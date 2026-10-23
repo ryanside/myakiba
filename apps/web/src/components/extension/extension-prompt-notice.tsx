@@ -11,7 +11,10 @@ function describe(prompt: ExtensionPrompt) {
     case "needs_user":
       return {
         title: "Complete the security check in the MyFigureCollection tab",
-        detail: "The import continues once the check is done.",
+        detail:
+          prompt.untilMs === null
+            ? "The import continues once the check is done."
+            : `Finish it by ${format(prompt.untilMs, "p")}. The import continues once the check is done.`,
       };
     case "backing_off":
       return {
@@ -24,7 +27,7 @@ function describe(prompt: ExtensionPrompt) {
     case "queued":
       return {
         title: "Waiting for the extension",
-        detail: "It is finishing an import from another tab first.",
+        detail: "It is finishing another import first.",
       };
   }
 }

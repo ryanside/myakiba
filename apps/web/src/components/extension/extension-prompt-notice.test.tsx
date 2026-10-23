@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import type { ExtensionPrompt } from "@/lib/extension-prompt";
 
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
@@ -15,11 +16,17 @@ await mock.module("@/queries/sync", () => ({
   fetchSyncSessions: async () => ({ sessions: [], totalCount: 0 }),
 }));
 
-const { default: SyncStatusWidget } = await import("./sync-status-widget");
+const { default: SyncStatusWidget } = await import("@/components/sync/sync-status-widget");
 const { ExtensionPromptNotice } = await import("./extension-prompt-notice");
 const { setExtensionPrompt } = await import("@/lib/extension-prompt");
 
 const SECURITY_CHECK = "Complete the security check in the MyFigureCollection tab";
+const runs = new Set<string>();
+
+function prompt(runId: string, sessionId: string | null, next: ExtensionPrompt) {
+  runs.add(runId);
+  setExtensionPrompt(runId, { sessionId, prompt: next });
+}
 
 function renderWidget() {
   const queryClient = new QueryClient();
@@ -32,11 +39,12 @@ function renderWidget() {
 
 afterEach(() => {
   cleanup();
-  setExtensionPrompt(null);
+  for (const runId of runs) setExtensionPrompt(runId, null);
+  runs.clear();
 });
 
 test("the widget opens on the security check prompt for this tab's import", async () => {
-  setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "needs_user" } });
+  prompt("run-1", "ss-1", { kind: "needs_user", untilMs: null });
   renderWidget();
 
   expect(await screen.findByText(SECURITY_CHECK)).toBeDefined();
@@ -44,14 +52,14 @@ test("the widget opens on the security check prompt for this tab's import", asyn
 
 test("closing the widget keeps it closed until the next security check", async () => {
   const user = userEvent.setup();
-  setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "needs_user" } });
+  prompt("run-1", "ss-1", { kind: "needs_user", untilMs: null });
   renderWidget();
   await screen.findByText(SECURITY_CHECK);
 
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByText(SECURITY_CHECK)).toBeNull());
 
-  act(() => setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "needs_user" } }));
+  act(() => prompt("run-1", "ss-1", { kind: "needs_user", untilMs: null }));
   expect(await screen.findByText(SECURITY_CHECK)).toBeDefined();
 });
 
@@ -70,20 +78,19 @@ test("the prompt follows the store and clears with it", async () => {
   renderWidget();
   await user.click(await screen.findByRole("button", { name: "Imports" }));
 
-  act(() => setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "queued" } }));
+  act(() => prompt("run-1", "ss-1", { kind: "queued" }));
   expect(screen.getByRole("status").textContent).toContain("Waiting for the extension");
+  expect(screen.getByRole("status").textContent).toContain("It is finishing another import first.");
 
-  act(() =>
-    setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "backing_off", untilMs: null } }),
-  );
+  act(() => prompt("run-1", "ss-1", { kind: "backing_off", untilMs: null }));
   expect(screen.getByRole("status").textContent).toContain("MyFigureCollection asked to slow down");
 
-  act(() => setExtensionPrompt(null));
+  act(() => setExtensionPrompt("run-1", null));
   expect(screen.queryByRole("status")).toBeNull();
 });
 
 test("the session page shows only its own import's prompt", () => {
-  setExtensionPrompt({ sessionId: "ss-1", prompt: { kind: "needs_user" } });
+  prompt("run-1", "ss-1", { kind: "needs_user", untilMs: null });
 
   render(<ExtensionPromptNotice sessionId="ss-2" />);
   expect(screen.queryByText(SECURITY_CHECK)).toBeNull();
@@ -91,4 +98,38 @@ test("the session page shows only its own import's prompt", () => {
   cleanup();
   render(<ExtensionPromptNotice sessionId="ss-1" />);
   expect(screen.getByText(SECURITY_CHECK)).toBeDefined();
+});
+
+test("the most urgent prompt of all this tab's runs shows", () => {
+  prompt("run-1", "ss-1", { kind: "queued" });
+  prompt("run-2", null, { kind: "needs_user", untilMs: null });
+  prompt("run-3", "ss-3", { kind: "backing_off", untilMs: null });
+  render(<ExtensionPromptNotice />);
+  expect(screen.getByRole("status").textContent).toContain(SECURITY_CHECK);
+
+  act(() => setExtensionPrompt("run-2", null));
+  expect(screen.getByRole("status").textContent).toContain("MyFigureCollection asked to slow down");
+
+  act(() => setExtensionPrompt("run-3", null));
+  expect(screen.getByRole("status").textContent).toContain("Waiting for the extension");
+});
+
+test("a run with no sync session shows in the widget but on no session page", () => {
+  prompt("resync-1", null, { kind: "backing_off", untilMs: null });
+
+  render(<ExtensionPromptNotice sessionId="ss-1" />);
+  expect(screen.queryByRole("status")).toBeNull();
+
+  cleanup();
+  render(<ExtensionPromptNotice />);
+  expect(screen.getByRole("status").textContent).toContain("MyFigureCollection asked to slow down");
+});
+
+test("the security check names its deadline", () => {
+  const deadline = new Date(2026, 9, 22, 15, 4).getTime();
+  prompt("run-1", "ss-1", { kind: "needs_user", untilMs: deadline });
+
+  render(<ExtensionPromptNotice sessionId="ss-1" />);
+
+  expect(screen.getByRole("status").textContent).toContain("Finish it by 3:04 PM.");
 });

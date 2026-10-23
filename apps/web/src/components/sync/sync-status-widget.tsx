@@ -33,7 +33,7 @@ import { SparkleTrail } from "@/components/ui/sparkle-trail";
 import { cn } from "@/lib/utils";
 import { useExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
-import { ExtensionPromptNotice } from "@/components/sync/extension-prompt-notice";
+import { ExtensionPromptNotice } from "@/components/extension/extension-prompt-notice";
 
 export default function SyncStatusWidget() {
   const {
