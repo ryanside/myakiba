@@ -69,6 +69,12 @@ type Reading =
 
 type Answer = Exclude<Reading, { readonly kind: "challenge" }>;
 
+type ItemContext = {
+  readonly tabId: number;
+  readonly requester: LiveRequester;
+  readonly signal: AbortSignal;
+};
+
 function failed(error: ItemError): Extract<Outcome, { readonly kind: "result" }> {
   return { kind: "result", result: { ok: false, error } };
 }
@@ -137,9 +143,7 @@ export function createFetcher(deps: FetcherDeps) {
 
   async function pictureOf(
     ogImage: MfcOgImage,
-    tabId: number,
-    requester: LiveRequester,
-    signal: AbortSignal,
+    { tabId, requester, signal }: ItemContext,
   ): Promise<PortPicture | null> {
     if (ogImage.kind !== "picture") return null;
     const { picture } = ogImage;
@@ -161,17 +165,11 @@ export function createFetcher(deps: FetcherDeps) {
   async function itemResult(
     page: CollectedPage,
     ogImage: MfcOgImage,
-    tabId: number,
-    requester: LiveRequester,
-    signal: AbortSignal,
+    context: ItemContext,
   ): Promise<Outcome> {
     return {
       kind: "result",
-      result: {
-        ok: true,
-        html: page.html,
-        picture: await pictureOf(ogImage, tabId, requester, signal),
-      },
+      result: { ok: true, html: page.html, picture: await pictureOf(ogImage, context) },
     };
   }
 
@@ -266,7 +264,7 @@ export function createFetcher(deps: FetcherDeps) {
     if (!answer) return failed("challenge_unsolved");
     const { page, reading } = answer;
     return reading.kind === "item"
-      ? itemResult(page, reading.ogImage, tabId, requester, signal)
+      ? itemResult(page, reading.ogImage, { tabId, requester, signal })
       : reading;
   }
 
@@ -277,7 +275,7 @@ export function createFetcher(deps: FetcherDeps) {
       const reading = readPage(page, job, clock.now());
       switch (reading.kind) {
         case "item":
-          return await itemResult(page, reading.ogImage, tabId, requester, signal);
+          return await itemResult(page, reading.ogImage, { tabId, requester, signal });
         case "challenge":
           if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
           return await solveChallenge(job, requester, reading.status, signal);
