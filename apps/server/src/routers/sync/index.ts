@@ -1,7 +1,6 @@
-import { Elysia, status, sse } from "elysia";
+import { privateApi } from "@/boundary/private-api";
+import { ElysiaCustomStatusResponse, sse } from "elysia";
 import * as z from "zod";
-import { betterAuth } from "@/middleware/better-auth";
-import { evlog } from "evlog/elysia";
 import { rateLimit } from "@/middleware/rate-limit";
 import {
   itemSyncSchema,
@@ -13,42 +12,22 @@ import {
   syncOrderItemsSchema,
   syncRunSchema,
 } from "./model";
-import type {
-  JobData,
-  SyncJobError,
-  SyncTerminalState,
-  UpdatedSyncCollection,
-  UpdatedSyncOrder,
-  UpdatedSyncOrderItem,
-  QueuedCollectionItem,
-} from "@myakiba/contracts/sync/schema";
-import type { SyncJobStatus, SyncOrderItemInput } from "./model";
+import type { SyncJobError, SyncTerminalState } from "@myakiba/contracts/sync/schema";
+import type { SyncJobStatus } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
-import { SYNC_SESSION_RETRY_WINDOW_DAYS } from "@myakiba/contracts/sync/constants";
-import SyncService from "./service";
-import { tryCatch } from "@myakiba/utils/result";
+import { serve } from "@/domain/kernel";
+import { Sync, SyncRuns } from "./module";
 import {
-  MAX_LIMIT,
   SYNC_SESSION_ITEM_STATUSES,
   SYNC_SESSION_STATUSES,
   SYNC_TYPES,
 } from "@myakiba/contracts/shared/constants";
-import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
   JOB_STATUS_POLL_INTERVAL_MS,
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
-import { prepareCsvItems } from "./csv";
-import { idsToFetch } from "./item-rows";
-import {
-  completeSyncItem,
-  failSyncItem,
-  heartbeatSyncRun,
-  interruptSyncRun,
-  retrySyncRun,
-} from "./run";
 
 const createTerminalJobStatus = ({
   jobId,
@@ -72,253 +51,47 @@ const createTerminalJobStatus = ({
   terminalState,
 });
 
-type ExistingItemsWithLatestRelease = Awaited<
-  ReturnType<typeof SyncService.getExistingItemsWithLatestReleaseByExternalIds>
->;
-
-const buildExistingItemLookups = (existingItems: ExistingItemsWithLatestRelease) => {
-  const externalIdToInternalId = new Map<number, string>();
-  const releaseIdsByItemId = new Map<string, string>();
-  const releaseDatesByItemId = new Map<string, string>();
-
-  for (const existingItem of existingItems) {
-    externalIdToInternalId.set(existingItem.externalId, existingItem.id);
-
-    if (existingItem.releaseId) {
-      releaseIdsByItemId.set(existingItem.id, existingItem.releaseId);
-    }
-
-    if (existingItem.releaseDate) {
-      releaseDatesByItemId.set(existingItem.id, existingItem.releaseDate);
-    }
-  }
-
-  return {
-    externalIdToInternalId,
-    releaseIdsByItemId,
-    releaseDatesByItemId,
-  };
-};
-
 const sessionParams = z.object({ id: z.string() });
 
-const syncRouter = new Elysia({ prefix: "/sync" })
-  .use(betterAuth)
-  .use(evlog())
+const syncRouter = privateApi("/sync")
   .use(rateLimit)
   .post(
     "/item",
-    async ({ body, user, log }) => {
-      log.set({ action: "sync.item", user: { id: user.id }, sync: { type: "item" } });
-      if (!user.emailVerified) {
-        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      const { data: existingItems, error: lookupError } = await tryCatch(
-        SyncService.getExistingItemsWithLatestReleaseByExternalIds(body.items),
-      );
-      if (lookupError) {
-        log.error(lookupError, { step: "getExistingItems", outcome: "error" });
-        return status(500, "Failed to check for existing items");
-      }
-      const existingIds = new Set(existingItems.map((item) => item.externalId));
-      const missingIds = body.items.filter((id) => !existingIds.has(id));
-      const syncSessionId = createId();
-      const session = {
-        id: syncSessionId,
-        userId: user.id,
-        syncType: "item" as const,
-        itemExternalIds: body.items,
-        existingItemExternalIds: body.items.filter((id) => existingIds.has(id)),
-      };
-      const statusMessage =
-        missingIds.length > 0
-          ? SYNC_STATUS_MESSAGES.queued
-          : "These items are already in the item database.";
-
-      if (missingIds.length > 0) {
-        const { error: startError } = await tryCatch(
-          SyncService.startSyncRun({
-            session,
-            requestPayload: {
-              type: "item",
-              payloadVersion: 3,
-              userId: user.id,
-              syncSessionId,
-              itemExternalIds: missingIds,
-            },
-            existingRows: { collectionItems: [], orders: [] },
-          }),
-        );
-        if (startError) {
-          log.error(startError, { step: "startSyncRun", outcome: "error" });
-          return status(500, "Failed to create import record");
-        }
-      } else {
-        const { error: sessionError } = await tryCatch(SyncService.createSyncSession(session));
-        if (sessionError) {
-          log.error(sessionError, { step: "createSyncSession", outcome: "error" });
-          return status(500, "Failed to create import record");
-        }
-        const { error: completeError } = await tryCatch(
-          SyncService.updateSyncSession(syncSessionId, {
-            status: "completed",
-            statusMessage,
-            completedAt: new Date(),
-          }),
-        );
-        if (completeError) {
-          log.error(completeError, { step: "startItemSync", outcome: "error" });
-          return status(500, "Failed to update import record");
-        }
-      }
-
-      log.set({
-        outcome: "success",
-        sync: { sessionId: syncSessionId },
-        items: {
-          requested: body.items.length,
-          existing: existingIds.size,
-          toFetch: missingIds.length,
-        },
+    async (ctx) => {
+      const plan = await serve(ctx, Sync.planItem, {
+        body: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-      return {
-        status: statusMessage,
-        isFinished: missingIds.length === 0,
-        existingItemsToInsert: existingIds.size,
-        newItems: missingIds.length,
-        jobId: missingIds.length > 0 ? syncSessionId : null,
-        syncSessionId,
-        missingMfcItemIds: missingIds,
-      };
+      if (plan instanceof ElysiaCustomStatusResponse) return plan;
+      if (plan.response.jobId) {
+        const started = await serve(ctx, Sync.start, plan);
+        if (started !== null) return started;
+      } else {
+        const created = await serve(ctx, Sync.createSession, plan.session);
+        if (created !== null) return created;
+        const completed = await serve(ctx, Sync.completeItemSession, {
+          id: plan.session.id,
+          statusMessage: plan.response.status,
+        });
+        if (completed !== null) return completed;
+      }
+      return plan.response;
     },
     { body: itemSyncSchema, auth: true, rateLimit: "item" },
   )
   .post(
     "/csv",
-    async ({ body, user, log }) => {
-      if (!user.emailVerified) {
-        log.set({
-          action: "sync.csv",
-          outcome: "forbidden",
-          user: { id: user.id },
-          sync: { type: "csv", reason: "email_not_verified" },
-        });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      log.set({
-        action: "sync.csv",
-        user: { id: user.id },
-        sync: { type: "csv" },
-        items: { requested: body.length },
+    async (ctx) => {
+      const plan = await serve(ctx, Sync.planCsv, {
+        body: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-
-      const items = body.map((item) => ({
-        ...item,
-        collectionId: createId(),
-        orderId: item.status === "Ordered" ? createId() : item.orderId,
-      }));
-
-      const itemExternalIds = items.map((item) => item.itemExternalId);
-      const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
-      );
-
-      if (existingItemsError) {
-        log.error(existingItemsError, {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "csv" },
-        });
-        return status(500, "Failed to check for existing items");
-      }
-
-      const result = prepareCsvItems(items, existingItems, user.id);
-      const {
-        collectionItems,
-        orderItems,
-        csvItemsToFetch: itemsToFetch,
-        existingItemExternalIds,
-      } = result;
-
-      const itemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const syncSessionId = createId();
-      const jobData = {
-        type: "csv",
-        payloadVersion: 3,
-        userId: user.id,
-        syncSessionId,
-        items: itemsToFetch,
-        itemsToInsert: collectionItems,
-        ordersToInsert: orderItems,
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: user.id,
-        syncType: "csv" as const,
-        itemExternalIds: itemExternalIdsToTrack,
-        existingItemExternalIds,
-      };
-      const { error: syncSessionError } = await tryCatch(
-        itemsToFetch.length === 0
-          ? SyncService.completeSyncSessionFromExisting({
-              session,
-              collectionItems,
-              orderItems,
-              requestPayload: jobData,
-            })
-          : SyncService.startSyncRun({
-              session,
-              requestPayload: jobData,
-              existingRows: { collectionItems, orders: orderItems },
-            }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
-          outcome: "error",
-          sync: { type: "csv", sessionId: syncSessionId },
-        });
-        return status(
-          500,
-          itemsToFetch.length === 0
-            ? "Failed to save collection items and orders"
-            : "Failed to create import record",
-        );
-      }
-
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-      const statusMessage: string = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      log.set({
-        outcome: "success",
-        sync: {
-          type: "csv",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-        },
-        items: {
-          requested: body.length,
-          existing: existingItemExternalIds.length,
-          toInsert: collectionItems.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
-      return {
-        status: statusMessage,
-        isFinished: !jobId,
-        existingItemsToInsert: collectionItems.length,
-        newItems: itemsToFetch.length,
-        jobId,
-        syncSessionId,
-        missingMfcItemIds: idsToFetch(jobData),
-      };
+      if (plan instanceof ElysiaCustomStatusResponse) return plan;
+      const saved = plan.response.jobId
+        ? await serve(ctx, Sync.start, plan)
+        : await serve(ctx, Sync.completeCsv, plan.complete);
+      if (saved !== null) return saved;
+      return plan.response;
     },
     {
       body: z.array(internalCsvItemSchema.omit({ collectionId: true })).min(1),
@@ -328,217 +101,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/order",
-    async ({ body, user, log }) => {
-      if (!user.emailVerified) {
-        log.set({
-          action: "sync.order",
-          outcome: "forbidden",
-          user: { id: user.id },
-          sync: { type: "order", reason: "email_not_verified" },
-        });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      log.set({
-        action: "sync.order",
-        user: { id: user.id },
-        sync: { type: "order" },
-        items: { requested: body.items.length },
+    async (ctx) => {
+      const plan = await serve(ctx, Sync.planOrder, {
+        body: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-
-      const orderId = createId();
-
-      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
-        ...item,
-        collectionId: createId(),
-      }));
-      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
-
-      const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
-      );
-
-      if (existingItemsError) {
-        log.error(existingItemsError, {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "order" },
-        });
-        return status(500, "Failed to check for existing items");
-      }
-
-      const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const releaseDates = normalizedItems.flatMap((item) => {
-        const internalId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalId) return [];
-        const date = releaseDatesByItemId.get(internalId);
-        return date ? [date] : [];
-      });
-      if (body.releaseDate) releaseDates.push(body.releaseDate);
-
-      const latestReleaseDate =
-        releaseDates.length > 0
-          ? releaseDates.reduce((latest, current) => (current > latest ? current : latest))
-          : null;
-
-      const { items: _items, ...orderData } = body;
-      const order: UpdatedSyncOrder = {
-        ...orderData,
-        userId: user.id,
-        id: orderId,
-        releaseDate: latestReleaseDate,
-      };
-
-      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          orderId,
-          releaseId: null,
-          userId: user.id,
-        }));
-
-      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            orderId,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: user.id,
-          },
-        ];
-      });
-
-      const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          orderId: item.orderId,
-          status: item.status,
-          count: item.count,
-          score: "0.0",
-          price: item.price,
-          shop: order.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          condition: item.condition,
-          notes: "",
-          tags: [],
-          releaseId: item.releaseId,
-        }));
-
-      const syncSessionId = createId();
-      const jobData = {
-        type: "order",
-        payloadVersion: 3,
-        userId: user.id,
-        syncSessionId,
-        order: {
-          details: order,
-          itemsToFetch,
-          itemsToInsert: collectionItemsToInsert,
-        },
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: user.id,
-        syncType: "order" as const,
-        itemExternalIds: orderItemExternalIdsToTrack,
-        existingItemExternalIds: existingOrderItemExternalIds,
-      };
-      const { error: syncSessionError } = await tryCatch(
-        itemsToFetch.length === 0
-          ? SyncService.completeSyncSessionFromExisting({
-              session,
-              collectionItems: collectionItemsToInsert,
-              orderItems: [order],
-              requestPayload: jobData,
-            })
-          : SyncService.startSyncRun({
-              session,
-              requestPayload: jobData,
-              existingRows: {
-                collectionItems: collectionItemsToInsert,
-                orders: collectionItemsToInsert.length > 0 ? [order] : [],
-              },
-            }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
-          outcome: "error",
-          sync: {
-            type: "order",
-            sessionId: syncSessionId,
-            orderId,
-          },
-          order: { id: orderId },
-        });
-        return status(
-          500,
-          itemsToFetch.length === 0
-            ? "Failed to save the order and its items"
-            : "Failed to create import record",
-        );
-      }
-
-      log.set({
-        sync: {
-          type: "order",
-          sessionId: syncSessionId,
-          orderId,
-        },
-        order: { id: orderId },
-      });
-
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        outcome: "success",
-        sync: {
-          type: "order",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-          orderId,
-        },
-        order: { id: orderId },
-        items: {
-          requested: body.items.length,
-          existing: existingOrderItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return {
-        status: statusMessage,
-        isFinished: !jobId,
-        existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToFetch.length,
-        jobId,
-        syncSessionId,
-        missingMfcItemIds: idsToFetch(jobData),
-      };
+      if (plan instanceof ElysiaCustomStatusResponse) return plan;
+      const saved = plan.response.jobId
+        ? await serve(ctx, Sync.start, plan)
+        : await serve(ctx, Sync.completeOrder, plan.complete);
+      if (saved !== null) return saved;
+      return plan.response;
     },
     {
       body: orderSyncSchema,
@@ -548,229 +121,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/order-item",
-    async ({ body, user, log }) => {
-      if (!user.emailVerified) {
-        log.set({
-          action: "sync.orderItem",
-          outcome: "forbidden",
-          user: { id: user.id },
-          sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
-        });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      log.set({
-        action: "sync.orderItem",
-        user: { id: user.id },
-        sync: { type: "order-item", orderId: body.orderId },
-        items: { requested: body.items.length },
+    async (ctx) => {
+      const plan = await serve(ctx, Sync.planOrderItem, {
+        body: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-
-      const { data: existingOrder, error: existingOrderError } = await tryCatch(
-        SyncService.getOrderByIdForUser(body.orderId, user.id),
-      );
-
-      if (existingOrderError) {
-        log.error(existingOrderError, {
-          step: "getOrderByIdForUser",
-          outcome: "error",
-          sync: { type: "order-item", orderId: body.orderId },
-        });
-        return status(500, "Failed to load order");
-      }
-
-      if (!existingOrder) {
-        log.set({ outcome: "not_found" });
-        return status(404, "Order not found");
-      }
-
-      const orderDetails: UpdatedSyncOrder = {
-        id: existingOrder.id,
-        userId: existingOrder.userId,
-        status: existingOrder.status,
-        title: existingOrder.title,
-        shop: existingOrder.shop,
-        orderDate: existingOrder.orderDate,
-        releaseDate: existingOrder.releaseDate,
-        paymentDate: existingOrder.paymentDate,
-        shippingDate: existingOrder.shippingDate,
-        collectionDate: existingOrder.collectionDate,
-        shippingMethod: existingOrder.shippingMethod,
-        shippingFee: existingOrder.shippingFee,
-        taxes: existingOrder.taxes,
-        duties: existingOrder.duties,
-        tariffs: existingOrder.tariffs,
-        miscFees: existingOrder.miscFees,
-        notes: existingOrder.notes,
-      };
-
-      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
-        ...item,
-        collectionId: createId(),
-      }));
-      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
-
-      const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
-      );
-
-      if (existingItemsError) {
-        log.error(existingItemsError, {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "order-item", orderId: body.orderId },
-        });
-        return status(500, "Failed to check for existing items");
-      }
-
-      const { externalIdToInternalId, releaseIdsByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          orderId: existingOrder.id,
-          releaseId: null,
-          userId: user.id,
-        }));
-
-      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            orderId: existingOrder.id,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: user.id,
-          },
-        ];
-      });
-
-      const orderItemExternalIdsToTrack = itemsToFetch.map((item) => item.itemExternalId);
-      const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          orderId: item.orderId,
-          status: item.status,
-          count: item.count,
-          score: "0.0",
-          price: item.price,
-          shop: orderDetails.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          condition: item.condition,
-          notes: "",
-          tags: [],
-          releaseId: item.releaseId,
-        }));
-
-      const syncSessionId = createId();
-      const jobData = {
-        type: "order-item",
-        payloadVersion: 3,
-        userId: user.id,
-        syncSessionId,
-        order: {
-          details: orderDetails,
-          itemsToFetch,
-          itemsToInsert: collectionItemsToInsert,
-        },
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: user.id,
-        syncType: "order-item" as const,
-        itemExternalIds: orderItemExternalIdsToTrack,
-        orderId: existingOrder.id,
-        existingItemExternalIds: existingOrderItemExternalIds,
-      };
-      const { error: syncSessionError } = await tryCatch(
-        itemsToFetch.length === 0
-          ? SyncService.completeSyncSessionFromExisting({
-              session,
-              collectionItems: collectionItemsToInsert,
-              requestPayload: jobData,
-            })
-          : SyncService.startSyncRun({
-              session,
-              requestPayload: jobData,
-              existingRows: { collectionItems: collectionItemsToInsert, orders: [] },
-            }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: itemsToFetch.length === 0 ? "insertOrderItems" : "startSyncRun",
-          outcome: "error",
-          sync: {
-            type: "order-item",
-            sessionId: syncSessionId,
-            orderId: existingOrder.id,
-          },
-          order: { id: existingOrder.id },
-        });
-        return status(
-          500,
-          itemsToFetch.length === 0
-            ? "Failed to save order items"
-            : "Failed to create import record",
-        );
-      }
-
-      log.set({
-        sync: {
-          type: "order-item",
-          sessionId: syncSessionId,
-          orderId: existingOrder.id,
-        },
-        order: { id: existingOrder.id },
-      });
-
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        outcome: "success",
-        sync: {
-          type: "order-item",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-          orderId: existingOrder.id,
-        },
-        order: { id: existingOrder.id },
-        items: {
-          requested: body.items.length,
-          existing: existingOrderItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return {
-        status: statusMessage,
-        isFinished: !jobId,
-        existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToFetch.length,
-        jobId,
-        syncSessionId,
-        missingMfcItemIds: idsToFetch(jobData),
-      };
+      if (plan instanceof ElysiaCustomStatusResponse) return plan;
+      const saved = plan.response.jobId
+        ? await serve(ctx, Sync.start, plan)
+        : await serve(ctx, Sync.completeOrderItem, plan.complete);
+      if (saved !== null) return saved;
+      return plan.response;
     },
     {
       body: syncOrderItemsSchema,
@@ -780,178 +141,17 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/collection",
-    async ({ body, user, log }) => {
-      if (!user.emailVerified) {
-        log.set({
-          action: "sync.collection",
-          outcome: "forbidden",
-          user: { id: user.id },
-          sync: { type: "collection", reason: "email_not_verified" },
-        });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      log.set({
-        action: "sync.collection",
-        user: { id: user.id },
-        sync: { type: "collection" },
-        items: { requested: body.length },
+    async (ctx) => {
+      const plan = await serve(ctx, Sync.planCollection, {
+        body: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-
-      const normalizedItems = body.map((item) => ({
-        ...item,
-        collectionId: createId(),
-      }));
-      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
-
-      const { data: existingItems, error: existingItemsError } = await tryCatch(
-        SyncService.getExistingItemsWithLatestReleaseByExternalIds(itemExternalIds),
-      );
-
-      if (existingItemsError) {
-        log.error(existingItemsError, {
-          step: "getExistingItemsWithLatestRelease",
-          outcome: "error",
-          sync: { type: "collection" },
-        });
-        return status(500, "Failed to check for existing items");
-      }
-
-      const { externalIdToInternalId, releaseIdsByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const itemsToFetch: UpdatedSyncCollection[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          releaseId: null,
-          userId: user.id,
-        }));
-
-      const itemsToInsert: UpdatedSyncCollection[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: user.id,
-          },
-        ];
-      });
-
-      const collectionItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncCollection & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          releaseId: item.releaseId,
-          orderId: null,
-          status: "Owned",
-          price: item.price,
-          count: item.count,
-          score: item.score,
-          shop: item.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          tags: item.tags,
-          condition: item.condition,
-          notes: item.notes,
-        }));
-
-      const syncSessionId = createId();
-      const jobData = {
-        type: "collection",
-        payloadVersion: 3,
-        userId: user.id,
-        syncSessionId,
-        collection: {
-          itemsToFetch,
-          itemsToInsert: collectionItemsToInsert,
-        },
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: user.id,
-        syncType: "collection" as const,
-        itemExternalIds: collectionItemExternalIdsToTrack,
-        existingItemExternalIds: existingCollectionItemExternalIds,
-      };
-      const { error: syncSessionError } = await tryCatch(
-        itemsToFetch.length === 0
-          ? SyncService.completeSyncSessionFromExisting({
-              session,
-              collectionItems: collectionItemsToInsert,
-              requestPayload: jobData,
-            })
-          : SyncService.startSyncRun({
-              session,
-              requestPayload: jobData,
-              existingRows: { collectionItems: collectionItemsToInsert, orders: [] },
-            }),
-      );
-
-      if (syncSessionError) {
-        log.error(syncSessionError, {
-          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
-          outcome: "error",
-          sync: { type: "collection", sessionId: syncSessionId },
-        });
-        return status(
-          500,
-          itemsToFetch.length === 0
-            ? "Failed to save collection items"
-            : "Failed to create import record",
-        );
-      }
-
-      log.set({
-        sync: {
-          type: "collection",
-          sessionId: syncSessionId,
-        },
-      });
-
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        outcome: "success",
-        sync: {
-          type: "collection",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-        },
-        items: {
-          requested: body.length,
-          existing: existingCollectionItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return {
-        status: statusMessage,
-        isFinished: !jobId,
-        existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToFetch.length,
-        jobId,
-        syncSessionId,
-        missingMfcItemIds: idsToFetch(jobData),
-      };
+      if (plan instanceof ElysiaCustomStatusResponse) return plan;
+      const saved = plan.response.jobId
+        ? await serve(ctx, Sync.start, plan)
+        : await serve(ctx, Sync.completeCollection, plan.complete);
+      if (saved !== null) return saved;
+      return plan.response;
     },
     {
       body: z.array(collectionSyncSchema.omit({ collectionId: true })).min(1),
@@ -959,128 +159,24 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       rateLimit: "collection",
     },
   )
-  .get(
-    "/sessions",
-    async ({ query, user, log }) => {
-      const page = query.page ? Number.parseInt(query.page, 10) : 1;
-      const limit = query.limit ? Number.parseInt(query.limit, 10) : 20;
-
-      log.set({
-        action: "sync.sessions",
-        user: { id: user.id },
-        pagination: { page, limit },
-        filters: {
-          status: query.status ?? [],
-          syncType: query.syncType ?? [],
-        },
-      });
-
-      if (Number.isNaN(page) || page < 1) {
-        log.set({ outcome: "bad_request" });
-        return status(400, "Invalid page parameter");
-      }
-      if (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
-        log.set({ outcome: "bad_request" });
-        return status(400, "Invalid limit parameter");
-      }
-
-      const { data: result, error } = await tryCatch(
-        SyncService.getSyncSessions(user.id, page, limit, query.status, query.syncType),
-      );
-
-      if (error) {
-        log.error(error, { step: "getSyncSessions", outcome: "error" });
-        return status(500, "Failed to load import history");
-      }
-
-      log.set({
-        outcome: "success",
-        result: {
-          sessionCount: result.sessions.length,
-          total: result.total,
-        },
-      });
-
-      return { sessions: result.sessions, total: result.total, page, limit };
-    },
-    {
-      query: z.object({
-        page: z.string().optional(),
-        limit: z.string().optional(),
-        status: z
-          .union([z.enum(SYNC_SESSION_STATUSES), z.array(z.enum(SYNC_SESSION_STATUSES))])
-          .transform((v) => (Array.isArray(v) ? v : [v]))
-          .optional(),
-        syncType: z
-          .union([z.enum(SYNC_TYPES), z.array(z.enum(SYNC_TYPES))])
-          .transform((v) => (Array.isArray(v) ? v : [v]))
-          .optional(),
-      }),
-      auth: true,
-    },
-  )
+  .get("/sessions", (ctx) => serve(ctx, Sync.sessions, { query: ctx.query }), {
+    query: z.object({
+      page: z.string().optional(),
+      limit: z.string().optional(),
+      status: z
+        .union([z.enum(SYNC_SESSION_STATUSES), z.array(z.enum(SYNC_SESSION_STATUSES))])
+        .transform((v) => (Array.isArray(v) ? v : [v]))
+        .optional(),
+      syncType: z
+        .union([z.enum(SYNC_TYPES), z.array(z.enum(SYNC_TYPES))])
+        .transform((v) => (Array.isArray(v) ? v : [v]))
+        .optional(),
+    }),
+    auth: true,
+  })
   .get(
     "/sessions/:id",
-    async ({ params, query, user, log }) => {
-      log.set({
-        action: "sync.sessionDetail",
-        user: { id: user.id },
-        sync: { sessionId: params.id },
-        filters: {
-          status: query.status ?? [],
-        },
-      });
-
-      const page = query.page ? Number.parseInt(query.page, 10) : undefined;
-      const limit = query.limit ? Number.parseInt(query.limit, 10) : undefined;
-
-      log.set({
-        pagination: {
-          page: page ?? null,
-          limit: limit ?? null,
-        },
-      });
-
-      if (page !== undefined && (Number.isNaN(page) || page < 1)) {
-        log.set({ outcome: "bad_request" });
-        return status(400, "Invalid page parameter");
-      }
-      if (limit !== undefined && (Number.isNaN(limit) || limit < 1 || limit > MAX_LIMIT)) {
-        log.set({ outcome: "bad_request" });
-        return status(400, "Invalid limit parameter");
-      }
-
-      const { data: result, error } = await tryCatch(
-        SyncService.getSyncSessionDetail(params.id, user.id, page, limit, query.status),
-      );
-
-      if (error) {
-        log.error(error, {
-          step: "getSyncSessionDetail",
-          outcome: "error",
-          sync: { sessionId: params.id },
-        });
-        return status(500, "Failed to load import details");
-      }
-
-      if (!result) {
-        log.set({ outcome: "not_found" });
-        return status(404, "Import not found");
-      }
-
-      log.set({
-        outcome: "success",
-        result: {
-          itemCount: result.items.length,
-          totalItems: result.totalItems,
-        },
-      });
-
-      return {
-        session: { ...result.session, items: result.items },
-        totalItems: result.totalItems,
-      };
-    },
+    (ctx) => serve(ctx, Sync.sessionDetail, { query: ctx.query, params: ctx.params }),
     {
       params: z.object({ id: z.string() }),
       query: z.object({
@@ -1096,48 +192,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/sessions/:id/retry",
-    async ({ params, user, log }) => {
-      log.set({
-        action: "sync.retry",
-        user: { id: user.id },
-        sync: { sessionId: params.id },
+    async (ctx) => {
+      const result = await serve(ctx, SyncRuns.retry, {
+        id: ctx.params.id,
+        emailVerified: ctx.user.emailVerified,
       });
-
-      if (!user.emailVerified) {
-        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      const { data: result, error } = await tryCatch(retrySyncRun(params.id, user.id));
-      if (error) {
-        log.error(error, { step: "retrySyncSession", outcome: "error" });
-        return status(500, "Failed to retry failed item results");
-      }
-
-      if (result.outcome === "not_found") {
-        log.set({ outcome: "not_found" });
-        return status(404, "Import not found");
-      }
-      if (result.outcome === "expired") {
-        log.set({ outcome: "expired" });
-        return status(
-          409,
-          `The ${SYNC_SESSION_RETRY_WINDOW_DAYS}-day window to retry failed item results has expired`,
-        );
-      }
-      if (result.outcome === "unavailable") {
-        log.set({ outcome: "conflict" });
-        return status(409, "These failed item results cannot be retried");
-      }
-
-      log.set({
-        outcome: "success",
-        sync: {
-          jobId: result.jobId,
-        },
-        items: { toFetch: result.missingMfcItemIds.length },
-      });
-      return { jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds };
+      if (result instanceof ElysiaCustomStatusResponse) return result;
+      return serve(ctx, SyncRuns.retryResponse, result);
     },
     {
       params: z.object({ id: z.string() }),
@@ -1147,114 +208,57 @@ const syncRouter = new Elysia({ prefix: "/sync" })
   )
   .post(
     "/sessions/:id/items",
-    async ({ params, body, user, log }) => {
-      log.set({
-        action: "sync.completeItem",
-        user: { id: user.id },
-        sync: { sessionId: params.id, jobId: body.jobId },
-        mfc: { itemId: body.mfcItemId },
+    async (ctx) => {
+      const existing = await serve(ctx, SyncRuns.itemStatus, {
+        id: ctx.params.id,
+        mfcItemId: ctx.body.mfcItemId,
+        emailVerified: ctx.user.emailVerified,
       });
-      if (!user.emailVerified) {
-        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      const { data: result, error } = await tryCatch(completeSyncItem(params.id, user.id, body));
-      if (error) {
-        log.error(error, { step: "completeSyncItem", outcome: "error" });
-        return status(500, "Failed to import item");
-      }
-      if (!result) {
-        log.set({ outcome: "not_found" });
-        return status(404, "This item is not part of the import");
-      }
-      log.set({ outcome: result.outcome });
-      return result;
+      if (existing !== null) return existing;
+      const result = await serve(ctx, SyncRuns.complete, {
+        id: ctx.params.id,
+        upload: ctx.body,
+      });
+      if (result instanceof ElysiaCustomStatusResponse) return result;
+      return serve(ctx, SyncRuns.itemResponse, result);
     },
     { params: sessionParams, body: syncItemUploadSchema, auth: true, rateLimit: "mfcIngest" },
   )
   .post(
     "/sessions/:id/failures",
-    async ({ params, body, user, log }) => {
-      log.set({
-        action: "sync.failItem",
-        user: { id: user.id },
-        sync: { sessionId: params.id, jobId: body.jobId },
-        mfc:
-          "failures" in body
-            ? { failureCount: body.failures.length }
-            : { itemId: body.mfcItemId, error: body.error },
+    async (ctx) => {
+      return serve(ctx, SyncRuns.failure, {
+        id: ctx.params.id,
+        failure: ctx.body,
+        emailVerified: ctx.user.emailVerified,
       });
-      if (!user.emailVerified) {
-        log.set({ outcome: "forbidden", sync: { reason: "email_not_verified" } });
-        return status(403, SYNC_STATUS_MESSAGES.requireEmailVerification);
-      }
-
-      const { data: result, error } = await tryCatch(failSyncItem(params.id, user.id, body));
-      if (error) {
-        log.error(error, { step: "failSyncItem", outcome: "error" });
-        return status(500, "Failed to save the item result");
-      }
-      if (!result) {
-        log.set({ outcome: "not_found" });
-        return status(404, "Import not found");
-      }
-      log.set({ outcome: result.outcome });
-      return result;
     },
     { params: sessionParams, body: syncItemFailureSchema, auth: true, rateLimit: "syncFailure" },
   )
   .post(
     "/sessions/:id/heartbeat",
-    async ({ params, body, user, log }) => {
-      log.set({
-        action: "sync.heartbeat",
-        user: { id: user.id },
-        sync: { sessionId: params.id, jobId: body.jobId },
+    async (ctx) => {
+      return serve(ctx, SyncRuns.heartbeat, {
+        id: ctx.params.id,
+        jobId: ctx.body.jobId,
       });
-      const { data: result, error } = await tryCatch(
-        heartbeatSyncRun(params.id, user.id, body.jobId),
-      );
-      if (error) {
-        log.error(error, { step: "heartbeatSyncRun", outcome: "error" });
-        return status(500, "Failed to renew the import");
-      }
-      if (!result) {
-        log.set({ outcome: "not_found" });
-        return status(404, "Import not found");
-      }
-      log.set({ outcome: result.active ? "active" : "inactive" });
-      return result;
     },
     { params: sessionParams, body: syncRunSchema, auth: true, rateLimit: "syncControl" },
   )
   .post(
     "/sessions/:id/interrupt",
-    async ({ params, body, user, log }) => {
-      log.set({
-        action: "sync.interrupt",
-        user: { id: user.id },
-        sync: { sessionId: params.id, jobId: body.jobId },
+    async (ctx) => {
+      return serve(ctx, SyncRuns.interrupt, {
+        id: ctx.params.id,
+        jobId: ctx.body.jobId,
       });
-      const { data: result, error } = await tryCatch(
-        interruptSyncRun(params.id, user.id, body.jobId),
-      );
-      if (error) {
-        log.error(error, { step: "interruptSyncRun", outcome: "error" });
-        return status(500, "Failed to stop the import");
-      }
-      if (!result) {
-        log.set({ outcome: "not_found" });
-        return status(404, "Import not found");
-      }
-      log.set({ outcome: result.outcome });
-      return result;
     },
     { params: sessionParams, body: syncRunSchema, auth: true, rateLimit: "syncControl" },
   )
   .get(
     "/job-status",
-    async function* ({ query, user, log, request }) {
+    async function* (ctx) {
+      const { query, user, log, request } = ctx;
       log.set({
         action: "sync.jobStatus",
         user: { id: user.id },
@@ -1277,12 +281,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         });
       };
 
-      const { data: initialJobStatus, error: initialJobStatusError } = await tryCatch(
-        SyncService.getJobStatus(jobId, user.id),
-      );
+      const initialJobStatus = await serve(ctx, Sync.jobStatus, { jobId });
 
-      if (initialJobStatusError) {
-        const isNotFound = initialJobStatusError.message === "SYNC_JOB_NOT_FOUND";
+      if (initialJobStatus instanceof ElysiaCustomStatusResponse) {
+        const initialJobStatusError = new Error(String(initialJobStatus.response));
+        const isNotFound = initialJobStatus.code === 404;
         const message = isNotFound ? "Job not found" : "Error fetching job status";
 
         if (isNotFound) {
@@ -1311,11 +314,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         return;
       }
 
-      const { data: subscription, error: subscriptionError } = await tryCatch(
-        jobStatusSubscriptionRegistry.subscribe(jobId),
-      );
-
-      if (subscriptionError) {
+      let subscription;
+      try {
+        subscription = await jobStatusSubscriptionRegistry.subscribe(jobId);
+      } catch (error) {
+        const subscriptionError = error instanceof Error ? error : new Error(String(error));
         log.error(subscriptionError, {
           step: "subscribeJobStatus",
           outcome: "error",
@@ -1335,12 +338,11 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       }
 
       try {
-        const { data: replayJobStatus, error: replayJobStatusError } = await tryCatch(
-          SyncService.getJobStatus(jobId, user.id),
-        );
+        const replayJobStatus = await serve(ctx, Sync.jobStatus, { jobId });
 
-        if (replayJobStatusError) {
-          const isNotFound = replayJobStatusError.message === "SYNC_JOB_NOT_FOUND";
+        if (replayJobStatus instanceof ElysiaCustomStatusResponse) {
+          const replayJobStatusError = new Error(String(replayJobStatus.response));
+          const isNotFound = replayJobStatus.code === 404;
           const message = isNotFound ? "Job not found" : "Error fetching job status";
 
           if (isNotFound) {
@@ -1431,11 +433,10 @@ const syncRouter = new Elysia({ prefix: "/sync" })
               continue;
             }
             nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
-            const { data: polledStatus, error: pollError } = await tryCatch(
-              SyncService.getJobStatus(jobId, user.id),
-            );
-            if (pollError) {
-              const isNotFound = pollError.message === "SYNC_JOB_NOT_FOUND";
+            const polledStatus = await serve(ctx, Sync.jobStatus, { jobId });
+            if (polledStatus instanceof ElysiaCustomStatusResponse) {
+              const pollError = new Error(String(polledStatus.response));
+              const isNotFound = polledStatus.code === 404;
               if (!isNotFound) {
                 log.error(pollError, { step: "getJobStatusHeartbeat", outcome: "error" });
                 yield sse({ data: latestJobStatus });

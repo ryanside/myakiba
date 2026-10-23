@@ -2,7 +2,6 @@ import { createLogger } from "evlog";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
-import { tryCatch } from "@myakiba/utils/result";
 
 export type ServerSyncJobStatus = SyncJobStatus & { readonly revision: number };
 
@@ -30,15 +29,17 @@ export async function publishJobStatus(
   status: ServerSyncJobStatus,
   syncSessionId: string,
 ): Promise<void> {
-  const { error } = await tryCatch(writeJobStatusSnapshotAndPublish(redis, status.jobId, status));
-  if (!error) return;
-  const cacheLog = createLogger({
-    action: "sync.jobStatusCache",
-    outcome: "warn",
-    jobId: status.jobId,
-    syncSessionId,
-    message: "Failed to publish job status; the saved session is still available",
-  });
-  cacheLog.error(error);
-  cacheLog.emit();
+  try {
+    await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
+  } catch (error) {
+    const cacheLog = createLogger({
+      action: "sync.jobStatusCache",
+      outcome: "warn",
+      jobId: status.jobId,
+      syncSessionId,
+      message: "Failed to publish job status; the saved session is still available",
+    });
+    cacheLog.error(error instanceof Error ? error : String(error));
+    cacheLog.emit();
+  }
 }

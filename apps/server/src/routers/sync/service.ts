@@ -1,4 +1,5 @@
-import { db } from "@myakiba/db/client";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
+import { paginateBy } from "@/domain/kernel";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   item as itemTable,
@@ -9,7 +10,7 @@ import {
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
-import { and, inArray, eq, desc, count, sql } from "drizzle-orm";
+import { and, inArray, eq, desc, sql } from "drizzle-orm";
 import { syncJobStatusSchema } from "./model";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
@@ -28,7 +29,6 @@ import {
 } from "@myakiba/contracts/sync/constants";
 import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
-import { tryCatch } from "@myakiba/utils/result";
 import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
@@ -48,9 +48,9 @@ type SyncSessionUpdatePayload = Partial<
   >
 >;
 
-type SyncTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type SyncTransaction = Tx;
 
-type SyncSessionCreation = {
+export type SyncSessionCreation = {
   readonly id: string;
   readonly userId: string;
   readonly syncType: SyncType;
@@ -141,7 +141,7 @@ class SyncService {
 
   async getExistingItemsWithLatestReleaseByExternalIds(
     externalIds: readonly number[],
-    database: Pick<typeof db, "selectDistinctOn"> = db,
+    database: ReadTx,
   ): Promise<readonly ExistingItemWithLatestRelease[]> {
     if (externalIds.length === 0) {
       return [];
@@ -171,7 +171,7 @@ class SyncService {
     );
   }
 
-  async getOrderByIdForUser(orderId: string, userId: string) {
+  async getOrderByIdForUser(orderId: string, userId: string, db: ReadTx) {
     const [existingOrder] = await db
       .select()
       .from(orderTable)
@@ -180,75 +180,67 @@ class SyncService {
     return existingOrder ?? null;
   }
 
-  async completeSyncSessionFromExisting({
-    session,
-    collectionItems,
-    orderItems = [],
-    requestPayload,
-  }: {
-    readonly session: SyncSessionCreation;
-    readonly collectionItems: CollectionInsertType[];
-    readonly orderItems?: OrderInsertType[];
-    readonly requestPayload: JobData;
-  }): Promise<void> {
+  async completeSyncSessionFromExisting(
+    {
+      session,
+      collectionItems,
+      orderItems = [],
+      requestPayload,
+    }: {
+      readonly session: SyncSessionCreation;
+      readonly collectionItems: CollectionInsertType[];
+      readonly orderItems?: OrderInsertType[];
+      readonly requestPayload: JobData;
+    },
+    tx: Tx,
+  ): Promise<void> {
     const syncSessionId = session.id;
-    try {
-      const orderId =
-        requestPayload.type === "order" || requestPayload.type === "order-item"
-          ? requestPayload.order.details.id
-          : undefined;
+    const orderId =
+      requestPayload.type === "order" || requestPayload.type === "order-item"
+        ? requestPayload.order.details.id
+        : undefined;
 
-      await db.transaction(async (tx) => {
-        await this.insertSyncSession(tx, session);
+    await this.insertSyncSession(tx, session);
 
-        if (orderItems.length > 0) {
-          await tx.insert(orderTable).values(orderItems);
-        }
+    if (orderItems.length > 0) {
+      await tx.insert(orderTable).values(orderItems);
+    }
 
-        const insertedCollectionItems = await tx
-          .insert(collectionTable)
-          .values(collectionItems)
-          .returning({ id: collectionTable.id });
+    const insertedCollectionItems = await tx
+      .insert(collectionTable)
+      .values(collectionItems)
+      .returning({ id: collectionTable.id });
 
-        if (requestPayload.type === "order-item") {
-          await advanceOrderReleaseDatesForCollectionItems(
-            tx,
-            insertedCollectionItems.map(({ id }) => id),
-          );
-        }
+    if (requestPayload.type === "order-item") {
+      await advanceOrderReleaseDatesForCollectionItems(
+        tx,
+        insertedCollectionItems.map(({ id }) => id),
+      );
+    }
 
-        await tx
-          .update(syncSessionItem)
-          .set({ status: "imported", errorReason: null, updatedAt: new Date() })
-          .where(
-            and(
-              eq(syncSessionItem.syncSessionId, syncSessionId),
-              eq(syncSessionItem.status, "pending"),
-            ),
-          );
-
-        await tx
-          .update(syncSession)
-          .set({
-            requestPayload,
-            status: "completed",
-            statusMessage: SYNC_STATUS_MESSAGES.insertedFromExisting,
-            successCount: sql`${syncSession.totalItems}`,
-            failCount: 0,
-            orderId,
-            completedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(syncSession.id, syncSessionId));
-      });
-    } catch (error) {
-      await tryCatch(
-        db.transaction((tx) =>
-          this.recordFailedStart(tx, session, requestPayload, "request_persistence"),
+    await tx
+      .update(syncSessionItem)
+      .set({ status: "imported", errorReason: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(syncSessionItem.syncSessionId, syncSessionId),
+          eq(syncSessionItem.status, "pending"),
         ),
       );
-      throw error;
-    }
+
+    await tx
+      .update(syncSession)
+      .set({
+        requestPayload,
+        status: "completed",
+        statusMessage: SYNC_STATUS_MESSAGES.insertedFromExisting,
+        successCount: sql`${syncSession.totalItems}`,
+        failCount: 0,
+        orderId,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(syncSession.id, syncSessionId));
   }
 
   /**
@@ -256,55 +248,52 @@ class SyncService {
    * the Item Database are written now, and the session stays processing until the page
    * reports every missing item.
    */
-  async startSyncRun({
-    session,
-    requestPayload,
-    existingRows,
-  }: {
-    readonly session: SyncSessionCreation;
-    readonly requestPayload: JobData;
-    readonly existingRows: ItemRows;
-  }): Promise<void> {
+  async startSyncRun(
+    {
+      session,
+      requestPayload,
+      existingRows,
+    }: {
+      readonly session: SyncSessionCreation;
+      readonly requestPayload: JobData;
+      readonly existingRows: ItemRows;
+    },
+    tx: Tx,
+    afterCommit: (effect: () => Promise<void>) => void,
+  ): Promise<void> {
     const existingIds = session.existingItemExternalIds ?? [];
     const createsOrder = requestPayload.type === "order" && existingRows.collectionItems.length > 0;
-    try {
-      await db.transaction(async (tx) => {
-        await this.insertSyncSession(tx, session);
-        await insertItemRows(tx, requestPayload.type, existingRows);
-        if (existingIds.length > 0) {
-          await tx
-            .update(syncSessionItem)
-            .set({ status: "imported", updatedAt: new Date() })
-            .where(
-              and(
-                eq(syncSessionItem.syncSessionId, session.id),
-                inArray(syncSessionItem.itemExternalId, [...existingIds]),
-              ),
-            );
-        }
-        await tx
-          .update(syncSession)
-          .set({
-            requestPayload,
-            status: "processing",
-            revision: 1,
-            statusMessage: SYNC_STATUS_MESSAGES.queued,
-            successCount: existingIds.length,
-            ...(createsOrder && { orderId: requestPayload.order.details.id }),
-            updatedAt: new Date(),
-          })
-          .where(eq(syncSession.id, session.id));
-      });
-    } catch (error) {
-      await tryCatch(
-        db.transaction((tx) => this.recordFailedStart(tx, session, requestPayload, "before_start")),
-      );
-      throw error;
+    await this.insertSyncSession(tx, session);
+    await insertItemRows(tx, requestPayload.type, existingRows);
+    if (existingIds.length > 0) {
+      await tx
+        .update(syncSessionItem)
+        .set({ status: "imported", updatedAt: new Date() })
+        .where(
+          and(
+            eq(syncSessionItem.syncSessionId, session.id),
+            inArray(syncSessionItem.itemExternalId, [...existingIds]),
+          ),
+        );
     }
-    await publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id);
+    await tx
+      .update(syncSession)
+      .set({
+        requestPayload,
+        status: "processing",
+        revision: 1,
+        statusMessage: SYNC_STATUS_MESSAGES.queued,
+        successCount: existingIds.length,
+        ...(createsOrder && { orderId: requestPayload.order.details.id }),
+        updatedAt: new Date(),
+      })
+      .where(eq(syncSession.id, session.id));
+    afterCommit(() =>
+      publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id),
+    );
   }
 
-  private async recordFailedStart(
+  async recordFailedStart(
     tx: SyncTransaction,
     session: SyncSessionCreation,
     payload: JobData,
@@ -344,7 +333,7 @@ class SyncService {
       .where(eq(syncSession.id, session.id));
   }
 
-  async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
+  async getJobStatus(jobId: string, userId: string, db: ReadTx): Promise<SyncJobStatus> {
     const [row] = await db
       .select({
         id: syncSession.id,
@@ -416,18 +405,17 @@ class SyncService {
     };
   }
 
-  async createSyncSession(session: SyncSessionCreation): Promise<void> {
-    await db.transaction(async (tx) => {
-      await this.insertSyncSession(tx, session);
-    });
+  async createSyncSession(session: SyncSessionCreation, tx: Tx): Promise<void> {
+    await this.insertSyncSession(tx, session);
   }
 
   async getSyncSessions(
     userId: string,
     page: number,
     limit: number,
-    statusFilter?: readonly SyncSessionStatus[],
-    syncTypeFilter?: readonly SyncType[],
+    statusFilter: readonly SyncSessionStatus[] | undefined,
+    syncTypeFilter: readonly SyncType[] | undefined,
+    db: ReadTx,
   ): Promise<{ sessions: SyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
     const now = Date.now();
@@ -440,9 +428,11 @@ class SyncService {
       conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
 
-    const [sessionRecords, [totalRow]] = await Promise.all([
-      db
-        .select({
+    const pageResult = await paginateBy(
+      { tx: db },
+      { limit, offset },
+      {
+        select: {
           id: syncSession.id,
           userId: syncSession.userId,
           syncType: syncSession.syncType,
@@ -458,18 +448,16 @@ class SyncService {
           revision: syncSession.revision,
           completedAt: syncSession.completedAt,
           hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
-        })
-        .from(syncSession)
-        .where(whereClause)
-        .orderBy(
-          sql`CASE WHEN ${viewedStatus} IN ('pending', 'processing') THEN 0 ELSE 1 END`,
-          desc(syncSession.updatedAt),
-          desc(syncSession.id),
-        )
-        .limit(limit)
-        .offset(offset),
-      db.select({ total: count() }).from(syncSession).where(whereClause),
-    ]);
+        },
+        rows: (fields) => db.select(fields).from(syncSession).where(whereClause).$dynamic(),
+        orderBy: [
+          [sql`CASE WHEN ${viewedStatus} IN ('pending', 'processing') THEN 0 ELSE 1 END`, "asc"],
+          [syncSession.updatedAt, "desc"],
+          [syncSession.id, "desc"],
+        ],
+      },
+    );
+    const sessionRecords = pageResult.items;
 
     return {
       sessions: sessionRecords.map(({ hasRequestPayload, ...record }) => {
@@ -499,16 +487,17 @@ class SyncService {
             ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
         };
       }),
-      total: totalRow?.total ?? 0,
+      total: pageResult.totalCount,
     };
   }
 
   async getSyncSessionDetail(
     sessionId: string,
     userId: string,
-    page?: number,
-    limit?: number,
-    statusFilter?: readonly SyncSessionItemStatus[],
+    page: number | undefined,
+    limit: number | undefined,
+    statusFilter: readonly SyncSessionItemStatus[] | undefined,
+    db: ReadTx,
   ): Promise<{
     session: SyncSessionRow;
     items: DbEnrichedSyncSessionItemRow[];
@@ -559,37 +548,48 @@ class SyncService {
     }
     const itemsWhereClause = and(...itemConditions);
 
-    const baseQuery = db
-      .select({
-        id: syncSessionItem.id,
-        syncSessionId: syncSessionItem.syncSessionId,
-        itemExternalId: syncSessionItem.itemExternalId,
-        status: syncSessionItem.status,
-        errorReason: syncSessionItem.errorReason,
-        errorCode: syncSessionItem.errorCode,
-        createdAt: syncSessionItem.createdAt,
-        updatedAt: syncSessionItem.updatedAt,
-        itemId: itemTable.id,
-        itemTitle: itemTable.title,
-        itemImage: itemTable.image,
-      })
-      .from(syncSessionItem)
-      .leftJoin(
-        itemTable,
-        and(eq(itemTable.externalId, syncSessionItem.itemExternalId), eq(itemTable.source, "mfc")),
-      )
-      .where(itemsWhereClause)
-      .orderBy(syncSessionItem.createdAt, syncSessionItem.id);
-
-    const countQuery = db.select({ total: count() }).from(syncSessionItem).where(itemsWhereClause);
-
-    const usePagination = page !== undefined && limit !== undefined;
-    const offset = usePagination ? (page - 1) * limit : 0;
-
-    const [rows, [totalRow]] = await Promise.all([
-      usePagination ? baseQuery.limit(limit).offset(offset) : baseQuery,
-      countQuery,
-    ]);
+    const select = {
+      id: syncSessionItem.id,
+      syncSessionId: syncSessionItem.syncSessionId,
+      itemExternalId: syncSessionItem.itemExternalId,
+      status: syncSessionItem.status,
+      errorReason: syncSessionItem.errorReason,
+      errorCode: syncSessionItem.errorCode,
+      createdAt: syncSessionItem.createdAt,
+      updatedAt: syncSessionItem.updatedAt,
+      itemId: itemTable.id,
+      itemTitle: itemTable.title,
+      itemImage: itemTable.image,
+    };
+    const rowsOf = (fields: typeof select) =>
+      db
+        .select(fields)
+        .from(syncSessionItem)
+        .leftJoin(
+          itemTable,
+          and(
+            eq(itemTable.externalId, syncSessionItem.itemExternalId),
+            eq(itemTable.source, "mfc"),
+          ),
+        )
+        .where(itemsWhereClause)
+        .$dynamic();
+    const pageResult = await paginateBy(
+      { tx: db },
+      {
+        limit: page !== undefined && limit !== undefined ? limit : 2_147_483_647,
+        offset: page !== undefined && limit !== undefined ? (page - 1) * limit : 0,
+      },
+      {
+        select,
+        rows: rowsOf,
+        orderBy: [
+          [syncSessionItem.createdAt, "asc"],
+          [syncSessionItem.id, "asc"],
+        ],
+      },
+    );
+    const rows = pageResult.items;
 
     const items: DbEnrichedSyncSessionItemRow[] = rows.map((row) => ({
       ...row,
@@ -614,13 +614,14 @@ class SyncService {
           ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
       },
       items,
-      totalItems: totalRow?.total ?? 0,
+      totalItems: pageResult.totalCount,
     };
   }
 
   async updateSyncSession(
     sessionId: string,
     updates: Readonly<SyncSessionUpdatePayload>,
+    db: Tx,
   ): Promise<boolean> {
     const result = await db
       .update(syncSession)
@@ -634,7 +635,8 @@ class SyncService {
     syncSessionId: string,
     itemExternalId: number,
     itemStatus: SyncSessionItemStatus,
-    errorReason?: string,
+    errorReason: string | undefined,
+    db: Tx,
   ): Promise<void> {
     await db
       .update(syncSessionItem)

@@ -1095,7 +1095,7 @@ test("a cached partial status cannot hide a later successful completion", async 
   await complete(run, Y);
   redisValues.set(getJobStatusSnapshotKey(run.jobId), stale);
   const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
     terminalState: "success",
     progress: { succeeded: 2, failed: 0 },
   });
@@ -1243,7 +1243,7 @@ test("a cached partial snapshot cannot hide a newer partial revision", async () 
   await complete(run, Y);
   redisValues.set(getJobStatusSnapshotKey(run.jobId), stale);
   const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
     terminalState: "partial",
     progress: { succeeded: 2, failed: 1 },
   });
@@ -1332,14 +1332,14 @@ test("persistence failure survives cache expiry and a changed display message", 
     .set({ statusMessage: "Translated persistence failure" })
     .where(eq(syncSession.id, run.syncSessionId));
   const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
     error: { code: "persistence_failed" },
   });
   failS3 = false;
   const retried = await retry(run.syncSessionId);
   expect(await complete(retried, X)).toEqual(imported);
   redisValues.delete(getJobStatusSnapshotKey(retried.jobId));
-  expect(await service.getJobStatus(retried.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(retried.jobId, userId, db)).toMatchObject({
     terminalState: "success",
     error: null,
   });
@@ -1357,7 +1357,7 @@ test("display text alone cannot classify a persistence failure", async () => {
     .where(eq(syncSessionItem.syncSessionId, run.syncSessionId));
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
   const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
     terminalState: "error",
     error: { code: "fetch_failed", message: SYNC_STATUS_MESSAGES.failedFetch },
   });
@@ -1367,14 +1367,16 @@ test("a failed history fallback preserves the original persistence error", async
   const { default: service } = await import("./service");
   const originalStart = service.startSyncRun.bind(service);
   let caught: unknown;
-  const startRun = spyOn(service, "startSyncRun").mockImplementation(async (input) => {
-    try {
-      return await originalStart(input);
-    } catch (error) {
-      caught = error;
-      throw error;
-    }
-  });
+  const startRun = spyOn(service, "startSyncRun").mockImplementation(
+    async (input, tx, afterCommit) => {
+      try {
+        return await originalStart(input, tx, afterCommit);
+      } catch (error) {
+        caught = error;
+        throw error;
+      }
+    },
+  );
   await db.execute(`CREATE SEQUENCE session_attempts`);
   await db.execute(
     `CREATE FUNCTION reject_history() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF nextval('session_attempts') > 1 THEN RAISE EXCEPTION 'history unavailable'; END IF; RETURN NEW; END $$`,
@@ -1412,7 +1414,7 @@ test("a fetch failure cannot hide a recorded persistence failure", async () => {
   expect(snapshot(run.jobId)).toMatchObject({ error: { code: "persistence_failed" } });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
   const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
     error: { code: "persistence_failed" },
   });
 });
@@ -1526,7 +1528,7 @@ test("interruption keeps its error after an earlier persistence failure and cach
   });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
   const { default: service } = await import("./service");
-  const after = await service.getJobStatus(run.jobId, userId);
+  const after = await service.getJobStatus(run.jobId, userId, db);
   expect(after.error).toEqual(before.error);
 });
 
