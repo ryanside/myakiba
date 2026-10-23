@@ -5,11 +5,12 @@
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",
       "fixed": [
-        "normalizeMfcDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
-        "normalizeMfcDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
-        "normalizeMfcDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
-        "normalizeMfcDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
-      ]
+        "normalizeScrapedDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
+        "normalizeScrapedDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "dd30621e",
@@ -745,7 +746,8 @@
       "fix": "147ab018",
       "bug": "An older committed snapshot could replace and publish over a newer revision",
       "test": "apps/server/src/routers/sync/snapshot.test.ts",
-      "fixed": ["Redis atomically keeps and publishes only the latest committed revision"]
+      "fixed": ["Redis atomically keeps and publishes only the latest committed revision"],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "c2ff4dbb",
@@ -775,13 +777,16 @@
         "an S3 timeout records the item as a persistence failure",
         "a persistence failure after an imported item retains the partial-success message",
         "CSV completion imports an Owned row whose Order does not exist yet",
+        "worker-era controls leave a 180000ms-old session untouched",
+        "worker-era controls leave a 86401000ms-old session untouched",
         "failure reporting accepts the full hourly ingest budget",
         "polling keeps the last status through a Redis blip and retries",
         "persistence failure survives cache expiry and a changed display message",
         "a failed history fallback preserves the original persistence error",
         "a fetch failure cannot hide a recorded persistence failure",
         "extension CSV cannot reuse another user's Order"
-      ]
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "8c19d208",
@@ -790,7 +795,8 @@
       "fixed": [
         "an S3 preparation timeout records a retryable import item failure",
         "import polling keeps its last status through a database blip and retries"
-      ]
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "e8c106e9",
@@ -824,10 +830,12 @@
         "failedBeforeStart does not label item results as persistence failures",
         "in-request persistence failure keeps its original item reasons",
         "interruption keeps its error after an earlier persistence failure and cache expiry",
+        "worker persistence failure keeps its error without a snapshot",
         "display text alone cannot classify a persistence failure",
         "a 1000-item failure batch uses one transaction and rate-limit unit",
         "a mixed failure batch preserves imported Items and ignores a stale job"
-      ]
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "19a50bb7",
@@ -839,7 +847,8 @@
         "completion records persistence failure from collection RAISE EXCEPTION 'collection persistence unavailable';",
         "a 1000-item import failure batch uses one transaction and rate-limit unit",
         "a mixed import failure batch preserves imported Items and ignores a stale job"
-      ]
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "258770eb",
@@ -848,7 +857,8 @@
       "fixed": [
         "CSV and order-item completions import the same missing Item without deadlocking",
         "CSV retry locks Orders from in-request rows before its session"
-      ]
+      ],
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "1f796363",
