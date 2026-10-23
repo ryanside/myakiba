@@ -236,6 +236,8 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
   readonly invalidates: readonly [F, ...F[]];
   /** Narrows the refetch to these keys of the invalidated families. */
   readonly refetchKeys?: (input: Input) => readonly RefetchKey<F>[];
+  /** Keys to refetch when the write fails, such as a status that says why. */
+  readonly failureRefetchKeys?: (input: Input) => readonly RefetchKey<F>[];
   readonly persist: (input: Input) => Promise<Output>;
   /** Patches the cache before the write and returns what puts it back if the write fails. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
@@ -282,10 +284,12 @@ export function useResourceMutation<Input, Output>(
     queryClient.invalidateQueries({
       predicate: (query) => inFamilies(query.queryKey, spec.invalidates),
     });
+  const invalidateKeys = (keys: readonly RefetchKey<PersistedFamily>[]) =>
+    Promise.all(keys.map((filter) => queryClient.invalidateQueries(filter)));
   const refetch = async (input: Input) => {
     const keys = spec.refetchKeys?.(input);
     if (keys === undefined) await refetchFamilies();
-    else await Promise.all(keys.map((filter) => queryClient.invalidateQueries(filter)));
+    else await invalidateKeys(keys);
   };
   const mutation = useMutation<Output, Error, Input, Rollback | undefined>({
     mutationFn: spec.persist,
@@ -297,7 +301,7 @@ export function useResourceMutation<Input, Output>(
       await spec.saved?.(queryClient, input, output);
       if (!refetchAfterFailure && !refetchBy) await refetch(input);
     },
-    onError: (error, input, rollback) => {
+    onError: async (error, input, rollback) => {
       rollback?.();
       if (spec.failureTitle)
         toast.add({
@@ -305,6 +309,7 @@ export function useResourceMutation<Input, Output>(
           title: spec.failureTitle(input, error),
           ...(spec.failureDescription && { description: spec.failureDescription(input, error) }),
         });
+      await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
     },
     onSettled: refetchAfterFailure && ((_output, _error, input) => refetch(input)),
   });

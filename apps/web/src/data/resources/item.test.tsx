@@ -1,18 +1,17 @@
 import { afterEach, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 setDefaultTimeout(20_000);
 
+const COOLDOWN = { status: "cooldown", cooldownExpiresAt: "2026-10-25T00:00:00.000Z" } as const;
+const refreshed = async () => ({ ...COOLDOWN, saved: "refreshed" });
+let refresh = refreshed;
 const realRun = await import("@/data/extension-run");
 await mock.module("@/data/extension-run", () => ({
   ...realRun,
-  refreshItemWithExtension: async () => ({
-    status: "cooldown",
-    cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
-    saved: "refreshed",
-  }),
+  refreshItemWithExtension: () => refresh(),
 }));
 
 const { toast } = await import("@/components/ui/toast");
@@ -23,6 +22,7 @@ const itemResource = await import("./item");
 afterEach(() => {
   cleanup();
   toastAdd.mockClear();
+  refresh = refreshed;
 });
 
 function renderRefresh(queryClient: QueryClient) {
@@ -82,4 +82,28 @@ test("an Item Refresh refetches the dashboard, analytics, searches, Wishlist, li
   });
 
   expect(shown.filter((key) => !queryClient.getQueryState(key)?.isInvalidated)).toEqual([]);
+});
+
+test("a refresh refused during the item's cooldown shows the cooldown at once", async () => {
+  const queryClient = new QueryClient();
+  const idle = { status: "idle", cooldownExpiresAt: null } as const;
+  let resyncStatus: typeof idle | typeof COOLDOWN = idle;
+  const shown = new QueryObserver(queryClient, {
+    queryKey: itemResource.items.resyncStatus.key(98_777),
+    queryFn: async () => resyncStatus,
+  });
+  const stop = shown.subscribe(() => {});
+  await queryClient.refetchQueries({ queryKey: itemResource.items.resyncStatus.key(98_777) });
+  resyncStatus = COOLDOWN;
+  refresh = async () => {
+    throw new Error("Item details were recently refreshed");
+  };
+  const { result } = renderRefresh(queryClient);
+
+  await act(async () => {
+    await result.current.run(98_777);
+  });
+
+  expect(shown.getCurrentResult().data).toEqual(COOLDOWN);
+  stop();
 });

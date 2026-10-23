@@ -42,6 +42,9 @@ export const items = {
 
 export const refreshItemCommand = defineCommand({
   invalidates: syncResultFamilies,
+  failureRefetchKeys: (externalId: number) => [
+    { queryKey: items.resyncStatus.key(externalId), exact: true },
+  ],
   persist: refreshItemWithExtension,
   successTitle: (_externalId, refreshed) =>
     refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
