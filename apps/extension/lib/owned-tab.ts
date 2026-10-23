@@ -260,8 +260,6 @@ export function ownedTab(deps: {
       return own && inContext(own.tab, context) && onOrigin(own.tab.url, origin) ? own.tabId : null;
     },
 
-    closeUntilGone,
-
     /** The user focused the tab, or the extension showed it to them, so it is theirs from now on. */
     async claim(tabId: number): Promise<void> {
       focusedDuringCreate?.add(tabId);
