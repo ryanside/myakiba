@@ -23,7 +23,7 @@ import type {
   CurrentImportViewState,
 } from "./current-import-card";
 import { importDataTransferItems } from "@/data/extension-run";
-import { toastImportLimit } from "@/components/extension/import-limit-toast";
+import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
 import { SettingsGroup } from "../settings-group";
 import { SettingsRow } from "../settings-row";
 import { ImportSection } from "./import-section";
@@ -84,7 +84,7 @@ export function DataTransfer() {
   const startMutation = useMutation({
     mutationFn: startDataTransferImport,
     onSuccess: (startedImport) => {
-      void toastImportLimit(
+      toastRunOutcome(
         importDataTransferItems({
           importId: startedImport.id,
           mfcItemIds: startedImport.missingMfcItemIds,
@@ -100,7 +100,7 @@ export function DataTransfer() {
   const retryMutation = useMutation({
     mutationFn: retryCurrentDataTransferImport,
     onSuccess: (retriedImport) => {
-      void toastImportLimit(
+      toastRunOutcome(
         importDataTransferItems({
           importId: retriedImport.id,
           mfcItemIds: retriedImport.missingMfcItemIds,

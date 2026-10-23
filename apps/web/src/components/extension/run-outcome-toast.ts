@@ -1,8 +1,18 @@
 import { toast } from "@/components/ui/toast";
 import type { RunOutcome } from "@/data/extension-run";
 
-export async function toastImportLimit(running: Promise<RunOutcome>): Promise<void> {
-  const outcome = await running;
+async function toastIfStopped(running: Promise<RunOutcome>): Promise<void> {
+  let outcome: RunOutcome;
+  try {
+    outcome = await running;
+  } catch {
+    toast.add({
+      type: "error",
+      title: "The import stopped unexpectedly",
+      description: "Reload the page to see which items were imported.",
+    });
+    return;
+  }
   if (outcome.kind !== "busy") return;
   const { notImported, retryAfterMs } = outcome;
   const minutes = retryAfterMs === null ? null : Math.max(1, Math.ceil(retryAfterMs / 60_000));
@@ -13,4 +23,8 @@ export async function toastImportLimit(running: Promise<RunOutcome>): Promise<vo
       minutes === null ? "Try again later." : `Try again in ${minutes} min.`
     }`,
   });
+}
+
+export function toastRunOutcome(running: Promise<RunOutcome>): void {
+  void toastIfStopped(running);
 }

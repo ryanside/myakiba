@@ -76,6 +76,14 @@ const sleep = (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+const brokenOff = () =>
+  new Response(
+    new ReadableStream({
+      start: (controller) => controller.error(new TypeError("network error")),
+    }),
+    { headers: { "content-type": "application/json" } },
+  );
+const imported = () => Response.json({ outcome: "imported", reason: null });
 const SESSION = "/api/sync/sessions/ss-1";
 const CURRENT = "/api/data-transfer/imports/current";
 
@@ -577,6 +585,59 @@ test("an Import/Export run reports to the import's endpoints", async () => {
   expect(posted(`${CURRENT}/items/failure`).map((request) => request.fields)).toEqual([
     { jobId: "imp-1", failures: [{ mfcItemId: 2, error: "hidden_or_missing" }] },
   ]);
+});
+
+describe("an answer that breaks off after its headers", () => {
+  test("counts its upload as failed and frees the upload slot for later runs", async () => {
+    fakeFetch();
+    let breakOff = true;
+    answer = (request) => (request.path.endsWith("/items") && breakOff ? brokenOff() : imported());
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds) fetch.item(id);
+      fetch.done("complete");
+    });
+    const { run } = runner();
+
+    const outcome = await run(sync(1, 2));
+    breakOff = false;
+    await run(importRun({ importId: "imp-1", mfcItemIds: [3] }));
+
+    expect(outcome).toEqual({ kind: "ended" });
+    expect(posted(`${SESSION}/interrupt`)).toMatchObject([{ keepalive: false }]);
+    expect(posted(`${CURRENT}/items`).map((request) => request.fields.mfcItemId)).toEqual([3]);
+  });
+
+  test("counts a failure report as failed and still ends the run with an interrupt", async () => {
+    fakeFetch();
+    answer = (request) => (request.path.endsWith("/failures") ? brokenOff() : imported());
+    loadExtension((fetch) => {
+      fetch.fail(1, "mfc_signed_out");
+      fetch.done("complete");
+    });
+
+    const outcome = await runner().run(sync(1));
+
+    expect(outcome).toEqual({ kind: "ended" });
+    expect(posted(`${SESSION}/interrupt`)).toMatchObject([{ keepalive: false }]);
+  });
+
+  test("keeps the run going on a heartbeat", async () => {
+    fakeFetch();
+    answer = (request) => (request.path.endsWith("/heartbeat") ? brokenOff() : imported());
+    loadExtension((fetch) => {
+      fetch.item(1);
+      setTimeout(() => {
+        fetch.item(2);
+        fetch.done("complete");
+      }, 120);
+    });
+
+    const outcome = await runner({ heartbeatMs: 20 }).run(sync(1, 2));
+
+    expect(posted(`${SESSION}/heartbeat`).length).toBeGreaterThan(0);
+    expect(posted(`${SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([1, 2]);
+    expect(outcome).toEqual({ kind: "ended" });
+  });
 });
 
 describe("refreshing an item", () => {

@@ -20,18 +20,22 @@ await mock.module("@/lib/extension-bridge", () => ({
 
 const realRun = await import("@/data/extension-run");
 const ENDED: RunOutcome = { kind: "ended" };
-let outcome: RunOutcome = ENDED;
+let outcome: RunOutcome | Error = ENDED;
+const settle = async () => {
+  if (outcome instanceof Error) throw outcome;
+  return outcome;
+};
 const syncRuns: Parameters<typeof realRun.importSyncItems>[0][] = [];
 const importRuns: Parameters<typeof realRun.importDataTransferItems>[0][] = [];
 await mock.module("@/data/extension-run", () => ({
   ...realRun,
   importSyncItems: async (run: (typeof syncRuns)[number]) => {
     syncRuns.push(run);
-    return outcome;
+    return settle();
   },
   importDataTransferItems: async (run: (typeof importRuns)[number]) => {
     importRuns.push(run);
-    return outcome;
+    return settle();
   },
 }));
 
@@ -212,12 +216,14 @@ test("an Import/Export retry fetches the items it is missing", async () => {
   await waitFor(() => expect(importRuns).toEqual([{ importId: "imp-1", mfcItemIds: [31] }]));
 });
 
-test.each([
+const FLOWS = [
   ["a sync form", () => submitForm("item", "Add")],
   ["a session retry", retrySession],
   ["an Import/Export import", startImport],
   ["an Import/Export retry", retryImport],
-] as const)("%s says the hourly import limit stopped its run", async (_flow, start) => {
+] as const;
+
+test.each(FLOWS)("%s says the hourly import limit stopped its run", async (_flow, start) => {
   outcome = { kind: "busy", notImported: 2, retryAfterMs: 120_000 };
 
   await start();
@@ -228,6 +234,21 @@ test.each([
     ).toContainEqual({
       title: "You've reached the hourly import limit",
       description: "2 items were not imported. Try again in 2 min.",
+    }),
+  );
+});
+
+test.each(FLOWS)("%s says its run stopped when the run breaks off", async (_flow, start) => {
+  outcome = new TypeError("network error");
+
+  await start();
+
+  await waitFor(() =>
+    expect(
+      toastAdd.mock.calls.map(([{ title, description }]) => ({ title, description })),
+    ).toContainEqual({
+      title: "The import stopped unexpectedly",
+      description: "Reload the page to see which items were imported.",
     }),
   );
 });

@@ -32,31 +32,38 @@ const ITEM_ERROR_MESSAGE = {
 } as const satisfies Record<FetchError, string>;
 
 type Busy = { readonly kind: "busy"; readonly retryAfterMs: number | null };
+type Over = { readonly kind: "over" };
 
-type ServerAnswer = { readonly kind: "ok" } | Busy | { readonly kind: "failed" };
+type ServerAnswer = { readonly kind: "ok" } | { readonly kind: "failed" } | Busy | Over;
 
-type EdenAnswer = {
-  readonly error: { readonly status: unknown } | null;
-  readonly response?: Response | undefined;
-};
+type EdenAnswer<Data> =
+  | { readonly data: Data; readonly error: null; readonly response?: Response }
+  | {
+      readonly data: null;
+      readonly error: { readonly status: unknown };
+      readonly response?: Response;
+    };
 
 const OK: ServerAnswer = { kind: "ok" };
 const FAILED: ServerAnswer = { kind: "failed" };
+const OVER: Over = { kind: "over" };
 
-function answerOf({ error, response }: EdenAnswer): ServerAnswer {
-  if (error === null) return OK;
-  if (error.status !== 429) return FAILED;
-  const seconds = Number(response?.headers.get("retry-after") ?? Number.NaN);
+async function answerOf<Data>(
+  sending: Promise<EdenAnswer<Data>>,
+  read: (data: Data) => ServerAnswer = () => OK,
+): Promise<ServerAnswer> {
+  let answer: EdenAnswer<Data>;
+  try {
+    answer = await sending;
+  } catch {
+    // Eden rejects when the connection drops after the headers, a request that failed like any other.
+    return FAILED;
+  }
+  if (answer.error === null) return read(answer.data);
+  const { status } = answer.error;
+  if (status !== 429) return FAILED;
+  const seconds = Number(answer.response?.headers.get("retry-after") ?? Number.NaN);
   return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
-}
-
-type Lease = "held" | "lost";
-
-function leaseOf<Data>(
-  { data }: { readonly data: Data | null },
-  held: (data: Data) => boolean,
-): Lease {
-  return data === null || held(data) ? "held" : "lost";
 }
 
 type ItemPage = { readonly mfcItemId: MfcItemId; readonly page: File; readonly picture?: File };
@@ -79,7 +86,7 @@ type ExtensionRun = {
   readonly mfcItemIds: readonly number[];
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
   readonly report: (failures: readonly ItemFailure[]) => Promise<ServerAnswer>;
-  readonly heartbeat: () => Promise<Lease>;
+  readonly heartbeat: () => Promise<ServerAnswer>;
   readonly interrupt: (options: { readonly keepalive: boolean }) => Promise<ServerAnswer>;
 };
 
@@ -94,15 +101,15 @@ export function syncRun(run: {
     runId: jobId,
     sessionId,
     mfcItemIds: run.mfcItemIds,
-    complete: async (item) => {
-      const answer = await session.items.post({ jobId, ...item });
-      return answer.data?.outcome === "failed" ? FAILED : answerOf(answer);
-    },
-    report: async (failures) =>
-      answerOf(await session.failures.post({ jobId, failures: [...failures] })),
-    heartbeat: async () => leaseOf(await session.heartbeat.post({ jobId }), (data) => data.active),
-    interrupt: async ({ keepalive }) =>
-      answerOf(await session.interrupt.post({ jobId }, { fetch: { keepalive } })),
+    complete: (item) =>
+      answerOf(session.items.post({ jobId, ...item }), (data) =>
+        data.outcome === "failed" ? FAILED : OK,
+      ),
+    report: (failures) => answerOf(session.failures.post({ jobId, failures: [...failures] })),
+    heartbeat: () =>
+      answerOf(session.heartbeat.post({ jobId }), (data) => (data.active ? OK : OVER)),
+    interrupt: ({ keepalive }) =>
+      answerOf(session.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
 }
 
@@ -116,12 +123,12 @@ export function importRun(run: {
     runId: jobId,
     sessionId: null,
     mfcItemIds: run.mfcItemIds,
-    complete: async (item) => answerOf(await current.items.post({ jobId, ...item })),
-    report: async (failures) =>
-      answerOf(await current.items.failure.post({ jobId, failures: [...failures] })),
-    heartbeat: async () => leaseOf(await current.heartbeat.post({ jobId }), (data) => data.running),
-    interrupt: async ({ keepalive }) =>
-      answerOf(await current.interrupt.post({ jobId }, { fetch: { keepalive } })),
+    complete: (item) => answerOf(current.items.post({ jobId, ...item })),
+    report: (failures) => answerOf(current.items.failure.post({ jobId, failures: [...failures] })),
+    heartbeat: () =>
+      answerOf(current.heartbeat.post({ jobId }), (data) => (data.running ? OK : OVER)),
+    interrupt: ({ keepalive }) =>
+      answerOf(current.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
 }
 
@@ -220,7 +227,7 @@ export type RunOutcome =
 
 const ENDED: RunOutcome = { kind: "ended" };
 
-type Stop = Busy | { readonly kind: "over" } | { readonly kind: "left" };
+type Stop = Busy | Over | { readonly kind: "left" };
 
 const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
 
@@ -255,7 +262,8 @@ export function createExtensionRunner(deps: RunnerDeps) {
       if (answer.kind === "busy") halt(answer);
     };
     const renew = async () => {
-      if ((await run.heartbeat()) === "lost") halt({ kind: "over" });
+      const answer = await run.heartbeat();
+      if (answer.kind === "over") halt(answer);
     };
     const heartbeat = setInterval(() => {
       void renew();
@@ -296,10 +304,13 @@ export function createExtensionRunner(deps: RunnerDeps) {
       return false;
     };
     const upload = async (item: ItemPage) => {
-      const answer = await completeOnce(run, item);
-      if (answer.kind === "ok") tally.imported += 1;
-      else refused(answer, 1);
-      slots.give();
+      try {
+        const answer = await completeOnce(run, item);
+        if (answer.kind === "ok") tally.imported += 1;
+        else refused(answer, 1);
+      } finally {
+        slots.give();
+      }
     };
 
     try {
