@@ -74,7 +74,7 @@ const orderCollectionWishlistTests = ["orders", "collection", "wishlist"].flatMa
 // The react-query hook ban skips these web files. S7's lock still covers them through the overrides above.
 const webOutsideHookBan = [
   "apps/web/src/data/**",
-  // Scraper flow, replaced by the browser extension.
+  // Sync and import screens the extension port kept from before apps/web/src/data.
   "apps/web/src/components/orders/order-item-sync-sheet.tsx",
   "apps/web/src/components/settings/data-transfer/**",
   "apps/web/src/components/sync/**",
@@ -93,12 +93,12 @@ const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/s
 const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
 const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
-// scraper code, replaced by the browser extension
+// The scraper, kept in the worker for a future background role, and the sync and
+// data-transfer routers the extension port kept from before the kernel.
 const scraperCode = [
   "apps/worker/**",
   "apps/server/src/routers/sync/**",
   "apps/server/src/routers/data-transfer/**",
-  "apps/server/src/routers/item/resync-service.ts",
 ];
 
 const otherTypeAwareRules = [
