@@ -92,14 +92,8 @@ function fakePage() {
 
 function runner(options: { readonly heartbeatMs?: number } = {}) {
   const page = fakePage();
-  const busy: { notImported: number; retryAfterMs: number | null }[] = [];
-  const run = createExtensionRunner({
-    bridge,
-    page,
-    heartbeatMs: options.heartbeatMs ?? 60_000,
-    onBusy: (notImported, retryAfterMs) => busy.push({ notImported, retryAfterMs }),
-  });
-  return { run, page, busy };
+  const run = createExtensionRunner({ bridge, page, heartbeatMs: options.heartbeatMs ?? 60_000 });
+  return { run, page };
 }
 
 const sync = (...mfcItemIds: number[]) =>
@@ -235,13 +229,13 @@ describe("a sync run", () => {
       fetch.item(1);
       fetch.done("complete");
     });
-    const { run, busy } = runner();
+    const { run } = runner();
 
-    await run(sync(1));
+    const outcome = await run(sync(1));
 
     expect(posted(`${SESSION}/items`)).toHaveLength(2);
     expect(posted(`${SESSION}/interrupt`)).toEqual([]);
-    expect(busy).toEqual([]);
+    expect(outcome).toEqual({ kind: "ended" });
   });
 
   test("a long Retry-After stops the run and reports the rest as not imported", async () => {
@@ -256,14 +250,14 @@ describe("a sync run", () => {
     loadExtension((fetch) => {
       fetch.item(1);
     });
-    const { run, busy } = runner();
+    const { run } = runner();
 
-    await run(sync(1, 2, 3));
+    const outcome = await run(sync(1, 2, 3));
 
     expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
     expect(posted(`${SESSION}/items`)).toHaveLength(1);
     expect(posted(`${SESSION}/interrupt`)).toHaveLength(1);
-    expect(busy).toEqual([{ notImported: 3, retryAfterMs: 3_600_000 }]);
+    expect(outcome).toEqual({ kind: "busy", notImported: 3, retryAfterMs: 3_600_000 });
   });
 
   test("shows the extension's prompts for the run and clears them as it goes", async () => {
@@ -273,7 +267,7 @@ describe("a sync run", () => {
     });
     render(<ExtensionPromptNotice sessionId="ss-1" />);
 
-    let running: Promise<void> = Promise.resolve();
+    let running: Promise<unknown> = Promise.resolve();
     await act(async () => {
       running = runner().run(sync(1));
       await waitFor(() => expect(extension.runs).toHaveLength(1));
@@ -326,9 +320,13 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    const refresh = await refreshItemWithExtension(98_777);
+    const refreshed = await refreshItemWithExtension(98_777);
 
-    expect(refresh).toEqual({ kind: "refreshed", cooldownExpiresAt: "2026-10-25T00:00:00.000Z" });
+    expect(refreshed).toEqual({
+      status: "cooldown",
+      cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
+      saved: "refreshed",
+    });
     const [resync] = posted("/api/item/98777/resync");
     expect(resync?.formKeys).toEqual(["page"]);
     expect(await resync?.page?.text()).toBe("<html>fresh</html>");
@@ -346,10 +344,9 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    expect(await refreshItemWithExtension(98_777)).toEqual({
-      kind: "failed",
-      message: "Item details were recently refreshed",
-    });
+    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
+      "Item details were recently refreshed",
+    );
   });
 
   test("sends nothing when the extension cannot fetch the page", async () => {
@@ -359,10 +356,9 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    expect(await refreshItemWithExtension(98_777)).toEqual({
-      kind: "failed",
-      message: "Sign in to MyFigureCollection to import this item",
-    });
+    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
+      "Sign in to MyFigureCollection to import this item",
+    );
     expect(sent).toEqual([]);
   });
 });

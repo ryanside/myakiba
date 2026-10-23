@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { useExtensionGate } from "@/lib/extension-gate";
 import { retrySyncSession } from "@/queries/sync";
 import { importSyncItems } from "@/data/extension-run";
+import { toastImportLimit } from "@/components/extension/import-limit-toast";
 
 export function RetrySyncSessionButton({
   sessionId,
@@ -26,7 +27,7 @@ export function RetrySyncSessionButton({
   const mutation = useMutation({
     mutationFn: () => retrySyncSession(sessionId),
     onSuccess: async ({ jobId, missingMfcItemIds }) => {
-      importSyncItems({ sessionId, jobId, mfcItemIds: missingMfcItemIds });
+      void toastImportLimit(importSyncItems({ sessionId, jobId, mfcItemIds: missingMfcItemIds }));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["syncSessionDetail", sessionId] }),
         queryClient.invalidateQueries({ queryKey: ["syncSessions"] }),

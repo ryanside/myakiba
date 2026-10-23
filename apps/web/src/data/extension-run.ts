@@ -1,6 +1,5 @@
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { toast } from "@/components/ui/toast";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionBridge, ExtensionFetchEvent } from "@/lib/extension-bridge";
 import { setExtensionPrompt } from "@/lib/extension-prompt";
@@ -134,6 +133,41 @@ function promptFor(event: StatusEvent): ExtensionPrompt | null {
   }
 }
 
+type FetchedPage =
+  | { readonly mfcItemId: MfcItemId; readonly ok: true; readonly page: ItemPage }
+  | { readonly mfcItemId: MfcItemId; readonly ok: false; readonly error: FetchError };
+
+type PromptTarget = { readonly runId: string; readonly sessionId: string | null };
+
+/**
+ * Fetches the ids through the extension, and keeps the extension's prompt in the store until it ends.
+ * @yields {FetchedPage} each item's page, or why the extension could not fetch it
+ */
+async function* fetchPages(
+  bridge: ExtensionBridge,
+  { runId, sessionId }: PromptTarget,
+  ids: readonly MfcItemId[],
+  signal: AbortSignal,
+): AsyncGenerator<FetchedPage> {
+  const show = (prompt: ExtensionPrompt | null) =>
+    setExtensionPrompt(runId, prompt && { sessionId, prompt });
+  try {
+    for await (const event of bridge.fetchItems(ids, { signal })) {
+      if (event.type === "status") {
+        show(promptFor(event));
+        continue;
+      }
+      show(null);
+      const { mfcItemId: id, result } = event;
+      yield result.ok
+        ? { mfcItemId: id, ok: true, page: itemPage(id, result.html, result.picture) }
+        : { mfcItemId: id, ok: false, error: result.error };
+    }
+  } finally {
+    show(null);
+  }
+}
+
 async function completeOnce(run: ExtensionRun, item: ItemPage): Promise<ServerAnswer> {
   const answer = await run.complete(item);
   if (answer.kind !== "busy" || answer.retryAfterMs === null) return answer;
@@ -145,6 +179,13 @@ async function completeOnce(run: ExtensionRun, item: ItemPage): Promise<ServerAn
   return run.complete(item);
 }
 
+/** How a run ended. `busy` means the server refused it for now, so some items were not imported. */
+export type RunOutcome =
+  | { readonly kind: "ended" }
+  | { readonly kind: "busy"; readonly notImported: number; readonly retryAfterMs: number | null };
+
+const ENDED: RunOutcome = { kind: "ended" };
+
 type PageEvents = {
   readonly addEventListener: (type: "pagehide", listener: () => void) => void;
   readonly removeEventListener: (type: "pagehide", listener: () => void) => void;
@@ -154,16 +195,14 @@ type RunnerDeps = {
   readonly bridge: ExtensionBridge;
   readonly page: PageEvents;
   readonly heartbeatMs: number;
-  readonly onBusy: (notImported: number, retryAfterMs: number | null) => void;
 };
 
-export function createExtensionRunner({ bridge, page, heartbeatMs, onBusy }: RunnerDeps) {
-  return async function runWithExtension(run: ExtensionRun): Promise<void> {
+/** The returned function never rejects. */
+export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps) {
+  return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
-    if (ids.length === 0) return;
+    if (ids.length === 0) return ENDED;
     const controller = new AbortController();
-    const prompt = (next: ExtensionPrompt | null) =>
-      setExtensionPrompt(run.runId, next && { sessionId: run.sessionId, prompt: next });
     const heartbeat = setInterval(() => {
       void run.heartbeat();
     }, heartbeatMs);
@@ -189,104 +228,62 @@ export function createExtensionRunner({ bridge, page, heartbeatMs, onBusy }: Run
     };
 
     try {
-      for await (const event of bridge.fetchItems(ids, { signal: controller.signal })) {
-        if (event.type === "status") {
-          prompt(promptFor(event));
-          continue;
-        }
-        prompt(null);
-        const { result } = event;
-        if (!result.ok) {
+      for await (const fetched of fetchPages(bridge, run, ids, controller.signal)) {
+        if (!fetched.ok) {
           const answer =
-            result.error === "extension_stopped"
+            fetched.error === "extension_stopped"
               ? FAILED
-              : await run.fail(event.mfcItemId, result.error);
+              : await run.fail(fetched.mfcItemId, fetched.error);
           if (answer.kind !== "ok") tally.unanswered += 1;
         } else if (tally.busy === null) {
           while (uploads.size >= MAX_UPLOADS_IN_FLIGHT) await Promise.race(uploads.values());
-          send(itemPage(event.mfcItemId, result.html, result.picture));
+          send(fetched.page);
         } else {
           tally.unanswered += 1;
         }
       }
       await Promise.all(uploads.values());
       if (tally.unanswered > 0) await run.interrupt({ keepalive: false });
-      if (tally.busy !== null) onBusy(tally.unanswered, tally.busy.retryAfterMs);
-    } catch {
-      await run.interrupt({ keepalive: false });
     } finally {
       clearInterval(heartbeat);
       page.removeEventListener("pagehide", leave);
-      prompt(null);
     }
+    return tally.busy === null
+      ? ENDED
+      : { kind: "busy", notImported: tally.unanswered, retryAfterMs: tally.busy.retryAfterMs };
   };
-}
-
-function showBusy(notImported: number, retryAfterMs: number | null): void {
-  const minutes = retryAfterMs === null ? null : Math.max(1, Math.ceil(retryAfterMs / 60_000));
-  toast.add({
-    type: "error",
-    title: "myakiba is busy",
-    description: `${notImported} item${notImported === 1 ? " was" : "s were"} not imported. ${
-      minutes === null ? "Retry them later." : `Retry them in about ${minutes} min.`
-    }`,
-  });
 }
 
 const runWithExtension = createExtensionRunner({
   bridge: extensionBridge,
   page: window,
   heartbeatMs: HEARTBEAT_MS,
-  onBusy: showBusy,
 });
 
-async function startRun(run: ExtensionRun): Promise<void> {
-  try {
-    await runWithExtension(run);
-  } catch (error) {
-    reportError(error);
-  }
+export function importSyncItems(run: Parameters<typeof syncRun>[0]): Promise<RunOutcome> {
+  return runWithExtension(syncRun(run));
 }
 
-export function importSyncItems(run: Parameters<typeof syncRun>[0]): void {
-  void startRun(syncRun(run));
+export function importDataTransferItems(run: Parameters<typeof importRun>[0]): Promise<RunOutcome> {
+  return runWithExtension(importRun(run));
 }
 
-export function importDataTransferItems(run: Parameters<typeof importRun>[0]): void {
-  void startRun(importRun(run));
-}
-
-export type ItemRefresh =
-  | { readonly kind: "refreshed" | "unchanged"; readonly cooldownExpiresAt: string | null }
-  | { readonly kind: "failed"; readonly message: string };
-
-export async function refreshItemWithExtension(externalId: number): Promise<ItemRefresh> {
+/** Fetches the item's page through the extension and posts it as its Item Refresh. Rejects with why it could not. */
+export async function refreshItemWithExtension(externalId: number) {
   const id = mfcItemId(externalId);
-  if (id === null) return { kind: "failed", message: "Item not found" };
-  const runId = `resync:${id}`;
-  let fetched: ItemPage | null = null;
-  let fetchError: FetchError = "extension_stopped";
-  for await (const event of extensionBridge.fetchItems([id], {
-    signal: new AbortController().signal,
-  })) {
-    if (event.type === "status") {
-      const next = promptFor(event);
-      setExtensionPrompt(runId, next && { sessionId: null, prompt: next });
-    } else if (event.result.ok) {
-      fetched = itemPage(id, event.result.html, event.result.picture);
-    } else {
-      fetchError = event.result.error;
-    }
+  if (id === null) throw new Error("Item not found");
+  let fetched: FetchedPage | undefined;
+  const target = { runId: `resync:${id}`, sessionId: null };
+  for await (const page of fetchPages(
+    extensionBridge,
+    target,
+    [id],
+    new AbortController().signal,
+  )) {
+    fetched = page;
   }
-  setExtensionPrompt(runId, null);
-  if (fetched === null) return { kind: "failed", message: ITEM_ERROR_MESSAGE[fetchError] };
-
-  const { page, picture } = fetched;
-  try {
-    const refreshed = await requestResync(externalId, picture ? { page, picture } : { page });
-    return { kind: refreshed.saved, cooldownExpiresAt: refreshed.cooldownExpiresAt };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to request item refresh";
-    return { kind: "failed", message };
-  }
+  if (fetched === undefined) throw new Error(ITEM_ERROR_MESSAGE.extension_stopped);
+  if (!fetched.ok) throw new Error(ITEM_ERROR_MESSAGE[fetched.error]);
+  const { page, picture } = fetched.page;
+  return requestResync(externalId, picture ? { page, picture } : { page });
 }

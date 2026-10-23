@@ -57,21 +57,19 @@ function RouteComponent(): ReactNode {
   });
 
   const requestResyncMutation = useMutation({
-    mutationFn: async () => {
-      const refresh = await refreshItemWithExtension(externalId);
-      if (refresh.kind === "failed") throw new Error(refresh.message);
-      return refresh;
-    },
-    onSuccess: (refresh) => {
+    mutationFn: () => refreshItemWithExtension(externalId),
+    onSuccess: (refreshed) => {
       queryClient.setQueryData(["item", externalId, "resyncStatus"], {
         status: "cooldown",
-        cooldownExpiresAt: refresh.cooldownExpiresAt,
+        cooldownExpiresAt: refreshed.cooldownExpiresAt,
       });
       void queryClient.invalidateQueries({ queryKey: ["item", externalId] });
       toast.add({
         type: "success",
         title:
-          refresh.kind === "refreshed" ? "Item details refreshed" : "Item details are up to date",
+          refreshed.saved === "refreshed"
+            ? "Item details refreshed"
+            : "Item details are up to date",
       });
     },
     onError: (mutationError) => {

@@ -1,9 +1,10 @@
-import { afterEach, expect, mock, setDefaultTimeout, test } from "bun:test";
+import { afterEach, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
 import { cleanup, configure, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
+import type { RunOutcome } from "@/data/extension-run";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -18,12 +19,20 @@ await mock.module("@/lib/extension-bridge", () => ({
 }));
 
 const realRun = await import("@/data/extension-run");
+const ENDED: RunOutcome = { kind: "ended" };
+let outcome: RunOutcome = ENDED;
 const syncRuns: Parameters<typeof realRun.importSyncItems>[0][] = [];
 const importRuns: Parameters<typeof realRun.importDataTransferItems>[0][] = [];
 await mock.module("@/data/extension-run", () => ({
   ...realRun,
-  importSyncItems: (run: (typeof syncRuns)[number]) => syncRuns.push(run),
-  importDataTransferItems: (run: (typeof importRuns)[number]) => importRuns.push(run),
+  importSyncItems: async (run: (typeof syncRuns)[number]) => {
+    syncRuns.push(run);
+    return outcome;
+  },
+  importDataTransferItems: async (run: (typeof importRuns)[number]) => {
+    importRuns.push(run);
+    return outcome;
+  },
 }));
 
 const accepted = (newItems: number, missingMfcItemIds: number[]) => ({
@@ -93,6 +102,8 @@ await mock.module("@/lib/data-transfer", () => ({
   readDataTransferFile: async () => ({ orders: [{}], collectionItems: [{}, {}] }),
 }));
 
+const { toast } = await import("@/components/ui/toast");
+const toastAdd = spyOn(toast, "add");
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
 const { SyncActionSheet } = await import("@/components/sync/sync-launcher");
 const { DataTransfer } = await import("@/components/settings/data-transfer");
@@ -108,6 +119,8 @@ afterEach(() => {
   currentImport = null;
   syncAnswer = accepted(1, [98_777]);
   syncsSent = 0;
+  outcome = ENDED;
+  toastAdd.mockClear();
 });
 
 async function submitForm(syncType: "item" | "order", submit: string) {
@@ -144,7 +157,7 @@ test("a sync with nothing missing starts no fetch", async () => {
   expect(syncRuns).toEqual([]);
 });
 
-test("a session retry fetches the items it returned under the retry's job", async () => {
+async function retrySession() {
   const user = userEvent.setup();
   renderWithQueries(
     <RetrySyncSessionButton
@@ -155,15 +168,10 @@ test("a session retry fetches the items it returned under the retry's job", asyn
       failCount={2}
     />,
   );
-
   await user.click(screen.getByRole("button", { name: "Retry failed item results" }));
+}
 
-  await waitFor(() =>
-    expect(syncRuns).toEqual([{ sessionId: "ss-1", jobId: "job-2", mfcItemIds: [11, 12] }]),
-  );
-});
-
-test("an Import/Export import fetches the items it is missing", async () => {
+async function startImport() {
   const user = userEvent.setup();
   renderWithQueries(<DataTransfer />);
   const input = await waitFor(() => {
@@ -171,21 +179,52 @@ test("an Import/Export import fetches the items it is missing", async () => {
     if (found === null) throw new Error("no file input yet");
     return found;
   });
-
   await user.upload(input, new File(["{}"], "myakiba-export.json", { type: "application/json" }));
   await user.click(await screen.findByRole("button", { name: "Import data" }));
   const confirmation = await screen.findByRole("dialog", { name: "Import this export?" });
   await user.click(within(confirmation).getByRole("button", { name: "Import data" }));
+}
+
+async function retryImport() {
+  currentImport = partialImport;
+  const user = userEvent.setup();
+  renderWithQueries(<DataTransfer />);
+  await user.click(await screen.findByRole("button", { name: "Retry failed items" }));
+}
+
+test("a session retry fetches the items it returned under the retry's job", async () => {
+  await retrySession();
+
+  await waitFor(() =>
+    expect(syncRuns).toEqual([{ sessionId: "ss-1", jobId: "job-2", mfcItemIds: [11, 12] }]),
+  );
+});
+
+test("an Import/Export import fetches the items it is missing", async () => {
+  await startImport();
 
   await waitFor(() => expect(importRuns).toEqual([{ importId: "imp-2", mfcItemIds: [21, 22] }]));
 });
 
 test("an Import/Export retry fetches the items it is missing", async () => {
-  currentImport = partialImport;
-  const user = userEvent.setup();
-  renderWithQueries(<DataTransfer />);
-
-  await user.click(await screen.findByRole("button", { name: "Retry failed items" }));
+  await retryImport();
 
   await waitFor(() => expect(importRuns).toEqual([{ importId: "imp-1", mfcItemIds: [31] }]));
+});
+
+test.each([
+  ["a sync form", () => submitForm("item", "Add")],
+  ["a session retry", retrySession],
+  ["an Import/Export import", startImport],
+  ["an Import/Export retry", retryImport],
+] as const)("%s says so when the server stops its run for now", async (_flow, start) => {
+  outcome = { kind: "busy", notImported: 2, retryAfterMs: 120_000 };
+
+  await start();
+
+  await waitFor(() =>
+    expect(toastAdd.mock.calls.map(([options]) => options.description)).toContain(
+      "2 items were not imported. Retry them in about 2 min.",
+    ),
+  );
 });

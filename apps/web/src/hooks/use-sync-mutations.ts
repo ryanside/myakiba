@@ -18,6 +18,7 @@ import { toast } from "@/components/ui/toast";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import { requireExtension } from "@/lib/extension-gate";
 import { importSyncItems } from "@/data/extension-run";
+import { toastImportLimit } from "@/components/extension/import-limit-toast";
 
 export type SyncSubmit = "sent" | "not_sent";
 
@@ -49,11 +50,13 @@ export function useSyncMutations(
     (data: SyncResponse, syncType: SyncType): void => {
       onComplete?.();
       if (data.jobId !== null && data.missingMfcItemIds.length > 0) {
-        importSyncItems({
-          sessionId: data.syncSessionId,
-          jobId: data.jobId,
-          mfcItemIds: data.missingMfcItemIds,
-        });
+        void toastImportLimit(
+          importSyncItems({
+            sessionId: data.syncSessionId,
+            jobId: data.jobId,
+            mfcItemIds: data.missingMfcItemIds,
+          }),
+        );
       }
 
       const itemCount = data.existingItemsToInsert + data.newItems;
