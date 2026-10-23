@@ -81,7 +81,6 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
           TEST_REDIS_URL: redis://localhost:6379
-          TURBO_ENV_MODE: loose
 
   build-images:
     name: Build ${{ matrix.image }} image

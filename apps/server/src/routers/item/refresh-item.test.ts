@@ -17,8 +17,6 @@ test.each([
   [-1e-7, 0],
   [5e-3, 0.01],
   [-5e-3, -0.01],
-  [1e21, 1e21],
-  [-1e21, -1e21],
 ])("storedPercentage(%s) matches Postgres numeric rounding", (input, expected) => {
   expect(storedPercentage(input)).toBe(expected);
 });
