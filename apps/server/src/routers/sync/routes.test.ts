@@ -1389,11 +1389,29 @@ test("CSV request retains the original empty-title fallback", async () => {
   expect(saved?.title).toBe(`Order ${saved?.id}`);
 });
 
+async function setCsvOrder(run: Run, orderId: string) {
+  const [stored] = await db
+    .select({ payload: syncSession.requestPayload })
+    .from(syncSession)
+    .where(eq(syncSession.id, run.syncSessionId));
+  if (stored?.payload?.type !== "csv") throw new Error("CSV payload missing");
+  await db
+    .update(syncSession)
+    .set({
+      requestPayload: {
+        ...stored.payload,
+        items: stored.payload.items.map((row) => ({ ...row, orderId })),
+      },
+    })
+    .where(eq(syncSession.id, run.syncSessionId));
+}
+
 test("two extension CSV Items share one Order", async () => {
   const run = await start("csv", [
     { ...csvRow(X, "Ordered", "10.00"), orderId: "shared-order" },
     { ...csvRow(Y, "Owned", "20.00"), orderId: "shared-order" },
   ]);
+  await setCsvOrder(run, "shared-order");
   expect(await complete(run, X)).toEqual(imported);
   expect(await complete(run, Y)).toEqual(imported);
   expect(await db.$count(order)).toBe(1);
@@ -1410,6 +1428,7 @@ test("extension CSV cannot reuse another user's Order", async () => {
     .values({ id: "other", name: "Other", email: "o@example.test", username: "other" });
   await db.insert(order).values({ id: "foreign-order", userId: "other", title: "Private" });
   const run = await start("csv", [{ ...csvRow(X, "Ordered", "10.00"), orderId: "foreign-order" }]);
+  await setCsvOrder(run, "foreign-order");
   expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
   expect(await db.$count(collection)).toBe(0);
 });
@@ -1490,7 +1509,8 @@ test("interruption keeps its error after an earlier persistence failure and cach
   });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
   const { default: service } = await import("./service");
-  expect((await service.getJobStatus(run.jobId, userId)).error).toEqual(before.error);
+  const after = await service.getJobStatus(run.jobId, userId);
+  expect(after.error).toEqual(before.error);
 });
 
 test("worker persistence failure keeps its error without a snapshot", async () => {
@@ -1518,13 +1538,16 @@ test("worker persistence failure keeps its error without a snapshot", async () =
 
 test("a 1000-item failure batch uses one transaction and rate-limit unit", async () => {
   const ids = Array.from({ length: 1000 }, (_, index) => X + index);
-  const run = await start("item", { items: ids });
+  const run = await start(
+    "collection",
+    ids.map((id) => collectionEntry(id, 100)),
+  );
   const transaction = spyOn(db, "transaction");
   const rateUnits = rateKeys.filter((key) => key.startsWith("rl:sync-failure:")).length;
   try {
     const reply = await post(`/sessions/${run.syncSessionId}/failures`, {
       jobId: run.jobId,
-      failures: ids.map((mfcItemId) => ({ mfcItemId, error: "timeout" })),
+      failures: ids.map((id) => ({ mfcItemId: id, error: "timeout" })),
     });
     expect(reply).toEqual({ status: 200, body: { outcome: "recorded" } });
     expect(transaction).toHaveBeenCalledTimes(1);
@@ -1532,7 +1555,8 @@ test("a 1000-item failure batch uses one transaction and rate-limit unit", async
       rateUnits + 1,
     );
     expect(await session(run.syncSessionId)).toMatchObject({ status: "failed", failCount: 1000 });
-    expect((await results(run.syncSessionId)).every((row) => row.status === "failed")).toBe(true);
+    const rows = await results(run.syncSessionId);
+    expect(rows.every((row) => row.status === "failed")).toBe(true);
   } finally {
     transaction.mockRestore();
   }
@@ -1541,7 +1565,7 @@ test("a 1000-item failure batch uses one transaction and rate-limit unit", async
 test("a mixed failure batch preserves imported Items and ignores a stale job", async () => {
   const run = await start("item", { items: [X, Y, Z] });
   await complete(run, X);
-  const failures = [X, Y, Z].map((mfcItemId) => ({ mfcItemId, error: "timeout" }));
+  const failures = [X, Y, Z].map((id) => ({ mfcItemId: id, error: "timeout" }));
   expect(
     await post(`/sessions/${run.syncSessionId}/failures`, { jobId: "stale", failures }),
   ).toEqual({ status: 200, body: { outcome: "ignored" } });
