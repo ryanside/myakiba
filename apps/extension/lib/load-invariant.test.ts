@@ -65,6 +65,9 @@ async function play(seed: number, style: CommitStyle | undefined) {
     timeouts: 0,
     stalledNavigations: 0,
     stalledNavigationsWithMoreQueued: 0,
+    redirectsAway: 0,
+    redirectsWithin: 0,
+    droppedNavigations: 0,
     pictureReads: 0,
     stalledPictureReads: 0,
     gatedReads: 0,
@@ -139,6 +142,24 @@ async function play(seed: number, style: CommitStyle | undefined) {
     return PAGE_TIMEOUT_MS + 25_000;
   }
 
+  const onMfc = (url: string) => url.startsWith(ORIGINS.mfc) || url.startsWith(ORIGINS.mfcStatic);
+
+  function redirect(url: string): string | undefined {
+    if (!onMfc(url) || random() >= 0.04) return undefined;
+    if (random() < 0.5) {
+      seen.redirectsAway += 1;
+      return "https://example.com/elsewhere";
+    }
+    seen.redirectsWithin += 1;
+    return new URL("/moved", url).href;
+  }
+
+  function dropsNavigation(url: string): boolean {
+    if (!onMfc(url) || random() >= 0.03) return false;
+    seen.droppedNavigations += 1;
+    return true;
+  }
+
   const created = new Set<number>();
   const claimed = new Set<number>();
   const claims = { pictureTabs: 0, mfcTabs: 0, duringCreate: 0 };
@@ -154,6 +175,8 @@ async function play(seed: number, style: CommitStyle | undefined) {
     clock,
     pages: mfc,
     navigationMs,
+    redirect,
+    dropsNavigation,
     publicPicture,
     gatedPicture,
     deferNavigationCommit: style,
@@ -198,7 +221,9 @@ async function play(seed: number, style: CommitStyle | undefined) {
       extension.restart();
       runs = [];
     } else if (roll < 0.78) {
-      const awaited = open.map((run) => awaitedItem(run.events)).find((id) => id !== null);
+      const awaited = open
+        .map((run) => awaitedItem(run.events))
+        .find((id) => id !== null && !solved.has(id));
       const tabId = awaited ? extension.tabs.find(`${ORIGINS.mfc}/item/${awaited}`) : undefined;
       if (awaited && tabId !== undefined) {
         done.solves += 1;
@@ -251,7 +276,7 @@ async function play(seed: number, style: CommitStyle | undefined) {
 }
 
 test.each(COMMIT_STYLES)(
-  "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled navigations, picture reads, claims and restarts (%s commits)",
+  "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (%s commits)",
   async (_name, style) => {
     const total = new Map<string, number>();
     for (const seed of SEEDS) {
