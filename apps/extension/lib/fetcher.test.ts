@@ -1089,6 +1089,45 @@ describe("the MFC tab", () => {
     expect(extension.tabs.has(101)).toBe(true);
   });
 
+  test("a focus that comes while the extension reads whose tab it is keeps the tab open and where it was, at every read", async () => {
+    const outcomes: string[] = [];
+    for (let focusAt = 1, reads = Infinity; focusAt <= reads; focusAt++) {
+      reads = 0;
+      const focuses: { readonly tabId: number; readonly logged: number }[] = [];
+      const watched = (stored: ReturnType<typeof memoryValue<OwnedTab>>) => ({
+        load: () => {
+          reads += 1;
+          const tabId = stored.peek()?.tabId;
+          if (reads === focusAt && tabId !== undefined && extension.tabs.has(tabId)) {
+            focuses.push({ tabId, logged: extension.tabs.log.length });
+            extension.tabs.activate(tabId);
+          }
+          return stored.load();
+        },
+        save: stored.save,
+      });
+      const extension: FakeExtension = fakeExtension({
+        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "public")),
+        ownedTab: watched(memoryValue<OwnedTab>(null)),
+        ownedPictureTab: watched(memoryValue<OwnedTab>(null)),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      for (const { tabId, logged } of focuses) {
+        const touched = extension.tabs.log
+          .slice(logged)
+          .filter((entry) => entry.startsWith(`update ${tabId} `) || entry === `remove ${tabId}`);
+        const state = extension.tabs.has(tabId) ? "open" : "closed";
+        outcomes.push([`read ${focusAt}: ${state}`, ...touched].join(", "));
+      }
+    }
+
+    expect(outcomes.length).toBeGreaterThan(5);
+    expect(outcomes.filter((outcome) => !outcome.endsWith(": open"))).toEqual([]);
+  });
+
   test("an MFC error in a borrowed tab is the item's, with no second try", async () => {
     const extension = fakeExtension({ pages: () => MFC_ERROR });
     extension.tabs.open(`${ORIGINS.mfc}/`);

@@ -88,8 +88,11 @@ export function ownedTab(deps: {
   readonly turnMs: number;
 }) {
   const { tabs, clock, origin, record, throttle, turnMs } = deps;
-  /** Tabs the user focused while a create was pending, which may include the new tab. */
-  let focusedDuringCreate: Set<number> | null = null;
+  /**
+   * Every tab focused since this worker started, held in memory as well as cleared from the record, so a focus wins
+   * over a close or a navigation already waiting on storage. Tab ids are never reused, and a claim is for good.
+   */
+  const claimed = new Set<number>();
   let ownership = Promise.resolve(null);
 
   async function exclusively<T>(work: () => Promise<T>): Promise<T> {
@@ -114,14 +117,14 @@ export function ownedTab(deps: {
     const own = await record.load();
     if (own?.state !== "landed") return null;
     const tab = await tabs.get(own.tabId).catch(() => null);
-    if (tab) return { tabId: own.tabId, tab };
+    if (tab) return claimed.has(own.tabId) ? null : { tabId: own.tabId, tab };
     await record.save(null);
     return null;
   }
 
   async function stillOursAfterRemoving(tabId: number): Promise<boolean> {
     const own = await record.load();
-    if (own?.tabId !== tabId) return false;
+    if (own?.tabId !== tabId || claimed.has(tabId)) return false;
     await tabs.remove(tabId).catch(() => null);
     if ((await tabs.get(tabId).catch(() => null)) !== null) return true;
     await record.save(null);
@@ -164,26 +167,18 @@ export function ownedTab(deps: {
     const properties: Parameters<TabsApi["create"]>[0] = { url, active: false, windowId };
     if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
     signal.throwIfAborted();
-    const focused = new Set<number>();
-    focusedDuringCreate = focused;
-    let created: Tab;
-    try {
-      created = await tabs.create(properties);
-    } finally {
-      focusedDuringCreate = null;
-    }
-    const tabId = created.id;
+    const { id: tabId } = await tabs.create(properties);
     if (tabId === undefined) throw new Error("the new tab has no id");
     const load = { tabId, before: null };
     await exclusively(async () => {
-      if (!focused.has(tabId)) await record.save({ state: "loading", ...load });
+      if (!claimed.has(tabId)) await record.save({ state: "loading", ...load });
     });
     return load;
   }
 
   async function landed(tabId: number): Promise<boolean> {
     const own = await record.load();
-    if (own?.tabId !== tabId) throw new TabTakenError(tabId);
+    if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabTakenError(tabId);
     if (own.state === "landed") return true;
     if (!hasLanded(await tabs.get(tabId), own.before, origin)) return false;
     await record.save({ state: "landed", tabId });
@@ -251,7 +246,7 @@ export function ownedTab(deps: {
     },
 
     async claim(tabId: number): Promise<void> {
-      focusedDuringCreate?.add(tabId);
+      claimed.add(tabId);
       await exclusively(async () => {
         const own = await record.load();
         if (own?.tabId === tabId) await record.save(null);
