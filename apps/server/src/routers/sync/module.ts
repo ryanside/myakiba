@@ -34,7 +34,7 @@ import type {
 import SyncService from "./service";
 import type { SyncSessionCreation } from "./service";
 import { prepareCsvItems } from "./csv";
-import { collectionRows, plannedSync, splitItems } from "./plan";
+import { collectionRows, orderCollectionRows, plannedSync, splitItems } from "./plan";
 import type { PlannedSync } from "./plan";
 
 const failedStart = command(
@@ -217,24 +217,10 @@ export const Sync = {
         existingItemExternalIds,
       };
 
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        sync: {
-          type: "csv",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-        },
-        items: {
-          requested: body.length,
-          existing: existingItemExternalIds.length,
-          toInsert: collectionItems.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
       return ok(
         plannedSync({
+          log,
+          requested: body.length,
           session,
           requestPayload: jobData,
           rows: { collectionItems, orders: orderItems },
@@ -295,15 +281,7 @@ export const Sync = {
 
       const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert = collectionRows(
-        itemsToInsert.map((item) => ({
-          ...item,
-          score: "0.0",
-          shop: order.shop,
-          notes: "",
-          tags: [],
-        })),
-      );
+      const collectionItemsToInsert = orderCollectionRows(itemsToInsert, order.shop);
 
       const syncSessionId = createId();
       const jobData = {
@@ -325,26 +303,10 @@ export const Sync = {
         existingItemExternalIds: existingOrderItemExternalIds,
       };
 
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        sync: {
-          type: "order",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-          orderId,
-        },
-        order: { id: orderId },
-        items: {
-          requested: body.items.length,
-          existing: existingOrderItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
       return ok(
         plannedSync({
+          log,
+          requested: body.items.length,
           session,
           requestPayload: jobData,
           rows: {
@@ -436,15 +398,7 @@ export const Sync = {
 
       const orderItemExternalIdsToTrack = itemsToFetch.map((item) => item.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
-      const collectionItemsToInsert = collectionRows(
-        itemsToInsert.map((item) => ({
-          ...item,
-          score: "0.0",
-          shop: orderDetails.shop,
-          notes: "",
-          tags: [],
-        })),
-      );
+      const collectionItemsToInsert = orderCollectionRows(itemsToInsert, orderDetails.shop);
 
       const syncSessionId = createId();
       const jobData = {
@@ -467,26 +421,10 @@ export const Sync = {
         existingItemExternalIds: existingOrderItemExternalIds,
       };
 
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        sync: {
-          type: "order-item",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-          orderId: orderDetails.id,
-        },
-        order: { id: orderDetails.id },
-        items: {
-          requested: body.items.length,
-          existing: existingOrderItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
       return ok(
         plannedSync({
+          log,
+          requested: body.items.length,
           session,
           requestPayload: jobData,
           rows: { collectionItems: collectionItemsToInsert, orders: [] },
@@ -559,24 +497,10 @@ export const Sync = {
         existingItemExternalIds: existingCollectionItemExternalIds,
       };
 
-      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-
-      log.set({
-        sync: {
-          type: "collection",
-          sessionId: syncSessionId,
-          jobId: jobId ?? null,
-        },
-        items: {
-          requested: body.length,
-          existing: existingCollectionItemExternalIds.length,
-          toInsert: itemsToInsert.length,
-          toFetch: itemsToFetch.length,
-        },
-      });
-
       return ok(
         plannedSync({
+          log,
+          requested: body.length,
           session,
           requestPayload: jobData,
           rows: { collectionItems: collectionItemsToInsert, orders: [] },
@@ -755,7 +679,7 @@ const runFailure = command(
       [{ mfcItemId: input.upload.mfcItemId, kind: "persistence" }],
     );
     return recorded === null
-      ? failAfterCommit("not_found", "This item is not part of the import")
+      ? fail("not_found", "This item is not part of the import")
       : ok({
           outcome: "failed",
           reason: SYNC_STATUS_MESSAGES.failedPersist,
@@ -811,7 +735,7 @@ export const SyncRuns = {
         input.prepared,
       );
       return result === null
-        ? failAfterCommit("not_found", "This item is not part of the import")
+        ? fail("not_found", "This item is not part of the import")
         : ok(result);
     },
   ),
@@ -851,7 +775,7 @@ export const SyncRuns = {
       if (!input.emailVerified)
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       const result = await retrySyncRun(scope, input.id, scope.viewer.userId);
-      if (result.outcome === "not_found") return failAfterCommit("not_found", "Import not found");
+      if (result.outcome === "not_found") return fail("not_found", "Import not found");
       if (result.outcome === "expired")
         return failAfterCommit(
           "conflict",

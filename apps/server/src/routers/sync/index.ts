@@ -392,6 +392,7 @@ const syncRouter = privateApi("/sync")
           });
 
           if (nextEvent.kind === "aborted") {
+            log.set({ outcome: "aborted" });
             return;
           }
 

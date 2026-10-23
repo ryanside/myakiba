@@ -100,7 +100,10 @@ const dataTransferRouter = privateApi("/data-transfer")
             remainingMs,
           });
 
-          if (nextEvent.kind === "aborted") return;
+          if (nextEvent.kind === "aborted") {
+            log.set({ outcome: "aborted" });
+            return;
+          }
           if (nextEvent.kind === "timeout") {
             log.set({ outcome: "timeout" });
             return;

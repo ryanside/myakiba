@@ -124,8 +124,18 @@ export const DataTransfer = {
           scope.log.error(error);
           return recorded;
         } catch (recordError) {
-          scope.log.warn(recordError instanceof Error ? recordError.message : String(recordError), {
-            step: "dataTransfer.failItem",
+          const failure =
+            recordError instanceof Error ? recordError : new Error(String(recordError));
+          scope.log.warn(failure.message, {
+            recoveryErrors: [
+              {
+                step: "dataTransfer.failItem",
+                name: failure.name,
+                message: failure.message,
+                stack: failure.stack,
+                cause: failure.cause,
+              },
+            ],
           });
           throw error;
         }
