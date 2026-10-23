@@ -15,6 +15,7 @@ import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { getResyncStatus } from "@/queries/item";
+import { refreshItemWithExtension } from "@/data/extension-run";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -57,11 +58,21 @@ function RouteComponent(): ReactNode {
 
   const requestResyncMutation = useMutation({
     mutationFn: async () => {
-      throw new Error("Refreshing an item needs the browser extension");
+      const refresh = await refreshItemWithExtension(externalId);
+      if (refresh.kind === "failed") throw new Error(refresh.message);
+      return refresh;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
-      toast.add({ type: "success", title: "Item refresh requested" });
+    onSuccess: (refresh) => {
+      queryClient.setQueryData(["item", externalId, "resyncStatus"], {
+        status: "cooldown",
+        cooldownExpiresAt: refresh.cooldownExpiresAt,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["item", externalId] });
+      toast.add({
+        type: "success",
+        title:
+          refresh.kind === "refreshed" ? "Item details refreshed" : "Item details are up to date",
+      });
     },
     onError: (mutationError) => {
       toast.add({

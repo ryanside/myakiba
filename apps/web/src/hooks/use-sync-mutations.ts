@@ -17,6 +17,7 @@ import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import { requireExtension } from "@/lib/extension-gate";
+import { importSyncItems } from "@/data/extension-run";
 
 /** Each submit resolves false, sending nothing, when the extension is missing, so the form keeps its values. */
 export type UseSyncMutationsReturn = {
@@ -46,12 +47,19 @@ export function useSyncMutations(
   const handleSuccess = useCallback(
     (data: SyncResponse, syncType: SyncType): void => {
       onComplete?.();
+      if (data.jobId !== null && data.missingMfcItemIds.length > 0) {
+        importSyncItems({
+          sessionId: data.syncSessionId,
+          jobId: data.jobId,
+          mfcItemIds: data.missingMfcItemIds,
+        });
+      }
 
       const itemCount = data.existingItemsToInsert + data.newItems;
       const meta = SYNC_OPTION_META[syncType];
       let title: string = meta.pendingTitle;
       let description = [
-        `${data.newItems} item${data.newItems === 1 ? "" : "s"} queued for scraping`,
+        `${data.newItems} item${data.newItems === 1 ? "" : "s"} to fetch from MyFigureCollection`,
         data.existingItemsToInsert > 0
           ? `${data.existingItemsToInsert} already in the item database`
           : null,

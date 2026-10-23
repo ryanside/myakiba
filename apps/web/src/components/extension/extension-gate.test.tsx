@@ -40,7 +40,7 @@ await mock.module("@/queries/sync", () => ({
   ...realSync,
   retrySyncSession: async (sessionId: string) => {
     retriedSessions.push(sessionId);
-    return { retried: 1 };
+    return { jobId: "job-2", missingMfcItemIds: [] };
   },
 }));
 

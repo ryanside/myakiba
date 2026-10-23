@@ -22,6 +22,7 @@ import type {
   CurrentImportLiveState,
   CurrentImportViewState,
 } from "./current-import-card";
+import { importDataTransferItems } from "@/data/extension-run";
 import { SettingsGroup } from "../settings-group";
 import { SettingsRow } from "../settings-row";
 import { ImportSection } from "./import-section";
@@ -82,6 +83,10 @@ export function DataTransfer() {
   const startMutation = useMutation({
     mutationFn: startDataTransferImport,
     onSuccess: (startedImport) => {
+      importDataTransferItems({
+        importId: startedImport.id,
+        mfcItemIds: startedImport.missingMfcItemIds,
+      });
       setPreparedFile({ kind: "idle" });
       queryClient.setQueryData(dataTransferCurrentImportQueryKey, startedImport);
     },
@@ -92,6 +97,10 @@ export function DataTransfer() {
   const retryMutation = useMutation({
     mutationFn: retryCurrentDataTransferImport,
     onSuccess: (retriedImport) => {
+      importDataTransferItems({
+        importId: retriedImport.id,
+        mfcItemIds: retriedImport.missingMfcItemIds,
+      });
       queryClient.removeQueries({
         queryKey: dataTransferImportStatusQueryKey(retriedImport.id),
         exact: true,

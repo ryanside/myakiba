@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "@/components/ui/toast";
 import { useExtensionGate } from "@/lib/extension-gate";
 import { retrySyncSession } from "@/queries/sync";
+import { importSyncItems } from "@/data/extension-run";
 
 export function RetrySyncSessionButton({
   sessionId,
@@ -24,7 +25,8 @@ export function RetrySyncSessionButton({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => retrySyncSession(sessionId),
-    onSuccess: async () => {
+    onSuccess: async ({ jobId, missingMfcItemIds }) => {
+      importSyncItems({ sessionId, jobId, mfcItemIds: missingMfcItemIds });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["syncSessionDetail", sessionId] }),
         queryClient.invalidateQueries({ queryKey: ["syncSessions"] }),
