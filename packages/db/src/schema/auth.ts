@@ -7,6 +7,8 @@ export const user = pgTable("user", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  // Existing accounts are backfilled as onboarded; sign-up sets false.
+  hasSeenOnboarding: boolean("has_seen_onboarding").default(true).notNull(),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

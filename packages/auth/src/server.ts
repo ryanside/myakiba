@@ -129,6 +129,11 @@ export const auth = betterAuth({
       enabled: true,
     },
     additionalFields: {
+      hasSeenOnboarding: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+      },
       currency: {
         type: "string",
         required: true,

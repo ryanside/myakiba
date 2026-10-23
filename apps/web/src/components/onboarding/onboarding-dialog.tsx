@@ -100,13 +100,12 @@ type OnboardingDialogProps = {
 function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const {
     step: savedStep,
-    hasSeen,
     isCompleted,
     setStep,
     complete,
-    dismiss,
   } = useOnboarding({ totalSteps: STEPS.length });
   const [open, setOpen] = useState(false);
+  const [userToggled, setUserToggled] = useState(false);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const resumeStep = isCompleted
     ? FIRST_STEP
@@ -192,26 +191,29 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   }, [open, sessionUsername, sessionCurrency, sessionDateFormat, form]);
 
   useEffect(() => {
-    if (hasSeen) return;
-    const timeoutId = window.setTimeout(() => {
+    // Sessions from before the column existed have no key and count as onboarded.
+    if (session.user.hasSeenOnboarding !== false || userToggled) return;
+    const timeoutId = window.setTimeout(async () => {
       setOpen(true);
-      // Persist that the user has seen the dialog at first auto-open, so a
-      // tab close or refresh before any interaction doesn't re-trigger it.
-      dismiss();
+      try {
+        const { error } = await authClient.updateUser({ hasSeenOnboarding: true });
+        if (error) {
+          toast.add({ type: "error", title: error.message ?? "Couldn't save onboarding." });
+        }
+      } catch {
+        toast.add({ type: "error", title: "Couldn't save onboarding." });
+      }
     }, FIRST_OPEN_DELAY_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [hasSeen, dismiss]);
+  }, [session.user.hasSeenOnboarding, userToggled]);
 
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      setOpen(next);
-      if (!next) {
-        dismiss();
-        setCurrentStep(FIRST_STEP);
-      }
-    },
-    [dismiss],
-  );
+  const handleOpenChange = useCallback((next: boolean) => {
+    setUserToggled(true);
+    setOpen(next);
+    if (!next) {
+      setCurrentStep(FIRST_STEP);
+    }
+  }, []);
 
   const handleBack = useCallback(() => {
     if (isFirst) return;
