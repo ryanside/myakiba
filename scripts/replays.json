@@ -1063,6 +1063,16 @@
         "parseMfcItemPage warnings > a bracket that is part of the name does not warn",
         "parseMfcItemPage warnings > a rejected og:image leaves no picture and warns"
       ]
+    },
+    {
+      "fix": "39f38f09",
+      "bug": "a post-commit effect that threw turned a committed write into a 500 and skipped the effects after it",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "failed commit effects keep the committed response and run later effects",
+        "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
+      ],
+      "testAt": "39f38f09"
     }
   ],
   "lint": [
