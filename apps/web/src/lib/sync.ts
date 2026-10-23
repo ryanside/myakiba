@@ -61,7 +61,7 @@ export function resolveSyncMessage(
 
 export const ITEM_STATUS_CONFIG = {
   pending: { label: "Pending", variant: "secondary" },
-  scraped: { label: "Scraped", variant: "success" },
+  scraped: { label: "Imported", variant: "success" },
   failed: { label: "Failed", variant: "destructive" },
 } satisfies Record<
   SyncSessionItemStatus,

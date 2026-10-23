@@ -3,17 +3,17 @@ import type { SyncJobRecentItem } from "./schema";
 export const SYNC_STATUS_MESSAGES = {
   queued: "Import queued",
   retryQueued: "Retry queued",
-  starting: (count: number) => `Starting to scrape ${count} item${count === 1 ? "" : "s"}`,
+  starting: (count: number) => `Starting to import ${count} item${count === 1 ? "" : "s"}`,
   scraping: (processed: number, total: number) =>
-    `Scraping item details from MyFigureCollection: ${processed}/${total} processed`,
-  persisting: (count: number) => `Saving ${count} scraped item${count === 1 ? "" : "s"}`,
+    `Importing item details from MyFigureCollection: ${processed}/${total} processed`,
+  persisting: (count: number) => `Saving ${count} imported item${count === 1 ? "" : "s"}`,
   itemOutcome: (item: Pick<SyncJobRecentItem, "outcome" | "title" | "externalId">) =>
-    `${item.outcome === "succeeded" ? "Scraped details for" : "Failed to scrape details for"} ${item.title ?? `MFC #${item.externalId}`}`,
+    `${item.outcome === "succeeded" ? "Imported details for" : "Failed to import details for"} ${item.title ?? `MFC #${item.externalId}`}`,
   completed: (successCount: number, totalCount: number) =>
     `Added ${successCount}/${totalCount} items`,
   partial: (successCount: number, totalCount: number, failCount: number) =>
     `Added ${successCount}/${totalCount} items. ${failCount} failed.`,
-  failedScrape: "Failed to scrape item details from MyFigureCollection",
+  failedScrape: "Failed to import item details from MyFigureCollection",
   failedPersist: "Failed to save items",
   failedBeforeStart: "Import failed before processing started",
   failedDuringProcessing: "Import failed during processing",

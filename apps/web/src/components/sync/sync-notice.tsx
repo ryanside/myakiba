@@ -4,14 +4,14 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const SYNC_DESCRIPTION =
-  "MFC now uses content levels (General, Intermediate, Explicit, and Controversial) to control item access. Intermediate, Explicit, and Controversial content level items cannot be scraped by myakiba since they are locked behind MFC user-authentication. :(";
+  "MFC uses content levels (General, Intermediate, Explicit, and Controversial) to control item access. The myakiba extension fetches items with your own MyFigureCollection sign-in, so it imports Intermediate, Explicit, and Controversial items your account can see.";
 
 export function SyncNotice() {
   return (
     <Alert>
       <HugeiconsIcon icon={InformationCircleIcon} />
       <AlertTitle className="min-w-0">
-        <span>MyFigureCollection content-restricted items may not import</span>{" "}
+        <span>Sign in to MyFigureCollection to import content-restricted items</span>{" "}
         <Tooltip>
           <TooltipTrigger className="text-sm text-muted-foreground underline">Why?</TooltipTrigger>
           <TooltipContent>
