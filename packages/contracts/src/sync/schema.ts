@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { itemUploadSchema } from "../mfc-items/schema";
+import { itemUploadSchema, MAX_ITEM_FAILURES_PER_REPORT } from "../mfc-items/schema";
 import {
   CONDITIONS,
   MAX_MFC_ITEM_ID,
@@ -76,7 +76,7 @@ const syncItemFailureEntrySchema = z.strictObject({
 
 export const syncItemFailureBatchSchema = z.strictObject({
   jobId: z.string().min(1),
-  failures: z.array(syncItemFailureEntrySchema).min(1).max(1000),
+  failures: z.array(syncItemFailureEntrySchema).min(1).max(MAX_ITEM_FAILURES_PER_REPORT),
 });
 export const syncItemFailureSchema = z.union([
   itemUploadSchema.pick({ mfcItemId: true }).extend({
