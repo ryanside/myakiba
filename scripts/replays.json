@@ -433,7 +433,7 @@
     },
     {
       "fix": "9597fbf5",
-      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101–5 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     },
@@ -549,7 +549,7 @@
       "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
     },
     {
-      "fix": "7cf2e1f3",
+      "fix": "91a647e8",
       "bug": "MFC ingest held its transaction open through the picture put, which had no timeout",
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
@@ -558,7 +558,7 @@
       ]
     },
     {
-      "fix": "0a520833",
+      "fix": "33f44f9b",
       "bug": "an item resync whose commit failed after the cooldown write answered 500, left the item as it was and still held a 3-day cooldown",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
@@ -566,15 +566,17 @@
       ]
     },
     {
-      "fix": "2ad79602",
+      "fix": "25fd8793",
       "bug": "an item resync read a page with a material share finer than 2 decimals as changed every time, because the column stores it rounded",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
-        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh"
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 33.335 percent rounds as Postgres after import",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 0.0000001 percent rounds as Postgres after import"
       ]
     },
     {
-      "fix": "d089602e",
+      "fix": "95e0582e",
       "bug": "a late or unprompted extension announce satisfied a fresh probe, and an outdated extension read as not installed once its update orphaned the old content script",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
       "fixed": [
@@ -584,7 +586,7 @@
       ]
     },
     {
-      "fix": "b20d4a0a",
+      "fix": "91743a38",
       "bug": "a sync form or the Import/Export confirmation sent its request after the extension went away while it was open",
       "test": "apps/web/src/components/extension/extension-submit-gate.test.tsx",
       "fixed": [
@@ -597,7 +599,7 @@
       ]
     },
     {
-      "fix": "b20d4a0a",
+      "fix": "91743a38",
       "bug": "onboarding finished before the extension probe and a reload after installing ended it",
       "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
       "fixed": [
@@ -607,7 +609,7 @@
       ]
     },
     {
-      "fix": "b20d4a0a",
+      "fix": "91743a38",
       "bug": "onboarding's sync choices finished onboarding before the probe, a gated button took a second click while it probed, and the dialog dropped its copy before it closed",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": [
@@ -638,7 +640,7 @@
       ]
     },
     {
-      "fix": "fe9ce540",
+      "fix": "d061fb8a",
       "bug": "an extension run kept fetching and uploading after its heartbeat said the server had ended it, and a page restored from the back-forward cache resumed a run it had interrupted",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -648,7 +650,7 @@
       ]
     },
     {
-      "fix": "1e2e917d",
+      "fix": "90682bd9",
       "bug": "two extension runs together had 4 uploads in flight, and a page waiting for an upload slot went out after a busy answer",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -657,7 +659,7 @@
       ]
     },
     {
-      "fix": "bfd53fd4",
+      "fix": "09a8732b",
       "bug": "a busy run's count of items not imported left out the failures the page reported",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -665,7 +667,7 @@
       ]
     },
     {
-      "fix": "bfd53fd4",
+      "fix": "09a8732b",
       "bug": "the toast for a 429 called myakiba busy instead of naming the user's hourly import limit",
       "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
       "fixed": [
@@ -676,13 +678,7 @@
       ]
     },
     {
-      "fix": "eb428493",
-      "bug": "the status widget flashed the queued prompt at the start of every extension batch",
-      "test": "apps/web/src/data/extension-run.test.tsx",
-      "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"]
-    },
-    {
-      "fix": "d363d75f",
+      "fix": "d5ed21c8",
       "bug": "an Item Refresh refetched only the item, so its releases, collection rows, orders and calendar stayed stale",
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": [
@@ -690,7 +686,7 @@
       ]
     },
     {
-      "fix": "cd28cc3e",
+      "fix": "ebb23965",
       "bug": "the sync launcher and command palette showed nothing while they checked for the extension",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": [
@@ -699,13 +695,13 @@
       ]
     },
     {
-      "fix": "43d4c7a7",
+      "fix": "44421395",
       "bug": "onboarding opened in a second tab cleared the flag that reopens the first tab at the extension step",
       "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
       "fixed": ["onboarding opened in a second tab leaves the first tab's extension step to reopen"]
     },
     {
-      "fix": "f29d0d5c",
+      "fix": "87ee9ee5",
       "bug": "the extension runner posted each failure on its own and kept going after a 429 from a failure post",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -716,6 +712,141 @@
         "failure reports > stop the run on a busy answer, like an upload does",
         "failure reports > still go out after a busy upload, and are answered before the final interrupt",
         "an Import/Export run reports to the import's endpoints"
+      ]
+    },
+    {
+      "fix": "35c7296c",
+      "bug": "Material percentage comparison used floating-point rounding instead of Postgres decimal rounding",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 1.005 percent rounds as Postgres after import",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a stored 1.00 share changes when the page shows 1.005 percent"
+      ]
+    },
+    {
+      "fix": "147ab018",
+      "bug": "Extension sync run lease, snapshot, persistence and control behavior diverged from the durable session",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "a cached partial status cannot hide a later successful completion",
+        "worker-era sync runs stay active past the extension lease",
+        "an Order deleted mid-run fails the remaining items without ingesting them",
+        "publishing an older revision cannot replace a newer snapshot",
+        "the stream ignores a delayed event from an older revision",
+        "a start that fails while writing existing rows keeps failed import history",
+        "recent items include five distinct finished items even after many repeated results",
+        "a cached partial snapshot cannot hide a newer partial revision",
+        "an open stream notices an expired lease on its next poll",
+        "control and failure requests use separate per-user rate limits",
+        "a poll whose session was deleted sends a terminal error and closes",
+        "two extension CSV Items share one Order",
+        "worker-era sync stays processing one second before 24 hours",
+        "worker persistence failure keeps its error without a snapshot"
+      ]
+    },
+    {
+      "fix": "147ab018",
+      "bug": "An older committed snapshot could replace and publish over a newer revision",
+      "test": "apps/server/src/routers/sync/snapshot.test.ts",
+      "fixed": ["Redis atomically keeps and publishes only the latest committed revision"]
+    },
+    {
+      "fix": "c2ff4dbb",
+      "bug": "Import status reads and payload or lease lifecycle diverged across retries",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "an interrupted import > worker-era imports keep their worker lease for a day",
+        "scraped payloads are cleared while failed rows remain available for retry",
+        "complete uploads renew the import lease",
+        "fail uploads renew the import lease",
+        "status reads stay in one snapshot when a retry commits between reads",
+        "worker-era import stays running one second before 24 hours"
+      ]
+    },
+    {
+      "fix": "7bdad8ef",
+      "bug": "CSV completion omitted Orders for Owned rows and changed empty titles",
+      "test": "apps/server/src/routers/sync/item-rows.test.ts",
+      "fixed": [
+        "CSV completion keeps an empty Item title as the worker does",
+        "CSV completion creates an Order for an Owned row with an orderId"
+      ]
+    },
+    {
+      "fix": "7bdad8ef",
+      "bug": "Sync controls, completion outcomes, failure classification, polling and failure throttling diverged from durable run data",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "an S3 timeout records the item as a persistence failure",
+        "a persistence failure after an imported item retains the partial-success message",
+        "CSV completion imports an Owned row whose Order does not exist yet",
+        "worker-era controls leave a 180000ms-old session untouched",
+        "worker-era controls leave a 86401000ms-old session untouched",
+        "failure reporting accepts the full hourly ingest budget",
+        "polling keeps the last status through a Redis blip and retries",
+        "persistence failure survives cache expiry and a changed display message",
+        "a failed history fallback preserves the original persistence error",
+        "a fetch failure cannot hide a recorded persistence failure",
+        "extension CSV cannot reuse another user's Order"
+      ]
+    },
+    {
+      "fix": "8c19d208",
+      "bug": "Import preparation failures left pending items and polling errors closed the progress stream",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "an S3 preparation timeout records a retryable import item failure",
+        "import polling keeps its last status through a database blip and retries"
+      ]
+    },
+    {
+      "fix": "e8c106e9",
+      "bug": "CI silently skipped the real Redis Lua test without its Redis URL",
+      "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
+      "fixed": ["CI fails when the Redis Lua test has no Redis URL"]
+    },
+    {
+      "fix": "602817ab",
+      "bug": "CSV requests and retries used worker completion mapping, and shared Orders collided or could be reused across users",
+      "test": "apps/server/src/routers/sync/item-rows.test.ts",
+      "fixed": [
+        "in-request CSV creates Orders only for Ordered rows and falls back from an empty title",
+        "CSV retry of an existing Item keeps the in-request Order mapping"
+      ]
+    },
+    {
+      "fix": "602817ab",
+      "bug": "CSV extension completion collided on a shared Order; the request lost the original title fallback",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "CSV request retains the original empty-title fallback",
+        "two extension CSV Items share one Order"
+      ]
+    },
+    {
+      "fix": "19a50bb7",
+      "bug": "Failed starts changed legacy item reasons; durable run errors diverged after cache expiry; failure batches were unsupported",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "failedBeforeStart does not label item results as persistence failures",
+        "in-request persistence failure keeps its original item reasons",
+        "interruption keeps its error after an earlier persistence failure and cache expiry",
+        "worker persistence failure keeps its error without a snapshot",
+        "display text alone cannot classify a persistence failure",
+        "a 1000-item failure batch uses one transaction and rate-limit unit",
+        "a mixed failure batch preserves imported Items and ignores a stale job"
+      ]
+    },
+    {
+      "fix": "19a50bb7",
+      "bug": "Import completion exceptions left items pending, and the failure route did not accept batches",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "completion records persistence failure from item RAISE EXCEPTION 'item persistence unavailable';",
+        "completion records persistence failure from item RETURN NULL;",
+        "completion records persistence failure from collection RAISE EXCEPTION 'collection persistence unavailable';",
+        "a 1000-item import failure batch uses one transaction and rate-limit unit",
+        "a mixed import failure batch preserves imported Items and ignores a stale job"
       ]
     }
   ],
@@ -834,7 +965,7 @@
     },
     {
       "name": "command-before",
-      "fix": "917238d4",
+      "fix": "02ecbcc2",
       "bug": "a command without before accepted a writing before held in a variable, and a before that only proceeded typed the op's value as unknown and its failure as every Failure",
       "package": "apps/server",
       "config": ["apps/server/src/domain/kernel.type-test.ts"],
