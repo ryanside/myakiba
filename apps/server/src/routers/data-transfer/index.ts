@@ -170,20 +170,12 @@ const dataTransferRouter = privateApi("/data-transfer")
   .post("/imports/current/retry", (ctx) => serve(ctx, DataTransfer.retry, {}), {
     auth: true,
   })
-  .post(
-    "/imports/current/items",
-    async (ctx) => {
-      const result = await serve(ctx, DataTransfer.complete, ctx.body);
-      if (result instanceof ElysiaCustomStatusResponse) return result;
-      return serve(ctx, DataTransfer.completeResponse, result);
-    },
-    {
-      auth: true,
-      verifiedEmail: true,
-      rateLimit: "mfcIngest",
-      body: dataTransferImportItemUploadSchema,
-    },
-  )
+  .post("/imports/current/items", (ctx) => serve(ctx, DataTransfer.complete, ctx.body), {
+    auth: true,
+    verifiedEmail: true,
+    rateLimit: "mfcIngest",
+    body: dataTransferImportItemUploadSchema,
+  })
   .post("/imports/current/items/failure", (ctx) => serve(ctx, DataTransfer.failure, ctx.body), {
     auth: true,
     body: dataTransferImportItemFailureSchema,

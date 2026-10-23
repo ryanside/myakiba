@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
-import { initLogger } from "evlog";
+import { createRequestLogger, initLogger } from "evlog";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
 import { dataTransferImportSchema } from "@myakiba/contracts/data-transfer/schema";
@@ -998,4 +998,69 @@ test("a mixed import failure batch preserves imported Items and ignores a stale 
     { id: 2, status: "failed" },
     { id: 3, status: "failed" },
   ]);
+});
+
+test("an oversized archive answers before opening a transaction", async () => {
+  const { DATA_TRANSFER_MAX_BYTES } = await import("@myakiba/contracts/data-transfer/schema");
+  const { DataTransfer } = await import("./module");
+  const { run } = await import("@/domain/kernel");
+  const { Viewer } = await import("@/domain/viewer");
+  const archive = archiveOf(
+    [],
+    [{ ...collectionRecord("large", 98_777), notes: "x".repeat(DATA_TRANSFER_MAX_BYTES) }],
+  );
+  const transaction = spyOn(db, "transaction");
+  try {
+    expect(
+      await run(
+        Viewer.fromSession({ user: { id: userId } }),
+        DataTransfer.start,
+        { fileName: "large.json", archive },
+        createRequestLogger(),
+      ),
+    ).toEqual({
+      ok: false,
+      category: "payload_too_large",
+      message: "The import archive exceeds the 50 MiB limit.",
+    });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(await db.$count(dataTransferImport)).toBe(0);
+  } finally {
+    transaction.mockRestore();
+  }
+});
+
+test("a failed persistence fallback retains both errors and the original cause", async () => {
+  const runInfo = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+  const { DataTransfer } = await import("./module");
+  const { default: service } = await import("./service");
+  const { run } = await import("@/domain/kernel");
+  const { Viewer } = await import("@/domain/viewer");
+  const original = new Error("item persistence failed");
+  const fallback = new Error("failure recording failed");
+  const persist = spyOn(service, "completeItem").mockRejectedValue(original);
+  const record = spyOn(service, "failItem").mockRejectedValue(fallback);
+  try {
+    await expect(
+      run(
+        Viewer.fromSession({ user: { id: userId } }),
+        DataTransfer.complete,
+        {
+          jobId: runInfo.id,
+          mfcItemId: 98_777,
+          page: new File([page98777], "page.html", { type: "text/html" }),
+          picture: new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], "picture", {
+            type: "image/jpeg",
+          }),
+        },
+        createRequestLogger(),
+      ),
+    ).rejects.toMatchObject({
+      cause: original,
+      errors: [original, fallback],
+    });
+  } finally {
+    persist.mockRestore();
+    record.mockRestore();
+  }
 });

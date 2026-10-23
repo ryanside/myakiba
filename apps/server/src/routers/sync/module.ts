@@ -12,9 +12,9 @@ import {
   failRunWithoutOrder,
   recordItemFailures,
 } from "./run";
-import type { CompleteSyncItemResult, RetrySyncRunResult } from "./run";
+import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
-import { command, fail, ok, proceed, query } from "@/domain/kernel";
+import { command, fail, failAfterCommit, ok, proceed, query } from "@/domain/kernel";
 import type {
   JobData,
   UpdatedSyncCollection,
@@ -1077,14 +1077,12 @@ const runFailure = command(
       input.upload.jobId,
       [{ mfcItemId: input.upload.mfcItemId, kind: "persistence" }],
     );
-    return ok(
-      recorded === null
-        ? null
-        : ({
-            outcome: "failed",
-            reason: SYNC_STATUS_MESSAGES.failedPersist,
-          } satisfies CompleteSyncItemResult),
-    );
+    return recorded === null
+      ? failAfterCommit("not_found", "This item is not part of the import")
+      : ok({
+          outcome: "failed",
+          reason: SYNC_STATUS_MESSAGES.failedPersist,
+        } satisfies CompleteSyncItemResult);
   },
 );
 
@@ -1127,10 +1125,18 @@ export const SyncRuns = {
         }
       },
     },
-    async (scope, input) =>
-      ok(
-        await completeSyncItem(scope, input.id, scope.viewer.userId, input.upload, input.prepared),
-      ),
+    async (scope, input) => {
+      const result = await completeSyncItem(
+        scope,
+        input.id,
+        scope.viewer.userId,
+        input.upload,
+        input.prepared,
+      );
+      return result === null
+        ? failAfterCommit("not_found", "This item is not part of the import")
+        : ok(result);
+    },
   ),
   failure: command(
     { action: "sync.failItem", failure: "Failed to save the item result" },
@@ -1163,30 +1169,20 @@ export const SyncRuns = {
     },
   ),
   retry: command(
-    { action: "sync.retry", failure: "Failed to retry failed item results", retry: retryOrderLock },
+    { action: "sync.retry", failure: "Failed to retry failed item results" },
     async (scope, input: { readonly id: string; readonly emailVerified: boolean }) => {
       if (!input.emailVerified)
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
-      return ok(await retrySyncRun(scope, input.id, scope.viewer.userId));
-    },
-  ),
-  retryResponse: query(
-    { action: "sync.retry", failure: "Failed to retry failed item results" },
-    async (_scope, result: RetrySyncRunResult) => {
-      if (result.outcome === "not_found") return fail("not_found", "Import not found");
+      const result = await retrySyncRun(scope, input.id, scope.viewer.userId);
+      if (result.outcome === "not_found") return failAfterCommit("not_found", "Import not found");
       if (result.outcome === "expired")
-        return fail(
+        return failAfterCommit(
           "conflict",
           `The ${SYNC_SESSION_RETRY_WINDOW_DAYS}-day window to retry failed item results has expired`,
         );
       if (result.outcome === "unavailable")
-        return fail("conflict", "These failed item results cannot be retried");
+        return failAfterCommit("conflict", "These failed item results cannot be retried");
       return ok({ jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds });
     },
-  ),
-  itemResponse: query(
-    { action: "sync.completeItem", failure: "Failed to import item" },
-    async (_scope, result: CompleteSyncItemResult | null) =>
-      result === null ? fail("not_found", "This item is not part of the import") : ok(result),
   ),
 };

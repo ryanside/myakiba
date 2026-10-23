@@ -48,8 +48,6 @@ type SyncSessionUpdatePayload = Partial<
   >
 >;
 
-type SyncTransaction = Tx;
-
 export type SyncSessionCreation = {
   readonly id: string;
   readonly userId: string;
@@ -99,7 +97,7 @@ const resolveFallbackJobStatusMessage = ({
 
 class SyncService {
   private async insertSyncSession(
-    tx: SyncTransaction,
+    tx: Tx,
     {
       id,
       userId,
@@ -294,7 +292,7 @@ class SyncService {
   }
 
   async recordFailedStart(
-    tx: SyncTransaction,
+    tx: Tx,
     session: SyncSessionCreation,
     payload: JobData,
     failure: "before_start" | "request_persistence",
@@ -629,28 +627,6 @@ class SyncService {
       .where(eq(syncSession.id, sessionId))
       .returning({ id: syncSession.id });
     return result.length > 0;
-  }
-
-  async updateSyncSessionItem(
-    syncSessionId: string,
-    itemExternalId: number,
-    itemStatus: SyncSessionItemStatus,
-    errorReason: string | undefined,
-    db: Tx,
-  ): Promise<void> {
-    await db
-      .update(syncSessionItem)
-      .set({
-        status: itemStatus,
-        errorReason: errorReason ?? null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(syncSessionItem.syncSessionId, syncSessionId),
-          eq(syncSessionItem.itemExternalId, itemExternalId),
-        ),
-      );
   }
 }
 

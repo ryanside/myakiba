@@ -1,11 +1,15 @@
+import { Buffer } from "node:buffer";
 import type {
   DataTransferImportItemFailure,
   DataTransferImportItemUpload,
   DataTransferArchiveV1,
 } from "@myakiba/contracts/data-transfer/schema";
-import { DATA_TRANSFER_MAX_RECORDS } from "@myakiba/contracts/data-transfer/schema";
+import {
+  DATA_TRANSFER_MAX_BYTES,
+  DATA_TRANSFER_MAX_RECORDS,
+} from "@myakiba/contracts/data-transfer/schema";
 import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
-import { command, fail, ok, proceed, query } from "@/domain/kernel";
+import { command, fail, failAfterCommit, ok, proceed, query } from "@/domain/kernel";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import DataTransferService from "./service";
 
@@ -65,18 +69,24 @@ export const DataTransfer = {
     },
   ),
   start: command(
-    { action: "dataTransfer.startImport", failure: "Failed to start import." },
-    async (
-      scope,
-      input: { readonly fileName: string; readonly archive: DataTransferArchiveV1 },
-    ) => {
+    {
+      action: "dataTransfer.startImport",
+      failure: "Failed to start import.",
+      before: async (
+        _scope,
+        input: { readonly fileName: string; readonly archive: DataTransferArchiveV1 },
+      ) => {
+        if (Buffer.byteLength(JSON.stringify(input.archive), "utf-8") > DATA_TRANSFER_MAX_BYTES)
+          return fail("payload_too_large", "The import archive exceeds the 50 MiB limit.");
+        return proceed(input);
+      },
+    },
+    async (scope, input) => {
       try {
         return ok(
           await DataTransferService.startImport(scope, { ...input, userId: scope.viewer.userId }),
         );
       } catch (error) {
-        if (error instanceof Error && error.message === "DATA_TRANSFER_ARCHIVE_TOO_LARGE")
-          return fail("payload_too_large", "The import archive exceeds the 50 MiB limit.");
         if (error instanceof Error && error.message === "DATA_TRANSFER_ACTIVE_IMPORT")
           return fail("conflict", "Another data import is already active.");
         throw error;
@@ -105,30 +115,32 @@ export const DataTransfer = {
       before: async (scope, input: DataTransferImportItemUpload) =>
         proceed({ upload: input, prepared: await prepareMfcItem(scope.tx, input) }),
       recover: async (scope, input, error) => {
-        scope.log.error(error instanceof Error ? error : new Error(String(error)));
-        const recorded = await scope.execute(recordFailure, {
-          jobId: input.jobId,
-          mfcItemId: input.mfcItemId,
-          reason: UNSAVED_ITEM_REASON,
-        });
-        if (!recorded.ok) throw error;
-        return ok({ kind: "imported", import: recorded.value } as const);
+        try {
+          const recorded = await scope.execute(recordFailure, {
+            jobId: input.jobId,
+            mfcItemId: input.mfcItemId,
+            reason: UNSAVED_ITEM_REASON,
+          });
+          scope.log.error(error);
+          return recorded;
+        } catch (recordError) {
+          throw new AggregateError([error, recordError], "Failed to record the item failure.", {
+            cause: error,
+          });
+        }
       },
     },
-    async (scope, input) =>
-      ok(
-        await DataTransferService.completeItem(
-          scope,
-          scope.viewer.userId,
-          input.upload,
-          input.prepared,
-        ),
-      ),
-  ),
-  completeResponse: query(
-    { action: "dataTransfer.completeItem", failure: "Failed to import the item." },
-    async (_scope, input: Awaited<ReturnType<typeof DataTransferService.completeItem>>) =>
-      input.kind === "problem" ? fail("bad_request", input.message) : ok(input.import),
+    async (scope, input) => {
+      const result = await DataTransferService.completeItem(
+        scope,
+        scope.viewer.userId,
+        input.upload,
+        input.prepared,
+      );
+      return result.kind === "problem"
+        ? failAfterCommit("bad_request", result.message)
+        : ok(result.import);
+    },
   ),
   failure: recordFailure,
   interrupt: command(

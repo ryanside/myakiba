@@ -192,14 +192,11 @@ const syncRouter = privateApi("/sync")
   )
   .post(
     "/sessions/:id/retry",
-    async (ctx) => {
-      const result = await serve(ctx, SyncRuns.retry, {
+    (ctx) =>
+      serve(ctx, SyncRuns.retry, {
         id: ctx.params.id,
         emailVerified: ctx.user.emailVerified,
-      });
-      if (result instanceof ElysiaCustomStatusResponse) return result;
-      return serve(ctx, SyncRuns.retryResponse, result);
-    },
+      }),
     {
       params: z.object({ id: z.string() }),
       auth: true,
@@ -215,12 +212,7 @@ const syncRouter = privateApi("/sync")
         emailVerified: ctx.user.emailVerified,
       });
       if (existing !== null) return existing;
-      const result = await serve(ctx, SyncRuns.complete, {
-        id: ctx.params.id,
-        upload: ctx.body,
-      });
-      if (result instanceof ElysiaCustomStatusResponse) return result;
-      return serve(ctx, SyncRuns.itemResponse, result);
+      return serve(ctx, SyncRuns.complete, { id: ctx.params.id, upload: ctx.body });
     },
     { params: sessionParams, body: syncItemUploadSchema, auth: true, rateLimit: "mfcIngest" },
   )

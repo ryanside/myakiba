@@ -441,9 +441,6 @@ const DataTransferService = {
       readonly archive: DataTransferArchiveV1;
     },
   ): Promise<DataTransferImportRun> {
-    if (Buffer.byteLength(JSON.stringify(archive), "utf-8") > DATA_TRANSFER_MAX_BYTES) {
-      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_LARGE");
-    }
     const importId = createId();
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
