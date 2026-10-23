@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
+import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
@@ -10,14 +11,14 @@ import { transformCSVData } from "@/lib/sync";
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
 }: {
-  handleSyncCsvSubmit: (values: File | undefined) => Promise<boolean>;
+  handleSyncCsvSubmit: (values: File | undefined) => Promise<SyncSubmit>;
 }) {
   const csvForm = useForm({
     defaultValues: {
       file: undefined as File | undefined,
     },
     onSubmit: async ({ value }) => {
-      if (await handleSyncCsvSubmit(value.file)) csvForm.reset();
+      if ((await handleSyncCsvSubmit(value.file)) === "sent") csvForm.reset();
     },
   });
   return (

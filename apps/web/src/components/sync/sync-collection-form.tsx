@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Edit03Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/contracts/sync/types";
@@ -39,7 +40,7 @@ export default function SyncCollectionForm({
   currency,
   initialItemExternalId,
 }: {
-  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<boolean>;
+  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<SyncSubmit>;
   currency: Currency;
   initialItemExternalId?: string;
 }) {
@@ -82,7 +83,7 @@ export default function SyncCollectionForm({
           score: item.score.toString(),
         };
       });
-      if (await handleSyncCollectionSubmit(payload)) collectionForm.reset();
+      if ((await handleSyncCollectionSubmit(payload)) === "sent") collectionForm.reset();
     },
   });
 

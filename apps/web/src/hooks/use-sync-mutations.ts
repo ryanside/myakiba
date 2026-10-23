@@ -19,23 +19,24 @@ import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import { requireExtension } from "@/lib/extension-gate";
 import { importSyncItems } from "@/data/extension-run";
 
-/** Each submit resolves false, sending nothing, when the extension is missing, so the form keeps its values. */
+export type SyncSubmit = "sent" | "not_sent";
+
 export type UseSyncMutationsReturn = {
-  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<boolean>;
-  readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<boolean>;
-  readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<boolean>;
-  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<boolean>;
-  readonly handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<boolean>;
+  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<SyncSubmit>;
+  readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<SyncSubmit>;
+  readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<SyncSubmit>;
+  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<SyncSubmit>;
+  readonly handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<SyncSubmit>;
   readonly isSyncing: boolean;
 };
 
 async function sendWithExtension<Input>(
   send: (input: Input) => Promise<SyncResponse>,
   input: Input,
-): Promise<boolean> {
-  if (!(await requireExtension())) return false;
+): Promise<SyncSubmit> {
+  if (!(await requireExtension())) return "not_sent";
   await send(input);
-  return true;
+  return "sent";
 }
 
 export function useSyncMutations(
@@ -200,7 +201,7 @@ export function useSyncMutations(
   );
 
   const handleSyncCsvSubmit = useCallback(
-    async (value: File | undefined): Promise<boolean> => {
+    async (value: File | undefined): Promise<SyncSubmit> => {
       const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
       if (error) {
         const toastId = toast.add({
@@ -215,7 +216,7 @@ export function useSyncMutations(
             },
           },
         });
-        return false;
+        return "not_sent";
       }
 
       return sendWithExtension(csvMutation.mutateAsync, userItems);

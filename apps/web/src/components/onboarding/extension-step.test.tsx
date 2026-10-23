@@ -43,7 +43,6 @@ function renderOnboarding() {
   );
 }
 
-/** Chrome injects a new install's content script only into pages loaded after it. */
 function reloadWith(options: Parameters<typeof fakeExtension>[0]) {
   cleanup();
   loadExtension(options);

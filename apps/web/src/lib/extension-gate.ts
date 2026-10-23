@@ -29,7 +29,6 @@ export async function requireExtension(): Promise<boolean> {
   return false;
 }
 
-/** The dialog keeps its last copy after it closes, so the copy stays through the exit transition. */
 export function useMissingExtensionDialog(): MissingExtensionDialog | null {
   return useSyncExternalStore(subscribeDialog, () => dialog);
 }
@@ -40,7 +39,6 @@ export function dismissMissingExtension(): void {
 
 export type ExtensionGate = {
   readonly checking: boolean;
-  /** Runs `proceed` once the extension answers ready, and ignores another call while it asks. */
   readonly gate: (proceed: () => void) => Promise<void>;
 };
 

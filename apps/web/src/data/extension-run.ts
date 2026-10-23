@@ -29,7 +29,6 @@ const ITEM_ERROR_MESSAGE = {
   unknown: "The extension could not fetch this item",
 } as const satisfies Record<FetchError, string>;
 
-/** What myakiba answered to one request of a run. */
 export type ServerAnswer =
   | { readonly kind: "ok" }
   | { readonly kind: "busy"; readonly retryAfterMs: number | null }
@@ -72,7 +71,6 @@ function itemPage(id: MfcItemId, html: string, picture: Blob | null): ItemPage {
   };
 }
 
-/** One run of the extension over the MFC items a sync job or an Import/Export import waits for. */
 export type ExtensionRun = {
   readonly runId: string;
   readonly sessionId: string | null;
@@ -80,7 +78,6 @@ export type ExtensionRun = {
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
   readonly fail: (mfcItemId: MfcItemId, error: ItemError) => Promise<ServerAnswer>;
   readonly heartbeat: () => Promise<ServerAnswer>;
-  /** Fails the items the server still waits for, as "import interrupted". */
   readonly interrupt: (options: { readonly keepalive: boolean }) => Promise<ServerAnswer>;
 };
 
@@ -160,11 +157,6 @@ type RunnerDeps = {
   readonly onBusy: (notImported: number, retryAfterMs: number | null) => void;
 };
 
-/**
- * Runs the extension over a run's items and reports each one to the run's endpoints, with
- * at most two uploads in flight. Items nobody answered for end the run as interrupted.
- * Never rejects.
- */
 export function createExtensionRunner({ bridge, page, heartbeatMs, onBusy }: RunnerDeps) {
   return async function runWithExtension(run: ExtensionRun): Promise<void> {
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
@@ -248,21 +240,26 @@ const runWithExtension = createExtensionRunner({
   onBusy: showBusy,
 });
 
-/** Starts fetching a sync job's missing items in this tab. The job-status stream shows progress. */
-export function importSyncItems(run: Parameters<typeof syncRun>[0]): void {
-  void runWithExtension(syncRun(run));
+async function startRun(run: ExtensionRun): Promise<void> {
+  try {
+    await runWithExtension(run);
+  } catch (error) {
+    reportError(error);
+  }
 }
 
-/** Starts fetching an Import/Export import's missing items. Its status stream shows progress. */
+export function importSyncItems(run: Parameters<typeof syncRun>[0]): void {
+  void startRun(syncRun(run));
+}
+
 export function importDataTransferItems(run: Parameters<typeof importRun>[0]): void {
-  void runWithExtension(importRun(run));
+  void startRun(importRun(run));
 }
 
 export type ItemRefresh =
   | { readonly kind: "refreshed" | "unchanged"; readonly cooldownExpiresAt: string | null }
   | { readonly kind: "failed"; readonly message: string };
 
-/** Fetches an item's page through the extension and refreshes the item from it. Never rejects. */
 export async function refreshItemWithExtension(externalId: number): Promise<ItemRefresh> {
   const id = mfcItemId(externalId);
   if (id === null) return { kind: "failed", message: "Item not found" };

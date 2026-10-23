@@ -1,5 +1,6 @@
 import { useForm } from "@tanstack/react-form";
 import * as z from "zod";
+import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { itemSyncSchema, mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
@@ -15,7 +16,7 @@ export function SyncItemsForm({
   handleSyncItemsSubmit,
   initialItemExternalId = "",
 }: {
-  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<boolean>;
+  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<SyncSubmit>;
   readonly initialItemExternalId?: string;
 }): React.JSX.Element {
   const form = useForm({
@@ -28,7 +29,7 @@ export function SyncItemsForm({
           items: value.items.map((item) => item.itemExternalId),
         }),
       );
-      if (sent) form.reset();
+      if (sent === "sent") form.reset();
     },
   });
 

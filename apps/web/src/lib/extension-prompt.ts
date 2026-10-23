@@ -5,7 +5,6 @@ export type ExtensionPrompt =
   | { readonly kind: "backing_off"; readonly untilMs: number | null }
   | { readonly kind: "queued" };
 
-/** Item resync and Import/Export runs have no sync session. */
 type RunPrompt = { readonly sessionId: string | null; readonly prompt: ExtensionPrompt };
 
 const URGENCY = { needs_user: 0, backing_off: 1, queued: 2 } as const satisfies Record<

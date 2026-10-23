@@ -1,3 +1,4 @@
+import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -44,7 +45,7 @@ import { SyncNotice } from "@/components/sync/sync-notice";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
-  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<boolean>;
+  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<SyncSubmit>;
   readonly currency: Currency;
 };
 
@@ -94,7 +95,7 @@ export default function SyncOrderItemForm({
         };
       });
 
-      if (await handleSyncOrderItemSubmit({ orderId, items: updatedItems })) {
+      if ((await handleSyncOrderItemSubmit({ orderId, items: updatedItems })) === "sent") {
         orderItemForm.reset();
       }
     },

@@ -49,7 +49,6 @@ type UseOnboardingReturn = {
   readonly step: number;
   readonly hasSeen: boolean;
   readonly isCompleted: boolean;
-  /** Installing the extension takes a page reload, which should not cost the user their place. */
   readonly reopenAtExtensionStep: boolean;
   readonly setStep: (step: number) => void;
   readonly setExtensionStepOpen: (open: boolean) => void;
