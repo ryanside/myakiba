@@ -36,31 +36,21 @@ export type TabsApi = {
 export type LiveRequester = () => Requester;
 
 /**
- * A user's tab is never recorded. While it loads, `before` is the page the tab showed when the load started, and
- * `showsPending` says whether the browser showed the load as `pendingUrl`, as Chrome does and Firefox does not.
+ * A tab the extension created, kept until the user claims it or it is gone. While its load runs, `before` is the page the
+ * tab showed when the load started, which Firefox may still call complete before the load begins.
  */
 export const ownedTabSchema = z
   .discriminatedUnion("state", [
     z.strictObject({
       state: z.literal("loading"),
       tabId: z.number().int(),
-      path: z.string(),
       before: z.string().nullable(),
-      showsPending: z.boolean(),
     }),
-    z.strictObject({ state: z.literal("landed"), tabId: z.number().int(), path: z.string() }),
+    z.strictObject({ state: z.literal("landed"), tabId: z.number().int() }),
   ])
   .nullable();
 export type OwnedTab = z.output<typeof ownedTabSchema>;
-type Owned = NonNullable<OwnedTab>;
 
-type Place =
-  | { readonly kind: "loading" }
-  | { readonly kind: "landed"; readonly path: string }
-  | { readonly kind: "elsewhere" };
-
-const LOADING: Place = { kind: "loading" };
-const ELSEWHERE: Place = { kind: "elsewhere" };
 const POLL_MS = 50;
 
 class TabTakenError extends Error {
@@ -77,35 +67,29 @@ export function inContext(tab: Tab, context: TabContext): boolean {
   );
 }
 
-function pathOn(origin: string, url: string | undefined | null): string | null {
-  const parsed = URL.parse(url ?? "");
-  return parsed?.origin === origin ? parsed.pathname : null;
+function onOrigin(url: string | undefined, origin: string): boolean {
+  return URL.parse(url ?? "")?.origin === origin;
 }
 
+/** A load the extension started in a tab, and the page the tab showed when it started. */
+type Load = { readonly tabId: number; readonly before: string | null };
+
 /**
- * Only a page the extension can read on its origin counts as its own, since the browser hides the URL of a page
- * outside its host permissions. Before a load lands, a redirect within the origin is still the extension's.
+ * The load has ended once the tab is complete on a page other than the one it showed before. A browser hides the URL of
+ * a page outside the host permissions, so that page reads as no URL at all.
  */
-function locate(tab: Tab, own: Owned, origin: string): Place {
-  const path = pathOn(origin, tab.pendingUrl ?? tab.url);
-  if (own.state === "landed") return path === own.path ? { kind: "landed", path } : ELSEWHERE;
-  const unchanged =
-    tab.pendingUrl === undefined &&
-    (tab.url ?? null) === own.before &&
-    pathOn(origin, own.before) !== own.path;
-  if (unchanged) {
-    // Chrome hides a pending load only where the extension has no permission, so that load is not the extension's.
-    if (own.showsPending) return ELSEWHERE;
-    // Firefox shows the old page until the load commits, and may call a navigated tab complete before the load starts.
-    if (tab.status !== "complete" || own.before !== null) return LOADING;
-  }
-  if (path === null) return ELSEWHERE;
-  return tab.status === "complete" ? { kind: "landed", path } : LOADING;
+function hasEnded(tab: Tab, before: string | null): boolean {
+  return tab.status === "complete" && tab.pendingUrl === undefined && (tab.url ?? null) !== before;
+}
+
+/** A load that ends anywhere but on `origin`, such as a redirect away, a 204 or a download, never lands. */
+function hasLanded(tab: Tab, before: string | null, origin: string): boolean {
+  return hasEnded(tab, before) && onOrigin(tab.url, origin);
 }
 
 /**
- * One tab of the extension's own on `origin`, which it loads pages in and closes only while the browser shows it is
- * still the extension's.
+ * The one tab on `origin` the extension created and the user has not claimed, which it loads pages in and closes. Only two
+ * events end the extension's ownership: the user focuses the tab, or the extension shows it to them. A URL never does.
  */
 export function ownedTab(deps: {
   readonly tabs: TabsApi;
@@ -141,24 +125,24 @@ export function ownedTab(deps: {
     const own = await record.load();
     if (own?.state !== "landed") return null;
     const tab = await tabs.get(own.tabId).catch(() => null);
-    if (tab && locate(tab, own, origin).kind === "landed") return { tabId: own.tabId, tab };
+    if (tab) return { tabId: own.tabId, tab };
     await record.save(null);
     return null;
   }
 
+  /** Answers whether the tab is still open and still the extension's after one try at removing it. */
+  async function removeOnce(tabId: number): Promise<boolean> {
+    const own = await record.load();
+    if (own?.tabId !== tabId) return false;
+    await tabs.remove(tabId).catch(() => null);
+    if ((await tabs.get(tabId).catch(() => null)) !== null) return true;
+    await record.save(null);
+    return false;
+  }
+
+  /** Chrome refuses to close a tab while the user drags it, and the drag may claim it before the next try. */
   async function closeUntilGone(tabId: number): Promise<void> {
-    const ours = await exclusively(async () => {
-      const own = await record.load();
-      if (own?.tabId !== tabId) return false;
-      await record.save(null);
-      const tab = await tabs.get(tabId).catch(() => null);
-      return tab !== null && locate(tab, own, origin).kind !== "elsewhere";
-    });
-    if (!ours) return;
-    // Chrome refuses to close a tab while the user drags it.
-    while ((await tabs.get(tabId).catch(() => null)) !== null) {
-      await tabs.remove(tabId).catch(() => clock.sleep(POLL_MS));
-    }
+    while (await exclusively(() => removeOnce(tabId))) await clock.sleep(POLL_MS);
   }
 
   async function release(): Promise<void> {
@@ -166,30 +150,28 @@ export function ownedTab(deps: {
     if (own) await closeUntilGone(own.tabId);
   }
 
+  /** A tab that already shows `url` is used as it is, since a load of the page it shows could not be told from that page. */
   async function navigate(
     requester: LiveRequester,
     url: string,
     signal: AbortSignal,
-  ): Promise<number | null> {
+  ): Promise<Load | null> {
     const { tabId: requesterTabId, context } = requester();
     const windowId = await windowOf(requesterTabId);
     return exclusively(async () => {
       const own = await landedTab();
       if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) return null;
+      const load = { tabId: own.tabId, before: own.tab.url ?? null };
+      if (own.tab.url === url) return load;
       signal.throwIfAborted();
-      const shown = await tabs.update(own.tabId, { url });
-      await record.save({
-        state: "loading",
-        tabId: own.tabId,
-        path: new URL(url).pathname,
-        before: own.tab.url ?? null,
-        showsPending: shown?.pendingUrl !== undefined,
-      });
-      return own.tabId;
+      await tabs.update(own.tabId, { url });
+      await record.save({ state: "loading", ...load });
+      return load;
     });
   }
 
-  async function create(requester: LiveRequester, url: string, signal: AbortSignal) {
+  /** A new tab's only page before its load is a blank one. */
+  async function create(requester: LiveRequester, url: string, signal: AbortSignal): Promise<Load> {
     await release();
     const { tabId: requesterTabId, context } = requester();
     const windowId = await windowOf(requesterTabId);
@@ -206,75 +188,88 @@ export function ownedTab(deps: {
     }
     const tabId = created.id;
     if (tabId === undefined) throw new Error("the new tab has no id");
+    const load = { tabId, before: null };
     await exclusively(async () => {
-      if (focused.has(tabId)) throw new TabTakenError(tabId);
-      await record.save({
-        state: "loading",
-        tabId,
-        path: new URL(url).pathname,
-        before: created.url ?? null,
-        showsPending: created.pendingUrl !== undefined,
-      });
+      if (!focused.has(tabId)) await record.save({ state: "loading", ...load });
     });
-    return tabId;
+    return load;
   }
 
   async function landed(tabId: number): Promise<boolean> {
     const own = await record.load();
     if (own?.tabId !== tabId) throw new TabTakenError(tabId);
-    const place = locate(await tabs.get(tabId), own, origin);
-    switch (place.kind) {
-      case "loading":
-        return false;
-      case "landed":
-        await record.save({ state: "landed", tabId, path: place.path });
-        return true;
-      case "elsewhere":
-        await record.save(null);
-        throw new TabTakenError(tabId);
+    if (own.state === "landed") return true;
+    if (!hasLanded(await tabs.get(tabId), own.before, origin)) return false;
+    await record.save({ state: "landed", tabId });
+    return true;
+  }
+
+  /**
+   * A tab the user claimed mid-load may still run the extension's request, so the turn waits until the tab is seen
+   * loading and then complete, which is also when a load of the user's own has replaced it.
+   */
+  async function untilEnded({ tabId, before }: Load, timeout: AbortSignal): Promise<void> {
+    let loading = false;
+    while (!timeout.aborted) {
+      const tab = await tabs.get(tabId).catch(() => null);
+      if (!tab) return;
+      if (tab.status !== "complete" || tab.pendingUrl !== undefined) loading = true;
+      else if (loading || hasEnded(tab, before)) return;
+      await clock.sleep(POLL_MS, timeout);
     }
   }
 
-  async function open(requester: LiveRequester, url: string, signal: AbortSignal) {
-    const tabId =
-      (await navigate(requester, url, signal)) ?? (await create(requester, url, signal));
+  async function open(
+    requester: LiveRequester,
+    url: string,
+    cancel: AbortSignal,
+    timeout: AbortSignal,
+  ): Promise<number> {
+    const signal = AbortSignal.any([cancel, timeout]);
+    const load = (await navigate(requester, url, signal)) ?? (await create(requester, url, signal));
     try {
       for (;;) {
         signal.throwIfAborted();
-        if (await exclusively(() => landed(tabId))) return tabId;
+        if (await exclusively(() => landed(load.tabId))) return load.tabId;
         await clock.sleep(POLL_MS, signal);
       }
     } catch (error) {
-      if (signal.aborted) await closeUntilGone(tabId);
+      if (signal.aborted) await closeUntilGone(load.tabId);
+      await untilEnded(load, timeout);
       throw error;
     }
   }
 
   return {
     /**
-     * Loads `url` in the extension's own tab and runs `use` there, both in one throttle turn, so the next load waits for
-     * the whole of it. A load cut short closes the tab, if it is still the extension's, before the turn ends.
+     * Loads `url` in the extension's own tab in one throttle turn. A load cut short closes the tab before the turn ends,
+     * unless the user claimed it.
      */
-    loadOwned<T>(
+    load(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
+      return throttle.load(signal, (timeout) => open(requester, url, signal, timeout));
+    },
+
+    /** Loads `url` and runs `read` in the tab, both in one throttle turn, so the next load waits for the whole of it. */
+    loadAndRead<T>(
       requester: LiveRequester,
       url: string,
       signal: AbortSignal,
-      use: (tabId: number, signal: AbortSignal) => T | Promise<T>,
+      read: (tabId: number, signal: AbortSignal) => Promise<T>,
     ): Promise<T> {
-      return throttle.load(signal, async (timeout) => {
-        const bounded = AbortSignal.any([signal, timeout]);
-        return use(await open(requester, url, bounded), bounded);
-      });
+      return throttle.load(signal, async (timeout) =>
+        read(await open(requester, url, signal, timeout), AbortSignal.any([signal, timeout])),
+      );
     },
 
     async landedIn(context: TabContext): Promise<number | null> {
       const own = await exclusively(landedTab);
-      return own && inContext(own.tab, context) ? own.tabId : null;
+      return own && inContext(own.tab, context) && onOrigin(own.tab.url, origin) ? own.tabId : null;
     },
 
     closeUntilGone,
 
-    async noteActivated(tabId: number): Promise<void> {
+    /** The user focused the tab, or the extension showed it to them, so it is theirs from now on. */
+    async claim(tabId: number): Promise<void> {
       focusedDuringCreate?.add(tabId);
       await exclusively(async () => {
         const own = await record.load();

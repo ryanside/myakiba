@@ -14,8 +14,6 @@ export type MfcTabLease = { readonly kind: "borrowed" | "owned"; readonly tabId:
 
 const NAVIGATION_POLL_MS = 500;
 
-const tabIdOf = (tabId: number) => tabId;
-
 export function createMfcTabs(deps: {
   readonly tabs: TabsApi;
   readonly windows: WindowsApi;
@@ -33,17 +31,6 @@ export function createMfcTabs(deps: {
     throttle: deps.throttle,
   });
   let borrowing = true;
-  let selfActivatedTabId: number | null = null;
-
-  async function activate(tabId: number, signal: AbortSignal): Promise<void> {
-    signal.throwIfAborted();
-    const tab = await tabs.get(tabId);
-    signal.throwIfAborted();
-    if (!tab.active) selfActivatedTabId = tabId;
-    const shown = await tabs.update(tabId, { active: true });
-    signal.throwIfAborted();
-    if (shown?.windowId !== undefined) await windows.update(shown.windowId, { focused: true });
-  }
 
   return {
     async lease(requester: LiveRequester, signal: AbortSignal): Promise<MfcTabLease> {
@@ -59,19 +46,23 @@ export function createMfcTabs(deps: {
         const borrowed = open.find((tab) => inContext(tab, context))?.id;
         if (borrowed !== undefined) return { kind: "borrowed", tabId: borrowed };
       }
-      const tabId = await own.loadOwned(requester, `${origins.mfc}/`, signal, tabIdOf);
-      return { kind: "owned", tabId };
+      return { kind: "owned", tabId: await own.load(requester, `${origins.mfc}/`, signal) };
     },
 
-    /** Loads the item in a tab of the extension's own, never a borrowed one, and shows it. */
+    /**
+     * Loads the item in a tab of the extension's own, never a borrowed one, and gives the tab to the user by showing it.
+     * The extension reads the page the user solves there, but never closes that tab.
+     */
     async showChallenge(
       requester: LiveRequester,
       mfcItemId: MfcItemId,
       signal: AbortSignal,
     ): Promise<number> {
-      const url = mfcItemUrl(mfcItemId, origins);
-      const tabId = await own.loadOwned(requester, url, signal, tabIdOf);
-      await activate(tabId, signal);
+      const tabId = await own.load(requester, mfcItemUrl(mfcItemId, origins), signal);
+      signal.throwIfAborted();
+      await own.claim(tabId);
+      const shown = await tabs.update(tabId, { active: true });
+      if (shown?.windowId !== undefined) await windows.update(shown.windowId, { focused: true });
       return tabId;
     },
 
@@ -97,11 +88,7 @@ export function createMfcTabs(deps: {
       }
     },
 
-    /** Closes a challenge tab nobody solved, if it is still the extension's, so a reload in it cannot run on. */
-    dismiss: own.closeUntilGone,
-
     async handBack(requester: LiveRequester, signal: AbortSignal): Promise<void> {
-      selfActivatedTabId = null;
       if (signal.aborted) return;
       try {
         const tab = await tabs.update(requester().tabId, { active: true });
@@ -111,13 +98,7 @@ export function createMfcTabs(deps: {
       }
     },
 
-    async noteActivated(tabId: number): Promise<void> {
-      if (selfActivatedTabId === tabId) {
-        selfActivatedTabId = null;
-        return;
-      }
-      await own.noteActivated(tabId);
-    },
+    claim: own.claim,
 
     stopBorrowing(): void {
       borrowing = false;

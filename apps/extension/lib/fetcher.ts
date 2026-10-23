@@ -153,7 +153,7 @@ export function createFetcher(deps: FetcherDeps) {
       return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, (bounded) =>
         picture.access === "gated"
           ? deps.fetchGatedPicture(tabId, picture.url, bounded)
-          : pictureTab.loadOwned(requester, url.href, bounded, (pictureTabId, inTurn) =>
+          : pictureTab.loadAndRead(requester, url.href, bounded, (pictureTabId, inTurn) =>
               deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
             ),
       );
@@ -258,7 +258,6 @@ export function createFetcher(deps: FetcherDeps) {
     const deadline = clock.now() + CHALLENGE_WINDOW_MS;
     dispatch({ type: "needs_user", untilMs: deadline });
     const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
-    if (!answer) await mfcTabs.dismiss(tabId);
     await mfcTabs.handBack(requester, signal);
     signal.throwIfAborted();
     if (!answer) return failed("challenge_unsolved");
@@ -348,7 +347,7 @@ export function createFetcher(deps: FetcherDeps) {
       dispatch({ type: "cancelled", run: key });
     },
     async noteTabActivated(tabId: number): Promise<void> {
-      await Promise.all([mfcTabs.noteActivated(tabId), pictureTab.noteActivated(tabId)]);
+      await Promise.all([mfcTabs.claim(tabId), pictureTab.claim(tabId)]);
     },
     /** Runs the queue once, which closes a tab left open by a worker that stopped mid-run. */
     resume: kick,

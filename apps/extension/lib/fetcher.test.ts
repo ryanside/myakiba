@@ -70,9 +70,12 @@ function challengeOn(ids: readonly number[], options: { readonly solved?: boolea
   };
 }
 
+/** The last tab the extension showed the user for the item. */
 function challengeTab(extension: FakeExtension, id: number): number {
-  const tabId = extension.tabs.find(`${ORIGINS.mfc}/item/${id}`);
-  if (tabId === undefined) throw new Error(`no tab shows item ${id}`);
+  const tabId = extension.tabs.raised.findLast(
+    (raised) => extension.tabs.get(raised)?.url === `${ORIGINS.mfc}/item/${id}`,
+  );
+  if (tabId === undefined) throw new Error(`no tab the extension showed has item ${id}`);
   return tabId;
 }
 
@@ -353,6 +356,7 @@ describe("cancel", () => {
 
     expect(fetches(extension.calls)).toEqual([itemId(7), itemId(7)]);
     expect(again.results().map((result) => result.ok)).toEqual([true]);
+    expect(extension.tabs.has(101)).toBe(true);
   });
 });
 
@@ -980,7 +984,7 @@ describe("the MFC tab", () => {
     const ownedTab = memoryValue<OwnedTab>(null);
     const extension = fakeExtension({ pages: itemPages(), ownedTab });
     const left = extension.tabs.open(`${ORIGINS.mfc}/item/7`);
-    await ownedTab.save({ state: "landed", tabId: left, path: "/item/7" });
+    await ownedTab.save({ state: "landed", tabId: left });
 
     extension.fetcher.resume();
     await extension.settle();
@@ -1027,7 +1031,11 @@ describe("the MFC tab", () => {
       navigationMs: () => 5000,
       onTabCreated: (tabId) => {
         extension.tabs.activate(tabId);
-        extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Example" });
+        extension.tabs.navigate(tabId, {
+          url: "https://example.com/",
+          title: "Example",
+          loadMs: 1000,
+        });
       },
     });
     const startedAt = extension.clock.now();
@@ -1056,6 +1064,28 @@ describe("the MFC tab", () => {
 
       expect(run.results()).toEqual([{ ok: false, error: "timeout" }]);
       expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a tab the user focuses mid-load is theirs, and the next load waits for that load to end (%s commits)",
+    async (_name, style) => {
+      let navigations = 0;
+      const extension = fakeExtension({
+        pages: itemPages(),
+        navigationMs: () => (navigations++ === 0 ? 6000 : 0),
+        deferNavigationCommit: style,
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+      await advance(extension.clock, 1000);
+      extension.tabs.activate(101);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results().at(-1)).toEqual({ ok: true, html: itemPage(2), picture: null });
+      expect(extension.tabs.has(101)).toBe(true);
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
     },
   );
 

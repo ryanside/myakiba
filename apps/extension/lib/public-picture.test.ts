@@ -381,7 +381,7 @@ describe("public pictures in an owned static tab", () => {
     const ownedPictureTab = memoryValue<OwnedTab>(null);
     const extension = fakeExtension({ pages: publicPages, ownedPictureTab });
     const tabId = extension.tabs.open(pictureUrl(1));
-    await ownedPictureTab.save({ state: "landed", tabId, path: "/upload/items/1/1.jpg" });
+    await ownedPictureTab.save({ state: "landed", tabId });
     extension.restart();
     await extension.settle();
 

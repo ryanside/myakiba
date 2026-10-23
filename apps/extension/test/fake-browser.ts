@@ -2,13 +2,14 @@ import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Clock, SessionValue } from "../lib/clock";
+import { PAGE_TIMEOUT_MS } from "../lib/collect";
 import type { CollectedPage, PageRequest } from "../lib/collect";
 import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { WindowsApi } from "../lib/mfc-tab";
 import type { Origins } from "../lib/origins";
 import type { OwnedTab, Tab, TabsApi } from "../lib/owned-tab";
-import { pictureToRead } from "../lib/picture";
+import { PICTURE_TIMEOUT_MS, pictureToRead } from "../lib/picture";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
 import { OPEN_THROTTLE } from "../lib/throttle";
 import type { ThrottleState } from "../lib/throttle";
@@ -182,6 +183,17 @@ export const COMMIT_STYLES: readonly (readonly [string, CommitStyle | undefined]
 
 const IDLE_POLLS = 3;
 
+const MFC_ORIGINS = new Set([
+  ...HOST_ORIGINS,
+  "https://myfigurecollection.net",
+  "https://static.myfigurecollection.net",
+]);
+
+function onMfc(url: string): boolean {
+  const origin = URL.parse(url)?.origin;
+  return origin !== undefined && MFC_ORIGINS.has(origin);
+}
+
 function readable(url: string): boolean {
   const origin = URL.parse(url)?.origin;
   return origin !== undefined && HOST_ORIGINS.has(origin);
@@ -246,6 +258,27 @@ function fakeTabs(
       answer = { ...answer, pendingUrl: tab.destination };
     }
     return answer;
+  }
+
+  /**
+   * Once the user claims a tab, the extension answers for a load it started there only until that load's throttle turn
+   * runs out, since it may neither close nor stop the user's tab.
+   */
+  function claim(tabId: number): void {
+    for (const running of loads) {
+      if (
+        running.tabId !== tabId ||
+        running.byUser ||
+        (running.endedAt ?? Infinity) <= clock.now()
+      ) {
+        continue;
+      }
+      const turnMs = running.url.startsWith(ORIGINS.mfcStatic)
+        ? PICTURE_TIMEOUT_MS
+        : PAGE_TIMEOUT_MS;
+      running.endedAt = Math.min(running.endedAt ?? Infinity, running.at + turnMs);
+    }
+    activate(tabId);
   }
 
   function activate(tabId: number): void {
@@ -377,7 +410,8 @@ function fakeTabs(
       const tab = tabs.get(tabId);
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
-    activate,
+    /** The user focuses the tab. */
+    activate: claim,
     /** While the user drags a tab, Chrome refuses to close it. */
     drag(tabId: number, dragging: boolean): void {
       if (dragging) dragged.add(tabId);
@@ -624,6 +658,7 @@ export function fakeExtension(options: {
     },
     run,
     settle: clock.runUntilIdle,
+    /** Loads on MFC's origins, which the throttle spaces. A load the user starts anywhere else is none of MFC's. */
     loads(): readonly Load[] {
       const fetches = calls
         .filter((call) => call.mode === "fetch")
@@ -634,7 +669,9 @@ export function fakeExtension(options: {
           byUser: false,
           endedAt: call.endedAt,
         }));
-      return [...tabs.loads, ...fetches, ...pictureReads].toSorted((a, b) => a.at - b.at);
+      return [...tabs.loads, ...fetches, ...pictureReads]
+        .filter((load) => onMfc(load.url))
+        .toSorted((a, b) => a.at - b.at);
     },
     /** The browser stops the worker and starts a new one, which resumes as the background does. */
     restart(): void {
