@@ -35,10 +35,7 @@ export type TabsApi = {
 /** The first run still waiting for the job. Read at each tab step, since runs cancel at any time. */
 export type LiveRequester = () => Requester;
 
-/**
- * A tab the extension created, kept until the user claims it or it is gone. While its load runs, `before` is the page the
- * tab showed when the load started, which Firefox may still call complete before the load begins.
- */
+/** Firefox may call a tab complete on `before`, the page it showed when the load started, before the load begins. */
 export const ownedTabSchema = z
   .discriminatedUnion("state", [
     z.strictObject({
@@ -71,25 +68,20 @@ function onOrigin(url: string | undefined, origin: string): boolean {
   return URL.parse(url ?? "")?.origin === origin;
 }
 
-/** A load the extension started in a tab, and the page the tab showed when it started. */
 type Load = { readonly tabId: number; readonly before: string | null };
 
-/**
- * The load has ended once the tab is complete on a page other than the one it showed before. A browser hides the URL of
- * a page outside the host permissions, so that page reads as no URL at all.
- */
+/** A browser hides the URL of a page outside the host permissions, so that page reads as no URL at all. */
 function hasEnded(tab: Tab, before: string | null): boolean {
   return tab.status === "complete" && tab.pendingUrl === undefined && (tab.url ?? null) !== before;
 }
 
-/** A load that ends anywhere but on `origin`, such as a redirect away, a 204 or a download, never lands. */
 function hasLanded(tab: Tab, before: string | null, origin: string): boolean {
   return hasEnded(tab, before) && onOrigin(tab.url, origin);
 }
 
 /**
- * The one tab on `origin` the extension created and the user has not claimed, which it loads pages in and closes. Only two
- * events end the extension's ownership: the user focuses the tab, or the extension shows it to them. A URL never does.
+ * The one tab on `origin` the extension created and the user has not claimed, which it loads pages in and closes. Only
+ * `claim` ends that ownership. A URL never does.
  */
 export function ownedTab(deps: {
   readonly tabs: TabsApi;
@@ -97,7 +89,6 @@ export function ownedTab(deps: {
   readonly origin: string;
   readonly record: SessionValue<OwnedTab>;
   readonly throttle: Pick<Throttle, "load">;
-  /** How long one throttle turn in this tab may take, from when the turn begins. */
   readonly turnMs: number;
 }) {
   const { tabs, clock, origin, record, throttle, turnMs } = deps;
@@ -132,8 +123,7 @@ export function ownedTab(deps: {
     return null;
   }
 
-  /** Answers whether the tab is still open and still the extension's after one try at removing it. */
-  async function removeOnce(tabId: number): Promise<boolean> {
+  async function stillOursAfterRemoving(tabId: number): Promise<boolean> {
     const own = await record.load();
     if (own?.tabId !== tabId) return false;
     await tabs.remove(tabId).catch(() => null);
@@ -144,7 +134,7 @@ export function ownedTab(deps: {
 
   /** Chrome refuses to close a tab while the user drags it, and the drag may claim it before the next try. */
   async function closeUntilGone(tabId: number): Promise<void> {
-    while (await exclusively(() => removeOnce(tabId))) await clock.sleep(POLL_MS);
+    while (await exclusively(() => stillOursAfterRemoving(tabId))) await clock.sleep(POLL_MS);
   }
 
   async function release(): Promise<void> {
@@ -172,7 +162,6 @@ export function ownedTab(deps: {
     });
   }
 
-  /** A new tab's only page before its load is a blank one. */
   async function create(requester: LiveRequester, url: string, signal: AbortSignal): Promise<Load> {
     await release();
     const { tabId: requesterTabId, context } = requester();

@@ -116,15 +116,11 @@ export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: (
 type FakeTab = {
   id: number;
   windowId: number;
-  /** The page the tab shows once its load completes. */
   url: string;
-  /** The page the tab showed before its load. */
-  committedUrl: string;
-  /** Where the load is going, which Chrome shows as `pendingUrl`. */
+  previousUrl: string;
   destination: string;
   title: string;
   completesAt: number;
-  /** Polls left in which a Firefox tab calls itself complete before its load starts. */
   idlePolls: number;
   active: boolean;
   incognito: boolean;
@@ -217,7 +213,7 @@ function fakeTabs(
   const log: string[] = [];
   const loads: Load[] = [];
   const focused: number[] = [];
-  const raised: number[] = [];
+  const shownByExtension: number[] = [];
   let nextId = 100;
   const showsPending =
     options.deferNavigationCommit === undefined || options.deferNavigationCommit === "chrome";
@@ -236,7 +232,7 @@ function fakeTabs(
   function view(tab: FakeTab): Tab {
     const loading = clock.now() < tab.completesAt;
     const style = loading ? options.deferNavigationCommit : undefined;
-    const shown = style === undefined ? tab.url : tab.committedUrl;
+    const shown = style === undefined ? tab.url : tab.previousUrl;
     let shownTab: Tab = { ...seen(tab), status: loading ? "loading" : "complete" };
     if (readable(shown)) shownTab = { ...shownTab, url: shown, title: tab.title };
     if (style === "chrome" && readable(tab.destination)) {
@@ -247,13 +243,13 @@ function fakeTabs(
 
   function idleView(tab: FakeTab): Tab {
     const idle: Tab = { ...seen(tab), status: "complete" };
-    return readable(tab.committedUrl) ? { ...idle, url: tab.committedUrl } : idle;
+    return readable(tab.previousUrl) ? { ...idle, url: tab.previousUrl } : idle;
   }
 
   /** Create and update answer before their load commits, even when the fake commits at once. */
   function started(tab: FakeTab): Tab {
     let answer: Tab = { ...seen(tab), status: "loading" };
-    if (readable(tab.committedUrl)) answer = { ...answer, url: tab.committedUrl };
+    if (readable(tab.previousUrl)) answer = { ...answer, url: tab.previousUrl };
     if (showsPending && readable(tab.destination)) {
       answer = { ...answer, pendingUrl: tab.destination };
     }
@@ -264,7 +260,7 @@ function fakeTabs(
    * Once the user claims a tab, the extension answers for a load it started there only until that load's throttle turn
    * runs out, since it may neither close nor stop the user's tab.
    */
-  function claim(tabId: number): void {
+  function activateByUser(tabId: number): void {
     for (const running of loads) {
       if (
         running.tabId !== tabId ||
@@ -301,15 +297,15 @@ function fakeTabs(
 
   /** A dropped load, such as a 204 or a download, ends on the page the tab showed before it. */
   function load(tab: FakeTab, url: string, loadMs: number, title = url, byUser = false): void {
-    const committedUrl = status(tab) === "complete" ? tab.url : tab.committedUrl;
+    const previousUrl = status(tab) === "complete" ? tab.url : tab.previousUrl;
     stopLoading(tab.id);
     const at = clock.now();
     const destination = options.redirect?.(url) ?? url;
     const dropped = options.dropsNavigation?.(url) === true;
     Object.assign(tab, {
-      committedUrl,
+      previousUrl,
       destination,
-      url: dropped ? committedUrl : destination,
+      url: dropped ? previousUrl : destination,
       title: dropped ? tab.title : title,
       completesAt: at + loadMs,
       idlePolls: options.deferNavigationCommit === "firefox-late" && !byUser ? IDLE_POLLS : 0,
@@ -324,7 +320,7 @@ function fakeTabs(
       id: nextId++,
       windowId,
       url,
-      committedUrl: url,
+      previousUrl: url,
       destination: url,
       title: url,
       completesAt: clock.now(),
@@ -367,7 +363,7 @@ function fakeTabs(
       const answer = url === undefined ? view(tab) : started(tab);
       log.push(`update ${tabId}${url === undefined ? "" : ` ${url}`}${active ? " active" : ""}`);
       if (active) {
-        raised.push(tabId);
+        shownByExtension.push(tabId);
         activate(tabId);
       }
       return answer;
@@ -396,8 +392,7 @@ function fakeTabs(
     log,
     loads,
     focused,
-    /** Tabs the extension brought to the front. */
-    raised,
+    shownByExtension,
     open(url: string, placement: { windowId?: number; cookieStoreId?: string } = {}): number {
       return add(url, placement.windowId ?? 1, placement.cookieStoreId).id;
     },
@@ -410,8 +405,7 @@ function fakeTabs(
       const tab = tabs.get(tabId);
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
-    /** The user focuses the tab. */
-    activate: claim,
+    activate: activateByUser,
     /** While the user drags a tab, Chrome refuses to close it. */
     drag(tabId: number, dragging: boolean): void {
       if (dragging) dragged.add(tabId);
@@ -545,7 +539,6 @@ export function fakeExtension(options: {
     }
   }
 
-  /** A read in a tab ends once it answers, once its signal stops it, or once its tab closes. */
   async function readIn(
     read: Load,
     signal: AbortSignal,
@@ -658,7 +651,7 @@ export function fakeExtension(options: {
     },
     run,
     settle: clock.runUntilIdle,
-    /** Loads on MFC's origins, which the throttle spaces. A load the user starts anywhere else is none of MFC's. */
+    /** Only MFC's loads, since the throttle spaces only those. */
     loads(): readonly Load[] {
       const fetches = calls
         .filter((call) => call.mode === "fetch")

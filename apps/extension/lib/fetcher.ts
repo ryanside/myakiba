@@ -142,10 +142,7 @@ export function createFetcher(deps: FetcherDeps) {
     };
   }
 
-  /**
-   * A picture takes a throttle turn of its own, whose budget starts with the turn. A gated one is a request to MFC like a
-   * page, and a public one is a page load in the static tab.
-   */
+  /** Each picture is a request to MFC, so it takes a throttle turn of its own, and its budget starts with that turn. */
   async function pictureOf(
     ogImage: MfcOgImage,
     { tabId, requester, signal }: ItemContext,

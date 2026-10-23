@@ -52,7 +52,6 @@ function awaitedItem(events: readonly RunEvent<PortPicture>[]): number | null {
   return awaited;
 }
 
-/** Drives one seeded mix of runs, cancels, solves, claims and worker restarts against a fake MFC. */
 async function play(seed: number, style: CommitStyle | undefined) {
   const random = seeded(seed);
   const between = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
@@ -233,7 +232,7 @@ async function play(seed: number, style: CommitStyle | undefined) {
   await extension.settle();
 
   const loads = extension.loads();
-  const shown = extension.tabs.raised.filter((id) => id !== extension.myakiba.tabId);
+  const shown = extension.tabs.shownByExtension.filter((id) => id !== extension.myakiba.tabId);
   const users = new Set([...claimed, ...shown, ...(usersTab === null ? [] : [usersTab])]);
   return {
     unfinished: loads.filter((load) => load.endedAt === null),

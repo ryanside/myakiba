@@ -70,9 +70,8 @@ function challengeOn(ids: readonly number[], options: { readonly solved?: boolea
   };
 }
 
-/** The last tab the extension showed the user for the item. */
 function challengeTab(extension: FakeExtension, id: number): number {
-  const tabId = extension.tabs.raised.findLast(
+  const tabId = extension.tabs.shownByExtension.findLast(
     (raised) => extension.tabs.get(raised)?.url === `${ORIGINS.mfc}/item/${id}`,
   );
   if (tabId === undefined) throw new Error(`no tab the extension showed has item ${id}`);
