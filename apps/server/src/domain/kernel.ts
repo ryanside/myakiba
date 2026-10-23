@@ -367,7 +367,8 @@ export async function serve<I, T, F extends Failure, M extends string>(
   try {
     const outcome = await run(caller.viewer, op, input, caller.log);
     if (outcome.ok) {
-      caller.log.set({ outcome: "success" });
+      // An operation may name its own outcome, such as "imported", in place of "success".
+      caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
       return outcome.value;
     }
     caller.log.set({ outcome: outcome.category });

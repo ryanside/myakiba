@@ -1099,3 +1099,27 @@ test.each([1, 2])(
     }
   },
 );
+
+test("an import heartbeat's wide event names the import", async () => {
+  const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+  const { default: service } = await import("./service");
+  const { useLogger } = await import("evlog/elysia");
+  const original = service.heartbeat.bind(service);
+  let logged: ReturnType<typeof useLogger> | undefined;
+  const beat = spyOn(service, "heartbeat").mockImplementation(async (...args) => {
+    logged = useLogger();
+    return original(...args);
+  });
+  initLogger({ enabled: true });
+  try {
+    expect(await heartbeat(run.id)).toEqual({ running: true });
+    expect(logged?.getContext()).toMatchObject({
+      action: "dataTransfer.heartbeat",
+      outcome: "success",
+      dataTransfer: { importId: run.id },
+    });
+  } finally {
+    initLogger({ enabled: false });
+    beat.mockRestore();
+  }
+});

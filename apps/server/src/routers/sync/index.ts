@@ -200,11 +200,13 @@ const syncRouter = privateApi("/sync")
   )
   .post(
     "/sessions/:id/retry",
-    (ctx) =>
-      serve(ctx, SyncRuns.retry, {
+    (ctx) => {
+      ctx.log.set({ sync: { sessionId: ctx.params.id } });
+      return serve(ctx, SyncRuns.retry, {
         id: ctx.params.id,
         emailVerified: ctx.user.emailVerified,
-      }),
+      });
+    },
     {
       params: z.object({ id: z.string() }),
       auth: true,
@@ -214,6 +216,10 @@ const syncRouter = privateApi("/sync")
   .post(
     "/sessions/:id/items",
     async (ctx) => {
+      ctx.log.set({
+        sync: { sessionId: ctx.params.id, jobId: ctx.body.jobId },
+        mfc: { itemId: ctx.body.mfcItemId },
+      });
       const existing = await serve(ctx, SyncRuns.itemStatus, {
         id: ctx.params.id,
         mfcItemId: ctx.body.mfcItemId,
@@ -227,6 +233,14 @@ const syncRouter = privateApi("/sync")
   .post(
     "/sessions/:id/failures",
     async (ctx) => {
+      const { body } = ctx;
+      ctx.log.set({
+        sync: { sessionId: ctx.params.id, jobId: body.jobId },
+        mfc:
+          "failures" in body
+            ? { failureCount: body.failures.length }
+            : { itemId: body.mfcItemId, error: body.error },
+      });
       return serve(ctx, SyncRuns.failure, {
         id: ctx.params.id,
         failure: ctx.body,
@@ -238,6 +252,7 @@ const syncRouter = privateApi("/sync")
   .post(
     "/sessions/:id/heartbeat",
     async (ctx) => {
+      ctx.log.set({ sync: { sessionId: ctx.params.id, jobId: ctx.body.jobId } });
       return serve(ctx, SyncRuns.heartbeat, {
         id: ctx.params.id,
         jobId: ctx.body.jobId,
@@ -248,6 +263,7 @@ const syncRouter = privateApi("/sync")
   .post(
     "/sessions/:id/interrupt",
     async (ctx) => {
+      ctx.log.set({ sync: { sessionId: ctx.params.id, jobId: ctx.body.jobId } });
       return serve(ctx, SyncRuns.interrupt, {
         id: ctx.params.id,
         jobId: ctx.body.jobId,

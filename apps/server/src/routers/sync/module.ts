@@ -113,8 +113,11 @@ export const Sync = {
       scope,
       input: { readonly body: { readonly items: number[] }; readonly emailVerified: boolean },
     ) => {
-      if (!input.emailVerified)
+      scope.log.set({ sync: { type: "item" } });
+      if (!input.emailVerified) {
+        scope.log.set({ sync: { reason: "email_not_verified" } });
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
+      }
       const existing = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
         input.body.items,
         scope.tx,
@@ -122,6 +125,10 @@ export const Sync = {
       const ids = new Set(existing.map((row) => row.externalId));
       const missing = input.body.items.filter((id) => !ids.has(id));
       const syncSessionId = createId();
+      scope.log.set({
+        sync: { sessionId: syncSessionId },
+        items: { requested: input.body.items.length, existing: ids.size, toFetch: missing.length },
+      });
       const session = {
         id: syncSessionId,
         userId: scope.viewer.userId,
@@ -664,6 +671,7 @@ const runFailure = command(
     scope,
     input: { readonly id: string; readonly upload: SyncItemUpload; readonly missingOrder: boolean },
   ) => {
+    scope.log.set({ outcome: "failed" });
     if (input.missingOrder) {
       await failRunWithoutOrder(scope, input.id, scope.viewer.userId);
       return ok({
@@ -698,11 +706,9 @@ export const SyncRuns = {
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       const rows = await syncItemStatus(scope.tx, input.id, scope.viewer.userId, input.mfcItemId);
       if (rows.length === 0) return fail("not_found", "This item is not part of the import");
-      return ok(
-        rows.every((row) => row.status === "imported")
-          ? ({ outcome: "already_imported", reason: null } satisfies CompleteSyncItemResult)
-          : null,
-      );
+      if (!rows.every((row) => row.status === "imported")) return ok(null);
+      scope.log.set({ outcome: "already_imported" });
+      return ok({ outcome: "already_imported", reason: null } satisfies CompleteSyncItemResult);
     },
   ),
 
@@ -734,9 +740,9 @@ export const SyncRuns = {
         input.upload,
         input.prepared,
       );
-      return result === null
-        ? fail("not_found", "This item is not part of the import")
-        : ok(result);
+      if (result === null) return fail("not_found", "This item is not part of the import");
+      scope.log.set({ outcome: result.outcome });
+      return ok(result);
     },
   ),
   failure: command(
@@ -752,21 +758,27 @@ export const SyncRuns = {
       if (!input.emailVerified)
         return fail("forbidden", SYNC_STATUS_MESSAGES.requireEmailVerification);
       const result = await failSyncItem(scope, input.id, scope.viewer.userId, input.failure);
-      return result === null ? fail("not_found", "Import not found") : ok(result);
+      if (result === null) return fail("not_found", "Import not found");
+      scope.log.set({ outcome: result.outcome });
+      return ok(result);
     },
   ),
   heartbeat: command(
     { action: "sync.heartbeat", failure: "Failed to renew the import" },
     async (scope, input: { readonly id: string; readonly jobId: string }) => {
       const result = await heartbeatSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
-      return result === null ? fail("not_found", "Import not found") : ok(result);
+      if (result === null) return fail("not_found", "Import not found");
+      scope.log.set({ outcome: result.active ? "active" : "inactive" });
+      return ok(result);
     },
   ),
   interrupt: command(
     { action: "sync.interrupt", failure: "Failed to stop the import" },
     async (scope, input: { readonly id: string; readonly jobId: string }) => {
       const result = await interruptSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
-      return result === null ? fail("not_found", "Import not found") : ok(result);
+      if (result === null) return fail("not_found", "Import not found");
+      scope.log.set({ outcome: result.outcome });
+      return ok(result);
     },
   ),
   retry: command(
@@ -783,6 +795,10 @@ export const SyncRuns = {
         );
       if (result.outcome === "unavailable")
         return failAfterCommit("conflict", "These failed item results cannot be retried");
+      scope.log.set({
+        sync: { jobId: result.jobId },
+        items: { toFetch: result.missingMfcItemIds.length },
+      });
       return ok({ jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds });
     },
   ),

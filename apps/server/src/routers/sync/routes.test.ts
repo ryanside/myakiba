@@ -1678,3 +1678,30 @@ test.each([true, false])(
     }
   },
 );
+
+test("an item upload's wide event names its session, job, item and outcome", async () => {
+  const run = await start("item", { items: [X] });
+  const { default: service } = await import("./service");
+  const { useLogger } = await import("evlog/elysia");
+  const original = service.getExistingItemsWithLatestReleaseByExternalIds.bind(service);
+  let logged: ReturnType<typeof useLogger> | undefined;
+  const read = spyOn(service, "getExistingItemsWithLatestReleaseByExternalIds").mockImplementation(
+    async (...args) => {
+      logged = useLogger();
+      return original(...args);
+    },
+  );
+  initLogger({ enabled: true });
+  try {
+    expect(await complete(run, X)).toEqual(imported);
+    expect(logged?.getContext()).toMatchObject({
+      action: "sync.completeItem",
+      outcome: "imported",
+      sync: { sessionId: run.syncSessionId, jobId: run.jobId },
+      mfc: { itemId: X },
+    });
+  } finally {
+    initLogger({ enabled: false });
+    read.mockRestore();
+  }
+});
