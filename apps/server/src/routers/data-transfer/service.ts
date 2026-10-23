@@ -218,6 +218,8 @@ async function applyItemRows(
       ),
     ),
   ];
+  // The per-user advisory key belongs only to imports. Order deletion never locks an import,
+  // so taking it before these order locks cannot form a cycle with deletion.
   const presentOrderIds = new Set<string>();
   if (wantedOrderIds.length > 0) {
     const present = await tx
@@ -225,7 +227,7 @@ async function applyItemRows(
       .from(orderTable)
       .where(and(eq(orderTable.userId, run.userId), inArray(orderTable.id, wantedOrderIds)))
       .orderBy(asc(orderTable.id))
-      .for("update");
+      .for("key share");
     for (const { id } of present) presentOrderIds.add(id);
   }
 
@@ -240,11 +242,7 @@ async function applyItemRows(
     .update(dataTransferImport)
     .set({
       importedCollectionItems: sql`${dataTransferImport.importedCollectionItems} + ${inserted}`,
-      report: {
-        failureReasons: view.report?.failureReasons ?? [],
-        releaseSubstitutions: (view.report?.releaseSubstitutions ?? 0) + plan.releaseSubstitutions,
-        missingReleases: (view.report?.missingReleases ?? 0) + plan.missingReleases,
-      },
+      report: sql`${JSON.stringify({ releaseSubstitutions: (view.report?.releaseSubstitutions ?? 0) + plan.releaseSubstitutions, missingReleases: (view.report?.missingReleases ?? 0) + plan.missingReleases })}::text::jsonb`,
     })
     .where(eq(dataTransferImport.userId, run.userId));
 }
@@ -551,6 +549,12 @@ const DataTransferService = {
     const view = await mutateImport(userId, now, async (tx, current) => {
       if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
       if (!current) return { value: current, changed: false };
+      if (current.row.jobId === upload.jobId) {
+        await tx
+          .update(dataTransferImport)
+          .set({ heartbeatAt: now })
+          .where(eq(dataTransferImport.userId, userId));
+      }
 
       const [waiting] = await tx
         .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
@@ -570,7 +574,7 @@ const DataTransferService = {
       await applyItemRows(tx, current, arrived, waiting.rows);
       await tx
         .update(dataTransferImportItem)
-        .set({ status: "scraped", errorReason: null, updatedAt: now })
+        .set({ status: "scraped", errorReason: null, rows: [], updatedAt: now })
         .where(
           and(
             eq(dataTransferImportItem.userId, userId),
@@ -589,6 +593,12 @@ const DataTransferService = {
   ): Promise<DataTransferImport | null> {
     const now = new Date();
     const view = await mutateImport(userId, now, async (tx, current) => {
+      if (current?.row.jobId === failure.jobId) {
+        await tx
+          .update(dataTransferImport)
+          .set({ heartbeatAt: now })
+          .where(eq(dataTransferImport.userId, userId));
+      }
       if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
         return { value: current, changed: false };
       }

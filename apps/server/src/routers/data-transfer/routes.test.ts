@@ -590,32 +590,18 @@ describe("an interrupted import", () => {
     expect(next.status).toBe(200);
   });
 
-  test("a worker-era import whose lease lapsed reads as failed and retries from its archive", async () => {
-    await seedItem(1);
-    const archive = archiveOf([orderRecord("order-1")], [collectionRecord("c1", 1)]);
+  test("worker-era imports keep their worker lease for a day", async () => {
     await db.insert(dataTransferImport).values({
       userId,
-      importId: "import-legacy",
-      jobId: "data-transfer-import-legacy",
+      importId: "legacy",
+      jobId: "legacy",
       fileName: "export.json",
-      archive,
       status: "queued",
       phase: "queued",
-      updatedAt: new Date(Date.now() - 121_000),
+      updatedAt: new Date(Date.now() - 180_000),
     });
-
-    expect(await currentImport()).toMatchObject({
-      status: "failed",
-      error: "The import was interrupted. Try again to continue.",
-    });
-    const retried = await retryRun();
-
-    expect(retried).toMatchObject({
-      status: "completed",
-      importedOrders: 1,
-      importedCollectionItems: 1,
-      missingMfcItemIds: [],
-    });
+    expect(await currentImport()).toMatchObject({ status: "queued", error: null });
+    expect(await post("/imports/current/retry")).toMatchObject({ status: 409 });
   });
 });
 
@@ -736,4 +722,128 @@ describe("a large archive", () => {
     });
     expect(elapsedMs).toBeLessThan(20_000);
   }, 60_000);
+});
+
+test("scraped payloads are cleared while failed rows remain available for retry", async () => {
+  const run = await startRun(archiveOf([], [collectionRecord("c1", 1), collectionRecord("c2", 2)]));
+  await complete(run.id, 1);
+  await fail(run.id, 2);
+  const waiting = await db
+    .select()
+    .from(dataTransferImportItem)
+    .orderBy(asc(dataTransferImportItem.itemExternalId));
+  expect(waiting[0]?.rows).toEqual([]);
+  expect(waiting[1]?.rows).toHaveLength(1);
+  const retried = await retryRun();
+  await complete(retried.id, 2);
+  const cleared = await db.select().from(dataTransferImportItem);
+  expect(cleared.every((row) => row.rows.length === 0)).toBe(true);
+  const [finished] = await db.select().from(dataTransferImport);
+  expect(finished?.archive).toBeNull();
+});
+
+for (const outcome of ["complete", "fail"] as const) {
+  test(`${outcome} uploads renew the import lease`, async () => {
+    const run = await startRun(
+      archiveOf([], [collectionRecord("c1", 1), collectionRecord("c2", 2)]),
+    );
+    const before = new Date(Date.now() - 110_000);
+    await db
+      .update(dataTransferImport)
+      .set({ heartbeatAt: before })
+      .where(eq(dataTransferImport.userId, userId));
+    if (outcome === "complete") await complete(run.id, 1);
+    else await fail(run.id, 1);
+    const [row] = await db.select().from(dataTransferImport);
+    expect(row?.heartbeatAt?.getTime()).toBeGreaterThan(before.getTime() + 100_000);
+  });
+}
+
+test("retrying a worker-written partial import uses the worker ids without duplicating rows", async () => {
+  const firstId = await seedItem(1);
+  const archive = archiveOf(
+    [orderRecord("order-1")],
+    [collectionRecord("c1", 1, { orderKey: "order-1" }), collectionRecord("c2", 2)],
+  );
+  const { createImportId } = await import("./import-plan");
+  const run = { userId, importId: "worker-partial" };
+  const orderId = createImportId({ ...run, kind: "order", localKey: "order-1" });
+  const collectionId = createImportId({ ...run, kind: "collection", localKey: "c1" });
+  await db.insert(order).values({ id: orderId, userId, title: "Worker order" });
+  await db.insert(collection).values({ id: collectionId, userId, itemId: firstId, orderId });
+  await db.insert(dataTransferImport).values({
+    ...run,
+    jobId: "worker-partial",
+    fileName: "export.json",
+    archive,
+    status: "partial",
+    phase: "completed",
+    importedOrders: 1,
+    importedCollectionItems: 1,
+    failedCollectionItems: 1,
+    totalCollectionItems: 2,
+  });
+  const retried = await retryRun();
+  expect(retried).toMatchObject({
+    status: "running",
+    importedOrders: 1,
+    importedCollectionItems: 1,
+    missingMfcItemIds: [2],
+  });
+  expect(await db.$count(order)).toBe(1);
+  expect(await db.$count(collection)).toBe(1);
+  await complete(retried.id, 2);
+  expect(await currentImport()).toMatchObject({ status: "completed", importedCollectionItems: 2 });
+  expect(await db.$count(collection)).toBe(2);
+});
+
+test("status reads stay in one snapshot when a retry commits between reads", async () => {
+  const run = await startRun(archiveOf([], [collectionRecord("c1", 1)]));
+  await fail(run.id, 1);
+  const held = Promise.withResolvers<null>();
+  const proceed = Promise.withResolvers<null>();
+  const retrying = db.transaction(async (tx) => {
+    await tx.execute("LOCK TABLE data_transfer_import_item IN ACCESS EXCLUSIVE MODE");
+    await tx
+      .update(dataTransferImport)
+      .set({
+        jobId: "retry-after-read",
+        status: "running",
+        phase: "preparing_items",
+        heartbeatAt: new Date(),
+      })
+      .where(eq(dataTransferImport.userId, userId));
+    await tx
+      .update(dataTransferImportItem)
+      .set({ status: "pending", errorReason: null })
+      .where(eq(dataTransferImportItem.userId, userId));
+    held.resolve(null);
+    await proceed.promise;
+  });
+  await held.promise;
+  const { readView, toImport } = await import("./import-state");
+  const reading = readView(db, userId, new Date());
+  try {
+    const deadline = Date.now() + 2000;
+    for (;;) {
+      const [waiting] = await db.execute<{ count: number }>(
+        "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
+      );
+      if (waiting?.count) break;
+      if (Date.now() > deadline) throw new Error("status did not reach waiting-items read");
+      await Bun.sleep(10);
+    }
+    proceed.resolve(null);
+    await retrying;
+    const view = await reading;
+    if (!view) throw new Error("missing import");
+    const expected =
+      view.row.jobId === run.id
+        ? { id: run.id, status: "failed", failedCollectionItems: 1 }
+        : { id: "retry-after-read", status: "running", failedCollectionItems: 0 };
+    expect(toImport(view)).toMatchObject(expected);
+  } finally {
+    proceed.resolve(null);
+    await retrying;
+  }
 });

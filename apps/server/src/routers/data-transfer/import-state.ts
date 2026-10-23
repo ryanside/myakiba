@@ -74,7 +74,10 @@ const isWorkerEraImport = (row: ImportRow) => row.heartbeatAt === null;
 function leaseLapsed(row: ImportRow, now: Date): boolean {
   if (!isActive(row.status)) return false;
   const lastSeen = row.heartbeatAt ?? row.updatedAt;
-  return now.getTime() - lastSeen.getTime() >= DATA_TRANSFER_IMPORT_LEASE_MS;
+  // Delete the worker-era allowance after those imports finish or leave the retention window.
+  // A day allows pre-deploy jobs to drain while bounding an abandoned worker job.
+  const lease = isWorkerEraImport(row) ? 24 * 60 * 60 * 1000 : DATA_TRANSFER_IMPORT_LEASE_MS;
+  return now.getTime() - lastSeen.getTime() >= lease;
 }
 
 function settledStatus(row: ImportRow, failedRows: number, pendingRows: number) {
@@ -153,44 +156,30 @@ export function toImport(view: ImportView): DataTransferImport {
   });
 }
 
-async function readImportRow(tx: Tx | typeof db, userId: string) {
-  const [row] = await tx
-    .select(importRowColumns)
-    .from(dataTransferImport)
-    .where(eq(dataTransferImport.userId, userId))
-    .limit(1);
-  return row;
-}
+export type ImportRow = Omit<typeof dataTransferImport.$inferSelect, "archive"> & {
+  readonly hasArchive: boolean;
+};
 
-export type ImportRow = NonNullable<Awaited<ReturnType<typeof readImportRow>>>;
-
-async function readWaitingItems(tx: Tx | typeof db, userId: string): Promise<WaitingItems> {
-  const groups = await tx
-    .select({
-      status: dataTransferImportItem.status,
-      reason: dataTransferImportItem.errorReason,
-      items: sql<number>`count(*)`.mapWith(Number),
-      rows: sql<number>`coalesce(sum(${dataTransferImportItem.rowCount}), 0)`.mapWith(Number),
-    })
-    .from(dataTransferImportItem)
-    .where(
-      and(eq(dataTransferImportItem.userId, userId), ne(dataTransferImportItem.status, "scraped")),
-    )
-    .groupBy(dataTransferImportItem.status, dataTransferImportItem.errorReason);
-
+function waitingItems(
+  groups: readonly {
+    readonly status: string | null;
+    readonly reason: string | null;
+    readonly items: number | null;
+    readonly rows: number | null;
+  }[],
+): WaitingItems {
   let pendingItems = 0;
   let pendingRows = 0;
   let failedRows = 0;
   const failureReasons: FailureReason[] = [];
   for (const group of groups) {
     if (group.status === "pending") {
-      pendingItems += group.items;
-      pendingRows += group.rows;
-      continue;
-    }
-    failedRows += group.rows;
-    if (group.rows > 0) {
-      failureReasons.push({ reason: group.reason ?? "Import failed.", count: group.rows });
+      pendingItems += group.items ?? 0;
+      pendingRows += group.rows ?? 0;
+    } else if (group.status === "failed") {
+      failedRows += group.rows ?? 0;
+      if (group.rows)
+        failureReasons.push({ reason: group.reason ?? "Import failed.", count: group.rows });
     }
   }
   return { pendingItems, pendingRows, failedRows, failureReasons };
@@ -201,9 +190,44 @@ export async function readView(
   userId: string,
   now: Date,
 ): Promise<ImportView | undefined> {
-  const row = await readImportRow(tx, userId);
-  if (!row) return;
-  return viewImport(row, await readWaitingItems(tx, userId), now);
+  const waiting = tx
+    .select({
+      userId: dataTransferImportItem.userId,
+      status: dataTransferImportItem.status,
+      reason: dataTransferImportItem.errorReason,
+      items: sql<number>`count(*)`.mapWith(Number).as("items"),
+      rows: sql<number>`sum(${dataTransferImportItem.rowCount})`.mapWith(Number).as("rows"),
+    })
+    .from(dataTransferImportItem)
+    .where(
+      and(eq(dataTransferImportItem.userId, userId), ne(dataTransferImportItem.status, "scraped")),
+    )
+    .groupBy(
+      dataTransferImportItem.userId,
+      dataTransferImportItem.status,
+      dataTransferImportItem.errorReason,
+    )
+    .as("waiting");
+  const rows = await tx
+    .select({
+      row: importRowColumns,
+      waiting: {
+        status: waiting.status,
+        reason: waiting.reason,
+        items: waiting.items,
+        rows: waiting.rows,
+      },
+    })
+    .from(dataTransferImport)
+    .leftJoin(waiting, eq(waiting.userId, dataTransferImport.userId))
+    .where(eq(dataTransferImport.userId, userId));
+  const first = rows[0];
+  if (!first) return;
+  return viewImport(
+    first.row,
+    waitingItems(rows.flatMap((row) => (row.waiting ? [row.waiting] : []))),
+    now,
+  );
 }
 
 async function recordLapse(tx: Tx, view: ImportView, now: Date): Promise<ImportView> {
@@ -261,6 +285,10 @@ async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView
     })
     .where(eq(dataTransferImport.userId, view.row.userId));
   if (view.status === "completed") {
+    await tx
+      .update(dataTransferImportItem)
+      .set({ rows: [] })
+      .where(eq(dataTransferImportItem.userId, view.row.userId));
     await tx
       .update(dataTransferImport)
       .set({ archive: null })
