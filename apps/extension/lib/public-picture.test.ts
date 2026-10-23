@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import {
+  COMMIT_STYLES,
   ORIGINS,
   fakeExtension,
   itemPage,
@@ -18,36 +19,113 @@ const publicPages = ({ mfcItemId }: { readonly mfcItemId: number }) =>
 const pictureUrl = (id: number) => `${ORIGINS.mfcStatic}/upload/items/1/${id}.jpg`;
 
 describe("public pictures in an owned static tab", () => {
-  test("reuses one owned picture tab, never navigates borrowed tabs, and spaces every load", async () => {
+  test.each(COMMIT_STYLES)(
+    "reuses one owned picture tab, never navigates borrowed tabs, and spaces every load (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: publicPages,
+        navigationMs: () => 1500,
+        deferNavigationCommit: style,
+      });
+      const mfc = extension.tabs.open(`${ORIGINS.mfc}/`);
+      const staticTab = extension.tabs.open(pictureUrl(99));
+      const run = extension.run([1, 2, 3]);
+      await extension.settle();
+
+      expect(run.results().map((result) => result.ok && result.picture)).toEqual([
+        PICTURE,
+        PICTURE,
+        PICTURE,
+      ]);
+      const pictures = extension.tabs.loads.filter((load) =>
+        load.url.startsWith(ORIGINS.mfcStatic),
+      );
+      expect(pictures.map((load) => load.url)).toEqual([
+        pictureUrl(1),
+        pictureUrl(2),
+        pictureUrl(3),
+      ]);
+      expect(new Set(pictures.map((load) => load.tabId)).size).toBe(1);
+      expect(extension.publicPictureCalls.map((call) => call.tabId)).toEqual(
+        pictures.map((load) => load.tabId),
+      );
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+      expect(
+        extension.tabs.loads.some((load) => load.tabId === mfc || load.tabId === staticTab),
+      ).toBe(false);
+      expect(extension.tabs.has(mfc)).toBe(true);
+      expect(extension.tabs.has(staticTab)).toBe(true);
+      expect(pictures.every((load) => !extension.tabs.has(load.tabId))).toBe(true);
+    },
+  );
+
+  test("a picture read holds the throttle until it ends, so the next page loads 2.5 s after it", async () => {
     const extension = fakeExtension({
       pages: publicPages,
-      navigationMs: () => 1500,
-      deferNavigationCommit: true,
+      publicPicture: async (_url, signal) => {
+        await extension.clock.sleep(8000, signal);
+        return PICTURE;
+      },
     });
-    const mfc = extension.tabs.open(`${ORIGINS.mfc}/`);
-    const staticTab = extension.tabs.open(pictureUrl(99));
-    const run = extension.run([1, 2, 3]);
+    const run = extension.run([1, 2]);
     await extension.settle();
 
-    expect(run.results().map((result) => result.ok && result.picture)).toEqual([
-      PICTURE,
-      PICTURE,
-      PICTURE,
-    ]);
-    const pictures = extension.tabs.loads.filter((load) => load.url.startsWith(ORIGINS.mfcStatic));
-    expect(pictures.map((load) => load.url)).toEqual([pictureUrl(1), pictureUrl(2), pictureUrl(3)]);
-    expect(new Set(pictures.map((load) => load.tabId)).size).toBe(1);
-    expect(extension.publicPictureCalls.map((call) => call.tabId)).toEqual(
-      pictures.map((load) => load.tabId),
+    expect(run.results().map((result) => result.ok && result.picture)).toEqual([PICTURE, PICTURE]);
+    const firstRead = extension.loads().find((load) => load.within !== undefined);
+    const secondPage = extension.calls.find((call) => call.mfcItemId === 2);
+    expect((secondPage?.at ?? 0) - (firstRead?.endedAt ?? Infinity)).toBeGreaterThanOrEqual(
+      THROTTLE.minGapMs,
     );
     expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
-    expect(
-      extension.tabs.loads.some((load) => load.tabId === mfc || load.tabId === staticTab),
-    ).toBe(false);
-    expect(extension.tabs.has(mfc)).toBe(true);
-    expect(extension.tabs.has(staticTab)).toBe(true);
-    expect(pictures.every((load) => !extension.tabs.has(load.tabId))).toBe(true);
   });
+
+  test("cancelling a picture read stops it in the tab, and the next run's page waits 2.5 s after that", async () => {
+    const extension = fakeExtension({
+      pages: publicPages,
+      publicPicture: () => new Promise(() => {}),
+    });
+    const cancelled = extension.run([1]);
+    await extension.clock.runUntil(() => extension.publicPictureCalls.length === 1);
+    await extension.clock.runUntil(() => extension.clock.now() >= 1_010_000);
+    extension.fetcher.cancel(cancelled.key);
+    const cancelledAt = extension.clock.now();
+    const next = extension.run([2]);
+    await extension.settle();
+
+    const read = extension.loads().find((load) => load.within !== undefined);
+    expect(read?.endedAt).toBe(cancelledAt);
+    const nextPage = extension.calls.find((call) => call.mfcItemId === 2);
+    expect((nextPage?.at ?? 0) - cancelledAt).toBeGreaterThanOrEqual(THROTTLE.minGapMs);
+    expect(next.results().map((result) => result.ok)).toEqual([true]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
+
+  test.each(COMMIT_STYLES)(
+    "a picture the CDN redirects within its origin is still the extension's tab, used again and closed (%s commits)",
+    async (_name, style) => {
+      const moved = `${ORIGINS.mfcStatic}/upload/items/1/1-moved.jpg`;
+      const extension = fakeExtension({
+        pages: publicPages,
+        navigationMs: () => 1500,
+        redirect: (url) => (url === pictureUrl(1) ? moved : undefined),
+        deferNavigationCommit: style,
+      });
+      const run = extension.run([1, 2]);
+      await extension.settle();
+
+      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+      const pictureTabs = extension.tabs.loads
+        .filter((load) => load.url.startsWith(ORIGINS.mfcStatic))
+        .map((load) => load.tabId);
+      expect(pictureTabs).toHaveLength(2);
+      expect(new Set(pictureTabs).size).toBe(1);
+      expect(extension.publicPictureCalls.map((call) => call.tab?.url)).toEqual([
+        moved,
+        pictureUrl(2),
+      ]);
+      expect(extension.tabs.loads.every((load) => !extension.tabs.has(load.tabId))).toBe(true);
+    },
+  );
 
   test("a stalled navigation times out as a missing picture and stops before the next load", async () => {
     const extension = fakeExtension({
@@ -148,7 +226,7 @@ describe("public pictures in an owned static tab", () => {
     const extension = fakeExtension({
       pages: publicPages,
       navigationMs: () => 6000,
-      deferNavigationCommit: true,
+      deferNavigationCommit: "chrome",
     });
     extension.tabs.open(`${ORIGINS.mfc}/`);
     const run = extension.run([1]);
@@ -162,6 +240,31 @@ describe("public pictures in an owned static tab", () => {
     expect(extension.tabs.has(tabId)).toBe(true);
     expect(extension.publicPictureCalls).toEqual([]);
   });
+
+  test.each(COMMIT_STYLES)(
+    "a picture tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: publicPages,
+        navigationMs: () => 6000,
+        deferNavigationCommit: style,
+      });
+      extension.tabs.open(`${ORIGINS.mfc}/`);
+      const run = extension.run([1]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+      const tabId = extension.tabs.loads[0]?.tabId;
+      if (tabId === undefined) throw new Error("no picture tab");
+      const loadingFrom = extension.clock.now();
+      await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 1000);
+      extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Mine" });
+      await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 2000);
+      extension.fetcher.cancel(run.key);
+      await extension.settle();
+
+      expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
+      expect(extension.tabs.has(tabId)).toBe(true);
+    },
+  );
 
   test("the picture tab uses the requester's Firefox cookie store", async () => {
     const extension = fakeExtension({ pages: publicPages });

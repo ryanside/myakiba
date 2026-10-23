@@ -6,6 +6,7 @@ import {
   DEFAULT_SCENARIO,
   E2E_ORIGINS,
   GATED_ID,
+  MOVED_PICTURE_ID,
   PICTURE_SHA256,
   PUBLIC_ID,
   UNLISTED_ORIGIN,
@@ -150,6 +151,26 @@ describe("the extension against a mock MFC", () => {
       expect(
         pictures.some((request) => request.mode !== "navigate" && request.site === "same-origin"),
       ).toBe(true);
+      await until(
+        () =>
+          context.pages().every((tab) => !tab.url().startsWith(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN)),
+        "the owned static tab to close",
+      );
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "a public picture the CDN redirects to another picture is sent as none, and its tab still closes",
+    async () => {
+      const myakiba = await launch();
+
+      const run = await fetchItems(myakiba, [MOVED_PICTURE_ID]);
+
+      expect(run.items.map((item) => [item.ok, item.picture])).toEqual([[true, null]]);
+      expect(mocks.requests.map((request) => request.path)).toContain(
+        `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`,
+      );
       await until(
         () =>
           context.pages().every((tab) => !tab.url().startsWith(E2E_ORIGINS.WXT_MFC_STATIC_ORIGIN)),

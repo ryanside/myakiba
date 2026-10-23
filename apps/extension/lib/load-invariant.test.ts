@@ -13,12 +13,14 @@ import {
 import type { FakeClock } from "../test/fake-browser";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
+import { PICTURE_TIMEOUT_MS } from "./picture";
 import { THROTTLE } from "./throttle";
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 const STEPS = 200;
 const INJECTION_DELAY_MS = 1000;
 const COLLECTOR_TIMEOUT_MS = PAGE_TIMEOUT_MS + INJECTION_DELAY_MS;
+const PICTURE_COLLECTOR_TIMEOUT_MS = PICTURE_TIMEOUT_MS + INJECTION_DELAY_MS;
 
 const MODULUS = 2_147_483_647;
 
@@ -63,12 +65,15 @@ async function play(seed: number) {
     timeouts: 0,
     stalledNavigations: 0,
     stalledNavigationsWithMoreQueued: 0,
+    pictureReads: 0,
+    stalledPictureReads: 0,
   };
+  const item = (id: number) => page(itemPage(id, id % 3 === 0 ? "public" : null));
 
   async function mfc(request: PageRequest): Promise<CollectedPage> {
     const id = request.mfcItemId;
     if (request.mode === "document") {
-      return solved.has(id) ? page(itemPage(id)) : page(CHALLENGE_PAGE, { status: 403 });
+      return solved.has(id) ? item(id) : page(CHALLENGE_PAGE, { status: 403 });
     }
     const latency = random() < 0.03 ? PAGE_TIMEOUT_MS + 10_000 : between(0, 6000);
     await clock.sleep(Math.min(latency, COLLECTOR_TIMEOUT_MS));
@@ -97,7 +102,15 @@ async function play(seed: number) {
       throw new Error("Frame with ID 0 was removed.");
     }
     if (roll < 0.24) return page(notFoundPage(true), { status: 404 });
-    return page(itemPage(id));
+    return item(id);
+  }
+
+  async function publicPicture(_url: URL, signal: AbortSignal) {
+    seen.pictureReads += 1;
+    const latency = random() < 0.1 ? PICTURE_TIMEOUT_MS + 10_000 : between(0, 8000);
+    if (latency > PICTURE_TIMEOUT_MS) seen.stalledPictureReads += 1;
+    await clock.sleep(Math.min(latency, PICTURE_COLLECTOR_TIMEOUT_MS), signal);
+    return { base64: "AQID", contentType: "image/jpeg" };
   }
 
   function navigationMs(): number {
@@ -107,7 +120,7 @@ async function play(seed: number) {
     return PAGE_TIMEOUT_MS + 25_000;
   }
 
-  const extension = fakeExtension({ clock, pages: mfc, navigationMs });
+  const extension = fakeExtension({ clock, pages: mfc, navigationMs, publicPicture });
   let usersTab: number | null = extension.tabs.open(`${ORIGINS.mfc}/`);
   let runs: (ReturnType<typeof extension.run> & { readonly size: number })[] = [];
   const itemsWaiting = () =>
@@ -170,7 +183,7 @@ async function play(seed: number) {
   };
 }
 
-test("one MFC load at a time, each 2.5 s after the last ended, across cancels, challenges, rate limits, stalled navigations and restarts", async () => {
+test("one MFC load at a time, each 2.5 s after the last ended, across cancels, challenges, rate limits, stalled navigations, picture reads and restarts", async () => {
   const total = new Map<string, number>();
   for (const seed of SEEDS) {
     const { unfinished, tooSoon, coverage } = await play(seed);

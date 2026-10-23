@@ -11,6 +11,8 @@ export const UNLISTED_ORIGIN = "http://127.0.0.1:4604";
 
 export const GATED_ID = 98_777;
 export const PUBLIC_ID = 98_778;
+/** A public item whose picture the static CDN redirects to another item's. */
+export const MOVED_PICTURE_ID = 98_779;
 
 const fixtures = path.join(import.meta.dir, "../../../packages/mfc/fixtures");
 const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
@@ -20,6 +22,8 @@ const signedOutNotFound = await fixture("derived-not-found-signed-out.html");
 // Derived from derived-public-item.html: the same page as item 98778, so two ids differ.
 const publicFixture = await fixture("derived-public-item.html");
 const publicItem = publicFixture.replaceAll("98777", String(PUBLIC_ID));
+const movedPictureItem = publicFixture.replaceAll("98777", String(MOVED_PICTURE_ID));
+const publicPicturePath = `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`;
 // Derived from derived-challenge.html: a button stands in for Cloudflare's check.
 const challengeFixture = await fixture("derived-challenge.html");
 const challenge = challengeFixture.replace(
@@ -112,6 +116,7 @@ export function startMocks() {
       );
     }
     if (url.pathname === `/item/${PUBLIC_ID}`) return html(publicItem);
+    if (url.pathname === `/item/${MOVED_PICTURE_ID}`) return html(movedPictureItem);
     if (url.pathname === `/item/${GATED_ID}`) {
       if (scenario.challenge && !cookie.includes("cf_clearance=ok")) {
         return html(challenge, 403, { "cf-mitigated": "challenge" });
@@ -135,7 +140,10 @@ export function startMocks() {
         const browsing = request.headers.get("sec-fetch-mode") === "navigate";
         const sameOrigin = request.headers.get("sec-fetch-site") === "same-origin";
         if (!browsing && !sameOrigin) return html(challenge, 403, { "cf-mitigated": "challenge" });
-        return url.pathname === `/upload/items/1/${PUBLIC_ID}-a1b2c.jpg`
+        if (url.pathname === `/upload/items/1/${MOVED_PICTURE_ID}-a1b2c.jpg`) {
+          return Response.redirect(new URL(publicPicturePath, url.origin), 302);
+        }
+        return url.pathname === publicPicturePath
           ? jpeg(publicPicture)
           : new Response("not found", { status: 404 });
       }),

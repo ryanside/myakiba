@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   CHALLENGE_PAGE,
+  COMMIT_STYLES,
   INCOGNITO,
   ORIGINS,
   OTHER_WINDOW,
@@ -1112,6 +1113,125 @@ describe("the MFC tab", () => {
 
     expect(extension.calls.map((call) => call.tab?.incognito)).toEqual([false, true]);
   });
+});
+
+describe("the MFC tab, however the browser shows a load before it commits", () => {
+  test.each(COMMIT_STYLES)(
+    "a challenge loads in the extension's own tab, which closes once the queue drains (%s commits)",
+    async (_name, style) => {
+      const challenge = challengeOn([7]);
+      const extension = fakeExtension({
+        pages: challenge.pages,
+        navigationMs: () => 1500,
+        deferNavigationCommit: style,
+      });
+      const run = extension.run([7, 8]);
+      await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+      challenge.solve(extension, 7, 1500);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+      expect(extension.tabs.log).toEqual([
+        `create inactive ${ORIGINS.mfc}/`,
+        `update 101 ${ORIGINS.mfc}/item/7`,
+        "update 101 active",
+        `update ${extension.myakiba.tabId} active`,
+        "remove 101",
+      ]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "cancelling while the extension's new MFC tab loads closes it, so the next run need not wait it out (%s commits)",
+    async (_name, style) => {
+      let navigations = 0;
+      const extension = fakeExtension({
+        pages: itemPages(),
+        navigationMs: () => (navigations++ === 0 ? 60_000 : 0),
+        deferNavigationCommit: style,
+      });
+      const cancelled = extension.run([1]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+      await advance(extension.clock, 1000);
+      extension.fetcher.cancel(cancelled.key);
+      const cancelledAt = extension.clock.now();
+      const next = extension.run([2]);
+      await extension.clock.runUntil(next.done);
+
+      expect(extension.tabs.has(101)).toBe(false);
+      expect(next.results().map((result) => result.ok)).toEqual([true]);
+      const nextPage = extension.calls.find((call) => call.mfcItemId === 2);
+      expect((nextPage?.at ?? Infinity) - cancelledAt).toBeLessThan(10_000);
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "cancelling while a challenge loads closes its tab, so the next run need not wait it out (%s commits)",
+    async (_name, style) => {
+      let navigations = 0;
+      const extension = fakeExtension({
+        pages: challengeOn([7]).pages,
+        navigationMs: () => (navigations++ === 1 ? 60_000 : 0),
+        deferNavigationCommit: style,
+      });
+      const cancelled = extension.run([7]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 2);
+      await advance(extension.clock, 1000);
+      extension.fetcher.cancel(cancelled.key);
+      const cancelledAt = extension.clock.now();
+      const next = extension.run([2]);
+      await extension.clock.runUntil(next.done);
+
+      expect(extension.tabs.has(101)).toBe(false);
+      expect(next.results().map((result) => result.ok)).toEqual([true]);
+      const nextPage = extension.calls.find((call) => call.mfcItemId === 2);
+      expect((nextPage?.at ?? Infinity) - cancelledAt).toBeLessThan(10_000);
+      expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a page MFC redirects within its origin is still the extension's tab, used and then closed (%s commits)",
+    async (_name, style) => {
+      const extension = fakeExtension({
+        pages: itemPages(),
+        navigationMs: () => 1500,
+        redirect: (url) => (url === `${ORIGINS.mfc}/` ? `${ORIGINS.mfc}/en/` : undefined),
+        deferNavigationCommit: style,
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+      expect(extension.calls.map((call) => call.tabId)).toEqual([101, 101]);
+      expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+    },
+  );
+
+  test.each(COMMIT_STYLES)(
+    "a challenge tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
+    async (_name, style) => {
+      let navigations = 0;
+      const extension = fakeExtension({
+        pages: challengeOn([7]).pages,
+        navigationMs: () => (navigations++ === 1 ? 6000 : 0),
+        deferNavigationCommit: style,
+      });
+      const run = extension.run([7]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 2);
+      await advance(extension.clock, 1000);
+      extension.tabs.navigate(101, { url: "https://example.com/", title: "Mine" });
+      await advance(extension.clock, 1000);
+      extension.fetcher.cancel(run.key);
+      await extension.settle();
+
+      expect(run.events.at(-1)).toEqual({ type: "done", reason: "cancelled" });
+      expect(extension.tabs.has(101)).toBe(true);
+    },
+  );
 });
 
 describe("item results", () => {
