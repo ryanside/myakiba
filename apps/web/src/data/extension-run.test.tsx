@@ -308,6 +308,23 @@ describe("a sync run", () => {
     });
     expect(screen.queryByRole("status")).toBeNull();
   });
+
+  test("a busy run counts every item it did not import, reported failures included", async () => {
+    fakeFetch();
+    answer = (request) =>
+      request.path === `${SESSION}/items` && request.fields.mfcItemId === 3
+        ? tooBusy()
+        : Response.json({ outcome: "imported", reason: null });
+    loadExtension((fetch) => {
+      fetch.fail(1, "mfc_signed_out");
+      fetch.item(2);
+      fetch.item(3);
+    });
+
+    const outcome = await runner().run(sync(1, 2, 3, 4));
+
+    expect(outcome).toEqual({ kind: "busy", notImported: 3, retryAfterMs: 3_600_000 });
+  });
 });
 
 describe("the upload cap", () => {

@@ -90,7 +90,10 @@ export function syncRun(run: {
     runId: jobId,
     sessionId,
     mfcItemIds: run.mfcItemIds,
-    complete: async (item) => answerOf(await session.items.post({ jobId, ...item })),
+    complete: async (item) => {
+      const answer = await session.items.post({ jobId, ...item });
+      return answer.data?.outcome === "failed" ? FAILED : answerOf(answer);
+    },
     fail: async (id, error) =>
       answerOf(await session.failures.post({ jobId, mfcItemId: id, error })),
     heartbeat: async () => leaseOf(await session.heartbeat.post({ jobId }), (data) => data.active),
@@ -217,7 +220,7 @@ type Stop = Busy | { readonly kind: "over" } | { readonly kind: "left" };
 /** After `over` or `left` the server already holds the run's end. */
 const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
 
-type RunTally = { unanswered: number; stop: Stop | null };
+type RunTally = { imported: number; unanswered: number; stop: Stop | null };
 
 type PageEvents = {
   readonly addEventListener: (type: "pagehide", listener: () => void) => void;
@@ -238,7 +241,7 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
     if (ids.length === 0) return ENDED;
     const controller = new AbortController();
-    const tally: RunTally = { unanswered: 0, stop: null };
+    const tally: RunTally = { imported: 0, unanswered: 0, stop: null };
     const halt = (stop: Stop) => {
       tally.stop ??= stop;
       controller.abort();
@@ -271,7 +274,8 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     };
     const upload = async (item: ItemPage) => {
       const answer = await completeOnce(run, item);
-      if (answer.kind !== "ok") refused(answer, 1);
+      if (answer.kind === "ok") tally.imported += 1;
+      else refused(answer, 1);
       slots.give();
     };
 
@@ -299,7 +303,7 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     }
     const { stop } = tally;
     return stop?.kind === "busy"
-      ? { kind: "busy", notImported: tally.unanswered, retryAfterMs: stop.retryAfterMs }
+      ? { kind: "busy", notImported: ids.length - tally.imported, retryAfterMs: stop.retryAfterMs }
       : ENDED;
   };
 }

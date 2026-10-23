@@ -217,14 +217,17 @@ test.each([
   ["a session retry", retrySession],
   ["an Import/Export import", startImport],
   ["an Import/Export retry", retryImport],
-] as const)("%s says so when the server stops its run for now", async (_flow, start) => {
+] as const)("%s says the hourly import limit stopped its run", async (_flow, start) => {
   outcome = { kind: "busy", notImported: 2, retryAfterMs: 120_000 };
 
   await start();
 
   await waitFor(() =>
-    expect(toastAdd.mock.calls.map(([options]) => options.description)).toContain(
-      "2 items were not imported. Retry them in about 2 min.",
-    ),
+    expect(
+      toastAdd.mock.calls.map(([{ title, description }]) => ({ title, description })),
+    ).toContainEqual({
+      title: "You've reached the hourly import limit",
+      description: "2 items were not imported. Try again in 2 min.",
+    }),
   );
 });

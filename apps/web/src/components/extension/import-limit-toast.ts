@@ -8,9 +8,9 @@ export async function toastImportLimit(running: Promise<RunOutcome>): Promise<vo
   const minutes = retryAfterMs === null ? null : Math.max(1, Math.ceil(retryAfterMs / 60_000));
   toast.add({
     type: "error",
-    title: "myakiba is busy",
+    title: "You've reached the hourly import limit",
     description: `${notImported} item${notImported === 1 ? " was" : "s were"} not imported. ${
-      minutes === null ? "Retry them later." : `Retry them in about ${minutes} min.`
+      minutes === null ? "Try again later." : `Try again in ${minutes} min.`
     }`,
   });
 }
