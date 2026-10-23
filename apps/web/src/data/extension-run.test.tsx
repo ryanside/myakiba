@@ -337,7 +337,7 @@ describe("a sync run", () => {
       await waitFor(() => expect(extension.runs).toHaveLength(1));
       await sleep(20);
     });
-    expect(screen.queryByText("Waiting for the extension")).toBeNull();
+    expect(screen.queryByText("Waiting for the extension")?.textContent ?? null).toBeNull();
     expect(await screen.findByText("Waiting for the extension")).toBeDefined();
 
     await act(async () => {
