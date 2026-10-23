@@ -26,6 +26,19 @@ const SLOW_PAGE_MS = 3000;
 const CONTAINER = "firefox-container-1";
 const NORMAL = { incognito: false, cookieStoreId: null };
 const MFC_ERROR = page("<html><title>Server error</title></html>", { status: 500 });
+const SHORT_SETTLE_MS = 5000;
+const HOMEPAGE = `${ORIGINS.mfc}/`;
+const NEVER_LANDS = [
+  [
+    "redirects to a site the extension cannot read",
+    { redirect: (url: string) => (url === HOMEPAGE ? "https://example.com/" : undefined) },
+  ],
+  [
+    "redirects to another origin it can read",
+    { redirect: (url: string) => (url === HOMEPAGE ? `${ORIGINS.mfcStatic}/` : undefined) },
+  ],
+  ["is answered with a 204 or a download", { dropsNavigation: (url: string) => url === HOMEPAGE }],
+] as const;
 
 function itemPages() {
   return ({ mfcItemId }: PageRequest) => page(itemPage(mfcItemId));
@@ -1049,21 +1062,28 @@ describe("the MFC tab", () => {
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
   });
 
-  test.each([
-    ["a site the extension cannot read", "https://example.com/"],
-    ["another origin it can read", `${ORIGINS.mfcStatic}/`],
-  ])(
-    "a homepage that redirects to %s never lands, times out and closes its tab",
-    async (_name, elsewhere) => {
+  test.each(
+    COMMIT_STYLES.flatMap(([styleName, style]) =>
+      NEVER_LANDS.flatMap(([name, options]) =>
+        [0, 1500].map((loadMs) => [name, loadMs, styleName, style, options] as const),
+      ),
+    ),
+  )(
+    "a homepage that %s after %i ms fails as an unexpected page within moments and closes its tab (%s commits)",
+    async (_name, loadMs, _styleName, style, options) => {
       const extension = fakeExtension({
         pages: itemPages(),
-        redirect: (url) => (url === `${ORIGINS.mfc}/` ? elsewhere : undefined),
+        navigationMs: () => loadMs,
+        deferNavigationCommit: style,
+        ...options,
       });
+      const startedAt = extension.clock.now();
       const run = extension.run([1]);
       await extension.clock.runUntil(run.done);
+      expect(extension.clock.now() - startedAt).toBeLessThan(SHORT_SETTLE_MS);
       await extension.settle();
 
-      expect(run.results()).toEqual([{ ok: false, error: "timeout" }]);
+      expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
       expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
     },
   );

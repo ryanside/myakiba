@@ -35,20 +35,17 @@ export type TabsApi = {
 /** The first run still waiting for the job. Read at each tab step, since runs cancel at any time. */
 export type LiveRequester = () => Requester;
 
-/** Firefox may call a tab complete on `before`, the page it showed when the load started, before the load begins. */
 export const ownedTabSchema = z
   .discriminatedUnion("state", [
-    z.strictObject({
-      state: z.literal("loading"),
-      tabId: z.number().int(),
-      before: z.string().nullable(),
-    }),
+    z.strictObject({ state: z.literal("loading"), tabId: z.number().int() }),
     z.strictObject({ state: z.literal("landed"), tabId: z.number().int() }),
   ])
   .nullable();
 export type OwnedTab = z.output<typeof ownedTabSchema>;
 
 const POLL_MS = 50;
+/** Firefox may call a tab complete on the page it showed before, for a moment before its load starts. */
+const LOAD_START_MS = 2000;
 
 class TabTakenError extends Error {
   constructor(tabId: number) {
@@ -68,15 +65,23 @@ function onOrigin(url: string | undefined, origin: string): boolean {
   return URL.parse(url ?? "")?.origin === origin;
 }
 
-type Load = { readonly tabId: number; readonly before: string | null };
+/** `before` is the page the tab showed when the load started. */
+type Load = { readonly tabId: number; readonly before: string | null; readonly startedAt: number };
 
-/** A browser hides the URL of a page outside the host permissions, so that page reads as no URL at all. */
-function hasEnded(tab: Tab, before: string | null): boolean {
-  return tab.status === "complete" && tab.pendingUrl === undefined && (tab.url ?? null) !== before;
-}
-
-function hasLanded(tab: Tab, before: string | null, origin: string): boolean {
-  return hasEnded(tab, before) && onOrigin(tab.url, origin);
+/**
+ * Tells from each look at the tab whether the load has ended. A load ends complete on another page, or back on `before`
+ * once it was seen loading, as a 204 or a download does. A browser hides the URL of a page outside the host permissions,
+ * so that page reads as no URL at all.
+ */
+function endOf({ before, startedAt }: Load, clock: Clock): (tab: Tab) => boolean {
+  let seenLoading = false;
+  return (tab) => {
+    if (tab.status !== "complete" || tab.pendingUrl !== undefined) {
+      seenLoading = true;
+      return false;
+    }
+    return seenLoading || (tab.url ?? null) !== before || clock.now() - startedAt >= LOAD_START_MS;
+  };
 }
 
 export function ownedTab(deps: {
@@ -151,11 +156,11 @@ export function ownedTab(deps: {
     return exclusively(async () => {
       const own = await landedTab();
       if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) return null;
-      const load = { tabId: own.tabId, before: own.tab.url ?? null };
+      const load = { tabId: own.tabId, before: own.tab.url ?? null, startedAt: clock.now() };
       if (own.tab.url === url) return load;
       signal.throwIfAborted();
       await tabs.update(own.tabId, { url });
-      await record.save({ state: "loading", ...load });
+      await record.save({ state: "loading", tabId: own.tabId });
       return load;
     });
   }
@@ -167,34 +172,36 @@ export function ownedTab(deps: {
     const properties: Parameters<TabsApi["create"]>[0] = { url, active: false, windowId };
     if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
     signal.throwIfAborted();
+    const startedAt = clock.now();
     const { id: tabId } = await tabs.create(properties);
     if (tabId === undefined) throw new Error("the new tab has no id");
-    const load = { tabId, before: null };
     await exclusively(async () => {
-      if (!claimed.has(tabId)) await record.save({ state: "loading", ...load });
+      if (!claimed.has(tabId)) await record.save({ state: "loading", tabId });
     });
-    return load;
+    return { tabId, before: null, startedAt };
   }
 
-  async function landed(tabId: number): Promise<boolean> {
+  async function landed({ tabId, before }: Load, ended: (tab: Tab) => boolean): Promise<boolean> {
     const own = await record.load();
     if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabTakenError(tabId);
     if (own.state === "landed") return true;
-    if (!hasLanded(await tabs.get(tabId), own.before, origin)) return false;
+    const tab = await tabs.get(tabId);
+    if (!ended(tab)) return false;
+    if (!onOrigin(tab.url, origin) || (tab.url ?? null) === before) {
+      throw new Error(`the load in tab ${tabId} ended on another page`);
+    }
     await record.save({ state: "landed", tabId });
     return true;
   }
 
   async function holdTurnUntilLoadEnds(
-    { tabId, before }: Load,
+    { tabId }: Load,
+    ended: (tab: Tab) => boolean,
     timeout: AbortSignal,
   ): Promise<void> {
-    let loading = false;
     while (!timeout.aborted) {
       const tab = await tabs.get(tabId).catch(() => null);
-      if (!tab) return;
-      if (tab.status !== "complete" || tab.pendingUrl !== undefined) loading = true;
-      else if (loading || hasEnded(tab, before)) return;
+      if (!tab || ended(tab)) return;
       await clock.sleep(POLL_MS, timeout);
     }
   }
@@ -208,15 +215,16 @@ export function ownedTab(deps: {
     const signal = AbortSignal.any([cancel, timeout]);
     const load =
       (await navigateUnlessShown(requester, url, signal)) ?? (await create(requester, url, signal));
+    const ended = endOf(load, clock);
     try {
       for (;;) {
         signal.throwIfAborted();
-        if (await exclusively(() => landed(load.tabId))) return load.tabId;
+        if (await exclusively(() => landed(load, ended))) return load.tabId;
         await clock.sleep(POLL_MS, signal);
       }
     } catch (error) {
-      if (signal.aborted) await closeUntilGone(load.tabId);
-      await holdTurnUntilLoadEnds(load, timeout);
+      await closeUntilGone(load.tabId);
+      await holdTurnUntilLoadEnds(load, ended, timeout);
       throw error;
     }
   }
