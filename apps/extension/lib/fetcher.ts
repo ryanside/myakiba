@@ -177,10 +177,7 @@ export function createFetcher(deps: FetcherDeps) {
     };
   }
 
-  /**
-   * The browser's error page keeps the MFC URL, so an owned tab that cannot run the collector is closed before it fails
-   * more items.
-   */
+  /** The browser's error page keeps the MFC URL, so an owned tab whose collector failed is closed rather than reused. */
   async function fetchPage(
     lease: MfcTabLease,
     job: Job,

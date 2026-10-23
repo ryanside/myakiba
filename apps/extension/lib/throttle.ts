@@ -30,8 +30,8 @@ export const OPEN_THROTTLE: ThrottleState = {
 };
 
 /**
- * Keeps a throttle turn going until `at` at the latest. It is booked as well, so a worker that stops meanwhile leaves
- * the next load waiting.
+ * Keeps a throttle turn going until `at` at the latest, for a load its work can no longer stop. It is booked as well, so
+ * a worker that stops meanwhile leaves the next load waiting.
  */
 export type HoldTurn = (at: number) => Promise<void>;
 
@@ -144,7 +144,6 @@ export function createThrottle(deps: {
     /**
      * Runs one MFC load in its turn. `work` gets a signal that aborts `timeoutMs` after the turn begins.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
-     * `holdUntil` keeps the turn going up to a later time, for a load `work` can no longer stop.
      */
     async load<T>(
       signal: AbortSignal,

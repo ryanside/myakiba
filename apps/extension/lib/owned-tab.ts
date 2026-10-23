@@ -67,22 +67,26 @@ function onOrigin(url: string | undefined, origin: string): boolean {
   return URL.parse(url ?? "")?.origin === origin;
 }
 
-/** `before` is the page the tab showed when the load started. */
-type Load = { readonly tabId: number; readonly before: string | null; readonly startedAt: number };
+type Load = {
+  readonly tabId: number;
+  readonly urlAtStart: string | null;
+  readonly startedAt: number;
+};
 
 /**
- * Tells from each look at the tab whether the load has ended. A load ends complete on another page, or back on `before`
- * once it was seen loading, as a 204 or a download does. A browser hides the URL of a page outside the host permissions,
- * so that page reads as no URL at all.
+ * A 204 or a download ends a load back on `urlAtStart`, so a load seen loading has ended once it is complete. A browser
+ * hides the URL of a page outside the host permissions, so that page reads as no URL at all.
  */
-function endOf({ before, startedAt }: Load, clock: Clock): (tab: Tab) => boolean {
+function endOf({ urlAtStart, startedAt }: Load, clock: Clock): (tab: Tab) => boolean {
   let seenLoading = false;
   return (tab) => {
     if (tab.status !== "complete" || tab.pendingUrl !== undefined) {
       seenLoading = true;
       return false;
     }
-    return seenLoading || (tab.url ?? null) !== before || clock.now() - startedAt >= LOAD_START_MS;
+    return (
+      seenLoading || (tab.url ?? null) !== urlAtStart || clock.now() - startedAt >= LOAD_START_MS
+    );
   };
 }
 
@@ -96,8 +100,8 @@ export function ownedTab(deps: {
 }) {
   const { tabs, clock, origin, record, throttle, turnMs } = deps;
   /**
-   * Every tab focused since this worker started, held in memory as well as cleared from the record, so a focus wins
-   * over a close or a navigation already waiting on storage. Tab ids are never reused, and a claim is for good.
+   * The record survives a worker restart, but storage answers later, so a close already waiting on it checks this too.
+   * Browsers never reuse a tab id, so a claim is never cleared.
    */
   const claimed = new Set<number>();
   let ownership = Promise.resolve(null);
@@ -158,7 +162,7 @@ export function ownedTab(deps: {
     return exclusively(async () => {
       const own = await landedTab();
       if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) return null;
-      const load = { tabId: own.tabId, before: own.tab.url ?? null, startedAt: clock.now() };
+      const load = { tabId: own.tabId, urlAtStart: own.tab.url ?? null, startedAt: clock.now() };
       if (own.tab.url === url) return load;
       signal.throwIfAborted();
       await tabs.update(own.tabId, { url });
@@ -180,16 +184,19 @@ export function ownedTab(deps: {
     await exclusively(async () => {
       if (!claimed.has(tabId)) await record.save({ state: "loading", tabId });
     });
-    return { tabId, before: null, startedAt };
+    return { tabId, urlAtStart: null, startedAt };
   }
 
-  async function landed({ tabId, before }: Load, ended: (tab: Tab) => boolean): Promise<boolean> {
+  async function landed(
+    { tabId, urlAtStart }: Load,
+    ended: (tab: Tab) => boolean,
+  ): Promise<boolean> {
     const own = await record.load();
     if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabTakenError(tabId);
     if (own.state === "landed") return true;
     const tab = await tabs.get(tabId);
     if (!ended(tab)) return false;
-    if (!onOrigin(tab.url, origin) || (tab.url ?? null) === before) {
+    if (!onOrigin(tab.url, origin) || (tab.url ?? null) === urlAtStart) {
       throw new Error(`the load in tab ${tabId} ended on another page`);
     }
     await record.save({ state: "landed", tabId });
