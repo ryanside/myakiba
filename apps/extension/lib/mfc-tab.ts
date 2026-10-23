@@ -98,6 +98,9 @@ export function createMfcTabs(deps: {
 
     claim: own.claim,
 
+    /** Closes the extension's own MFC tab, unless the user took it, so the next lease loads a fresh one. */
+    closeOwned: own.release,
+
     stopBorrowing(): void {
       borrowing = false;
     },

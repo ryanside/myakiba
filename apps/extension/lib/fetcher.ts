@@ -177,11 +177,25 @@ export function createFetcher(deps: FetcherDeps) {
     };
   }
 
-  function fetchPage(lease: MfcTabLease, job: Job, signal: AbortSignal): Promise<CollectedPage> {
+  /**
+   * The browser's error page keeps the MFC URL, so an owned tab that cannot run the collector is closed before it fails
+   * more items.
+   */
+  async function fetchPage(
+    lease: MfcTabLease,
+    job: Job,
+    signal: AbortSignal,
+  ): Promise<CollectedPage> {
     const request = { kind: "page", mode: "fetch", mfcItemId: job.mfcItemId } as const;
-    return throttle.load(signal, (timeout) =>
-      deps.collectPage(lease.tabId, request, AbortSignal.any([signal, timeout])),
-    );
+    try {
+      return await throttle.load(signal, (timeout) =>
+        deps.collectPage(lease.tabId, request, AbortSignal.any([signal, timeout])),
+      );
+    } catch (error) {
+      const tabFailed = !(error instanceof TimeoutError || error instanceof HaltedError);
+      if (lease.kind === "owned" && tabFailed && !signal.aborted) await mfcTabs.closeOwned();
+      throw error;
+    }
   }
 
   /** A page that never came back from a borrowed tab is the tab's fault, so it is tried once more in one of the extension's own. */

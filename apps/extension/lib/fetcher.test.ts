@@ -27,6 +27,7 @@ const CONTAINER = "firefox-container-1";
 const NORMAL = { incognito: false, cookieStoreId: null };
 const MFC_ERROR = page("<html><title>Server error</title></html>", { status: 500 });
 const SHORT_SETTLE_MS = 5000;
+const ERROR_PAGE = "Frame with ID 0 is showing error page";
 const STALLED_LOAD_MS = PAGE_TIMEOUT_MS + 25_000;
 const HOMEPAGE = `${ORIGINS.mfc}/`;
 const NEVER_LANDS = [
@@ -1216,6 +1217,44 @@ describe("the MFC tab", () => {
 
     expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed, 102]);
     expect(run.results().map((result) => result.ok)).toEqual([true]);
+  });
+
+  test("its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab", async () => {
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (extension.calls.at(-1)?.tabId === 101) throw new Error(ERROR_PAGE);
+        return page(itemPage(request.mfcItemId));
+      },
+    });
+    const run = extension.run([1, 2, 3]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results().map((result) => result.ok)).toEqual([false, true, true]);
+    expect(extension.tabs.log).toEqual([
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 101",
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 102",
+    ]);
+    expect(tooClose(extension.loads(), THROTTLE.minGapMs)).toEqual([]);
+  });
+
+  test("while every tab of its own shows the browser's error page, each item fails after one fresh tab", async () => {
+    const extension = fakeExtension({
+      pages: () => {
+        throw new Error(ERROR_PAGE);
+      },
+    });
+    const run = extension.run([1, 2, 3]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    const failure = { ok: false, error: "unexpected_page" } as const;
+    expect(run.results()).toEqual([failure, failure, failure]);
+    expect(extension.tabs.log.filter((entry) => entry.startsWith("create"))).toHaveLength(3);
+    expect(extension.calls).toHaveLength(3);
+    expect(extension.tabs.has(103)).toBe(false);
   });
 
   test("a shared item outlives its first run's tab closing before the MFC tab opens", async () => {
