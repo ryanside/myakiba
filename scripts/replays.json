@@ -848,6 +848,15 @@
         "a 1000-item import failure batch uses one transaction and rate-limit unit",
         "a mixed import failure batch preserves imported Items and ignores a stale job"
       ]
+    },
+    {
+      "fix": "258770eb",
+      "bug": "CSV completion and retry locked referenced Orders after the session, deadlocking with Order-first writes and recording valid uploads as persistence failures",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "CSV and order-item completions import the same missing Item without deadlocking",
+        "CSV retry locks Orders from in-request rows before its session"
+      ]
     }
   ],
   "lint": [
