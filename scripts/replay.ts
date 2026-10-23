@@ -9,6 +9,11 @@ type TestReplay = {
   bug: string;
   test: string;
   fixed: string[];
+  /**
+   * The revision to take the test harness from, when a later change renamed what the test
+   * uses so HEAD's copy can no longer run against the fix. Without it, the harness is HEAD's.
+   */
+  testAt?: string;
 };
 
 type LintReplay = {
@@ -382,23 +387,35 @@ async function install(revision: string) {
   }
 }
 
-async function harnessOf(testFile: string) {
+type Harness = { packageDir: string; files: string[]; at?: string };
+
+async function harnessOf(testFile: string, at?: string): Promise<Harness> {
   const packageDir = await packageDirOf(testFile);
-  const files =
-    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
-      .cwd(root)
-      .text();
-  return { packageDir, files: files.split("\n").filter(Boolean) };
+  const paths = [
+    testFile,
+    `${packageDir}/bunfig.toml`,
+    `${packageDir}/test.env`,
+    `${packageDir}/test`,
+  ];
+  const files = at
+    ? await $`git ls-tree -r --name-only ${at} -- ${paths}`.cwd(root).text()
+    : await $`git ls-files --cached --others --exclude-standard ${paths}`.cwd(root).text();
+  return { packageDir, files: files.split("\n").filter(Boolean), at };
 }
 
-async function checkOut(revision: string, harness?: { packageDir: string; files: string[] }) {
+async function checkOut(revision: string, harness?: Harness) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   if (harness === undefined) return;
   await install(revision);
 
-  const { packageDir, files } = harness;
+  const { packageDir, files, at } = harness;
   for (const file of files)
-    await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
+    await Bun.write(
+      path.join(worktree, file),
+      at
+        ? await $`git show ${`${at}:${file}`}`.cwd(root).arrayBuffer()
+        : Bun.file(path.join(root, file)),
+    );
 
   const head = await readPackage(path.join(root, packageDir));
   const atRevision = await readPackage(path.join(worktree, packageDir));
@@ -446,7 +463,7 @@ try {
   }
 
   for (const replay of selected) {
-    const harness = await harnessOf(replay.test);
+    const harness = await harnessOf(replay.test, replay.testAt);
     const workingTree = replay.fix === "WORKTREE";
     const base = workingTree ? replay.base : `${replay.fix}^`;
     if (!base) throw new Error("A WORKTREE replay needs a base revision");
