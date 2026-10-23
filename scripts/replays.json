@@ -576,6 +576,34 @@
       "bug": "Google sign-in navigated into the signed-out app before opening consent",
       "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
       "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
+    },
+    {
+      "fix": "0d3f95ce",
+      "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "a bar pressed while the hover highlight moves to it stays mounted and navigates on release"
+      ]
+    },
+    {
+      "fix": "c6ab608d",
+      "bug": "the dashboard order chart bars had no names and no keyboard path, and the chart's focus ring was hidden",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "each order bar is a link named for its month and count, and only the highlighted month is a tab stop",
+        "arrow keys move the order chart highlight between months and Enter opens the focused month",
+        "tabbing out of the order chart returns the highlight to the current month"
+      ]
+    },
+    {
+      "fix": "1b9f9b52",
+      "bug": "hovering the dashboard order chart moved its tab stop off the focused month, a value refresh dropped keyboard focus, and the reference line ignored the OS reduced-motion setting",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "with reduced motion the order reference line jumps to the highlighted month",
+        "a focused month keeps the tab stop and the Enter target while the pointer highlights another month",
+        "a focused month keeps keyboard focus when the order counts refresh"
+      ]
     }
   ],
   "lint": [
