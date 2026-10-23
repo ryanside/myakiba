@@ -13,6 +13,8 @@ const FAILURE_FLUSH_MS = 1000;
 const QUEUED_PROMPT_DELAY_MS = 1000;
 const MAX_UPLOADS_IN_FLIGHT = 2;
 const MAX_RETRY_AFTER_MS = 60_000;
+// A page may have at most 64 KiB of keepalive request bodies in flight.
+const KEEPALIVE_BODY_BYTES = 64 * 1024;
 
 type ItemEvent = Extract<ExtensionFetchEvent, { readonly type: "item" }>;
 type StatusEvent = Extract<ExtensionFetchEvent, { readonly type: "status" }>;
@@ -83,14 +85,26 @@ function itemPage(id: MfcItemId, html: string, picture: Blob | null): ItemPage {
 
 type ItemFailure = { readonly mfcItemId: MfcItemId; readonly error: ItemError };
 
+type Delivery = { readonly keepalive: boolean };
+
+type RunBody = { readonly jobId: string };
+type FailureBody = RunBody & { readonly failures: ItemFailure[] };
+
+const runBody = (jobId: string): RunBody => ({ jobId });
+
+const failureBody = (jobId: string, failures: readonly ItemFailure[]): FailureBody => ({
+  jobId,
+  failures: [...failures],
+});
+
 type ExtensionRun = {
-  readonly runId: string;
+  readonly jobId: string;
   readonly sessionId: string | null;
   readonly mfcItemIds: readonly number[];
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
-  readonly report: (failures: readonly ItemFailure[]) => Promise<ServerAnswer>;
+  readonly report: (failures: readonly ItemFailure[], delivery: Delivery) => Promise<ServerAnswer>;
   readonly heartbeat: () => Promise<ServerAnswer>;
-  readonly interrupt: (options: { readonly keepalive: boolean }) => Promise<ServerAnswer>;
+  readonly interrupt: (delivery: Delivery) => Promise<ServerAnswer>;
 };
 
 export function syncRun(run: {
@@ -101,18 +115,19 @@ export function syncRun(run: {
   const { sessionId, jobId } = run;
   const session = app.api.sync.sessions({ id: sessionId });
   return {
-    runId: jobId,
+    jobId,
     sessionId,
     mfcItemIds: run.mfcItemIds,
     complete: (item) =>
       answerOf(session.items.post({ jobId, ...item }), (data) =>
         data.outcome === "failed" ? FAILED : OK,
       ),
-    report: (failures) => answerOf(session.failures.post({ jobId, failures: [...failures] })),
+    report: (failures, { keepalive }) =>
+      answerOf(session.failures.post(failureBody(jobId, failures), { fetch: { keepalive } })),
     heartbeat: () =>
-      answerOf(session.heartbeat.post({ jobId }), (data) => (data.active ? OK : OVER)),
+      answerOf(session.heartbeat.post(runBody(jobId)), (data) => (data.active ? OK : OVER)),
     interrupt: ({ keepalive }) =>
-      answerOf(session.interrupt.post({ jobId }, { fetch: { keepalive } })),
+      answerOf(session.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
   };
 }
 
@@ -123,15 +138,16 @@ export function importRun(run: {
   const jobId = run.importId;
   const current = app.api["data-transfer"].imports.current;
   return {
-    runId: jobId,
+    jobId,
     sessionId: null,
     mfcItemIds: run.mfcItemIds,
     complete: (item) => answerOf(current.items.post({ jobId, ...item })),
-    report: (failures) => answerOf(current.items.failure.post({ jobId, failures: [...failures] })),
+    report: (failures, { keepalive }) =>
+      answerOf(current.items.failure.post(failureBody(jobId, failures), { fetch: { keepalive } })),
     heartbeat: () =>
-      answerOf(current.heartbeat.post({ jobId }), (data) => (data.running ? OK : OVER)),
+      answerOf(current.heartbeat.post(runBody(jobId)), (data) => (data.running ? OK : OVER)),
     interrupt: ({ keepalive }) =>
-      answerOf(current.interrupt.post({ jobId }, { fetch: { keepalive } })),
+      answerOf(current.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
   };
 }
 
@@ -240,6 +256,32 @@ function uploadSlots(size: number) {
 
 const tabUploadSlots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
+let pageKeepaliveBytes = 0;
+
+const jsonBytes = (body: RunBody | FailureBody | ItemFailure) =>
+  new TextEncoder().encode(JSON.stringify(body)).byteLength;
+
+async function sendKeepalive(bytes: number, send: () => Promise<ServerAnswer>): Promise<void> {
+  pageKeepaliveBytes += bytes;
+  await send();
+  pageKeepaliveBytes -= bytes;
+}
+
+function leadingFailuresWithin(
+  maxBytes: number,
+  jobId: string,
+  failures: readonly ItemFailure[],
+): readonly ItemFailure[] {
+  let bytes = jsonBytes(failureBody(jobId, []));
+  let fit = 0;
+  for (const failure of failures) {
+    bytes += jsonBytes(failure) + (fit > 0 ? 1 : 0);
+    if (bytes > maxBytes) break;
+    fit += 1;
+  }
+  return failures.slice(0, fit);
+}
+
 export type RunOutcome =
   | { readonly kind: "ended" }
   | { readonly kind: "busy"; readonly notImported: number; readonly retryAfterMs: number | null };
@@ -286,25 +328,23 @@ export function createExtensionRunner(deps: RunnerDeps) {
     const heartbeat = setInterval(() => {
       void renew();
     }, heartbeatMs);
-    // A page restored from the back-forward cache must not drive a run the server has since settled.
-    const leave = () => {
-      void run.interrupt({ keepalive: true });
-      halt({ kind: "left" });
-    };
-    page.addEventListener("pagehide", leave);
 
     const reports: Promise<void>[] = [];
     const report = async (batch: readonly ItemFailure[]) => {
-      const answer = await run.report(batch);
+      const answer = await run.report(batch, { keepalive: false });
       if (answer.kind !== "ok") refused(answer, batch.length);
     };
     let failures: ItemFailure[] = [];
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
-    const flush = () => {
+    const takeFailures = () => {
       clearTimeout(flushTimer);
       flushTimer = undefined;
       const batch = failures;
       failures = [];
+      return batch;
+    };
+    const flush = () => {
+      const batch = takeFailures();
       if (batch.length > 0 && !serverHoldsEnd(tally.stop)) reports.push(report(batch));
     };
     const fail = (failure: ItemFailure) => {
@@ -312,6 +352,20 @@ export function createExtensionRunner(deps: RunnerDeps) {
       if (failures.length >= MAX_ITEM_FAILURES_PER_REPORT) flush();
       else flushTimer ??= setTimeout(flush, failureFlushMs);
     };
+
+    // A page restored from the back-forward cache must not drive a run the server has since settled.
+    const leave = () => {
+      const interruptBytes = jsonBytes(runBody(run.jobId));
+      const room = KEEPALIVE_BODY_BYTES - pageKeepaliveBytes - interruptBytes;
+      const sent = leadingFailuresWithin(room, run.jobId, takeFailures());
+      if (sent.length > 0) {
+        const reportBytes = jsonBytes(failureBody(run.jobId, sent));
+        void sendKeepalive(reportBytes, () => run.report(sent, { keepalive: true }));
+      }
+      void sendKeepalive(interruptBytes, () => run.interrupt({ keepalive: true }));
+      halt({ kind: "left" });
+    };
+    page.addEventListener("pagehide", leave);
 
     const uploads: Promise<void>[] = [];
     const takeSlotUnlessStopped = async () => {
@@ -331,8 +385,9 @@ export function createExtensionRunner(deps: RunnerDeps) {
       }
     };
 
+    const target = { runId: run.jobId, sessionId: run.sessionId };
     try {
-      for await (const fetched of fetchPagesShowingPrompts(deps, run, ids, controller.signal)) {
+      for await (const fetched of fetchPagesShowingPrompts(deps, target, ids, controller.signal)) {
         if (!fetched.ok) {
           if (fetched.error === "extension_stopped") tally.unanswered += 1;
           else fail({ mfcItemId: fetched.mfcItemId, error: fetched.error });

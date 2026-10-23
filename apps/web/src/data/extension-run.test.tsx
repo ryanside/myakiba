@@ -35,6 +35,7 @@ type Sent = {
   readonly path: string;
   readonly keepalive: boolean;
   readonly fields: z.output<typeof runFields>;
+  readonly bodyBytes: number;
   readonly formKeys: readonly string[];
   readonly page: File | null;
 };
@@ -47,14 +48,17 @@ async function readSent(input: RequestInfo | URL, init?: RequestInit): Promise<S
   const request = new Request(input, init);
   const base = { path: new URL(request.url).pathname, keepalive: init?.keepalive ?? false };
   if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) {
-    const fields = parseJson(runFields, await request.text()).data ?? {};
-    return { ...base, fields, formKeys: [], page: null };
+    const body = await request.text();
+    const fields = parseJson(runFields, body).data ?? {};
+    const bodyBytes = new TextEncoder().encode(body).byteLength;
+    return { ...base, fields, bodyBytes, formKeys: [], page: null };
   }
   const form = await request.formData();
   const page = form.get("page");
   return {
     ...base,
     fields: runFields.parse(Object.fromEntries(form)),
+    bodyBytes: 0,
     formKeys: [...form.keys()],
     page: page instanceof File ? page : null,
   };
@@ -714,6 +718,77 @@ describe("an upload waiting out a Retry-After", () => {
 
     expect(posted(`${SESSION}/items`)).toHaveLength(1);
     expect(posted(`${CURRENT}/items`).map((request) => request.fields.mfcItemId)).toEqual([2]);
+  });
+});
+
+describe("leaving the page with failures not yet reported", () => {
+  test("reports them with their reasons before the keepalive interrupt", async () => {
+    fakeFetch();
+    answer = imported;
+    loadExtension((fetch) => {
+      fetch.fail(1, "challenge_unsolved");
+      fetch.item(2);
+    });
+    const { run, page } = runner();
+
+    const running = run(sync(1, 2, 3));
+    await waitFor(() => expect(posted(`${SESSION}/items`)).toHaveLength(1));
+    page.hide();
+    await running;
+    await waitFor(() => expect(sent.filter((request) => request.keepalive)).toHaveLength(2));
+
+    expect(
+      sent.filter((request) => request.keepalive).map(({ path, fields }) => ({ path, fields })),
+    ).toEqual([
+      {
+        path: `${SESSION}/failures`,
+        fields: { jobId: "job-1", failures: [{ mfcItemId: 1, error: "challenge_unsolved" }] },
+      },
+      { path: `${SESSION}/interrupt`, fields: { jobId: "job-1" } },
+    ]);
+  });
+
+  test("reports what fits in the page's 64 KiB keepalive budget, in order", async () => {
+    fakeFetch();
+    answer = imported;
+    const held = 997;
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds.slice(0, held)) fetch.fail(id, "challenge_unsolved");
+      fetch.item(fetch.mfcItemIds[held] ?? 0);
+    });
+    const { run, page } = runner();
+    const ids = (first: number) => Array.from({ length: held + 2 }, (_, index) => first + index);
+    const sessions = ["ss-1", "ss-2"];
+
+    const running = Promise.all(
+      sessions.map((sessionId, index) =>
+        run(
+          syncRun({ sessionId, jobId: `job-${index}`, mfcItemIds: ids(1_000_000 * (index + 1)) }),
+        ),
+      ),
+    );
+    await waitFor(() =>
+      expect(sent.filter((request) => request.path.endsWith("/items"))).toHaveLength(2),
+    );
+    page.hide();
+    await running;
+    await waitFor(() => expect(sent.filter((request) => request.keepalive)).toHaveLength(4));
+
+    const keepalive = sent.filter((request) => request.keepalive);
+    const [first = [], second = []] = sessions.map(
+      (sessionId) =>
+        keepalive
+          .find((request) => request.path === `/api/sync/sessions/${sessionId}/failures`)
+          ?.fields.failures?.map((failure) => failure.mfcItemId) ?? [],
+    );
+    expect(first).toEqual(ids(1_000_000).slice(0, held));
+    expect(second.length).toBeGreaterThan(0);
+    expect(second.length).toBeLessThan(held);
+    expect(second).toEqual(ids(2_000_000).slice(0, second.length));
+    expect(keepalive.filter((request) => request.path.endsWith("/interrupt"))).toHaveLength(2);
+    expect(keepalive.reduce((bytes, request) => bytes + request.bodyBytes, 0)).toBeLessThanOrEqual(
+      64 * 1024,
+    );
   });
 });
 
