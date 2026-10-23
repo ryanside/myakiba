@@ -5,6 +5,8 @@ const MAX_ITEM_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_MISSING_LOOKUP_IDS = 1000;
 
 export const MAX_ITEM_PICTURE_BYTES = 10 * 1024 * 1024;
+/** The most failures a run's failure route takes in one batch. */
+export const MAX_ITEM_FAILURES_PER_REPORT = 1000;
 
 const mfcItemIdField = z.int().min(1).max(MAX_MFC_ITEM_ID);
 

@@ -1,3 +1,4 @@
+import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schema";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { extensionBridge } from "@/lib/extension-bridge";
@@ -8,6 +9,7 @@ import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
 
 const HEARTBEAT_MS = 20_000;
+const FAILURE_FLUSH_MS = 1000;
 const QUEUED_PROMPT_DELAY_MS = 1000;
 const MAX_UPLOADS_IN_FLIGHT = 2;
 const MAX_RETRY_AFTER_MS = 60_000;
@@ -70,12 +72,14 @@ function itemPage(id: MfcItemId, html: string, picture: Blob | null): ItemPage {
   };
 }
 
+type ItemFailure = { readonly mfcItemId: MfcItemId; readonly error: ItemError };
+
 type ExtensionRun = {
   readonly runId: string;
   readonly sessionId: string | null;
   readonly mfcItemIds: readonly number[];
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
-  readonly fail: (mfcItemId: MfcItemId, error: ItemError) => Promise<ServerAnswer>;
+  readonly report: (failures: readonly ItemFailure[]) => Promise<ServerAnswer>;
   readonly heartbeat: () => Promise<Lease>;
   readonly interrupt: (options: { readonly keepalive: boolean }) => Promise<ServerAnswer>;
 };
@@ -95,8 +99,8 @@ export function syncRun(run: {
       const answer = await session.items.post({ jobId, ...item });
       return answer.data?.outcome === "failed" ? FAILED : answerOf(answer);
     },
-    fail: async (id, error) =>
-      answerOf(await session.failures.post({ jobId, mfcItemId: id, error })),
+    report: async (failures) =>
+      answerOf(await session.failures.post({ jobId, failures: [...failures] })),
     heartbeat: async () => leaseOf(await session.heartbeat.post({ jobId }), (data) => data.active),
     interrupt: async ({ keepalive }) =>
       answerOf(await session.interrupt.post({ jobId }, { fetch: { keepalive } })),
@@ -114,14 +118,8 @@ export function importRun(run: {
     sessionId: null,
     mfcItemIds: run.mfcItemIds,
     complete: async (item) => answerOf(await current.items.post({ jobId, ...item })),
-    fail: async (id, error) =>
-      answerOf(
-        await current.items.failure.post({
-          jobId,
-          mfcItemId: id,
-          reason: ITEM_ERROR_MESSAGE[error],
-        }),
-      ),
+    report: async (failures) =>
+      answerOf(await current.items.failure.post({ jobId, failures: [...failures] })),
     heartbeat: async () => leaseOf(await current.heartbeat.post({ jobId }), (data) => data.running),
     interrupt: async ({ keepalive }) =>
       answerOf(await current.interrupt.post({ jobId }, { fetch: { keepalive } })),
@@ -232,7 +230,7 @@ const ENDED: RunOutcome = { kind: "ended" };
 /** Why a run stopped before the extension finished it. */
 type Stop = Busy | { readonly kind: "over" } | { readonly kind: "left" };
 
-/** After `over` or `left` the server already holds the run's end. */
+/** After `over` or `left` the server already holds the run's end, so the page reports nothing more. */
 const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
 
 type RunTally = { imported: number; unanswered: number; stop: Stop | null };
@@ -245,11 +243,12 @@ type PageEvents = {
 type RunnerDeps = FetchDeps & {
   readonly page: PageEvents;
   readonly heartbeatMs: number;
+  readonly failureFlushMs: number;
 };
 
 /** The returned function never rejects. Its runs share one cap on uploads in flight. */
 export function createExtensionRunner(deps: RunnerDeps) {
-  const { page, heartbeatMs } = deps;
+  const { page, heartbeatMs, failureFlushMs } = deps;
   const slots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
   return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
@@ -278,6 +277,26 @@ export function createExtensionRunner(deps: RunnerDeps) {
     };
     page.addEventListener("pagehide", leave);
 
+    const reports: Promise<void>[] = [];
+    const report = async (batch: readonly ItemFailure[]) => {
+      const answer = await run.report(batch);
+      if (answer.kind !== "ok") refused(answer, batch.length);
+    };
+    let failures: ItemFailure[] = [];
+    let flushTimer: ReturnType<typeof setTimeout> | undefined;
+    const flush = () => {
+      clearTimeout(flushTimer);
+      flushTimer = undefined;
+      const batch = failures;
+      failures = [];
+      if (batch.length > 0 && !serverHoldsEnd(tally.stop)) reports.push(report(batch));
+    };
+    const fail = (failure: ItemFailure) => {
+      failures.push(failure);
+      if (failures.length >= MAX_ITEM_FAILURES_PER_REPORT) flush();
+      else flushTimer ??= setTimeout(flush, failureFlushMs);
+    };
+
     const uploads: Promise<void>[] = [];
     /** Waits for a free upload slot, or answers false with no slot taken once the run has stopped. */
     const takeSlot = async () => {
@@ -297,11 +316,8 @@ export function createExtensionRunner(deps: RunnerDeps) {
     try {
       for await (const fetched of fetchPages(deps, run, ids, controller.signal)) {
         if (!fetched.ok) {
-          const answer =
-            fetched.error === "extension_stopped"
-              ? FAILED
-              : await run.fail(fetched.mfcItemId, fetched.error);
-          if (answer.kind !== "ok") tally.unanswered += 1;
+          if (fetched.error === "extension_stopped") tally.unanswered += 1;
+          else fail({ mfcItemId: fetched.mfcItemId, error: fetched.error });
         } else if (await takeSlot()) {
           uploads.push(upload(fetched.page));
         } else {
@@ -309,11 +325,14 @@ export function createExtensionRunner(deps: RunnerDeps) {
         }
       }
       await Promise.all(uploads);
+      flush();
+      await Promise.all(reports);
       if (tally.unanswered > 0 && !serverHoldsEnd(tally.stop)) {
         await run.interrupt({ keepalive: false });
       }
     } finally {
       clearInterval(heartbeat);
+      clearTimeout(flushTimer);
       page.removeEventListener("pagehide", leave);
     }
     const { stop } = tally;
@@ -332,6 +351,7 @@ const runWithExtension = createExtensionRunner({
   ...fetchDeps,
   page: window,
   heartbeatMs: HEARTBEAT_MS,
+  failureFlushMs: FAILURE_FLUSH_MS,
 });
 
 export function importSyncItems(run: Parameters<typeof syncRun>[0]): Promise<RunOutcome> {

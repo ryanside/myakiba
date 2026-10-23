@@ -28,8 +28,7 @@ const { ExtensionPromptNotice } = await import("@/components/extension/extension
 const runFields = z.object({
   jobId: z.string().optional(),
   mfcItemId: z.coerce.number().optional(),
-  error: z.string().optional(),
-  reason: z.string().optional(),
+  failures: z.array(z.object({ mfcItemId: z.number(), error: z.string() })).optional(),
 });
 
 type Sent = {
@@ -99,12 +98,23 @@ function fakePage() {
 
 type RunnerOptions = {
   readonly heartbeatMs?: number;
+  readonly failureFlushMs?: number;
   readonly queuedPromptDelayMs?: number;
 };
 
-function runner({ heartbeatMs = 60_000, queuedPromptDelayMs = 0 }: RunnerOptions = {}) {
+function runner({
+  heartbeatMs = 60_000,
+  failureFlushMs = 60_000,
+  queuedPromptDelayMs = 0,
+}: RunnerOptions = {}) {
   const page = fakePage();
-  const run = createExtensionRunner({ bridge, page, heartbeatMs, queuedPromptDelayMs });
+  const run = createExtensionRunner({
+    bridge,
+    page,
+    heartbeatMs,
+    failureFlushMs,
+    queuedPromptDelayMs,
+  });
   return { run, page };
 }
 
@@ -133,7 +143,7 @@ describe("a sync run", () => {
     expect(upload?.fields).toEqual({ jobId: "job-1", mfcItemId: 1 });
     expect(await upload?.page?.text()).toBe("<html>one</html>");
     expect(posted(`${SESSION}/failures`).map((request) => request.fields)).toEqual([
-      { jobId: "job-1", mfcItemId: 2, error: "mfc_signed_out" },
+      { jobId: "job-1", failures: [{ mfcItemId: 2, error: "mfc_signed_out" }] },
     ]);
     expect(posted(`${SESSION}/interrupt`)).toEqual([]);
   });
@@ -357,6 +367,111 @@ describe("a sync run", () => {
   });
 });
 
+describe("failure reports", () => {
+  test("report the failures that arrive close together in one request", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.fail(1, "mfc_signed_out");
+      fetch.fail(2, "hidden_or_missing");
+      setTimeout(() => {
+        fetch.fail(3, "timeout");
+        fetch.done("complete");
+      }, 150);
+    });
+
+    await runner({ failureFlushMs: 50 }).run(sync(1, 2, 3));
+
+    expect(posted(`${SESSION}/failures`).map((request) => request.fields)).toEqual([
+      {
+        jobId: "job-1",
+        failures: [
+          { mfcItemId: 1, error: "mfc_signed_out" },
+          { mfcItemId: 2, error: "hidden_or_missing" },
+        ],
+      },
+      { jobId: "job-1", failures: [{ mfcItemId: 3, error: "timeout" }] },
+    ]);
+  });
+
+  test("hold at most 1000 failures in one request", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds) fetch.fail(id, "hidden_or_missing");
+      fetch.done("complete");
+    });
+
+    await runner().run(sync(...Array.from({ length: 1001 }, (_, index) => index + 1)));
+
+    expect(posted(`${SESSION}/failures`).map((request) => request.fields.failures?.length)).toEqual(
+      [1000, 1],
+    );
+  });
+
+  test("report an unsolved security check for every open item at once", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.item(1);
+      for (const id of fetch.mfcItemIds.slice(1)) fetch.fail(id, "challenge_unsolved");
+      fetch.done("complete");
+    });
+
+    await runner({ failureFlushMs: 50 }).run(sync(1, 2, 3, 4));
+
+    expect(posted(`${SESSION}/failures`).map((request) => request.fields.failures)).toEqual([
+      [
+        { mfcItemId: 2, error: "challenge_unsolved" },
+        { mfcItemId: 3, error: "challenge_unsolved" },
+        { mfcItemId: 4, error: "challenge_unsolved" },
+      ],
+    ]);
+  });
+
+  test("stop the run on a busy answer, like an upload does", async () => {
+    fakeFetch();
+    answer = (request) =>
+      request.path === `${SESSION}/failures`
+        ? tooBusy()
+        : Response.json({ outcome: "imported", reason: null });
+    loadExtension((fetch) => {
+      fetch.fail(1, "mfc_signed_out");
+      setTimeout(() => fetch.item(2), 200);
+    });
+
+    const outcome = await runner({ failureFlushMs: 20 }).run(sync(1, 2));
+
+    expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
+    expect(posted(`${SESSION}/items`)).toEqual([]);
+    expect(posted(`${SESSION}/interrupt`)).toMatchObject([{ keepalive: false }]);
+    expect(outcome).toEqual({ kind: "busy", notImported: 2, retryAfterMs: 3_600_000 });
+  });
+
+  test("still go out after a busy upload, and are answered before the final interrupt", async () => {
+    fakeFetch();
+    const log: string[] = [];
+    answer = async (request) => {
+      if (request.path === `${SESSION}/items`) return tooBusy();
+      if (request.path === `${SESSION}/failures`) {
+        await sleep(50);
+        log.push("failures answered");
+      }
+      if (request.path === `${SESSION}/interrupt`) log.push("interrupt sent");
+      return Response.json({});
+    };
+    loadExtension((fetch) => {
+      fetch.fail(1, "mfc_signed_out");
+      fetch.item(2);
+    });
+
+    const outcome = await runner().run(sync(1, 2, 3));
+
+    expect(posted(`${SESSION}/failures`).map((request) => request.fields.failures)).toEqual([
+      [{ mfcItemId: 1, error: "mfc_signed_out" }],
+    ]);
+    expect(log).toEqual(["failures answered", "interrupt sent"]);
+    expect(outcome).toEqual({ kind: "busy", notImported: 3, retryAfterMs: 3_600_000 });
+  });
+});
+
 describe("the upload cap", () => {
   test("holds for two runs together", async () => {
     let inFlight = 0;
@@ -448,7 +563,7 @@ test.each([
   expect(posted(`${path}/interrupt`)).toEqual([]);
 });
 
-test("an Import/Export run reports to the import's endpoints with a readable reason", async () => {
+test("an Import/Export run reports to the import's endpoints", async () => {
   fakeFetch();
   loadExtension((fetch) => {
     fetch.item(1);
@@ -460,11 +575,7 @@ test("an Import/Export run reports to the import's endpoints with a readable rea
 
   expect(posted(`${CURRENT}/items`)[0]?.fields).toEqual({ jobId: "imp-1", mfcItemId: 1 });
   expect(posted(`${CURRENT}/items/failure`).map((request) => request.fields)).toEqual([
-    {
-      jobId: "imp-1",
-      mfcItemId: 2,
-      reason: "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
-    },
+    { jobId: "imp-1", failures: [{ mfcItemId: 2, error: "hidden_or_missing" }] },
   ]);
 });
 
