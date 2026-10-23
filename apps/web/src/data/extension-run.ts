@@ -183,6 +183,27 @@ async function completeOnce(run: ExtensionRun, item: ItemPage): Promise<ServerAn
   return run.complete(item);
 }
 
+function uploadSlots(size: number) {
+  let free = size;
+  const waiting: (() => void)[] = [];
+  return {
+    take: async (): Promise<void> => {
+      if (free > 0) {
+        free -= 1;
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        waiting.push(resolve);
+      });
+    },
+    give: (): void => {
+      const wake = waiting.shift();
+      if (wake === undefined) free += 1;
+      else wake();
+    },
+  };
+}
+
 /** How a run ended. `busy` means the server refused it for now, so some items were not imported. */
 export type RunOutcome =
   | { readonly kind: "ended" }
@@ -209,8 +230,10 @@ type RunnerDeps = {
   readonly heartbeatMs: number;
 };
 
-/** The returned function never rejects. */
+/** The returned function never rejects. Its runs share one cap on uploads in flight. */
 export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps) {
+  const slots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
+
   return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
     if (ids.length === 0) return ENDED;
@@ -219,6 +242,10 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     const halt = (stop: Stop) => {
       tally.stop ??= stop;
       controller.abort();
+    };
+    const refused = (answer: ServerAnswer, items: number) => {
+      tally.unanswered += items;
+      if (answer.kind === "busy") halt(answer);
     };
     const renew = async () => {
       if ((await run.heartbeat()) === "over") halt({ kind: "over" });
@@ -233,16 +260,19 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     };
     page.addEventListener("pagehide", leave);
 
-    const uploads = new Map<MfcItemId, Promise<void>>();
-    const send = (item: ItemPage) => {
-      const sending = async () => {
-        const answer = await completeOnce(run, item);
-        uploads.delete(item.mfcItemId);
-        if (answer.kind === "ok") return;
-        tally.unanswered += 1;
-        if (answer.kind === "busy") halt(answer);
-      };
-      uploads.set(item.mfcItemId, sending());
+    const uploads: Promise<void>[] = [];
+    /** Waits for a free upload slot, or answers false with no slot taken once the run has stopped. */
+    const takeSlot = async () => {
+      if (tally.stop !== null) return false;
+      await slots.take();
+      if (tally.stop === null) return true;
+      slots.give();
+      return false;
+    };
+    const upload = async (item: ItemPage) => {
+      const answer = await completeOnce(run, item);
+      if (answer.kind !== "ok") refused(answer, 1);
+      slots.give();
     };
 
     try {
@@ -253,14 +283,13 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
               ? FAILED
               : await run.fail(fetched.mfcItemId, fetched.error);
           if (answer.kind !== "ok") tally.unanswered += 1;
-        } else if (tally.stop === null) {
-          while (uploads.size >= MAX_UPLOADS_IN_FLIGHT) await Promise.race(uploads.values());
-          send(fetched.page);
+        } else if (await takeSlot()) {
+          uploads.push(upload(fetched.page));
         } else {
           tally.unanswered += 1;
         }
       }
-      await Promise.all(uploads.values());
+      await Promise.all(uploads);
       if (tally.unanswered > 0 && !serverHoldsEnd(tally.stop)) {
         await run.interrupt({ keepalive: false });
       }

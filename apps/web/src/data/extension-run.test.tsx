@@ -71,6 +71,12 @@ function fakeFetch() {
 }
 
 const posted = (path: string) => sent.filter((request) => request.path === path);
+const tooBusy = () =>
+  new Response("Rate limit exceeded", { status: 429, headers: { "retry-after": "3600" } });
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 const SESSION = "/api/sync/sessions/ss-1";
 const CURRENT = "/api/data-transfer/imports/current";
 
@@ -301,6 +307,73 @@ describe("a sync run", () => {
       await running;
     });
     expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
+describe("the upload cap", () => {
+  test("holds for two runs together", async () => {
+    let inFlight = 0;
+    let most = 0;
+    const releases: (() => void)[] = [];
+    fakeFetch();
+    answer = async (request) => {
+      if (!request.path.endsWith("/items")) return Response.json({});
+      inFlight += 1;
+      most = Math.max(most, inFlight);
+      await new Promise<void>((resolve) => {
+        releases.push(resolve);
+      });
+      inFlight -= 1;
+      return Response.json({ outcome: "imported", reason: null });
+    };
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds) fetch.item(id);
+      fetch.done("complete");
+    });
+    const { run } = runner();
+    const uploads = () => sent.filter((request) => request.path.endsWith("/items")).length;
+
+    const running = Promise.all([
+      run(sync(1, 2, 3)),
+      run(importRun({ importId: "imp-1", mfcItemIds: [4, 5, 6] })),
+    ]);
+    while (uploads() < 6) {
+      await waitFor(() => expect(releases.length).toBeGreaterThan(0));
+      releases.shift()?.();
+    }
+    for (const release of releases) release();
+    await running;
+
+    expect(most).toBe(2);
+  });
+
+  test("lets no page waiting for a slot go out after a busy answer", async () => {
+    const releases: (() => void)[] = [];
+    fakeFetch();
+    answer = async (request) => {
+      if (!request.path.endsWith("/items")) return Response.json({});
+      await new Promise<void>((resolve) => {
+        releases.push(resolve);
+      });
+      return tooBusy();
+    };
+    loadExtension((fetch) => {
+      for (const id of fetch.mfcItemIds) fetch.item(id);
+      fetch.done("complete");
+    });
+
+    const running = runner().run(sync(1, 2, 3));
+    await waitFor(() => expect(releases).toHaveLength(2));
+    releases.shift()?.();
+    await sleep(50);
+    const releaseRest = setInterval(() => {
+      for (const release of releases.splice(0)) release();
+    }, 10);
+    const outcome = await running;
+    clearInterval(releaseRest);
+
+    expect(posted(`${SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([1, 2]);
+    expect(outcome).toEqual({ kind: "busy", notImported: 3, retryAfterMs: 3_600_000 });
   });
 });
 
