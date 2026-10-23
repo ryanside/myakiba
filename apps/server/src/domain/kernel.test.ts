@@ -408,7 +408,45 @@ describe("command commit hooks and recovery", () => {
       });
       return ok("committed");
     });
-    await expect(run(viewer, effectThrows, undefined, log)).rejects.toThrow("effect");
+    expect(await run(viewer, effectThrows, undefined, log)).toEqual({
+      ok: true,
+      value: "committed",
+    });
     expect(recoveries).toBe(1);
+  });
+});
+
+test("failed commit effects keep the committed response and run later effects", async () => {
+  initLogger({ enabled: true });
+  const caller = { viewer, log: createRequestLogger() };
+  initLogger({ enabled: false });
+  const original = new Error("original recovered error");
+  caller.log.error(original);
+  const logged = spyOn(caller.log, "error");
+  const warnings = spyOn(caller.log, "warn");
+  const observed: string[] = [];
+  const operation = command(config, async (scope, id: string) => {
+    await scope.tx.insert(user).values({ id, name: id, email: `${id}@example.com`, username: id });
+    for (const message of ["first effect failed", "second effect failed"]) {
+      scope.afterCommit(async () => {
+        throw new Error(message);
+      });
+    }
+    scope.afterCommit(async (committed) => {
+      const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
+      for (const row of rows) observed.push(row.id);
+    });
+    return ok("committed");
+  });
+
+  expect(await serve(caller, operation, "failed-effects")).toBe("committed");
+  expect(await userExists("failed-effects")).toBe(true);
+  expect(observed).toEqual(["failed-effects"]);
+  expect(warnings).toHaveBeenCalledTimes(2);
+  expect(logged).not.toHaveBeenCalled();
+  expect(caller.log.getContext()).toMatchObject({
+    error: { message: original.message },
+    outcome: "success",
+    afterCommitErrors: [{ message: "first effect failed" }, { message: "second effect failed" }],
   });
 });

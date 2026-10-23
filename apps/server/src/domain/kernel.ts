@@ -319,7 +319,24 @@ export async function run<I, T, F extends Failure, M extends string>(
       error instanceof Error ? error : new Error(String(error)),
     )) as Outcome<T, F>;
   }
-  for (const effect of effects) await effect({ viewer, tx: pool, log });
+  for (const effect of effects) {
+    try {
+      await effect({ viewer, tx: pool, log });
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error(String(error));
+      log.warn(failure.message, {
+        afterCommitErrors: [
+          {
+            step: op.action,
+            name: failure.name,
+            message: failure.message,
+            stack: failure.stack,
+            cause: failure.cause,
+          },
+        ],
+      });
+    }
+  }
   return outcome;
 }
 
