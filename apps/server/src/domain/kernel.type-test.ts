@@ -12,7 +12,7 @@ import type { PageRequest } from "@myakiba/contracts/shared/pagination";
 import { betterAuth } from "@/middleware/better-auth";
 import { privateApi } from "@/boundary/private-api";
 import { Orders } from "@/routers/orders/module";
-import { command, fail, ok, paginate, proceed, query, serve } from "./kernel";
+import { command, fail, failAfterCommit, ok, paginate, proceed, query, serve } from "./kernel";
 
 const config = { action: "probe", failure: "Probe failed" };
 
@@ -128,4 +128,55 @@ void (true satisfies Equal<ValuesOf<typeof mayFail>, number>);
 void (true satisfies Equal<
   FailuresOf<typeof mayFail>,
   { readonly ok: false; readonly category: "bad_request"; readonly message: "No id" }
+>);
+
+command(config, async (scope) => {
+  scope.afterCommit(async (committed) => {
+    // @ts-expect-error commit effects read the pool, never a transaction that can write
+    await committed.tx.delete(order);
+  });
+  return ok(1);
+});
+
+const recovered = command(
+  {
+    ...config,
+    recover: async (scope, input: { readonly found: boolean }) => {
+      // @ts-expect-error recovery cannot reach a rolled-back transaction
+      await scope.tx.delete(order);
+      return input.found ? ok(false) : fail("not_found", "Recovery failed");
+    },
+  },
+  async (_scope, input: { readonly found: boolean }) =>
+    input.found ? ok("written") : fail("conflict", "Write failed"),
+);
+void (true satisfies Equal<ValuesOf<typeof recovered>, "written" | boolean>);
+void (true satisfies Equal<
+  FailuresOf<typeof recovered>,
+  | ReturnType<typeof fail<"not_found", "Recovery failed">>
+  | ReturnType<typeof fail<"conflict", "Write failed">>
+>);
+
+// @ts-expect-error only a command body can request a failure after commit
+query(config, async () => failAfterCommit("conflict", "Saved failure"));
+
+command(
+  // @ts-expect-error before runs outside a transaction and cannot request a commit
+  { ...config, before: async () => failAfterCommit("conflict", "Saved failure") },
+  async () => ok(1),
+);
+
+command(
+  // @ts-expect-error recovery runs fresh operations and cannot request a commit itself
+  { ...config, recover: async () => failAfterCommit("conflict", "Saved failure") },
+  async () => ok(1),
+);
+
+const committedFailure = command(config, async (_scope, input: { readonly found: boolean }) =>
+  input.found ? ok(1) : failAfterCommit("conflict", "Saved failure"),
+);
+void (true satisfies Equal<ValuesOf<typeof committedFailure>, number>);
+void (true satisfies Equal<
+  FailuresOf<typeof committedFailure>,
+  ReturnType<typeof fail<"conflict", "Saved failure">>
 >);

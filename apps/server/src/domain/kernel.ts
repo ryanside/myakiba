@@ -15,7 +15,8 @@ import type { Viewer } from "./viewer";
  * `serve(ctx, Module.op, input)`.
  *
  * A command runs in one transaction. A body that returns `fail(...)` or throws
- * rolls it back. A query reads from the pool, so its parallel reads run on
+ * rolls it back; `failAfterCommit(...)` saves its writes before answering a failure.
+ * A query reads from the pool, so its parallel reads run on
  * separate connections and may see different commits; a query whose reads must
  * agree sets `snapshot: true` and reads one snapshot in one transaction. A
  * command whose slow work must not hold a connection does it in `before`, which
@@ -43,6 +44,8 @@ type Failure<C extends FailureCategory = FailureCategory, M extends string = str
   readonly message: M;
 };
 type Outcome<T, F extends Failure> = Ok<T> | F;
+type CommittedFailure<F extends Failure = Failure> = { readonly afterCommit: F };
+type CommandResult = Ok<unknown> | Failure | CommittedFailure;
 
 type Proceed<P> = { readonly proceed: P };
 type BeforeResult = Ok<unknown> | Failure | Proceed<unknown>;
@@ -50,7 +53,7 @@ type HandoffOf<B> = B extends Proceed<infer P> ? P : never;
 
 /** Splits what a body returns, so a body that never fails has no failure entry. */
 type ValueOf<R> = R extends Ok<infer T> ? T : never;
-type FailureOf<R> = Extract<R, Failure>;
+type FailureOf<R> = R extends CommittedFailure<infer F> ? F : Extract<R, Failure>;
 
 /** A message keeps its literal type for Eden. Any other body keeps the shape it has. */
 export function ok<const T extends string>(value: T): Ok<T>;
@@ -65,6 +68,14 @@ export function fail<const C extends FailureCategory, const M extends string>(
   message: M,
 ): Failure<C, M> {
   return { ok: false, category, message };
+}
+
+/** Commits a command's writes and effects, then answers with an expected failure. */
+export function failAfterCommit<const C extends FailureCategory, const M extends string>(
+  category: C,
+  message: M,
+): CommittedFailure<Failure<C, M>> {
+  return { afterCommit: fail(category, message) };
 }
 
 /** Ends a command's `before` and runs its body in the transaction with `value`. */
@@ -144,10 +155,7 @@ type Op<I, T, F extends Failure, M extends string> = OpConfig<M> & {
 
 type AnyOp = Op<never, unknown, Failure, string>;
 
-const bodies = new WeakMap<
-  AnyOp,
-  (scope: never, input: never) => Promise<Outcome<unknown, Failure>>
->();
+const bodies = new WeakMap<AnyOp, (scope: never, input: never) => Promise<CommandResult>>();
 
 const befores = new WeakMap<AnyOp, Before<never, BeforeResult>>();
 
@@ -202,7 +210,7 @@ type Before<I, B extends BeforeResult> = (scope: PoolScope, input: I) => Promise
 export function command<
   I,
   B extends BeforeResult,
-  R extends Ok<unknown> | Failure,
+  R extends CommandResult,
   const M extends string,
   C extends Ok<unknown> | Failure = never,
 >(
@@ -212,7 +220,7 @@ export function command<
 // Only the first overload takes a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
-  R extends Ok<unknown> | Failure,
+  R extends CommandResult,
   const M extends string,
   C extends Ok<unknown> | Failure = never,
 >(
@@ -223,7 +231,7 @@ export function command(
   config: CommandConfig<never, Ok<unknown> | Failure, string> & {
     readonly before?: Before<never, BeforeResult>;
   },
-  body: (scope: CommandScope, input: never) => Promise<Ok<unknown> | Failure>,
+  body: (scope: CommandScope, input: never) => Promise<CommandResult>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
@@ -274,7 +282,10 @@ export async function run<I, T, F extends Failure, M extends string>(
       if (!("proceed" in first)) return first as Outcome<T, F>;
       handoff = first.proceed;
     }
-    const inTransaction = body as (scope: CommandScope, input: never) => Promise<Outcome<T, F>>;
+    const inTransaction = body as (
+      scope: CommandScope,
+      input: never,
+    ) => Promise<Outcome<T, F> | CommittedFailure<F>>;
     for (let attempt = 1; ; attempt += 1) {
       const attemptEffects: ((scope: ReadScope) => Promise<void>)[] = [];
       try {
@@ -291,6 +302,7 @@ export async function run<I, T, F extends Failure, M extends string>(
               },
               handoff as never,
             );
+            if ("afterCommit" in result) return result.afterCommit;
             if (!result.ok) throw new Rollback(result);
             return result as Ok<T>;
           },

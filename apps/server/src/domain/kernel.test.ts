@@ -8,7 +8,8 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, fail, ok, prepared, proceed, query, run, serve } = await import("./kernel");
+const { command, fail, failAfterCommit, ok, prepared, proceed, query, run, serve } =
+  await import("./kernel");
 const { Viewer } = await import("./viewer");
 
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
@@ -449,4 +450,45 @@ test("failed commit effects keep the committed response and run later effects", 
     outcome: "success",
     afterCommitErrors: [{ message: "first effect failed" }, { message: "second effect failed" }],
   });
+});
+
+test("a committed failure saves its writes and effects before answering its status", async () => {
+  let effects = 0;
+  let retries = 0;
+  let recoveries = 0;
+  const operation = command(
+    {
+      ...config,
+      retry: (_error, attempt) => {
+        retries += 1;
+        return attempt < 2;
+      },
+      recover: async () => {
+        recoveries += 1;
+        return ok("unused");
+      },
+    },
+    async (scope, id: string) => {
+      await scope.tx
+        .insert(user)
+        .values({ id, name: id, email: `${id}@example.com`, username: id });
+      scope.afterCommit(async () => {
+        effects += 1;
+      });
+      return failAfterCommit("conflict", "The saved lease has expired");
+    },
+  );
+
+  expect(await run(viewer, operation, "committed-failure", log)).toEqual({
+    ok: false,
+    category: "conflict",
+    message: "The saved lease has expired",
+  });
+  expect(await serve({ viewer, log }, operation, "served-committed-failure")).toMatchObject({
+    code: 409,
+    response: "The saved lease has expired",
+  });
+  expect(await userExists("committed-failure")).toBe(true);
+  expect(await userExists("served-committed-failure")).toBe(true);
+  expect({ effects, retries, recoveries }).toEqual({ effects: 2, retries: 0, recoveries: 0 });
 });
