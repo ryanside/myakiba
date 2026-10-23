@@ -1,18 +1,19 @@
 {
   "test": [
     {
+      "fix": "2d8c17ce",
+      "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "a new account that opens Getting Started right away saves that it has seen onboarding",
+        "a new account sees the welcome as soon as the dashboard renders"
+      ]
+    },
+    {
       "fix": "92b71fdb",
       "bug": "Getting Started resumed a step saved in this browser instead of opening at the welcome step",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
       "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"]
-    },
-    {
-      "fix": "49986ca8",
-      "bug": "a new account that closed Getting Started within 400 ms saw the welcome dialog open again",
-      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
-      "fixed": [
-        "a new account that closes Getting Started before the welcome opens keeps it closed"
-      ]
     },
     {
       "fix": "f8da3c4a",
@@ -26,7 +27,9 @@
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
       "fixed": [
         "an onboarded account on a new browser keeps the welcome dialog closed",
-        "a new account sees the welcome dialog and saves that it has seen onboarding"
+        "a new account sees the welcome dialog and saves that it has seen onboarding",
+        "a new account that opens Getting Started right away saves that it has seen onboarding",
+        "a new account that dismisses the welcome with Escape saves that it has seen onboarding"
       ]
     },
     {

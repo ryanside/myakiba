@@ -72,7 +72,7 @@ async function openDashboard(hasSeenOnboarding?: boolean) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  await screen.findByRole("heading", { name: "Dashboard" });
+  await screen.findByRole("heading", { name: "Dashboard", hidden: true });
 }
 
 test("an onboarded account on a new browser keeps the welcome dialog closed", async () => {
@@ -99,22 +99,35 @@ test("an account signed in before the deploy keeps the welcome dialog closed", a
 
 test("a new account sees the welcome dialog and saves that it has seen onboarding", async () => {
   await openDashboard(false);
-
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("a new account that opens Getting Started right away saves that it has seen onboarding", async () => {
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started", hidden: true }));
+  fireEvent.click(await screen.findByRole("button", { name: "Close" }));
+
   await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
 });
 
-test("a new account that closes Getting Started before the welcome opens keeps it closed", async () => {
+test("a new account that dismisses the welcome with Escape saves that it has seen onboarding", async () => {
   await openDashboard(false);
-  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
-  fireEvent.click(screen.getByRole("button", { name: "Close" }));
-  await act(() => Bun.sleep(500));
+  fireEvent.keyDown(await screen.findByRole("dialog", { name: "Welcome to myakiba." }), {
+    key: "Escape",
+  });
 
-  expect(
-    screen.queryByRole("dialog") !== null,
-    "the welcome dialog opened again after the user closed it",
-  ).toBe(false);
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("a new account sees the welcome as soon as the dashboard renders", async () => {
+  await openDashboard(false);
+
+  expect(screen.getByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
 test("Getting Started opens at the welcome step even with a step left in local storage", async () => {

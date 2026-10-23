@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -83,7 +83,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
 
 const FIRST_STEP = 1;
 const LAST_STEP = STEPS.length;
-const FIRST_OPEN_DELAY_MS = 400;
+const SAVE_FAILED = "Couldn't save onboarding.";
 const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
 const PANEL_MIN_HEIGHT = "min-h-[440px]";
@@ -97,13 +97,14 @@ type OnboardingDialogProps = {
 };
 
 function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
-  const [open, setOpen] = useState(false);
-  const [userToggled, setUserToggled] = useState(false);
+  const { session } = appRouteApi.useRouteContext();
+  // Sessions from before the column existed have no key and count as onboarded.
+  const isNewAccount = session.user.hasSeenOnboarding === false;
+  const [open, setOpen] = useState(isNewAccount);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const [currentStep, setCurrentStep] = useState(FIRST_STEP);
 
   const router = useRouter();
-  const { session } = appRouteApi.useRouteContext();
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
   const sessionDateFormat = session.user.dateFormat as DateFormat;
@@ -165,39 +166,30 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
     },
   });
 
-  useEffect(() => {
-    if (!open) return;
-    form.reset({
-      username: sessionUsername,
-      currency: sessionCurrency,
-      dateFormat: sessionDateFormat,
-    });
-  }, [open, sessionUsername, sessionCurrency, sessionDateFormat, form]);
-
-  useEffect(() => {
-    // Sessions from before the column existed have no key and count as onboarded.
-    if (session.user.hasSeenOnboarding !== false || userToggled) return;
-    const timeoutId = window.setTimeout(async () => {
-      setOpen(true);
-      try {
-        const { error } = await authClient.updateUser({ hasSeenOnboarding: true });
-        if (error) {
-          toast.add({ type: "error", title: error.message ?? "Couldn't save onboarding." });
-        }
-      } catch {
-        toast.add({ type: "error", title: "Couldn't save onboarding." });
-      }
-    }, FIRST_OPEN_DELAY_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [session.user.hasSeenOnboarding, userToggled]);
-
-  const handleOpenChange = useCallback((next: boolean) => {
-    setUserToggled(true);
-    setOpen(next);
-    if (!next) {
-      setCurrentStep(FIRST_STEP);
+  const close = useCallback(async () => {
+    setOpen(false);
+    setCurrentStep(FIRST_STEP);
+    if (!isNewAccount) return;
+    try {
+      const { error } = await authClient.updateUser({ hasSeenOnboarding: true });
+      if (error) toast.add({ type: "error", title: error.message ?? SAVE_FAILED });
+    } catch {
+      toast.add({ type: "error", title: SAVE_FAILED });
     }
-  }, []);
+  }, [isNewAccount]);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) return close();
+      form.reset({
+        username: sessionUsername,
+        currency: sessionCurrency,
+        dateFormat: sessionDateFormat,
+      });
+      setOpen(true);
+    },
+    [close, form, sessionUsername, sessionCurrency, sessionDateFormat],
+  );
 
   const handleBack = useCallback(() => {
     if (isFirst) return;
@@ -213,19 +205,16 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
       advance();
       return;
     }
-    setOpen(false);
-    setCurrentStep(FIRST_STEP);
-  }, [currentMeta.id, isLast, form, advance]);
+    await close();
+  }, [currentMeta.id, isLast, form, advance, close]);
 
-  const handleSkip = useCallback(() => {
-    handleOpenChange(false);
-  }, [handleOpenChange]);
-
-  const handleSelectSync = useCallback((type: LaunchableSyncType) => {
-    setOpen(false);
-    setCurrentStep(FIRST_STEP);
-    setSyncSheetType(type);
-  }, []);
+  const handleSelectSync = useCallback(
+    (type: LaunchableSyncType) => {
+      setSyncSheetType(type);
+      return close();
+    },
+    [close],
+  );
 
   return (
     <>
@@ -383,7 +372,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                   canContinue={currentMeta.id !== "preferences" || canSubmit}
                   onBack={handleBack}
                   onContinue={handleContinue}
-                  onSkip={handleSkip}
+                  onSkip={close}
                 />
               )}
             </form.Subscribe>
