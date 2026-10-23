@@ -65,7 +65,15 @@ function pageLink(link: MfcEntryLink): Link {
 
 // entry_to_item.material_percentage is decimal(5,2), so a finer share reads back rounded.
 function storedPercentage(percentage: number | null): number | null {
-  return percentage === null ? null : Math.round(percentage * 100) / 100;
+  if (percentage === null) return null;
+  const [coefficient = "0", exponent = "0"] = Math.abs(percentage).toString().split("e");
+  const [whole = "0", fraction = ""] = coefficient.split(".");
+  const digits = whole + fraction;
+  const centEnd = whole.length + Number(exponent) + 2;
+  if (centEnd < 0) return 0;
+  const cents = BigInt(digits.slice(0, centEnd).padEnd(centEnd, "0") || "0");
+  const rounded = cents + (Number(digits[centEnd] ?? "0") >= 5 ? 1n : 0n);
+  return (Math.sign(percentage) * Number(rounded)) / 100;
 }
 
 type Snapshot = {

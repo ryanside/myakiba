@@ -383,6 +383,35 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await itemRows()).toEqual(before);
   });
 
+  test.each(["1.005", "33.335", "0.0000001"])(
+    "a material share of %s percent rounds as Postgres after import",
+    async (percentage) => {
+      const page = edit(
+        page98777,
+        '<span switch="塩ビ">PVC</span></a></div>',
+        `<span switch="塩ビ">PVC</span></a> <small class="light">${percentage}%</small></div>`,
+      );
+      await upload(page);
+      expect(await resync(page)).toEqual(refreshed("unchanged"));
+    },
+  );
+
+  test("a stored 1.00 share changes when the page shows 1.005 percent", async () => {
+    const page = edit(
+      page98777,
+      '<span switch="塩ビ">PVC</span></a></div>',
+      '<span switch="塩ビ">PVC</span></a> <small class="light">1.005%</small></div>',
+    );
+    await upload(page);
+    const reset = await db
+      .update(entry_to_item)
+      .set({ materialPercentage: 1 })
+      .where(eq(entry_to_item.materialPercentage, 1.01))
+      .returning({ materialPercentage: entry_to_item.materialPercentage });
+    expect(reset).toEqual([{ materialPercentage: 1 }, { materialPercentage: 1 }]);
+    expect(await resync(page)).toEqual(refreshed("refreshed"));
+  });
+
   test("the page as it is stored answers unchanged, writes nothing and still starts the cooldown", async () => {
     await upload(page98777, JPEG);
     const before = await itemRows();
