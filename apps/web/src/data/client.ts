@@ -240,7 +240,7 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
   /** Patches the cache before the write and returns what puts it back if the write fails. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
-  readonly successTitle?: (input: Input) => string | undefined;
+  readonly successTitle?: (input: Input, output: Output) => string | undefined;
   /** A failure toast's title. A command without one shows no failure toast. */
   readonly failureTitle?: (input: Input, error: Error) => string;
   readonly failureDescription?: (input: Input, error: Error) => string;
@@ -291,7 +291,7 @@ export function useResourceMutation<Input, Output>(
     mutationFn: spec.persist,
     onMutate: optimistic && ((input) => optimistic(queryClient, input)),
     onSuccess: async (output, input) => {
-      const successTitle = spec.successTitle?.(input);
+      const successTitle = spec.successTitle?.(input, output);
       if (successTitle !== undefined) toast.add({ type: "success", title: successTitle });
       onSaved?.(input, output);
       await spec.saved?.(queryClient, input, output);

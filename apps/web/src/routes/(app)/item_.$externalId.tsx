@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { createFileRoute, useParams, notFound } from "@tanstack/react-router";
-// oxlint-disable-next-line no-restricted-imports -- scraper flow, replaced by the browser extension: the Item resync status and request stay here (until 2027-04-16, approved by root)
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
@@ -12,10 +9,8 @@ import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
-import { useRead } from "@/data/client";
-import { items } from "@/data/resources/item";
-import { getResyncStatus } from "@/queries/item";
-import { refreshItemWithExtension } from "@/data/extension-run";
+import { useRead, useResourceMutation } from "@/data/client";
+import { items, refreshItemCommand } from "@/data/resources/item";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -40,7 +35,6 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
 });
 
 function RouteComponent(): ReactNode {
-  const queryClient = useQueryClient();
   const { externalId } = useParams({ from: "/(app)/item_/$externalId" });
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
 
@@ -48,38 +42,11 @@ function RouteComponent(): ReactNode {
 
   const isNotFound = data === null;
 
-  const { data: resyncStatusData } = useQuery({
-    queryKey: ["item", externalId, "resyncStatus"],
-    queryFn: () => getResyncStatus(externalId),
-    staleTime: 1000 * 30,
-    retry: false,
+  const { data: resyncStatusData } = useRead(items.resyncStatus, externalId, {
     enabled: data != null,
   });
 
-  const requestResyncMutation = useMutation({
-    mutationFn: () => refreshItemWithExtension(externalId),
-    onSuccess: (refreshed) => {
-      queryClient.setQueryData(["item", externalId, "resyncStatus"], {
-        status: "cooldown",
-        cooldownExpiresAt: refreshed.cooldownExpiresAt,
-      });
-      void queryClient.invalidateQueries({ queryKey: ["item", externalId] });
-      toast.add({
-        type: "success",
-        title:
-          refreshed.saved === "refreshed"
-            ? "Item details refreshed"
-            : "Item details are up to date",
-      });
-    },
-    onError: (mutationError) => {
-      toast.add({
-        type: "error",
-        title: "Failed to request item refresh",
-        description: mutationError.message,
-      });
-    },
-  });
+  const refresh = useResourceMutation(refreshItemCommand);
 
   const { data: itemRelatedOrders } = useRead(items.relatedOrders, externalId, {
     enabled: data != null,
@@ -131,8 +98,8 @@ function RouteComponent(): ReactNode {
         externalId={externalId}
         resyncStatus={resyncStatusData?.status ?? "idle"}
         cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
-        isResyncPending={requestResyncMutation.isPending}
-        onRequestResync={() => requestResyncMutation.mutate()}
+        isResyncPending={refresh.isPending}
+        onRequestResync={() => refresh.run(externalId)}
         isWishlisted={data?.isWishlisted ?? false}
       />
 

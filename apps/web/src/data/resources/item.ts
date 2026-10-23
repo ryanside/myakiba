@@ -3,8 +3,10 @@ import {
   getItemRelatedCollection,
   getItemRelatedOrders,
   getItemReleases,
+  getResyncStatus,
 } from "@/queries/item";
-import { rootedRead } from "../client";
+import { defineCommand, rootedRead } from "../client";
+import { refreshItemWithExtension } from "../extension-run";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -29,4 +31,20 @@ export const items = {
     load: getItemReleases,
     ...cache,
   }),
+  resyncStatus: rootedRead("item", {
+    key: (externalId: number) => ["item", externalId, "resyncStatus"] as const,
+    load: getResyncStatus,
+    staleTime: 1000 * 30,
+    retry: false,
+  }),
 };
+
+/** An Item Refresh rewrites the item and its releases, which collection rows, orders and the calendar show. */
+export const refreshItemCommand = defineCommand({
+  invalidates: ["item", "releases", "collection", "orders", "calendar"],
+  persist: refreshItemWithExtension,
+  successTitle: (_externalId, refreshed) =>
+    refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
+  failureTitle: () => "Failed to request item refresh",
+  failureDescription: (_externalId, error) => error.message,
+});
