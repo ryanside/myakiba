@@ -1019,6 +1019,48 @@
       "bug": "a gate whose extension check threw stayed checking, so its button spun forever",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": ["a gate whose check throws stops checking and can check again"]
+    },
+    {
+      "fix": "3918467b",
+      "bug": "the envelope reader matched the canonical link, og:image, title and user menu with regexes, so comments, scripts, templates and odd attributes fooled it, and it passed any og:image through unchecked",
+      "test": "packages/mfc/src/page.test.ts",
+      "fixed": [
+        "readMfcEnvelope on the signed-in 98777 page > reads the canonical id, the signed-in menu and the gated og:image",
+        "readMfcEnvelope on the signed-in 98777 page > the not-found sentence on a 503 is unexpected, even in a comment",
+        "readMfcEnvelope on pages derived from item-98777.html > derived public item: signed out, static og:image",
+        "markup the envelope ignores > a commented-out canonical before the real one",
+        "markup the envelope ignores > a challenge title inside a script",
+        "markup the envelope ignores > a challenge title inside a template",
+        "markup the envelope ignores > a > inside a quoted attribute of the canonical link",
+        "markup the envelope ignores > a duplicate attribute after the first",
+        "signed-in state > a single-quoted class list with the user-menu token",
+        "signed-in state > a class that only starts with user-menu",
+        "og:image > a gated picture comes back rebuilt with its size",
+        "og:image > a public picture loses its query and fragment",
+        "og:image > public pictures must live under /upload/items/ on the static host",
+        "og:image > rejects another item's gated picture",
+        "og:image > rejects plain http",
+        "og:image > rejects another host",
+        "og:image > rejects a port",
+        "og:image > rejects credentials",
+        "og:image > rejects a path escaping /upload/items/",
+        "og:image > rejects a duplicate objectId",
+        "og:image > rejects an extra commit",
+        "og:image > rejects an unknown parameter",
+        "og:image > rejects no size",
+        "og:image > rejects a size that is not a small integer",
+        "og:image > rejects not a URL",
+        "og:image > no og:image is absent"
+      ]
+    },
+    {
+      "fix": "3918467b",
+      "bug": "the parser warned on a bracket that is part of a name and kept a rejected og:image as the picture",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage warnings > a bracket that is part of the name does not warn",
+        "parseMfcItemPage warnings > a rejected og:image leaves no picture and warns"
+      ]
     }
   ],
   "lint": [
