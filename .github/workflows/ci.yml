@@ -26,6 +26,15 @@ jobs:
           --health-interval 2s
           --health-timeout 5s
           --health-retries 15
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -71,6 +80,8 @@ jobs:
         run: bun run test
         env:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
+          TEST_REDIS_URL: redis://localhost:6379
+          TURBO_ENV_MODE: loose
 
   build-images:
     name: Build ${{ matrix.image }} image
