@@ -72,6 +72,7 @@ function fakeFetch() {
 
 const posted = (path: string) => sent.filter((request) => request.path === path);
 const SESSION = "/api/sync/sessions/ss-1";
+const CURRENT = "/api/data-transfer/imports/current";
 
 function loadExtension(onFetch: (run: FakeRun) => void) {
   extension = fakeExtension({ onFetch });
@@ -198,6 +199,24 @@ describe("a sync run", () => {
     expect(page.listening()).toBe(0);
   });
 
+  test("stops driving the extension once the page enters the back-forward cache", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.item(1);
+      setTimeout(() => fetch.item(2), 200);
+    });
+    const { run, page } = runner();
+
+    const running = run(sync(1, 2));
+    await waitFor(() => expect(posted(`${SESSION}/items`)).toHaveLength(1));
+    page.hide();
+    await running;
+
+    expect(posted(`${SESSION}/interrupt`)).toMatchObject([{ keepalive: true }]);
+    expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
+    expect(posted(`${SESSION}/items`)).toHaveLength(1);
+  });
+
   test("interrupts the items the extension never fetched when it stops", async () => {
     fakeFetch();
     loadExtension((fetch) => {
@@ -285,6 +304,30 @@ describe("a sync run", () => {
   });
 });
 
+test.each([
+  ["a sync run", SESSION, sync, { active: false }],
+  [
+    "an Import/Export run",
+    CURRENT,
+    (...mfcItemIds: number[]) => importRun({ importId: "imp-1", mfcItemIds }),
+    { running: false },
+  ],
+] as const)("%s stops when the server says it is over", async (_run, path, start, over) => {
+  fakeFetch();
+  answer = (request) =>
+    request.path.endsWith("/heartbeat") ? Response.json(over) : Response.json({});
+  loadExtension((fetch) => {
+    fetch.item(1);
+    setTimeout(() => fetch.item(2), 200);
+  });
+
+  await runner({ heartbeatMs: 20 }).run(start(1, 2));
+
+  expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
+  expect(posted(`${path}/items`).map((request) => request.fields.mfcItemId)).toEqual([1]);
+  expect(posted(`${path}/interrupt`)).toEqual([]);
+});
+
 test("an Import/Export run reports to the import's endpoints with a readable reason", async () => {
   fakeFetch();
   loadExtension((fetch) => {
@@ -295,9 +338,8 @@ test("an Import/Export run reports to the import's endpoints with a readable rea
 
   await runner().run(importRun({ importId: "imp-1", mfcItemIds: [1, 2] }));
 
-  const current = "/api/data-transfer/imports/current";
-  expect(posted(`${current}/items`)[0]?.fields).toEqual({ jobId: "imp-1", mfcItemId: 1 });
-  expect(posted(`${current}/items/failure`).map((request) => request.fields)).toEqual([
+  expect(posted(`${CURRENT}/items`)[0]?.fields).toEqual({ jobId: "imp-1", mfcItemId: 1 });
+  expect(posted(`${CURRENT}/items/failure`).map((request) => request.fields)).toEqual([
     {
       jobId: "imp-1",
       mfcItemId: 2,

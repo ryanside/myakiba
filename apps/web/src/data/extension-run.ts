@@ -38,10 +38,13 @@ type EdenAnswer = {
   readonly response?: Response | undefined;
 };
 
-type RunTally = {
-  unanswered: number;
-  busy: Extract<ServerAnswer, { readonly kind: "busy" }> | null;
-};
+/** Why a run stopped before the extension finished it. After `over` or `left` the server already holds its end. */
+type Stop =
+  | Extract<ServerAnswer, { readonly kind: "busy" }>
+  | { readonly kind: "over" }
+  | { readonly kind: "left" };
+
+type RunTally = { unanswered: number; stop: Stop | null };
 
 const OK: ServerAnswer = { kind: "ok" };
 const FAILED: ServerAnswer = { kind: "failed" };
@@ -55,6 +58,21 @@ async function answerOf(request: Promise<EdenAnswer>): Promise<ServerAnswer> {
     return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
   } catch {
     return FAILED;
+  }
+}
+
+/** `over` once the server has ended the run, or a retry replaced it. */
+type Lease = "held" | "over";
+
+async function leaseOf<Data>(
+  request: Promise<{ readonly data: Data | null }>,
+  held: (data: Data) => boolean,
+): Promise<Lease> {
+  try {
+    const { data } = await request;
+    return data === null || held(data) ? "held" : "over";
+  } catch {
+    return "held";
   }
 }
 
@@ -76,7 +94,7 @@ export type ExtensionRun = {
   readonly mfcItemIds: readonly number[];
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
   readonly fail: (mfcItemId: MfcItemId, error: ItemError) => Promise<ServerAnswer>;
-  readonly heartbeat: () => Promise<ServerAnswer>;
+  readonly heartbeat: () => Promise<Lease>;
   readonly interrupt: (options: { readonly keepalive: boolean }) => Promise<ServerAnswer>;
 };
 
@@ -93,7 +111,7 @@ export function syncRun(run: {
     mfcItemIds: run.mfcItemIds,
     complete: (item) => answerOf(session.items.post({ jobId, ...item })),
     fail: (id, error) => answerOf(session.failures.post({ jobId, mfcItemId: id, error })),
-    heartbeat: () => answerOf(session.heartbeat.post({ jobId })),
+    heartbeat: () => leaseOf(session.heartbeat.post({ jobId }), (data) => data.active),
     interrupt: ({ keepalive }) =>
       answerOf(session.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
@@ -114,7 +132,7 @@ export function importRun(run: {
       answerOf(
         current.items.failure.post({ jobId, mfcItemId: id, reason: ITEM_ERROR_MESSAGE[error] }),
       ),
-    heartbeat: () => answerOf(current.heartbeat.post({ jobId })),
+    heartbeat: () => leaseOf(current.heartbeat.post({ jobId }), (data) => data.running),
     interrupt: ({ keepalive }) =>
       answerOf(current.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
@@ -203,15 +221,24 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
     const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
     if (ids.length === 0) return ENDED;
     const controller = new AbortController();
+    const tally: RunTally = { unanswered: 0, stop: null };
+    const halt = (stop: Stop) => {
+      tally.stop ??= stop;
+      controller.abort();
+    };
+    const renew = async () => {
+      if ((await run.heartbeat()) === "over") halt({ kind: "over" });
+    };
     const heartbeat = setInterval(() => {
-      void run.heartbeat();
+      void renew();
     }, heartbeatMs);
+    // A page restored from the back-forward cache must not drive a run the server has since settled.
     const leave = () => {
       void run.interrupt({ keepalive: true });
+      halt({ kind: "left" });
     };
     page.addEventListener("pagehide", leave);
 
-    const tally: RunTally = { unanswered: 0, busy: null };
     const uploads = new Map<MfcItemId, Promise<void>>();
     const send = (item: ItemPage) => {
       const sending = async () => {
@@ -219,10 +246,7 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
         uploads.delete(item.mfcItemId);
         if (answer.kind === "ok") return;
         tally.unanswered += 1;
-        if (answer.kind === "busy") {
-          tally.busy = answer;
-          controller.abort();
-        }
+        if (answer.kind === "busy") halt(answer);
       };
       uploads.set(item.mfcItemId, sending());
     };
@@ -235,7 +259,7 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
               ? FAILED
               : await run.fail(fetched.mfcItemId, fetched.error);
           if (answer.kind !== "ok") tally.unanswered += 1;
-        } else if (tally.busy === null) {
+        } else if (tally.stop === null) {
           while (uploads.size >= MAX_UPLOADS_IN_FLIGHT) await Promise.race(uploads.values());
           send(fetched.page);
         } else {
@@ -243,14 +267,16 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
         }
       }
       await Promise.all(uploads.values());
-      if (tally.unanswered > 0) await run.interrupt({ keepalive: false });
+      const ended = tally.stop?.kind === "over" || tally.stop?.kind === "left";
+      if (tally.unanswered > 0 && !ended) await run.interrupt({ keepalive: false });
     } finally {
       clearInterval(heartbeat);
       page.removeEventListener("pagehide", leave);
     }
-    return tally.busy === null
-      ? ENDED
-      : { kind: "busy", notImported: tally.unanswered, retryAfterMs: tally.busy.retryAfterMs };
+    const { stop } = tally;
+    return stop?.kind === "busy"
+      ? { kind: "busy", notImported: tally.unanswered, retryAfterMs: stop.retryAfterMs }
+      : ENDED;
   };
 }
 
