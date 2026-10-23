@@ -9,7 +9,6 @@ import type { CollectRequest } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/mfc-tab";
-import { PICTURE_TIMEOUT_MS, readPicture } from "../lib/picture";
 import { servePort } from "../lib/port-host";
 import { OPEN_THROTTLE, throttleStateSchema } from "../lib/throttle";
 
@@ -63,18 +62,13 @@ export default defineBackground(() => {
     origins: ORIGINS,
     throttleState: sessionValue("throttle", throttleStateSchema, OPEN_THROTTLE),
     ownedTab: sessionValue("ownedTab", ownedTabSchema, null),
+    ownedPictureTab: sessionValue("ownedPictureTab", ownedTabSchema, null),
     collectPage: (tabId, request, signal) =>
       runCollector(tabId, request, collectedPageSchema, signal),
-    fetchGatedPicture: (tabId, url) =>
-      runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable()),
-    fetchPublicPicture: async (url) =>
-      readPicture(
-        await fetch(url, {
-          credentials: "omit",
-          cache: "no-store",
-          signal: AbortSignal.timeout(PICTURE_TIMEOUT_MS),
-        }),
-      ),
+    fetchGatedPicture: (tabId, url, signal) =>
+      runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable(), signal),
+    fetchPublicPicture: (tabId, signal) =>
+      runCollector(tabId, { kind: "public-picture" }, portPictureSchema.nullable(), signal),
   });
 
   browser.tabs.onActivated.addListener(async ({ tabId }) => {

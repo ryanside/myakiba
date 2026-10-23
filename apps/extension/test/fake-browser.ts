@@ -113,6 +113,7 @@ type FakeTab = {
   url: string;
   title: string;
   completesAt: number;
+  previousUrl?: string;
   active: boolean;
   incognito: boolean;
   cookieStoreId?: string;
@@ -152,6 +153,7 @@ function fakeTabs(
     readonly activated: (tabId: number) => Promise<void>;
     readonly navigationMs: () => number;
     readonly created: (tabId: number) => void;
+    readonly deferNavigationCommit: boolean;
   },
 ) {
   const tabs = new Map<number, FakeTab>();
@@ -165,8 +167,12 @@ function fakeTabs(
   }
 
   function view(tab: FakeTab) {
-    const { completesAt, ...seen } = tab;
-    return { ...seen, status: clock.now() >= completesAt ? "complete" : "loading" };
+    const { completesAt, previousUrl, ...seen } = tab;
+    const loading = clock.now() < completesAt;
+    const current = { ...seen, status: loading ? "loading" : "complete" };
+    if (loading && options.deferNavigationCommit && previousUrl !== undefined)
+      return { ...current, url: previousUrl, pendingUrl: tab.url };
+    return current;
   }
 
   function activate(tabId: number): void {
@@ -190,7 +196,7 @@ function fakeTabs(
   function load(tab: FakeTab, url: string, loadMs: number, title = url, byUser = false): void {
     stopLoading(tab.id);
     const at = clock.now();
-    Object.assign(tab, { url, title, completesAt: at + loadMs });
+    Object.assign(tab, { previousUrl: tab.url, url, title, completesAt: at + loadMs });
     loads.push({ tabId: tab.id, url, at, byUser, endedAt: at + loadMs });
   }
 
@@ -342,22 +348,31 @@ export function fakeExtension(options: {
   readonly clock?: FakeClock;
   readonly throttleState?: SessionValue<ThrottleState>;
   readonly ownedTab?: SessionValue<OwnedTab>;
+  readonly ownedPictureTab?: SessionValue<OwnedTab>;
   readonly navigationMs?: () => number;
   readonly onTabCreated?: (tabId: number) => void;
+  readonly deferNavigationCommit?: boolean;
   readonly gatedPicture?: (url: string) => Promise<PortPicture | null>;
   readonly publicPicture?: (url: URL) => Promise<PortPicture | null>;
 }) {
   const clock = options.clock ?? fakeClock();
   const throttleState = options.throttleState ?? memoryValue(OPEN_THROTTLE);
   const ownedTab = options.ownedTab ?? memoryValue<OwnedTab>(null);
+  const ownedPictureTab = options.ownedPictureTab ?? memoryValue<OwnedTab>(null);
   const tabs = fakeTabs(clock, {
     activated: (tabId) => worker.fetcher.noteTabActivated(tabId),
     navigationMs: options.navigationMs ?? (() => 0),
     created: (tabId) => options.onTabCreated?.(tabId),
+    deferNavigationCommit: options.deferNavigationCommit ?? false,
   });
   const myakiba: Requester = { tabId: tabs.open(`${ORIGINS.web}/sync`), context: NORMAL };
   const calls: CollectCall[] = [];
   const pictureUrls: string[] = [];
+  const publicPictureCalls: {
+    readonly tabId: number;
+    readonly signal: AbortSignal;
+    readonly tab: Readonly<FakeTab> | undefined;
+  }[] = [];
 
   async function collectPage(tabId: number, request: PageRequest, signal: AbortSignal) {
     const tab = tabs.get(tabId);
@@ -394,6 +409,7 @@ export function fakeExtension(options: {
       origins: ORIGINS,
       throttleState: mortalValue(throttleState, wrap),
       ownedTab: mortalValue(ownedTab, wrap),
+      ownedPictureTab: mortalValue(ownedPictureTab, wrap),
       collectPage: wrap(collectPage),
       fetchGatedPicture: wrap(async (_tabId: number, url: string) => {
         pictureUrls.push(url);
@@ -401,7 +417,10 @@ export function fakeExtension(options: {
           ? options.gatedPicture(url)
           : { base64: "/9j/", contentType: "image/jpeg" };
       }),
-      fetchPublicPicture: wrap(async (url: URL) => {
+      fetchPublicPicture: wrap(async (tabId: number, signal: AbortSignal) => {
+        const tab = tabs.get(tabId);
+        publicPictureCalls.push({ tabId, signal, tab: tab && { ...tab } });
+        const url = new URL(tabs.get(tabId)?.url ?? "about:blank");
         pictureUrls.push(url.href);
         return options.publicPicture
           ? options.publicPicture(url)
@@ -442,6 +461,7 @@ export function fakeExtension(options: {
     myakiba,
     calls,
     pictureUrls,
+    publicPictureCalls,
     get fetcher() {
       return worker.fetcher;
     },

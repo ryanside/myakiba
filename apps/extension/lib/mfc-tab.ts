@@ -12,6 +12,7 @@ export type Tab = {
   readonly windowId?: number;
   readonly status?: string;
   readonly url?: string;
+  readonly pendingUrl?: string;
   readonly title?: string;
   readonly active?: boolean;
   readonly incognito?: boolean;
@@ -51,7 +52,7 @@ export type OwnedTab = z.output<typeof ownedTabSchema>;
 
 class TabTakenError extends Error {
   constructor(tabId: number) {
-    super(`the user took the new MFC tab ${tabId}`);
+    super(`the user took tab ${tabId}`);
     this.name = "TabTakenError";
   }
 }
@@ -71,10 +72,12 @@ export function createMfcTabs(deps: {
   readonly windows: WindowsApi;
   readonly clock: Clock;
   readonly origins: Origins;
+  readonly origin?: string;
   readonly owned: SessionValue<OwnedTab>;
   readonly throttle: Pick<Throttle, "load">;
 }) {
   const { tabs, windows, clock, origins, owned, throttle } = deps;
+  const origin = deps.origin ?? origins.mfc;
   let borrowing = true;
   let selfActivatedTabId: number | null = null;
   /** Tabs the user focused while a create was pending, which may include the new tab. */
@@ -93,15 +96,15 @@ export function createMfcTabs(deps: {
     }
   }
 
-  function mfcPath(url: string | undefined): string | null {
+  function pathOnOrigin(url: string | undefined): string | null {
     const parsed = URL.parse(url ?? "");
-    return parsed?.origin === origins.mfc ? parsed.pathname : null;
+    return parsed?.origin === origin ? parsed.pathname : null;
   }
 
-  /** A new tab's `url` stays empty until its first page commits, so another web page there means the user took it. */
-  function committedElsewhere(tab: Tab, path: string): boolean {
-    const protocol = URL.parse(tab.url ?? "")?.protocol;
-    return (protocol === "http:" || protocol === "https:") && mfcPath(tab.url) !== path;
+  function movedElsewhere(tab: Tab, path: string): boolean {
+    const destination = tab.pendingUrl ?? tab.url;
+    const protocol = URL.parse(destination ?? "")?.protocol;
+    return (protocol === "http:" || protocol === "https:") && pathOnOrigin(destination) !== path;
   }
 
   async function windowOf(tabId: number): Promise<number> {
@@ -114,7 +117,8 @@ export function createMfcTabs(deps: {
     const record = await owned.load();
     if (!record) return null;
     const tab = await tabs.get(record.tabId).catch(() => null);
-    if (tab && mfcPath(tab.url) === record.path) return { tabId: record.tabId, tab };
+    if (tab && pathOnOrigin(tab.pendingUrl ?? tab.url) === record.path)
+      return { tabId: record.tabId, tab };
     await owned.save(null);
     return null;
   }
@@ -130,7 +134,9 @@ export function createMfcTabs(deps: {
     const ours = await exclusively(async () => {
       const record = await owned.load();
       if (record?.tabId !== tabId) return false;
+      const tab = await tabs.get(tabId).catch(() => null);
       await owned.save(null);
+      if (tab && movedElsewhere(tab, record.path)) return false;
       return true;
     });
     if (!ours) return;
@@ -140,18 +146,13 @@ export function createMfcTabs(deps: {
     }
   }
 
-  async function waitOrClose(
-    tabId: number,
-    path: string,
-    timeout: AbortSignal,
-    created = false,
-  ): Promise<void> {
+  async function waitOrClose(tabId: number, path: string, timeout: AbortSignal): Promise<void> {
     try {
       for (;;) {
         timeout.throwIfAborted();
         const tab = await tabs.get(tabId);
-        if (tab.status === "complete" && mfcPath(tab.url) === path) return;
-        if (created && committedElsewhere(tab, path)) throw new TabTakenError(tabId);
+        if (tab.status === "complete" && pathOnOrigin(tab.url) === path) return;
+        if (movedElsewhere(tab, path)) throw new TabTakenError(tabId);
         await clock.sleep(POLL_MS, timeout);
       }
     } catch (error) {
@@ -187,7 +188,7 @@ export function createMfcTabs(deps: {
       if (focused.has(tabId)) throw new TabTakenError(tabId);
       await owned.save({ tabId, path: pathname });
     });
-    await waitOrClose(tabId, pathname, timeout, true);
+    await waitOrClose(tabId, pathname, timeout);
     return tabId;
   }
 
@@ -209,6 +210,16 @@ export function createMfcTabs(deps: {
     });
   }
 
+  function loadOwned(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
+    return throttle.load(signal, async (timeout) => {
+      const bounded = AbortSignal.any([signal, timeout]);
+      const navigated = await navigateOwned(requester, url, bounded);
+      if (navigated === null) return createOwned(requester, url, bounded, bounded);
+      await waitOrClose(navigated, new URL(url).pathname, bounded);
+      return navigated;
+    });
+  }
+
   async function activate(tabId: number, signal: AbortSignal): Promise<void> {
     signal.throwIfAborted();
     const tab = await tabs.get(tabId);
@@ -220,13 +231,15 @@ export function createMfcTabs(deps: {
   }
 
   return {
+    loadOwned,
+
     async lease(requester: LiveRequester, signal: AbortSignal): Promise<MfcTabLease> {
       const { context } = requester();
       const own = await exclusively(ownedTab);
       if (own && inContext(own.tab, context)) return { kind: "owned", tabId: own.tabId };
       if (borrowing) {
         const open = await tabs.query({
-          url: `${origins.mfc}/*`,
+          url: `${origin}/*`,
           status: "complete",
           discarded: false,
         });
@@ -234,7 +247,7 @@ export function createMfcTabs(deps: {
         if (borrowed !== undefined) return { kind: "borrowed", tabId: borrowed };
       }
       const tabId = await throttle.load(signal, (timeout) =>
-        createOwned(requester, `${origins.mfc}/`, signal, timeout),
+        createOwned(requester, `${origin}/`, signal, timeout),
       );
       return { kind: "owned", tabId };
     },
@@ -246,12 +259,7 @@ export function createMfcTabs(deps: {
       signal: AbortSignal,
     ): Promise<number> {
       const url = mfcItemUrl(mfcItemId, origins);
-      const tabId = await throttle.load(signal, async (timeout) => {
-        const navigated = await navigateOwned(requester, url, signal);
-        if (navigated === null) return createOwned(requester, url, signal, timeout);
-        await waitOrClose(navigated, new URL(url).pathname, timeout);
-        return navigated;
-      });
+      const tabId = await loadOwned(requester, url, signal);
       await activate(tabId, signal);
       return tabId;
     },

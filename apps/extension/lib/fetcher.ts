@@ -33,14 +33,19 @@ export type FetcherDeps = {
   readonly origins: Origins;
   readonly throttleState: SessionValue<ThrottleState>;
   readonly ownedTab: SessionValue<OwnedTab>;
+  readonly ownedPictureTab: SessionValue<OwnedTab>;
   readonly collectPage: (
     tabId: number,
     request: PageRequest,
     signal: AbortSignal,
   ) => Promise<CollectedPage>;
   /** Runs in the MFC tab, so the request carries the user's MFC cookies. */
-  readonly fetchGatedPicture: (tabId: number, url: string) => Promise<PortPicture | null>;
-  readonly fetchPublicPicture: (url: URL) => Promise<PortPicture | null>;
+  readonly fetchGatedPicture: (
+    tabId: number,
+    url: string,
+    signal: AbortSignal,
+  ) => Promise<PortPicture | null>;
+  readonly fetchPublicPicture: (tabId: number, signal: AbortSignal) => Promise<PortPicture | null>;
 };
 
 export type FetchRun = {
@@ -91,6 +96,12 @@ export function createFetcher(deps: FetcherDeps) {
   const { clock, origins } = deps;
   const throttle = createThrottle({ clock, random: deps.random, state: deps.throttleState });
   const mfcTabs = createMfcTabs({ ...deps, owned: deps.ownedTab, throttle });
+  const pictureTabs = createMfcTabs({
+    ...deps,
+    origin: origins.mfcStatic,
+    owned: deps.ownedPictureTab,
+    throttle,
+  });
   const listeners = new Map<RunKey, FetchRun["emit"]>();
   let state = EMPTY_QUEUE;
   let current: { readonly job: Job; readonly controller: AbortController } | null = null;
@@ -119,6 +130,7 @@ export function createFetcher(deps: FetcherDeps) {
   async function pictureOf(
     ogImage: MfcOgImage,
     tabId: number,
+    requester: LiveRequester,
     signal: AbortSignal,
   ): Promise<PortPicture | null> {
     if (ogImage.kind !== "picture") return null;
@@ -126,11 +138,12 @@ export function createFetcher(deps: FetcherDeps) {
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return null;
     try {
-      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, () =>
-        picture.access === "gated"
-          ? deps.fetchGatedPicture(tabId, picture.url)
-          : deps.fetchPublicPicture(url),
-      );
+      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, async (bounded) => {
+        if (picture.access === "gated") return deps.fetchGatedPicture(tabId, picture.url, bounded);
+        const pictureTabId = await pictureTabs.loadOwned(requester, url.href, bounded);
+        bounded.throwIfAborted();
+        return deps.fetchPublicPicture(pictureTabId, bounded);
+      });
     } catch {
       return null;
     }
@@ -140,11 +153,16 @@ export function createFetcher(deps: FetcherDeps) {
     page: CollectedPage,
     ogImage: MfcOgImage,
     tabId: number,
+    requester: LiveRequester,
     signal: AbortSignal,
   ): Promise<Outcome> {
     return {
       kind: "result",
-      result: { ok: true, html: page.html, picture: await pictureOf(ogImage, tabId, signal) },
+      result: {
+        ok: true,
+        html: page.html,
+        picture: await pictureOf(ogImage, tabId, requester, signal),
+      },
     };
   }
 
@@ -238,7 +256,9 @@ export function createFetcher(deps: FetcherDeps) {
     signal.throwIfAborted();
     if (!answer) return failed("challenge_unsolved");
     const { page, reading } = answer;
-    return reading.kind === "item" ? itemResult(page, reading.ogImage, tabId, signal) : reading;
+    return reading.kind === "item"
+      ? itemResult(page, reading.ogImage, tabId, requester, signal)
+      : reading;
   }
 
   async function attempt(job: Job, signal: AbortSignal): Promise<Outcome> {
@@ -248,7 +268,7 @@ export function createFetcher(deps: FetcherDeps) {
       const reading = readPage(page, job, clock.now());
       switch (reading.kind) {
         case "item":
-          return await itemResult(page, reading.ogImage, tabId, signal);
+          return await itemResult(page, reading.ogImage, tabId, requester, signal);
         case "challenge":
           if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
           return await solveChallenge(job, requester, reading.status, signal);
@@ -289,6 +309,7 @@ export function createFetcher(deps: FetcherDeps) {
       dispatch({ type: "answered", job, outcome: await booked(outcome) });
     }
     await mfcTabs.release();
+    await pictureTabs.release();
   }
 
   function kick(): void {
@@ -319,7 +340,9 @@ export function createFetcher(deps: FetcherDeps) {
     cancel(key: RunKey): void {
       dispatch({ type: "cancelled", run: key });
     },
-    noteTabActivated: (tabId: number) => mfcTabs.noteActivated(tabId),
+    async noteTabActivated(tabId: number): Promise<void> {
+      await Promise.all([mfcTabs.noteActivated(tabId), pictureTabs.noteActivated(tabId)]);
+    },
     /** Runs the queue once, which closes a tab left open by a worker that stopped mid-run. */
     resume: kick,
   };

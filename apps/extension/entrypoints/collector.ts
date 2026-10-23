@@ -34,12 +34,14 @@ function loadedItemPage(): CollectedPage {
   };
 }
 
-async function fetchGatedPicture(canonical: string): Promise<PortPicture | null> {
-  const url = toConfiguredUrl(canonical, ORIGINS);
+async function fetchPicture(url: URL | null, signal: AbortSignal): Promise<PortPicture | null> {
   if (url?.origin !== location.origin) return null;
   try {
     return await readPicture(
-      await fetch(url, { credentials: "include", signal: AbortSignal.timeout(PICTURE_TIMEOUT_MS) }),
+      await fetch(url, {
+        credentials: "include",
+        signal: AbortSignal.any([signal, AbortSignal.timeout(PICTURE_TIMEOUT_MS)]),
+      }),
     );
   } catch {
     return null;
@@ -48,7 +50,12 @@ async function fetchGatedPicture(canonical: string): Promise<PortPicture | null>
 
 export default defineUnlistedScript(async (): Promise<CollectedPage | PortPicture | null> =>
   runArmed(async (request, signal) => {
-    if (request.kind === "gated-picture") return fetchGatedPicture(request.url);
+    if (request.kind === "gated-picture")
+      return fetchPicture(toConfiguredUrl(request.url, ORIGINS), signal);
+    if (request.kind === "public-picture")
+      return location.origin === ORIGINS.mfcStatic
+        ? fetchPicture(new URL(location.href), signal)
+        : null;
     if (request.mode === "document") return loadedItemPage();
     return fetchItemPage(request.mfcItemId, signal);
   }),
