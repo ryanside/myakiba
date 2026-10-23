@@ -29,7 +29,7 @@ import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import type { CommandSearchResults } from "@/queries/search";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
 import type {
   LaunchableSyncType,
@@ -164,6 +164,7 @@ export function AppCommand(): React.JSX.Element {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
+  const { gate } = useExtensionGate();
   const [inputValue, setInputValue] = useState("");
   const query = inputValue.trim();
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
@@ -209,9 +210,9 @@ export function AppCommand(): React.JSX.Element {
     void navigate({ to });
   };
 
-  const handleSyncAction = async (nextSyncType: LaunchableSyncType): Promise<void> => {
+  const handleSyncAction = (nextSyncType: LaunchableSyncType): Promise<void> => {
     closeCommand();
-    if (await requireExtension()) setSyncType(nextSyncType);
+    return gate(() => setSyncType(nextSyncType));
   };
 
   const handleOrderOpen = (orderId: string): void => {

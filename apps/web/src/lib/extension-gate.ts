@@ -1,18 +1,23 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 
 export type MissingExtension = Extract<ExtensionStatus, { kind: "absent" | "outdated" }>;
 
-let missing: MissingExtension | null = null;
+export type MissingExtensionDialog = {
+  readonly open: boolean;
+  readonly missing: MissingExtension;
+};
+
+let dialog: MissingExtensionDialog | null = null;
 const listeners = new Set<() => void>();
 
-function showMissing(next: MissingExtension | null): void {
-  missing = next;
+function showDialog(next: MissingExtensionDialog | null): void {
+  dialog = next;
   for (const listener of listeners) listener();
 }
 
-function subscribeMissing(listener: () => void): () => void {
+function subscribeDialog(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
@@ -20,25 +25,43 @@ function subscribeMissing(listener: () => void): () => void {
 export async function requireExtension(): Promise<boolean> {
   const status = await extensionBridge.probe();
   if (status.kind === "ready") return true;
-  showMissing(status.kind === "outdated" ? status : { kind: "absent" });
+  showDialog({ open: true, missing: status.kind === "outdated" ? status : { kind: "absent" } });
   return false;
 }
 
-export function useMissingExtension(): MissingExtension | null {
-  return useSyncExternalStore(subscribeMissing, () => missing);
+/** The dialog keeps its last copy after it closes, so the copy stays through the exit transition. */
+export function useMissingExtensionDialog(): MissingExtensionDialog | null {
+  return useSyncExternalStore(subscribeDialog, () => dialog);
 }
 
 export function dismissMissingExtension(): void {
-  showMissing(null);
+  if (dialog?.open) showDialog({ ...dialog, open: false });
 }
 
-export function checkExtension(): Promise<ExtensionStatus> {
-  return extensionBridge.probe();
+export type ExtensionGate = {
+  readonly checking: boolean;
+  /** Runs `proceed` once the extension answers ready, and ignores another call while it asks. */
+  readonly gate: (proceed: () => void) => Promise<void>;
+};
+
+export function useExtensionGate(): ExtensionGate {
+  const [checking, setChecking] = useState(false);
+  const asking = useRef(false);
+  const gate = useCallback(async (proceed: () => void) => {
+    if (asking.current) return;
+    asking.current = true;
+    setChecking(true);
+    const ready = await requireExtension();
+    asking.current = false;
+    setChecking(false);
+    if (ready) proceed();
+  }, []);
+  return { checking, gate };
 }
 
 export function useExtensionStatus(): ExtensionStatus {
   useEffect(() => {
-    void checkExtension();
+    void extensionBridge.probe();
   }, []);
   return useSyncExternalStore(extensionBridge.subscribe, extensionBridge.status);
 }

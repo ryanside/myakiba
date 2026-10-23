@@ -7,6 +7,7 @@ import type { BadgeVariant } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
+import { useExtensionGate } from "@/lib/extension-gate";
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -64,6 +65,7 @@ export function CurrentImportCard({
   readonly onDelete: () => Promise<void>;
 }) {
   const { currentImport } = current;
+  const { checking, gate } = useExtensionGate();
   const live = current.kind === "active" ? current.live : null;
   let liveStatus: SyncJobStatus | null = null;
   if (live?.kind === "ready") liveStatus = live.status;
@@ -201,13 +203,14 @@ export function CurrentImportCard({
               size="sm"
               variant="outline"
               disabled={current.retry.kind === "pending" || deleteState.kind === "pending"}
-              onClick={onRetry}
+              aria-busy={checking || undefined}
+              onClick={() => gate(onRetry)}
             >
               <HugeiconsIcon
-                icon={current.retry.kind === "pending" ? Loading03Icon : Refresh01Icon}
+                icon={current.retry.kind === "pending" || checking ? Loading03Icon : Refresh01Icon}
                 data-icon="inline-start"
                 className={
-                  current.retry.kind === "pending"
+                  current.retry.kind === "pending" || checking
                     ? "animate-spin motion-reduce:animate-none"
                     : undefined
                 }

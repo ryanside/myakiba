@@ -39,7 +39,7 @@ export default function SyncCollectionForm({
   currency,
   initialItemExternalId,
 }: {
-  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => void;
+  handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<boolean>;
   currency: Currency;
   initialItemExternalId?: string;
 }) {
@@ -82,8 +82,7 @@ export default function SyncCollectionForm({
           score: item.score.toString(),
         };
       });
-      await handleSyncCollectionSubmit(payload);
-      collectionForm.reset();
+      if (await handleSyncCollectionSubmit(payload)) collectionForm.reset();
     },
   });
 

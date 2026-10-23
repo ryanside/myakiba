@@ -6,7 +6,7 @@ import { Dropzone } from "@/components/kibo-ui/dropzone";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingsRow } from "@/components/settings/settings-row";
-import { requireExtension } from "@/lib/extension-gate";
+import { requireExtension, useExtensionGate } from "@/lib/extension-gate";
 import { CurrentImportCard } from "./current-import-card";
 import type { ActionState, CurrentImportViewState } from "./current-import-card";
 
@@ -60,6 +60,7 @@ export function ImportSection({
   readonly actions: ImportViewActions;
 }) {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const { checking, gate } = useExtensionGate();
   const currentImport = state.current.kind === "loading" ? null : state.current.current;
   const activeImport = currentImport?.kind === "active";
   const retryPending =
@@ -186,10 +187,9 @@ export function ImportSection({
 
               <ConfirmDialog
                 open={confirmationOpen}
-                onOpenChange={async (open) => {
-                  if (open && !(await requireExtension())) return;
-                  setConfirmationOpen(open);
-                }}
+                onOpenChange={(open) =>
+                  open ? gate(() => setConfirmationOpen(true)) : setConfirmationOpen(false)
+                }
                 variant="default"
                 icon={FileImportIcon}
                 title="Import this export?"
@@ -215,12 +215,19 @@ export function ImportSection({
                 loadingLabel="Starting import…"
                 disabled={importControlsDisabled}
                 renderTrigger={
-                  <Button type="button" className="w-full" disabled={importControlsDisabled}>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={importControlsDisabled}
+                    aria-busy={checking || undefined}
+                  >
                     <HugeiconsIcon
-                      icon={state.start.kind === "pending" ? Loading03Icon : FileImportIcon}
+                      icon={
+                        state.start.kind === "pending" || checking ? Loading03Icon : FileImportIcon
+                      }
                       data-icon="inline-start"
                       className={
-                        state.start.kind === "pending"
+                        state.start.kind === "pending" || checking
                           ? "animate-spin motion-reduce:animate-none"
                           : undefined
                       }
@@ -229,7 +236,9 @@ export function ImportSection({
                     {state.start.kind === "pending" ? "Starting import…" : "Import data"}
                   </Button>
                 }
-                onConfirm={actions.handleConfirmImport}
+                onConfirm={async () => {
+                  if (await requireExtension()) await actions.handleConfirmImport();
+                }}
               />
             </div>
           ) : null}
@@ -249,9 +258,7 @@ export function ImportSection({
             deleteState={state.delete}
             deleteDisabled={state.start.kind === "pending" || retryPending}
             onReconnect={actions.handleReconnectImportStatus}
-            onRetry={async () => {
-              if (await requireExtension()) actions.handleRetryCurrentImport();
-            }}
+            onRetry={actions.handleRetryCurrentImport}
             onDelete={actions.handleDeleteCurrentImport}
           />
         </div>

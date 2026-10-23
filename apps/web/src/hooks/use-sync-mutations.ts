@@ -16,15 +16,26 @@ import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
+import { requireExtension } from "@/lib/extension-gate";
 
+/** Each submit resolves false, sending nothing, when the extension is missing, so the form keeps its values. */
 export type UseSyncMutationsReturn = {
-  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<SyncResponse>;
-  readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<void>;
-  readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<void>;
-  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
-  readonly handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<void>;
+  readonly handleSyncItemsSubmit: (values: ItemSyncInput) => Promise<boolean>;
+  readonly handleSyncCsvSubmit: (value: File | undefined) => Promise<boolean>;
+  readonly handleSyncOrderSubmit: (values: SyncOrder) => Promise<boolean>;
+  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<boolean>;
+  readonly handleSyncCollectionSubmit: (values: SyncCollectionItem[]) => Promise<boolean>;
   readonly isSyncing: boolean;
 };
+
+async function sendWithExtension<Input>(
+  send: (input: Input) => Promise<SyncResponse>,
+  input: Input,
+): Promise<boolean> {
+  if (!(await requireExtension())) return false;
+  await send(input);
+  return true;
+}
 
 export function useSyncMutations(
   queryClient: QueryClient,
@@ -175,8 +186,13 @@ export function useSyncMutations(
     },
   });
 
+  const handleSyncItemsSubmit = useCallback(
+    (values: ItemSyncInput) => sendWithExtension(itemMutation.mutateAsync, values),
+    [itemMutation],
+  );
+
   const handleSyncCsvSubmit = useCallback(
-    async (value: File | undefined): Promise<void> => {
+    async (value: File | undefined): Promise<boolean> => {
       const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
       if (error) {
         const toastId = toast.add({
@@ -191,32 +207,26 @@ export function useSyncMutations(
             },
           },
         });
-        return;
+        return false;
       }
 
-      await csvMutation.mutateAsync(userItems);
+      return sendWithExtension(csvMutation.mutateAsync, userItems);
     },
     [csvMutation, navigate],
   );
 
   const handleSyncOrderSubmit = useCallback(
-    async (values: SyncOrder): Promise<void> => {
-      await orderMutation.mutateAsync(values);
-    },
+    (values: SyncOrder) => sendWithExtension(orderMutation.mutateAsync, values),
     [orderMutation],
   );
 
   const handleSyncCollectionSubmit = useCallback(
-    async (values: SyncCollectionItem[]): Promise<void> => {
-      await collectionMutation.mutateAsync(values);
-    },
+    (values: SyncCollectionItem[]) => sendWithExtension(collectionMutation.mutateAsync, values),
     [collectionMutation],
   );
 
   const handleSyncOrderItemSubmit = useCallback(
-    async (values: SyncOrderItems): Promise<void> => {
-      await orderItemMutation.mutateAsync(values);
-    },
+    (values: SyncOrderItems) => sendWithExtension(orderItemMutation.mutateAsync, values),
     [orderItemMutation],
   );
 
@@ -228,7 +238,7 @@ export function useSyncMutations(
     collectionMutation.isPending;
 
   return {
-    handleSyncItemsSubmit: itemMutation.mutateAsync,
+    handleSyncItemsSubmit,
     handleSyncCsvSubmit,
     handleSyncOrderSubmit,
     handleSyncOrderItemSubmit,

@@ -10,15 +10,14 @@ import { transformCSVData } from "@/lib/sync";
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
 }: {
-  handleSyncCsvSubmit: (values: File | undefined) => void;
+  handleSyncCsvSubmit: (values: File | undefined) => Promise<boolean>;
 }) {
   const csvForm = useForm({
     defaultValues: {
       file: undefined as File | undefined,
     },
     onSubmit: async ({ value }) => {
-      await handleSyncCsvSubmit(value.file);
-      csvForm.reset();
+      if (await handleSyncCsvSubmit(value.file)) csvForm.reset();
     },
   });
   return (

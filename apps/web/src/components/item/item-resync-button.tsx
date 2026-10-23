@@ -4,7 +4,7 @@ import { Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 import type { ResyncStatus } from "@/components/item/types";
 
 const RESYNC_LABELS = {
@@ -41,6 +41,7 @@ export function ItemResyncButton({
   readonly onRequest: () => void;
   readonly disabled?: boolean;
 }): ReactNode {
+  const { checking, gate } = useExtensionGate();
   const isDisabled = disabled || status !== "idle" || isPending;
   const buttonLabel = isPending ? "Requesting..." : RESYNC_LABELS[status];
   const showCooldownTooltip = status === "cooldown" && cooldownExpiresAt !== null;
@@ -51,14 +52,13 @@ export function ItemResyncButton({
       variant="outline"
       size="xs"
       disabled={isDisabled}
-      onClick={async () => {
-        if (await requireExtension()) onRequest();
-      }}
+      aria-busy={checking || undefined}
+      onClick={() => gate(onRequest)}
     >
       <HugeiconsIcon
-        icon={isPending ? Loading03Icon : Refresh01Icon}
+        icon={isPending || checking ? Loading03Icon : Refresh01Icon}
         data-icon="inline-start"
-        className={cn(isPending && "animate-spin")}
+        className={cn((isPending || checking) && "animate-spin")}
       />
       {buttonLabel}
     </Button>

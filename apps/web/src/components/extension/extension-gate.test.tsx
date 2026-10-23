@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
-import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
@@ -22,6 +30,7 @@ const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
   useNavigate: () => async () => {},
+  useRouter: () => ({ invalidate: async () => {} }),
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
 }));
 
@@ -46,6 +55,7 @@ const { ItemSyncActions } = await import("@/components/item/item-sync-actions");
 const { ItemResyncButton } = await import("@/components/item/item-resync-button");
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
 const { DataTransferView } = await import("@/components/settings/data-transfer");
+const { OnboardingDialog } = await import("@/components/onboarding/onboarding-dialog");
 const { SYNC_OPTION_META } = await import("@/lib/sync");
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -86,6 +96,15 @@ const importActions = (proceed: () => void) => ({
   handleDeleteCurrentImport: async () => {},
 });
 
+const ONBOARDING_KEY = "myakiba:onboarding-v2";
+const SYNC_STEP_TITLE = "Bring in your items.";
+const collectionChoice = new RegExp(`^${SYNC_OPTION_META.collection.title}`, "u");
+
+function onboardingAtSyncStep() {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 3, hasSeen: true }));
+  return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
+}
+
 const ENTRY_POINTS: readonly EntryPoint[] = [
   ...LAUNCHABLE_SYNC_OPTIONS.map((option): EntryPoint => ({
     name: `the sync launcher's ${option.label} option`,
@@ -113,6 +132,20 @@ const ENTRY_POINTS: readonly EntryPoint[] = [
     name: `the ${syncType} sheet button`,
     render: () => <SyncSheetButton syncType={syncType} label="Add" />,
     start: click("Add"),
+    proceeded: sheetOpened(SYNC_OPTION_META[syncType].title),
+  })),
+  ...(["collection", "order", "csv"] as const).map((syncType): EntryPoint => ({
+    name: `onboarding's ${SYNC_OPTION_META[syncType].title} choice`,
+    render: onboardingAtSyncStep,
+    start: async (user) => {
+      await click("Getting Started")(user);
+      await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+      await user.click(
+        screen.getByRole("button", {
+          name: new RegExp(`^${SYNC_OPTION_META[syncType].title}`, "u"),
+        }),
+      );
+    },
     proceeded: sheetOpened(SYNC_OPTION_META[syncType].title),
   })),
   {
@@ -223,7 +256,7 @@ function renderEntryPoint(entryPoint: EntryPoint) {
   return { proceeded: () => entryPoint.proceeded(calls) };
 }
 
-function useExtension(options: Parameters<typeof fakeExtension>[0]) {
+function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
   extension = fakeExtension(options);
   bridge = createExtensionBridge(extension.window);
 }
@@ -232,27 +265,30 @@ afterEach(() => {
   cleanup();
   dismissMissingExtension();
   retriedSessions.length = 0;
+  localStorage.clear();
 });
 
 describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as const))(
   "%s",
   (_name, entryPoint) => {
     test("asks for the extension instead when it is not installed", async () => {
-      useExtension({ installed: false });
+      loadExtension({ installed: false });
       const user = userEvent.setup();
       const { proceeded } = renderEntryPoint(entryPoint);
 
       await entryPoint.start(user);
 
       await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
-      expect(screen.getByRole("link", { name: "How to install it" }).getAttribute("href")).toBe(
-        "/#faq-extension",
-      );
+      expect(
+        screen
+          .getByRole("link", { name: "How to install it (opens in a new tab)" })
+          .getAttribute("href"),
+      ).toBe("/#faq-extension");
       expect(proceeded()).toBe(false);
     });
 
     test("asks for an update when the extension is too old", async () => {
-      useExtension({ protocols: { min: 0, max: 0 } });
+      loadExtension({ protocols: { min: 0, max: 0 } });
       const user = userEvent.setup();
       const { proceeded } = renderEntryPoint(entryPoint);
 
@@ -263,7 +299,7 @@ describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as 
     });
 
     test("goes ahead when the extension is ready", async () => {
-      useExtension({ installed: true });
+      loadExtension({ installed: true });
       const user = userEvent.setup();
       const { proceeded } = renderEntryPoint(entryPoint);
 
@@ -276,7 +312,7 @@ describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as 
 );
 
 test("the dialog closes, and the next try probes again", async () => {
-  useExtension({ installed: false });
+  loadExtension({ installed: false });
   const user = userEvent.setup();
   let calls = 0;
   render(
@@ -302,4 +338,109 @@ test("the dialog closes, and the next try probes again", async () => {
   await click("Refresh item details")(user);
 
   await waitFor(() => expect(calls).toBe(1));
+});
+
+test("a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back", async () => {
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderEntryPoint({
+    name: "onboarding",
+    render: onboardingAtSyncStep,
+    start: async () => {},
+    proceeded: () => false,
+  });
+  await click("Getting Started")(user);
+  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+
+  await user.click(screen.getByRole("button", { name: collectionChoice }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
+  await click("Close")(user);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: /myakiba extension first/u })).toBeNull(),
+  );
+
+  expect(screen.getByRole("dialog", { name: SYNC_STEP_TITLE })).toBeDefined();
+  expect(localStorage.getItem(ONBOARDING_KEY)).not.toContain('"completed":true');
+  await click("Back")(user);
+  expect(
+    await screen.findByRole("dialog", { name: "Install the myakiba extension." }),
+  ).toBeDefined();
+});
+
+test("onboarding completes once the extension answers ready", async () => {
+  loadExtension({ installed: true });
+  const user = userEvent.setup();
+  renderEntryPoint({
+    name: "onboarding",
+    render: onboardingAtSyncStep,
+    start: async () => {},
+    proceeded: () => false,
+  });
+  await click("Getting Started")(user);
+  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+
+  await user.click(screen.getByRole("button", { name: collectionChoice }));
+
+  await screen.findByRole("dialog", { name: SYNC_OPTION_META.collection.title });
+  expect(screen.queryByRole("dialog", { name: SYNC_STEP_TITLE })).toBeNull();
+  expect(localStorage.getItem(ONBOARDING_KEY)).toContain('"completed":true');
+});
+
+test("closing the dialog keeps its copy while it closes and returns focus to the button", async () => {
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  render(
+    <>
+      <ItemResyncButton status="idle" isPending={false} cooldownExpiresAt={null} onRequest={noop} />
+      <ExtensionRequiredDialog />
+    </>,
+  );
+  const trigger = screen.getByRole("button", { name: "Refresh item details" });
+  await user.click(trigger);
+  const dialog = await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
+
+  act(() => dismissMissingExtension());
+  expect(dialog.isConnected).toBe(true);
+  expect(dialog.textContent).toContain("Install the myakiba extension first");
+
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
+});
+
+test("a gated button shows it is checking and ignores a second click until the check ends", async () => {
+  loadExtension({ installed: false });
+  let calls = 0;
+  render(
+    <>
+      <ItemResyncButton
+        status="idle"
+        isPending={false}
+        cooldownExpiresAt={null}
+        onRequest={() => {
+          calls += 1;
+        }}
+      />
+      <ExtensionRequiredDialog />
+    </>,
+  );
+  const button = screen.getByRole("button", { name: "Refresh item details" });
+
+  fireEvent.click(button);
+  await waitFor(() => expect(button.getAttribute("aria-busy")).toBe("true"));
+  fireEvent.click(button);
+  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
+  expect(button.getAttribute("aria-busy")).toBeNull();
+  expect(
+    extension.posted.filter((post) => post.message.request.type === "hello").length,
+  ).toBeLessThanOrEqual(6);
+
+  act(() => dismissMissingExtension());
+  extension.setInstalled(true);
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await waitFor(() => expect(calls).toBe(1));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  expect(calls).toBe(1);
 });

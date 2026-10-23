@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -94,6 +94,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
 
 const FIRST_STEP = 1;
 const LAST_STEP = STEPS.length;
+const EXTENSION_STEP = STEPS.find((meta) => meta.id === "extension")?.step ?? FIRST_STEP;
 const FIRST_OPEN_DELAY_MS = 400;
 const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
@@ -112,16 +113,20 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
     step: savedStep,
     hasSeen,
     isCompleted,
+    reopenAtExtensionStep,
     setStep,
+    setExtensionStepOpen,
     complete,
     dismiss,
   } = useOnboarding({ totalSteps: STEPS.length });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(reopenAtExtensionStep);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const resumeStep = isCompleted
     ? FIRST_STEP
     : Math.min(Math.max(savedStep + 1, FIRST_STEP), LAST_STEP);
-  const [currentStep, setCurrentStep] = useState(resumeStep);
+  const [currentStep, setCurrentStep] = useState(
+    reopenAtExtensionStep ? EXTENSION_STEP : resumeStep,
+  );
 
   const router = useRouter();
   const { session } = appRouteApi.useRouteContext();
@@ -132,6 +137,10 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const currentMeta = STEPS.find((meta) => meta.step === currentStep) ?? STEPS[0];
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
+
+  useEffect(() => {
+    setExtensionStepOpen(open && currentMeta.id === "extension");
+  }, [open, currentMeta.id, setExtensionStepOpen]);
 
   const goToStep = useCallback(
     (next: number) => {
@@ -247,11 +256,11 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   }, [handleOpenChange]);
 
   const handleSelectSync = useCallback(
-    async (type: LaunchableSyncType) => {
+    (type: LaunchableSyncType) => {
       complete();
       setOpen(false);
       setCurrentStep(FIRST_STEP);
-      if (await requireExtension()) setSyncSheetType(type);
+      setSyncSheetType(type);
     },
     [complete],
   );
@@ -491,10 +500,12 @@ type SyncOptionCardProps = {
 };
 
 function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
+  const { checking, gate } = useExtensionGate();
   return (
     <Button
       variant="outline"
-      onClick={() => onSelect(option.id)}
+      aria-busy={checking || undefined}
+      onClick={() => gate(() => onSelect(option.id))}
       className={cn(
         "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
         "transition-[transform] duration-100",
@@ -511,13 +522,14 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
         <span className="text-xs text-muted-foreground">{option.description}</span>
       </span>
       <HugeiconsIcon
-        icon={ArrowRight02Icon}
+        icon={checking ? Loading03Icon : ArrowRight02Icon}
         strokeWidth={2}
         className={cn(
           "size-4 shrink-0 text-muted-foreground",
           "transition-[transform,color] duration-200",
           EASE_OUT,
           "group-hover:translate-x-0.5 group-hover:text-foreground",
+          checking && "animate-spin motion-reduce:animate-none",
         )}
       />
     </Button>

@@ -5,7 +5,7 @@ import { RedoIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/toast";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 import { retrySyncSession } from "@/queries/sync";
 
 export function RetrySyncSessionButton({
@@ -38,6 +38,7 @@ export function RetrySyncSessionButton({
       });
     },
   });
+  const { checking, gate } = useExtensionGate();
   const retryIsPending = mutation.isPending || isRetrying;
   let unavailableReason: string | null = null;
   if (!retrySupported) {
@@ -54,14 +55,13 @@ export function RetrySyncSessionButton({
       size="sm"
       className="gap-1"
       disabled={!canRetry || retryIsPending}
-      onClick={async () => {
-        if (await requireExtension()) mutation.mutate();
-      }}
+      aria-busy={checking || undefined}
+      onClick={() => gate(() => mutation.mutate())}
     >
       <HugeiconsIcon
         icon={RedoIcon}
         data-icon="inline-start"
-        className={retryIsPending ? "animate-spin" : ""}
+        className={retryIsPending || checking ? "animate-spin" : ""}
       />
       <span>
         {retryIsPending ? "Retrying failed item results..." : "Retry failed item results"}

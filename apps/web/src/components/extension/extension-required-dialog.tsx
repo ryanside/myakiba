@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
-import { dismissMissingExtension, useMissingExtension } from "@/lib/extension-gate";
+import { dismissMissingExtension, useMissingExtensionDialog } from "@/lib/extension-gate";
 import type { MissingExtension } from "@/lib/extension-gate";
 
 const COPY = {
@@ -29,12 +29,12 @@ const COPY = {
 } as const satisfies Record<MissingExtension["kind"], Record<string, string>>;
 
 export function ExtensionRequiredDialog() {
-  const missing = useMissingExtension();
-  const copy = missing ? COPY[missing.kind] : null;
+  const dialog = useMissingExtensionDialog();
+  const copy = dialog ? COPY[dialog.missing.kind] : null;
 
   return (
     <Dialog
-      open={missing !== null}
+      open={dialog?.open ?? false}
       onOpenChange={(open) => {
         if (!open) dismissMissingExtension();
       }}
@@ -61,6 +61,7 @@ export function ExtensionRequiredDialog() {
               className={buttonVariants()}
             >
               {copy.link}
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           </DialogFooter>
         </DialogContent>

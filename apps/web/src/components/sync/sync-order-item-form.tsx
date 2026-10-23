@@ -44,7 +44,7 @@ import { SyncNotice } from "@/components/sync/sync-notice";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
-  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<void>;
+  readonly handleSyncOrderItemSubmit: (values: SyncOrderItems) => Promise<boolean>;
   readonly currency: Currency;
 };
 
@@ -94,11 +94,9 @@ export default function SyncOrderItemForm({
         };
       });
 
-      await handleSyncOrderItemSubmit({
-        orderId,
-        items: updatedItems,
-      });
-      orderItemForm.reset();
+      if (await handleSyncOrderItemSubmit({ orderId, items: updatedItems })) {
+        orderItemForm.reset();
+      }
     },
   });
 

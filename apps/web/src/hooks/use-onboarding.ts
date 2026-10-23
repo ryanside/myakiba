@@ -8,6 +8,7 @@ const storedOnboardingStateSchema = z.object({
   step: z.number().finite().optional(),
   hasSeen: z.boolean().optional(),
   completed: z.boolean().optional(),
+  extensionStepOpen: z.boolean().optional(),
 });
 
 type StoredOnboardingState = z.infer<typeof storedOnboardingStateSchema>;
@@ -16,6 +17,7 @@ type OnboardingState = {
   readonly step: number;
   readonly hasSeen: boolean;
   readonly completed: boolean;
+  readonly extensionStepOpen: boolean;
 };
 
 const INITIAL_STATE: StoredOnboardingState = {
@@ -31,7 +33,12 @@ function normalize(raw: StoredOnboardingState, totalSteps: number): OnboardingSt
   // Migration: earlier versions encoded completion as `step > lastStepIndex`
   // (past-the-end sentinel) without a dedicated flag.
   const completed = raw.completed ?? rawStep > lastStepIndex;
-  return { step, hasSeen: raw.hasSeen ?? false, completed };
+  return {
+    step,
+    hasSeen: raw.hasSeen ?? false,
+    completed,
+    extensionStepOpen: raw.extensionStepOpen ?? false,
+  };
 }
 
 type UseOnboardingOptions = {
@@ -42,7 +49,10 @@ type UseOnboardingReturn = {
   readonly step: number;
   readonly hasSeen: boolean;
   readonly isCompleted: boolean;
+  /** Installing the extension takes a page reload, which should not cost the user their place. */
+  readonly reopenAtExtensionStep: boolean;
   readonly setStep: (step: number) => void;
+  readonly setExtensionStepOpen: (open: boolean) => void;
   readonly complete: () => void;
   readonly dismiss: () => void;
 };
@@ -62,8 +72,24 @@ function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingRetur
     [setState],
   );
 
+  const setExtensionStepOpen = useCallback(
+    (extensionStepOpen: boolean) => {
+      setState((previous) =>
+        (previous.extensionStepOpen ?? false) === extensionStepOpen
+          ? previous
+          : { ...previous, extensionStepOpen },
+      );
+    },
+    [setState],
+  );
+
   const complete = useCallback(() => {
-    setState((previous) => ({ ...previous, hasSeen: true, completed: true }));
+    setState((previous) => ({
+      ...previous,
+      hasSeen: true,
+      completed: true,
+      extensionStepOpen: false,
+    }));
   }, [setState]);
 
   const dismiss = useCallback(() => {
@@ -74,7 +100,9 @@ function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingRetur
     step: state.step,
     hasSeen: state.hasSeen,
     isCompleted: state.completed,
+    reopenAtExtensionStep: state.extensionStepOpen && !state.completed,
     setStep,
+    setExtensionStepOpen,
     complete,
     dismiss,
   } as const;

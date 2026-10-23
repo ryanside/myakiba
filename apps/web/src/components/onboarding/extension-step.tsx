@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import {
@@ -9,7 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
-import { checkExtension, useExtensionStatus } from "@/lib/extension-gate";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { cn } from "@/lib/utils";
 
@@ -25,15 +24,8 @@ const STATUS_LINE = {
 
 export function ExtensionStep() {
   const status = useExtensionStatus();
-  const [rechecking, setRechecking] = useState(false);
   const line = STATUS_LINE[status.kind];
-  const spinning = status.kind === "checking" || rechecking;
-
-  const recheck = async () => {
-    setRechecking(true);
-    await checkExtension();
-    setRechecking(false);
-  };
+  const spinning = status.kind === "checking";
 
   return (
     <div className="flex flex-col gap-4 rounded-lg bg-muted/45 p-4 ring-1 ring-foreground/8">
@@ -54,12 +46,13 @@ export function ExtensionStep() {
             className={buttonVariants({ size: "sm" })}
           >
             {status.kind === "absent" ? "How to install it" : "How to update it"}
+            <span className="sr-only"> (opens in a new tab)</span>
           </a>
-          <Button variant="outline" size="sm" disabled={rechecking} onClick={recheck}>
-            Check again
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Reload page
           </Button>
           <span className="text-xs text-muted-foreground">
-            Reload this page after you install it.
+            Reload this page after you {status.kind === "absent" ? "install" : "update"} it.
           </span>
         </div>
       ) : null}

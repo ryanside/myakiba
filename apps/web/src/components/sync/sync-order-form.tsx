@@ -53,7 +53,7 @@ export default function SyncOrderForm({
   currency,
   initialItemExternalId,
 }: {
-  handleSyncOrderSubmit: (values: SyncOrder) => void;
+  handleSyncOrderSubmit: (values: SyncOrder) => Promise<boolean>;
   currency: Currency;
   initialItemExternalId?: string;
 }) {
@@ -152,8 +152,7 @@ export default function SyncOrderForm({
         items: updatedItems,
       };
 
-      await handleSyncOrderSubmit(updatedValue);
-      orderForm.reset();
+      if (await handleSyncOrderSubmit(updatedValue)) orderForm.reset();
     },
   });
 

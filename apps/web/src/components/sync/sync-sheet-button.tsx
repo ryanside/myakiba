@@ -18,7 +18,7 @@ import SyncCollectionForm from "@/components/sync/sync-collection-form";
 import { SyncItemsForm } from "@/components/sync/sync-items-form";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 
 type SyncSheetButtonProps = {
   readonly syncType: Extract<SyncType, "collection" | "order" | "item">;
@@ -30,6 +30,7 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
   const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
+  const { checking, gate } = useExtensionGate();
 
   const { handleSyncOrderSubmit, handleSyncCollectionSubmit, handleSyncItemsSubmit, isSyncing } =
     useSyncMutations(queryClient, () => {
@@ -39,17 +40,17 @@ export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonP
   const meta = SYNC_OPTION_META[syncType];
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={async (next) => {
-        if (next && !(await requireExtension())) return;
-        setOpen(next);
-      }}
-    >
+    <Sheet open={open} onOpenChange={(next) => (next ? gate(() => setOpen(true)) : setOpen(false))}>
       <SheetTrigger
         render={
-          <Button variant="default" className={className} aria-label={label} disabled={isSyncing}>
-            {isSyncing ? (
+          <Button
+            variant="default"
+            className={className}
+            aria-label={label}
+            disabled={isSyncing}
+            aria-busy={checking || undefined}
+          >
+            {isSyncing || checking ? (
               <HugeiconsIcon
                 icon={Loading03Icon}
                 data-icon="inline-start"

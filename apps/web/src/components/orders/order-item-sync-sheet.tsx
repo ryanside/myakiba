@@ -16,7 +16,7 @@ import { SYNC_OPTION_META } from "@/lib/sync";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import SyncOrderItemForm from "@/components/sync/sync-order-item-form";
-import { requireExtension } from "@/lib/extension-gate";
+import { useExtensionGate } from "@/lib/extension-gate";
 
 type OrderItemSyncSheetProps = {
   readonly orderId: string;
@@ -36,6 +36,7 @@ export function OrderItemSyncSheet({
   const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
+  const { checking, gate } = useExtensionGate();
 
   const handleComplete = useCallback((): void => {
     setOpen(false);
@@ -49,13 +50,7 @@ export function OrderItemSyncSheet({
   const meta = SYNC_OPTION_META["order-item"];
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={async (next) => {
-        if (next && !(await requireExtension())) return;
-        setOpen(next);
-      }}
-    >
+    <Sheet open={open} onOpenChange={(next) => (next ? gate(() => setOpen(true)) : setOpen(false))}>
       <SheetTrigger
         render={
           <Button
@@ -64,8 +59,9 @@ export function OrderItemSyncSheet({
             className={className}
             aria-label={label}
             disabled={isSyncing}
+            aria-busy={checking || undefined}
           >
-            {isSyncing ? (
+            {isSyncing || checking ? (
               <HugeiconsIcon
                 icon={Loading03Icon}
                 data-icon="inline-start"
