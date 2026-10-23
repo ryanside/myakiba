@@ -48,6 +48,8 @@ const OK: ServerAnswer = { kind: "ok" };
 const FAILED: ServerAnswer = { kind: "failed" };
 const OVER: Over = { kind: "over" };
 
+const RUN_CLOSED_STATUSES: ReadonlySet<unknown> = new Set([401, 403, 404]);
+
 async function answerOf<Data>(
   sending: Promise<EdenAnswer<Data>>,
   read: (data: Data) => ServerAnswer = () => OK,
@@ -61,6 +63,7 @@ async function answerOf<Data>(
   }
   if (answer.error === null) return read(answer.data);
   const { status } = answer.error;
+  if (RUN_CLOSED_STATUSES.has(status)) return OVER;
   if (status !== 429) return FAILED;
   const seconds = Number(answer.response?.headers.get("retry-after") ?? Number.NaN);
   return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
@@ -259,7 +262,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
     };
     const refused = (answer: ServerAnswer, items: number) => {
       tally.unanswered += items;
-      if (answer.kind === "busy") halt(answer);
+      if (answer.kind === "busy" || answer.kind === "over") halt(answer);
     };
     const renew = async () => {
       const answer = await run.heartbeat();

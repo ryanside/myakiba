@@ -640,6 +640,46 @@ describe("an answer that breaks off after its headers", () => {
   });
 });
 
+describe("a run the user lost access to", () => {
+  test.each([401, 403, 404])("stops fetching once a heartbeat answers %d", async (status) => {
+    fakeFetch();
+    answer = (request) =>
+      request.path.endsWith("/heartbeat") ? new Response("Unauthorized", { status }) : imported();
+    loadExtension((fetch) => {
+      fetch.item(1);
+      setTimeout(() => fetch.item(2), 200);
+    });
+
+    const outcome = await runner({ heartbeatMs: 20 }).run(sync(1, 2));
+
+    expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
+    expect(posted(`${SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([1]);
+    expect(posted(`${SESSION}/interrupt`)).toEqual([]);
+    expect(outcome).toEqual({ kind: "ended" });
+  });
+
+  test.each([
+    ["an upload", "/items", (fetch: FakeRun) => fetch.item(1), [1]],
+    ["a failure report", "/failures", (fetch: FakeRun) => fetch.fail(1, "timeout"), []],
+  ] as const)("stops fetching once %s answers 401", async (_request, path, first, uploaded) => {
+    fakeFetch();
+    answer = (request) =>
+      request.path.endsWith(path) ? new Response("Unauthorized", { status: 401 }) : imported();
+    loadExtension((fetch) => {
+      first(fetch);
+      setTimeout(() => fetch.item(2), 200);
+    });
+
+    await runner({ failureFlushMs: 20 }).run(sync(1, 2));
+
+    expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
+    expect(posted(`${SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([
+      ...uploaded,
+    ]);
+    expect(posted(`${SESSION}/interrupt`)).toEqual([]);
+  });
+});
+
 describe("refreshing an item", () => {
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
