@@ -636,6 +636,87 @@
         "closing the dialog keeps its copy while it closes and returns focus to the button",
         "a gated button shows it is checking and ignores a second click until the check ends"
       ]
+    },
+    {
+      "fix": "fe9ce540",
+      "bug": "an extension run kept fetching and uploading after its heartbeat said the server had ended it, and a page restored from the back-forward cache resumed a run it had interrupted",
+      "test": "apps/web/src/data/extension-run.test.tsx",
+      "fixed": [
+        "a sync run > stops driving the extension once the page enters the back-forward cache",
+        "a sync run stops when the server says it is over",
+        "an Import/Export run stops when the server says it is over"
+      ]
+    },
+    {
+      "fix": "1e2e917d",
+      "bug": "two extension runs together had 4 uploads in flight, and a page waiting for an upload slot went out after a busy answer",
+      "test": "apps/web/src/data/extension-run.test.tsx",
+      "fixed": [
+        "the upload cap > holds for two runs together",
+        "the upload cap > lets no page waiting for a slot go out after a busy answer"
+      ]
+    },
+    {
+      "fix": "bfd53fd4",
+      "bug": "a busy run's count of items not imported left out the failures the page reported",
+      "test": "apps/web/src/data/extension-run.test.tsx",
+      "fixed": [
+        "a sync run > a busy run counts every item it did not import, reported failures included"
+      ]
+    },
+    {
+      "fix": "bfd53fd4",
+      "bug": "the toast for a 429 called myakiba busy instead of naming the user's hourly import limit",
+      "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
+      "fixed": [
+        "a sync form says the hourly import limit stopped its run",
+        "a session retry says the hourly import limit stopped its run",
+        "an Import/Export import says the hourly import limit stopped its run",
+        "an Import/Export retry says the hourly import limit stopped its run"
+      ]
+    },
+    {
+      "fix": "eb428493",
+      "bug": "the status widget flashed the queued prompt at the start of every extension batch",
+      "test": "apps/web/src/data/extension-run.test.tsx",
+      "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"]
+    },
+    {
+      "fix": "d363d75f",
+      "bug": "an Item Refresh refetched only the item, so its releases, collection rows, orders and calendar stayed stale",
+      "test": "apps/web/src/data/resources/item.test.tsx",
+      "fixed": [
+        "an Item Refresh refetches the item, its releases, and the collection, orders and calendar that show it"
+      ]
+    },
+    {
+      "fix": "cd28cc3e",
+      "bug": "the sync launcher and command palette showed nothing while they checked for the extension",
+      "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+      "fixed": [
+        "the sync launcher shows it is checking on the chosen option",
+        "the command palette shows it is checking on the chosen option"
+      ]
+    },
+    {
+      "fix": "43d4c7a7",
+      "bug": "onboarding opened in a second tab cleared the flag that reopens the first tab at the extension step",
+      "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
+      "fixed": ["onboarding opened in a second tab leaves the first tab's extension step to reopen"]
+    },
+    {
+      "fix": "f29d0d5c",
+      "bug": "the extension runner posted each failure on its own and kept going after a 429 from a failure post",
+      "test": "apps/web/src/data/extension-run.test.tsx",
+      "fixed": [
+        "a sync run > uploads each fetched page and reports each failure with the extension's code",
+        "failure reports > report the failures that arrive close together in one request",
+        "failure reports > hold at most 1000 failures in one request",
+        "failure reports > report an unsolved security check for every open item at once",
+        "failure reports > stop the run on a busy answer, like an upload does",
+        "failure reports > still go out after a busy upload, and are answered before the final interrupt",
+        "an Import/Export run reports to the import's endpoints"
+      ]
     }
   ],
   "lint": [
