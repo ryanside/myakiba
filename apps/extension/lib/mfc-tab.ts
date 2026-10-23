@@ -1,39 +1,10 @@
-import * as z from "zod";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Clock, SessionValue } from "./clock";
 import { mfcItemUrl } from "./origins";
 import type { Origins } from "./origins";
-import { sameContext } from "./queue";
-import type { Requester, TabContext } from "./queue";
+import { inContext, ownedTab } from "./owned-tab";
+import type { LiveRequester, OwnedTab, TabsApi } from "./owned-tab";
 import type { Throttle } from "./throttle";
-
-export type Tab = {
-  readonly id?: number;
-  readonly windowId?: number;
-  readonly status?: string;
-  readonly url?: string;
-  readonly pendingUrl?: string;
-  readonly title?: string;
-  readonly active?: boolean;
-  readonly incognito?: boolean;
-  readonly cookieStoreId?: string;
-};
-
-export type TabsApi = {
-  readonly get: (tabId: number) => Promise<Tab>;
-  readonly query: (query: { url: string; status: "complete"; discarded: false }) => Promise<Tab[]>;
-  readonly create: (properties: {
-    url: string;
-    active: boolean;
-    windowId: number;
-    cookieStoreId?: string;
-  }) => Promise<Tab>;
-  readonly update: (
-    tabId: number,
-    properties: { url?: string; active?: boolean },
-  ) => Promise<Tab | undefined>;
-  readonly remove: (tabId: number) => Promise<void>;
-};
 
 export type WindowsApi = {
   readonly update: (windowId: number, info: { focused: boolean }) => Promise<{ id?: number }>;
@@ -41,184 +12,28 @@ export type WindowsApi = {
 
 export type MfcTabLease = { readonly kind: "borrowed" | "owned"; readonly tabId: number };
 
-/** The first run still waiting for the job. Read at each tab step, since runs cancel at any time. */
-export type LiveRequester = () => Requester;
-
-/** The tab the extension opened and the path it put there. A user's tab is never recorded. */
-export const ownedTabSchema = z
-  .strictObject({ tabId: z.number().int(), path: z.string() })
-  .nullable();
-export type OwnedTab = z.output<typeof ownedTabSchema>;
-
-class TabTakenError extends Error {
-  constructor(tabId: number) {
-    super(`the user took tab ${tabId}`);
-    this.name = "TabTakenError";
-  }
-}
-
-const POLL_MS = 50;
 const NAVIGATION_POLL_MS = 500;
 
-function inContext(tab: Tab, context: TabContext): boolean {
-  return (
-    tab.incognito !== undefined &&
-    sameContext({ incognito: tab.incognito, cookieStoreId: tab.cookieStoreId ?? null }, context)
-  );
-}
+const tabIdOf = (tabId: number) => tabId;
 
 export function createMfcTabs(deps: {
   readonly tabs: TabsApi;
   readonly windows: WindowsApi;
   readonly clock: Clock;
   readonly origins: Origins;
-  readonly origin?: string;
   readonly owned: SessionValue<OwnedTab>;
   readonly throttle: Pick<Throttle, "load">;
 }) {
-  const { tabs, windows, clock, origins, owned, throttle } = deps;
-  const origin = deps.origin ?? origins.mfc;
+  const { tabs, windows, clock, origins } = deps;
+  const own = ownedTab({
+    tabs,
+    clock,
+    origin: origins.mfc,
+    record: deps.owned,
+    throttle: deps.throttle,
+  });
   let borrowing = true;
   let selfActivatedTabId: number | null = null;
-  /** Tabs the user focused while a create was pending, which may include the new tab. */
-  let focusedDuringCreate: Set<number> | null = null;
-  let ownership = Promise.resolve(null);
-
-  async function exclusively<T>(work: () => Promise<T>): Promise<T> {
-    const previous = ownership;
-    const { promise: turn, resolve } = Promise.withResolvers<null>();
-    ownership = turn;
-    try {
-      await previous;
-      return await work();
-    } finally {
-      resolve(null);
-    }
-  }
-
-  function pathOnOrigin(url: string | undefined): string | null {
-    const parsed = URL.parse(url ?? "");
-    return parsed?.origin === origin ? parsed.pathname : null;
-  }
-
-  function movedElsewhere(tab: Tab, path: string): boolean {
-    const destination = tab.pendingUrl ?? tab.url;
-    const protocol = URL.parse(destination ?? "")?.protocol;
-    return (protocol === "http:" || protocol === "https:") && pathOnOrigin(destination) !== path;
-  }
-
-  async function windowOf(tabId: number): Promise<number> {
-    const { windowId } = await tabs.get(tabId);
-    if (windowId === undefined) throw new Error(`tab ${tabId} has no window`);
-    return windowId;
-  }
-
-  async function ownedTab(): Promise<{ readonly tabId: number; readonly tab: Tab } | null> {
-    const record = await owned.load();
-    if (!record) return null;
-    const tab = await tabs.get(record.tabId).catch(() => null);
-    if (tab && pathOnOrigin(tab.pendingUrl ?? tab.url) === record.path)
-      return { tabId: record.tabId, tab };
-    await owned.save(null);
-    return null;
-  }
-
-  async function closeOwned(): Promise<void> {
-    const own = await ownedTab();
-    await owned.save(null);
-    // The tab may close between the read and the remove.
-    if (own) await tabs.remove(own.tabId).catch(() => null);
-  }
-
-  async function closeUntilGone(tabId: number): Promise<void> {
-    const ours = await exclusively(async () => {
-      const record = await owned.load();
-      if (record?.tabId !== tabId) return false;
-      const tab = await tabs.get(tabId).catch(() => null);
-      await owned.save(null);
-      if (tab && movedElsewhere(tab, record.path)) return false;
-      return true;
-    });
-    if (!ours) return;
-    // Chrome refuses to close a tab while the user drags it.
-    while ((await tabs.get(tabId).catch(() => null)) !== null) {
-      await tabs.remove(tabId).catch(() => clock.sleep(POLL_MS));
-    }
-  }
-
-  async function waitOrClose(tabId: number, path: string, timeout: AbortSignal): Promise<void> {
-    try {
-      for (;;) {
-        timeout.throwIfAborted();
-        const tab = await tabs.get(tabId);
-        if (tab.status === "complete" && pathOnOrigin(tab.url) === path) return;
-        if (movedElsewhere(tab, path)) throw new TabTakenError(tabId);
-        await clock.sleep(POLL_MS, timeout);
-      }
-    } catch (error) {
-      if (timeout.aborted) await closeUntilGone(tabId);
-      throw error;
-    }
-  }
-
-  async function createOwned(
-    requester: LiveRequester,
-    url: string,
-    signal: AbortSignal,
-    timeout: AbortSignal,
-  ): Promise<number> {
-    await exclusively(closeOwned);
-    const { tabId: requesterTabId, context } = requester();
-    const windowId = await windowOf(requesterTabId);
-    const properties: Parameters<TabsApi["create"]>[0] = { url, active: false, windowId };
-    if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
-    signal.throwIfAborted();
-    const focused = new Set<number>();
-    focusedDuringCreate = focused;
-    let created: Tab;
-    try {
-      created = await tabs.create(properties);
-    } finally {
-      focusedDuringCreate = null;
-    }
-    const tabId = created.id;
-    if (tabId === undefined) throw new Error("the new MFC tab has no id");
-    const { pathname } = new URL(url);
-    await exclusively(async () => {
-      if (focused.has(tabId)) throw new TabTakenError(tabId);
-      await owned.save({ tabId, path: pathname });
-    });
-    await waitOrClose(tabId, pathname, timeout);
-    return tabId;
-  }
-
-  /** Moves the owned tab to `url` when it is in the requester's window, so a challenge shows where they are. */
-  async function navigateOwned(
-    requester: LiveRequester,
-    url: string,
-    signal: AbortSignal,
-  ): Promise<number | null> {
-    const { tabId: requesterTabId, context } = requester();
-    const windowId = await windowOf(requesterTabId);
-    return exclusively(async () => {
-      const own = await ownedTab();
-      if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) return null;
-      signal.throwIfAborted();
-      await tabs.update(own.tabId, { url });
-      await owned.save({ tabId: own.tabId, path: new URL(url).pathname });
-      return own.tabId;
-    });
-  }
-
-  function loadOwned(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
-    return throttle.load(signal, async (timeout) => {
-      const bounded = AbortSignal.any([signal, timeout]);
-      const navigated = await navigateOwned(requester, url, bounded);
-      if (navigated === null) return createOwned(requester, url, bounded, bounded);
-      await waitOrClose(navigated, new URL(url).pathname, bounded);
-      return navigated;
-    });
-  }
 
   async function activate(tabId: number, signal: AbortSignal): Promise<void> {
     signal.throwIfAborted();
@@ -231,24 +46,20 @@ export function createMfcTabs(deps: {
   }
 
   return {
-    loadOwned,
-
     async lease(requester: LiveRequester, signal: AbortSignal): Promise<MfcTabLease> {
       const { context } = requester();
-      const own = await exclusively(ownedTab);
-      if (own && inContext(own.tab, context)) return { kind: "owned", tabId: own.tabId };
+      const owned = await own.landedIn(context);
+      if (owned !== null) return { kind: "owned", tabId: owned };
       if (borrowing) {
         const open = await tabs.query({
-          url: `${origin}/*`,
+          url: `${origins.mfc}/*`,
           status: "complete",
           discarded: false,
         });
         const borrowed = open.find((tab) => inContext(tab, context))?.id;
         if (borrowed !== undefined) return { kind: "borrowed", tabId: borrowed };
       }
-      const tabId = await throttle.load(signal, (timeout) =>
-        createOwned(requester, `${origin}/`, signal, timeout),
-      );
+      const tabId = await own.loadOwned(requester, `${origins.mfc}/`, signal, tabIdOf);
       return { kind: "owned", tabId };
     },
 
@@ -259,7 +70,7 @@ export function createMfcTabs(deps: {
       signal: AbortSignal,
     ): Promise<number> {
       const url = mfcItemUrl(mfcItemId, origins);
-      const tabId = await loadOwned(requester, url, signal);
+      const tabId = await own.loadOwned(requester, url, signal, tabIdOf);
       await activate(tabId, signal);
       return tabId;
     },
@@ -287,12 +98,7 @@ export function createMfcTabs(deps: {
     },
 
     /** Closes a challenge tab nobody solved, if it is still the extension's, so a reload in it cannot run on. */
-    async dismiss(tabId: number): Promise<void> {
-      await exclusively(async () => {
-        const record = await owned.load();
-        if (record?.tabId === tabId) await closeOwned();
-      });
-    },
+    dismiss: own.closeUntilGone,
 
     async handBack(requester: LiveRequester, signal: AbortSignal): Promise<void> {
       selfActivatedTabId = null;
@@ -310,11 +116,7 @@ export function createMfcTabs(deps: {
         selfActivatedTabId = null;
         return;
       }
-      focusedDuringCreate?.add(tabId);
-      await exclusively(async () => {
-        const record = await owned.load();
-        if (record?.tabId === tabId) await owned.save(null);
-      });
+      await own.noteActivated(tabId);
     },
 
     stopBorrowing(): void {
@@ -323,7 +125,7 @@ export function createMfcTabs(deps: {
 
     async release(): Promise<void> {
       borrowing = true;
-      await exclusively(closeOwned);
+      await own.release();
     },
   };
 }

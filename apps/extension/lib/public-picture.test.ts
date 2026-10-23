@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import {
+  COMMITS_SHOWING_PENDING,
   COMMIT_STYLES,
   ORIGINS,
   fakeExtension,
@@ -9,7 +10,7 @@ import {
   page,
   tooClose,
 } from "../test/fake-browser";
-import type { OwnedTab } from "./mfc-tab";
+import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { THROTTLE } from "./throttle";
 
@@ -241,7 +242,7 @@ describe("public pictures in an owned static tab", () => {
     expect(extension.publicPictureCalls).toEqual([]);
   });
 
-  test.each(COMMIT_STYLES)(
+  test.each(COMMITS_SHOWING_PENDING)(
     "a picture tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
     async (_name, style) => {
       const extension = fakeExtension({
@@ -256,8 +257,7 @@ describe("public pictures in an owned static tab", () => {
       if (tabId === undefined) throw new Error("no picture tab");
       const loadingFrom = extension.clock.now();
       await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 1000);
-      extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Mine" });
-      await extension.clock.runUntil(() => extension.clock.now() >= loadingFrom + 2000);
+      extension.tabs.navigate(tabId, { url: "https://example.com/", title: "Mine", loadMs: 5000 });
       extension.fetcher.cancel(run.key);
       await extension.settle();
 
@@ -284,7 +284,7 @@ describe("public pictures in an owned static tab", () => {
     const ownedPictureTab = memoryValue<OwnedTab>(null);
     const extension = fakeExtension({ pages: publicPages, ownedPictureTab });
     const tabId = extension.tabs.open(pictureUrl(1));
-    await ownedPictureTab.save({ tabId, path: "/upload/items/1/1.jpg" });
+    await ownedPictureTab.save({ state: "landed", tabId, path: "/upload/items/1/1.jpg" });
     extension.restart();
     await extension.settle();
 

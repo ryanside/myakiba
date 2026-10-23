@@ -8,7 +8,7 @@ import { armCollector, collectedPageSchema, stopCollector } from "../lib/collect
 import type { CollectRequest } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { createFetcher } from "../lib/fetcher";
-import { ownedTabSchema } from "../lib/mfc-tab";
+import { ownedTabSchema } from "../lib/owned-tab";
 import { servePort } from "../lib/port-host";
 import { OPEN_THROTTLE, throttleStateSchema } from "../lib/throttle";
 

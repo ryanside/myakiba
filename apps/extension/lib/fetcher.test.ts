@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   CHALLENGE_PAGE,
+  COMMITS_SHOWING_PENDING,
   COMMIT_STYLES,
   INCOGNITO,
   ORIGINS,
@@ -18,7 +19,7 @@ import type { FakeClock, FakeExtension } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
-import type { OwnedTab } from "./mfc-tab";
+import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { OPEN_THROTTLE, THROTTLE } from "./throttle";
 
@@ -982,7 +983,7 @@ describe("the MFC tab", () => {
     const ownedTab = memoryValue<OwnedTab>(null);
     const extension = fakeExtension({ pages: itemPages(), ownedTab });
     const left = extension.tabs.open(`${ORIGINS.mfc}/item/7`);
-    await ownedTab.save({ tabId: left, path: "/item/7" });
+    await ownedTab.save({ state: "landed", tabId: left, path: "/item/7" });
 
     extension.fetcher.resume();
     await extension.settle();
@@ -1211,7 +1212,7 @@ describe("the MFC tab, however the browser shows a load before it commits", () =
     },
   );
 
-  test.each(COMMIT_STYLES)(
+  test.each(COMMITS_SHOWING_PENDING)(
     "a challenge tab the user moves somewhere the extension cannot read stays open when the run is cancelled (%s commits)",
     async (_name, style) => {
       let navigations = 0;
@@ -1223,8 +1224,7 @@ describe("the MFC tab, however the browser shows a load before it commits", () =
       const run = extension.run([7]);
       await extension.clock.runUntil(() => extension.tabs.loads.length === 2);
       await advance(extension.clock, 1000);
-      extension.tabs.navigate(101, { url: "https://example.com/", title: "Mine" });
-      await advance(extension.clock, 1000);
+      extension.tabs.navigate(101, { url: "https://example.com/", title: "Mine", loadMs: 5000 });
       extension.fetcher.cancel(run.key);
       await extension.settle();
 

@@ -11,7 +11,6 @@ export const UNLISTED_ORIGIN = "http://127.0.0.1:4604";
 
 export const GATED_ID = 98_777;
 export const PUBLIC_ID = 98_778;
-/** A public item whose picture the static CDN redirects to another item's. */
 export const MOVED_PICTURE_ID = 98_779;
 
 const fixtures = path.join(import.meta.dir, "../../../packages/mfc/fixtures");

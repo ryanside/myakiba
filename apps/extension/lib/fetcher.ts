@@ -6,7 +6,9 @@ import type { Clock, SessionValue } from "./clock";
 import { NO_STATUS } from "./collect";
 import type { CollectedPage, PageRequest } from "./collect";
 import { createMfcTabs } from "./mfc-tab";
-import type { LiveRequester, MfcTabLease, OwnedTab, TabsApi, WindowsApi } from "./mfc-tab";
+import type { MfcTabLease, WindowsApi } from "./mfc-tab";
+import { ownedTab } from "./owned-tab";
+import type { LiveRequester, OwnedTab, TabsApi } from "./owned-tab";
 import { toConfiguredUrl } from "./origins";
 import type { Origins } from "./origins";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -101,10 +103,11 @@ export function createFetcher(deps: FetcherDeps) {
   const { clock, origins } = deps;
   const throttle = createThrottle({ clock, random: deps.random, state: deps.throttleState });
   const mfcTabs = createMfcTabs({ ...deps, owned: deps.ownedTab, throttle });
-  const pictureTabs = createMfcTabs({
-    ...deps,
+  const pictureTab = ownedTab({
+    tabs: deps.tabs,
+    clock,
     origin: origins.mfcStatic,
-    owned: deps.ownedPictureTab,
+    record: deps.ownedPictureTab,
     throttle,
   });
   const listeners = new Map<RunKey, FetchRun["emit"]>();
@@ -143,12 +146,13 @@ export function createFetcher(deps: FetcherDeps) {
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return null;
     try {
-      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, async (bounded) => {
-        if (picture.access === "gated") return deps.fetchGatedPicture(tabId, picture.url, bounded);
-        const pictureTabId = await pictureTabs.loadOwned(requester, url.href, bounded);
-        bounded.throwIfAborted();
-        return deps.fetchPublicPicture(pictureTabId, picture.url, bounded);
-      });
+      return await withTimeout(clock, PICTURE_TIMEOUT_MS, signal, (bounded) =>
+        picture.access === "gated"
+          ? deps.fetchGatedPicture(tabId, picture.url, bounded)
+          : pictureTab.loadOwned(requester, url.href, bounded, (pictureTabId, inTurn) =>
+              deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
+            ),
+      );
     } catch {
       return null;
     }
@@ -314,7 +318,7 @@ export function createFetcher(deps: FetcherDeps) {
       dispatch({ type: "answered", job, outcome: await booked(outcome) });
     }
     await mfcTabs.release();
-    await pictureTabs.release();
+    await pictureTab.release();
   }
 
   function kick(): void {
@@ -346,7 +350,7 @@ export function createFetcher(deps: FetcherDeps) {
       dispatch({ type: "cancelled", run: key });
     },
     async noteTabActivated(tabId: number): Promise<void> {
-      await Promise.all([mfcTabs.noteActivated(tabId), pictureTabs.noteActivated(tabId)]);
+      await Promise.all([mfcTabs.noteActivated(tabId), pictureTab.noteActivated(tabId)]);
     },
     /** Runs the queue once, which closes a tab left open by a worker that stopped mid-run. */
     resume: kick,

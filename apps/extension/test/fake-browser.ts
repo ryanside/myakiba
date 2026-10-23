@@ -5,8 +5,9 @@ import type { Clock, SessionValue } from "../lib/clock";
 import type { CollectedPage, PageRequest } from "../lib/collect";
 import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
-import type { OwnedTab, Tab, TabsApi, WindowsApi } from "../lib/mfc-tab";
+import type { WindowsApi } from "../lib/mfc-tab";
 import type { Origins } from "../lib/origins";
+import type { OwnedTab, Tab, TabsApi } from "../lib/owned-tab";
 import { pictureToRead } from "../lib/picture";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
 import { OPEN_THROTTLE } from "../lib/throttle";
@@ -114,9 +115,7 @@ export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: (
 type FakeTab = {
   id: number;
   windowId: number;
-  /** Where the tab is, or where its current load goes. */
   url: string;
-  /** The page shown before the current load, which the browser keeps reporting until that load commits. */
   committedUrl: string;
   title: string;
   completesAt: number;
@@ -167,12 +166,17 @@ const WINDOWS = new Map([
  */
 export type CommitStyle = "chrome" | "firefox";
 
-/** Each commit style with a name for test titles. */
 export const COMMIT_STYLES: readonly (readonly [string, CommitStyle | undefined])[] = [
   ["at once", undefined],
   ["Chrome-style", "chrome"],
   ["Firefox-style", "firefox"],
 ];
+
+/**
+ * Firefox shows only the old page before a load commits, so a tab the user moves reads as the extension's own load
+ * until the user's lands.
+ */
+export const COMMITS_SHOWING_PENDING = COMMIT_STYLES.filter(([, style]) => style !== "firefox");
 
 function readable(url: string): boolean {
   const origin = URL.parse(url)?.origin;
@@ -210,6 +214,17 @@ function fakeTabs(
     if (readable(shown)) shownTab = { ...shownTab, url: shown, title };
     if (style === "chrome" && readable(url)) shownTab = { ...shownTab, pendingUrl: url };
     return shownTab;
+  }
+
+  /** Create and update answer before their load commits, even when the fake commits at once. */
+  function started(tab: FakeTab): Tab {
+    const { completesAt: _completesAt, committedUrl, url, title: _title, ...seen } = tab;
+    let answer: Tab = { ...seen, status: "loading" };
+    if (readable(committedUrl)) answer = { ...answer, url: committedUrl };
+    if (options.deferNavigationCommit !== "firefox" && readable(url)) {
+      answer = { ...answer, pendingUrl: url };
+    }
+    return answer;
   }
 
   function activate(tabId: number): void {
@@ -273,17 +288,19 @@ function fakeTabs(
       const tab = add("about:blank", windowId, cookieStoreId);
       log.push(`create ${active ? "active" : "inactive"} ${url}`);
       load(tab, url, options.navigationMs());
+      const answer = started(tab);
       if (active) activate(tab.id);
       options.created(tab.id);
-      return view(tab);
+      return answer;
     },
     async update(tabId, { url, active }) {
       const tab = tabs.get(tabId);
       if (!tab) throw new Error(`No tab with id: ${tabId}`);
       if (url !== undefined) load(tab, url, options.navigationMs());
+      const answer = url === undefined ? view(tab) : started(tab);
       log.push(`update ${tabId}${url === undefined ? "" : ` ${url}`}${active ? " active" : ""}`);
       if (active) activate(tabId);
-      return view(tab);
+      return answer;
     },
     async remove(tabId) {
       tabs.delete(tabId);
@@ -400,7 +417,6 @@ export function fakeExtension(options: {
   readonly navigationMs?: () => number;
   readonly onTabCreated?: (tabId: number) => void;
   readonly deferNavigationCommit?: CommitStyle | undefined;
-  /** Where the server sends a navigation to `url` instead, if anywhere. */
   readonly redirect?: (url: string) => string | undefined;
   readonly gatedPicture?: (url: string) => Promise<PortPicture | null>;
   /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
