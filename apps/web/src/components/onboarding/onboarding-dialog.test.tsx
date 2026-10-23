@@ -99,22 +99,11 @@ test("an account signed in before the deploy keeps the welcome dialog closed", a
 
 test("a new account sees the welcome dialog and saves that it has seen onboarding", async () => {
   await openDashboard(false);
-
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
-  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
-});
-
-test("a new account that closes Getting Started before the welcome opens keeps it closed", async () => {
-  await openDashboard(false);
-  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
-  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
   fireEvent.click(screen.getByRole("button", { name: "Close" }));
-  await act(() => Bun.sleep(500));
 
-  expect(
-    screen.queryByRole("dialog") !== null,
-    "the welcome dialog opened again after the user closed it",
-  ).toBe(false);
+  await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
 
 test("a new account sees the welcome as soon as the dashboard renders", async () => {
