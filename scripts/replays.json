@@ -1194,7 +1194,7 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a CTE write in a read, a write in a command's before step and a writing before held in a variable",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, and the removed internal_error category",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
@@ -1209,7 +1209,13 @@
         "src/domain/kernel.type-test.ts(58,5): error TS2741",
         "src/domain/kernel.type-test.ts(82,30): error TS2339",
         "src/domain/kernel.type-test.ts(91,22): error TS2339",
-        "src/domain/kernel.type-test.ts(106,9): error TS2769"
+        "src/domain/kernel.type-test.ts(106,9): error TS2769",
+        "src/domain/kernel.type-test.ts(136,24): error TS2339",
+        "src/domain/kernel.type-test.ts(146,19): error TS2339",
+        "src/domain/kernel.type-test.ts(161,27): error TS2322",
+        "src/domain/kernel.type-test.ts(165,16): error TS2769",
+        "src/domain/kernel.type-test.ts(171,16): error TS2769",
+        "src/domain/kernel.type-test.ts(185,34): error TS2345"
       ]
     }
   ]
