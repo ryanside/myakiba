@@ -113,7 +113,7 @@ type ReadCache = {
 type RootedReadSpec<F extends Family, Input, Data> = ReadCache & {
   /**
    * A hand-built key under one of the family's cataloged roots, so sync and the family's
-   * writes refresh it. Scraper code still invalidates these keys by their literal roots.
+   * writes refresh it. The sync and import screens still invalidate these keys by their literal roots.
    */
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
   readonly load: (input: Input) => Promise<Data>;

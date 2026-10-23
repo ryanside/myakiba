@@ -17,14 +17,12 @@ import type {
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { WORKER_RUN_LEASE_MS } from "@myakiba/contracts/sync/constants";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import { tryCatch } from "@myakiba/utils/result";
 
 const RECENT_ITEMS_LIMIT = 5;
 const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
-const INTERRUPTED_IMPORT_ERROR = "The import was interrupted. Try again to continue.";
 const IMPORTING_ITEMS_MESSAGE = "Importing items from MyFigureCollection…";
 
 type ImportStatus = DataTransferImport["status"];
@@ -70,13 +68,10 @@ export type ImportView = {
 
 export const isActive = (status: ImportStatus) => status === "queued" || status === "running";
 
-const isWorkerEraImport = (row: ImportRow) => row.heartbeatAt === null;
-
 function leaseLapsed(row: ImportRow, now: Date): boolean {
   if (!isActive(row.status)) return false;
   const lastSeen = row.heartbeatAt ?? row.updatedAt;
-  const lease = isWorkerEraImport(row) ? WORKER_RUN_LEASE_MS : DATA_TRANSFER_IMPORT_LEASE_MS;
-  return now.getTime() - lastSeen.getTime() >= lease;
+  return now.getTime() - lastSeen.getTime() >= DATA_TRANSFER_IMPORT_LEASE_MS;
 }
 
 function settledStatus(row: ImportRow, failedRows: number, pendingRows: number) {
@@ -99,12 +94,6 @@ function viewImport(row: ImportRow, waiting: WaitingItems, now: Date): ImportVie
     failedRows: row.failedCollectionItems,
     report: row.report,
   };
-  if (isWorkerEraImport(row)) {
-    return lapsed
-      ? { ...stored, status: "failed", phase: "failed", error: INTERRUPTED_IMPORT_ERROR }
-      : stored;
-  }
-
   const failureReasons = [...waiting.failureReasons];
   let { failedRows, pendingRows } = waiting;
   if (lapsed && pendingRows > 0) {
@@ -199,7 +188,7 @@ export async function readView(
     })
     .from(dataTransferImportItem)
     .where(
-      and(eq(dataTransferImportItem.userId, userId), ne(dataTransferImportItem.status, "scraped")),
+      and(eq(dataTransferImportItem.userId, userId), ne(dataTransferImportItem.status, "imported")),
     )
     .groupBy(
       dataTransferImportItem.userId,
@@ -328,7 +317,7 @@ async function readRecentItems(userId: string): Promise<SyncJobRecentItem[]> {
   return rows.map((row) => ({
     externalId: row.externalId,
     title: row.title,
-    outcome: row.status === "scraped" ? "succeeded" : "failed",
+    outcome: row.status === "imported" ? "succeeded" : "failed",
     failureReason: row.status === "failed" ? (row.errorReason ?? "Import failed.") : null,
     completedAt: row.updatedAt.toISOString(),
   }));
@@ -341,10 +330,10 @@ function jobStatusOf(view: ImportView, recentItems: SyncJobRecentItem[]): SyncJo
       phase = "queued";
       break;
     case "preparing_items":
-      phase = "scraping";
+      phase = "importing";
       break;
     case "writing_records":
-      phase = "persisting";
+      phase = "saving";
       break;
     case "completed":
       phase = "completed";
@@ -363,7 +352,7 @@ function jobStatusOf(view: ImportView, recentItems: SyncJobRecentItem[]): SyncJo
   else if (view.status === "partial") terminalState = "partial";
   else if (view.status === "failed") terminalState = "error";
 
-  let statusMessage = "Waiting for the import worker…";
+  let statusMessage = "Waiting for the import to start…";
   if (view.phase === "preparing_items") statusMessage = IMPORTING_ITEMS_MESSAGE;
   else if (view.phase === "writing_records") statusMessage = "Writing imported records…";
   else if (view.status === "completed") statusMessage = "Import completed.";
@@ -372,7 +361,7 @@ function jobStatusOf(view: ImportView, recentItems: SyncJobRecentItem[]): SyncJo
 
   const total = view.row.totalCollectionItems;
   const progress =
-    !isWorkerEraImport(view.row) && total > 0
+    total > 0
       ? {
           processed: total - view.pendingRows,
           total,

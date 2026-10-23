@@ -96,13 +96,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - WORKER_PROXY_URL=${WORKER_PROXY_URL}
       - DATABASE_URL=${DATABASE_URL}
-      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
-      - AWS_BUCKET_REGION=${AWS_BUCKET_REGION}
-      - AWS_BUCKET_URL=${AWS_BUCKET_URL}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - POSTHOG_API_KEY=${POSTHOG_API_KEY}

@@ -613,20 +613,6 @@ describe("an interrupted import", () => {
     const next = await start(archiveOf([orderRecord("order-1")], []));
     expect(next.status).toBe(200);
   });
-
-  test("worker-era imports keep their worker lease for a day", async () => {
-    await db.insert(dataTransferImport).values({
-      userId,
-      importId: "legacy",
-      jobId: "legacy",
-      fileName: "export.json",
-      status: "queued",
-      phase: "queued",
-      updatedAt: new Date(Date.now() - 180_000),
-    });
-    expect(await currentImport()).toMatchObject({ status: "queued", error: null });
-    expect(await post("/imports/current/retry")).toMatchObject({ status: 409 });
-  });
 });
 
 describe("retry and delete", () => {
@@ -696,7 +682,7 @@ describe("the import status stream", () => {
     };
 
     expect(await nextStatus()).toMatchObject({
-      phase: "scraping",
+      phase: "importing",
       progress: { processed: 0, total: 2, succeeded: 0, failed: 0 },
       recentItems: [],
       terminalState: null,
@@ -748,7 +734,7 @@ describe("a large archive", () => {
   }, 60_000);
 });
 
-test("scraped payloads are cleared while failed rows remain available for retry", async () => {
+test("imported payloads are cleared while failed rows remain available for retry", async () => {
   const run = await startRun(archiveOf([], [collectionRecord("c1", 1), collectionRecord("c2", 2)]));
   await complete(run.id, 1);
   await fail(run.id, 2);
@@ -782,44 +768,6 @@ for (const outcome of ["complete", "fail"] as const) {
     expect(row?.heartbeatAt?.getTime()).toBeGreaterThan(before.getTime() + 100_000);
   });
 }
-
-test("retrying a worker-written partial import uses the worker ids without duplicating rows", async () => {
-  const firstId = await seedItem(1);
-  const archive = archiveOf(
-    [orderRecord("order-1")],
-    [collectionRecord("c1", 1, { orderKey: "order-1" }), collectionRecord("c2", 2)],
-  );
-  const { createImportId } = await import("./import-plan");
-  const run = { userId, importId: "worker-partial" };
-  const orderId = createImportId({ ...run, kind: "order", localKey: "order-1" });
-  const collectionId = createImportId({ ...run, kind: "collection", localKey: "c1" });
-  await db.insert(order).values({ id: orderId, userId, title: "Worker order" });
-  await db.insert(collection).values({ id: collectionId, userId, itemId: firstId, orderId });
-  await db.insert(dataTransferImport).values({
-    ...run,
-    jobId: "worker-partial",
-    fileName: "export.json",
-    archive,
-    status: "partial",
-    phase: "completed",
-    importedOrders: 1,
-    importedCollectionItems: 1,
-    failedCollectionItems: 1,
-    totalCollectionItems: 2,
-  });
-  const retried = await retryRun();
-  expect(retried).toMatchObject({
-    status: "running",
-    importedOrders: 1,
-    importedCollectionItems: 1,
-    missingMfcItemIds: [2],
-  });
-  expect(await db.$count(order)).toBe(1);
-  expect(await db.$count(collection)).toBe(1);
-  await complete(retried.id, 2);
-  expect(await currentImport()).toMatchObject({ status: "completed", importedCollectionItems: 2 });
-  expect(await db.$count(collection)).toBe(2);
-});
 
 test("status reads stay in one snapshot when a retry commits between reads", async () => {
   const run = await startRun(archiveOf([], [collectionRecord("c1", 1)]));
@@ -872,35 +820,6 @@ test("status reads stay in one snapshot when a retry commits between reads", asy
   }
 });
 
-test("a lost worker-era import lapses just past 24 hours and retries its archive", async () => {
-  const archive = archiveOf([], [collectionRecord("lost", 98_777)]);
-  await db.insert(dataTransferImport).values({
-    userId,
-    importId: "lost-worker",
-    jobId: "lost-worker",
-    fileName: "export.json",
-    archive,
-    status: "running",
-    phase: "preparing_items",
-    totalCollectionItems: 1,
-    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 - 1000),
-  });
-  expect(await currentImport()).toMatchObject({
-    status: "failed",
-    error: "The import was interrupted. Try again to continue.",
-  });
-  const retried = await post("/imports/current/retry");
-  expect(retried.status).toBe(200);
-  const run = dataTransferImportSchema
-    .extend({ missingMfcItemIds: z.array(z.number()) })
-    .parse(retried.body);
-  expect(run.id).not.toBe("lost-worker");
-  expect(await complete(run.id, 98_777)).toMatchObject({
-    status: 200,
-    body: { status: "completed", importedCollectionItems: 1 },
-  });
-});
-
 test("an S3 preparation timeout records a retryable import item failure", async () => {
   const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
   failS3 = true;
@@ -911,7 +830,7 @@ test("an S3 preparation timeout records a retryable import item failure", async 
       status: "failed",
       failedCollectionItems: 1,
       report: {
-        failureReasons: [{ reason: "Persistence failed while saving scraped items", count: 1 }],
+        failureReasons: [{ reason: "Failed to save this item", count: 1 }],
       },
     });
     expect(
@@ -988,23 +907,6 @@ test("import polling keeps its last status through a database blip and retries",
   }
 }, 25_000);
 
-test("worker-era import stays running one second before 24 hours", async () => {
-  await db.insert(dataTransferImport).values({
-    userId,
-    importId: "live-worker",
-    jobId: "live-worker",
-    fileName: "export.json",
-    archive: archiveOf([], [collectionRecord("c1", 98_777)]),
-    status: "running",
-    phase: "preparing_items",
-    totalCollectionItems: 1,
-    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 1000),
-  });
-  expect(await currentImport()).toMatchObject({ status: "running", error: null });
-  const { default: service } = await import("./service");
-  expect(await service.getImportJobStatus(userId)).toMatchObject({ terminalState: null });
-});
-
 for (const [table, body] of [
   ["item", "RAISE EXCEPTION 'item persistence unavailable';"],
   ["item", "RETURN NULL;"],
@@ -1025,7 +927,7 @@ for (const [table, body] of [
           status: "failed",
           failedCollectionItems: 1,
           report: {
-            failureReasons: [{ reason: "Persistence failed while saving scraped items", count: 1 }],
+            failureReasons: [{ reason: "Failed to save this item", count: 1 }],
           },
         },
       });
@@ -1092,7 +994,7 @@ test("a mixed import failure batch preserves imported Items and ignores a stale 
       .from(dataTransferImportItem)
       .orderBy(asc(dataTransferImportItem.itemExternalId)),
   ).toEqual([
-    { id: 1, status: "scraped" },
+    { id: 1, status: "imported" },
     { id: 2, status: "failed" },
     { id: 3, status: "failed" },
   ]);

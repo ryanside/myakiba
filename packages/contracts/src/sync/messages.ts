@@ -4,21 +4,19 @@ export const SYNC_STATUS_MESSAGES = {
   queued: "Import queued",
   retryQueued: "Retry queued",
   starting: (count: number) => `Starting to import ${count} item${count === 1 ? "" : "s"}`,
-  scraping: (processed: number, total: number) =>
+  importing: (processed: number, total: number) =>
     `Importing item details from MyFigureCollection: ${processed}/${total} processed`,
-  persisting: (count: number) => `Saving ${count} imported item${count === 1 ? "" : "s"}`,
   itemOutcome: (item: Pick<SyncJobRecentItem, "outcome" | "title" | "externalId">) =>
     `${item.outcome === "succeeded" ? "Imported details for" : "Failed to import details for"} ${item.title ?? `MFC #${item.externalId}`}`,
   completed: (successCount: number, totalCount: number) =>
     `Added ${successCount}/${totalCount} items`,
   partial: (successCount: number, totalCount: number, failCount: number) =>
     `Added ${successCount}/${totalCount} items. ${failCount} failed.`,
-  failedScrape: "Failed to import item details from MyFigureCollection",
+  failedFetch: "Failed to import item details from MyFigureCollection",
   failedPersist: "Failed to save items",
   failedBeforeStart: "Import failed before processing started",
-  failedDuringProcessing: "Import failed during processing",
   interrupted: "Import interrupted",
-  insertedWithoutScrape: "Items added using details already in myakiba",
+  insertedFromExisting: "Items added using details already in myakiba",
   streamError: "Lost connection. Reload the page to see the latest status.",
   streamTimeout: "Status updates timed out. Reload the page to see the latest status.",
   connecting: "Connecting...",

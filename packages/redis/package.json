@@ -17,8 +17,7 @@
   "dependencies": {
     "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
-    "ioredis": "catalog:",
-    "zod": "catalog:"
+    "ioredis": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",

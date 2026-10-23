@@ -31,7 +31,7 @@ const payload = (csvRow: NormalizedInternalCsvItem): JobData => ({
   ordersToInsert: [],
 });
 
-test("CSV completion keeps an empty Item title as the worker does", () => {
+test("CSV completion keeps an empty Item title", () => {
   expect(fetchedItemRows(payload(row), item).orders).toMatchObject([{ title: "" }]);
 });
 

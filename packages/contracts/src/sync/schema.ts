@@ -114,13 +114,7 @@ export const syncSessionDetailSearchSchema = z.object({
 
 export const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);
 
-export const syncJobPhaseSchema = z.enum([
-  "queued",
-  "scraping",
-  "persisting",
-  "completed",
-  "failed",
-]);
+export const syncJobPhaseSchema = z.enum(["queued", "importing", "saving", "completed", "failed"]);
 
 export const syncJobProgressSchema = z.object({
   processed: z.number().int().nonnegative(),
@@ -138,10 +132,8 @@ export const syncJobRecentItemSchema = z.object({
 });
 
 export const syncJobErrorCodeSchema = z.enum([
-  "queue_failed",
-  "scrape_failed",
+  "fetch_failed",
   "persistence_failed",
-  "invalid_payload",
   "connection_lost",
   "timeout",
   "unknown",
@@ -368,7 +360,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
-      itemsToScrape: z.array(syncOrderItemSchema),
+      itemsToFetch: z.array(syncOrderItemSchema),
       itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
@@ -379,7 +371,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     syncSessionId: z.string(),
     order: z.object({
       details: syncOrderSchema,
-      itemsToScrape: z.array(syncOrderItemSchema),
+      itemsToFetch: z.array(syncOrderItemSchema),
       itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
@@ -389,7 +381,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     userId: z.string(),
     syncSessionId: z.string(),
     collection: z.object({
-      itemsToScrape: z.array(syncCollectionItemSchema),
+      itemsToFetch: z.array(syncCollectionItemSchema),
       itemsToInsert: z.array(queuedCollectionItemSchema),
     }),
   }),
@@ -411,11 +403,8 @@ export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
  * `SyncSessionStatus`.
  *
  * This is intentionally lossy:
- * - `processing` maps to `scraping` because persistence is not stored durably
+ * - `processing` maps to `importing` because saving is not stored durably
  * - `partial` maps to `completed` because partial is a terminal outcome, not a phase
- *
- * Do not use this for live worker transitions; the worker should set `phase`
- * explicitly as it moves through queued/scraping/persisting.
  *
  * @example
  * sessionStatusToPhase("pending")
@@ -430,7 +419,7 @@ export const sessionStatusToPhase = (status: SyncSessionStatus): SyncJobPhase =>
     case "pending":
       return "queued";
     case "processing":
-      return "scraping";
+      return "importing";
     case "completed":
     case "partial":
       return "completed";

@@ -9,14 +9,12 @@
  */
 import type Redis from "ioredis";
 
-export const ITEM_RESYNC_QUEUE_NAME = "item-resync-queue";
-
 const COOLDOWN_KEY_PREFIX = "item-resync:cooldown";
 const COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days
 const TRANSACTION_PREFIX = "xid:";
 
 export type ItemResyncState = {
-  readonly status: "idle" | "requested" | "processing" | "cooldown";
+  readonly status: "idle" | "cooldown";
   readonly cooldownExpiresAt: string | null;
 };
 

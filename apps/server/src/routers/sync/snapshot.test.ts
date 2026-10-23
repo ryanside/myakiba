@@ -28,7 +28,7 @@ test.skipIf(!redisUrl && !process.env.CI)(
     const snapshot = (revision: number): SyncJobStatus => ({
       revision,
       jobId,
-      phase: "scraping",
+      phase: "importing",
       statusMessage: `Revision ${revision}`,
       progress: null,
       recentItems: [],

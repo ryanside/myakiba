@@ -42,7 +42,7 @@ export function buildRetryJobData(
     const failedItems = requestPayload.items.filter((item) =>
       failedItemExternalIds.has(item.itemExternalId),
     );
-    const { collectionItems, orderItems, csvItemsToScrape } = prepareCsvItems(
+    const { collectionItems, orderItems, csvItemsToFetch } = prepareCsvItems(
       failedItems,
       existingItems,
       requestPayload.userId,
@@ -59,23 +59,23 @@ export function buildRetryJobData(
 
     return {
       ...requestPayload,
-      items: csvItemsToScrape,
+      items: csvItemsToFetch,
       itemsToInsert: retryItemsToInsert,
       ordersToInsert,
     };
   }
 
   if (requestPayload.type === "order" || requestPayload.type === "order-item") {
-    const failedItems = requestPayload.order.itemsToScrape.filter((item) =>
+    const failedItems = requestPayload.order.itemsToFetch.filter((item) =>
       failedItemExternalIds.has(item.itemExternalId),
     );
-    const itemsToScrape: typeof requestPayload.order.itemsToScrape = [];
+    const itemsToFetch: typeof requestPayload.order.itemsToFetch = [];
 
     for (const item of failedItems) {
       const { collectionId, itemExternalId, ...details } = item;
       const existingItem = existingItemsByExternalId.get(itemExternalId);
       if (!existingItem) {
-        itemsToScrape.push(item);
+        itemsToFetch.push(item);
         continue;
       }
 
@@ -95,22 +95,22 @@ export function buildRetryJobData(
       ...requestPayload,
       order: {
         details: requestPayload.order.details,
-        itemsToScrape,
+        itemsToFetch,
         itemsToInsert,
       },
     };
   }
 
-  const failedItems = requestPayload.collection.itemsToScrape.filter((item) =>
+  const failedItems = requestPayload.collection.itemsToFetch.filter((item) =>
     failedItemExternalIds.has(item.itemExternalId),
   );
-  const itemsToScrape: typeof requestPayload.collection.itemsToScrape = [];
+  const itemsToFetch: typeof requestPayload.collection.itemsToFetch = [];
 
   for (const item of failedItems) {
     const { collectionId, itemExternalId, ...details } = item;
     const existingItem = existingItemsByExternalId.get(itemExternalId);
     if (!existingItem) {
-      itemsToScrape.push(item);
+      itemsToFetch.push(item);
       continue;
     }
 
@@ -126,6 +126,6 @@ export function buildRetryJobData(
 
   return {
     ...requestPayload,
-    collection: { itemsToScrape, itemsToInsert },
+    collection: { itemsToFetch, itemsToInsert },
   };
 }

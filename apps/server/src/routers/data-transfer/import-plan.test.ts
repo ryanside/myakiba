@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createImportId } from "./import-plan";
 
-test("import ids match the frozen worker vector", () => {
+test("import ids match the frozen vector", () => {
   expect(
     createImportId({
       userId: "user-1",

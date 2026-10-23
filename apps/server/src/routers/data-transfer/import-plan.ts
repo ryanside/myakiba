@@ -68,7 +68,7 @@ function selectRelease({
   return { kind: "substitute", release: matchingDate ?? latest };
 }
 
-const WORKER_IMPORT_ID_NAMESPACE = "85f8f00e-44c6-4e07-8d8d-e99d5e351daa";
+const IMPORT_ID_NAMESPACE = "85f8f00e-44c6-4e07-8d8d-e99d5e351daa";
 
 export function createImportId({
   userId,
@@ -81,7 +81,7 @@ export function createImportId({
   readonly kind: "order" | "collection";
   readonly localKey: string;
 }): string {
-  return uuidv5(JSON.stringify([userId, importId, kind, localKey]), WORKER_IMPORT_ID_NAMESPACE);
+  return uuidv5(JSON.stringify([userId, importId, kind, localKey]), IMPORT_ID_NAMESPACE);
 }
 
 export function planCollectionRows(

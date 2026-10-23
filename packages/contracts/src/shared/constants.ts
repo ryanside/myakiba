@@ -39,7 +39,7 @@ export const SYNC_SESSION_STATUSES = [
   "partial",
 ] as const;
 
-export const SYNC_SESSION_ITEM_STATUSES = ["pending", "scraped", "failed"] as const;
+export const SYNC_SESSION_ITEM_STATUSES = ["pending", "imported", "failed"] as const;
 
 export const CATEGORIES = [
   "Prepainted",

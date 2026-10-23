@@ -595,8 +595,8 @@ describe.each(cases)("a $type sync", (sync) => {
     expect(await complete(run, X)).toEqual(imported);
     const afterX = rows(PRESENT, X);
     expect(snapshot(run.jobId)).toMatchObject({
-      phase: "scraping",
-      statusMessage: SYNC_STATUS_MESSAGES.scraping(afterX, total),
+      phase: "importing",
+      statusMessage: SYNC_STATUS_MESSAGES.importing(afterX, total),
       progress: { processed: afterX, total, succeeded: afterX, failed: 0 },
       recentItems: [recent(X)],
       error: null,
@@ -607,7 +607,7 @@ describe.each(cases)("a $type sync", (sync) => {
     expect(await complete(run, Y)).toEqual(imported);
     const afterY = rows(PRESENT, X, Y);
     expect(snapshot(run.jobId)).toMatchObject({
-      phase: "scraping",
+      phase: "importing",
       progress: { processed: afterY, total, succeeded: afterY, failed: 0 },
       recentItems: [recent(Y), recent(X)],
       terminalState: null,
@@ -639,7 +639,7 @@ describe.each(cases)("a $type sync", (sync) => {
       terminalState: "partial",
     });
     const unfinished = await results(run.syncSessionId);
-    expect(unfinished.filter((row) => row.status !== "scraped")).toEqual(
+    expect(unfinished.filter((row) => row.status !== "imported")).toEqual(
       Array.from({ length: failed }, () => ({ id: Z, status: "failed", reason: HIDDEN })),
     );
     expect(await userRows()).toEqual(await sync.expectedRows([PRESENT, X, Y]));
@@ -700,7 +700,7 @@ test("a page that is not the item fails it with the reason", async () => {
   ]);
   expect(snapshot(run.jobId)).toMatchObject({
     terminalState: "error",
-    error: { code: "scrape_failed", message: SYNC_STATUS_MESSAGES.failedScrape },
+    error: { code: "fetch_failed", message: SYNC_STATUS_MESSAGES.failedFetch },
   });
   expect(await db.$count(item, eq(item.externalId, X))).toBe(0);
   expect(await complete({ ...run, syncSessionId: "missing" }, X)).toMatchObject({ status: 404 });
@@ -720,10 +720,10 @@ test("a stale job's failure is ignored and its late success still imports", asyn
   expect(await complete(first, Y)).toEqual(imported);
   expect(await results(first.syncSessionId)).toEqual([
     { id: X, status: "pending", reason: null },
-    { id: Y, status: "scraped", reason: null },
+    { id: Y, status: "imported", reason: null },
   ]);
   expect(snapshot(second.jobId)).toMatchObject({
-    phase: "scraping",
+    phase: "importing",
     progress: { processed: 1, total: 2, succeeded: 1, failed: 0 },
   });
 
@@ -782,7 +782,7 @@ test("an interrupted run fails its pending items, which a retry fetches again", 
 
   expect(await interrupt(run)).toEqual({ status: 200, body: { outcome: "interrupted" } });
   expect(await results(run.syncSessionId)).toEqual([
-    { id: X, status: "scraped", reason: null },
+    { id: X, status: "imported", reason: null },
     { id: Y, status: "failed", reason: SYNC_STATUS_MESSAGES.interrupted },
   ]);
   expect(await session(run.syncSessionId)).toMatchObject({
@@ -894,7 +894,7 @@ test("CSV and order-item completions import the same missing Item without deadlo
       successCount: 1,
       failCount: 0,
     });
-    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "scraped", reason: null }]);
+    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "imported", reason: null }]);
   }
   expect(await db.$count(item, eq(item.externalId, X))).toBe(1);
   expect(await userRows()).toMatchObject([
@@ -988,8 +988,8 @@ test("a complete takes the Order lock before the session, so an Order delete nev
     failCount: 2,
   });
   expect(await results(run.syncSessionId)).toEqual([
-    { id: X, status: "failed", reason: "Persistence failed while saving scraped items" },
-    { id: Y, status: "failed", reason: "Persistence failed while saving scraped items" },
+    { id: X, status: "failed", reason: "Failed to save this item" },
+    { id: Y, status: "failed", reason: "Failed to save this item" },
   ]);
   expect(snapshot(run.jobId)).toMatchObject({
     terminalState: "error",
@@ -1044,7 +1044,7 @@ test("the job-status stream sends each item's update", async () => {
 
   expect(await complete(run, X)).toEqual(imported);
   expect(await stream.next()).toMatchObject({
-    phase: "scraping",
+    phase: "importing",
     progress: { processed: 1, total: 2, succeeded: 1, failed: 0 },
     recentItems: [recent(X)],
   });
@@ -1106,29 +1106,12 @@ test("an S3 timeout records the item as a persistence failure", async () => {
   failS3 = true;
   expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
   expect(await results(run.syncSessionId)).toEqual([
-    { id: X, status: "failed", reason: "Persistence failed while saving scraped items" },
+    { id: X, status: "failed", reason: "Failed to save this item" },
   ]);
   expect(snapshot(run.jobId)).toMatchObject({
     terminalState: "error",
     error: { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist },
   });
-});
-
-test("worker-era sync runs stay active past the extension lease", async () => {
-  const { default: service } = await import("./service");
-  await db.insert(syncSession).values({
-    id: "worker-run",
-    jobId: "worker-run",
-    userId,
-    syncType: "item",
-    status: "processing",
-    totalItems: 1,
-    updatedAt: new Date(Date.now() - 180_000),
-  });
-  await db.insert(syncSessionItem).values({ syncSessionId: "worker-run", itemExternalId: X });
-  expect(await service.getJobStatus("worker-run", userId)).toMatchObject({ terminalState: null });
-  expect(await listed("?status=processing")).toHaveLength(1);
-  expect(await post("/sessions/worker-run/retry")).toMatchObject({ status: 409 });
 });
 
 test("two concurrent first completes create one Order and import both items", async () => {
@@ -1305,48 +1288,6 @@ test("CSV completion imports an Owned row whose Order does not exist yet", async
   ]);
 });
 
-for (const age of [180_000, 24 * 60 * 60 * 1000 + 1000]) {
-  test(`worker-era controls leave a ${age}ms-old session untouched`, async () => {
-    const updatedAt = new Date(Date.now() - age);
-    await db.insert(syncSession).values({
-      id: "worker-control",
-      jobId: "worker-control",
-      userId,
-      syncType: "item",
-      status: "processing",
-      totalItems: 1,
-      updatedAt,
-    });
-    await db.insert(syncSessionItem).values({ syncSessionId: "worker-control", itemExternalId: X });
-    const before = await db.select().from(syncSession);
-    const run = { syncSessionId: "worker-control", jobId: "worker-control" };
-    expect(await heartbeat(run)).toEqual({ status: 200, body: { active: false } });
-    expect(await interrupt(run)).toEqual({ status: 200, body: { outcome: "ignored" } });
-    expect(await db.select().from(syncSession)).toEqual(before);
-    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "pending", reason: null }]);
-  });
-}
-
-test("worker-era sync lapses just past 24 hours in status and SQL filters", async () => {
-  const { default: service } = await import("./service");
-  await db.insert(syncSession).values({
-    id: "lost-worker",
-    jobId: "lost-worker",
-    userId,
-    syncType: "item",
-    status: "processing",
-    totalItems: 1,
-    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 - 1000),
-  });
-  await db.insert(syncSessionItem).values({ syncSessionId: "lost-worker", itemExternalId: X });
-  expect(await service.getJobStatus("lost-worker", userId)).toMatchObject({
-    terminalState: "error",
-    statusMessage: SYNC_STATUS_MESSAGES.interrupted,
-  });
-  expect(await listed("?status=processing")).toEqual([]);
-  expect(await listed("?status=failed")).toMatchObject([{ status: "failed", failCount: 1 }]);
-});
-
 test("failure reporting accepts the full hourly ingest budget", async () => {
   const run = await start("collection", [collectionEntry(X, 200)]);
   failureRequests = 2000;
@@ -1418,7 +1359,7 @@ test("display text alone cannot classify a persistence failure", async () => {
   const { default: service } = await import("./service");
   expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
     terminalState: "error",
-    error: { code: "scrape_failed", message: SYNC_STATUS_MESSAGES.failedScrape },
+    error: { code: "fetch_failed", message: SYNC_STATUS_MESSAGES.failedFetch },
   });
 });
 
@@ -1528,25 +1469,6 @@ test("extension CSV cannot reuse another user's Order", async () => {
   expect(await db.$count(collection)).toBe(0);
 });
 
-test("worker-era sync stays processing one second before 24 hours", async () => {
-  const { default: service } = await import("./service");
-  await db.insert(syncSession).values({
-    id: "live-worker",
-    jobId: "live-worker",
-    userId,
-    syncType: "item",
-    status: "processing",
-    totalItems: 1,
-    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 1000),
-  });
-  await db.insert(syncSessionItem).values({ syncSessionId: "live-worker", itemExternalId: X });
-  expect(await service.getJobStatus("live-worker", userId)).toMatchObject({ terminalState: null });
-  expect(await listed("?status=processing")).toMatchObject([
-    { status: "processing", failCount: 0 },
-  ]);
-  expect(await listed("?status=failed")).toEqual([]);
-});
-
 test("failedBeforeStart does not label item results as persistence failures", async () => {
   await db.execute(
     `CREATE FUNCTION reject_start() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'cannot start'; END $$`,
@@ -1599,36 +1521,13 @@ test("interruption keeps its error after an earlier persistence failure and cach
   await interrupt(run);
   const before = snapshot(run.jobId);
   expect(before.error).toEqual({
-    code: "scrape_failed",
+    code: "fetch_failed",
     message: SYNC_STATUS_MESSAGES.interrupted,
   });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
   const { default: service } = await import("./service");
   const after = await service.getJobStatus(run.jobId, userId);
   expect(after.error).toEqual(before.error);
-});
-
-test("worker persistence failure keeps its error without a snapshot", async () => {
-  await db.insert(syncSession).values({
-    id: "failed-worker",
-    jobId: "failed-worker",
-    userId,
-    syncType: "collection",
-    status: "failed",
-    statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-    totalItems: 1,
-    successCount: 0,
-    failCount: 1,
-  });
-  await db.insert(syncSessionItem).values({
-    syncSessionId: "failed-worker",
-    itemExternalId: X,
-    status: "failed",
-  });
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus("failed-worker", userId)).toMatchObject({
-    error: { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist },
-  });
 });
 
 test("a 1000-item failure batch uses one transaction and rate-limit unit", async () => {
@@ -1668,7 +1567,7 @@ test("a mixed failure batch preserves imported Items and ignores a stale job", a
     await post(`/sessions/${run.syncSessionId}/failures`, { jobId: run.jobId, failures }),
   ).toEqual({ status: 200, body: { outcome: "recorded" } });
   expect(await results(run.syncSessionId)).toEqual([
-    { id: X, status: "scraped", reason: null },
+    { id: X, status: "imported", reason: null },
     { id: Y, status: "failed", reason: "MyFigureCollection took too long to answer" },
     { id: Z, status: "failed", reason: "MyFigureCollection took too long to answer" },
   ]);

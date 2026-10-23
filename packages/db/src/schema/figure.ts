@@ -1,6 +1,5 @@
 import {
   pgTable,
-  boolean,
   text,
   timestamp,
   integer,
@@ -397,7 +396,6 @@ export const syncSession = pgTable(
     successCount: integer("success_count").notNull().default(0),
     failCount: integer("fail_count").notNull().default(0),
     requestPayload: jsonb("request_payload").$type<JobData>(),
-    extensionRun: boolean("extension_run").notNull().default(false),
     endCause: text("end_cause", {
       enum: ["finished", "interrupted", "order_missing", "persistence_failed"],
     }),

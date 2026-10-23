@@ -51,7 +51,6 @@ const runColumns = {
   failCount: syncSession.failCount,
   createdAt: syncSession.createdAt,
   updatedAt: syncSession.updatedAt,
-  extensionRun: syncSession.extensionRun,
   endCause: syncSession.endCause,
   revision: syncSession.revision,
   orderId: syncSession.orderId,
@@ -185,9 +184,9 @@ async function recentItems(tx: Tx, run: Run): Promise<SyncJobRecentItem[]> {
     .limit(RECENT_ITEMS_LIMIT);
   return rows.map((row) => ({
     externalId: row.externalId,
-    title: row.status === "scraped" ? row.title : null,
-    outcome: row.status === "scraped" ? "succeeded" : "failed",
-    failureReason: row.status === "scraped" ? null : (row.errorReason ?? null),
+    title: row.status === "imported" ? row.title : null,
+    outcome: row.status === "imported" ? "succeeded" : "failed",
+    failureReason: row.status === "imported" ? null : (row.errorReason ?? null),
     completedAt: row.updatedAt.toISOString(),
   }));
 }
@@ -205,7 +204,7 @@ async function saveRun(
     .groupBy(syncSessionItem.status);
   const counted = (status: SyncSessionItemStatus) =>
     rows.find((row) => row.status === status)?.total ?? 0;
-  const successCount = counted("scraped");
+  const successCount = counted("imported");
   const failCount = counted("failed");
   const pending = counted("pending");
   const now = new Date();
@@ -221,7 +220,7 @@ async function saveRun(
     const statusMessage =
       change === "queued"
         ? SYNC_STATUS_MESSAGES.retryQueued
-        : SYNC_STATUS_MESSAGES.scraping(progress.processed, progress.total);
+        : SYNC_STATUS_MESSAGES.importing(progress.processed, progress.total);
     await tx
       .update(syncSession)
       .set({
@@ -248,7 +247,7 @@ async function saveRun(
     return {
       revision,
       jobId: session.jobId ?? session.id,
-      phase: "scraping",
+      phase: "importing",
       statusMessage,
       progress,
       recentItems: await recentItems(tx, run),
@@ -312,10 +311,7 @@ async function saveRun(
 async function withRun<T>(
   sessionId: string,
   userId: string,
-  {
-    lockOrder,
-    extensionOnly = false,
-  }: { readonly lockOrder: boolean; readonly extensionOnly?: boolean },
+  { lockOrder }: { readonly lockOrder: boolean },
   step: (tx: Tx, run: Run) => Promise<RunStep<T>>,
 ): Promise<T | null> {
   for (let attempt = 1; ; attempt += 1) {
@@ -324,7 +320,7 @@ async function withRun<T>(
         const run = await lockRun(tx, sessionId, userId, lockOrder);
         if (!run) return null;
         let snapshot: ServerSyncJobStatus | null = null;
-        if ((!extensionOnly || run.session.extensionRun) && isLapsed(run.session, Date.now())) {
+        if (isLapsed(run.session, Date.now())) {
           await failOpenItems(tx, sessionId, SYNC_STATUS_MESSAGES.interrupted);
           snapshot = await saveRun(tx, run, "interrupted");
         }
@@ -373,7 +369,7 @@ async function markImported(tx: Tx, sessionId: string, mfcItemIds: readonly numb
   if (mfcItemIds.length === 0) return;
   await tx
     .update(syncSessionItem)
-    .set({ status: "scraped", errorReason: null, errorCode: null, updatedAt: new Date() })
+    .set({ status: "imported", errorReason: null, errorCode: null, updatedAt: new Date() })
     .where(
       and(
         eq(syncSessionItem.syncSessionId, sessionId),
@@ -470,7 +466,7 @@ export async function completeSyncItem(
     .innerJoin(syncSession, eq(syncSession.id, syncSessionItem.syncSessionId))
     .where(and(ofItem(sessionId, mfcItemId), eq(syncSession.userId, userId)));
   if (rows.length === 0) return null;
-  if (rows.every((row) => row.status === "scraped")) {
+  if (rows.every((row) => row.status === "imported")) {
     return { outcome: "already_imported", reason: null };
   }
 
@@ -558,10 +554,9 @@ export async function heartbeatSyncRun(
   return withRun<{ readonly active: boolean }>(
     sessionId,
     userId,
-    { lockOrder: false, extensionOnly: true },
+    { lockOrder: false },
     async (tx, run) => {
-      if (!run.session.extensionRun || !isCurrentRun(run, jobId))
-        return { result: { active: false }, change: null };
+      if (!isCurrentRun(run, jobId)) return { result: { active: false }, change: null };
       await tx
         .update(syncSession)
         .set({ updatedAt: new Date() })
@@ -580,10 +575,9 @@ export async function interruptSyncRun(
   return withRun<{ readonly outcome: "interrupted" | "ignored" }>(
     sessionId,
     userId,
-    { lockOrder: false, extensionOnly: true },
+    { lockOrder: false },
     async (tx, run) => {
-      if (!run.session.extensionRun || !isCurrentRun(run, jobId))
-        return { result: { outcome: "ignored" }, change: null };
+      if (!isCurrentRun(run, jobId)) return { result: { outcome: "ignored" }, change: null };
       await failOpenItems(tx, sessionId, SYNC_STATUS_MESSAGES.interrupted);
       return { result: { outcome: "interrupted" }, change: "interrupted" };
     },
@@ -650,9 +644,9 @@ export async function retrySyncRun(sessionId: string, userId: string): Promise<R
       const jobId = createId();
       await tx
         .update(syncSession)
-        .set({ jobId, completedAt: null, extensionRun: true, endCause: null })
+        .set({ jobId, completedAt: null, endCause: null })
         .where(eq(syncSession.id, sessionId));
-      run.session = { ...run.session, jobId, extensionRun: true, endCause: null };
+      run.session = { ...run.session, jobId, endCause: null };
       const imported = new Set(importedIds);
       return {
         result: {

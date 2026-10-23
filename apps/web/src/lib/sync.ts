@@ -52,7 +52,7 @@ export function resolveSyncMessage(
   }
 
   const recentItem = jobStatus?.recentItems[0];
-  if (jobStatus?.phase === "scraping" && recentItem) {
+  if (jobStatus?.phase === "importing" && recentItem) {
     return SYNC_STATUS_MESSAGES.itemOutcome(recentItem);
   }
 
@@ -61,7 +61,7 @@ export function resolveSyncMessage(
 
 export const ITEM_STATUS_CONFIG = {
   pending: { label: "Pending", variant: "secondary" },
-  scraped: { label: "Imported", variant: "success" },
+  imported: { label: "Imported", variant: "success" },
   failed: { label: "Failed", variant: "destructive" },
 } satisfies Record<
   SyncSessionItemStatus,
@@ -132,50 +132,51 @@ export function transformCSVData(value: { file: File | undefined }): Promise<Use
     return cachedTransformation;
   }
 
-  // oxlint-disable-next-line promise/prefer-await-to-then -- Preserve one cached promise per File.
-  const transformation = value.file.text().then((text) => {
-    const parsedCSV = Papa.parse(text, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
-    });
-
-    const validatedCSV = csvSchema.safeParse(parsedCSV.data);
-    if (!validatedCSV.success) {
-      if (import.meta.env.DEV) {
-        console.log("Invalid CSV file", validatedCSV.error);
-      }
-      throw new Error("Please select a valid MyFigureCollection CSV file");
-    }
-
-    const filteredData = validatedCSV.data.filter((item) => SYNC_CSV_STATUS_SET.has(item.status));
-    if (filteredData.length === 0) {
-      throw new Error("This CSV has no supported Owned or Ordered items to import");
-    }
-    if (import.meta.env.DEV) {
-      console.log("Filtered data:", filteredData);
-    }
-    const userItems: UserItem[] = filteredData.map((item) => {
-      const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
-      return {
-        itemExternalId: item.id,
-        status: normalizedStatus,
-        count: item.count,
-        score: item.score,
-        payment_date: item.payment_date,
-        shipping_date: item.shipping_date,
-        collecting_date: item.collecting_date,
-        price: item.price_1,
-        shop: item.shop,
-        shipping_method: item.shipping_method,
-        note: item.note,
-        orderId: null,
-        orderDate: item.payment_date,
-      };
-    });
-    return userItems;
-  });
-
+  const transformation = readCsv(value.file);
   csvTransformationCache.set(value.file, transformation);
   return transformation;
+}
+
+async function readCsv(file: File): Promise<UserItem[]> {
+  const text = await file.text();
+  const parsedCSV = Papa.parse(text, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header: string) => header.trim().toLowerCase().replaceAll(" ", "_"),
+  });
+
+  const validatedCSV = csvSchema.safeParse(parsedCSV.data);
+  if (!validatedCSV.success) {
+    if (import.meta.env.DEV) {
+      console.log("Invalid CSV file", validatedCSV.error);
+    }
+    throw new Error("Please select a valid MyFigureCollection CSV file");
+  }
+
+  const filteredData = validatedCSV.data.filter((item) => SYNC_CSV_STATUS_SET.has(item.status));
+  if (filteredData.length === 0) {
+    throw new Error("This CSV has no supported Owned or Ordered items to import");
+  }
+  if (import.meta.env.DEV) {
+    console.log("Filtered data:", filteredData);
+  }
+  const userItems: UserItem[] = filteredData.map((item) => {
+    const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
+    return {
+      itemExternalId: item.id,
+      status: normalizedStatus,
+      count: item.count,
+      score: item.score,
+      payment_date: item.payment_date,
+      shipping_date: item.shipping_date,
+      collecting_date: item.collecting_date,
+      price: item.price_1,
+      shop: item.shop,
+      shipping_method: item.shipping_method,
+      note: item.note,
+      orderId: null,
+      orderDate: item.payment_date,
+    };
+  });
+  return userItems;
 }

@@ -5,10 +5,10 @@
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",
       "fixed": [
-        "normalizeScrapedDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
-        "normalizeScrapedDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
-        "normalizeScrapedDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
-        "normalizeScrapedDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
+        "normalizeMfcDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
+        "normalizeMfcDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
+        "normalizeMfcDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
+        "normalizeMfcDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
       ]
     },
     {
@@ -729,7 +729,6 @@
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
         "a cached partial status cannot hide a later successful completion",
-        "worker-era sync runs stay active past the extension lease",
         "an Order deleted mid-run fails the remaining items without ingesting them",
         "publishing an older revision cannot replace a newer snapshot",
         "the stream ignores a delayed event from an older revision",
@@ -739,9 +738,7 @@
         "an open stream notices an expired lease on its next poll",
         "control and failure requests use separate per-user rate limits",
         "a poll whose session was deleted sends a terminal error and closes",
-        "two extension CSV Items share one Order",
-        "worker-era sync stays processing one second before 24 hours",
-        "worker persistence failure keeps its error without a snapshot"
+        "two extension CSV Items share one Order"
       ]
     },
     {
@@ -755,12 +752,10 @@
       "bug": "Import status reads and payload or lease lifecycle diverged across retries",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
-        "an interrupted import > worker-era imports keep their worker lease for a day",
-        "scraped payloads are cleared while failed rows remain available for retry",
+        "imported payloads are cleared while failed rows remain available for retry",
         "complete uploads renew the import lease",
         "fail uploads renew the import lease",
-        "status reads stay in one snapshot when a retry commits between reads",
-        "worker-era import stays running one second before 24 hours"
+        "status reads stay in one snapshot when a retry commits between reads"
       ]
     },
     {
@@ -768,7 +763,7 @@
       "bug": "CSV completion omitted Orders for Owned rows and changed empty titles",
       "test": "apps/server/src/routers/sync/item-rows.test.ts",
       "fixed": [
-        "CSV completion keeps an empty Item title as the worker does",
+        "CSV completion keeps an empty Item title",
         "CSV completion creates an Order for an Owned row with an orderId"
       ]
     },
@@ -780,8 +775,6 @@
         "an S3 timeout records the item as a persistence failure",
         "a persistence failure after an imported item retains the partial-success message",
         "CSV completion imports an Owned row whose Order does not exist yet",
-        "worker-era controls leave a 180000ms-old session untouched",
-        "worker-era controls leave a 86401000ms-old session untouched",
         "failure reporting accepts the full hourly ingest budget",
         "polling keeps the last status through a Redis blip and retries",
         "persistence failure survives cache expiry and a changed display message",
@@ -831,7 +824,6 @@
         "failedBeforeStart does not label item results as persistence failures",
         "in-request persistence failure keeps its original item reasons",
         "interruption keeps its error after an earlier persistence failure and cache expiry",
-        "worker persistence failure keeps its error without a snapshot",
         "display text alone cannot classify a persistence failure",
         "a 1000-item failure batch uses one transaction and rate-limit unit",
         "a mixed failure batch preserves imported Items and ignores a stale job"

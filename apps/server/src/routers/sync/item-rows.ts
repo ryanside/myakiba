@@ -22,11 +22,11 @@ export function idsToFetch(payload: JobData): number[] {
       ids = payload.items.map((row) => row.itemExternalId);
       break;
     case "collection":
-      ids = payload.collection.itemsToScrape.map((row) => row.itemExternalId);
+      ids = payload.collection.itemsToFetch.map((row) => row.itemExternalId);
       break;
     case "order":
     case "order-item":
-      ids = payload.order.itemsToScrape.map((row) => row.itemExternalId);
+      ids = payload.order.itemsToFetch.map((row) => row.itemExternalId);
       break;
   }
   return [...new Set(ids)];

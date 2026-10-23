@@ -1,7 +1,6 @@
 import * as z from "zod";
 import { itemUploadSchema } from "../mfc-items/schema";
 import { syncItemFailureBatchSchema } from "../sync/schema";
-import type { SyncJobStatus } from "../sync/schema";
 import {
   COLLECTION_STATUSES,
   CONDITIONS,
@@ -188,11 +187,6 @@ const dataTransferImportResultFields = {
   error: z.string().nullable(),
 };
 
-export const dataTransferImportResultSchema = z.strictObject({
-  status: z.enum(["completed", "partial", "failed"]),
-  ...dataTransferImportResultFields,
-});
-
 export const dataTransferImportSchema = z.strictObject({
   id: portableKeySchema,
   fileName: fileNameSchema,
@@ -222,12 +216,7 @@ export type DataTransferCollectionItemV1 = z.infer<typeof dataTransferCollection
 export type DataTransferArchiveV1 = z.infer<typeof dataTransferArchiveV1Schema>;
 export type DataTransferImportRequest = z.infer<typeof dataTransferImportRequestSchema>;
 export type DataTransferImportReport = z.infer<typeof dataTransferImportReportSchema>;
-export type DataTransferImportResult = z.infer<typeof dataTransferImportResultSchema>;
 export type DataTransferImport = z.infer<typeof dataTransferImportSchema>;
-export type DataTransferImportTerminalStatus = Pick<
-  SyncJobStatus,
-  "phase" | "statusMessage" | "terminalState" | "error"
->;
 /** A started or retried import, with the MFC items the page must fetch through the extension. */
 export type DataTransferImportRun = DataTransferImport & {
   readonly missingMfcItemIds: readonly number[];

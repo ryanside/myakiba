@@ -594,7 +594,7 @@ describe("the posted picture", () => {
     expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
   });
 
-  test("no picture keeps the old image, where the worker wrote whatever it scraped", async () => {
+  test("no picture keeps the old image", async () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
 

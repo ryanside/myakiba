@@ -575,7 +575,7 @@ const DataTransferService = {
               eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
             ),
           );
-        if (!waiting || waiting.status === "scraped") return { value: current, changed: false };
+        if (!waiting || waiting.status === "imported") return { value: current, changed: false };
 
         const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
         if (!arrived.has(upload.mfcItemId)) {
@@ -584,7 +584,7 @@ const DataTransferService = {
         await applyItemRows(tx, current, arrived, waiting.rows);
         await tx
           .update(dataTransferImportItem)
-          .set({ status: "scraped", errorReason: null, rows: [], updatedAt: now })
+          .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
           .where(
             and(
               eq(dataTransferImportItem.userId, userId),

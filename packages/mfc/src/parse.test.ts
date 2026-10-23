@@ -119,7 +119,7 @@ describe("parseMfcItemPage on the signed-in 98777 page", () => {
     expect(problemOf(item98777, itemId(98_778))).toEqual({ kind: "wrong_item", found: ID_98777 });
   });
 
-  test("its release id matches the scraper's", () => {
+  test("its release id matches the ids already stored", () => {
     const [release] = parsedPage(item98777).releases;
     if (!release) throw new Error("98777 has a release");
     expect(mfcReleaseId(ID_98777, release)).toBe("d47145d4-1ff9-5639-a506-e33114d5d23b");
@@ -198,7 +198,7 @@ describe("parseMfcItemPage entries", () => {
     ]);
   });
 
-  test("an entry under two labels takes the scraper's category order, not page order", () => {
+  test("an entry under two labels keeps the stored category order, not page order", () => {
     const classification =
       '<div class="data-field"><div class="data-label">Classification</div><div class="data-value"><div class="item-entries"><a href="/entry/9613" class="item-entry"><span switch="">Minheru</span></a>&nbsp;<small class="light">as <em>Designer</em></small></div></div></div>';
     const releases = '<div class="data-field"><div class="data-label">Releases';

@@ -136,20 +136,14 @@
     "apps/worker": {
       "name": "worker",
       "dependencies": {
-        "@aws-sdk/client-s3": "^3.1115.0",
         "@myakiba/contracts": "workspace:*",
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
         "@myakiba/utils": "workspace:*",
         "bullmq": "catalog:",
-        "cheerio": "^1.2.0",
-        "domhandler": "^6.0.1",
         "drizzle-orm": "catalog:",
         "evlog": "catalog:",
-        "ioredis": "catalog:",
-        "uuid": "catalog:",
-        "zod": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -264,7 +258,6 @@
         "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
         "ioredis": "catalog:",
-        "zod": "catalog:",
       },
       "devDependencies": {
         "@myakiba/config": "workspace:*",

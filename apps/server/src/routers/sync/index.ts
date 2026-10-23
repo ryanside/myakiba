@@ -239,18 +239,18 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const {
         collectionItems,
         orderItems,
-        csvItemsToScrape: itemsToScrape,
+        csvItemsToFetch: itemsToFetch,
         existingItemExternalIds,
       } = result;
 
-      const itemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
+      const itemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const syncSessionId = createId();
       const jobData = {
         type: "csv",
         payloadVersion: 3,
         userId: user.id,
         syncSessionId,
-        items: itemsToScrape,
+        items: itemsToFetch,
         itemsToInsert: collectionItems,
         ordersToInsert: orderItems,
       } satisfies JobData;
@@ -262,8 +262,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         existingItemExternalIds,
       };
       const { error: syncSessionError } = await tryCatch(
-        itemsToScrape.length === 0
-          ? SyncService.completeSyncSessionWithoutWorker({
+        itemsToFetch.length === 0
+          ? SyncService.completeSyncSessionFromExisting({
               session,
               collectionItems,
               orderItems,
@@ -278,22 +278,22 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
+          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: { type: "csv", sessionId: syncSessionId },
         });
         return status(
           500,
-          itemsToScrape.length === 0
+          itemsToFetch.length === 0
             ? "Failed to save collection items and orders"
             : "Failed to create import record",
         );
       }
 
-      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
+      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
       const statusMessage: string = jobId
         ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+        : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       log.set({
         outcome: "success",
@@ -306,7 +306,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.length,
           existing: existingItemExternalIds.length,
           toInsert: collectionItems.length,
-          toFetch: itemsToScrape.length,
+          toFetch: itemsToFetch.length,
         },
       });
 
@@ -314,7 +314,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         status: statusMessage,
         isFinished: !jobId,
         existingItemsToInsert: collectionItems.length,
-        newItems: itemsToScrape.length,
+        newItems: itemsToFetch.length,
         jobId,
         syncSessionId,
         missingMfcItemIds: idsToFetch(jobData),
@@ -383,8 +383,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           ? releaseDates.reduce((latest, current) => (current > latest ? current : latest))
           : null;
 
-      // oxlint-disable-next-line no-unused-vars
-      const { items, ...orderData } = body;
+      const { items: _items, ...orderData } = body;
       const order: UpdatedSyncOrder = {
         ...orderData,
         userId: user.id,
@@ -392,7 +391,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         releaseDate: latestReleaseDate,
       };
 
-      const itemsToScrape: UpdatedSyncOrderItem[] = normalizedItems
+      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
         .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
         .map((item) => ({
           ...item,
@@ -418,7 +417,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         ];
       });
 
-      const orderItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
+      const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
       const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
@@ -451,7 +450,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         syncSessionId,
         order: {
           details: order,
-          itemsToScrape,
+          itemsToFetch,
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
@@ -463,8 +462,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         existingItemExternalIds: existingOrderItemExternalIds,
       };
       const { error: syncSessionError } = await tryCatch(
-        itemsToScrape.length === 0
-          ? SyncService.completeSyncSessionWithoutWorker({
+        itemsToFetch.length === 0
+          ? SyncService.completeSyncSessionFromExisting({
               session,
               collectionItems: collectionItemsToInsert,
               orderItems: [order],
@@ -482,7 +481,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
+          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: {
             type: "order",
@@ -493,7 +492,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         });
         return status(
           500,
-          itemsToScrape.length === 0
+          itemsToFetch.length === 0
             ? "Failed to save the order and its items"
             : "Failed to create import record",
         );
@@ -508,7 +507,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: orderId },
       });
 
-      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
+      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -523,19 +522,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.items.length,
           existing: existingOrderItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          toFetch: itemsToScrape.length,
+          toFetch: itemsToFetch.length,
         },
       });
 
       const statusMessage = jobId
         ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+        : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       return {
         status: statusMessage,
         isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToScrape.length,
+        newItems: itemsToFetch.length,
         jobId,
         syncSessionId,
         missingMfcItemIds: idsToFetch(jobData),
@@ -627,7 +626,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const itemsToScrape: UpdatedSyncOrderItem[] = normalizedItems
+      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
         .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
         .map((item) => ({
           ...item,
@@ -653,7 +652,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         ];
       });
 
-      const orderItemExternalIdsToTrack = itemsToScrape.map((item) => item.itemExternalId);
+      const orderItemExternalIdsToTrack = itemsToFetch.map((item) => item.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
       const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
@@ -686,7 +685,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         syncSessionId,
         order: {
           details: orderDetails,
-          itemsToScrape,
+          itemsToFetch,
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
@@ -699,8 +698,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         existingItemExternalIds: existingOrderItemExternalIds,
       };
       const { error: syncSessionError } = await tryCatch(
-        itemsToScrape.length === 0
-          ? SyncService.completeSyncSessionWithoutWorker({
+        itemsToFetch.length === 0
+          ? SyncService.completeSyncSessionFromExisting({
               session,
               collectionItems: collectionItemsToInsert,
               requestPayload: jobData,
@@ -714,7 +713,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertOrderItems" : "startSyncRun",
+          step: itemsToFetch.length === 0 ? "insertOrderItems" : "startSyncRun",
           outcome: "error",
           sync: {
             type: "order-item",
@@ -725,7 +724,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         });
         return status(
           500,
-          itemsToScrape.length === 0
+          itemsToFetch.length === 0
             ? "Failed to save order items"
             : "Failed to create import record",
         );
@@ -740,7 +739,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         order: { id: existingOrder.id },
       });
 
-      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
+      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -755,19 +754,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.items.length,
           existing: existingOrderItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          toFetch: itemsToScrape.length,
+          toFetch: itemsToFetch.length,
         },
       });
 
       const statusMessage = jobId
         ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+        : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       return {
         status: statusMessage,
         isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToScrape.length,
+        newItems: itemsToFetch.length,
         jobId,
         syncSessionId,
         missingMfcItemIds: idsToFetch(jobData),
@@ -821,7 +820,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       const { externalIdToInternalId, releaseIdsByItemId } =
         buildExistingItemLookups(existingItems);
 
-      const itemsToScrape: UpdatedSyncCollection[] = normalizedItems
+      const itemsToFetch: UpdatedSyncCollection[] = normalizedItems
         .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
         .map((item) => ({
           ...item,
@@ -845,7 +844,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         ];
       });
 
-      const collectionItemExternalIdsToTrack = itemsToScrape.map((i) => i.itemExternalId);
+      const collectionItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
       const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
         .filter((item): item is UpdatedSyncCollection & { itemId: string } => item.itemId !== null)
@@ -877,7 +876,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         userId: user.id,
         syncSessionId,
         collection: {
-          itemsToScrape,
+          itemsToFetch,
           itemsToInsert: collectionItemsToInsert,
         },
       } satisfies JobData;
@@ -889,8 +888,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         existingItemExternalIds: existingCollectionItemExternalIds,
       };
       const { error: syncSessionError } = await tryCatch(
-        itemsToScrape.length === 0
-          ? SyncService.completeSyncSessionWithoutWorker({
+        itemsToFetch.length === 0
+          ? SyncService.completeSyncSessionFromExisting({
               session,
               collectionItems: collectionItemsToInsert,
               requestPayload: jobData,
@@ -904,13 +903,13 @@ const syncRouter = new Elysia({ prefix: "/sync" })
 
       if (syncSessionError) {
         log.error(syncSessionError, {
-          step: itemsToScrape.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
+          step: itemsToFetch.length === 0 ? "insertToCollectionAndOrders" : "startSyncRun",
           outcome: "error",
           sync: { type: "collection", sessionId: syncSessionId },
         });
         return status(
           500,
-          itemsToScrape.length === 0
+          itemsToFetch.length === 0
             ? "Failed to save collection items"
             : "Failed to create import record",
         );
@@ -923,7 +922,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         },
       });
 
-      const jobId = itemsToScrape.length > 0 ? syncSessionId : null;
+      const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
         outcome: "success",
@@ -936,19 +935,19 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           requested: body.length,
           existing: existingCollectionItemExternalIds.length,
           toInsert: itemsToInsert.length,
-          toFetch: itemsToScrape.length,
+          toFetch: itemsToFetch.length,
         },
       });
 
       const statusMessage = jobId
         ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedWithoutScrape;
+        : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       return {
         status: statusMessage,
         isFinished: !jobId,
         existingItemsToInsert: itemsToInsert.length,
-        newItems: itemsToScrape.length,
+        newItems: itemsToFetch.length,
         jobId,
         syncSessionId,
         missingMfcItemIds: idsToFetch(jobData),

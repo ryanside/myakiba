@@ -14,13 +14,13 @@ export function prepareCsvItems(
   const existingItemsByExternalId = new Map(existingItems.map((item) => [item.externalId, item]));
   const collectionItems: QueuedCollectionItem[] = [];
   const orderItems: UpdatedSyncOrder[] = [];
-  const csvItemsToScrape: NormalizedInternalCsvItem[] = [];
+  const csvItemsToFetch: NormalizedInternalCsvItem[] = [];
   const existingItemExternalIds: number[] = [];
 
   for (const item of items) {
     const existingItem = existingItemsByExternalId.get(item.itemExternalId);
     if (!existingItem) {
-      csvItemsToScrape.push(item);
+      csvItemsToFetch.push(item);
       continue;
     }
 
@@ -69,5 +69,5 @@ export function prepareCsvItems(
     }
   }
 
-  return { collectionItems, orderItems, csvItemsToScrape, existingItemExternalIds };
+  return { collectionItems, orderItems, csvItemsToFetch, existingItemExternalIds };
 }

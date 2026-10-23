@@ -4,7 +4,6 @@ import {
   ACTIVE_SYNC_SESSION_STATUSES,
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_RUN_LEASE_MS,
-  WORKER_RUN_LEASE_MS,
   UNSAVED_ITEM_REASON,
 } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
@@ -41,7 +40,7 @@ export function settleRun(
   if (failCount === 0) status = "completed";
   else if (successCount > 0) status = "partial";
 
-  let statusMessage: string = SYNC_STATUS_MESSAGES.failedScrape;
+  let statusMessage: string = SYNC_STATUS_MESSAGES.failedFetch;
   if (end === "order_missing" || end === "persistence_failed")
     statusMessage = SYNC_STATUS_MESSAGES.failedPersist;
   else if (syncType === "item" && successCount > 0) {
@@ -58,7 +57,7 @@ export function settleRun(
     error =
       end === "order_missing" || end === "persistence_failed"
         ? { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist }
-        : { code: "scrape_failed", message: statusMessage };
+        : { code: "fetch_failed", message: statusMessage };
   }
   return { status, statusMessage, error };
 }
@@ -67,13 +66,11 @@ type LeasedSession = RunCounts & {
   readonly status: SyncSessionStatus;
   readonly statusMessage: string;
   readonly updatedAt: Date;
-  readonly extensionRun: boolean;
 };
 
 export const isLapsed = (session: LeasedSession, now: number): boolean =>
   ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) &&
-  session.updatedAt.getTime() <=
-    now - (session.extensionRun ? SYNC_RUN_LEASE_MS : WORKER_RUN_LEASE_MS);
+  session.updatedAt.getTime() <= now - SYNC_RUN_LEASE_MS;
 
 /**
  * How a session reads, with a lapsed run shown as interrupted: its pending items count
@@ -93,8 +90,5 @@ export function viewSession<S extends LeasedSession>(
 export const viewedStatusSql = (now: number) =>
   sql<SyncSessionStatus>`CASE WHEN ${and(
     inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
-    lte(
-      syncSession.updatedAt,
-      sql`CASE WHEN ${syncSession.extensionRun} THEN ${new Date(now - SYNC_RUN_LEASE_MS)}::timestamp ELSE ${new Date(now - WORKER_RUN_LEASE_MS)}::timestamp END`,
-    ),
+    lte(syncSession.updatedAt, new Date(now - SYNC_RUN_LEASE_MS)),
   )} THEN (CASE WHEN ${syncSession.successCount} = ${syncSession.totalItems} THEN 'completed' WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END) ELSE ${syncSession.status} END`;

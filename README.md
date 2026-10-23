@@ -108,7 +108,6 @@ skipped by using the workarounds below.
 - [Bun](https://bun.sh/)
 - Docker with Docker Compose
 - An AWS S3 bucket and credentials
-- An HTTP proxy is optional but recommended
 
 ### Services
 
@@ -167,9 +166,9 @@ VITE_SERVER_URL=http://localhost:3000
 ```
 
 Fill in the remaining auth, email, Turnstile, and S3 values in the example files.
-`WORKER_PROXY_URL`, `AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
+`AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
 Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such as
-`https://cdn.example.com`. If it is empty, the worker builds each file's URL from
+`https://cdn.example.com`. If it is empty, the server builds each file's URL from
 `AWS_BUCKET_NAME` and `AWS_BUCKET_REGION`:
 `https://<AWS_BUCKET_NAME>.s3.<AWS_BUCKET_REGION>.amazonaws.com/<filename>`.
 Set `S3_ENDPOINT_URL` only to store item pictures in an S3-compatible store other
@@ -250,7 +249,7 @@ myakiba/
 ├── apps/
 │   ├── web/            # Frontend (Vite + React + TanStack Router)
 │   ├── server/         # API and production web server (Elysia + Bun)
-│   └── worker/         # Scraping and background jobs (BullMQ)
+│   └── worker/         # Nightly sync history cleanup (BullMQ)
 ├── packages/
 │   ├── auth/           # Better Auth configuration
 │   ├── config/         # Shared TypeScript configuration

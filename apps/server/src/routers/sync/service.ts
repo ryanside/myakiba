@@ -87,7 +87,7 @@ const resolveFallbackJobStatusMessage = ({
       }
       return successCount > 0
         ? SYNC_STATUS_MESSAGES.failedPersist
-        : SYNC_STATUS_MESSAGES.failedScrape;
+        : SYNC_STATUS_MESSAGES.failedFetch;
     case "pending":
       return SYNC_STATUS_MESSAGES.queued;
     case "processing":
@@ -117,7 +117,7 @@ class SyncService {
             id: `${id}-${String(index).padStart(2, "0")}`,
             syncSessionId: id,
             itemExternalId: externalId,
-            status: existingIdSet.has(externalId) ? ("scraped" as const) : ("pending" as const),
+            status: existingIdSet.has(externalId) ? ("imported" as const) : ("pending" as const),
           }))
         : [...itemExternalIds, ...existingItemExternalIds].map((externalId) => ({
             syncSessionId: id,
@@ -180,7 +180,7 @@ class SyncService {
     return existingOrder ?? null;
   }
 
-  async completeSyncSessionWithoutWorker({
+  async completeSyncSessionFromExisting({
     session,
     collectionItems,
     orderItems = [],
@@ -219,7 +219,7 @@ class SyncService {
 
         await tx
           .update(syncSessionItem)
-          .set({ status: "scraped", errorReason: null, updatedAt: new Date() })
+          .set({ status: "imported", errorReason: null, updatedAt: new Date() })
           .where(
             and(
               eq(syncSessionItem.syncSessionId, syncSessionId),
@@ -232,7 +232,7 @@ class SyncService {
           .set({
             requestPayload,
             status: "completed",
-            statusMessage: SYNC_STATUS_MESSAGES.insertedWithoutScrape,
+            statusMessage: SYNC_STATUS_MESSAGES.insertedFromExisting,
             successCount: sql`${syncSession.totalItems}`,
             failCount: 0,
             orderId,
@@ -274,7 +274,7 @@ class SyncService {
         if (existingIds.length > 0) {
           await tx
             .update(syncSessionItem)
-            .set({ status: "scraped", updatedAt: new Date() })
+            .set({ status: "imported", updatedAt: new Date() })
             .where(
               and(
                 eq(syncSessionItem.syncSessionId, session.id),
@@ -287,7 +287,6 @@ class SyncService {
           .set({
             requestPayload,
             status: "processing",
-            extensionRun: true,
             revision: 1,
             statusMessage: SYNC_STATUS_MESSAGES.queued,
             successCount: existingIds.length,
@@ -339,7 +338,6 @@ class SyncService {
         failCount: sql`${syncSession.totalItems}`,
         completedAt: now,
         updatedAt: now,
-        extensionRun: failure === "before_start",
         endCause: failure === "before_start" ? "finished" : "persistence_failed",
         revision: 1,
       })
@@ -358,7 +356,6 @@ class SyncService {
         failCount: syncSession.failCount,
         createdAt: syncSession.createdAt,
         updatedAt: syncSession.updatedAt,
-        extensionRun: syncSession.extensionRun,
         endCause: syncSession.endCause,
         revision: syncSession.revision,
       })
@@ -403,12 +400,7 @@ class SyncService {
           }
         : null;
 
-    const end = session.interrupted
-      ? "interrupted"
-      : (session.endCause ??
-        (!session.extensionRun && session.statusMessage === SYNC_STATUS_MESSAGES.failedPersist
-          ? "persistence_failed"
-          : "finished"));
+    const end = session.interrupted ? "interrupted" : (session.endCause ?? "finished");
     const error = terminalState === null ? null : settleRun(session, end).error;
     return {
       revision: session.revision,
@@ -448,8 +440,7 @@ class SyncService {
       conditions.push(inArray(syncSession.syncType, syncTypeFilter));
     const whereClause = and(...conditions);
 
-    // @ts-expect-error -- scraper code, replaced by the browser extension (until 2027-01-31, approved by root under the operator's no-scraper-work rule)
-    const [sessionRecords, [{ total }]] = await Promise.all([
+    const [sessionRecords, [totalRow]] = await Promise.all([
       db
         .select({
           id: syncSession.id,
@@ -464,7 +455,6 @@ class SyncService {
           failCount: syncSession.failCount,
           createdAt: syncSession.createdAt,
           updatedAt: syncSession.updatedAt,
-          extensionRun: syncSession.extensionRun,
           revision: syncSession.revision,
           completedAt: syncSession.completedAt,
           hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
@@ -485,7 +475,6 @@ class SyncService {
       sessions: sessionRecords.map(({ hasRequestPayload, ...record }) => {
         const {
           interrupted: _interrupted,
-          extensionRun: _extensionRun,
           revision: _revision,
           ...session
         } = viewSession(record, now);
@@ -510,7 +499,7 @@ class SyncService {
             ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
         };
       }),
-      total,
+      total: totalRow?.total ?? 0,
     };
   }
 
@@ -539,7 +528,6 @@ class SyncService {
         failCount: syncSession.failCount,
         createdAt: syncSession.createdAt,
         updatedAt: syncSession.updatedAt,
-        extensionRun: syncSession.extensionRun,
         revision: syncSession.revision,
         completedAt: syncSession.completedAt,
         hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
@@ -549,12 +537,7 @@ class SyncService {
 
     if (!sessionRecord) return null;
     const { hasRequestPayload, ...record } = sessionRecord;
-    const {
-      interrupted,
-      extensionRun: _extensionRun,
-      revision: _revision,
-      ...session
-    } = viewSession(record, Date.now());
+    const { interrupted, revision: _revision, ...session } = viewSession(record, Date.now());
     const targetOrderIsAvailable =
       !(
         session.syncType === "order-item" ||
@@ -603,8 +586,7 @@ class SyncService {
     const usePagination = page !== undefined && limit !== undefined;
     const offset = usePagination ? (page - 1) * limit : 0;
 
-    // @ts-expect-error -- scraper code, replaced by the browser extension (until 2027-01-31, approved by root under the operator's no-scraper-work rule)
-    const [rows, [{ total }]] = await Promise.all([
+    const [rows, [totalRow]] = await Promise.all([
       usePagination ? baseQuery.limit(limit).offset(offset) : baseQuery,
       countQuery,
     ]);
@@ -632,7 +614,7 @@ class SyncService {
           ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status),
       },
       items,
-      totalItems: total,
+      totalItems: totalRow?.total ?? 0,
     };
   }
 

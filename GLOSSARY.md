@@ -186,7 +186,7 @@ An action that adds missing Items to the Item Database using MyFigureCollection 
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-An action that creates Collection Items for the user, using existing Item details or scraping missing details from MyFigureCollection.
+An action that creates Collection Items for the user, using existing Item details or importing missing details from MyFigureCollection through the browser extension.
 _Avoid_: Sync Collection
 
 **Create order**:

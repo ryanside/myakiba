@@ -9,8 +9,6 @@ import type { ResyncStatus } from "@/components/item/types";
 
 const RESYNC_LABELS = {
   idle: "Refresh item details",
-  requested: "Refresh requested",
-  processing: "Refreshing details",
   cooldown: "Recently refreshed",
 } satisfies Readonly<Record<ResyncStatus, string>>;
 

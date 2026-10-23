@@ -57,7 +57,6 @@ async function currentTransactionId(tx: Tx): Promise<string> {
   return row.id;
 }
 
-// The status keeps the queue's four states for the web. "requested" and "processing" no longer occur.
 async function resyncState(tx: ReadTx, itemId: string): Promise<ItemResyncState> {
   const cooldownExpiresAt = await cooldownHeldUntil(tx, itemId);
   if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };

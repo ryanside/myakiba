@@ -14,10 +14,7 @@
   },
   "myakiba(no-iso-slice)": {},
   "myakiba(no-window-total)": {},
-  "myakiba(require-suppression-reason)": {
-    "apps/server/src/routers/sync/index.ts": 1,
-    "apps/web/src/lib/sync.ts": 1
-  },
+  "myakiba(require-suppression-reason)": {},
   "typescript(no-floating-promises)": {
     "apps/server/src/route-auth.test.ts": 1,
     "apps/web/src/components/analytics/leaderboard-table.tsx": 1,

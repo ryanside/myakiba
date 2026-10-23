@@ -3,7 +3,7 @@ import { v5 as uuidv5 } from "uuid";
 import { CATEGORIES, CONTENT_LABELS } from "@myakiba/contracts/shared/constants";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Category, ContentLabel, EntryCategory } from "@myakiba/contracts/shared/types";
-import { normalizeScrapedDate } from "@myakiba/utils/date-only";
+import { normalizeMfcDate } from "@myakiba/utils/date-only";
 import { readMfcEnvelope } from "./page";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
@@ -96,7 +96,7 @@ export function parseMfcItemPage(html: string, expected: MfcItemId): MfcParseRes
 
   const releases: MfcRelease[] = [];
   for (const { rawDate, ...release } of fields.releases) {
-    const date = normalizeScrapedDate(rawDate);
+    const date = normalizeMfcDate(rawDate);
     if (date) releases.push({ date, ...release });
     else warnings.push(`release skipped: unsupported date "${rawDate}"`);
   }

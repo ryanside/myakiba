@@ -13,13 +13,13 @@ function answerWith(respond: () => Promise<Response>) {
   globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
 }
 
-const scraperCalls = [
+const calls = [
   ["an item refresh request", () => requestResync(1001, { page: "<html></html>" })],
   ["an import retry", () => retrySyncSession("session-1")],
   ["a data export", () => exportDataTransfer()],
 ] as const;
 
-describe.each(scraperCalls)("%s keeps the error text it had before F1", (_name, call) => {
+describe.each(calls)("%s keeps the error text it had before F1", (_name, call) => {
   test("a 500 shows the server's text", async () => {
     answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
     await expect(call()).rejects.toMatchObject({ message: "Failed to queue order creation" });
