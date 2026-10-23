@@ -117,7 +117,7 @@ test("a new account that closes Getting Started before the welcome opens keeps i
   ).toBe(false);
 });
 
-test("Getting Started resumes the saved step from legacy local storage", async () => {
+test("Getting Started opens at the welcome step even with a step left in local storage", async () => {
   localStorage.setItem(
     "myakiba:onboarding-v2",
     JSON.stringify({ step: 1, completed: false, hasSeen: true }),
@@ -125,7 +125,5 @@ test("Getting Started resumes the saved step from legacy local storage", async (
   await openDashboard(true);
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
 
-  expect(
-    await screen.findByRole("dialog", { name: "Set your username, currency, and date format." }),
-  ).toBeTruthy();
+  expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });

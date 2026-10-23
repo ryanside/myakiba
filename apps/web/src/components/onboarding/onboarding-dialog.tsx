@@ -36,7 +36,6 @@ import {
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
-import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
@@ -98,19 +97,10 @@ type OnboardingDialogProps = {
 };
 
 function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
-  const {
-    step: savedStep,
-    isCompleted,
-    setStep,
-    complete,
-  } = useOnboarding({ totalSteps: STEPS.length });
   const [open, setOpen] = useState(false);
   const [userToggled, setUserToggled] = useState(false);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
-  const resumeStep = isCompleted
-    ? FIRST_STEP
-    : Math.min(Math.max(savedStep + 1, FIRST_STEP), LAST_STEP);
-  const [currentStep, setCurrentStep] = useState(resumeStep);
+  const [currentStep, setCurrentStep] = useState(FIRST_STEP);
 
   const router = useRouter();
   const { session } = appRouteApi.useRouteContext();
@@ -122,15 +112,9 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
 
-  const goToStep = useCallback(
-    (next: number) => {
-      const clamped = Math.min(Math.max(next, FIRST_STEP), LAST_STEP);
-      const animationStep = clamped - 1;
-      setCurrentStep(clamped);
-      setStep(animationStep);
-    },
-    [setStep],
-  );
+  const goToStep = useCallback((next: number) => {
+    setCurrentStep(Math.min(Math.max(next, FIRST_STEP), LAST_STEP));
+  }, []);
 
   const advance = useCallback(() => {
     goToStep(currentStep + 1);
@@ -229,24 +213,19 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
       advance();
       return;
     }
-    complete();
     setOpen(false);
     setCurrentStep(FIRST_STEP);
-  }, [currentMeta.id, isLast, form, advance, complete]);
+  }, [currentMeta.id, isLast, form, advance]);
 
   const handleSkip = useCallback(() => {
     handleOpenChange(false);
   }, [handleOpenChange]);
 
-  const handleSelectSync = useCallback(
-    (type: LaunchableSyncType) => {
-      complete();
-      setOpen(false);
-      setCurrentStep(FIRST_STEP);
-      setSyncSheetType(type);
-    },
-    [complete],
-  );
+  const handleSelectSync = useCallback((type: LaunchableSyncType) => {
+    setOpen(false);
+    setCurrentStep(FIRST_STEP);
+    setSyncSheetType(type);
+  }, []);
 
   return (
     <>
