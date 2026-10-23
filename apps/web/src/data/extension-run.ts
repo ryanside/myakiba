@@ -28,52 +28,33 @@ const ITEM_ERROR_MESSAGE = {
   unknown: "The extension could not fetch this item",
 } as const satisfies Record<FetchError, string>;
 
-export type ServerAnswer =
-  | { readonly kind: "ok" }
-  | { readonly kind: "busy"; readonly retryAfterMs: number | null }
-  | { readonly kind: "failed" };
+type Busy = { readonly kind: "busy"; readonly retryAfterMs: number | null };
+
+type ServerAnswer = { readonly kind: "ok" } | Busy | { readonly kind: "failed" };
 
 type EdenAnswer = {
   readonly error: { readonly status: unknown } | null;
   readonly response?: Response | undefined;
 };
 
-/** Why a run stopped before the extension finished it. After `over` or `left` the server already holds its end. */
-type Stop =
-  | Extract<ServerAnswer, { readonly kind: "busy" }>
-  | { readonly kind: "over" }
-  | { readonly kind: "left" };
-
-type RunTally = { unanswered: number; stop: Stop | null };
-
 const OK: ServerAnswer = { kind: "ok" };
 const FAILED: ServerAnswer = { kind: "failed" };
 
-async function answerOf(request: Promise<EdenAnswer>): Promise<ServerAnswer> {
-  try {
-    const { error, response } = await request;
-    if (error === null) return OK;
-    if (error.status !== 429) return FAILED;
-    const seconds = Number(response?.headers.get("retry-after") ?? Number.NaN);
-    return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
-  } catch {
-    return FAILED;
-  }
+function answerOf({ error, response }: EdenAnswer): ServerAnswer {
+  if (error === null) return OK;
+  if (error.status !== 429) return FAILED;
+  const seconds = Number(response?.headers.get("retry-after") ?? Number.NaN);
+  return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
 }
 
 /** `over` once the server has ended the run, or a retry replaced it. */
 type Lease = "held" | "over";
 
-async function leaseOf<Data>(
-  request: Promise<{ readonly data: Data | null }>,
+function leaseOf<Data>(
+  { data }: { readonly data: Data | null },
   held: (data: Data) => boolean,
-): Promise<Lease> {
-  try {
-    const { data } = await request;
-    return data === null || held(data) ? "held" : "over";
-  } catch {
-    return "held";
-  }
+): Lease {
+  return data === null || held(data) ? "held" : "over";
 }
 
 type ItemPage = { readonly mfcItemId: MfcItemId; readonly page: File; readonly picture?: File };
@@ -88,7 +69,7 @@ function itemPage(id: MfcItemId, html: string, picture: Blob | null): ItemPage {
   };
 }
 
-export type ExtensionRun = {
+type ExtensionRun = {
   readonly runId: string;
   readonly sessionId: string | null;
   readonly mfcItemIds: readonly number[];
@@ -109,11 +90,12 @@ export function syncRun(run: {
     runId: jobId,
     sessionId,
     mfcItemIds: run.mfcItemIds,
-    complete: (item) => answerOf(session.items.post({ jobId, ...item })),
-    fail: (id, error) => answerOf(session.failures.post({ jobId, mfcItemId: id, error })),
-    heartbeat: () => leaseOf(session.heartbeat.post({ jobId }), (data) => data.active),
-    interrupt: ({ keepalive }) =>
-      answerOf(session.interrupt.post({ jobId }, { fetch: { keepalive } })),
+    complete: async (item) => answerOf(await session.items.post({ jobId, ...item })),
+    fail: async (id, error) =>
+      answerOf(await session.failures.post({ jobId, mfcItemId: id, error })),
+    heartbeat: async () => leaseOf(await session.heartbeat.post({ jobId }), (data) => data.active),
+    interrupt: async ({ keepalive }) =>
+      answerOf(await session.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
 }
 
@@ -127,14 +109,18 @@ export function importRun(run: {
     runId: jobId,
     sessionId: null,
     mfcItemIds: run.mfcItemIds,
-    complete: (item) => answerOf(current.items.post({ jobId, ...item })),
-    fail: (id, error) =>
+    complete: async (item) => answerOf(await current.items.post({ jobId, ...item })),
+    fail: async (id, error) =>
       answerOf(
-        current.items.failure.post({ jobId, mfcItemId: id, reason: ITEM_ERROR_MESSAGE[error] }),
+        await current.items.failure.post({
+          jobId,
+          mfcItemId: id,
+          reason: ITEM_ERROR_MESSAGE[error],
+        }),
       ),
-    heartbeat: () => leaseOf(current.heartbeat.post({ jobId }), (data) => data.running),
-    interrupt: ({ keepalive }) =>
-      answerOf(current.interrupt.post({ jobId }, { fetch: { keepalive } })),
+    heartbeat: async () => leaseOf(await current.heartbeat.post({ jobId }), (data) => data.running),
+    interrupt: async ({ keepalive }) =>
+      answerOf(await current.interrupt.post({ jobId }, { fetch: { keepalive } })),
   };
 }
 
@@ -204,6 +190,14 @@ export type RunOutcome =
 
 const ENDED: RunOutcome = { kind: "ended" };
 
+/** Why a run stopped before the extension finished it. */
+type Stop = Busy | { readonly kind: "over" } | { readonly kind: "left" };
+
+/** After `over` or `left` the server already holds the run's end. */
+const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
+
+type RunTally = { unanswered: number; stop: Stop | null };
+
 type PageEvents = {
   readonly addEventListener: (type: "pagehide", listener: () => void) => void;
   readonly removeEventListener: (type: "pagehide", listener: () => void) => void;
@@ -267,8 +261,9 @@ export function createExtensionRunner({ bridge, page, heartbeatMs }: RunnerDeps)
         }
       }
       await Promise.all(uploads.values());
-      const ended = tally.stop?.kind === "over" || tally.stop?.kind === "left";
-      if (tally.unanswered > 0 && !ended) await run.interrupt({ keepalive: false });
+      if (tally.unanswered > 0 && !serverHoldsEnd(tally.stop)) {
+        await run.interrupt({ keepalive: false });
+      }
     } finally {
       clearInterval(heartbeat);
       page.removeEventListener("pagehide", leave);
