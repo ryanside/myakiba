@@ -23,7 +23,6 @@
     "@myakiba/redis": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
-    "bullmq": "catalog:",
     "date-fns": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
