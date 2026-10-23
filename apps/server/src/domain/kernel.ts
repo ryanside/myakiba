@@ -26,6 +26,10 @@ import type { Viewer } from "./viewer";
 
 const FAILURE_STATUS = {
   bad_request: 400,
+  forbidden: 403,
+  conflict: 409,
+  payload_too_large: 413,
+  internal_error: 500,
   not_found: 404,
   too_many_requests: 429,
 } as const;
@@ -96,7 +100,25 @@ export function prepared<T>(
   return { statement: build(pool).prepare(name) };
 }
 
-type Scope = Omit<ReadScope, "tx"> & { readonly tx: Tx };
+export type CommandScope = Omit<ReadScope, "tx"> & {
+  readonly tx: Tx;
+  /** Runs only after this attempt commits, reading the pool. A rollback discards its callbacks. */
+  readonly afterCommit: (effect: (scope: ReadScope) => Promise<void>) => void;
+};
+
+type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
+  readonly execute: <I, T, F extends Failure, M extends string>(
+    op: Op<I, T, F, M>,
+    input: NoInfer<I>,
+  ) => Promise<Outcome<T, F>>;
+};
+
+type CommandConfig<I, R, M extends string> = OpConfig<M> & {
+  /** Decides whether a thrown transaction should run again, starting at attempt 1. */
+  readonly retry?: (error: Error, attempt: number) => boolean;
+  /** Runs after rollback, including a failed before, with access only to fresh operations. */
+  readonly recover?: (scope: RecoveryScope, input: I, error: Error) => Promise<R>;
+};
 
 type OpConfig<M extends string> = {
   /** The wide event's `action`, such as "orders.delete_item". */
@@ -128,6 +150,12 @@ const bodies = new WeakMap<
 >();
 
 const befores = new WeakMap<AnyOp, Before<never, BeforeResult>>();
+
+const retries = new WeakMap<AnyOp, (error: Error, attempt: number) => boolean>();
+const recoveries = new WeakMap<
+  AnyOp,
+  (scope: RecoveryScope, input: never, error: Error) => Promise<Outcome<unknown, Failure>>
+>();
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
@@ -167,28 +195,41 @@ type Before<I, B extends BeforeResult> = (scope: PoolScope, input: I) => Promise
  * must re-check inside the transaction anything it writes against. Its effects outside the
  * database, such as a stored file, are never rolled back. It returns `proceed(value)` to
  * run the body with `value`, or an outcome that answers without opening a transaction.
+ * `retry` reruns a thrown transaction without repeating `before`. `recover` handles a
+ * thrown preparation or exhausted attempt through fresh operations after rollback.
+ * Commit effects run afterwards; their errors never retry or recover committed writes.
  */
 export function command<
   I,
   B extends BeforeResult,
   R extends Ok<unknown> | Failure,
   const M extends string,
+  C extends Ok<unknown> | Failure = never,
 >(
-  config: OpConfig<M> & { readonly before: Before<I, B> },
-  body: (scope: Scope, input: HandoffOf<B>) => Promise<R>,
-): Op<I, ValueOf<B | R>, FailureOf<B | R>, M>;
+  config: CommandConfig<I, C, M> & { readonly before: Before<I, B> },
+  body: (scope: CommandScope, input: HandoffOf<B>) => Promise<R>,
+): Op<I, ValueOf<B | R | C>, FailureOf<B | R | C>, M>;
 // Only the first overload takes a `before`: it reads the pool, so it can never be handed a Tx.
-export function command<I, R extends Ok<unknown> | Failure, const M extends string>(
-  config: OpConfig<M> & { readonly before?: never },
-  body: (scope: Scope, input: I) => Promise<R>,
-): Op<I, ValueOf<R>, FailureOf<R>, M>;
+export function command<
+  I,
+  R extends Ok<unknown> | Failure,
+  const M extends string,
+  C extends Ok<unknown> | Failure = never,
+>(
+  config: CommandConfig<I, C, M> & { readonly before?: never },
+  body: (scope: CommandScope, input: I) => Promise<R>,
+): Op<I, ValueOf<R | C>, FailureOf<R | C>, M>;
 export function command(
-  config: OpConfig<string> & { readonly before?: Before<never, BeforeResult> },
-  body: (scope: Scope, input: never) => Promise<Ok<unknown> | Failure>,
+  config: CommandConfig<never, Ok<unknown> | Failure, string> & {
+    readonly before?: Before<never, BeforeResult>;
+  },
+  body: (scope: CommandScope, input: never) => Promise<Ok<unknown> | Failure>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body);
   if (config.before) befores.set(op, config.before);
+  if (config.retry) retries.set(op, config.retry);
+  if (config.recover) recoveries.set(op, config.recover);
   return op;
 }
 
@@ -223,27 +264,63 @@ export async function run<I, T, F extends Failure, M extends string>(
     const read = body as (scope: PoolScope, input: never) => Promise<Outcome<T, F>>;
     return read({ viewer, tx: pool, read: readPrepared, log }, input as never);
   }
-  const before = befores.get(op as AnyOp);
-  let handoff: unknown = input;
-  if (before) {
-    const first = await before({ viewer, tx: pool, read: readPrepared, log }, input as never);
-    if (!("proceed" in first)) return first as Outcome<T, F>;
-    handoff = first.proceed;
-  }
-  const inTransaction = body as (scope: Scope, input: never) => Promise<Outcome<T, F>>;
+  let outcome: Outcome<T, F>;
+  let effects: ((scope: ReadScope) => Promise<void>)[] = [];
   try {
-    return await db.transaction(
-      async (tx) => {
-        const outcome = await inTransaction({ viewer, tx, log }, handoff as never);
-        if (!outcome.ok) throw new Rollback(outcome);
-        return outcome as Ok<T>;
-      },
-      snapshots.has(op as AnyOp) ? SNAPSHOT : undefined,
-    );
+    const before = befores.get(op as AnyOp);
+    let handoff: unknown = input;
+    if (before) {
+      const first = await before({ viewer, tx: pool, read: readPrepared, log }, input as never);
+      if (!("proceed" in first)) return first as Outcome<T, F>;
+      handoff = first.proceed;
+    }
+    const inTransaction = body as (scope: CommandScope, input: never) => Promise<Outcome<T, F>>;
+    for (let attempt = 1; ; attempt += 1) {
+      const attemptEffects: ((scope: ReadScope) => Promise<void>)[] = [];
+      try {
+        outcome = await db.transaction(
+          async (tx) => {
+            const result = await inTransaction(
+              {
+                viewer,
+                tx,
+                log,
+                afterCommit: (effect) => {
+                  attemptEffects.push(effect);
+                },
+              },
+              handoff as never,
+            );
+            if (!result.ok) throw new Rollback(result);
+            return result as Ok<T>;
+          },
+          snapshots.has(op as AnyOp) ? SNAPSHOT : undefined,
+        );
+        effects = attemptEffects;
+        break;
+      } catch (error) {
+        if (error instanceof Rollback) return error.failure as F;
+        if (
+          retries.get(op as AnyOp)?.(
+            error instanceof Error ? error : new Error(String(error)),
+            attempt,
+          )
+        )
+          continue;
+        throw error;
+      }
+    }
   } catch (error) {
-    if (error instanceof Rollback) return error.failure as F;
-    throw error;
+    const recover = recoveries.get(op as AnyOp);
+    if (!recover) throw error;
+    return (await recover(
+      { viewer, log, execute: (next, value) => run(viewer, next, value, log) },
+      input as never,
+      error instanceof Error ? error : new Error(String(error)),
+    )) as Outcome<T, F>;
   }
+  for (const effect of effects) await effect({ viewer, tx: pool, log });
+  return outcome;
 }
 
 /**

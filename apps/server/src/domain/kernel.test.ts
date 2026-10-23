@@ -288,3 +288,127 @@ describe("serve answers with the outcome", () => {
     expect(await userExists("served-throw")).toBe(false);
   });
 });
+
+describe("command commit hooks and recovery", () => {
+  test("effects observe committed rows and disappear on fail or throw", async () => {
+    const observed: string[] = [];
+    const operation = (ending: "ok" | "fail" | "throw") =>
+      command(config, async (scope, id: string) => {
+        await scope.tx
+          .insert(user)
+          .values({ id, name: id, email: `${id}@example.com`, username: id });
+        scope.afterCommit(async (committed) => {
+          const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
+          for (const row of rows) observed.push(row.id);
+        });
+        if (ending === "fail") return fail("bad_request", "Rejected");
+        if (ending === "throw") throw new Error("rolled back");
+        return ok(id);
+      });
+    await run(viewer, operation("ok"), "effect-committed", log);
+    await run(viewer, operation("fail"), "effect-failed", log);
+    await expect(run(viewer, operation("throw"), "effect-thrown", log)).rejects.toThrow(
+      "rolled back",
+    );
+    expect(observed).toEqual(["effect-committed"]);
+    expect(await userExists("effect-failed")).toBe(false);
+    expect(await userExists("effect-thrown")).toBe(false);
+  });
+
+  test("a retry rolls back its writes and effects and retains the before handoff", async () => {
+    let preparations = 0;
+    let attempts = 0;
+    const effects: number[] = [];
+    const operation = command(
+      {
+        ...config,
+        before: async (_scope, id: string) => {
+          preparations += 1;
+          return proceed(id);
+        },
+        retry: (error, attempt) =>
+          error instanceof Error && error.message === "retry" && attempt < 3,
+      },
+      async (scope, id) => {
+        attempts += 1;
+        const attempt = attempts;
+        await scope.tx
+          .insert(user)
+          .values({ id, name: id, email: `${id}@example.com`, username: id });
+        scope.afterCommit(async () => {
+          effects.push(attempt);
+        });
+        if (attempt < 3) throw new Error("retry");
+        return ok(id);
+      },
+    );
+    expect(await run(viewer, operation, "retried-write", log)).toEqual({
+      ok: true,
+      value: "retried-write",
+    });
+    expect({ preparations, attempts, effects }).toEqual({
+      preparations: 1,
+      attempts: 3,
+      effects: [3],
+    });
+  });
+
+  test("recovery runs after rollback and commits a fresh operation", async () => {
+    let attempts = 0;
+    const original = new Error("original write failed");
+    const operation = command(
+      {
+        ...config,
+        retry: (_error, attempt) => attempt < 2,
+        recover: async (scope, id: string, error) => {
+          expect(error).toBe(original);
+          expect(await userExists(id)).toBe(false);
+          return scope.execute(writeThen("ok"), { id });
+        },
+      },
+      async (scope, id: string) => {
+        attempts += 1;
+        await scope.tx
+          .insert(user)
+          .values({ id, name: id, email: `${id}@example.com`, username: id });
+        throw original;
+      },
+    );
+    expect(await run(viewer, operation, "recovered-write", log)).toEqual({
+      ok: true,
+      value: "written",
+    });
+    expect(attempts).toBe(2);
+    expect(await userExists("recovered-write")).toBe(true);
+  });
+
+  test("recovery also handles preparation failures, and cannot run for committed effect failures", async () => {
+    let recoveries = 0;
+    const recover = async () => {
+      recoveries += 1;
+      return ok("recovered");
+    };
+    const beforeThrows = command(
+      {
+        ...config,
+        before: async () => {
+          throw new Error("preparation");
+        },
+        recover,
+      },
+      async () => ok("unused"),
+    );
+    expect(await run(viewer, beforeThrows, undefined, log)).toEqual({
+      ok: true,
+      value: "recovered",
+    });
+    const effectThrows = command({ ...config, recover }, async (scope) => {
+      scope.afterCommit(async () => {
+        throw new Error("effect");
+      });
+      return ok("committed");
+    });
+    await expect(run(viewer, effectThrows, undefined, log)).rejects.toThrow("effect");
+    expect(recoveries).toBe(1);
+  });
+});
