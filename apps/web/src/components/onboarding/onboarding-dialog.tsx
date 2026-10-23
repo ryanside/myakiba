@@ -139,11 +139,10 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
   const isLast = currentStep === LAST_STEP;
 
   const atExtensionStep = open && currentMeta.id === "extension";
-  const wroteExtensionStep = useRef(atExtensionStep);
+  const lastWrittenExtensionStep = useRef(atExtensionStep);
   useEffect(() => {
-    // Every tab shares the flag, so this dialog writes it only when it moves itself.
-    if (wroteExtensionStep.current === atExtensionStep) return;
-    wroteExtensionStep.current = atExtensionStep;
+    if (lastWrittenExtensionStep.current === atExtensionStep) return;
+    lastWrittenExtensionStep.current = atExtensionStep;
     setExtensionStepOpen(atExtensionStep);
   }, [atExtensionStep, setExtensionStepOpen]);
 

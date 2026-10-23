@@ -39,7 +39,6 @@ export const items = {
   }),
 };
 
-/** An Item Refresh rewrites the item and its releases, which collection rows, orders and the calendar show. */
 export const refreshItemCommand = defineCommand({
   invalidates: ["item", "releases", "collection", "orders", "calendar"],
   persist: refreshItemWithExtension,

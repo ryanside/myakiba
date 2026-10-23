@@ -50,14 +50,13 @@ function answerOf({ error, response }: EdenAnswer): ServerAnswer {
   return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
 }
 
-/** `over` once the server has ended the run, or a retry replaced it. */
-type Lease = "held" | "over";
+type Lease = "held" | "lost";
 
 function leaseOf<Data>(
   { data }: { readonly data: Data | null },
   held: (data: Data) => boolean,
 ): Lease {
-  return data === null || held(data) ? "held" : "over";
+  return data === null || held(data) ? "held" : "lost";
 }
 
 type ItemPage = { readonly mfcItemId: MfcItemId; readonly page: File; readonly picture?: File };
@@ -147,23 +146,18 @@ type PromptTarget = { readonly runId: string; readonly sessionId: string | null 
 
 type FetchDeps = { readonly bridge: ExtensionBridge; readonly queuedPromptDelayMs: number };
 
-/**
- * Fetches the ids through the extension, and keeps the extension's prompt in the store until it ends.
- * @yields {FetchedPage} each item's page, or why the extension could not fetch it
- */
-async function* fetchPages(
+async function* fetchPagesShowingPrompts(
   { bridge, queuedPromptDelayMs }: FetchDeps,
   { runId, sessionId }: PromptTarget,
   ids: readonly MfcItemId[],
   signal: AbortSignal,
 ): AsyncGenerator<FetchedPage> {
-  let queuedTimer: ReturnType<typeof setTimeout> | undefined;
+  let queuedPromptTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (prompt: ExtensionPrompt | null) => {
-    clearTimeout(queuedTimer);
-    // The extension says "queued" as every batch starts, so only a wait that lasts is shown.
+    clearTimeout(queuedPromptTimer);
     if (prompt?.kind === "queued") {
       setExtensionPrompt(runId, null);
-      queuedTimer = setTimeout(
+      queuedPromptTimer = setTimeout(
         () => setExtensionPrompt(runId, { sessionId, prompt }),
         queuedPromptDelayMs,
       );
@@ -220,17 +214,14 @@ function uploadSlots(size: number) {
   };
 }
 
-/** How a run ended. `busy` means the server refused it for now, so some items were not imported. */
 export type RunOutcome =
   | { readonly kind: "ended" }
   | { readonly kind: "busy"; readonly notImported: number; readonly retryAfterMs: number | null };
 
 const ENDED: RunOutcome = { kind: "ended" };
 
-/** Why a run stopped before the extension finished it. */
 type Stop = Busy | { readonly kind: "over" } | { readonly kind: "left" };
 
-/** After `over` or `left` the server already holds the run's end, so the page reports nothing more. */
 const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
 
 type RunTally = { imported: number; unanswered: number; stop: Stop | null };
@@ -246,7 +237,6 @@ type RunnerDeps = FetchDeps & {
   readonly failureFlushMs: number;
 };
 
-/** The returned function never rejects. Its runs share one cap on uploads in flight. */
 export function createExtensionRunner(deps: RunnerDeps) {
   const { page, heartbeatMs, failureFlushMs } = deps;
   const slots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
@@ -265,7 +255,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
       if (answer.kind === "busy") halt(answer);
     };
     const renew = async () => {
-      if ((await run.heartbeat()) === "over") halt({ kind: "over" });
+      if ((await run.heartbeat()) === "lost") halt({ kind: "over" });
     };
     const heartbeat = setInterval(() => {
       void renew();
@@ -298,8 +288,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
     };
 
     const uploads: Promise<void>[] = [];
-    /** Waits for a free upload slot, or answers false with no slot taken once the run has stopped. */
-    const takeSlot = async () => {
+    const takeSlotUnlessStopped = async () => {
       if (tally.stop !== null) return false;
       await slots.take();
       if (tally.stop === null) return true;
@@ -314,11 +303,11 @@ export function createExtensionRunner(deps: RunnerDeps) {
     };
 
     try {
-      for await (const fetched of fetchPages(deps, run, ids, controller.signal)) {
+      for await (const fetched of fetchPagesShowingPrompts(deps, run, ids, controller.signal)) {
         if (!fetched.ok) {
           if (fetched.error === "extension_stopped") tally.unanswered += 1;
           else fail({ mfcItemId: fetched.mfcItemId, error: fetched.error });
-        } else if (await takeSlot()) {
+        } else if (await takeSlotUnlessStopped()) {
           uploads.push(upload(fetched.page));
         } else {
           tally.unanswered += 1;
@@ -362,13 +351,17 @@ export function importDataTransferItems(run: Parameters<typeof importRun>[0]): P
   return runWithExtension(importRun(run));
 }
 
-/** Fetches the item's page through the extension and posts it as its Item Refresh. Rejects with why it could not. */
 export async function refreshItemWithExtension(externalId: number) {
   const id = mfcItemId(externalId);
   if (id === null) throw new Error("Item not found");
   let fetched: FetchedPage | undefined;
   const target = { runId: `resync:${id}`, sessionId: null };
-  for await (const page of fetchPages(fetchDeps, target, [id], new AbortController().signal)) {
+  for await (const page of fetchPagesShowingPrompts(
+    fetchDeps,
+    target,
+    [id],
+    new AbortController().signal,
+  )) {
     fetched = page;
   }
   if (fetched === undefined) throw new Error(ITEM_ERROR_MESSAGE.extension_stopped);
