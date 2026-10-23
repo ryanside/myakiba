@@ -1,4 +1,4 @@
-import { and, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, lte, or, sql } from "drizzle-orm";
 import { syncSession } from "@myakiba/db/schema/figure";
 import {
   ACTIVE_SYNC_SESSION_STATUSES,
@@ -16,7 +16,7 @@ type RunCounts = {
   readonly failCount: number;
 };
 
-export type RunEnd = "finished" | "interrupted" | "order_missing";
+export type RunEnd = "finished" | "interrupted" | "order_missing" | "persistence_failed";
 
 type SettledRun = {
   readonly status: Extract<SyncSessionStatus, "completed" | "partial" | "failed">;
@@ -33,7 +33,8 @@ export function settleRun(
   else if (successCount > 0) status = "partial";
 
   let statusMessage: string = SYNC_STATUS_MESSAGES.failedScrape;
-  if (end === "order_missing") statusMessage = SYNC_STATUS_MESSAGES.failedPersist;
+  if (end === "order_missing" || end === "persistence_failed")
+    statusMessage = SYNC_STATUS_MESSAGES.failedPersist;
   else if (syncType === "item" && successCount > 0) {
     statusMessage = `${successCount}/${totalItems} items in the item database`;
     if (failCount > 0) statusMessage += `. ${failCount} failed.`;
@@ -46,7 +47,7 @@ export function settleRun(
   let error: SyncJobError | null = null;
   if (status === "failed") {
     error =
-      end === "order_missing"
+      end === "order_missing" || end === "persistence_failed"
         ? { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist }
         : { code: "scrape_failed", message: statusMessage };
   }
@@ -57,13 +58,19 @@ type LeasedSession = RunCounts & {
   readonly status: SyncSessionStatus;
   readonly statusMessage: string;
   readonly updatedAt: Date;
+  readonly extensionRun: boolean;
 };
 
 export const leaseCutoff = (now: number): Date => new Date(now - SYNC_RUN_LEASE_MS);
 
+// Remove the worker-era allowance once those runs expire from the 30-day history.
+// A day bounds lost jobs while allowing queued jobs to finish through the old worker.
+const WORKER_RUN_LEASE_MS = 24 * 60 * 60 * 1000;
+
 export const isLapsed = (session: LeasedSession, now: number): boolean =>
   ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) &&
-  session.updatedAt.getTime() <= leaseCutoff(now).getTime();
+  session.updatedAt.getTime() <=
+    now - (session.extensionRun ? SYNC_RUN_LEASE_MS : WORKER_RUN_LEASE_MS);
 
 /**
  * How a session reads, with a lapsed run shown as interrupted: its pending items count
@@ -83,5 +90,14 @@ export function viewSession<S extends LeasedSession>(
 export const viewedStatusSql = (cutoff: Date) =>
   sql<SyncSessionStatus>`CASE WHEN ${and(
     inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
-    lte(syncSession.updatedAt, cutoff),
+    or(
+      and(eq(syncSession.extensionRun, true), lte(syncSession.updatedAt, cutoff)),
+      and(
+        eq(syncSession.extensionRun, false),
+        lte(
+          syncSession.updatedAt,
+          new Date(cutoff.getTime() + SYNC_RUN_LEASE_MS - WORKER_RUN_LEASE_MS),
+        ),
+      ),
+    ),
   )} THEN (CASE WHEN ${syncSession.successCount} = ${syncSession.totalItems} THEN 'completed' WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END) ELSE ${syncSession.status} END`;

@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { db } from "@myakiba/db/client";
 import {
@@ -13,7 +13,7 @@ import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_RETRY_WINDOW_MS,
 } from "@myakiba/contracts/sync/constants";
-import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import { ITEM_FETCH_ERROR_MESSAGE, SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import {
   jobDataSchema,
   sessionStatusToPhase,
@@ -22,7 +22,7 @@ import {
 import type { JobData, SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import { ensureMfcItem, prepareMfcItem } from "@/lib/mfc-item-ingest";
-import { fetchedItemRows, idsToFetch, insertItemRows } from "./item-rows";
+import { fetchedItemRows, idsToFetch, insertItemRows, retryRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
 import type { SyncItemFetchError, SyncItemUpload } from "./model";
@@ -30,17 +30,6 @@ import { buildRetryJobData } from "./retry";
 import { isLapsed, settleRun } from "./run-state";
 import type { RunEnd } from "./run-state";
 import SyncService from "./service";
-
-const ITEM_FETCH_ERROR_MESSAGE = {
-  mfc_signed_out: "Sign in to MyFigureCollection to import this item",
-  hidden_or_missing:
-    "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
-  challenge_unsolved: "The MyFigureCollection security check was not completed",
-  rate_limited: "MyFigureCollection asked us to slow down. Try again later",
-  timeout: "MyFigureCollection took too long to answer",
-  unexpected_page: "MyFigureCollection showed an unexpected page",
-  unknown: "The extension could not fetch this item",
-} as const satisfies Record<SyncItemFetchError, string>;
 
 const UNSAVED_ITEM_REASON = "Persistence failed while saving scraped items";
 const RECENT_ITEMS_LIMIT = 5;
@@ -61,6 +50,9 @@ const runColumns = {
   failCount: syncSession.failCount,
   createdAt: syncSession.createdAt,
   updatedAt: syncSession.updatedAt,
+  extensionRun: syncSession.extensionRun,
+  revision: syncSession.revision,
+  orderId: syncSession.orderId,
 };
 
 type RunSession = Awaited<ReturnType<typeof lockSession>>;
@@ -69,19 +61,17 @@ type Run = {
   session: NonNullable<RunSession>;
   readonly payload: JobData | null;
   orderLocked: boolean;
-  readonly attempt: number;
 };
 
 type RunChange = "item" | "queued" | Exclude<RunEnd, "finished"> | null;
 
 type RunStep<T> = { readonly result: T; readonly change: RunChange };
 
-class OrderLockError extends Error {
+class OrderAbsentError extends Error {
   readonly retryable: boolean;
-
   constructor(retryable: boolean) {
-    super(retryable ? "ORDER_LOCKED_TOO_LATE" : "ORDER_NOT_FOUND");
-    this.name = "OrderLockError";
+    super("ORDER_NOT_FOUND");
+    this.name = "OrderAbsentError";
     this.retryable = retryable;
   }
 }
@@ -101,7 +91,6 @@ async function lockRun(
   sessionId: string,
   userId: string,
   lockOrder: boolean,
-  attempt: number,
 ): Promise<Run | null> {
   const [peek] = await tx
     .select({ requestPayload: syncSession.requestPayload })
@@ -120,7 +109,7 @@ async function lockRun(
   }
   const session = await lockSession(tx, sessionId);
   if (!session) return null;
-  return { session, payload, orderLocked, attempt };
+  return { session, payload, orderLocked };
 }
 
 async function failOpenItems(tx: Tx, sessionId: string, errorReason: string): Promise<void> {
@@ -134,8 +123,9 @@ async function failOpenItems(tx: Tx, sessionId: string, errorReason: string): Pr
 
 async function recentItems(tx: Tx, run: Run): Promise<SyncJobRecentItem[]> {
   const fetched = new Set(run.payload ? idsToFetch(run.payload) : []);
-  const rows = await tx
-    .select({
+  if (fetched.size === 0) return [];
+  const distinct = tx
+    .selectDistinctOn([syncSessionItem.itemExternalId], {
       externalId: syncSessionItem.itemExternalId,
       status: syncSessionItem.status,
       errorReason: syncSessionItem.errorReason,
@@ -148,17 +138,27 @@ async function recentItems(tx: Tx, run: Run): Promise<SyncJobRecentItem[]> {
       and(eq(itemTable.source, "mfc"), eq(itemTable.externalId, syncSessionItem.itemExternalId)),
     )
     .where(
-      and(eq(syncSessionItem.syncSessionId, run.session.id), ne(syncSessionItem.status, "pending")),
+      and(
+        eq(syncSessionItem.syncSessionId, run.session.id),
+        ne(syncSessionItem.status, "pending"),
+        inArray(
+          syncSessionItem.itemExternalId,
+          sql`(select jsonb_array_elements_text(${JSON.stringify([...fetched])}::text::jsonb)::integer)`,
+        ),
+      ),
     )
-    .orderBy(desc(syncSessionItem.updatedAt), desc(syncSessionItem.id))
-    .limit(RECENT_ITEMS_LIMIT * 10);
-  const latestByItem = new Map<number, (typeof rows)[number]>();
-  for (const row of rows) {
-    if (fetched.has(row.externalId) && !latestByItem.has(row.externalId)) {
-      latestByItem.set(row.externalId, row);
-    }
-  }
-  return [...latestByItem.values()].slice(0, RECENT_ITEMS_LIMIT).map((row) => ({
+    .orderBy(
+      syncSessionItem.itemExternalId,
+      desc(syncSessionItem.updatedAt),
+      desc(syncSessionItem.id),
+    )
+    .as("finished_items");
+  const rows = await tx
+    .select()
+    .from(distinct)
+    .orderBy(desc(distinct.updatedAt), desc(distinct.externalId))
+    .limit(RECENT_ITEMS_LIMIT);
+  return rows.map((row) => ({
     externalId: row.externalId,
     title: row.status === "scraped" ? row.title : null,
     outcome: row.status === "scraped" ? "succeeded" : "failed",
@@ -180,6 +180,7 @@ async function saveRun(tx: Tx, run: Run, change: Exclude<RunChange, null>): Prom
   const failCount = counted("failed");
   const pending = counted("pending");
   const now = new Date();
+  const revision = session.revision + 1;
   const progress = {
     processed: successCount + failCount,
     total: session.totalItems,
@@ -194,11 +195,27 @@ async function saveRun(tx: Tx, run: Run, change: Exclude<RunChange, null>): Prom
         : SYNC_STATUS_MESSAGES.scraping(progress.processed, progress.total);
     await tx
       .update(syncSession)
-      .set({ status: "processing", statusMessage, successCount, failCount, updatedAt: now })
+      .set({
+        status: "processing",
+        statusMessage,
+        successCount,
+        failCount,
+        updatedAt: now,
+        revision,
+      })
       .where(eq(syncSession.id, session.id));
-    run.session = { ...session, status: "processing", statusMessage, successCount, failCount };
-    if (change === "queued") return queuedJobStatus(session.jobId ?? session.id, statusMessage);
+    run.session = {
+      ...session,
+      status: "processing",
+      statusMessage,
+      successCount,
+      failCount,
+      revision,
+    };
+    if (change === "queued")
+      return queuedJobStatus(session.jobId ?? session.id, statusMessage, revision);
     return {
+      revision,
       jobId: session.jobId ?? session.id,
       phase: "scraping",
       statusMessage,
@@ -211,7 +228,19 @@ async function saveRun(tx: Tx, run: Run, change: Exclude<RunChange, null>): Prom
     };
   }
 
-  const end: RunEnd = change === "interrupted" || change === "order_missing" ? change : "finished";
+  const failures = await tx
+    .select({ reason: syncSessionItem.errorReason })
+    .from(syncSessionItem)
+    .where(
+      and(eq(syncSessionItem.syncSessionId, session.id), eq(syncSessionItem.status, "failed")),
+    );
+  const persistenceFailed =
+    successCount === 0 &&
+    failCount > 0 &&
+    failures.every((row) => row.reason === SYNC_STATUS_MESSAGES.failedPersist);
+  let end: RunEnd = "finished";
+  if (change === "interrupted" || change === "order_missing") end = change;
+  else if (persistenceFailed) end = "persistence_failed";
   const settled = settleRun({ ...session, successCount, failCount }, end);
   await tx
     .update(syncSession)
@@ -220,18 +249,21 @@ async function saveRun(tx: Tx, run: Run, change: Exclude<RunChange, null>): Prom
       statusMessage: settled.statusMessage,
       successCount,
       failCount,
+      revision,
       completedAt: now,
       updatedAt: now,
     })
     .where(eq(syncSession.id, session.id));
   run.session = {
     ...session,
+    revision,
     status: settled.status,
     statusMessage: settled.statusMessage,
     successCount,
     failCount,
   };
   return {
+    revision,
     jobId: session.jobId ?? session.id,
     phase: sessionStatusToPhase(settled.status),
     statusMessage: settled.statusMessage,
@@ -253,7 +285,7 @@ async function withRun<T>(
   for (let attempt = 1; ; attempt += 1) {
     try {
       const done = await db.transaction(async (tx) => {
-        const run = await lockRun(tx, sessionId, userId, lockOrder, attempt);
+        const run = await lockRun(tx, sessionId, userId, lockOrder);
         if (!run) return null;
         let snapshot: SyncJobStatus | null = null;
         if (isLapsed(run.session, Date.now())) {
@@ -268,7 +300,8 @@ async function withRun<T>(
       if (done.snapshot) await publishJobStatus(done.snapshot, sessionId);
       return done.result;
     } catch (error) {
-      if (error instanceof OrderLockError && error.retryable) continue;
+      if (error instanceof OrderAbsentError && error.retryable && attempt < ORDER_LOCK_ATTEMPTS)
+        continue;
       throw error;
     }
   }
@@ -277,8 +310,8 @@ async function withRun<T>(
 async function writeItemRows(tx: Tx, run: Run, payload: JobData, rows: ItemRows): Promise<void> {
   if (rows.collectionItems.length === 0) return;
   if ((payload.type === "order" || payload.type === "order-item") && !run.orderLocked) {
-    if (payload.type === "order-item") throw new OrderLockError(false);
-    if (run.session.successCount > 0) throw new OrderLockError(run.attempt < ORDER_LOCK_ATTEMPTS);
+    if (payload.type === "order-item") throw new OrderAbsentError(false);
+    if (run.session.successCount > 0) throw new OrderAbsentError(true);
     await tx.insert(orderTable).values(payload.order.details);
     await tx
       .update(syncSession)
@@ -377,17 +410,17 @@ export async function completeSyncItem(
     return { outcome: "already_imported", reason: null };
   }
 
-  const prepared = await prepareMfcItem(db, upload);
-  if (prepared.kind === "unreadable") {
-    const recorded = await recordItemFailure(sessionId, userId, {
-      jobId,
-      mfcItemId,
-      reason: prepared.message,
-    });
-    return recorded === null ? null : { outcome: "failed", reason: prepared.message };
-  }
-
   try {
+    const prepared = await prepareMfcItem(db, upload);
+    if (prepared.kind === "unreadable") {
+      const recorded = await recordItemFailure(sessionId, userId, {
+        jobId,
+        mfcItemId,
+        reason: prepared.message,
+      });
+      return recorded === null ? null : { outcome: "failed", reason: prepared.message };
+    }
+
     return await withRun<CompleteSyncItemResult>(
       sessionId,
       userId,
@@ -402,6 +435,13 @@ export async function completeSyncItem(
         if (open.length === 0)
           return { result: { outcome: "already_imported", reason: null }, change: null };
 
+        if (
+          !run.orderLocked &&
+          (run.payload?.type === "order-item" ||
+            (run.payload?.type === "order" && run.session.successCount > 0))
+        ) {
+          throw new OrderAbsentError(run.payload.type === "order" && run.session.orderId !== null);
+        }
         if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
         const [imported] = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
           [mfcItemId],
@@ -415,7 +455,7 @@ export async function completeSyncItem(
       },
     );
   } catch (error) {
-    if (error instanceof OrderLockError) {
+    if (error instanceof OrderAbsentError) {
       await failRunWithoutOrder(sessionId, userId);
       return { outcome: "failed", reason: SYNC_STATUS_MESSAGES.failedPersist };
     }
@@ -458,7 +498,7 @@ export async function heartbeatSyncRun(
       if (!isCurrentRun(run, jobId)) return { result: { active: false }, change: null };
       await tx
         .update(syncSession)
-        .set({ updatedAt: new Date() })
+        .set({ updatedAt: new Date(), extensionRun: true })
         .where(eq(syncSession.id, sessionId));
       return { result: { active: true }, change: null };
     },
@@ -494,20 +534,6 @@ export type RetrySyncRunResult =
   | { readonly outcome: "unavailable" };
 
 const unavailable = { result: { outcome: "unavailable" }, change: null } as const;
-
-function retryRows(retry: JobData): ItemRows {
-  switch (retry.type) {
-    case "item":
-      return { collectionItems: [], orders: [] };
-    case "csv":
-      return { collectionItems: retry.itemsToInsert, orders: retry.ordersToInsert };
-    case "collection":
-      return { collectionItems: retry.collection.itemsToInsert, orders: [] };
-    case "order":
-    case "order-item":
-      return { collectionItems: retry.order.itemsToInsert, orders: [] };
-  }
-}
 
 /**
  * Starts a new run for a session's failed items, under the retry rules. Items already
@@ -559,9 +585,9 @@ export async function retrySyncRun(sessionId: string, userId: string): Promise<R
       const jobId = createId();
       await tx
         .update(syncSession)
-        .set({ jobId, completedAt: null })
+        .set({ jobId, completedAt: null, extensionRun: true })
         .where(eq(syncSession.id, sessionId));
-      run.session = { ...session, jobId };
+      run.session = { ...run.session, jobId, extensionRun: true };
       const imported = new Set(importedIds);
       return {
         result: {

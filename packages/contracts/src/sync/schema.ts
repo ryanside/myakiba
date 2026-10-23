@@ -124,6 +124,7 @@ export const syncJobErrorSchema = z.object({
 });
 
 export const syncJobStatusSchema = z.object({
+  revision: z.number().int().nonnegative().optional(),
   jobId: z.string(),
   phase: syncJobPhaseSchema,
   statusMessage: z.string(),

@@ -286,33 +286,65 @@ class SyncService {
   }): Promise<void> {
     const existingIds = session.existingItemExternalIds ?? [];
     const createsOrder = requestPayload.type === "order" && existingRows.collectionItems.length > 0;
-    await db.transaction(async (tx) => {
-      await this.insertSyncSession(tx, session);
-      await insertItemRows(tx, requestPayload.type, existingRows);
-      if (existingIds.length > 0) {
+    try {
+      await db.transaction(async (tx) => {
+        await this.insertSyncSession(tx, session);
+        await insertItemRows(tx, requestPayload.type, existingRows);
+        if (existingIds.length > 0) {
+          await tx
+            .update(syncSessionItem)
+            .set({ status: "scraped", updatedAt: new Date() })
+            .where(
+              and(
+                eq(syncSessionItem.syncSessionId, session.id),
+                inArray(syncSessionItem.itemExternalId, [...existingIds]),
+              ),
+            );
+        }
+        await tx
+          .update(syncSession)
+          .set({
+            requestPayload,
+            status: "processing",
+            extensionRun: true,
+            revision: 1,
+            statusMessage: SYNC_STATUS_MESSAGES.queued,
+            successCount: existingIds.length,
+            ...(createsOrder && { orderId: requestPayload.order.details.id }),
+            updatedAt: new Date(),
+          })
+          .where(eq(syncSession.id, session.id));
+      });
+    } catch (error) {
+      await db.transaction(async (tx) => {
+        await this.insertSyncSession(tx, session);
+        const now = new Date();
         await tx
           .update(syncSessionItem)
-          .set({ status: "scraped", updatedAt: new Date() })
-          .where(
-            and(
-              eq(syncSessionItem.syncSessionId, session.id),
-              inArray(syncSessionItem.itemExternalId, [...existingIds]),
-            ),
-          );
-      }
-      await tx
-        .update(syncSession)
-        .set({
-          requestPayload,
-          status: "processing",
-          statusMessage: SYNC_STATUS_MESSAGES.queued,
-          successCount: existingIds.length,
-          ...(createsOrder && { orderId: requestPayload.order.details.id }),
-          updatedAt: new Date(),
-        })
-        .where(eq(syncSession.id, session.id));
-    });
-    await publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued), session.id);
+          .set({
+            status: "failed",
+            errorReason: SYNC_STATUS_MESSAGES.failedBeforeStart,
+            updatedAt: now,
+          })
+          .where(eq(syncSessionItem.syncSessionId, session.id));
+        await tx
+          .update(syncSession)
+          .set({
+            requestPayload,
+            status: "failed",
+            statusMessage: SYNC_STATUS_MESSAGES.failedBeforeStart,
+            successCount: 0,
+            failCount: sql`${syncSession.totalItems}`,
+            completedAt: now,
+            updatedAt: now,
+            extensionRun: true,
+            revision: 1,
+          })
+          .where(eq(syncSession.id, session.id));
+      });
+      throw error;
+    }
+    await publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id);
   }
 
   async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
@@ -326,6 +358,8 @@ class SyncService {
         failCount: syncSession.failCount,
         createdAt: syncSession.createdAt,
         updatedAt: syncSession.updatedAt,
+        extensionRun: syncSession.extensionRun,
+        revision: syncSession.revision,
       })
       .from(syncSession)
       .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
@@ -341,22 +375,10 @@ class SyncService {
       const parsedStatus = parseJobStatusPayload(cached);
       const sessionOverridesSnapshot =
         parsedStatus !== null &&
-        (session.interrupted || (terminalState !== null && parsedStatus.terminalState === null));
-
-      if (parsedStatus && !sessionOverridesSnapshot) {
-        // Defensive backfill: if the worker crashed between marking the session
-        // terminal and writing a terminal-state snapshot, derive it from the session.
-        const isPhaseTerminal =
-          parsedStatus.phase === "completed" || parsedStatus.phase === "failed";
-        if (isPhaseTerminal && parsedStatus.terminalState === null) {
-          return syncJobStatusSchema.parse({
-            ...parsedStatus,
-            terminalState: sessionStatusToTerminalState(session.status),
-          });
-        }
-
-        return syncJobStatusSchema.parse(parsedStatus);
-      }
+        (session.interrupted ||
+          parsedStatus.terminalState !== terminalState ||
+          (parsedStatus.revision ?? 0) !== session.revision);
+      if (parsedStatus && !sessionOverridesSnapshot) return syncJobStatusSchema.parse(parsedStatus);
 
       if (!parsedStatus) {
         createLogger({
@@ -380,13 +402,21 @@ class SyncService {
           }
         : null;
 
+    let error: SyncJobStatus["error"] = null;
+    if (session.interrupted) error = settleRun(session, "interrupted").error;
+    else if (
+      session.status === "failed" &&
+      session.statusMessage === SYNC_STATUS_MESSAGES.failedPersist
+    )
+      error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
     return {
+      revision: session.revision,
       jobId,
       phase: sessionStatusToPhase(session.status),
       statusMessage,
       progress,
       recentItems: [],
-      error: session.interrupted ? settleRun(session, "interrupted").error : null,
+      error,
       startedAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
       terminalState,
@@ -433,6 +463,8 @@ class SyncService {
           failCount: syncSession.failCount,
           createdAt: syncSession.createdAt,
           updatedAt: syncSession.updatedAt,
+          extensionRun: syncSession.extensionRun,
+          revision: syncSession.revision,
           completedAt: syncSession.completedAt,
           hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
         })
@@ -450,7 +482,12 @@ class SyncService {
 
     return {
       sessions: sessionRecords.map(({ hasRequestPayload, ...record }) => {
-        const { interrupted: _interrupted, ...session } = viewSession(record, now);
+        const {
+          interrupted: _interrupted,
+          extensionRun: _extensionRun,
+          revision: _revision,
+          ...session
+        } = viewSession(record, now);
         const targetOrderIsAvailable =
           !(
             session.syncType === "order-item" ||
@@ -501,6 +538,8 @@ class SyncService {
         failCount: syncSession.failCount,
         createdAt: syncSession.createdAt,
         updatedAt: syncSession.updatedAt,
+        extensionRun: syncSession.extensionRun,
+        revision: syncSession.revision,
         completedAt: syncSession.completedAt,
         hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
       })
@@ -509,7 +548,12 @@ class SyncService {
 
     if (!sessionRecord) return null;
     const { hasRequestPayload, ...record } = sessionRecord;
-    const { interrupted, ...session } = viewSession(record, Date.now());
+    const {
+      interrupted,
+      extensionRun: _extensionRun,
+      revision: _revision,
+      ...session
+    } = viewSession(record, Date.now());
     const targetOrderIsAvailable =
       !(
         session.syncType === "order-item" ||

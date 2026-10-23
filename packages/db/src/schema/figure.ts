@@ -1,5 +1,6 @@
 import {
   pgTable,
+  boolean,
   text,
   timestamp,
   integer,
@@ -396,6 +397,8 @@ export const syncSession = pgTable(
     successCount: integer("success_count").notNull().default(0),
     failCount: integer("fail_count").notNull().default(0),
     requestPayload: jsonb("request_payload").$type<JobData>(),
+    extensionRun: boolean("extension_run").notNull().default(false),
+    revision: integer("revision").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),

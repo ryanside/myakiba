@@ -24,12 +24,35 @@ export const parseJobStatusPayload = (value: string): SyncJobStatus | null => {
   }
 };
 
+const WRITE_REVISION_SCRIPT = `
+local cached = redis.call('GET', KEYS[1])
+if cached then
+  local ok, previous = pcall(cjson.decode, cached)
+  if ok and tonumber(previous.revision or 0) > tonumber(ARGV[2]) then return 0 end
+end
+redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[3])
+redis.call('PUBLISH', KEYS[2], ARGV[1])
+return 1
+`;
+
 export const writeJobStatusSnapshotAndPublish = async (
   redis: Redis,
   jobId: string,
   status: SyncJobStatus,
 ): Promise<void> => {
   const serializedStatus = JSON.stringify(status);
+  if (status.revision !== undefined) {
+    await redis.eval(
+      WRITE_REVISION_SCRIPT,
+      2,
+      getJobStatusSnapshotKey(jobId),
+      getJobStatusChannel(jobId),
+      serializedStatus,
+      status.revision,
+      JOB_STATUS_TTL_SECONDS,
+    );
+    return;
+  }
   const results = await redis
     .multi()
     .set(getJobStatusSnapshotKey(jobId), serializedStatus, "EX", JOB_STATUS_TTL_SECONDS)

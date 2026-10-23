@@ -1199,7 +1199,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({ outcome: result.outcome });
       return result;
     },
-    { params: sessionParams, body: syncItemFailureSchema, auth: true, rateLimit: "mfcIngest" },
+    { params: sessionParams, body: syncItemFailureSchema, auth: true, rateLimit: "syncFailure" },
   )
   .post(
     "/sessions/:id/heartbeat",
@@ -1223,7 +1223,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({ outcome: result.active ? "active" : "inactive" });
       return result;
     },
-    { params: sessionParams, body: syncRunSchema, auth: true },
+    { params: sessionParams, body: syncRunSchema, auth: true, rateLimit: "syncControl" },
   )
   .post(
     "/sessions/:id/interrupt",
@@ -1247,7 +1247,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
       log.set({ outcome: result.outcome });
       return result;
     },
-    { params: sessionParams, body: syncRunSchema, auth: true },
+    { params: sessionParams, body: syncRunSchema, auth: true, rateLimit: "syncControl" },
   )
   .get(
     "/job-status",
@@ -1422,9 +1422,40 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           }
 
           if (nextEvent.kind === "heartbeat") {
+            const { data: polledStatus, error: pollError } = await tryCatch(
+              SyncService.getJobStatus(jobId, user.id),
+            );
+            if (pollError) {
+              const isNotFound = pollError.message === "SYNC_JOB_NOT_FOUND";
+              if (isNotFound) log.set({ outcome: "not_found" });
+              else log.error(pollError, { step: "getJobStatusHeartbeat", outcome: "error" });
+              yield sse({
+                data: createTerminalJobStatus({
+                  jobId,
+                  startedAt: initialJobStatus.startedAt,
+                  error: {
+                    code: isNotFound ? "unknown" : "connection_lost",
+                    message: isNotFound ? "Job not found" : SYNC_STATUS_MESSAGES.streamError,
+                  },
+                  terminalState: "error",
+                }),
+              });
+              return;
+            }
+            latestJobStatus = {
+              ...polledStatus,
+              recentItems:
+                polledStatus.recentItems.length > 0
+                  ? polledStatus.recentItems
+                  : latestJobStatus.recentItems,
+            };
             yield sse({
               data: latestJobStatus,
             });
+            if (latestJobStatus.terminalState !== null) {
+              logTerminalOutcome(latestJobStatus.terminalState);
+              return;
+            }
             continue;
           }
 
@@ -1449,6 +1480,8 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             return;
           }
 
+          subscriptionEventPromise = subscription.next();
+          if ((nextEvent.event.status.revision ?? 0) < (latestJobStatus.revision ?? 0)) continue;
           latestJobStatus = nextEvent.event.status;
           yield sse({
             data: latestJobStatus,
@@ -1458,8 +1491,6 @@ const syncRouter = new Elysia({ prefix: "/sync" })
             logTerminalOutcome(latestJobStatus.terminalState);
             return;
           }
-
-          subscriptionEventPromise = subscription.next();
         }
       } finally {
         await subscription.unsubscribe();

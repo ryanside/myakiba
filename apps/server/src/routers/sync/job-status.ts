@@ -4,10 +4,15 @@ import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import { tryCatch } from "@myakiba/utils/result";
 
-export const queuedJobStatus = (jobId: string, statusMessage: string): SyncJobStatus => {
+export const queuedJobStatus = (
+  jobId: string,
+  statusMessage: string,
+  revision?: number,
+): SyncJobStatus => {
   const now = new Date().toISOString();
   return {
     jobId,
+    ...(revision !== undefined && { revision }),
     phase: "queued",
     statusMessage,
     progress: null,

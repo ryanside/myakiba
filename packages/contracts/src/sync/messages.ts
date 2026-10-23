@@ -25,3 +25,14 @@ export const SYNC_STATUS_MESSAGES = {
   requireEmailVerification:
     "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up.",
 } as const;
+
+export const ITEM_FETCH_ERROR_MESSAGE = {
+  mfc_signed_out: "Sign in to MyFigureCollection to import this item",
+  hidden_or_missing:
+    "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
+  challenge_unsolved: "The MyFigureCollection security check was not completed",
+  rate_limited: "MyFigureCollection asked us to slow down. Try again later",
+  timeout: "MyFigureCollection took too long to answer",
+  unexpected_page: "MyFigureCollection showed an unexpected page",
+  unknown: "The extension could not fetch this item",
+} as const;

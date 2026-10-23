@@ -62,6 +62,18 @@ const rateLimitConfigs = {
     keyPrefix: "rl:sync-retry",
     strategy: "userId",
   },
+  syncControl: {
+    maxRequests: 240,
+    windowSeconds: 60,
+    keyPrefix: "rl:sync-control",
+    strategy: "userId",
+  },
+  syncFailure: {
+    maxRequests: 120,
+    windowSeconds: 60,
+    keyPrefix: "rl:sync-failure",
+    strategy: "userId",
+  },
   mfcIngest: {
     maxRequests: 2000,
     windowSeconds: 3600,
