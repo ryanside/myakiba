@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { PaginationState } from "@tanstack/react-table";
 import { SYNC_SESSION_ITEM_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
@@ -19,7 +18,8 @@ import { RetrySyncSessionButton } from "@/components/sync/retry-sync-session-but
 import { ExtensionPromptNotice } from "@/components/extension/extension-prompt-notice";
 import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchSyncSessionDetail } from "@/queries/sync";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 import { cn } from "@/lib/utils";
 import { useFilters } from "@/hooks/use-filters";
@@ -64,24 +64,7 @@ function RouteComponent(): ReactNode {
     isFetching,
     isError,
     error,
-  } = useQuery({
-    queryKey: [
-      "syncSessionDetail",
-      id,
-      page,
-      SYNC_SESSION_DETAIL_PAGE_SIZE,
-      selectedStatuses,
-    ] as const,
-    queryFn: () =>
-      fetchSyncSessionDetail(id, {
-        page,
-        limit: SYNC_SESSION_DETAIL_PAGE_SIZE,
-        status: filters.status,
-      }),
-    placeholderData: keepPreviousData,
-    staleTime: 15_000,
-    refetchOnWindowFocus: true,
-  });
+  } = useRead(sync.session, { sessionId: id, page, status: filters.status });
 
   const session = responseData?.session;
   const items = session?.items ?? [];

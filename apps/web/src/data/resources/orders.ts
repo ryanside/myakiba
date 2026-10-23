@@ -1,4 +1,5 @@
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type {
   CascadeOptions,
@@ -55,6 +56,19 @@ export const orders = {
     staleTime: 30_000,
   }),
 };
+
+/** Refetches the orders list and one order's items, for a sync that adds items to the order. */
+export function useRefetchOrder() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (orderId: string) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: orderItemsOf(orderId) }),
+      ]),
+    [queryClient],
+  );
+}
 
 /** The orders list the page shows. Optimistic patches touch it only when no filter or sort is on. */
 type OnList = { readonly list: OrderFilters };

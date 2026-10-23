@@ -2,7 +2,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import type { ComponentProps } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,6 +16,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { useSyncMutations } from "@/hooks/use-sync-mutations";
 import SyncOrderItemForm from "@/components/sync/sync-order-item-form";
 import { useExtensionGate } from "@/lib/extension-gate";
+import { useRefetchOrder } from "@/data/resources/orders";
 
 type OrderItemSyncSheetProps = {
   readonly orderId: string;
@@ -33,20 +33,18 @@ export function OrderItemSyncSheet({
   variant = "default",
   size = "sm",
 }: OrderItemSyncSheetProps) {
-  const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
   const { checking, gate } = useExtensionGate();
 
+  const refetchOrder = useRefetchOrder();
+
   const handleComplete = useCallback((): void => {
     setOpen(false);
-    void Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["orders"] }),
-      queryClient.invalidateQueries({ queryKey: ["orderItems", orderId] }),
-    ]);
-  }, [orderId, queryClient]);
+    void refetchOrder(orderId);
+  }, [orderId, refetchOrder]);
 
-  const { handleSyncOrderItemSubmit, isSyncing } = useSyncMutations(queryClient, handleComplete);
+  const { handleSyncOrderItemSubmit, isSyncing } = useSyncMutations(handleComplete);
   const meta = SYNC_OPTION_META["order-item"];
 
   return (

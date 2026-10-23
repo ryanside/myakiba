@@ -2,18 +2,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { MinusSignSquareIcon, AddSquareIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { useQueryClient } from "@tanstack/react-query";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatShortDateTime } from "@/lib/date-display";
-import { fetchSyncSessionDetail } from "@/queries/sync";
-import {
-  ACTIVE_SYNC_SESSION_STATUS_SET,
-  SYNC_SESSION_SUBGRID_PAGE_SIZE,
-} from "@myakiba/contracts/sync/constants";
+import { usePrefetchRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
+import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
 
 interface SyncSessionColumnsParams {
@@ -21,15 +18,10 @@ interface SyncSessionColumnsParams {
 }
 
 function ExpandButton({ row }: { readonly row: Row<SyncSessionRow> }) {
-  const queryClient = useQueryClient();
+  const prefetchItems = usePrefetchRead(sync.sessionItems);
 
   const handlePointerEnter = () => {
-    void queryClient.prefetchQuery({
-      queryKey: ["syncSessionDetail", row.original.id, 1, SYNC_SESSION_SUBGRID_PAGE_SIZE] as const,
-      queryFn: () =>
-        fetchSyncSessionDetail(row.original.id, { page: 1, limit: SYNC_SESSION_SUBGRID_PAGE_SIZE }),
-      staleTime: 30_000,
-    });
+    void prefetchItems({ sessionId: row.original.id, page: 1 });
   };
 
   const isExpanded = row.getIsExpanded();

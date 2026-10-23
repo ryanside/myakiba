@@ -1,4 +1,5 @@
 import {
+  experimental_streamedQuery as streamedQuery,
   infiniteQueryOptions,
   queryOptions,
   useInfiniteQuery,
@@ -111,10 +112,7 @@ type ReadCache = {
 };
 
 type RootedReadSpec<F extends Family, Input, Data> = ReadCache & {
-  /**
-   * A hand-built key under one of the family's cataloged roots, so sync and the family's
-   * writes refresh it. The sync and import screens still invalidate these keys by their literal roots.
-   */
+  /** A hand-built key under one of the family's cataloged roots, so sync and the family's writes refresh it. */
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
   readonly load: (input: Input) => Promise<Data>;
   /** Shows the previous input's data while this input loads, when it still applies. */
@@ -145,14 +143,55 @@ export function rootedRead<F extends Family, Input, Data>(
 
 type RootedRead<F extends Family, Input, Data> = ReturnType<typeof rootedRead<F, Input, Data>>;
 
+type StreamedReadSpec<F extends Family, Input, Chunk, Data> = {
+  readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
+  /** Opens the stream. `client` is the cache the read lives in, for what a chunk refreshes. */
+  readonly open: (
+    input: Input,
+    context: { readonly signal: AbortSignal; readonly client: QueryClient },
+  ) => Promise<AsyncIterable<Chunk>>;
+  readonly initialValue: (input: Input) => Data;
+  readonly reducer: (data: Data, chunk: Chunk) => Data;
+  /** Keeps the data a refetch reconnects from, instead of starting over. */
+  readonly refetchMode?: "append";
+  readonly retry: false | ((failureCount: number, error: Error) => boolean);
+};
+
+/** A read that follows a server stream. Focusing the window never reopens it. */
+export function streamedRead<F extends Family, Input, Chunk, Data>(
+  family: F,
+  { key, open, initialValue, reducer, refetchMode, retry }: StreamedReadSpec<F, Input, Chunk, Data>,
+) {
+  return {
+    family,
+    key,
+    options: (input: Input) =>
+      queryOptions({
+        queryKey: key(input),
+        queryFn: streamedQuery({
+          streamFn: ({ signal, client }) => open(input, { signal, client }),
+          reducer,
+          initialValue: initialValue(input),
+          refetchMode,
+        }),
+        refetchOnWindowFocus: false,
+        retry,
+      }),
+  };
+}
+
+type StreamedRead<F extends Family, Input, Chunk, Data> = ReturnType<
+  typeof streamedRead<F, Input, Chunk, Data>
+>;
+
 type ReadSwitch = { readonly enabled?: boolean };
 
 type ReadArgs<Input> = undefined extends Input
   ? [input?: Input, readSwitch?: ReadSwitch]
   : [input: Input, readSwitch?: ReadSwitch];
 
-export function useRead<F extends Family, Input, Data>(
-  read: RootedRead<F, Input, Data>,
+export function useRead<F extends Family, Input, Data, Chunk = never>(
+  read: RootedRead<F, Input, Data> | StreamedRead<F, Input, Chunk, Data>,
   ...[input, readSwitch]: ReadArgs<Input>
 ) {
   const enabled = readSwitch?.enabled;
@@ -211,6 +250,25 @@ export function useInvalidateRead<F extends Family, Input, Data>(read: RootedRea
     (input: Input) => queryClient.invalidateQueries({ queryKey: read.key(input) }),
     [queryClient, read],
   );
+}
+
+/** Loads one read's query before it shows, like a row about to expand. It never rejects. */
+export function usePrefetchRead<F extends Family, Input, Data>(read: RootedRead<F, Input, Data>) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (input: Input) => queryClient.prefetchQuery(read.options(input)),
+    [queryClient, read],
+  );
+}
+
+/** Refetches every query of these families, the way a write's refetch does. */
+export function invalidateFamilies(
+  queryClient: QueryClient,
+  families: readonly Family[],
+): Promise<void> {
+  return queryClient.invalidateQueries({
+    predicate: (query) => inFamilies(query.queryKey, families),
+  });
 }
 
 type Rollback = () => void;
@@ -280,10 +338,7 @@ export function useResourceMutation<Input, Output>(
   const spec = command[commandSpec];
   const { optimistic, refetchAfterFailure, refetchBy } = spec;
   const queryClient = useQueryClient();
-  const refetchFamilies = () =>
-    queryClient.invalidateQueries({
-      predicate: (query) => inFamilies(query.queryKey, spec.invalidates),
-    });
+  const refetchFamilies = () => invalidateFamilies(queryClient, spec.invalidates);
   const invalidateKeys = (keys: readonly RefetchKey<PersistedFamily>[]) =>
     Promise.all(keys.map((filter) => queryClient.invalidateQueries(filter)));
   const refetch = async (input: Input) => {

@@ -1,117 +1,58 @@
-import {
-  useQuery,
-  useQueryClient,
-  experimental_streamedQuery as streamedQuery,
-} from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { Treaty } from "@elysiajs/eden";
-import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import type { SyncType } from "@myakiba/contracts/shared/types";
-import { app } from "@/lib/treaty-client";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { resolveSyncMessage, SYNC_OPTION_META } from "@/lib/sync";
-import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
 import { toast } from "@/components/ui/toast";
-
-type SyncJobStatusChunk =
-  Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
-    ? Chunk
-    : never;
 
 export function useSyncJobStatusQuery(
   jobId: string | null,
   sessionId: string | null,
   syncType: SyncType | null,
 ) {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const now = new Date().toISOString();
-  const initialValue: SyncJobStatus = {
-    jobId: jobId ?? "",
-    phase: "queued",
-    statusMessage: SYNC_STATUS_MESSAGES.connecting,
-    progress: null,
-    recentItems: [],
-    error: null,
-    startedAt: now,
-    updatedAt: now,
-    terminalState: null,
+
+  const onEnd = (status: SyncJobStatus): void => {
+    const { error: chunkError, statusMessage, terminalState } = status;
+    const message = resolveSyncMessage({ statusMessage }, status, false);
+
+    const description =
+      chunkError?.message && chunkError.message !== message ? chunkError.message : undefined;
+
+    const meta = syncType === null ? null : SYNC_OPTION_META[syncType];
+    let toastType = "error";
+    let toastTitle: string = meta?.failureTitle ?? "Import failed";
+
+    if (terminalState === "success") {
+      toastType = "success";
+      toastTitle = meta?.completedTitle ?? "Import complete";
+    } else if (terminalState === "partial") {
+      toastType = "warning";
+      toastTitle = "Failed to add some items";
+    } else if (terminalState === "timeout") {
+      toastType = "info";
+      toastTitle = "Status updates timed out";
+    }
+
+    const toastId = toast.add({
+      type: toastType,
+      title: toastTitle,
+      description: description === undefined ? message : `${message}. ${description}`,
+      actionProps: {
+        children: sessionId === null ? "View import history" : "View details",
+        onClick() {
+          toast.close(toastId);
+          if (sessionId === null) {
+            void navigate({ to: "/sync" });
+            return;
+          }
+
+          void navigate({ to: "/sync/$id", params: { id: sessionId } });
+        },
+      },
+    });
   };
 
-  return useQuery({
-    queryKey: ["syncJobStatus", jobId] as const,
-    enabled: jobId !== null,
-    queryFn: streamedQuery({
-      streamFn: async ({ signal }) => {
-        if (jobId === null) throw new Error("jobId is null");
-        const { data, error } = await app.api.sync["job-status"].get({
-          query: { jobId },
-          fetch: { signal },
-        });
-        if (error) throw new Error("Failed to connect to job status stream");
-        if (!data) throw new Error("No data received from job status stream");
-        const stream = data;
-
-        async function* withFinishedCheck(): AsyncGenerator<SyncJobStatusChunk> {
-          for await (const chunk of stream) {
-            const { error: chunkError, statusMessage, terminalState } = chunk.data;
-            if (terminalState === null) {
-              yield chunk;
-              continue;
-            }
-
-            await invalidateSyncResultQueries(queryClient);
-
-            const message = resolveSyncMessage({ statusMessage }, chunk.data, false);
-
-            const description =
-              chunkError?.message && chunkError.message !== message
-                ? chunkError.message
-                : undefined;
-
-            const meta = syncType === null ? null : SYNC_OPTION_META[syncType];
-            let toastType = "error";
-            let toastTitle: string = meta?.failureTitle ?? "Import failed";
-
-            if (terminalState === "success") {
-              toastType = "success";
-              toastTitle = meta?.completedTitle ?? "Import complete";
-            } else if (terminalState === "partial") {
-              toastType = "warning";
-              toastTitle = "Failed to add some items";
-            } else if (terminalState === "timeout") {
-              toastType = "info";
-              toastTitle = "Status updates timed out";
-            }
-
-            const toastId = toast.add({
-              type: toastType,
-              title: toastTitle,
-              description: description === undefined ? message : `${message}. ${description}`,
-              actionProps: {
-                children: sessionId === null ? "View import history" : "View details",
-                onClick() {
-                  toast.close(toastId);
-                  if (sessionId === null) {
-                    void navigate({ to: "/sync" });
-                    return;
-                  }
-
-                  void navigate({ to: "/sync/$id", params: { id: sessionId } });
-                },
-              },
-            });
-
-            yield chunk;
-          }
-        }
-
-        return withFinishedCheck();
-      },
-      reducer: (_prev: SyncJobStatus, chunk: SyncJobStatusChunk) => chunk.data,
-      initialValue,
-    }),
-    refetchOnWindowFocus: false,
-    retry: false,
-  });
+  return useRead(sync.jobStatus, { jobId, onEnd }, { enabled: jobId !== null });
 }

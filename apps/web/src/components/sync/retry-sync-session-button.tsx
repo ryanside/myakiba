@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RedoIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "@/components/ui/toast";
 import { useExtensionGate } from "@/lib/extension-gate";
-import { retrySyncSession } from "@/queries/sync";
+import { useResourceMutation } from "@/data/client";
+import { retrySyncSessionCommand } from "@/data/resources/sync";
 import { importSyncItems } from "@/data/extension-run";
 import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
 
@@ -23,22 +22,11 @@ export function RetrySyncSessionButton({
   readonly isRetrying: boolean;
   readonly failCount: number;
 }): ReactNode {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () => retrySyncSession(sessionId),
-    onSuccess: async ({ jobId, missingMfcItemIds }) => {
-      toastRunOutcome(importSyncItems({ sessionId, jobId, mfcItemIds: missingMfcItemIds }));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["syncSessionDetail", sessionId] }),
-        queryClient.invalidateQueries({ queryKey: ["syncSessions"] }),
-      ]);
-    },
-    onError: (retryError) => {
-      toast.add({
-        type: "error",
-        title: "Failed to retry failed item results",
-        description: retryError.message,
-      });
+  const mutation = useResourceMutation(retrySyncSessionCommand, {
+    onSaved: (retriedSessionId, { jobId, missingMfcItemIds }) => {
+      toastRunOutcome(
+        importSyncItems({ sessionId: retriedSessionId, jobId, mfcItemIds: missingMfcItemIds }),
+      );
     },
   });
   const { checking, gate } = useExtensionGate();
@@ -59,7 +47,7 @@ export function RetrySyncSessionButton({
       className="gap-1"
       disabled={!canRetry || retryIsPending}
       aria-busy={checking || undefined}
-      onClick={() => gate(() => mutation.mutate())}
+      onClick={() => gate(() => mutation.run(sessionId))}
     >
       <HugeiconsIcon
         icon={RedoIcon}

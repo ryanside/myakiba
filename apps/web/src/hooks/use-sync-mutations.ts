@@ -1,17 +1,9 @@
 import { useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
-import type { QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { tryCatch } from "@myakiba/utils/result";
-import type {
-  SyncCollectionItem,
-  SyncOrder,
-  SyncOrderItems,
-  UserItem,
-} from "@myakiba/contracts/sync/types";
+import type { SyncCollectionItem, SyncOrder, SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
-import { invalidateSyncResultQueries } from "@/lib/mutation-query-invalidation";
-import { sendCollection, sendItemSync, sendItems, sendOrder, sendOrderItems } from "@/queries/sync";
+import { syncSends, useSyncSubmit } from "@/data/resources/sync";
 import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
@@ -40,10 +32,7 @@ async function sendWithExtension<Input>(
   return "sent";
 }
 
-export function useSyncMutations(
-  queryClient: QueryClient,
-  onComplete?: () => void,
-): UseSyncMutationsReturn {
+export function useSyncMutations(onComplete?: () => void): UseSyncMutationsReturn {
   const navigate = useNavigate();
 
   const handleSuccess = useCallback(
@@ -93,20 +82,13 @@ export function useSyncMutations(
           },
         },
       });
-
-      if (data.isFinished) {
-        void invalidateSyncResultQueries(queryClient);
-      } else {
-        void queryClient.invalidateQueries({ queryKey: ["syncSessions"] });
-      }
     },
-    [navigate, onComplete, queryClient],
+    [navigate, onComplete],
   );
 
-  const itemMutation = useMutation({
-    mutationFn: sendItemSync,
-    onSuccess: (data) => handleSuccess(data, "item"),
-    onError: (error: Error) => {
+  const itemSync = useSyncSubmit(syncSends.item, {
+    onSaved: (data) => handleSuccess(data, "item"),
+    onFailed: (error) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["item"].failureTitle,
@@ -122,10 +104,9 @@ export function useSyncMutations(
     },
   });
 
-  const csvMutation = useMutation({
-    mutationFn: (userItems: UserItem[]) => sendItems(userItems),
-    onSuccess: (data) => handleSuccess(data, "csv"),
-    onError: (error: Error) => {
+  const csvSync = useSyncSubmit(syncSends.csv, {
+    onSaved: (data) => handleSuccess(data, "csv"),
+    onFailed: (error) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["csv"].failureTitle,
@@ -141,10 +122,9 @@ export function useSyncMutations(
     },
   });
 
-  const orderMutation = useMutation({
-    mutationFn: (order: SyncOrder) => sendOrder(order),
-    onSuccess: (data) => handleSuccess(data, "order"),
-    onError: (error: Error) => {
+  const orderSync = useSyncSubmit(syncSends.order, {
+    onSaved: (data) => handleSuccess(data, "order"),
+    onFailed: (error) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["order"].failureTitle,
@@ -160,10 +140,9 @@ export function useSyncMutations(
     },
   });
 
-  const orderItemMutation = useMutation({
-    mutationFn: (orderItems: SyncOrderItems) => sendOrderItems(orderItems),
-    onSuccess: (data) => handleSuccess(data, "order-item"),
-    onError: (error: Error) => {
+  const orderItemSync = useSyncSubmit(syncSends.orderItem, {
+    onSaved: (data) => handleSuccess(data, "order-item"),
+    onFailed: (error) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["order-item"].failureTitle,
@@ -179,10 +158,9 @@ export function useSyncMutations(
     },
   });
 
-  const collectionMutation = useMutation({
-    mutationFn: (items: SyncCollectionItem[]) => sendCollection(items),
-    onSuccess: (data) => handleSuccess(data, "collection"),
-    onError: (error: Error) => {
+  const collectionSync = useSyncSubmit(syncSends.collection, {
+    onSaved: (data) => handleSuccess(data, "collection"),
+    onFailed: (error) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["collection"].failureTitle,
@@ -199,8 +177,8 @@ export function useSyncMutations(
   });
 
   const handleSyncItemsSubmit = useCallback(
-    (values: ItemSyncInput) => sendWithExtension(itemMutation.mutateAsync, values),
-    [itemMutation],
+    (values: ItemSyncInput) => sendWithExtension(itemSync.send, values),
+    [itemSync],
   );
 
   const handleSyncCsvSubmit = useCallback(
@@ -222,32 +200,32 @@ export function useSyncMutations(
         return "not_sent";
       }
 
-      return sendWithExtension(csvMutation.mutateAsync, userItems);
+      return sendWithExtension(csvSync.send, userItems);
     },
-    [csvMutation, navigate],
+    [csvSync, navigate],
   );
 
   const handleSyncOrderSubmit = useCallback(
-    (values: SyncOrder) => sendWithExtension(orderMutation.mutateAsync, values),
-    [orderMutation],
+    (values: SyncOrder) => sendWithExtension(orderSync.send, values),
+    [orderSync],
   );
 
   const handleSyncCollectionSubmit = useCallback(
-    (values: SyncCollectionItem[]) => sendWithExtension(collectionMutation.mutateAsync, values),
-    [collectionMutation],
+    (values: SyncCollectionItem[]) => sendWithExtension(collectionSync.send, values),
+    [collectionSync],
   );
 
   const handleSyncOrderItemSubmit = useCallback(
-    (values: SyncOrderItems) => sendWithExtension(orderItemMutation.mutateAsync, values),
-    [orderItemMutation],
+    (values: SyncOrderItems) => sendWithExtension(orderItemSync.send, values),
+    [orderItemSync],
   );
 
   const isSyncing =
-    itemMutation.isPending ||
-    csvMutation.isPending ||
-    orderMutation.isPending ||
-    orderItemMutation.isPending ||
-    collectionMutation.isPending;
+    itemSync.isPending ||
+    csvSync.isPending ||
+    orderSync.isPending ||
+    orderItemSync.isPending ||
+    collectionSync.isPending;
 
   return {
     handleSyncItemsSubmit,

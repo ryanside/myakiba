@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
-import { fetchSyncSessions } from "@/queries/sync";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
 import { SyncQuickFilters } from "@/components/sync/sync-quick-filters";
 import { syncSearchSchema } from "@myakiba/contracts/sync/schema";
@@ -39,18 +39,11 @@ function RouteComponent() {
     isPending,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["syncSessions", page, limit, filters.status, filters.syncType] as const,
-    queryFn: () =>
-      fetchSyncSessions({
-        page,
-        limit,
-        status: filters.status,
-        syncType: filters.syncType,
-      }),
-    placeholderData: keepPreviousData,
-    staleTime: 15_000,
-    refetchOnWindowFocus: true,
+  } = useRead(sync.sessions, {
+    page,
+    limit,
+    status: filters.status,
+    syncType: filters.syncType,
   });
 
   const sessions: SyncSessionRow[] = sessionsData?.sessions ?? [];

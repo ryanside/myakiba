@@ -1,6 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import { useQueryClient } from "@tanstack/react-query";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,13 +26,12 @@ type SyncSheetButtonProps = {
 };
 
 export function SyncSheetButton({ syncType, label, className }: SyncSheetButtonProps) {
-  const queryClient = useQueryClient();
   const { currency } = useUserPreferences();
   const [open, setOpen] = useState(false);
   const { checking, gate } = useExtensionGate();
 
   const { handleSyncOrderSubmit, handleSyncCollectionSubmit, handleSyncItemsSubmit, isSyncing } =
-    useSyncMutations(queryClient, () => {
+    useSyncMutations(() => {
       setOpen(false);
     });
 

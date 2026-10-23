@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -8,7 +7,8 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { PaginationState } from "@tanstack/react-table";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/contracts/sync/constants";
-import { fetchSyncSessionDetail } from "@/queries/sync";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { createSyncSessionItemSubColumns } from "./sync-session-item-sub-columns";
 
 interface SyncSessionItemSubDataGridProps {
@@ -28,13 +28,7 @@ export function SyncSessionItemSubDataGrid({ sessionId }: SyncSessionItemSubData
     isPending: isDetailPending,
     isError: isDetailError,
     error: detailError,
-  } = useQuery({
-    queryKey: ["syncSessionDetail", sessionId, page, SYNC_SESSION_SUBGRID_PAGE_SIZE] as const,
-    queryFn: () =>
-      fetchSyncSessionDetail(sessionId, { page, limit: SYNC_SESSION_SUBGRID_PAGE_SIZE }),
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-  });
+  } = useRead(sync.sessionItems, { sessionId, page });
 
   const responseData = detailData;
   const items = responseData?.session?.items ?? [];

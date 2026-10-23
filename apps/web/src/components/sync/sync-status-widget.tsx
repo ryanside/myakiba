@@ -8,7 +8,6 @@ import {
   Clock02Icon,
 } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,7 +22,8 @@ import {
 import { ThemedBadge } from "@/components/reui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { SyncSessionStatus, SyncType } from "@myakiba/contracts/shared/types";
-import { fetchSyncSessions } from "@/queries/sync";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { resolveSyncMessage, SESSION_STATUS_CONFIG, SYNC_TYPE_CONFIG } from "@/lib/sync";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ACTIVE_SYNC_SESSION_STATUS_SET } from "@myakiba/contracts/sync/constants";
@@ -40,12 +40,7 @@ export default function SyncStatusWidget() {
     data: recentData,
     isPending: isRecentPending,
     isError: isRecentError,
-  } = useQuery({
-    queryKey: ["syncSessions", 1, 5, undefined, undefined] as const,
-    queryFn: () => fetchSyncSessions({ page: 1, limit: 5 }),
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-  });
+  } = useRead(sync.recentSessions);
 
   const sessions = useMemo(() => recentData?.sessions ?? [], [recentData]);
 

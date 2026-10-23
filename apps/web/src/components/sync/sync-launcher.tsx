@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -28,7 +27,6 @@ export function SyncActionSheet({
   side = "left",
   initialItemExternalId,
 }: SyncActionSheetProps): React.JSX.Element {
-  const queryClient = useQueryClient();
   const { currency: userCurrency } = useUserPreferences();
 
   const {
@@ -36,7 +34,7 @@ export function SyncActionSheet({
     handleSyncOrderSubmit,
     handleSyncCollectionSubmit,
     handleSyncItemsSubmit,
-  } = useSyncMutations(queryClient, () => {
+  } = useSyncMutations(() => {
     onSyncTypeChange(null);
   });
 
