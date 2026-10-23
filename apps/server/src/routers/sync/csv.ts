@@ -46,11 +46,11 @@ export function prepareCsvItems(
       condition: "New",
     });
 
-    if (item.status === "Ordered" && item.orderId !== null) {
+    if (item.orderId !== null) {
       orderItems.push({
         id: item.orderId,
         userId,
-        title: existingItem.title || `Order ${item.orderId}`,
+        title: existingItem.title,
         shop: item.shop,
         orderDate: item.orderDate,
         releaseDate: existingItem.releaseDate,

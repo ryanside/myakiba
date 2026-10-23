@@ -1,9 +1,10 @@
-import { and, eq, inArray, lte, or, sql } from "drizzle-orm";
+import { and, inArray, lte, sql } from "drizzle-orm";
 import { syncSession } from "@myakiba/db/schema/figure";
 import {
   ACTIVE_SYNC_SESSION_STATUSES,
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_RUN_LEASE_MS,
+  WORKER_RUN_LEASE_MS,
 } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobError } from "@myakiba/contracts/sync/schema";
@@ -61,12 +62,6 @@ type LeasedSession = RunCounts & {
   readonly extensionRun: boolean;
 };
 
-export const leaseCutoff = (now: number): Date => new Date(now - SYNC_RUN_LEASE_MS);
-
-// Remove the worker-era allowance once those runs expire from the 30-day history.
-// A day bounds lost jobs while allowing queued jobs to finish through the old worker.
-const WORKER_RUN_LEASE_MS = 24 * 60 * 60 * 1000;
-
 export const isLapsed = (session: LeasedSession, now: number): boolean =>
   ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) &&
   session.updatedAt.getTime() <=
@@ -87,17 +82,11 @@ export function viewSession<S extends LeasedSession>(
 }
 
 /** The status `viewSession` shows, as SQL, for reads that filter or sort on it. */
-export const viewedStatusSql = (cutoff: Date) =>
+export const viewedStatusSql = (now: number) =>
   sql<SyncSessionStatus>`CASE WHEN ${and(
     inArray(syncSession.status, ACTIVE_SYNC_SESSION_STATUSES),
-    or(
-      and(eq(syncSession.extensionRun, true), lte(syncSession.updatedAt, cutoff)),
-      and(
-        eq(syncSession.extensionRun, false),
-        lte(
-          syncSession.updatedAt,
-          new Date(cutoff.getTime() + SYNC_RUN_LEASE_MS - WORKER_RUN_LEASE_MS),
-        ),
-      ),
+    lte(
+      syncSession.updatedAt,
+      sql`CASE WHEN ${syncSession.extensionRun} THEN ${new Date(now - SYNC_RUN_LEASE_MS)}::timestamp ELSE ${new Date(now - WORKER_RUN_LEASE_MS)}::timestamp END`,
     ),
   )} THEN (CASE WHEN ${syncSession.successCount} = ${syncSession.totalItems} THEN 'completed' WHEN ${syncSession.successCount} > 0 THEN 'partial' ELSE 'failed' END) ELSE ${syncSession.status} END`;

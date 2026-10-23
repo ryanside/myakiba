@@ -37,6 +37,7 @@ import { createId } from "@paralleldrive/cuid2";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
+  JOB_STATUS_POLL_INTERVAL_MS,
   waitForNextJobStatusEvent,
 } from "@/lib/job-status-stream";
 import { prepareCsvItems } from "./csv";
@@ -1374,6 +1375,7 @@ const syncRouter = new Elysia({ prefix: "/sync" })
         }
 
         let latestJobStatus = replayJobStatus;
+        let nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
         let subscriptionEventPromise = subscription.next();
 
         while (true) {
@@ -1422,20 +1424,29 @@ const syncRouter = new Elysia({ prefix: "/sync" })
           }
 
           if (nextEvent.kind === "heartbeat") {
+            if (Date.now() < nextPollAt) {
+              yield sse({ data: latestJobStatus });
+              continue;
+            }
+            nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
             const { data: polledStatus, error: pollError } = await tryCatch(
               SyncService.getJobStatus(jobId, user.id),
             );
             if (pollError) {
               const isNotFound = pollError.message === "SYNC_JOB_NOT_FOUND";
-              if (isNotFound) log.set({ outcome: "not_found" });
-              else log.error(pollError, { step: "getJobStatusHeartbeat", outcome: "error" });
+              if (!isNotFound) {
+                log.error(pollError, { step: "getJobStatusHeartbeat", outcome: "error" });
+                yield sse({ data: latestJobStatus });
+                continue;
+              }
+              log.set({ outcome: "not_found" });
               yield sse({
                 data: createTerminalJobStatus({
                   jobId,
                   startedAt: initialJobStatus.startedAt,
                   error: {
-                    code: isNotFound ? "unknown" : "connection_lost",
-                    message: isNotFound ? "Job not found" : SYNC_STATUS_MESSAGES.streamError,
+                    code: "unknown",
+                    message: "Job not found",
                   },
                   terminalState: "error",
                 }),

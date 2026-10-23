@@ -4,15 +4,17 @@ import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import { tryCatch } from "@myakiba/utils/result";
 
+export type ServerSyncJobStatus = SyncJobStatus & { readonly revision: number };
+
 export const queuedJobStatus = (
   jobId: string,
   statusMessage: string,
-  revision?: number,
-): SyncJobStatus => {
+  revision: number,
+): ServerSyncJobStatus => {
   const now = new Date().toISOString();
   return {
     jobId,
-    ...(revision !== undefined && { revision }),
+    revision,
     phase: "queued",
     statusMessage,
     progress: null,
@@ -25,7 +27,7 @@ export const queuedJobStatus = (
 };
 
 export async function publishJobStatus(
-  status: SyncJobStatus,
+  status: ServerSyncJobStatus,
   syncSessionId: string,
 ): Promise<void> {
   const { error } = await tryCatch(writeJobStatusSnapshotAndPublish(redis, status.jobId, status));

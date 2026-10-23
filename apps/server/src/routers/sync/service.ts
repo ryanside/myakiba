@@ -25,6 +25,7 @@ import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_RETRY_WINDOW_MS,
+  UNSAVED_ITEM_REASON,
 } from "@myakiba/contracts/sync/constants";
 import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
@@ -33,7 +34,7 @@ import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
-import { leaseCutoff, settleRun, viewSession, viewedStatusSql } from "./run-state";
+import { settleRun, viewSession, viewedStatusSql } from "./run-state";
 
 type SyncSessionUpdatePayload = Partial<
   Pick<
@@ -243,28 +244,9 @@ class SyncService {
       });
     } catch (error) {
       await tryCatch(
-        db.transaction(async (tx) => {
-          await this.insertSyncSession(tx, session);
-          await tx
-            .update(syncSessionItem)
-            .set({
-              status: "failed",
-              errorReason: SYNC_STATUS_MESSAGES.failedPersist,
-              updatedAt: new Date(),
-            })
-            .where(eq(syncSessionItem.syncSessionId, syncSessionId));
-          await tx
-            .update(syncSession)
-            .set({
-              requestPayload,
-              status: "failed",
-              statusMessage: SYNC_STATUS_MESSAGES.failedPersist,
-              failCount: sql`${syncSession.totalItems}`,
-              completedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(syncSession.id, syncSessionId));
-        }),
+        db.transaction((tx) =>
+          this.recordFailedStart(tx, session, requestPayload, SYNC_STATUS_MESSAGES.failedPersist),
+        ),
       );
       throw error;
     }
@@ -316,40 +298,58 @@ class SyncService {
           .where(eq(syncSession.id, session.id));
       });
     } catch (error) {
-      await db.transaction(async (tx) => {
-        await this.insertSyncSession(tx, session);
-        const now = new Date();
-        await tx
-          .update(syncSessionItem)
-          .set({
-            status: "failed",
-            errorReason: SYNC_STATUS_MESSAGES.failedBeforeStart,
-            updatedAt: now,
-          })
-          .where(eq(syncSessionItem.syncSessionId, session.id));
-        await tx
-          .update(syncSession)
-          .set({
+      await tryCatch(
+        db.transaction((tx) =>
+          this.recordFailedStart(
+            tx,
+            session,
             requestPayload,
-            status: "failed",
-            statusMessage: SYNC_STATUS_MESSAGES.failedBeforeStart,
-            successCount: 0,
-            failCount: sql`${syncSession.totalItems}`,
-            completedAt: now,
-            updatedAt: now,
-            extensionRun: true,
-            revision: 1,
-          })
-          .where(eq(syncSession.id, session.id));
-      });
+            SYNC_STATUS_MESSAGES.failedBeforeStart,
+          ),
+        ),
+      );
       throw error;
     }
     await publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id);
   }
 
+  private async recordFailedStart(
+    tx: SyncTransaction,
+    session: SyncSessionCreation,
+    payload: JobData,
+    message: string,
+  ): Promise<void> {
+    await this.insertSyncSession(tx, session);
+    const now = new Date();
+    await tx
+      .update(syncSessionItem)
+      .set({
+        status: "failed",
+        errorReason: payload.type === "item" ? message : UNSAVED_ITEM_REASON,
+        errorCode: "persistence_failed",
+        updatedAt: now,
+      })
+      .where(eq(syncSessionItem.syncSessionId, session.id));
+    await tx
+      .update(syncSession)
+      .set({
+        requestPayload: payload,
+        status: "failed",
+        statusMessage: message,
+        successCount: 0,
+        failCount: sql`${syncSession.totalItems}`,
+        completedAt: now,
+        updatedAt: now,
+        extensionRun: true,
+        revision: 1,
+      })
+      .where(eq(syncSession.id, session.id));
+  }
+
   async getJobStatus(jobId: string, userId: string): Promise<SyncJobStatus> {
     const [row] = await db
       .select({
+        id: syncSession.id,
         syncType: syncSession.syncType,
         status: syncSession.status,
         statusMessage: syncSession.statusMessage,
@@ -404,11 +404,18 @@ class SyncService {
 
     let error: SyncJobStatus["error"] = null;
     if (session.interrupted) error = settleRun(session, "interrupted").error;
-    else if (
-      session.status === "failed" &&
-      session.statusMessage === SYNC_STATUS_MESSAGES.failedPersist
-    )
-      error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
+    else if (session.status === "failed" && session.failCount > 0) {
+      const persistenceFailures = await db.$count(
+        syncSessionItem,
+        and(
+          eq(syncSessionItem.syncSessionId, session.id),
+          eq(syncSessionItem.status, "failed"),
+          eq(syncSessionItem.errorCode, "persistence_failed"),
+        ),
+      );
+      if (persistenceFailures > 0)
+        error = { code: "persistence_failed", message: SYNC_STATUS_MESSAGES.failedPersist };
+    }
     return {
       revision: session.revision,
       jobId,
@@ -438,7 +445,7 @@ class SyncService {
   ): Promise<{ sessions: SyncSessionRow[]; total: number }> {
     const offset = (page - 1) * limit;
     const now = Date.now();
-    const viewedStatus = viewedStatusSql(leaseCutoff(now));
+    const viewedStatus = viewedStatusSql(now);
 
     const conditions = [eq(syncSession.userId, userId)];
     if (statusFilter && statusFilter.length > 0)
@@ -582,6 +589,7 @@ class SyncService {
         itemExternalId: syncSessionItem.itemExternalId,
         status: syncSessionItem.status,
         errorReason: syncSessionItem.errorReason,
+        errorCode: syncSessionItem.errorCode,
         createdAt: syncSessionItem.createdAt,
         updatedAt: syncSessionItem.updatedAt,
         itemId: itemTable.id,

@@ -31,6 +31,8 @@ interface RateLimitResult {
   readonly remaining: number;
 }
 
+const MFC_ITEM_HOURLY_BUDGET = 2000;
+
 const rateLimitConfigs = {
   item: {
     maxRequests: 30,
@@ -69,13 +71,13 @@ const rateLimitConfigs = {
     strategy: "userId",
   },
   syncFailure: {
-    maxRequests: 120,
-    windowSeconds: 60,
+    maxRequests: MFC_ITEM_HOURLY_BUDGET,
+    windowSeconds: 3600,
     keyPrefix: "rl:sync-failure",
     strategy: "userId",
   },
   mfcIngest: {
-    maxRequests: 2000,
+    maxRequests: MFC_ITEM_HOURLY_BUDGET,
     windowSeconds: 3600,
     keyPrefix: "rl:mfc-ingest",
     strategy: "userId",

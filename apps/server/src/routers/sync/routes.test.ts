@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
@@ -39,6 +39,8 @@ const redisValues = new Map<string, string>();
 const subscribers = new Set<Listener>();
 let failS3 = false;
 const rateKeys: string[] = [];
+let failureRequests = 1;
+let statusReadFailures = 0;
 const statusReads = new Map<string, number>();
 
 function subscriber() {
@@ -71,7 +73,7 @@ await mock.module("@myakiba/redis/client", () => ({
     eval: async (_script: string, _keys: number, key: string, ...args: (string | number)[]) => {
       if (key.startsWith("rl:")) {
         rateKeys.push(key);
-        return [1, 3600];
+        return [key.startsWith("rl:sync-failure:") ? failureRequests : 1, 3600];
       }
       const [channel, raw] = args;
       const decoded = z.tuple([z.string(), z.string()]).parse([channel, raw]);
@@ -85,6 +87,10 @@ await mock.module("@myakiba/redis/client", () => ({
     },
     get: async (key: string) => {
       statusReads.set(key, (statusReads.get(key) ?? 0) + 1);
+      if (statusReadFailures > 0) {
+        statusReadFailures -= 1;
+        throw new Error("Redis temporarily unavailable");
+      }
       return redisValues.get(key) ?? null;
     },
     del: async (key: string) => Number(redisValues.delete(key)),
@@ -179,6 +185,8 @@ beforeEach(async () => {
   redisValues.clear();
   failS3 = false;
   rateKeys.length = 0;
+  failureRequests = 1;
+  statusReadFailures = 0;
   statusReads.clear();
   await db
     .insert(authSchema.user)
@@ -962,7 +970,7 @@ async function waitForReplay(jobId: string) {
   }
 }
 
-test("an open stream notices an expired lease on its next heartbeat", async () => {
+test("an open stream notices an expired lease on its next poll", async () => {
   const run = await start("item", { items: [X] });
   const stream = await openStream(run.jobId);
   expect(await stream.next()).toMatchObject({ terminalState: null });
@@ -971,6 +979,7 @@ test("an open stream notices an expired lease on its next heartbeat", async () =
     .update(syncSession)
     .set({ updatedAt: new Date(Date.now() - SYNC_RUN_LEASE_MS - 1000) })
     .where(eq(syncSession.id, run.syncSessionId));
+  const clock = spyOn(Date, "now").mockReturnValue(Date.now() + 31_000);
   try {
     expect(await stream.next()).toMatchObject({
       terminalState: "error",
@@ -978,9 +987,10 @@ test("an open stream notices an expired lease on its next heartbeat", async () =
     });
     await expect(stream.next()).rejects.toThrow("the stream ended");
   } finally {
+    clock.mockRestore();
     await stream.close();
   }
-}, 10_000);
+}, 40_000);
 
 test("a cached partial status cannot hide a later successful completion", async () => {
   const run = await start("item", { items: [X, Y] });
@@ -999,9 +1009,9 @@ test("a cached partial status cannot hide a later successful completion", async 
 test("an S3 timeout records the item as a persistence failure", async () => {
   const run = await start("collection", [collectionEntry(X, 200)]);
   failS3 = true;
-  expect(await complete(run, X)).toMatchObject({ status: 500 });
+  expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
   expect(await results(run.syncSessionId)).toEqual([
-    { id: X, status: "failed", reason: SYNC_STATUS_MESSAGES.failedPersist },
+    { id: X, status: "failed", reason: "Persistence failed while saving scraped items" },
   ]);
   expect(snapshot(run.jobId)).toMatchObject({
     terminalState: "error",
@@ -1073,7 +1083,7 @@ test("an Order deleted mid-run fails the remaining items without ingesting them"
   expect(await session(run.syncSessionId)).toMatchObject({ status: "partial", failCount: 1 });
 });
 
-test("control and failure requests use separate small per-user rate limits", async () => {
+test("control and failure requests use separate per-user rate limits", async () => {
   const run = await start("item", { items: [X] });
   await heartbeat(run);
   await fail(run, X);
@@ -1164,7 +1174,7 @@ test("a cached partial snapshot cannot hide a newer partial revision", async () 
 test("a persistence failure after an imported item retains the partial-success message", async () => {
   const run = await start("collection", [collectionEntry(PRESENT, 100), collectionEntry(X, 200)]);
   failS3 = true;
-  expect(await complete(run, X)).toMatchObject({ status: 500 });
+  expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
   expect(snapshot(run.jobId)).toMatchObject({
     terminalState: "partial",
     statusMessage: SYNC_STATUS_MESSAGES.partial(1, 2, 1),
@@ -1172,12 +1182,13 @@ test("a persistence failure after an imported item retains the partial-success m
   });
 });
 
-test("a heartbeat whose session was deleted sends a terminal error and closes", async () => {
+test("a poll whose session was deleted sends a terminal error and closes", async () => {
   const run = await start("item", { items: [X] });
   const stream = await openStream(run.jobId);
   await stream.next();
   await waitForReplay(run.jobId);
   await db.delete(syncSession).where(eq(syncSession.id, run.syncSessionId));
+  const clock = spyOn(Date, "now").mockReturnValue(Date.now() + 31_000);
   try {
     expect(await stream.next()).toMatchObject({
       terminalState: "error",
@@ -1185,6 +1196,187 @@ test("a heartbeat whose session was deleted sends a terminal error and closes", 
     });
     await expect(stream.next()).rejects.toThrow("the stream ended");
   } finally {
+    clock.mockRestore();
     await stream.close();
   }
-}, 10_000);
+}, 40_000);
+
+test("CSV completion imports an Owned row whose Order does not exist yet", async () => {
+  const run = await start("csv", [{ ...csvRow(X, "Owned", "10.00"), orderId: "missing-order" }]);
+  expect(await complete(run, X)).toEqual(imported);
+  expect(await session(run.syncSessionId)).toMatchObject({ status: "completed", successCount: 1 });
+  expect(await userRows()).toMatchObject([
+    { mfcItemId: X, status: "Owned", orderTitle: parsedPage(X).title },
+  ]);
+});
+
+for (const age of [180_000, 24 * 60 * 60 * 1000 + 1000]) {
+  test(`worker-era controls leave a ${age}ms-old session untouched`, async () => {
+    const updatedAt = new Date(Date.now() - age);
+    await db.insert(syncSession).values({
+      id: "worker-control",
+      jobId: "worker-control",
+      userId,
+      syncType: "item",
+      status: "processing",
+      totalItems: 1,
+      updatedAt,
+    });
+    await db.insert(syncSessionItem).values({ syncSessionId: "worker-control", itemExternalId: X });
+    const before = await db.select().from(syncSession);
+    const run = { syncSessionId: "worker-control", jobId: "worker-control" };
+    expect(await heartbeat(run)).toEqual({ status: 200, body: { active: false } });
+    expect(await interrupt(run)).toEqual({ status: 200, body: { outcome: "ignored" } });
+    expect(await db.select().from(syncSession)).toEqual(before);
+    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "pending", reason: null }]);
+  });
+}
+
+test("worker-era sync lapses just past 24 hours in status and SQL filters", async () => {
+  const { default: service } = await import("./service");
+  await db.insert(syncSession).values({
+    id: "lost-worker",
+    jobId: "lost-worker",
+    userId,
+    syncType: "item",
+    status: "processing",
+    totalItems: 1,
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 - 1000),
+  });
+  await db.insert(syncSessionItem).values({ syncSessionId: "lost-worker", itemExternalId: X });
+  expect(await service.getJobStatus("lost-worker", userId)).toMatchObject({
+    terminalState: "error",
+    statusMessage: SYNC_STATUS_MESSAGES.interrupted,
+  });
+  expect(await listed("?status=processing")).toEqual([]);
+  expect(await listed("?status=failed")).toMatchObject([{ status: "failed", failCount: 1 }]);
+});
+
+test("failure reporting accepts the full hourly ingest budget", async () => {
+  const run = await start("collection", [collectionEntry(X, 200)]);
+  failureRequests = 2000;
+  expect(await fail(run, X)).toEqual({ status: 200, body: { outcome: "recorded" } });
+  failureRequests = 2001;
+  expect(await fail(run, X)).toMatchObject({ status: 429 });
+});
+
+test("polling keeps the last status through a Redis blip and retries", async () => {
+  const run = await start("item", { items: [X] });
+  const stream = await openStream(run.jobId);
+  const clock = spyOn(Date, "now");
+  try {
+    const initial = await stream.next();
+    await waitForReplay(run.jobId);
+    const reads = statusReads.get(getJobStatusSnapshotKey(run.jobId));
+    expect(await stream.next()).toEqual(initial);
+    expect(statusReads.get(getJobStatusSnapshotKey(run.jobId))).toBe(reads);
+    statusReadFailures = 1;
+    const now = Date.now();
+    clock.mockReturnValue(now + 31_000);
+    expect(await stream.next()).toEqual(initial);
+    expect(statusReadFailures).toBe(0);
+    clock.mockReturnValue(now + 62_000);
+    expect(await stream.next()).toMatchObject({ terminalState: null });
+    expect(statusReads.get(getJobStatusSnapshotKey(run.jobId))).toBe((reads ?? 0) + 2);
+    await complete(run, X);
+    expect(await stream.next()).toMatchObject({ terminalState: "success" });
+  } finally {
+    clock.mockRestore();
+    await stream.close();
+  }
+}, 25_000);
+
+test("persistence failure survives cache expiry and a changed display message", async () => {
+  const run = await start("collection", [collectionEntry(X, 200)]);
+  failS3 = true;
+  await complete(run, X);
+  redisValues.delete(getJobStatusSnapshotKey(run.jobId));
+  await db
+    .update(syncSession)
+    .set({ statusMessage: "Translated persistence failure" })
+    .where(eq(syncSession.id, run.syncSessionId));
+  const { default: service } = await import("./service");
+  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+    error: { code: "persistence_failed" },
+  });
+  failS3 = false;
+  const retried = await retry(run.syncSessionId);
+  expect(await complete(retried, X)).toEqual(imported);
+  redisValues.delete(getJobStatusSnapshotKey(retried.jobId));
+  expect(await service.getJobStatus(retried.jobId, userId)).toMatchObject({
+    terminalState: "success",
+    error: null,
+  });
+});
+
+test("display text alone cannot classify a persistence failure", async () => {
+  const run = await start("item", { items: [X] });
+  await db
+    .update(syncSession)
+    .set({ status: "failed", statusMessage: SYNC_STATUS_MESSAGES.failedPersist, failCount: 1 })
+    .where(eq(syncSession.id, run.syncSessionId));
+  await db
+    .update(syncSessionItem)
+    .set({ status: "failed", errorReason: SYNC_STATUS_MESSAGES.failedPersist })
+    .where(eq(syncSessionItem.syncSessionId, run.syncSessionId));
+  redisValues.delete(getJobStatusSnapshotKey(run.jobId));
+  const { default: service } = await import("./service");
+  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+    terminalState: "error",
+    error: null,
+  });
+});
+
+test("a failed history fallback preserves the original persistence error", async () => {
+  const { default: service } = await import("./service");
+  const originalStart = service.startSyncRun.bind(service);
+  let caught: unknown;
+  const startRun = spyOn(service, "startSyncRun").mockImplementation(async (input) => {
+    try {
+      return await originalStart(input);
+    } catch (error) {
+      caught = error;
+      throw error;
+    }
+  });
+  await db.execute(`CREATE SEQUENCE session_attempts`);
+  await db.execute(
+    `CREATE FUNCTION reject_history() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF nextval('session_attempts') > 1 THEN RAISE EXCEPTION 'history unavailable'; END IF; RETURN NEW; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER reject_history BEFORE INSERT ON sync_session FOR EACH ROW EXECUTE FUNCTION reject_history()`,
+  );
+  await db.execute(
+    `CREATE FUNCTION reject_collection() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'persistence unavailable'; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER reject_collection BEFORE INSERT ON collection FOR EACH ROW EXECUTE FUNCTION reject_collection()`,
+  );
+  try {
+    expect(
+      await post("/collection", [collectionEntry(PRESENT, 100), collectionEntry(X, 200)]),
+    ).toMatchObject({ status: 500 });
+    if (!(caught instanceof Error)) throw new Error("the failed start did not throw");
+    expect(caught.cause).toMatchObject({ message: "persistence unavailable" });
+  } finally {
+    startRun.mockRestore();
+    await db.execute(`DROP TRIGGER reject_collection ON collection`);
+    await db.execute(`DROP FUNCTION reject_collection()`);
+    await db.execute(`DROP TRIGGER reject_history ON sync_session`);
+    await db.execute(`DROP FUNCTION reject_history()`);
+    await db.execute(`DROP SEQUENCE session_attempts`);
+  }
+});
+
+test("a fetch failure cannot hide a recorded persistence failure", async () => {
+  const run = await start("collection", [collectionEntry(X, 200), collectionEntry(Y, 300)]);
+  await fail(run, X);
+  failS3 = true;
+  await complete(run, Y);
+  expect(snapshot(run.jobId)).toMatchObject({ error: { code: "persistence_failed" } });
+  redisValues.delete(getJobStatusSnapshotKey(run.jobId));
+  const { default: service } = await import("./service");
+  expect(await service.getJobStatus(run.jobId, userId)).toMatchObject({
+    error: { code: "persistence_failed" },
+  });
+});

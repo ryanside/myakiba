@@ -29,10 +29,12 @@ const payload = (csvRow: NormalizedInternalCsvItem): JobData => ({
   ordersToInsert: [],
 });
 
-test("CSV completion uses the worker's fallback Order title", () => {
-  expect(fetchedItemRows(payload(row), item).orders).toMatchObject([{ title: "Order order-1" }]);
+test("CSV completion keeps an empty Item title as the worker does", () => {
+  expect(fetchedItemRows(payload(row), item).orders).toMatchObject([{ title: "" }]);
 });
 
-test("CSV completion creates Orders only for Ordered rows", () => {
-  expect(fetchedItemRows(payload({ ...row, status: "Owned" }), item).orders).toEqual([]);
+test("CSV completion creates an Order for an Owned row with an orderId", () => {
+  expect(fetchedItemRows(payload({ ...row, status: "Owned" }), item).orders).toMatchObject([
+    { id: "order-1", status: "Ordered" },
+  ]);
 });

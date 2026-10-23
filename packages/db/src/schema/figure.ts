@@ -422,6 +422,7 @@ export const syncSessionItem = pgTable(
     itemExternalId: integer("item_external_id").notNull(),
     status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
     errorReason: text("error_reason"),
+    errorCode: text("error_code", { enum: ["persistence_failed"] }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

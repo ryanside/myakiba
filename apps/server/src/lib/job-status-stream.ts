@@ -1,5 +1,6 @@
 import type { JobStatusSubscription } from "./job-status-subscription-registry";
 
+export const JOB_STATUS_POLL_INTERVAL_MS = 30_000;
 export const MAX_JOB_STATUS_STREAM_DURATION_MS = 10 * 60 * 1000;
 // Keep upstream idle timeouts from closing a healthy but quiet SSE response.
 const JOB_STATUS_HEARTBEAT_INTERVAL_MS = 5 * 1000;
