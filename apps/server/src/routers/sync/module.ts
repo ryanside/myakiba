@@ -15,13 +15,7 @@ import {
 import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
 import { command, fail, failAfterCommit, ok, proceed, query } from "@/domain/kernel";
-import type {
-  JobData,
-  UpdatedSyncCollection,
-  UpdatedSyncOrder,
-  UpdatedSyncOrderItem,
-  QueuedCollectionItem,
-} from "@myakiba/contracts/sync/schema";
+import type { JobData, UpdatedSyncOrder } from "@myakiba/contracts/sync/schema";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { MAX_LIMIT } from "@myakiba/contracts/shared/constants";
 import type {
@@ -36,47 +30,12 @@ import type {
   OrderSyncType,
   CollectionSyncType,
   SyncOrderItemsInput,
-  SyncOrderItemInput,
 } from "./model";
 import SyncService from "./service";
 import type { SyncSessionCreation } from "./service";
-import type { ItemRows } from "./item-rows";
-import { idsToFetch } from "./item-rows";
 import { prepareCsvItems } from "./csv";
-
-type ExistingItemsWithLatestRelease = Awaited<
-  ReturnType<typeof SyncService.getExistingItemsWithLatestReleaseByExternalIds>
->;
-
-const buildExistingItemLookups = (existingItems: ExistingItemsWithLatestRelease) => {
-  const externalIdToInternalId = new Map<number, string>();
-  const releaseIdsByItemId = new Map<string, string>();
-  const releaseDatesByItemId = new Map<string, string>();
-
-  for (const existingItem of existingItems) {
-    externalIdToInternalId.set(existingItem.externalId, existingItem.id);
-
-    if (existingItem.releaseId) {
-      releaseIdsByItemId.set(existingItem.id, existingItem.releaseId);
-    }
-
-    if (existingItem.releaseDate) {
-      releaseDatesByItemId.set(existingItem.id, existingItem.releaseDate);
-    }
-  }
-
-  return {
-    externalIdToInternalId,
-    releaseIdsByItemId,
-    releaseDatesByItemId,
-  };
-};
-
-type PlannedSync = {
-  readonly session: SyncSessionCreation;
-  readonly requestPayload: JobData;
-  readonly rows: ItemRows;
-};
+import { collectionRows, plannedSync, splitItems } from "./plan";
+import type { PlannedSync } from "./plan";
 
 const failedStart = command(
   { action: "sync.failedStart", failure: "Failed to save import history" },
@@ -259,9 +218,6 @@ export const Sync = {
       };
 
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
-      const statusMessage: string = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
 
       log.set({
         sync: {
@@ -277,26 +233,13 @@ export const Sync = {
         },
       });
 
-      return ok({
-        session,
-        requestPayload: jobData,
-        rows: { collectionItems, orders: orderItems },
-        complete: {
+      return ok(
+        plannedSync({
           session,
-          collectionItems,
-          orderItems,
           requestPayload: jobData,
-        },
-        response: {
-          status: statusMessage,
-          isFinished: !jobId,
-          existingItemsToInsert: collectionItems.length,
-          newItems: itemsToFetch.length,
-          jobId,
-          syncSessionId,
-          missingMfcItemIds: idsToFetch(jobData),
-        },
-      });
+          rows: { collectionItems, orders: orderItems },
+        }),
+      );
     },
   ),
   planOrder: query(
@@ -318,9 +261,10 @@ export const Sync = {
 
       const orderId = createId();
 
-      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
+      const normalizedItems = body.items.map((item) => ({
         ...item,
         collectionId: createId(),
+        orderId,
       }));
       const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
@@ -329,14 +273,10 @@ export const Sync = {
         scope.tx,
       );
 
-      const { externalIdToInternalId, releaseIdsByItemId, releaseDatesByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const releaseDates = normalizedItems.flatMap((item) => {
-        const internalId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalId) return [];
-        const date = releaseDatesByItemId.get(internalId);
-        return date ? [date] : [];
+      const { itemsToFetch, itemsToInsert, releaseDates } = splitItems({
+        items: normalizedItems,
+        existingItems,
+        userId: scope.viewer.userId,
       });
       if (body.releaseDate) releaseDates.push(body.releaseDate);
 
@@ -353,56 +293,17 @@ export const Sync = {
         releaseDate: latestReleaseDate,
       };
 
-      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          orderId,
-          releaseId: null,
-          userId: scope.viewer.userId,
-        }));
-
-      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            orderId,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: scope.viewer.userId,
-          },
-        ];
-      });
-
       const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          orderId: item.orderId,
-          status: item.status,
-          count: item.count,
+      const collectionItemsToInsert = collectionRows(
+        itemsToInsert.map((item) => ({
+          ...item,
           score: "0.0",
-          price: item.price,
           shop: order.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          condition: item.condition,
           notes: "",
           tags: [],
-          releaseId: item.releaseId,
-        }));
+        })),
+      );
 
       const syncSessionId = createId();
       const jobData = {
@@ -424,15 +325,6 @@ export const Sync = {
         existingItemExternalIds: existingOrderItemExternalIds,
       };
 
-      log.set({
-        sync: {
-          type: "order",
-          sessionId: syncSessionId,
-          orderId,
-        },
-        order: { id: orderId },
-      });
-
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
@@ -451,33 +343,17 @@ export const Sync = {
         },
       });
 
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return ok({
-        session,
-        requestPayload: jobData,
-        rows: {
-          collectionItems: collectionItemsToInsert,
-          orders: collectionItemsToInsert.length > 0 ? [order] : [],
-        },
-        complete: {
+      return ok(
+        plannedSync({
           session,
-          collectionItems: collectionItemsToInsert,
-          orderItems: [order],
           requestPayload: jobData,
-        },
-        response: {
-          status: statusMessage,
-          isFinished: !jobId,
-          existingItemsToInsert: itemsToInsert.length,
-          newItems: itemsToFetch.length,
-          jobId,
-          syncSessionId,
-          missingMfcItemIds: idsToFetch(jobData),
-        },
-      });
+          rows: {
+            collectionItems: collectionItemsToInsert,
+            orders: collectionItemsToInsert.length > 0 ? [order] : [],
+          },
+          completeOrders: [order],
+        }),
+      );
     },
   ),
   order: query(
@@ -540,9 +416,10 @@ export const Sync = {
       const { body, order: orderDetails } = input;
       const { log } = scope;
 
-      const normalizedItems = body.items.map((item: SyncOrderItemInput) => ({
+      const normalizedItems = body.items.map((item) => ({
         ...item,
         collectionId: createId(),
+        orderId: orderDetails.id,
       }));
       const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
@@ -551,59 +428,23 @@ export const Sync = {
         scope.tx,
       );
 
-      const { externalIdToInternalId, releaseIdsByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const itemsToFetch: UpdatedSyncOrderItem[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          orderId: orderDetails.id,
-          releaseId: null,
-          userId: scope.viewer.userId,
-        }));
-
-      const itemsToInsert: UpdatedSyncOrderItem[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            orderId: orderDetails.id,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: scope.viewer.userId,
-          },
-        ];
+      const { itemsToFetch, itemsToInsert } = splitItems({
+        items: normalizedItems,
+        existingItems,
+        userId: scope.viewer.userId,
       });
 
       const orderItemExternalIdsToTrack = itemsToFetch.map((item) => item.itemExternalId);
       const existingOrderItemExternalIds = itemsToInsert.map((item) => item.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncOrderItem & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          orderId: item.orderId,
-          status: item.status,
-          count: item.count,
+      const collectionItemsToInsert = collectionRows(
+        itemsToInsert.map((item) => ({
+          ...item,
           score: "0.0",
-          price: item.price,
           shop: orderDetails.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          condition: item.condition,
           notes: "",
           tags: [],
-          releaseId: item.releaseId,
-        }));
+        })),
+      );
 
       const syncSessionId = createId();
       const jobData = {
@@ -626,15 +467,6 @@ export const Sync = {
         existingItemExternalIds: existingOrderItemExternalIds,
       };
 
-      log.set({
-        sync: {
-          type: "order-item",
-          sessionId: syncSessionId,
-          orderId: orderDetails.id,
-        },
-        order: { id: orderDetails.id },
-      });
-
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
@@ -653,29 +485,13 @@ export const Sync = {
         },
       });
 
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return ok({
-        session,
-        requestPayload: jobData,
-        rows: { collectionItems: collectionItemsToInsert, orders: [] },
-        complete: {
+      return ok(
+        plannedSync({
           session,
-          collectionItems: collectionItemsToInsert,
           requestPayload: jobData,
-        },
-        response: {
-          status: statusMessage,
-          isFinished: !jobId,
-          existingItemsToInsert: itemsToInsert.length,
-          newItems: itemsToFetch.length,
-          jobId,
-          syncSessionId,
-          missingMfcItemIds: idsToFetch(jobData),
-        },
-      });
+          rows: { collectionItems: collectionItemsToInsert, orders: [] },
+        }),
+      );
     },
   ),
   planCollection: query(
@@ -712,57 +528,17 @@ export const Sync = {
         scope.tx,
       );
 
-      const { externalIdToInternalId, releaseIdsByItemId } =
-        buildExistingItemLookups(existingItems);
-
-      const itemsToFetch: UpdatedSyncCollection[] = normalizedItems
-        .filter((item) => !externalIdToInternalId.has(item.itemExternalId))
-        .map((item) => ({
-          ...item,
-          itemId: null,
-          releaseId: null,
-          userId: scope.viewer.userId,
-        }));
-
-      const itemsToInsert: UpdatedSyncCollection[] = normalizedItems.flatMap((item) => {
-        const internalItemId = externalIdToInternalId.get(item.itemExternalId);
-        if (!internalItemId) {
-          return [];
-        }
-        return [
-          {
-            ...item,
-            itemId: internalItemId,
-            releaseId: releaseIdsByItemId.get(internalItemId) ?? null,
-            userId: scope.viewer.userId,
-          },
-        ];
+      const { itemsToFetch, itemsToInsert } = splitItems({
+        items: normalizedItems,
+        existingItems,
+        userId: scope.viewer.userId,
       });
 
       const collectionItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
       const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert: QueuedCollectionItem[] = itemsToInsert
-        .filter((item): item is UpdatedSyncCollection & { itemId: string } => item.itemId !== null)
-        .map((item) => ({
-          id: item.collectionId,
-          userId: item.userId,
-          itemId: item.itemId,
-          releaseId: item.releaseId,
-          orderId: null,
-          status: "Owned",
-          price: item.price,
-          count: item.count,
-          score: item.score,
-          shop: item.shop,
-          orderDate: item.orderDate,
-          paymentDate: item.paymentDate,
-          shippingDate: item.shippingDate,
-          collectionDate: item.collectionDate,
-          shippingMethod: item.shippingMethod,
-          tags: item.tags,
-          condition: item.condition,
-          notes: item.notes,
-        }));
+      const collectionItemsToInsert = collectionRows(
+        itemsToInsert.map((item) => ({ ...item, orderId: null, status: "Owned" as const })),
+      );
 
       const syncSessionId = createId();
       const jobData = {
@@ -783,13 +559,6 @@ export const Sync = {
         existingItemExternalIds: existingCollectionItemExternalIds,
       };
 
-      log.set({
-        sync: {
-          type: "collection",
-          sessionId: syncSessionId,
-        },
-      });
-
       const jobId = itemsToFetch.length > 0 ? syncSessionId : null;
 
       log.set({
@@ -806,29 +575,13 @@ export const Sync = {
         },
       });
 
-      const statusMessage = jobId
-        ? SYNC_STATUS_MESSAGES.queued
-        : SYNC_STATUS_MESSAGES.insertedFromExisting;
-
-      return ok({
-        session,
-        requestPayload: jobData,
-        rows: { collectionItems: collectionItemsToInsert, orders: [] },
-        complete: {
+      return ok(
+        plannedSync({
           session,
-          collectionItems: collectionItemsToInsert,
           requestPayload: jobData,
-        },
-        response: {
-          status: statusMessage,
-          isFinished: !jobId,
-          existingItemsToInsert: itemsToInsert.length,
-          newItems: itemsToFetch.length,
-          jobId,
-          syncSessionId,
-          missingMfcItemIds: idsToFetch(jobData),
-        },
-      });
+          rows: { collectionItems: collectionItemsToInsert, orders: [] },
+        }),
+      );
     },
   ),
   sessions: query(

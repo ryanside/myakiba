@@ -20,7 +20,6 @@ export type {
   InternalCsvItem,
   SyncItemFailure,
   SyncJobStatus,
-  SyncOrderItemInput,
   SyncOrderItemsInput,
 } from "@myakiba/contracts/sync/schema";
 

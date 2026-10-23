@@ -423,8 +423,5 @@ export type InternalCsvItem = Omit<NormalizedInternalCsvItem, "collectionId"> & 
 };
 export type QueuedCollectionItem = z.infer<typeof queuedCollectionItemSchema>;
 export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
-export type UpdatedSyncOrderItem = z.infer<typeof syncOrderItemSchema>;
-export type UpdatedSyncCollection = z.infer<typeof syncCollectionItemSchema>;
-export type SyncOrderItemInput = z.infer<typeof syncOrderItemInputSchema>;
 export type SyncOrderItemsInput = z.infer<typeof syncOrderItemsSchema>;
 export type JobData = z.infer<typeof jobDataSchema>;

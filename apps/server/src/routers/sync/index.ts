@@ -17,6 +17,7 @@ import type { SyncJobStatus } from "./model";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { serve } from "@/domain/kernel";
 import { Sync, SyncRuns } from "./module";
+import type { plannedSync } from "./plan";
 import {
   SYNC_SESSION_ITEM_STATUSES,
   SYNC_SESSION_STATUSES,
@@ -53,6 +54,27 @@ const createTerminalJobStatus = ({
 
 const sessionParams = z.object({ id: z.string() });
 
+type Completion =
+  | typeof Sync.completeCsv
+  | typeof Sync.completeOrder
+  | typeof Sync.completeOrderItem
+  | typeof Sync.completeCollection;
+
+type SyncPlan = ReturnType<typeof plannedSync>;
+
+async function savePlan<C extends Completion>(
+  ctx: Parameters<typeof serve>[0],
+  plan: SyncPlan,
+  complete: C,
+): Promise<
+  SyncPlan["response"] | ElysiaCustomStatusResponse<500, C["failure"] | typeof Sync.start.failure>
+> {
+  const saved = plan.response.jobId
+    ? await serve(ctx, Sync.start, plan)
+    : await serve(ctx, complete, plan.complete);
+  return saved === null ? plan.response : saved;
+}
+
 const syncRouter = privateApi("/sync")
   .use(rateLimit)
   .post(
@@ -87,11 +109,7 @@ const syncRouter = privateApi("/sync")
         emailVerified: ctx.user.emailVerified,
       });
       if (plan instanceof ElysiaCustomStatusResponse) return plan;
-      const saved = plan.response.jobId
-        ? await serve(ctx, Sync.start, plan)
-        : await serve(ctx, Sync.completeCsv, plan.complete);
-      if (saved !== null) return saved;
-      return plan.response;
+      return savePlan(ctx, plan, Sync.completeCsv);
     },
     {
       body: z.array(internalCsvItemSchema.omit({ collectionId: true })).min(1),
@@ -107,11 +125,7 @@ const syncRouter = privateApi("/sync")
         emailVerified: ctx.user.emailVerified,
       });
       if (plan instanceof ElysiaCustomStatusResponse) return plan;
-      const saved = plan.response.jobId
-        ? await serve(ctx, Sync.start, plan)
-        : await serve(ctx, Sync.completeOrder, plan.complete);
-      if (saved !== null) return saved;
-      return plan.response;
+      return savePlan(ctx, plan, Sync.completeOrder);
     },
     {
       body: orderSyncSchema,
@@ -129,11 +143,7 @@ const syncRouter = privateApi("/sync")
       if (order instanceof ElysiaCustomStatusResponse) return order;
       const plan = await serve(ctx, Sync.planOrderItem, { body: ctx.body, order });
       if (plan instanceof ElysiaCustomStatusResponse) return plan;
-      const saved = plan.response.jobId
-        ? await serve(ctx, Sync.start, plan)
-        : await serve(ctx, Sync.completeOrderItem, plan.complete);
-      if (saved !== null) return saved;
-      return plan.response;
+      return savePlan(ctx, plan, Sync.completeOrderItem);
     },
     {
       body: syncOrderItemsSchema,
@@ -149,11 +159,7 @@ const syncRouter = privateApi("/sync")
         emailVerified: ctx.user.emailVerified,
       });
       if (plan instanceof ElysiaCustomStatusResponse) return plan;
-      const saved = plan.response.jobId
-        ? await serve(ctx, Sync.start, plan)
-        : await serve(ctx, Sync.completeCollection, plan.complete);
-      if (saved !== null) return saved;
-      return plan.response;
+      return savePlan(ctx, plan, Sync.completeCollection);
     },
     {
       body: z.array(collectionSyncSchema.omit({ collectionId: true })).min(1),
