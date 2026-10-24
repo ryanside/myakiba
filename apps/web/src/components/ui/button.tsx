@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ),
         outline: cn(
           raisedSurface,
-          "inset-shadow-white dark:inset-shadow-white/5 border-border bg-background bg-clip-padding shadow-foreground/5 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "inset-shadow-white dark:inset-shadow-white/5 border-control-edge bg-control bg-clip-padding shadow-foreground/5 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-input/80",
         ),
         secondary: cn(
           raisedSurface,

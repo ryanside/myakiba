@@ -106,6 +106,10 @@
   --warning-foreground: var(--color-amber-700);
   --invert: var(--color-zinc-900);
   --invert-foreground: var(--color-zinc-50);
+
+  --control: oklch(1 0 0 / 0.62);
+  --control-edge: oklch(0.25 0 0 / 0.12);
+  --control-pressed: color-mix(in oklab, var(--foreground) 14%, var(--control));
 }
 
 .dark {
@@ -179,6 +183,10 @@
   --warning-foreground: var(--color-amber-400);
   --invert: var(--color-zinc-700);
   --invert-foreground: var(--color-zinc-50);
+
+  --control: color-mix(in oklab, var(--input) 55%, transparent);
+  --control-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --control-pressed: color-mix(in oklab, var(--foreground) 22%, var(--control));
 }
 
 @theme inline {
@@ -207,6 +215,9 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
+  --color-control: var(--control);
+  --color-control-edge: var(--control-edge);
+  --color-control-pressed: var(--control-pressed);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
