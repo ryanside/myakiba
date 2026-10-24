@@ -1,5 +1,7 @@
 import type { ItemError, ItemResult, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
+import type { Result } from "better-result";
+import type { ItemFetchError } from "./fetcher";
 
 export type RunKey = string & { readonly __brand: "RunKey" };
 
@@ -28,10 +30,10 @@ export type QueueState = {
   readonly active: Job | null;
 };
 
-export type Outcome =
-  | { readonly kind: "result"; readonly result: ItemResult<PortPicture> }
-  | { readonly kind: "rate_limited"; readonly pausedUntil: number }
-  | { readonly kind: "halted"; readonly until: number };
+export type ItemPage = { readonly html: string; readonly picture: PortPicture | null };
+
+/** What one attempt at an item answered: its page, or why there is none. */
+export type ItemAnswer = Result<ItemPage, ItemFetchError>;
 
 export type QueueAction =
   | {
@@ -43,7 +45,7 @@ export type QueueAction =
     }
   | { readonly type: "started" }
   | { readonly type: "needs_user"; readonly untilMs: number }
-  | { readonly type: "answered"; readonly job: Job; readonly outcome: Outcome }
+  | { readonly type: "answered"; readonly job: Job; readonly answer: ItemAnswer }
   | { readonly type: "cancelled"; readonly run: RunKey };
 
 type Emission = { readonly run: RunKey; readonly event: RunEvent<PortPicture> };
@@ -112,27 +114,41 @@ function toActiveWaiters(state: QueueState, event: RunEvent<PortPicture>): Emiss
   return state.active ? waitersOf(state, state.active).map((run) => ({ run: run.key, event })) : [];
 }
 
-function answer(state: QueueState, job: Job, outcome: Outcome): QueueStep {
-  switch (outcome.kind) {
-    case "result":
-      // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
-      if (!outcome.result.ok && outcome.result.error === "challenge_unsolved") {
-        return { state: EMPTY_QUEUE, emit: failAll(state.runs, "challenge_unsolved") };
-      }
-      return settle(state, job, outcome.result);
-    case "halted":
-      return halt(state, outcome.until);
-    case "rate_limited":
-      return {
-        state,
-        emit: toActiveWaiters(state, {
-          type: "status",
-          state: "backing_off",
-          mfcItemId: job.mfcItemId,
-          untilMs: outcome.pausedUntil,
-        }),
-      };
-  }
+function answer(state: QueueState, job: Job, answered: ItemAnswer): QueueStep {
+  if (answered.isOk()) return settle(state, job, { ok: true, ...answered.value });
+  const failed = (error: ItemError) => () => settle(state, job, { ok: false, error });
+  return answered.error.match({
+    // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
+    MfcChallengeUnsolved: () => ({
+      state: EMPTY_QUEUE,
+      emit: failAll(state.runs, "challenge_unsolved"),
+    }),
+    MfcQueueHalted: ({ until }) => halt(state, until),
+    MfcRateLimited: ({ pausedUntil }) => ({
+      state,
+      emit: toActiveWaiters(state, {
+        type: "status",
+        state: "backing_off",
+        mfcItemId: job.mfcItemId,
+        untilMs: pausedUntil,
+      }),
+    }),
+    MfcSignedOut: failed("mfc_signed_out"),
+    MfcItemHiddenOrMissing: failed("hidden_or_missing"),
+    MfcLoadTimedOut: failed("timeout"),
+    MfcWrongItem: failed("unexpected_page"),
+    MfcPageUnrecognized: failed("unexpected_page"),
+    MfcPageFetchFailed: failed("unexpected_page"),
+    CollectorInjectionFailed: failed("unexpected_page"),
+    CollectorAnswerInvalid: failed("unexpected_page"),
+    MfcTabUnavailable: failed("unexpected_page"),
+    TabClosed: failed("unexpected_page"),
+    TabEditRefused: failed("unexpected_page"),
+    TabOpenFailed: failed("unexpected_page"),
+    TabQueryFailed: failed("unexpected_page"),
+    UnhandledException: failed("unexpected_page"),
+    SessionStorageUnavailable: failed("unexpected_page"),
+  });
 }
 
 export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
@@ -195,7 +211,7 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
     }
     case "answered":
       return sameJob(state.active, action.job)
-        ? answer(state, action.job, action.outcome)
+        ? answer(state, action.job, action.answer)
         : { state, emit: [] };
     case "cancelled": {
       if (!state.runs.some((run) => run.key === action.run)) return { state, emit: [] };
