@@ -1180,6 +1180,18 @@
         "worker shutdown exits nonzero without hanging when flush throw",
         "worker shutdown exits nonzero without hanging when flush stuck"
       ]
+    },
+    {
+      "fix": "175b1de6e3ea4882a84da0c5af5cd51e74b999d5",
+      "bug": "Redis connection error events bypassed evlog",
+      "test": "packages/redis/src/client.test.ts",
+      "fixed": ["the shared Redis client reports emitted errors through evlog"]
+    },
+    {
+      "fix": "175b1de6e3ea4882a84da0c5af5cd51e74b999d5",
+      "bug": "Redis connection error events bypassed evlog",
+      "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
+      "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
     }
   ],
   "lint": [
