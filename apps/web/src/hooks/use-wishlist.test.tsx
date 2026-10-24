@@ -270,9 +270,12 @@ describe("wishlist reorder", () => {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ReorderableAll() {
       const mutation = useMoveWishlistItemsMutation();
+      const moveOrder = mutation.move;
       useEffect(() => {
-        move = mutation.move;
-      }, [mutation.move]);
+        move = async (intent) => {
+          await moveOrder(intent);
+        };
+      }, [moveOrder]);
       return (
         <>
           <p role="status">{mutation.isPending ? "saving" : "idle"}</p>

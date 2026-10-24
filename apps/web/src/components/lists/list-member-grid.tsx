@@ -243,7 +243,7 @@ export function ListMemberGrid({
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onRemove: (memberId: string) => Saving;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;

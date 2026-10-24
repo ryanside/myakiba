@@ -4,7 +4,12 @@ import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query"
 import type { Result } from "better-result";
 import { toast } from "@/components/ui/toast";
 import type { ApiFailure } from "./api";
-import { settle } from "./client";
+import { StalePositionOrder } from "@/lib/errors/stale-position-order";
+import { settle, useWrite } from "./client";
+
+// react-query aborts a write only through a throw from onMutate, so a stale cache is thrown there
+// as the move's declared failure.
+const stale = () => new StalePositionOrder({ message: "The saved order changed" });
 
 const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
 
@@ -53,14 +58,12 @@ export function usePositionOrderMutation({
           number
         >
       >(queryKey);
-      if (!current) throw new Error("The saved order changed");
+      if (!current) throw stale();
 
       const items = current.pages.flatMap((page) => page.items);
       const movedIdSet = new Set(intent.movedIds);
       const movedItems = items.filter((item) => movedIdSet.has(item.id));
-      if (movedItems.length !== intent.movedIds.length) {
-        throw new Error("The saved order changed");
-      }
+      if (movedItems.length !== intent.movedIds.length) throw stale();
       if (intent.anchorId !== null && movedIdSet.has(intent.anchorId)) {
         queryClient.setQueryData(queryKey, current);
         return { previous: current };
@@ -72,9 +75,7 @@ export function usePositionOrderMutation({
         insertionIndex = intent.placement === "before" ? 0 : remainingItems.length;
       } else {
         const anchorIndex = remainingItems.findIndex((item) => item.id === intent.anchorId);
-        if (anchorIndex === -1) {
-          throw new Error("The saved order changed");
-        }
+        if (anchorIndex === -1) throw stale();
         insertionIndex = anchorIndex + (intent.placement === "after" ? 1 : 0);
       }
 
@@ -119,5 +120,6 @@ export function usePositionOrderMutation({
     },
   });
 
-  return { move: mutation.mutateAsync, isPending: mutation.isPending } as const;
+  const { run, isPending } = useWrite(mutation);
+  return { move: run, isPending } as const;
 }

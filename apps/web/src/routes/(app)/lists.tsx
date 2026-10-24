@@ -201,7 +201,7 @@ function SortableLists({
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onUpdate: (listId: string, input: ListInput) => Saving;
   readonly onDelete: (listId: string) => Saving;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
@@ -411,9 +411,7 @@ function RouteComponent(): React.JSX.Element {
           onLoadMore={handleLoadMore}
           onUpdate={(listId, input) => updateList({ listId, ...input })}
           onDelete={handleDeleteList}
-          onMove={async (intent) => {
-            await handleMove(intent);
-          }}
+          onMove={(intent) => handleMove(intent)}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(listId, selected) => {

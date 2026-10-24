@@ -343,7 +343,7 @@ export function WishlistItemGrid({
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
   readonly onRemove: (itemId: string, itemExternalId: number | null) => Saving;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
 }): React.JSX.Element {
   const {
     itemIds,

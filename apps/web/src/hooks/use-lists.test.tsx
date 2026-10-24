@@ -220,9 +220,12 @@ describe("lists reorder", () => {
       useSyncJobStatusQuery("job-1", "session-1", null);
       const { data } = useListsQuery();
       const mutation = useMoveListsMutation();
+      const moveOrder = mutation.move;
       useEffect(() => {
-        move = mutation.move;
-      }, [mutation.move]);
+        move = async (intent) => {
+          await moveOrder(intent);
+        };
+      }, [moveOrder]);
       const titles = data?.pages.flatMap((page) => page.items.map((list) => list.title)) ?? [];
       return (
         <ul aria-label="lists">
@@ -268,9 +271,12 @@ describe("lists reorder", () => {
 function Members({ listId }: { listId: string }) {
   const { data } = useListMembersQuery(listId);
   const mutation = useMoveListMembersMutation(listId);
+  const moveOrder = mutation.move;
   useEffect(() => {
-    moves.set(listId, mutation.move);
-  }, [listId, mutation.move]);
+    moves.set(listId, async (intent) => {
+      await moveOrder(intent);
+    });
+  }, [listId, moveOrder]);
   const ids = data?.pages.flatMap((page) => page.items.map((item) => item.id)) ?? [];
   return (
     <ul aria-label={`members of ${listId}`}>

@@ -230,9 +230,7 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={membersQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
           onRemove={handleRemove}
-          onMove={async (intent) => {
-            await handleMove(intent);
-          }}
+          onMove={(intent) => handleMove(intent)}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(memberId, selected) => {

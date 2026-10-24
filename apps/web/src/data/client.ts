@@ -379,7 +379,7 @@ async function guard<Value>(step: () => Value | Promise<Value>): Promise<Value> 
  * WriteFailed. The write's own callbacks have already told the user, so a defect is only
  * reported here, once.
  */
-function useWrite<Input, Output, Failure>(
+export function useWrite<Input, Output, Failure>(
   mutation: UseMutationResult<Output, ReadFailure<Failure>, Input, unknown>,
 ) {
   const { mutateAsync } = mutation;

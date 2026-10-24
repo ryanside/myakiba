@@ -141,9 +141,7 @@ function RouteComponent(): React.JSX.Element {
           onRemove={(itemId, itemExternalId) =>
             itemMutation.run({ itemId, itemExternalId, wishlisted: false })
           }
-          onMove={async (intent) => {
-            await moveMutation.move(intent);
-          }}
+          onMove={(intent) => moveMutation.move(intent)}
         />
       ) : null}
 

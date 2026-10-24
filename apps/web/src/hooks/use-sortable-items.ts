@@ -10,6 +10,7 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
+import type { Saving } from "@/data/client";
 
 interface SortableRecord {
   readonly id: string;
@@ -38,7 +39,7 @@ export function useSortableItems<T extends SortableRecord>({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly onClearSelection: () => void;
 }) {
   const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
@@ -166,15 +167,12 @@ export function useSortableItems<T extends SortableRecord>({
       if (movedIds.includes(targetId)) return;
 
       onClearSelection();
-      try {
-        await onMove({
-          movedIds,
-          anchorId: targetId,
-          placement: draggedIndex < targetIndex ? "after" : "before",
-        });
-      } catch {
-        // The mutation restores the saved order and reports the error.
-      }
+      // A failed move restores the saved order and says why itself.
+      await onMove({
+        movedIds,
+        anchorId: targetId,
+        placement: draggedIndex < targetIndex ? "after" : "before",
+      });
     },
     [items, onClearSelection, onMove, selectedIds],
   );
