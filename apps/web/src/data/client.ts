@@ -11,6 +11,7 @@ import type { keepPreviousData, QueryClient, UseMutationResult } from "@tanstack
 import { isTaggedError, Panic, Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
+import { asPanic } from "@/lib/as-panic";
 import { WriteFailed } from "@/lib/errors/write-failed";
 import { call } from "./api";
 import type { EdenAnswer } from "./api";
@@ -19,11 +20,6 @@ import type { Family, PersistedFamily, RootOf } from "./catalog";
 
 /** What a read's `error` can be: the failures its load declares, or a defect. */
 export type ReadFailure<Failure> = Failure | Panic;
-
-function asPanic(cause: unknown): Panic {
-  if (Panic.is(cause)) return cause;
-  return new Panic({ message: cause instanceof Error ? cause.message : String(cause), cause });
-}
 
 /**
  * Runs a load or a write for react-query, which reads a failure only from a throw. A failed
