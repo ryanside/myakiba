@@ -1,7 +1,7 @@
 {
   "test": [
     {
-      "fix": "f74b2615",
+      "fix": "f74b261547a6796ae7983514763ac9932c5f5bb1",
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",
       "fixed": [
@@ -13,7 +13,7 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "dd30621e",
+      "fix": "dd30621e3d4073382cff9ee6a2c55c2eda63f690",
       "bug": "a dragged kanban card landed away from the pointer",
       "test": "apps/web/src/components/reui/kanban.test.tsx",
       "fixed": [
@@ -22,7 +22,7 @@
       ]
     },
     {
-      "fix": "5a51f519",
+      "fix": "5a51f519047107b199bff9c9b156e8f33f57c1d9",
       "bug": "item details and the release and entry searches needed no session",
       "test": "apps/server/src/route-auth.test.ts",
       "fixed": [
@@ -32,7 +32,7 @@
       ]
     },
     {
-      "fix": "8bf962cd",
+      "fix": "8bf962cd8b33bffd3f3e3a929bf062fde73dae61",
       "bug": "resync status needed no session",
       "test": "apps/server/src/route-auth.test.ts",
       "fixed": [
@@ -40,13 +40,13 @@
       ]
     },
     {
-      "fix": "527a76d4",
+      "fix": "527a76d484ecf8d8e09616512bbecd837777d26b",
       "bug": "a failed order-item delete left owned items detached",
       "test": "apps/server/src/routers/orders/remove-items.test.ts",
       "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
     },
     {
-      "fix": "ed65f1d8",
+      "fix": "ed65f1d850e96ab20d8c32d4b46f24e4d0102897",
       "bug": "an outside change back to earlier typed text was lost",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
@@ -54,7 +54,7 @@
       ]
     },
     {
-      "fix": "50e97069",
+      "fix": "50e97069be9e2f696b4994da9146b64b7043c64e",
       "bug": "an outside change made while focused never showed",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
@@ -63,7 +63,7 @@
       ]
     },
     {
-      "fix": "37b4b86a",
+      "fix": "37b4b86a18a770c9c157271686abe2be5962c62c",
       "bug": "a late echo of earlier text replaced focused text",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
@@ -75,13 +75,13 @@
       ]
     },
     {
-      "fix": "9fbb24c4",
+      "fix": "9fbb24c4d4a8532a8853549284315479ea00c8a8",
       "bug": "the debounced callback called a stale onChange",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": ["DebouncedInput > the debounced text goes to the onChange from the latest render"]
     },
     {
-      "fix": "ed9d00fb",
+      "fix": "ed9d00fb38fcc6cfb67d0380714df90f08534d45",
       "bug": "mounting reported a change",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
@@ -92,7 +92,7 @@
       ]
     },
     {
-      "fix": "f93aa434",
+      "fix": "f93aa43469a3ffaff1831e5c5f14b703ea3fcc4c",
       "bug": "an open Wishlist kept old titles after a sync, and Upcoming kept a released Item past midnight",
       "test": "apps/web/src/hooks/use-wishlist.test.tsx",
       "fixed": [
@@ -102,7 +102,7 @@
       ]
     },
     {
-      "fix": "e3fabef4",
+      "fix": "e3fabef416593030b2433ba151fcd0e1796cc36d",
       "bug": "a sync that finished during a Wishlist move left the old order after the save",
       "test": "apps/web/src/hooks/use-wishlist.test.tsx",
       "fixed": [
@@ -110,7 +110,7 @@
       ]
     },
     {
-      "fix": "e3fabef4",
+      "fix": "e3fabef416593030b2433ba151fcd0e1796cc36d",
       "bug": "a sync that finished during a List move left the old order after the save, and the reorder hook never refetched the moved list after its last save",
       "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
@@ -122,13 +122,13 @@
       ]
     },
     {
-      "fix": "6c001651",
+      "fix": "6c00165135cf41eae8ad06da7ba6692202c45b25",
       "bug": "a Wishlist move that saved across local midnight kept the old order",
       "test": "apps/web/src/hooks/use-wishlist.test.tsx",
       "fixed": ["wishlist reorder > a move that saves across local midnight keeps its order"]
     },
     {
-      "fix": "4adf7f61",
+      "fix": "4adf7f61f7be812b36511ca57cc35e4fd3308d01",
       "bug": "the grid stayed busy until the refetch after a save returned, and two saves that finished together both skipped it",
       "test": "apps/web/src/hooks/use-wishlist.test.tsx",
       "fixed": [
@@ -137,7 +137,7 @@
       ]
     },
     {
-      "fix": "a6a7d4ff",
+      "fix": "a6a7d4ff536f48bc2c5c03367438d83d37015631",
       "bug": "a List switched while a move was saving kept that move's count, so the List's later moves never refetched",
       "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
@@ -145,7 +145,7 @@
       ]
     },
     {
-      "fix": "63d2ae3b",
+      "fix": "63d2ae3bd1eca84287773967b88c967afe38b9d8",
       "bug": "after a time zone change, the Wishlist day rolled at the old zone's midnight",
       "test": "apps/web/src/hooks/use-today.test.tsx",
       "fixed": [
@@ -153,7 +153,7 @@
       ]
     },
     {
-      "fix": "0f97416a",
+      "fix": "0f97416af904563f3da19dc1294bdded08a1c6c4",
       "bug": "a failed save's recovery fetch could land last and hide another save that worked",
       "test": "apps/web/src/hooks/use-lists.test.tsx",
       "fixed": [
@@ -161,7 +161,7 @@
       ]
     },
     {
-      "fix": "374c7408",
+      "fix": "374c740846c2ab035d0b9ca7fc3964a5837e1d96",
       "bug": "a failed write in an order form became an unhandled rejection because the form did not await its submit",
       "test": "apps/web/src/components/orders/order-submit.test.tsx",
       "fixed": [
@@ -172,7 +172,7 @@
       ]
     },
     {
-      "fix": "488ec693",
+      "fix": "488ec693253a30f9df5625175d6eced2e9a7ea20",
       "bug": "merge, split, move and bulk item delete on an unfiltered orders list returned before the write finished, and resolved even when it failed",
       "test": "apps/web/src/hooks/use-orders.test.tsx",
       "fixed": [
@@ -187,7 +187,7 @@
       ]
     },
     {
-      "fix": "52f1b8fa",
+      "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
       "bug": "a failed order write restored the old list's rows into the list the filter or sort had changed to",
       "test": "apps/web/src/data/resources/orders.test.tsx",
       "fixed": [
@@ -195,7 +195,7 @@
       ]
     },
     {
-      "fix": "52f1b8fa",
+      "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
       "bug": "a failed collection write restored the old list's rows into the list the filter or sort had changed to",
       "test": "apps/web/src/data/resources/collection.test.tsx",
       "fixed": [
@@ -203,7 +203,7 @@
       ]
     },
     {
-      "fix": "ad737d6d",
+      "fix": "ad737d6d23e685ae0df64e0c61fe646872a1b9ce",
       "bug": "text typed after an outside change was lost on blur or hidden behind the outside value",
       "test": "apps/web/src/components/debounced-input.test.tsx",
       "fixed": [
@@ -214,7 +214,7 @@
       ]
     },
     {
-      "fix": "21ded567",
+      "fix": "21ded567b9a987b0399742d5fb81e9f91214fb04",
       "bug": "Reset Filters clicked within the search debounce was undone by the pending search",
       "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
       "fixed": [
@@ -225,7 +225,7 @@
       ]
     },
     {
-      "fix": "c4d771e6",
+      "fix": "c4d771e68831a21aad0da689c31215eeb4274c0c",
       "bug": "the orders and collection filter dialogs reopened with a stale draft after Reset Filters, Back or Cancel, and Apply wrote it back",
       "test": "apps/web/src/components/draft-dialog.test.tsx",
       "fixed": [
@@ -240,7 +240,7 @@
       ]
     },
     {
-      "fix": "cd02b2ac",
+      "fix": "cd02b2ac8a371d6f43c8d38d10b7871f31b1940e",
       "bug": "a dashboard kanban card snapped back to its old column, or lost an edited date, when a refetch landed while its write was in flight",
       "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
       "fixed": [
@@ -254,7 +254,7 @@
       ]
     },
     {
-      "fix": "bcefafcf",
+      "fix": "bcefafcf17ea8cbec3e55d19e10a558be945260b",
       "bug": "every kanban reconcile published a new board and four new column arrays even when no card changed, so pickup and release re-rendered the board",
       "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
       "fixed": [
@@ -263,19 +263,19 @@
       ]
     },
     {
-      "fix": "0e06a016",
+      "fix": "0e06a016c9b7cbc4a39f78b2b8e145e2f3104c4b",
       "bug": "each /health call left another Redis ping pending while packets dropped",
       "test": "apps/server/src/lib/readiness.test.ts",
       "fixed": ["readinessCheck > keeps one Redis ping pending while the connection drops packets"]
     },
     {
-      "fix": "13284a20",
+      "fix": "13284a20165145cb83c0b2ad02dbf4e7166e1e4c",
       "bug": "each timed-out /health call stayed attached to the pending probe until it settled",
       "test": "apps/server/src/lib/readiness.test.ts",
       "fixed": ["readinessCheck > keeps nothing per timed-out call while the probe stays pending"]
     },
     {
-      "fix": "17ff9846",
+      "fix": "17ff984664927da1fb892da539eae49d90c6f71b",
       "bug": "moving items another tab had deleted, or another user's items, answered a logged 500",
       "test": "apps/server/src/routers/orders/routes.test.ts",
       "fixed": [
@@ -284,31 +284,31 @@
       ]
     },
     {
-      "fix": "6951e768",
+      "fix": "6951e768644864d684020559b34af7a0aaf9450a",
       "bug": "collection edit and delete returned Date timestamps that the wire sends as strings",
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": ["the edit and delete operations return strings, so Eden types them as strings"]
     },
     {
-      "fix": "25bdd705",
+      "fix": "25bdd70543c196384d607faa296b1f27d4e18307",
       "bug": "the move toast hid the server's not-found message behind a retry prompt",
       "test": "apps/web/src/hooks/use-orders-move-toast.test.tsx",
       "fixed": ["a rejected move shows the server's message"]
     },
     {
-      "fix": "6bdc8823",
+      "fix": "6bdc882362a1c12429c8e2914c04f3cbc67fd39b",
       "bug": "a list page and its totals read two snapshots, so a committed delete left rows the totals did not count",
       "test": "apps/server/src/routers/list-snapshot.test.ts",
       "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"]
     },
     {
-      "fix": "9d8845a0",
+      "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
       "bug": "the item search pager kept Next enabled on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["DataTablePagination > a page past the end cannot go further"]
     },
     {
-      "fix": "9d8845a0",
+      "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
       "bug": "the data grid showed an impossible range such as 101 - 50 of 50 on an empty page",
       "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
       "fixed": [
@@ -317,7 +317,7 @@
       ]
     },
     {
-      "fix": "742ae25e",
+      "fix": "742ae25e58e2fcfc9231306181e767760c968362",
       "bug": "a failed kanban status or date write reset the whole board to its last fetch, undoing another card's move that was still in flight",
       "test": "apps/web/src/components/dashboard/order-kanban-rollback.test.tsx",
       "fixed": [
@@ -326,7 +326,7 @@
       ]
     },
     {
-      "fix": "2ca2fcb2",
+      "fix": "2ca2fcb21cc059d6bfe83447efc5f9802f16daf4",
       "bug": "a failed inline or popover cell edit raised an unhandled rejection after its error toast, because no cell handler awaited the rejecting edit action",
       "test": "apps/web/src/components/cells/cell-edit-failure.test.tsx",
       "fixed": [
@@ -336,7 +336,7 @@
       ]
     },
     {
-      "fix": "d5c6cc9f",
+      "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
       "bug": "a failed API call showed raw error text, such as \"TypeError: Failed to fetch\" or \"[object Object]\", because getErrorMessage passed any error body through as the message",
       "test": "apps/web/src/queries/api-error-message.test.ts",
       "fixed": [
@@ -350,7 +350,7 @@
       ]
     },
     {
-      "fix": "d5c6cc9f",
+      "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
       "bug": "a failed kanban status write toasted \"Error: [object Object]\" on a JSON 500 and \"Error: TypeError: Failed to fetch\" with the server down",
       "test": "apps/web/src/data/resources/dashboard.test.tsx",
       "fixed": [
@@ -360,7 +360,7 @@
       ]
     },
     {
-      "fix": "d5c6cc9f",
+      "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
       "bug": "the order page showed \"Error: TypeError: Failed to fetch\" when its refetch failed with the server down",
       "test": "apps/web/src/components/orders/order-detail-error.test.tsx",
       "fixed": [
@@ -369,13 +369,13 @@
       ]
     },
     {
-      "fix": "196f8159",
+      "fix": "196f8159e485655be27439ed72e3b1c1f3037ff6",
       "bug": "a 4xx with a blank body left the order page's error panel empty",
       "test": "apps/web/src/components/orders/order-detail-error.test.tsx",
       "fixed": ["a refetch answered with a blank 400 shows a readable message on the order page"]
     },
     {
-      "fix": "196f8159",
+      "fix": "196f8159e485655be27439ed72e3b1c1f3037ff6",
       "bug": "a 4xx with a blank body gave a failed kanban status write an empty toast title",
       "test": "apps/web/src/data/resources/dashboard.test.tsx",
       "fixed": [
@@ -383,7 +383,7 @@
       ]
     },
     {
-      "fix": "f7607e13",
+      "fix": "f7607e13b6bfb6ebb85863934b8c13a04804581f",
       "bug": "a 4xx body of only zero width spaces gave a failed kanban status write a blank toast title",
       "test": "apps/web/src/data/resources/dashboard.test.tsx",
       "fixed": [
@@ -391,13 +391,13 @@
       ]
     },
     {
-      "fix": "3d912c08",
+      "fix": "3d912c0889b89464ca9cba62fd2a4635d2c8e64a",
       "bug": "a toast raised during a kanban drag drew under the dragged card, because the drag overlay took dnd-kit's inline z-index 999",
       "test": "apps/web/src/components/reui/kanban-overlay-layer.test.tsx",
       "fixed": ["a toast raised during a kanban drag > stacks above the dragged card"]
     },
     {
-      "fix": "1fe7e13a",
+      "fix": "1fe7e13a291f6034868f965a856ad1fde3afdbc6",
       "bug": "a kanban card held over the gap between two columns moved back and forth between them until the board crashed with \"Maximum update depth exceeded\"",
       "test": "apps/web/src/components/reui/kanban.test.tsx",
       "fixed": [
@@ -405,7 +405,7 @@
       ]
     },
     {
-      "fix": "622cbb52",
+      "fix": "622cbb52d38875243146fe7940a07b607a46289f",
       "bug": "a focused kanban card ignored Space and the arrow keys, because the drag listeners sat on a handle the key press never reached",
       "test": "apps/web/src/components/reui/kanban.test.tsx",
       "fixed": [
@@ -413,7 +413,7 @@
       ]
     },
     {
-      "fix": "087e165d",
+      "fix": "087e165d3123fb02505fa07c225203f62c160bc4",
       "bug": "the data grid hid its page controls on a page past the end of a one-page or empty result, and showed no page buttons past the end of a longer one",
       "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
       "fixed": [
@@ -423,7 +423,7 @@
       ]
     },
     {
-      "fix": "087e165d",
+      "fix": "087e165d3123fb02505fa07c225203f62c160bc4",
       "bug": "the item, expenses and analytics pager hid every page control on a page past the end of a one-page or empty result, and its Previous went to another empty page",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": [
@@ -433,13 +433,13 @@
       ]
     },
     {
-      "fix": "9597fbf5",
+      "fix": "9597fbf59b6981d09ab01f5cf11db5c0dd0390ef",
       "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     },
     {
-      "fix": "abc05395",
+      "fix": "abc05395f63485d3cf3852ae5b233397f1847d5c",
       "bug": "the data grid read an offset that was not a page start as page 1, so an offset past the rows inside the last page hid the pager and printed rows the table did not show",
       "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
       "fixed": [
@@ -451,7 +451,7 @@
       ]
     },
     {
-      "fix": "abc05395",
+      "fix": "abc05395f63485d3cf3852ae5b233397f1847d5c",
       "bug": "the item, expenses and analytics pager read an offset past the rows inside the last page as page 1, so it hid itself and left the user on an empty page",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": [
@@ -461,7 +461,7 @@
       ]
     },
     {
-      "fix": "97a0d693",
+      "fix": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
       "bug": "merge, split, move-items, order delete and order item delete answered 200 for a mix of the caller's ids and another user's, writing the caller's rows and skipping the rest",
       "test": "apps/server/src/routers/orders/routes.test.ts",
       "fixed": [
@@ -473,13 +473,13 @@
       ]
     },
     {
-      "fix": "97a0d693",
+      "fix": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
       "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
     },
     {
-      "fix": "2a572a42",
+      "fix": "2a572a426b4d6b3107fb3159ffbf4ec976c2e80a",
       "bug": "sidebar preloads and navigation repeatedly checked the session until a 429 incorrectly redirected a signed-in user to login",
       "test": "apps/web/src/components/auth/navigation-session.test.tsx",
       "fixed": [
@@ -488,7 +488,7 @@
       ]
     },
     {
-      "fix": "61071f7f",
+      "fix": "61071f7fe28227300b50036ebec021f8b324e784",
       "bug": "an API 401 from a revoked or expired session never rechecked the session, so the app kept rendering until focus, reconnect or reload",
       "test": "apps/web/src/lib/treaty-client.test.ts",
       "fixed": [
@@ -497,13 +497,13 @@
       ]
     },
     {
-      "fix": "2a572a42",
+      "fix": "2a572a426b4d6b3107fb3159ffbf4ec976c2e80a",
       "bug": "Google signup navigated into the signed-out app before the redirect plugin opened consent",
       "test": "apps/web/src/components/auth/google-signup.test.tsx",
       "fixed": ["Google signup opens consent without navigating through the signed-out app"]
     },
     {
-      "fix": "a3acade9",
+      "fix": "a3acade9311caddf175de5ac5b3ad49c0e142b73",
       "bug": "the first sidebar click waited for destination code, and an already loaded page could render in the click frame before the clicked item painted",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
       "fixed": [
@@ -513,13 +513,13 @@
       ]
     },
     {
-      "fix": "71ecea79",
+      "fix": "71ecea7978816ff9774b5bb6dede6af628efd673",
       "bug": "a sidebar link sat inside its menu button, so part of the hover area missed the link",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
       "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"]
     },
     {
-      "fix": "9a8047a1",
+      "fix": "9a8047a14a017f29140ab0d576d327d8247bc238",
       "bug": "the dashboard order reference-line spring rebuilt bars every frame, interrupting their entrance growth and detaching the pressed bar before its first click",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
       "fixed": [
@@ -528,7 +528,7 @@
       ]
     },
     {
-      "fix": "670907bd",
+      "fix": "670907bdb63f81b011b8d670e691a0726e75d28e",
       "bug": "the request log recorded every auth response as 200",
       "test": "apps/server/src/boundary/auth-log-status.test.ts",
       "fixed": [
@@ -538,19 +538,19 @@
       ]
     },
     {
-      "fix": "ebab2322",
+      "fix": "ebab2322988880da373c829954cc6446a1abf0ea",
       "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
       "fixed": ["every active-state style on the active sidebar item matches its attribute"]
     },
     {
-      "fix": "7da6de43",
+      "fix": "7da6de432f1f93417aae6c55457bbab6295524fc",
       "bug": "Google sign-in navigated into the signed-out app before opening consent",
       "test": "apps/web/src/components/auth/google-sign-in.test.tsx",
       "fixed": ["Google sign-in opens consent without navigating through the signed-out app"]
     },
     {
-      "fix": "91a647e8",
+      "fix": "91a647e88549d6354136ac3a87637fe1d4b750a4",
       "bug": "MFC ingest held its transaction open through the picture put, which had no timeout",
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
@@ -559,7 +559,7 @@
       ]
     },
     {
-      "fix": "33f44f9b",
+      "fix": "33f44f9bc81c5fc8e532bc7816144f90044358ee",
       "bug": "an item resync whose commit failed after the cooldown write answered 500, left the item as it was and still held a 3-day cooldown",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
@@ -567,7 +567,7 @@
       ]
     },
     {
-      "fix": "25fd8793",
+      "fix": "25fd8793bf4949b0645a15b6f66811e7d93586dc",
       "bug": "an item resync read a page with a material share finer than 2 decimals as changed every time, because the column stores it rounded",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
@@ -577,7 +577,7 @@
       ]
     },
     {
-      "fix": "95e0582e",
+      "fix": "95e0582eb92797fdfcdce8d1ce734286a8b1d48b",
       "bug": "a late or unprompted extension announce satisfied a fresh probe, and an outdated extension read as not installed once its update orphaned the old content script",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
       "fixed": [
@@ -587,7 +587,7 @@
       ]
     },
     {
-      "fix": "91743a38",
+      "fix": "91743a3878280b1286152240b5071f158118258b",
       "bug": "a sync form or the Import/Export confirmation sent its request after the extension went away while it was open",
       "test": "apps/web/src/components/extension/extension-submit-gate.test.tsx",
       "fixed": [
@@ -600,7 +600,7 @@
       ]
     },
     {
-      "fix": "91743a38",
+      "fix": "91743a3878280b1286152240b5071f158118258b",
       "bug": "onboarding finished before the extension probe and a reload after installing ended it",
       "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
       "fixed": [
@@ -610,7 +610,7 @@
       ]
     },
     {
-      "fix": "91743a38",
+      "fix": "91743a3878280b1286152240b5071f158118258b",
       "bug": "onboarding's sync choices finished onboarding before the probe, a gated button took a second click while it probed, and the dialog dropped its copy before it closed",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": [
@@ -641,7 +641,7 @@
       ]
     },
     {
-      "fix": "d061fb8a",
+      "fix": "d061fb8a3572ac0453cd9475d35136123b04d921",
       "bug": "an extension run kept fetching and uploading after its heartbeat said the server had ended it, and a page restored from the back-forward cache resumed a run it had interrupted",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -652,7 +652,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "90682bd9",
+      "fix": "90682bd953fa8b5ddbd5519cdade2075f40311c6",
       "bug": "two extension runs together had 4 uploads in flight, and a page waiting for an upload slot went out after a busy answer",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -662,7 +662,7 @@
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "09a8732b",
+      "fix": "09a8732be40d51c066b6ce558dc9bf49255551b3",
       "bug": "a busy run's count of items not imported left out the failures the page reported",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -671,7 +671,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "09a8732b",
+      "fix": "09a8732be40d51c066b6ce558dc9bf49255551b3",
       "bug": "the toast for a 429 called myakiba busy instead of naming the user's hourly import limit",
       "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
       "fixed": [
@@ -682,7 +682,7 @@
       ]
     },
     {
-      "fix": "d5ed21c8",
+      "fix": "d5ed21c8e5fa3216fd4e2d7729290c0054c6e542",
       "bug": "an Item Refresh refetched only the item, so its releases, collection rows, orders and calendar stayed stale",
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": [
@@ -690,7 +690,7 @@
       ]
     },
     {
-      "fix": "ebb23965",
+      "fix": "ebb23965a56ea8b39fad07944004842d10054b7d",
       "bug": "the sync launcher and command palette showed nothing while they checked for the extension",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": [
@@ -699,13 +699,13 @@
       ]
     },
     {
-      "fix": "44421395",
+      "fix": "444213950d6442f4f070fb06c1a2859d4be234ea",
       "bug": "onboarding opened in a second tab cleared the flag that reopens the first tab at the extension step",
       "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
       "fixed": ["onboarding opened in a second tab leaves the first tab's extension step to reopen"]
     },
     {
-      "fix": "87ee9ee5",
+      "fix": "87ee9ee5be3c352c4ebdfe6c873eb69b2342e612",
       "bug": "the extension runner posted each failure on its own and kept going after a 429 from a failure post",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -720,7 +720,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "35c7296c",
+      "fix": "35c7296c12bb87bc242be9d4fd6ecc08f8915714",
       "bug": "Material percentage comparison used floating-point rounding instead of Postgres decimal rounding",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
@@ -729,7 +729,7 @@
       ]
     },
     {
-      "fix": "147ab018",
+      "fix": "147ab01837422f1bda92441994791a6ef242cfc0",
       "bug": "Extension sync run lease, snapshot, persistence and control behavior diverged from the durable session",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -745,17 +745,17 @@
         "a poll whose session was deleted sends a terminal error and closes",
         "two extension CSV Items share one Order"
       ],
-      "testAt": "2759d153"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
     },
     {
-      "fix": "147ab018",
+      "fix": "147ab01837422f1bda92441994791a6ef242cfc0",
       "bug": "An older committed snapshot could replace and publish over a newer revision",
       "test": "apps/server/src/routers/sync/snapshot.test.ts",
       "fixed": ["Redis atomically keeps and publishes only the latest committed revision"],
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "c2ff4dbb",
+      "fix": "c2ff4dbb811c628558625d2f1ea553f299d0955f",
       "bug": "Import status reads and payload or lease lifecycle diverged across retries",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -766,7 +766,7 @@
       ]
     },
     {
-      "fix": "7bdad8ef",
+      "fix": "7bdad8ef71a55473bf6a99bd0c9bfa608b2326c7",
       "bug": "CSV completion omitted Orders for Owned rows and changed empty titles",
       "test": "apps/server/src/routers/sync/item-rows.test.ts",
       "fixed": [
@@ -775,7 +775,7 @@
       ]
     },
     {
-      "fix": "7bdad8ef",
+      "fix": "7bdad8ef71a55473bf6a99bd0c9bfa608b2326c7",
       "bug": "Sync controls, completion outcomes, failure classification, polling and failure throttling diverged from durable run data",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -794,7 +794,7 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "8c19d208",
+      "fix": "8c19d2088de705335017ea933100f1f00078e19e",
       "bug": "Import preparation failures left pending items and polling errors closed the progress stream",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -804,13 +804,13 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "e8c106e9",
+      "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
       "bug": "CI silently skipped the real Redis Lua test without its Redis URL",
       "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
       "fixed": ["CI fails when the Redis Lua test has no Redis URL"]
     },
     {
-      "fix": "602817ab",
+      "fix": "602817ab9c79064d969b51821a6d85c886a38a70",
       "bug": "CSV requests and retries used worker completion mapping, and shared Orders collided or could be reused across users",
       "test": "apps/server/src/routers/sync/item-rows.test.ts",
       "fixed": [
@@ -819,17 +819,17 @@
       ]
     },
     {
-      "fix": "602817ab",
+      "fix": "602817ab9c79064d969b51821a6d85c886a38a70",
       "bug": "CSV extension completion collided on a shared Order; the request lost the original title fallback",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
         "CSV request retains the original empty-title fallback",
         "two extension CSV Items share one Order"
       ],
-      "testAt": "2759d153"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
     },
     {
-      "fix": "19a50bb7",
+      "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
       "bug": "Failed starts changed legacy item reasons; durable run errors diverged after cache expiry; failure batches were unsupported",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -844,7 +844,7 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "19a50bb7",
+      "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
       "bug": "Import completion exceptions left items pending, and the failure route did not accept batches",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -857,7 +857,7 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "258770eb",
+      "fix": "258770eb267ed1dd85f0ce70765a9cd97c75c90b",
       "bug": "CSV completion and retry locked referenced Orders after the session, deadlocking with Order-first writes and recording valid uploads as persistence failures",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -867,7 +867,7 @@
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
-      "fix": "1f796363",
+      "fix": "1f796363d6f1889c9e5916840a6ec0bb0316c51f",
       "bug": "a focus that came while a cleanup or navigation was reading storage lost, and the extension closed or navigated the user's tab",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -876,7 +876,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "f4f14142",
+      "fix": "f4f14142b27e1247fdec8154a57a7e8a234f9c1c",
       "bug": "a challenge tab the browser refused to show was given to the user anyway and leaked",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -885,7 +885,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "bce24b2b",
+      "fix": "bce24b2b4847df55bfd097f2afb3ac0891218528",
       "bug": "a load that ended on another page waited out the 45 s turn and failed as timeout",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -917,7 +917,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "a2ec7b6d",
+      "fix": "a2ec7b6df36bb0bf1c5c54046048ab2066d42e83",
       "bug": "a load the user took over outlived its throttle turn, so the next MFC load overlapped it",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -934,7 +934,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "e23ace1d",
+      "fix": "e23ace1d616ce7985bd10d4d687192d743afc2fc",
       "bug": "an owned MFC tab on the browser's error page failed every later item in the drain",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -944,14 +944,14 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "20290a0d",
+      "fix": "20290a0db22899978ffda456082f7fef2ce14792",
       "bug": "the status widget flashed the queued prompt at the start of every extension batch",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"],
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "5564a143",
+      "fix": "5564a14328b70218ded52b7a5849011ee202c020",
       "bug": "an upload, failure report or heartbeat whose answer broke off after its headers rejected the extension run, leaked its upload slot and skipped the final interrupt",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -962,7 +962,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "5564a143",
+      "fix": "5564a14328b70218ded52b7a5849011ee202c020",
       "bug": "a screen that started an extension run dropped the run's rejection with void and told the user nothing",
       "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
       "fixed": [
@@ -974,7 +974,7 @@
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "b6c069dc",
+      "fix": "b6c069dc5e4ff79bae5752f8ccf48b3a858ae599",
       "bug": "an extension run kept fetching from MyFigureCollection after a heartbeat, upload or failure report answered 401, 403 or 404",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -987,7 +987,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "37b4c360",
+      "fix": "37b4c36011c8b06e5de0b0c506895ed59d458fb3",
       "bug": "an upload waiting out a short Retry-After sent its page again after the run had stopped",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -998,14 +998,14 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "8ec2fb08",
+      "fix": "8ec2fb08aaaf93ee9ddff8114834e47d6787b7a9",
       "bug": "an item refresh posted its page beside two run uploads, past the tab's upload cap",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": ["refreshing an item > waits for a free upload slot while runs hold both"],
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "22c19dde",
+      "fix": "22c19ddec996f20ee20a018cde875b1f5c75b511",
       "bug": "failures still buffered when the tab closed were never posted, so the interrupt replaced their reasons",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
@@ -1015,7 +1015,7 @@
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
-      "fix": "e9b38285",
+      "fix": "e9b38285c00428cb42a118ad3041b0dfd825701c",
       "bug": "an Item Refresh left the dashboard, analytics, searches, Wishlist, lists and expenses stale",
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": [
@@ -1023,27 +1023,27 @@
       ]
     },
     {
-      "fix": "ea0f1215",
+      "fix": "ea0f1215b0d4399637213312aaecf502b33608fb",
       "bug": "a refresh refused for the item's cooldown left the button idle until the status refetched",
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": ["a refresh refused during the item's cooldown shows the cooldown at once"]
     },
     {
-      "fix": "48c53fa1",
+      "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
       "bug": "the extension probe threw in browsers without Promise.withResolvers",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
       "fixed": ["probe > works in a browser without Promise.withResolvers"],
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "48c53fa1",
+      "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
       "bug": "a gate whose extension check threw stayed checking, so its button spun forever",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": ["a gate whose check throws stops checking and can check again"],
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
-      "fix": "3918467b",
+      "fix": "3918467b9bcb408305686b696dcc945c849144fe",
       "bug": "the envelope reader matched the canonical link, og:image, title and user menu with regexes, so comments, scripts, templates and odd attributes fooled it, and it passed any og:image through unchecked",
       "test": "packages/mfc/src/page.test.ts",
       "fixed": [
@@ -1076,24 +1076,24 @@
       ]
     },
     {
-      "fix": "3918467b",
+      "fix": "3918467b9bcb408305686b696dcc945c849144fe",
       "bug": "the parser warned on a bracket that is part of a name and kept a rejected og:image as the picture",
       "test": "packages/mfc/src/parse.test.ts",
       "fixed": [
         "parseMfcItemPage warnings > a bracket that is part of the name does not warn",
         "parseMfcItemPage warnings > a rejected og:image leaves no picture and warns"
       ],
-      "testAt": "2759d153"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
     },
     {
-      "fix": "39f38f09",
+      "fix": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
       "bug": "a post-commit effect that threw turned a committed write into a 500 and skipped the effects after it",
       "test": "apps/server/src/domain/kernel.test.ts",
       "fixed": [
         "failed commit effects keep the committed response and run later effects",
         "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
       ],
-      "testAt": "39f38f09"
+      "testAt": "39f38f0952386e3b7d06f4bea66bba992080e0ba"
     },
     {
       "fix": "26af6e8beb3be0cbccb6ed253dd6408e102e59b4",
@@ -1304,25 +1304,34 @@
       "bug": "server silently discarded an invariant failure and reported success",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": ["a missing Item import completion is refused instead of reporting success"]
+    },
+    {
+      "fix": "bd61ebcd765c3203e4bf7bdcc6c6c619bd3da419",
+      "testAt": "bd61ebcd765c3203e4bf7bdcc6c6c619bd3da419",
+      "bug": "schema-invalid retained sync payloads silently read as unavailable retries",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "a corrupt retained sync payload refuses retry explicitly and logs its schema failure"
+      ]
     }
   ],
   "lint": [
     {
-      "fix": "2b541696",
+      "fix": "2b5416967b198789a7baee0505f62d60b326ba5b",
       "bug": "a bare suppression hid a set-state-in-effect that reset the chart brush range",
       "rule": "myakiba(require-suppression-reason)",
       "atParent": ["apps/web/src/components/evilcharts/ui/recharts-brush.tsx:687:5"],
       "atFix": []
     },
     {
-      "fix": "850ddf60",
+      "fix": "850ddf60ca57b2159b1cc93aa250205b3718dc1b",
       "bug": "a bare suppression hid that each Rating star was a clickable div, not a button",
       "rule": "myakiba(require-suppression-reason)",
       "atParent": ["apps/web/src/components/ui/rating.tsx:104:9"],
       "atFix": []
     },
     {
-      "fix": "782088d4",
+      "fix": "782088d4e4c215cc38bd1c8a83a4f73da95fc2ed",
       "bug": "CORS_ORIGIN was read raw and passed as one string, so a list of origins never matched",
       "rule": "myakiba(no-env-outside-env-package)",
       "atParent": [
@@ -1341,42 +1350,42 @@
       ]
     },
     {
-      "fix": "2f2ffe57",
+      "fix": "2f2ffe579f3e3c6ea764782b22485c550a7854e5",
       "bug": "import.meta.env.PROD is undefined under Bun, so production mail used the test sender",
       "rule": "myakiba(no-env-outside-env-package)",
       "atParent": ["apps/server/src/lib/auth.ts:22:15", "apps/server/src/lib/auth.ts:40:15"],
       "atFix": ["apps/server/src/lib/auth.ts:22:15", "apps/server/src/lib/auth.ts:40:15"]
     },
     {
-      "fix": "a0643cdb",
+      "fix": "a0643cdbece35245bf49a15d1333d9b12c1bf34e",
       "bug": "a malformed Redis job-status payload threw from JSON.parse",
       "rule": "eslint(no-restricted-properties)",
       "atParent": ["packages/redis/src/job-status.ts:18:48"],
       "atFix": ["packages/redis/src/job-status.ts:19:20"]
     },
     {
-      "fix": "e24d4c5c",
+      "fix": "e24d4c5cc60deea76ce360ecbefc20417687c6c1",
       "bug": "a malformed recent-items entry in localStorage threw from JSON.parse",
       "rule": "eslint(no-restricted-properties)",
       "atParent": ["apps/web/src/lib/recent-items.ts:33:17"],
       "atFix": ["apps/web/src/lib/recent-items.ts:34:19"]
     },
     {
-      "fix": "5a242ef1",
+      "fix": "5a242ef12d196b6ec3f88e20a6d9bd14083a4118",
       "bug": "the expense date presets took the UTC day from toISOString, not the local day",
       "rule": "myakiba(no-iso-slice)",
       "atParent": ["apps/web/src/components/expenses/filters.tsx:50:10"],
       "atFix": []
     },
     {
-      "fix": "eafb6ed4",
+      "fix": "eafb6ed44c98928ae51ae740cd107f28dbd57e25",
       "bug": "the collection item menu copied the MFC id without awaiting the clipboard write, so it showed success even when the copy failed",
       "rule": "typescript(no-floating-promises)",
       "atParent": ["apps/web/src/components/collection/collection-item-actions.tsx:131:21"],
       "atFix": []
     },
     {
-      "fix": "60467844",
+      "fix": "60467844bd9c3745331ae5d54480327ade535670",
       "bug": "the collection and order item menus copied the MFC id without awaiting the clipboard write, so they showed success even when the copy failed",
       "rule": "typescript(no-floating-promises)",
       "atParent": [
@@ -1388,19 +1397,19 @@
   ],
   "knip": [
     {
-      "fix": "ff33e620",
+      "fix": "ff33e6205694bbb8e34fd20a64f781772b62e6f8",
       "bug": "apps/web imported lucide-react without declaring it",
       "reports": [
         "New unlisted: lucide-react at apps/web/src/components/homepage/integrations-1.tsx:1"
       ]
     },
     {
-      "fix": "5fb21638",
+      "fix": "5fb216388d3c0ac7300ae5d5b88a452aca1323d4",
       "bug": "packages/db imported dotenv without declaring it",
       "reports": ["New unlisted: dotenv at packages/db/drizzle.config.ts:2"]
     },
     {
-      "fix": "06b38dc4",
+      "fix": "06b38dc43d78ca938a00b809c3014052e95cdf8f",
       "bug": "banner.tsx and serializeJobStatusPayload had no importer",
       "reports": [
         "New files: apps/web/src/components/banner.tsx",
@@ -1411,7 +1420,7 @@
   "types": [
     {
       "name": "nuia",
-      "fix": "9997463d",
+      "fix": "9997463da126975ddebe149fe498f5ec903449ce",
       "bug": "order stats returned undefined when the totals query found no row",
       "package": "apps/server",
       "config": ["apps/server/tsconfig.json", "packages/config/tsconfig.base.json"],
@@ -1421,7 +1430,7 @@
     },
     {
       "name": "command-before",
-      "fix": "02ecbcc2",
+      "fix": "02ecbcc25271b5d4d047f937a892dda81a55cabb",
       "bug": "a command without before accepted a writing before held in a variable, and a before that only proceeded typed the op's value as unknown and its failure as every Failure",
       "package": "apps/server",
       "config": ["apps/server/src/domain/kernel.type-test.ts"],
@@ -1430,7 +1439,7 @@
         "src/domain/kernel.type-test.ts(116,12): error TS1360: Type 'true' does not satisfy the expected type 'false'.",
         "src/domain/kernel.type-test.ts(117,12): error TS1360: Type 'true' does not satisfy the expected type 'false'."
       ],
-      "configAt": "2759d153"
+      "configAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
     }
   ],
   "fixtures": [
