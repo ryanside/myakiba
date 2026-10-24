@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { SQL } from "bun";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
@@ -52,6 +52,8 @@ await mock.module("@myakiba/auth/server", () => ({
 const rateLimited: string[] = [];
 let resyncsThisHour = 1;
 let redisLost = false;
+let hangRedis: "read" | "write" | null = null;
+let hungRedis = Promise.withResolvers<never>();
 let loseRedis: "at the cooldown write" | "after the cooldown write" | null = null;
 let dropTransactionAtCooldown = false;
 const reachRedis = () => {
@@ -68,6 +70,7 @@ await mock.module("@myakiba/redis/client", () => ({
     },
     set: async (key: string, value: string, _mode: "EX", seconds: number) => {
       if (isCooldown(key) && loseRedis === "at the cooldown write") redisLost = true;
+      if (isCooldown(key) && hangRedis === "write") return hungRedis.promise;
       reachRedis();
       redisKeys.set(key, { value, expiresAt: Date.now() + seconds * 1000 });
       if (isCooldown(key) && loseRedis === "after the cooldown write") redisLost = true;
@@ -75,6 +78,7 @@ await mock.module("@myakiba/redis/client", () => ({
       return "OK";
     },
     get: async (key: string) => {
+      if (isCooldown(key) && hangRedis === "read") return hungRedis.promise;
       reachRedis();
       return liveKey(key)?.value ?? null;
     },
@@ -689,3 +693,40 @@ describe("pages the refresh refuses or rewrites", () => {
     expect(await resync(page98777)).toEqual(refreshed("unchanged"));
   });
 });
+
+test.each(["write", "status", "guard"] as const)(
+  "hanging cooldown %s settles within its deadline",
+  async (operation) => {
+    await upload(page98777);
+    hungRedis = Promise.withResolvers<never>();
+    hangRedis = operation === "write" ? "write" : "read";
+    const realTimer = globalThis.setTimeout;
+    const timer = spyOn(globalThis, "setTimeout").mockImplementation((fn, ms, ...args) =>
+      realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+    );
+    const pending = operation === "status" ? resyncStatus() : resync(derivedRetitledPage);
+    let guard: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const response = await Promise.race([
+        pending,
+        new Promise<null>((resolve) => {
+          guard = realTimer(() => resolve(null), 250);
+        }),
+      ]);
+      expect(response).toMatchObject(
+        operation === "guard"
+          ? { status: 500, body: "Failed to request item refresh" }
+          : operation === "status"
+            ? IDLE
+            : { status: 200, body: { status: "idle", saved: "refreshed" } },
+      );
+      if (operation === "write") expect((await itemRows()).item?.title).toBe(RETITLED);
+    } finally {
+      clearTimeout(guard);
+      timer.mockRestore();
+      hangRedis = null;
+      hungRedis.reject(new Error("test releases hung Redis"));
+      await pending;
+    }
+  },
+);

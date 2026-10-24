@@ -41,6 +41,7 @@ let failS3 = false;
 const rateKeys: string[] = [];
 let failureRequests = 1;
 let statusReadFailures = 0;
+let hungStatusRead: ReturnType<typeof Promise.withResolvers<never>> | null = null;
 const statusReads = new Map<string, number>();
 
 function subscriber() {
@@ -86,6 +87,7 @@ await mock.module("@myakiba/redis/client", () => ({
       return 1;
     },
     get: async (key: string) => {
+      if (hungStatusRead) return hungStatusRead.promise;
       statusReads.set(key, (statusReads.get(key) ?? 0) + 1);
       if (statusReadFailures > 0) {
         statusReadFailures -= 1;
@@ -1839,4 +1841,34 @@ test("a broken invariant in an item upload answers a logged 500 and records noth
     lookup.mockRestore();
   }
   expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "pending", reason: null }]);
+});
+
+test("hanging job status cache read settles within its deadline", async () => {
+  const run = await start("item", { items: [X] });
+  const { default: service } = await import("./service");
+  const hung = Promise.withResolvers<never>();
+  hungStatusRead = hung;
+  const realTimer = globalThis.setTimeout;
+  const timer = spyOn(globalThis, "setTimeout").mockImplementation((fn, ms, ...args) =>
+    realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+  );
+  const pending = service.getJobStatus(run.jobId, userId, db);
+  let guard: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const result = await Promise.race([
+      pending,
+      new Promise<null>((resolve) => {
+        guard = realTimer(() => resolve(null), 250);
+      }),
+    ]);
+    expect(result).not.toBeNull();
+    expect(result?.isErr()).toBe(true);
+    if (result?.isErr()) expect(result.error).toMatchObject({ _tag: "JobStatusCacheUnavailable" });
+  } finally {
+    clearTimeout(guard);
+    timer.mockRestore();
+    hungStatusRead = null;
+    hung.reject(new Error("test releases hung Redis"));
+    await pending;
+  }
 });
