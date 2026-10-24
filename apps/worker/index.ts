@@ -126,7 +126,7 @@ if (booted.isErr()) {
   startupLog.emit();
 
   if (drain) await drain.flush();
-  throw startupError;
+  process.exit(1);
 }
 const workerModule = booted.value;
 const closeWorker = workerModule.closeWorker;
