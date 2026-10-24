@@ -78,40 +78,37 @@ const COMPANY_FIELD =
 
 function problemOf(html: string, expected = ID_98777): MfcPageProblem | null {
   const result = parseMfcItemPage(html, expected);
-  return result.ok ? null : result.problem;
+  return result.isOk() ? null : result.error.problem;
 }
 
 function parsedPage(html: string): MfcItemPage {
   const result = parseMfcItemPage(html, ID_98777);
-  if (!result.ok) throw new Error(`expected an item page, got ${result.problem.kind}`);
-  return result.page;
+  if (result.isErr()) throw new Error(`expected an item page, got ${result.error.problem.kind}`);
+  return result.value;
 }
 
 describe("parseMfcItemPage on the signed-in 98777 page", () => {
   test("reads the item in Item Database vocabulary", () => {
-    expect(parseMfcItemPage(item98777, ID_98777)).toEqual({
-      ok: true,
-      page: {
-        mfcItemId: ID_98777,
-        title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
-        contentLabel: "explicit",
-        mfcRatingId: 3,
-        mfcTitle: null,
-        numbering: null,
-        category: "Prepainted",
-        version: [],
-        scale: "1/7",
-        height: 140,
-        width: null,
-        depth: null,
-        entries: ENTRIES_98777,
-        releases: [RELEASE_98777],
-        picture: {
-          access: "gated",
-          url: "https://myfigurecollection.net/?_tb=commit&commit=nsp&objectType=item&objectId=98777&size=1",
-        },
-        warnings: [],
+    expect(parsedPage(item98777)).toEqual({
+      mfcItemId: ID_98777,
+      title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
+      contentLabel: "explicit",
+      mfcRatingId: 3,
+      mfcTitle: null,
+      numbering: null,
+      category: "Prepainted",
+      version: [],
+      scale: "1/7",
+      height: 140,
+      width: null,
+      depth: null,
+      entries: ENTRIES_98777,
+      releases: [RELEASE_98777],
+      picture: {
+        access: "gated",
+        url: "https://myfigurecollection.net/?_tb=commit&commit=nsp&objectType=item&objectId=98777&size=1",
       },
+      warnings: [],
     });
   });
 

@@ -170,8 +170,9 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x4
 
 function parsedPage(id: number): MfcItemPage {
   const parsed = parseMfcItemPage(pages.get(id) ?? "", mfcItemId(id) ?? never());
-  if (!parsed.ok) throw new Error(`fixture for ${id} does not parse: ${parsed.problem.kind}`);
-  return parsed.page;
+  if (parsed.isErr())
+    throw new Error(`fixture for ${id} does not parse: ${parsed.error.problem.kind}`);
+  return parsed.value;
 }
 
 function never(): never {

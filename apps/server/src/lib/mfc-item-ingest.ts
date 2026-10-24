@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import { and, eq, sql } from "drizzle-orm";
 import type { ItemRefresh, ItemUpload } from "@myakiba/contracts/mfc-items/schema";
 import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
@@ -5,25 +6,21 @@ import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/fig
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
-import type { MfcItemPage, MfcPageProblem } from "@myakiba/mfc/parse";
+import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
-import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 
 export type PictureOutcome = "stored" | "absent" | "rejected";
 
-type ReadMfcItemPage =
-  | {
-      readonly kind: "unreadable";
-      readonly mfcItemId: MfcItemId;
-      readonly problem: MfcPageProblem["kind"];
-      readonly message: (typeof PROBLEM_MESSAGE)[MfcPageProblem["kind"]];
-    }
-  | { readonly kind: "parsed"; readonly page: MfcItemPage; readonly stored: StoredPicture | null };
+type ParsedMfcItem = {
+  readonly kind: "parsed";
+  readonly page: MfcItemPage;
+  readonly stored: StoredPicture | null;
+};
 
 type PreparedMfcItem =
   | { readonly kind: "existing"; readonly mfcItemId: MfcItemId; readonly itemId: string }
-  | ReadMfcItemPage;
+  | ParsedMfcItem;
 
 export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | undefined> {
   const [found] = await tx
@@ -37,23 +34,23 @@ export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | u
 export async function readMfcItemPage(
   id: MfcItemId,
   upload: ItemRefresh,
-): Promise<ReadMfcItemPage> {
+): Promise<Result<ParsedMfcItem, MfcPageUnreadable>> {
   const html = upload.page instanceof File ? await upload.page.text() : upload.page;
   const parsed = parseMfcItemPage(html, id);
-  if (!parsed.ok) {
-    const problem = parsed.problem.kind;
-    return { kind: "unreadable", mfcItemId: id, problem, message: PROBLEM_MESSAGE[problem] };
-  }
-  const { page } = parsed;
+  if (parsed.isErr()) return Result.err(parsed.error);
+  const page = parsed.value;
   const stored = page.picture && upload.picture ? await itemImages.store(id, upload.picture) : null;
-  return { kind: "parsed", page, stored };
+  return Result.ok({ kind: "parsed", page, stored });
 }
 
 /** The slow half of an ingest: an Item already in the pool answers at once, otherwise the page is read. */
-export async function prepareMfcItem(pool: ReadTx, upload: ItemUpload): Promise<PreparedMfcItem> {
+export async function prepareMfcItem(
+  pool: ReadTx,
+  upload: ItemUpload,
+): Promise<Result<PreparedMfcItem, MfcPageUnreadable>> {
   const id = upload.mfcItemId as MfcItemId;
   const existingId = await findMfcItem(pool, id);
-  if (existingId) return { kind: "existing", mfcItemId: id, itemId: existingId };
+  if (existingId) return Result.ok({ kind: "existing", mfcItemId: id, itemId: existingId });
   return readMfcItemPage(id, upload);
 }
 

@@ -36,19 +36,18 @@ export const MfcItems = {
       failure: "Failed to import item",
       before: async (scope, input: ItemUpload) => {
         const prepared = await prepareMfcItem(scope.tx, input);
-        if (prepared.kind === "parsed") return scope.proceed(prepared);
-        scope.log.set({
-          mfc: {
-            itemId: prepared.mfcItemId,
-            outcome: prepared.kind === "existing" ? "existing" : prepared.problem,
-          },
-        });
-        if (prepared.kind === "unreadable")
-          return Result.err(new MfcPageRejected({ problem: prepared.problem }));
+        if (prepared.isErr()) {
+          const { mfcItemId, problem } = prepared.error;
+          scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
+          return Result.err(new MfcPageRejected({ problem: problem.kind }));
+        }
+        const ready = prepared.value;
+        if (ready.kind === "parsed") return scope.proceed(ready);
+        scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
         return Result.ok<IngestResult>({
           saved: "existing",
-          itemId: prepared.itemId,
-          mfcItemId: prepared.mfcItemId,
+          itemId: ready.itemId,
+          mfcItemId: ready.mfcItemId,
         });
       },
     },

@@ -524,11 +524,13 @@ export const Items = {
           return Result.err(new ResyncCooldownActive());
         }
         const read = await readMfcItemPage(found.id, input);
-        if (read.kind === "unreadable") {
-          scope.log.set({ mfc: { itemId: found.id, outcome: read.problem } });
-          return Result.err(new MfcPageRejected({ problem: read.problem }));
+        if (read.isErr()) {
+          const problem = read.error.problem.kind;
+          scope.log.set({ mfc: { itemId: found.id, outcome: problem } });
+          return Result.err(new MfcPageRejected({ problem }));
         }
-        return scope.proceed({ itemId: found.itemId, page: read.page, stored: read.stored });
+        const { page, stored } = read.value;
+        return scope.proceed({ itemId: found.itemId, page, stored });
       },
     },
     async (scope, { itemId, page, stored }) => {

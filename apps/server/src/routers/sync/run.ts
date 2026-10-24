@@ -24,6 +24,7 @@ import type { JobData, SyncJobRecentItem } from "@myakiba/contracts/sync/schema"
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
+import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 import { fetchedItemRows, idsToFetch, insertItemRows, retryRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
@@ -471,14 +472,14 @@ export async function completeSyncItem(
   prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
 ): Promise<Result<CompleteSyncItemResult | null, SyncOrderAbsent | SyncOrderUnowned>> {
   const mfcItemId = upload.mfcItemId;
-  if (prepared.kind === "unreadable") {
+  if (prepared.isErr()) {
+    const reason = PROBLEM_MESSAGE[prepared.error.problem.kind];
     const recorded = await recordItemFailures(scope, sessionId, userId, jobId, [
-      { mfcItemId, kind: "reported", reason: prepared.message },
+      { mfcItemId, kind: "reported", reason },
     ]);
-    return recorded.map((outcome) =>
-      outcome === null ? null : { outcome: "failed", reason: prepared.message },
-    );
+    return recorded.map((outcome) => (outcome === null ? null : { outcome: "failed", reason }));
   }
+  const ready = prepared.value;
   return withRun<CompleteSyncItemResult, SyncOrderAbsent | SyncOrderUnowned>(
     scope,
     sessionId,
@@ -501,7 +502,7 @@ export async function completeSyncItem(
 
         const absent = missingOrder(run);
         if (absent) return Result.err(absent);
-        if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+        if (ready.kind === "parsed") await ensureMfcItem(tx, ready.page, ready.stored);
         const [imported] = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
           [mfcItemId],
           tx,

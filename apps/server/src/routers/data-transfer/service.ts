@@ -34,6 +34,7 @@ import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
+import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 import type { MfcPageProblem } from "@myakiba/mfc/parse";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
@@ -590,18 +591,21 @@ const DataTransferService = {
         readonly message: string;
       }
   > {
-    if (prepared.kind === "unreadable") {
+    if (prepared.isErr()) {
+      const problem = prepared.error.problem.kind;
+      const message = PROBLEM_MESSAGE[problem];
       await DataTransferService.failItem(scope, userId, {
         jobId: upload.jobId,
         mfcItemId: upload.mfcItemId,
-        reason: prepared.message,
+        reason: message,
       });
-      return { kind: "problem", problem: prepared.problem, message: prepared.message };
+      return { kind: "problem", problem, message };
     }
+    const ready = prepared.value;
 
     const now = new Date();
     const view = await mutateImport(scope, userId, now, async (tx, current) => {
-      if (prepared.kind === "parsed") await ensureMfcItem(tx, prepared.page, prepared.stored);
+      if (ready.kind === "parsed") await ensureMfcItem(tx, ready.page, ready.stored);
       if (!current) return { value: current, changed: false };
       if (current.row.jobId === upload.jobId) {
         await tx

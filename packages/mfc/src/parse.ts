@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import * as cheerio from "cheerio";
 import { v5 as uuidv5 } from "uuid";
 import { CATEGORIES, CONTENT_LABELS } from "@myakiba/contracts/shared/constants";
@@ -8,6 +9,9 @@ import { readMfcEnvelope } from "./page";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
+import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
+
+export { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
 export type MfcEntryLink = {
   readonly externalId: number;
@@ -54,36 +58,36 @@ export type MfcPageProblem =
   | { readonly kind: "missing_category" }
   | { readonly kind: "unsupported_category"; readonly raw: string };
 
-export type MfcParseResult =
-  | { readonly ok: true; readonly page: MfcItemPage }
-  | { readonly ok: false; readonly problem: MfcPageProblem };
-
 const ENVELOPE_PROBLEMS = {
   challenge: { kind: "challenge" },
   not_found: { kind: "not_found" },
   unexpected: { kind: "not_an_item_page" },
 } as const satisfies Record<Exclude<MfcEnvelope["kind"], "item">, MfcPageProblem>;
 
-export function parseMfcItemPage(html: string, expected: MfcItemId): MfcParseResult {
+export function parseMfcItemPage(
+  html: string,
+  expected: MfcItemId,
+): Result<MfcItemPage, MfcPageUnreadable> {
+  const unreadable = (problem: MfcPageProblem) =>
+    Result.err(new MfcPageUnreadable({ mfcItemId: expected, problem }));
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
-  if (envelope.kind !== "item") return { ok: false, problem: ENVELOPE_PROBLEMS[envelope.kind] };
+  if (envelope.kind !== "item") return unreadable(ENVELOPE_PROBLEMS[envelope.kind]);
   if (envelope.mfcItemId !== expected) {
-    return { ok: false, problem: { kind: "wrong_item", found: envelope.mfcItemId } };
+    return unreadable({ kind: "wrong_item", found: envelope.mfcItemId });
   }
 
   const $ = cheerio.load(html);
   const rawTitle = $("h1.title").first().text().trim();
-  if (!rawTitle) return { ok: false, problem: { kind: "missing_title" } };
+  if (!rawTitle) return unreadable({ kind: "missing_title" });
 
   const fields = readItemFields($);
   const category = CATEGORIES.find((known) => known === fields.rawCategory);
   if (!category) {
-    return {
-      ok: false,
-      problem: fields.rawCategory
+    return unreadable(
+      fields.rawCategory
         ? { kind: "unsupported_category", raw: fields.rawCategory }
         : { kind: "missing_category" },
-    };
+    );
   }
 
   const { title, contentLabel } = splitContentLabel(rawTitle);
@@ -101,27 +105,24 @@ export function parseMfcItemPage(html: string, expected: MfcItemId): MfcParseRes
     else warnings.push(`release skipped: unsupported date "${rawDate}"`);
   }
 
-  return {
-    ok: true,
-    page: {
-      mfcItemId: envelope.mfcItemId,
-      title,
-      contentLabel,
-      mfcRatingId: fields.mfcRatingId,
-      mfcTitle: fields.mfcTitle,
-      numbering: fields.numbering,
-      category,
-      version: fields.version,
-      scale: normalizeScale(fields.scale),
-      height: fields.height,
-      width: fields.width,
-      depth: fields.depth,
-      entries: mergeEntryLinks(fields.mentions),
-      releases,
-      picture: envelope.ogImage.kind === "picture" ? envelope.ogImage.picture : null,
-      warnings,
-    },
-  };
+  return Result.ok({
+    mfcItemId: envelope.mfcItemId,
+    title,
+    contentLabel,
+    mfcRatingId: fields.mfcRatingId,
+    mfcTitle: fields.mfcTitle,
+    numbering: fields.numbering,
+    category,
+    version: fields.version,
+    scale: normalizeScale(fields.scale),
+    height: fields.height,
+    width: fields.width,
+    depth: fields.depth,
+    entries: mergeEntryLinks(fields.mentions),
+    releases,
+    picture: envelope.ogImage.kind === "picture" ? envelope.ogImage.picture : null,
+    warnings,
+  });
 }
 
 const CONTENT_LABEL_PREFIX = /^\[([^\]]+)\] - /;
