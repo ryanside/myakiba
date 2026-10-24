@@ -137,12 +137,14 @@ test.each([
   },
 );
 
-test("a defect in the refresh is reported as a Panic, not read as a refused refresh", async () => {
+test("a defect in the refresh is reported as a Panic and shows the safe text, not its message", async () => {
   bridgeBreaks = true;
   const saved = await refresh();
 
   expect(saved?.isErr() && Panic.is(saved.error.cause)).toBe(true);
   expect(consoleError).toHaveBeenCalledTimes(1);
   expect(Panic.is(consoleError.mock.calls[0]?.[0])).toBe(true);
-  expect(toastAdd.mock.calls).toEqual([[failed("bridge.fetchItems is not a function")]]);
+  expect(toastAdd.mock.calls).toEqual([
+    [failed("Something went wrong. Reload the page and try again")],
+  ]);
 });

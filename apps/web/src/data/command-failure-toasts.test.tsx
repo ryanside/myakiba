@@ -15,7 +15,7 @@ await mock.module("@/data/extension-run", () => ({
 }));
 
 const { toast } = await import("@/components/ui/toast");
-const { useResourceMutation } = await import("./client");
+const { defineCommand, useResourceMutation } = await import("./client");
 const { refreshItemCommand } = await import("./resources/item");
 const { retrySyncSessionCommand } = await import("./resources/sync");
 const { useMoveListsMutation } = await import("@/hooks/use-lists");
@@ -101,3 +101,33 @@ test("a move against a list the page no longer holds says the order was not save
   expect(options).toEqual({ type: "error", title: "Failed to save List order" });
   expect(requests.filter((request) => request.startsWith("PATCH"))).toEqual([]);
 });
+
+test.each([
+  ["words its failures", { failureDescription: (_input: null, error: Error) => error.message }],
+  ["words none", {}],
+] as const)(
+  "a defect in a write whose command %s shows the safe text under its title, never its message",
+  async (_name, wording) => {
+    const command = defineCommand({
+      invalidates: ["syncHistory"],
+      persist: async (_input: null): Promise<Result<null, Error>> => {
+        throw new TypeError("cannot read properties of undefined (reading 'items')");
+      },
+      failureTitle: () => "Failed to save",
+      ...wording,
+    });
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    const queryClient = new QueryClient();
+    const { result } = renderHook(() => useResourceMutation(command), {
+      wrapper: wrapperFor(queryClient),
+    });
+
+    expect(await lastToastAfter(() => result.current.run(null))).toEqual({
+      type: "error",
+      title: "Failed to save",
+      description: "Something went wrong. Reload the page and try again",
+    });
+    expect(error).toHaveBeenCalledTimes(1);
+    error.mockRestore();
+  },
+);
