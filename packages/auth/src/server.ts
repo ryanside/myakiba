@@ -12,6 +12,7 @@ import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 
+import { parseUserPreference } from "./user-preference";
 import { sendAuthEmail } from "./send-auth-email";
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -145,11 +146,13 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         defaultValue: "USD",
+        transform: { input: (value) => parseUserPreference("currency", value) },
       },
       dateFormat: {
         type: "string",
         required: true,
         defaultValue: "MM/DD/YYYY",
+        transform: { input: (value) => parseUserPreference("dateFormat", value) },
       },
     },
   },

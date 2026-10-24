@@ -164,6 +164,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@better-auth/infra": "^0.3.4",
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/db": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",

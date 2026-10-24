@@ -36,7 +36,7 @@ await mock.module("resend", () => ({
 }));
 const { auth } = await import("./server");
 
-function testAuth() {
+function testAuth(requireEmailVerification = true) {
   return betterAuth({
     ...auth.options,
     database: memoryAdapter({
@@ -56,6 +56,7 @@ function testAuth() {
       session: [],
       verification: [],
     }),
+    emailAndPassword: { ...auth.options.emailAndPassword, requireEmailVerification },
     plugins: [],
     rateLimit: { enabled: false },
   });
@@ -105,29 +106,31 @@ test.each(["send-verification-email", "request-password-reset"])(
   },
 );
 
-for (const [field, value, message] of [
+const invalidPreferences = [
   ["currency", "not-money", "Choose a supported currency."],
   ["dateFormat", "not-a-date-format", "Choose a supported date format."],
-] as const) {
-  test(`sign-up rejects unsupported ${field}`, async () => {
-    sendFails = false;
-    const response = await testAuth().handler(
-      new Request("http://localhost:3000/api/auth/sign-up/email", {
-        method: "POST",
-        headers: { "content-type": "application/json", origin: "http://localhost:3001" },
-        body: JSON.stringify({
-          name: "New collector",
-          email: "new@example.com",
-          password: "password-123456",
-          [field]: value,
-        }),
+] as const;
+test.each(invalidPreferences)("sign-up rejects unsupported %s", async (field, value, message) => {
+  sendFails = false;
+  const response = await testAuth().handler(
+    new Request("http://localhost:3000/api/auth/sign-up/email", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost:3001" },
+      body: JSON.stringify({
+        name: "New collector",
+        email: "new@example.com",
+        password: "password-123456",
+        [field]: value,
       }),
-    );
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
-  });
-  test(`update-user rejects unsupported ${field}`, async () => {
-    const instance = testAuth();
+    }),
+  );
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
+});
+test.each(invalidPreferences)(
+  "update-user rejects unsupported %s",
+  async (field, value, message) => {
+    const instance = testAuth(false);
     const context = await instance.$context;
     await context.internalAdapter.linkAccount({
       userId: "user-id",
@@ -135,7 +138,6 @@ for (const [field, value, message] of [
       providerId: "credential",
       password: await context.password.hash("password-123456"),
     });
-    instance.options.emailAndPassword.requireEmailVerification = false;
     const signedIn = await instance.api.signInEmail({
       body: { email: "collector@example.com", password: "password-123456" },
       asResponse: true,
@@ -156,5 +158,5 @@ for (const [field, value, message] of [
     expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
     const session = await instance.api.getSession({ headers: new Headers({ cookie }) });
     expect(session?.user).toMatchObject({ currency: "USD", dateFormat: "MM/DD/YYYY" });
-  });
-}
+  },
+);
