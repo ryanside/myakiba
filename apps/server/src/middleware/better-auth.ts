@@ -1,3 +1,5 @@
+import { Result } from "better-result";
+import { Unauthenticated } from "./errors/unauthenticated";
 import { Elysia } from "elysia";
 import { auth } from "@myakiba/auth/server";
 import { Viewer } from "@/domain/viewer";
@@ -17,12 +19,12 @@ export const betterAuth = new Elysia({ name: "better-auth" }).macro({
       }
       const session = await pending;
 
-      if (!session) return status(401);
-
+      const authenticated = session ? Result.ok(session) : Result.err(new Unauthenticated());
+      if (authenticated.isErr()) return status(authenticated.error.status);
       return {
-        user: session.user,
-        session: session.session,
-        viewer: Viewer.fromSession(session),
+        user: authenticated.value.user,
+        session: authenticated.value.session,
+        viewer: Viewer.fromSession(authenticated.value),
       };
     },
   },
