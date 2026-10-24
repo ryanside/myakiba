@@ -2,6 +2,7 @@ import { panic } from "better-result";
 import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { getJobStatusChannel, parseJobStatusPayload } from "@myakiba/redis/job-status";
+import { logConnectionError } from "@myakiba/redis/log-connection-error";
 import { redis } from "@myakiba/redis/client";
 import { JobStatusSubscriptionLost } from "@/lib/errors/job-status-subscription-lost";
 
@@ -88,6 +89,7 @@ class JobStatusSubscriptionRegistry {
   };
 
   private readonly handleError = (error: Error): void => {
+    logConnectionError(error);
     this.failAllConsumers(new JobStatusSubscriptionLost({ reason: "redis_error", cause: error }));
   };
 

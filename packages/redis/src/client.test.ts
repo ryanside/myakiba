@@ -1,17 +1,9 @@
-import { EventEmitter } from "node:events";
-import { expect, mock, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 
-const client = new EventEmitter();
-await mock.module("ioredis", () => ({
-  default: function Redis() {
-    return client;
-  },
-}));
-await mock.module("@myakiba/env/redis", () => ({
-  env: { REDIS_HOST: "127.0.0.1", REDIS_PORT: 1 },
-}));
+process.env.REDIS_HOST = "127.0.0.1";
+process.env.REDIS_PORT = "56379";
 const events: DrainContext["event"][] = [];
 initLogger({
   silent: true,
@@ -19,11 +11,12 @@ initLogger({
     events.push(event);
   },
 });
-await import("./client");
+const { redis: client } = await import("./client");
+afterAll(() => client.disconnect());
 
 test("the shared Redis client reports emitted errors through evlog", () => {
   const error = new Error("Redis connection lost");
-  expect(() => client.emit("error", error)).not.toThrow();
+  client.emit("error", error);
   expect(events).toEqual([
     expect.objectContaining({
       action: "redis.connection",

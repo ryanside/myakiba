@@ -1,3 +1,4 @@
+import { logConnectionError } from "./log-connection-error";
 import Redis from "ioredis";
 import { env } from "@myakiba/env/redis";
 
@@ -8,3 +9,5 @@ export const redis = new Redis({
     return Math.max(Math.min(Math.exp(times), 20_000), 1000);
   },
 });
+
+redis.on("error", logConnectionError);

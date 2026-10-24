@@ -1,13 +1,10 @@
-import { EventEmitter } from "node:events";
-import { expect, mock, test } from "bun:test";
+import Redis from "ioredis";
+import { afterAll, expect, mock, test } from "bun:test";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 
-class Subscriber extends EventEmitter {
-  async subscribe() {}
-  disconnect() {}
-}
-const subscriber = new Subscriber();
+const subscriber = new Redis({ host: "127.0.0.1", port: 56_379, lazyConnect: true });
+afterAll(() => subscriber.disconnect());
 await mock.module("@myakiba/redis/client", () => ({ redis: { duplicate: () => subscriber } }));
 const events: DrainContext["event"][] = [];
 initLogger({
