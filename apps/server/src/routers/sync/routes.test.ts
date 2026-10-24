@@ -1650,6 +1650,40 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
   }
 });
 
+test("an unanswered status cache read answers the stream's error and logs JobStatusCacheUnavailable", async () => {
+  const run = await start("item", { items: [X] });
+  const { default: service } = await import("./service");
+  const { useLogger } = await import("evlog/elysia");
+  const original = service.getJobStatus.bind(service);
+  let logged: ReturnType<typeof useLogger> | undefined;
+  const read = spyOn(service, "getJobStatus").mockImplementation(async (...args) => {
+    logged = useLogger();
+    return original(...args);
+  });
+  statusReadFailures = 1;
+  initLogger({ enabled: true });
+  const stream = await openStream(run.jobId);
+  try {
+    expect(await stream.next()).toMatchObject({
+      terminalState: "error",
+      error: { code: "unknown", message: "Error fetching job status" },
+    });
+    expect(logged?.getContext()).toMatchObject({
+      action: "sync.jobStatus",
+      outcome: "error",
+      error: {
+        name: "JobStatusCacheUnavailable",
+        message: `Redis did not answer for the cached status of job ${run.jobId}, so the status was not read.`,
+        cause: new Error("Redis temporarily unavailable"),
+      },
+    });
+  } finally {
+    await stream.close();
+    initLogger({ enabled: false });
+    read.mockRestore();
+  }
+});
+
 test.each([true, false])(
   "CSV keeps its route action when it needs a fetch: %s",
   async (missing) => {

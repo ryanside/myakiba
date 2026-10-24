@@ -19,6 +19,7 @@ import { ImportNotFound } from "./errors/import-not-found";
 import { InvalidLimit } from "./errors/invalid-limit";
 import { InvalidPage } from "./errors/invalid-page";
 import { ItemNotInImport } from "./errors/item-not-in-import";
+import { JobStatusCacheUnavailable } from "./errors/job-status-cache-unavailable";
 import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { RetryUnavailable } from "./errors/retry-unavailable";
 import { RetryWindowExpired } from "./errors/retry-window-expired";
@@ -657,7 +658,11 @@ export const Sync = {
     },
   ),
   jobStatus: query(
-    { action: "sync.jobStatus", failure: "Error fetching job status" },
+    {
+      action: "sync.jobStatus",
+      failure: "Error fetching job status",
+      operational: [JobStatusCacheUnavailable],
+    },
     async (scope, input: { readonly jobId: string }) =>
       SyncService.getJobStatus(input.jobId, scope.viewer.userId, scope.tx),
   ),

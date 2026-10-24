@@ -34,6 +34,7 @@ import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { SyncOrderUnowned } from "./errors/sync-order-unowned";
 import { SyncJobNotFound } from "./errors/sync-job-not-found";
+import { JobStatusCacheUnavailable } from "./errors/job-status-cache-unavailable";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
 import { persistenceFailure, settleRun, viewSession, viewedStatusSql } from "./run-state";
@@ -340,7 +341,7 @@ class SyncService {
     jobId: string,
     userId: string,
     db: ReadTx,
-  ): Promise<Result<SyncJobStatus, SyncJobNotFound>> {
+  ): Promise<Result<SyncJobStatus, SyncJobNotFound | JobStatusCacheUnavailable>> {
     const [row] = await db
       .select({
         id: syncSession.id,
@@ -362,7 +363,12 @@ class SyncService {
     const session = viewSession(row, Date.now());
     const terminalState = sessionStatusToTerminalState(session.status);
 
-    const cached = await redis.get(getJobStatusSnapshotKey(jobId));
+    const read = await Result.tryPromise({
+      try: () => redis.get(getJobStatusSnapshotKey(jobId)),
+      catch: (cause) => new JobStatusCacheUnavailable({ jobId, cause }),
+    });
+    if (read.isErr()) return read;
+    const cached = read.value;
     if (cached) {
       const parsedStatus = parseJobStatusPayload(cached);
       const sessionOverridesSnapshot =
