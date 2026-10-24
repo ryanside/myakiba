@@ -50,7 +50,6 @@ export const dataTransfer = {
         {
           fallback: "Failed to connect to import status",
           empty: "No import status stream received",
-          policy: "legacy",
         },
       );
       const disconnected = opened.mapError((failure) =>

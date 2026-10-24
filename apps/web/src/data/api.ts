@@ -43,7 +43,7 @@ export type Wording = {
   readonly fallback: string;
   readonly empty?: string;
   readonly invalid?: string;
-  readonly policy?: "legacy" | "fixed" | "bodyMessage";
+  readonly policy?: "fixed" | "bodyMessage";
 };
 
 type Policy = NonNullable<Wording["policy"]> | "safe";
@@ -102,10 +102,9 @@ const BODY_MESSAGE_TEXT: FailureText = {
     String(withMessage.safeParse(body).data?.message || fallback),
 };
 
-/** How each policy words a failure. Legacy callers use the same safe text. */
+/** How each policy words a failure. */
 const FAILURE_TEXT = {
   safe: SAFE_TEXT,
-  legacy: SAFE_TEXT,
   fixed: FIXED_TEXT,
   bodyMessage: BODY_MESSAGE_TEXT,
 } as const satisfies Record<Policy, FailureText>;

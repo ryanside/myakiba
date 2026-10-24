@@ -17,21 +17,18 @@ import type {
 export function sendItems(userItems: UserItem[]) {
   return call(app.api.sync.csv.post(userItems), {
     fallback: "Failed to submit MyFigureCollection CSV",
-    policy: "legacy",
   });
 }
 
 export function sendItemSync(input: ItemSyncInput) {
   return call(app.api.sync.item.post(input), {
     fallback: "Failed to submit item database items",
-    policy: "legacy",
   });
 }
 
 export function sendOrder(order: SyncOrder) {
   return call(app.api.sync.order.post(order), {
     fallback: "Failed to submit order",
-    policy: "legacy",
   });
 }
 
@@ -41,14 +38,13 @@ export function sendOrderItems(orderItems: SyncOrderItems) {
       orderId: orderItems.orderId,
       items: [...orderItems.items],
     }),
-    { fallback: "Failed to submit order items", policy: "legacy" },
+    { fallback: "Failed to submit order items" },
   );
 }
 
 export function sendCollection(collection: SyncCollectionItem[]) {
   return call(app.api.sync.collection.post(collection), {
     fallback: "Failed to submit collection items",
-    policy: "legacy",
   });
 }
 
@@ -69,7 +65,7 @@ export function fetchSyncSessions(params: {
         syncType: params.syncType,
       },
     }),
-    { fallback: "Failed to load import history", policy: "legacy" },
+    { fallback: "Failed to load import history" },
   );
 }
 
@@ -89,13 +85,12 @@ export function fetchSyncSessionDetail(
         status: params?.status,
       },
     }),
-    { fallback: "Failed to load import details", policy: "legacy" },
+    { fallback: "Failed to load import details" },
   );
 }
 
 export function retrySyncSession(sessionId: string) {
   return call(app.api.sync.sessions({ id: sessionId }).retry.post(), {
     fallback: "Failed to retry failed item results",
-    policy: "legacy",
   });
 }

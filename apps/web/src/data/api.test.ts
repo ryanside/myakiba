@@ -50,8 +50,6 @@ type Case = {
   readonly tag: string;
   /** getUserErrorMessage: a 4xx text body with a visible character, otherwise the fallback. */
   readonly safe: string;
-  /** getErrorMessage, which shows what the server or fetch said. */
-  readonly legacy: string;
   /** The version read shows a JSON body's `message`, or the fetch error's. */
   readonly version: string;
 };
@@ -61,98 +59,84 @@ const cases = {
     tag: "ApiUnreachable",
     answer: unreachable,
     safe: ORDER_FALLBACK,
-    legacy: "TypeError: Failed to fetch",
     version: "Failed to fetch",
   },
   "a real 503 with a text body": {
     tag: "ApiServerError",
     answer: body(503, "Service Unavailable", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: "Service Unavailable",
     version: VERSION_FALLBACK,
   },
   "a 500 with text": {
     tag: "ApiServerError",
     answer: body(500, "Failed to get order", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: "Failed to get order",
     version: VERSION_FALLBACK,
   },
   "a 500 with a JSON body": {
     tag: "ApiServerError",
     answer: body(500, JSON.stringify({ message: "lane forced failure" }), "application/json"),
     safe: ORDER_FALLBACK,
-    legacy: "[object Object]",
     version: "lane forced failure",
   },
   "a 502 gateway page": {
     tag: "ApiServerError",
     answer: body(502, gatewayPage, "text/html"),
     safe: ORDER_FALLBACK,
-    legacy: gatewayPage,
     version: VERSION_FALLBACK,
   },
   "a 422 validation body": {
     tag: "ApiInvalid",
     answer: body(422, validation, "application/json"),
     safe: ORDER_FALLBACK,
-    legacy: "Expected string",
     version: "Expected string",
   },
   "a 401 without a message": {
     tag: "ApiRejected",
     answer: body(401, "", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: RETRY_FALLBACK,
     version: VERSION_FALLBACK,
   },
   "a 404 with text": {
     tag: "ApiNotFound",
     answer: body(404, "Order not found", "text/plain"),
     safe: "Order not found",
-    legacy: "Order not found",
     version: VERSION_FALLBACK,
   },
   "a 404 whose text is only an invisible character": {
     tag: "ApiNotFound",
     answer: body(404, "​", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: "​",
     version: VERSION_FALLBACK,
   },
   "a 409 with text": {
     tag: "ApiRejected",
     answer: body(409, "Order changed", "text/plain"),
     safe: "Order changed",
-    legacy: "Order changed",
     version: VERSION_FALLBACK,
   },
   "a 429 whose text is only whitespace": {
     tag: "ApiRejected",
     answer: body(429, "   ", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: "   ",
     version: VERSION_FALLBACK,
   },
   "a 3xx answer": {
     tag: "ApiRejected",
     answer: body(302, "moved", "text/plain"),
     safe: ORDER_FALLBACK,
-    legacy: "moved",
     version: VERSION_FALLBACK,
   },
   "a JSON content type whose body is not JSON": {
     tag: "ApiUnreadable",
     answer: body(200, "<html>", "application/json"),
     safe: PARSER_TEXT,
-    legacy: PARSER_TEXT,
     version: PARSER_TEXT,
   },
   "an error status whose JSON body is not JSON": {
     tag: "ApiUnreadable",
     answer: body(500, "<html>", "application/json"),
     safe: PARSER_TEXT,
-    legacy: PARSER_TEXT,
     version: PARSER_TEXT,
   },
 } satisfies Record<string, Case>;
@@ -163,7 +147,7 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
     expect(await failureOf(getOrder("od-alpha"))).toMatchObject({ _tag: tag, message: safe });
   });
 
-  test("a legacy write shows safe server text or its fallback", async () => {
+  test("a write shows safe server text or its own fallback", async () => {
     answerWith(answer);
     expect(await failureOf(retrySyncSession("session-1"))).toMatchObject({
       _tag: tag,
