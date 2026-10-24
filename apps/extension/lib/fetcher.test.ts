@@ -16,7 +16,7 @@ import {
 } from "../test/fake-browser";
 import type { FakeClock, FakeExtension } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
-import { PAGE_TIMEOUT_MS } from "./collect";
+import { PAGE_TIMEOUT_MS, collectedPageSchema } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -1060,6 +1060,7 @@ describe("the MFC tab", () => {
     expect(extension.clock.now() - startedAt).toBeLessThan(PAGE_TIMEOUT_MS);
     await extension.settle();
 
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
     expect(extension.tabs.has(101)).toBe(true);
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`]);
   });
@@ -1255,6 +1256,27 @@ describe("the MFC tab", () => {
     expect(extension.tabs.log.filter((entry) => entry.startsWith("create"))).toHaveLength(3);
     expect(extension.calls).toHaveLength(3);
     expect(extension.tabs.has(103)).toBe(false);
+  });
+
+  test("a collector answer that fails its schema in its own tab fails the item, and the next item loads a fresh tab", async () => {
+    const extension = fakeExtension({
+      pages: (request) =>
+        request.mfcItemId === 1 ? collectedPageSchema.parse(undefined) : page(itemPage(2)),
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.tabs.log).toEqual([
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 101",
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 102",
+    ]);
   });
 
   test("a shared item outlives its first run's tab closing before the MFC tab opens", async () => {
@@ -1576,5 +1598,57 @@ describe("item results", () => {
     await extension.clock.runUntil(run.done);
 
     expect(run.results()).toEqual([{ ok: true, html: itemPage(1, "public"), picture: null }]);
+  });
+});
+
+describe("an attempt that breaks", () => {
+  test("a collector that throws a defect fails only its item, and the queue moves on", async () => {
+    const extension = fakeExtension({
+      pages: (request) => {
+        if (request.mfcItemId === 1) throw new TypeError("page.html is not a function");
+        return page(itemPage(request.mfcItemId));
+      },
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.tabs.log).toEqual([
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 101",
+      `create inactive ${ORIGINS.mfc}/`,
+      "remove 102",
+    ]);
+  });
+
+  test("a throttle write that fails while it records a challenge's pause fails only its item", async () => {
+    const stored = memoryValue(OPEN_THROTTLE);
+    const throttleState = {
+      load: stored.load,
+      save: async (next: typeof OPEN_THROTTLE) => {
+        if (next.pausedUntil > 0) throw new Error("QuotaExceededError");
+        await stored.save(next);
+      },
+    };
+    const extension = fakeExtension({
+      throttleState,
+      pages: (request) =>
+        request.mfcItemId === 7
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
+          : page(itemPage(request.mfcItemId)),
+    });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(8), picture: null },
+    ]);
+    expect(asked(run.events, "needs_user")).toBe(false);
   });
 });
