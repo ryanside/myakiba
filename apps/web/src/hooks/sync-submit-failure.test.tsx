@@ -57,23 +57,23 @@ const failureToast = (description: string) => ({
   actionProps: { children: "View import history" },
 });
 
-test("a sync the server refuses shows the server's text and still rejects the submit", async () => {
+test("a sync the server refuses shows safe text and still rejects the submit", async () => {
   answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
 
   const { options, rejection } = await submitCollectionAndReadToast();
 
-  expect(options).toMatchObject(failureToast("Failed to queue order creation"));
-  expect(rejection).toMatchObject({ message: "Failed to queue order creation" });
+  expect(options).toMatchObject(failureToast("Failed to submit collection items"));
+  expect(rejection).toMatchObject({ message: "Failed to submit collection items" });
 });
 
-test("a sync that never reaches the server shows the fetch error's text", async () => {
+test("a sync that never reaches the server shows safe text", async () => {
   answerWith(async () => {
     throw new TypeError("Failed to fetch");
   });
 
   const { options } = await submitCollectionAndReadToast();
 
-  expect(options).toMatchObject(failureToast("TypeError: Failed to fetch"));
+  expect(options).toMatchObject(failureToast("Failed to submit collection items"));
 });
 
 test("a sync refused with only whitespace shows the form's own text", async () => {
@@ -81,5 +81,5 @@ test("a sync refused with only whitespace shows the form's own text", async () =
 
   const { options } = await submitCollectionAndReadToast();
 
-  expect(options).toMatchObject(failureToast("Failed to submit collection items."));
+  expect(options).toMatchObject(failureToast("Failed to submit collection items"));
 });

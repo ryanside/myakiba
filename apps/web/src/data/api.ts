@@ -79,16 +79,6 @@ const SAFE_TEXT: FailureText = {
   ApiServerError: (_facts, { fallback }) => fallback,
 };
 
-/** What the server or fetch said, as text. It leaks 5xx bodies and fetch errors. */
-const LEGACY_TEXT: FailureText = {
-  ApiUnreachable: ({ cause }, { fallback }) => String(cause || fallback),
-  ApiNotFound: ({ body }, { fallback }) => String(body || fallback),
-  ApiRejected: ({ body }, { fallback }) => String(body || fallback),
-  ApiInvalid: ({ body }, { fallback }) =>
-    String(withMessage.safeParse(body).data?.message || fallback),
-  ApiServerError: ({ body }, { fallback }) => String(body || fallback),
-};
-
 /** One text for every failure. */
 const FIXED_TEXT: FailureText = {
   ApiUnreachable: (_facts, { fallback }) => fallback,
@@ -112,10 +102,10 @@ const BODY_MESSAGE_TEXT: FailureText = {
     String(withMessage.safeParse(body).data?.message || fallback),
 };
 
-/** How each policy words a failure. Retiring the leaking text is `legacy: SAFE_TEXT`. */
+/** How each policy words a failure. Legacy callers use the same safe text. */
 const FAILURE_TEXT = {
   safe: SAFE_TEXT,
-  legacy: LEGACY_TEXT,
+  legacy: SAFE_TEXT,
   fixed: FIXED_TEXT,
   bodyMessage: BODY_MESSAGE_TEXT,
 } as const satisfies Record<Policy, FailureText>;

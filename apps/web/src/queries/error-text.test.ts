@@ -15,32 +15,36 @@ function answerWith(respond: () => Promise<Response>) {
 }
 
 const calls = [
-  ["an item refresh request", () => requestResync(1001, { page: "<html></html>" })],
-  ["an import retry", () => retrySyncSession("session-1")],
-  ["a data export", () => exportDataTransfer()],
+  [
+    "an item refresh request",
+    () => requestResync(1001, { page: "<html></html>" }),
+    "Failed to request item refresh",
+  ],
+  ["an import retry", () => retrySyncSession("session-1"), "Failed to retry failed item results"],
+  ["a data export", () => exportDataTransfer(), "Failed to export your data"],
 ] as const;
 
-describe.each(calls)("%s keeps the error text it had before F1", (_name, call) => {
-  test("a 500 shows the server's text", async () => {
+describe.each(calls)("%s uses safe error text", (_name, call, fallback) => {
+  test("a 500 shows the operation fallback", async () => {
     answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
     expect(await failureOf<unknown>(call())).toMatchObject({
-      message: "Failed to queue order creation",
+      message: fallback,
     });
   });
 
-  test("a 422 shows the validator's message", async () => {
+  test("a 422 shows the operation fallback", async () => {
     answerWith(async () =>
       Response.json({ type: "validation", message: "Expected string" }, { status: 422 }),
     );
-    expect(await failureOf<unknown>(call())).toMatchObject({ message: "Expected string" });
+    expect(await failureOf<unknown>(call())).toMatchObject({ message: fallback });
   });
 
-  test("an unreachable server shows the fetch error's text", async () => {
+  test("an unreachable server shows the operation fallback", async () => {
     answerWith(async () => {
       throw new TypeError("Failed to fetch");
     });
     expect(await failureOf<unknown>(call())).toMatchObject({
-      message: "TypeError: Failed to fetch",
+      message: fallback,
     });
   });
 });

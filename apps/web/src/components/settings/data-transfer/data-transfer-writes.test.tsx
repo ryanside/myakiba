@@ -46,14 +46,14 @@ async function openDataTransfer(answer: Answer) {
   await screen.findByText("myakiba-export.json");
 }
 
-test("an export the server refuses shows its text beside the button", async () => {
+test("an export the server refuses shows safe text beside the button", async () => {
   await openDataTransfer(({ url }) =>
     url.endsWith("/export") ? new Response("Export storage is unavailable", { status: 500 }) : null,
   );
 
   act(() => screen.getByRole("button", { name: "Download export" }).click());
 
-  expect(await screen.findByText("Export storage is unavailable")).toBeTruthy();
+  expect(await screen.findByText("Failed to export your data")).toBeTruthy();
 });
 
 test("a delete the server refuses closes the dialog and shows its text beside the import", async () => {

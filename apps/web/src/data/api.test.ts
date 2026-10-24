@@ -157,17 +157,17 @@ const cases = {
   },
 } satisfies Record<string, Case>;
 
-describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, legacy, version }) => {
+describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version }) => {
   test("a safe read shows the server's 4xx text or its fallback", async () => {
     answerWith(answer);
     expect(await failureOf(getOrder("od-alpha"))).toMatchObject({ _tag: tag, message: safe });
   });
 
-  test("a legacy write shows what the server or fetch said", async () => {
+  test("a legacy write shows safe server text or its fallback", async () => {
     answerWith(answer);
     expect(await failureOf(retrySyncSession("session-1"))).toMatchObject({
       _tag: tag,
-      message: legacy,
+      message: safe === ORDER_FALLBACK ? RETRY_FALLBACK : safe,
     });
   });
 
