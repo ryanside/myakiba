@@ -10,9 +10,9 @@ import {
   readAnswer,
   stopCollector,
 } from "../lib/collect";
-import type { AnswerCodec, CollectRequest } from "../lib/collect";
+import type { AnswerCodec, CollectRequest, CollectorFailure } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
-import type { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
+import { AttemptAbandoned } from "../lib/errors/attempt-abandoned";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
@@ -25,23 +25,19 @@ async function runCollector<Ok extends StandardSchemaV1, Fails extends StandardS
   request: CollectRequest,
   codec: AnswerCodec<Ok, Fails>,
   signal?: AbortSignal,
-): Promise<
-  Result<
-    StandardSchemaOutput<Ok>,
-    StandardSchemaOutput<Fails> | CollectorInjectionFailed | CollectorAnswerInvalid
-  >
-> {
+): Promise<Result<StandardSchemaOutput<Ok>, StandardSchemaOutput<Fails> | CollectorFailure>> {
   const inject = <R>(script: () => Promise<R>) =>
     Result.tryPromise({
       try: script,
       catch: (cause) => new CollectorInjectionFailed({ tabId, kind: request.kind, cause }),
     });
-  signal?.throwIfAborted();
+  // Each step that touches the tab first checks the signal, so a stopped load starts no new script.
+  if (signal?.aborted) return Result.err(new AttemptAbandoned());
   const armed = await inject(() =>
     browser.scripting.executeScript({ target: { tabId }, func: armCollector, args: [request] }),
   );
   if (armed.isErr()) return Result.err(armed.error);
-  signal?.throwIfAborted();
+  if (signal?.aborted) return Result.err(new AttemptAbandoned());
   const stop = async () => {
     try {
       await browser.scripting.executeScript({ target: { tabId }, func: stopCollector });
@@ -84,10 +80,14 @@ export default defineBackground(() => {
   });
 
   browser.tabs.onActivated.addListener(async ({ tabId }) => {
+    const notFocused = (cause: unknown) => {
+      console.error("could not record a tab focus", cause);
+    };
     try {
-      await fetcher.noteTabActivated(tabId);
+      const noted = await fetcher.noteTabActivated(tabId);
+      noted.tapError(notFocused);
     } catch (error) {
-      console.error("could not record a tab focus", error);
+      notFocused(error);
     }
   });
   browser.runtime.onConnect.addListener((port) => {

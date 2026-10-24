@@ -10,6 +10,7 @@ import type {
   PageRequest,
   PictureFailure,
 } from "../lib/collect";
+import { AttemptAbandoned } from "../lib/errors/attempt-abandoned";
 import { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { MfcPageFetchFailed } from "../lib/errors/mfc-page-fetch-failed";
@@ -114,11 +115,12 @@ export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: (
   return {
     load: async () => {
       await later();
-      return value;
+      return Result.ok(value);
     },
     save: async (next) => {
       await later();
       value = next;
+      return Result.ok();
     },
     peek: () => value,
   };
@@ -211,7 +213,7 @@ function readable(url: string): boolean {
 function fakeTabs(
   clock: Clock,
   options: {
-    readonly activated: (tabId: number) => Promise<void>;
+    readonly activated: Fetcher["noteTabActivated"];
     readonly navigationMs: () => number;
     readonly created: (tabId: number) => void;
     readonly deferNavigationCommit: CommitStyle | undefined;
@@ -585,7 +587,7 @@ export function fakeExtension(options: {
 
   /** Stands in for the collector, which reads only the picture asked for. */
   async function readPublicPicture(tabId: number, requested: string, signal: AbortSignal) {
-    signal.throwIfAborted();
+    if (signal.aborted) return Result.err(new AttemptAbandoned());
     const tab = tabs.get(tabId);
     publicPictureCalls.push({ tabId, signal, tab: tab && { ...tab } });
     const url = new URL(tab?.url ?? "about:blank");
@@ -608,7 +610,7 @@ export function fakeExtension(options: {
   }
 
   async function readGatedPicture(tabId: number, url: string, signal: AbortSignal) {
-    signal.throwIfAborted();
+    if (signal.aborted) return Result.err(new AttemptAbandoned());
     pictureUrls.push(url);
     const read: Load = { tabId, url, at: clock.now(), byUser: false, endedAt: null };
     return readIn(read, signal, async () =>

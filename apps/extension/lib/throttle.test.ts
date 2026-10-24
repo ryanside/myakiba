@@ -22,8 +22,8 @@ function books() {
 }
 
 async function haltOf(throttle: Throttle, pausedUntil: number): Promise<number | null> {
-  const { haltedUntil } = await throttle.rateLimited(pausedUntil);
-  return haltedUntil;
+  const limited = await throttle.rateLimited(pausedUntil);
+  return limited.unwrap().haltedUntil;
 }
 
 describe("MFC's answers on the books", () => {

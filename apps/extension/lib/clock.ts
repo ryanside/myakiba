@@ -1,3 +1,8 @@
+import { Result } from "better-result";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
+import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
+
 export type Clock = {
   readonly now: () => number;
   /** Resolves after `ms`, or as soon as `signal` aborts. */
@@ -26,38 +31,31 @@ export const systemClock: Clock = {
 
 /** Survives a service-worker restart, which would otherwise reset the throttle. */
 export type SessionValue<T> = {
-  readonly load: () => Promise<T>;
-  readonly save: (value: T) => Promise<void>;
+  readonly load: () => Promise<Result<T, SessionStorageUnavailable>>;
+  readonly save: (value: T) => Promise<Result<void, SessionStorageUnavailable>>;
 };
 
-export class TimeoutError extends Error {
-  readonly timeoutMs: number;
-
-  constructor(timeoutMs: number) {
-    super(`MFC did not answer in ${timeoutMs} ms`);
-    this.name = "TimeoutError";
-    this.timeoutMs = timeoutMs;
-  }
-}
-
-/** Aborts with a TimeoutError once `ms` pass on `clock`, unless `cancelled` aborts first. */
+/** Aborts with MfcLoadTimedOut once `ms` pass on `clock`, unless `cancelled` aborts first. */
 export function timeoutSignal(clock: Clock, ms: number, cancelled: AbortSignal): AbortSignal {
   const controller = new AbortController();
   void (async () => {
     await clock.sleep(ms, cancelled);
-    if (!cancelled.aborted) controller.abort(new TimeoutError(ms));
+    if (!cancelled.aborted) controller.abort(new MfcLoadTimedOut({ timeoutMs: ms }));
   })();
   return controller.signal;
 }
 
-/** Settles as `work` does, or rejects with `signal`'s reason once it aborts, even when `work` ignores it. */
-export async function unlessAborted<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
-  const aborted = Promise.withResolvers<never>();
-  const abort = () => aborted.reject(signal.reason);
+/** Settles as `work` does, or answers AttemptAbandoned once `signal` aborts, even when `work` ignores it. */
+export async function unlessAborted<T>(
+  signal: AbortSignal,
+  work: Promise<T>,
+): Promise<Result<T, AttemptAbandoned>> {
+  const aborted = Promise.withResolvers<Result<T, AttemptAbandoned>>();
+  const abort = () => aborted.resolve(Result.err(new AttemptAbandoned()));
   if (signal.aborted) abort();
   else signal.addEventListener("abort", abort, { once: true });
   try {
-    return await Promise.race([work, aborted.promise]);
+    return await Promise.race([work.then((value) => Result.ok(value)), aborted.promise]);
   } finally {
     signal.removeEventListener("abort", abort);
   }

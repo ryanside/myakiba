@@ -27,6 +27,7 @@ import { CollectorInjectionFailed } from "./errors/collector-injection-failed";
 import { PictureFetchFailed } from "./errors/picture-fetch-failed";
 import { PictureRejected } from "./errors/picture-rejected";
 import { PictureTimedOut } from "./errors/picture-timed-out";
+import { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -245,6 +246,9 @@ describe("the throttle's books", () => {
       error.mockRestore();
     });
 
+    const unavailable = (op: "get" | "set", message: string) =>
+      new SessionStorageUnavailable({ key: "throttle", op, cause: new Error(message) });
+
     /** Fails the `nth` read or write of the books once item 1's page has answered. */
     function failingBooks(op: "load" | "save", nth: number) {
       const stored = memoryValue(OPEN_THROTTLE);
@@ -256,14 +260,14 @@ describe("the throttle's books", () => {
           armed = true;
         },
         throttleState: {
-          load: async () => {
-            if (op === "load" && failsNow()) throw new Error("storage is gone");
-            return stored.load();
-          },
-          save: async (next: typeof OPEN_THROTTLE) => {
-            if (op === "save" && failsNow()) throw new Error("QuotaExceededError");
-            await stored.save(next);
-          },
+          load: async () =>
+            op === "load" && failsNow()
+              ? Result.err(unavailable("get", "storage is gone"))
+              : stored.load(),
+          save: async (next: typeof OPEN_THROTTLE) =>
+            op === "save" && failsNow()
+              ? Result.err(unavailable("set", "QuotaExceededError"))
+              : stored.save(next),
         },
       };
     }
@@ -1819,10 +1823,16 @@ describe("an attempt that breaks", () => {
     const stored = memoryValue(OPEN_THROTTLE);
     const throttleState = {
       load: stored.load,
-      save: async (next: typeof OPEN_THROTTLE) => {
-        if (next.pausedUntil > 0) throw new Error("QuotaExceededError");
-        await stored.save(next);
-      },
+      save: async (next: typeof OPEN_THROTTLE) =>
+        next.pausedUntil > 0
+          ? Result.err(
+              new SessionStorageUnavailable({
+                key: "throttle",
+                op: "set",
+                cause: new Error("QuotaExceededError"),
+              }),
+            )
+          : stored.save(next),
     };
     const extension = fakeExtension({
       throttleState,
@@ -2210,7 +2220,7 @@ describe("the developer log", () => {
         load: stored.load,
         save: async (next) => {
           if (next.pausedUntil > 0) throw new Error("QuotaExceededError");
-          await stored.save(next);
+          return stored.save(next);
         },
       },
       pages: () => page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" }),

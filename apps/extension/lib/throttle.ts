@@ -1,11 +1,12 @@
-import { Panic, Result, UnhandledException } from "better-result";
+import { Result } from "better-result";
 import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
-import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
+import { timeoutSignal, unlessAborted } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
+import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 
 export const THROTTLE = {
   minGapMs: 2500,
@@ -37,17 +38,14 @@ export const OPEN_THROTTLE: ThrottleState = {
  * Keeps a throttle turn going until `at` at the latest, for a load its work can no longer stop. It is booked as well, so
  * a worker that stops meanwhile leaves the next load waiting.
  */
-export type HoldTurn = (at: number) => Promise<void>;
+export type HoldTurn = (at: number) => Promise<Result<void, SessionStorageUnavailable>>;
 
-class HaltedError extends Error {
-  readonly until: number;
-
-  constructor(until: number) {
-    super(`MFC halted the queue until ${new Date(until).toISOString()}`);
-    this.name = "HaltedError";
-    this.until = until;
-  }
-}
+/** How a throttle turn fails, whatever its work does. */
+export type TurnFailure =
+  | MfcLoadTimedOut
+  | MfcQueueHalted
+  | AttemptAbandoned
+  | SessionStorageUnavailable;
 
 function pausedOrHalted(current: ThrottleState, until: number, now: number): ThrottleState {
   const haltedUntil = until - now > THROTTLE.maxPauseMs ? until : 0;
@@ -56,24 +54,6 @@ function pausedOrHalted(current: ThrottleState, until: number, now: number): Thr
     pausedUntil: Math.max(current.pausedUntil, until),
     haltedUntil: Math.max(current.haltedUntil, haltedUntil),
   };
-}
-
-async function timedOutOnceSettled(settled: Promise<void>, timeoutMs: number): Promise<never> {
-  await settled;
-  throw new TimeoutError(timeoutMs);
-}
-
-async function answerOnceStopped<T>(
-  running: Promise<T>,
-  settled: Promise<void>,
-  timeout: AbortSignal,
-  timeoutMs: number,
-): Promise<T> {
-  try {
-    return await Promise.race([running, timedOutOnceSettled(settled, timeoutMs)]);
-  } catch (error) {
-    throw timeout.aborted ? timeout.reason : error;
-  }
 }
 
 export function createThrottle(deps: {
@@ -89,35 +69,55 @@ export function createThrottle(deps: {
   const gapAfter = (at: number) =>
     at + THROTTLE.minGapMs + Math.floor(random() * THROTTLE.jitterMs);
 
-  /** Reads and writes the books one change at a time, so no change overwrites another. */
-  async function book<R>(
-    change: (current: ThrottleState, now: number) => [ThrottleState, R],
-  ): Promise<R> {
+  /**
+   * Reads and writes the books one change at a time, so no change overwrites another. A change that fails writes
+   * nothing.
+   */
+  async function book<R, E = never>(
+    change: (current: ThrottleState, now: number) => Result<[ThrottleState, R], E>,
+  ): Promise<Result<R, E | SessionStorageUnavailable>> {
     const previous = books;
     const turn = Promise.withResolvers<null>();
     books = turn.promise;
     try {
       await previous;
-      const [next, result] = change(await state.load(), clock.now());
-      await state.save(next);
-      return result;
+      return await Result.gen(async function* () {
+        const current = yield* Result.await(state.load());
+        const [next, result] = yield* change(current, clock.now());
+        yield* Result.await(state.save(next));
+        return Result.ok(result);
+      });
     } finally {
       turn.resolve(null);
     }
   }
 
-  async function reserve(signal: AbortSignal, timeoutMs: number): Promise<void> {
+  const write = (change: (current: ThrottleState, now: number) => ThrottleState) =>
+    book((current, now) =>
+      Result.ok<[ThrottleState, undefined]>([change(current, now), undefined]),
+    );
+
+  async function reserve(
+    signal: AbortSignal,
+    timeoutMs: number,
+  ): Promise<Result<void, TurnFailure>> {
     for (;;) {
-      signal.throwIfAborted();
-      const wait = await book((current, now): [ThrottleState, number] => {
-        if (now < current.haltedUntil) throw new HaltedError(current.haltedUntil);
+      if (signal.aborted) return Result.err(new AttemptAbandoned());
+      const booked = await book((current, now): Result<[ThrottleState, number], MfcQueueHalted> => {
+        if (now < current.haltedUntil) {
+          return Result.err(new MfcQueueHalted({ until: current.haltedUntil }));
+        }
         const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
-        if (untilFree > 0) return [current, untilFree];
+        if (untilFree > 0) return Result.ok([current, untilFree]);
         // Booked to the latest this load can end, so a worker that stops mid-load leaves the next one waiting it out.
-        return [{ ...current, nextPageAt: gapAfter(now + timeoutMs + THROTTLE.graceMs) }, 0];
+        return Result.ok([
+          { ...current, nextPageAt: gapAfter(now + timeoutMs + THROTTLE.graceMs) },
+          0,
+        ]);
       });
-      if (wait <= 0) return;
-      await clock.sleep(wait, signal);
+      if (booked.isErr()) return Result.err(booked.error);
+      if (booked.value <= 0) return Result.ok();
+      await clock.sleep(booked.value, signal);
     }
   }
 
@@ -137,11 +137,25 @@ export function createThrottle(deps: {
       if (first === "stopped") break;
     }
     finished.abort();
-    try {
-      await book((current, now) => [{ ...current, nextPageAt: gapAfter(now) }, null]);
-    } catch (error) {
-      console.error("could not book the end of an MFC page load", error);
-    }
+    const booked = await write((current, now) => ({ ...current, nextPageAt: gapAfter(now) }));
+    booked.tapError((failure) => {
+      console.error("could not book the end of an MFC page load", failure);
+    });
+  }
+
+  /**
+   * The work's answer, or MfcLoadTimedOut once the load has ended or run out its grace after the timeout. An error
+   * the work answers after the timeout stopped it is that timeout.
+   */
+  async function answerOnceStopped<T, E>(
+    running: Promise<Result<T, E>>,
+    settled: Promise<void>,
+    timeout: AbortSignal,
+    timeoutMs: number,
+  ): Promise<Result<T, E | MfcLoadTimedOut>> {
+    const timedOut = new MfcLoadTimedOut({ timeoutMs });
+    const answer = await Promise.race([running, settled.then(() => Result.err(timedOut))]);
+    return answer.isErr() && timeout.aborted ? Result.err(timedOut) : answer;
   }
 
   return {
@@ -149,43 +163,50 @@ export function createThrottle(deps: {
      * Runs one MFC load in its turn. `work` gets a signal that aborts `timeoutMs` after the turn begins.
      * The next turn starts a gap after this load ends, even when the caller stopped waiting first.
      */
-    async load<T>(
+    async load<T, E>(
       signal: AbortSignal,
-      work: (timeout: AbortSignal, holdUntil: HoldTurn) => Promise<T>,
+      work: (timeout: AbortSignal, holdUntil: HoldTurn) => Promise<Result<T, E>>,
       timeoutMs = PAGE_TIMEOUT_MS,
-    ): Promise<T> {
+    ): Promise<Result<T, E | TurnFailure>> {
       const previous = lastLoad;
       const ended = Promise.withResolvers<unknown>();
       lastLoad = Promise.all([previous, ended.promise]);
-      try {
-        await unlessAborted(signal, previous);
-        await reserve(signal, timeoutMs);
-      } catch (error) {
+      const waited = await unlessAborted(signal, previous);
+      const reserved = waited.isOk() ? await reserve(signal, timeoutMs) : waited;
+      if (reserved.isErr()) {
         ended.resolve(null);
-        throw error;
+        return Result.err(reserved.error);
       }
       const finished = new AbortController();
       const timeout = timeoutSignal(clock, timeoutMs, finished.signal);
       let endsBy = clock.now() + timeoutMs + THROTTLE.graceMs;
-      const holdUntil: HoldTurn = async (at) => {
+      const holdUntil: HoldTurn = (at) => {
         endsBy = Math.max(endsBy, at);
-        await book((current) => [
-          { ...current, nextPageAt: Math.max(current.nextPageAt, gapAfter(at)) },
-          null,
-        ]);
+        return write((current) => ({
+          ...current,
+          nextPageAt: Math.max(current.nextPageAt, gapAfter(at)),
+        }));
       };
-      const running = signal.aborted ? Promise.reject(signal.reason) : work(timeout, holdUntil);
+      const running: Promise<Result<T, E | AttemptAbandoned>> = signal.aborted
+        ? Promise.resolve(Result.err(new AttemptAbandoned()))
+        : work(timeout, holdUntil);
       const settled = settle(running, finished, () => endsBy);
       ended.resolve(settled);
-      return unlessAborted(signal, answerOnceStopped(running, settled, timeout, timeoutMs));
+      const answer = await unlessAborted(
+        signal,
+        answerOnceStopped(running, settled, timeout, timeoutMs),
+      );
+      return Result.flatten(answer);
     },
 
-    async pauseOrHalt(until: number): Promise<void> {
-      await book((current, now) => [pausedOrHalted(current, until, now), null]);
+    pauseOrHalt(until: number): Promise<Result<void, SessionStorageUnavailable>> {
+      return write((current, now) => pausedOrHalted(current, until, now));
     },
 
-    async rateLimited(pausedUntil: number): Promise<{ readonly haltedUntil: number | null }> {
-      return book((current, now): [ThrottleState, { readonly haltedUntil: number | null }] => {
+    rateLimited(
+      pausedUntil: number,
+    ): Promise<Result<{ readonly haltedUntil: number | null }, SessionStorageUnavailable>> {
+      return book((current, now) => {
         const pauseMs = pausedUntil - now;
         const inRow = current.limitedAt !== null && now - current.limitedAt <= THROTTLE.inRowMs;
         let haltedUntil: number | null = null;
@@ -197,47 +218,28 @@ export function createThrottle(deps: {
           haltedUntil: Math.max(current.haltedUntil, haltedUntil ?? 0),
           limitedAt: haltEndsRow ? null : now,
         };
-        return [next, { haltedUntil }];
+        return Result.ok<[ThrottleState, { readonly haltedUntil: number | null }]>([
+          next,
+          { haltedUntil },
+        ]);
       });
     },
 
-    async answered(): Promise<void> {
-      await book((current) => [{ ...current, limitedAt: null }, null]);
+    answered(): Promise<Result<void, SessionStorageUnavailable>> {
+      return write((current) => ({ ...current, limitedAt: null }));
     },
 
     /** Books a page load the extension did not start, such as the reload after a solved challenge. */
-    async noteLoad(): Promise<void> {
-      await book((current, now) => [
-        { ...current, nextPageAt: Math.max(current.nextPageAt, gapAfter(now)) },
-        null,
-      ]);
+    noteLoad(): Promise<Result<void, SessionStorageUnavailable>> {
+      return write((current, now) => ({
+        ...current,
+        nextPageAt: Math.max(current.nextPageAt, gapAfter(now)),
+      }));
     },
   };
 }
 
 export type Throttle = ReturnType<typeof createThrottle>;
-
-/** How a throttle turn fails. `load` still throws, so each call is wrapped where it is made. */
-export type TurnFailure = MfcLoadTimedOut | MfcQueueHalted | AttemptAbandoned | UnhandledException;
-
-function turnFailure(cause: unknown, signal: AbortSignal, phase: "page" | "tab"): TurnFailure {
-  // A defect reaches attempt as a Panic rather than reading as a failed load.
-  if (Panic.is(cause)) throw cause;
-  if (signal.aborted) return new AttemptAbandoned();
-  if (cause instanceof TimeoutError) {
-    return new MfcLoadTimedOut({ timeoutMs: cause.timeoutMs, phase });
-  }
-  if (cause instanceof HaltedError) return new MfcQueueHalted({ until: cause.until });
-  return new UnhandledException({ cause });
-}
-
-export function loading<T>(
-  load: () => Promise<T>,
-  signal: AbortSignal,
-  phase: "page" | "tab",
-): Promise<Result<T, TurnFailure>> {
-  return Result.tryPromise({ try: load, catch: (cause) => turnFailure(cause, signal, phase) });
-}
 
 export function parseRetryAfter(header: string | null, now: number): number | null {
   if (header === null) return null;

@@ -3,6 +3,7 @@ import { Result } from "better-result";
 import type { Clock, SessionValue } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import type { TabEditRefused } from "./errors/tab-edit-refused";
 import type { TabQueryFailed } from "./errors/tab-query-failed";
 import type { WindowFocusRefused } from "./errors/window-focus-refused";
@@ -60,7 +61,7 @@ export function createMfcTabs(deps: {
     ): Promise<Result<MfcTabLease, LeaseFailure>> {
       return Result.gen(async function* () {
         const { context } = yield* requester();
-        const owned = await own.landedIn(context);
+        const owned = yield* Result.await(own.landedIn(context));
         if (owned !== null) return Result.ok({ kind: "owned", tabId: owned } as const);
         const borrowed = yield* Result.await(borrowable(context));
         if (borrowed !== null) return Result.ok({ kind: "borrowed", tabId: borrowed } as const);
@@ -80,7 +81,7 @@ export function createMfcTabs(deps: {
         );
         if (signal.aborted) return Result.err(new AttemptAbandoned());
         const shown = yield* Result.await(tabs.update(tabId, { active: true }));
-        await own.claim(tabId);
+        yield* Result.await(own.claim(tabId));
         if (shown?.windowId !== undefined) yield* Result.await(tabs.focusWindow(shown.windowId));
         return Result.ok(tabId);
       });
@@ -132,9 +133,9 @@ export function createMfcTabs(deps: {
       borrowing = false;
     },
 
-    async release(): Promise<void> {
+    release(): Promise<Result<void, SessionStorageUnavailable>> {
       borrowing = true;
-      await own.release();
+      return own.release();
     },
   };
 }

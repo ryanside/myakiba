@@ -1,9 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import type { SessionValue } from "./clock";
 import { sessionValue } from "./session-value";
 import { OPEN_THROTTLE, throttleStateSchema } from "./throttle";
 import type { ThrottleState } from "./throttle";
 
 const PAUSED: ThrottleState = { ...OPEN_THROTTLE, pausedUntil: 5000 };
+
+async function loaded(value: SessionValue<ThrottleState>) {
+  const read = await value.load();
+  return read.unwrap();
+}
 
 function memoryArea(initial: Partial<Record<string, ThrottleState>> = {}) {
   const items = { ...initial };
@@ -23,13 +29,13 @@ describe("a session value", () => {
     await value.save(PAUSED);
 
     expect(area.items).toEqual({ throttle: PAUSED });
-    expect(await value.load()).toEqual(PAUSED);
+    expect(await loaded(value)).toEqual(PAUSED);
   });
 
   test("reads as its fallback before anything was saved", async () => {
     const value = sessionValue(memoryArea(), "throttle", throttleStateSchema, OPEN_THROTTLE);
 
-    expect(await value.load()).toEqual(OPEN_THROTTLE);
+    expect(await loaded(value)).toEqual(OPEN_THROTTLE);
   });
 
   test("reads a stored value that fails its schema as its fallback", async () => {
@@ -40,6 +46,6 @@ describe("a session value", () => {
     };
     const value = sessionValue(area, "throttle", throttleStateSchema, OPEN_THROTTLE);
 
-    expect(await value.load()).toEqual(OPEN_THROTTLE);
+    expect(await loaded(value)).toEqual(OPEN_THROTTLE);
   });
 });
