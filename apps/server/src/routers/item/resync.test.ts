@@ -52,6 +52,9 @@ await mock.module("@myakiba/auth/server", () => ({
 const rateLimited: string[] = [];
 let resyncsThisHour = 1;
 let redisLost = false;
+let redisStatus = "ready";
+let cooldownReadsBeforeDisconnect: number | null = null;
+const cooldownCalls: string[] = [];
 let hangRedis: "read" | "write" | null = null;
 let hungRedis = Promise.withResolvers<never>();
 let loseRedis: "at the cooldown write" | "after the cooldown write" | null = null;
@@ -63,12 +66,16 @@ const isCooldown = (key: string) => key.startsWith("item-resync:cooldown:");
 
 await mock.module("@myakiba/redis/client", () => ({
   redis: {
+    get status() {
+      return redisStatus;
+    },
     eval: async (_script: string, _keys: number, key: string) => {
       reachRedis();
       rateLimited.push(key);
       return [key.startsWith("rl:item-resync:") ? resyncsThisHour : 1, 3600];
     },
     set: async (key: string, value: string, _mode: "EX", seconds: number) => {
+      if (isCooldown(key)) cooldownCalls.push("set");
       if (isCooldown(key) && loseRedis === "at the cooldown write") redisLost = true;
       if (isCooldown(key) && hangRedis === "write") return hungRedis.promise;
       reachRedis();
@@ -78,11 +85,19 @@ await mock.module("@myakiba/redis/client", () => ({
       return "OK";
     },
     get: async (key: string) => {
+      if (isCooldown(key)) cooldownCalls.push("get");
       if (isCooldown(key) && hangRedis === "read") return hungRedis.promise;
       reachRedis();
       return liveKey(key)?.value ?? null;
     },
     ttl: async (key: string) => {
+      if (isCooldown(key)) {
+        cooldownCalls.push("ttl");
+        if (cooldownReadsBeforeDisconnect !== null) {
+          cooldownReadsBeforeDisconnect -= 1;
+          if (cooldownReadsBeforeDisconnect === 0) redisStatus = "reconnecting";
+        }
+      }
       reachRedis();
       const stored = liveKey(key);
       return stored === undefined ? -2 : Math.ceil((stored.expiresAt - Date.now()) / 1000);
@@ -234,6 +249,9 @@ beforeEach(async () => {
   cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
   resyncsThisHour = 1;
   redisLost = false;
+  redisStatus = "ready";
+  cooldownReadsBeforeDisconnect = null;
+  cooldownCalls.length = 0;
   loseRedis = null;
   dropTransactionAtCooldown = false;
 });
@@ -564,6 +582,34 @@ describe("a resync that fails part way leaves no cooldown and no refresh", () =>
 });
 
 describe("best-effort cooldown failures", () => {
+  test("status skips a disconnected Redis cache and warns while reporting idle", async () => {
+    await upload(page98777);
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+    cooldownCalls.length = 0;
+    redisStatus = "reconnecting";
+    expect(await resyncStatus()).toEqual(IDLE);
+    expect(cooldownCalls).toEqual([]);
+    expect(await cooldownLogged.promise).toMatchObject({
+      level: "warn",
+      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
+    });
+  });
+
+  test("Redis disconnected after the cooldown guard commits the refresh without queueing a write", async () => {
+    await upload(page98777);
+    cooldownReadsBeforeDisconnect = 2;
+    expect(await resync(derivedRetitledPage)).toEqual({
+      status: 200,
+      body: { status: "idle", cooldownExpiresAt: null, saved: "refreshed" },
+    });
+    expect(cooldownCalls).toEqual(["get", "ttl", "get", "ttl"]);
+    expect((await itemRows()).item?.title).toBe(RETITLED);
+    expect(await cooldownLogged.promise).toMatchObject({
+      level: "warn",
+      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
+    });
+  });
+
   test("Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure", async () => {
     await upload(page98777);
     loseRedis = "at the cooldown write";
@@ -574,11 +620,10 @@ describe("best-effort cooldown failures", () => {
     });
     const { item: row } = await itemRows();
     expect(row?.title).toBe(RETITLED);
-    expect(await cooldownLogged.promise).toMatchObject(
-      expect.objectContaining({
-        error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
-      }),
-    );
+    expect(await cooldownLogged.promise).toMatchObject({
+      level: "warn",
+      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
+    });
     redisLost = false;
     loseRedis = null;
     expect(await resyncStatus()).toEqual(IDLE);
@@ -591,11 +636,10 @@ describe("best-effort cooldown failures", () => {
     redisLost = true;
     cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
     expect(await resyncStatus()).toEqual(IDLE);
-    expect(await cooldownLogged.promise).toMatchObject(
-      expect.objectContaining({
-        error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
-      }),
-    );
+    expect(await cooldownLogged.promise).toMatchObject({
+      level: "warn",
+      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
+    });
   });
 });
 

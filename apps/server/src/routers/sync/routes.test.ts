@@ -41,6 +41,7 @@ let failS3 = false;
 const rateKeys: string[] = [];
 let failureRequests = 1;
 let statusReadFailures = 0;
+let redisStatus = "ready";
 let hungStatusRead: ReturnType<typeof Promise.withResolvers<never>> | null = null;
 const statusReads = new Map<string, number>();
 
@@ -71,6 +72,9 @@ function subscriber() {
 
 await mock.module("@myakiba/redis/client", () => ({
   redis: {
+    get status() {
+      return redisStatus;
+    },
     eval: async (_script: string, _keys: number, key: string, ...args: (string | number)[]) => {
       if (key.startsWith("rl:")) {
         rateKeys.push(key);
@@ -190,6 +194,7 @@ beforeEach(async () => {
   rateKeys.length = 0;
   failureRequests = 1;
   statusReadFailures = 0;
+  redisStatus = "ready";
   statusReads.clear();
   await db
     .insert(authSchema.user)
@@ -1681,13 +1686,56 @@ test("an unanswered status cache read uses the DB row and logs JobStatusCacheUna
     expect(events).toContainEqual(
       expect.objectContaining({
         action: "sync.getJobStatus",
-        error: expect.objectContaining({ name: "JobStatusCacheUnavailable" }),
+        level: "warn",
+        failure: expect.objectContaining({ _tag: "JobStatusCacheUnavailable" }),
       }),
     );
   } finally {
     initLogger({ enabled: false });
   }
 });
+
+test.each(["wait", "connecting", "connect", "reconnecting", "close", "end"])(
+  "job status skips Redis while %s and warns with the unchanged DB fallback",
+  async (status) => {
+    const run = await start("item", { items: [X] });
+    const { default: service } = await import("./service");
+    redisValues.delete(getJobStatusSnapshotKey(run.jobId));
+    const expected = await service.getJobStatus(run.jobId, userId, db);
+    const reads = statusReads.get(getJobStatusSnapshotKey(run.jobId));
+    const events: unknown[] = [];
+    initLogger({
+      silent: true,
+      drain: ({ event }) => {
+        events.push(event);
+      },
+    });
+    redisStatus = status;
+    try {
+      for (let poll = 0; poll < 2; poll++) {
+        expect(await service.getJobStatus(run.jobId, userId, db)).toEqual(expected);
+      }
+      expect(statusReads.get(getJobStatusSnapshotKey(run.jobId))).toBe(reads);
+      expect(events).toHaveLength(2);
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: "sync.getJobStatus",
+            outcome: "warn",
+            level: "warn",
+            failure: expect.objectContaining({
+              _tag: "JobStatusCacheUnavailable",
+              jobId: run.jobId,
+            }),
+          }),
+        ]),
+      );
+    } finally {
+      redisStatus = "ready";
+      initLogger({ enabled: false });
+    }
+  },
+);
 
 test.each([true, false])(
   "CSV keeps its route action when it needs a fetch: %s",
