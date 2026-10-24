@@ -280,7 +280,9 @@
       "test": "apps/server/src/routers/orders/routes.test.ts",
       "fixed": [
         "each orders route answers as before > move another user's item",
-        "each orders route answers as before > move an item deleted in another tab"
+        "each orders route answers as before > move an item deleted in another tab",
+        "a write that names any id the caller does not own answers 404 and changes nothing > move only another user's item",
+        "a write with an empty id list answers 404 and changes nothing > move"
       ]
     },
     {
