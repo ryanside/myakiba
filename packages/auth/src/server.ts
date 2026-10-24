@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@myakiba/db/client";
 import * as schema from "@myakiba/db/schema/auth";
@@ -11,10 +12,21 @@ import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 
+import { sendAuthEmail } from "./send-auth-email";
+
 const resend = new Resend(env.RESEND_API_KEY);
 
 export const auth = betterAuth({
   appName: "myakiba",
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      // Email delivery belongs to the request. Better Auth's default helper
+      // catches even awaited failures and would otherwise answer success.
+      ctx.context.runInBackgroundOrAwait = async (task) => {
+        await task;
+      };
+    }),
+  },
   secondaryStorage: {
     get: async (key) => {
       return await redis.get(key);
@@ -65,7 +77,7 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "reset", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Reset your password",
@@ -78,7 +90,7 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "verification", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Verify your email address",

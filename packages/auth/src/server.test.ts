@@ -1,4 +1,5 @@
 import { beforeEach, expect, mock, test } from "bun:test";
+import { z } from "zod";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 import { betterAuth } from "better-auth";
@@ -66,8 +67,9 @@ beforeEach(() => {
   sendFails = true;
 });
 
-for (const endpoint of ["send-verification-email", "request-password-reset"]) {
-  test(`${endpoint} fails when the email provider refuses the send`, async () => {
+test.each(["send-verification-email", "request-password-reset"])(
+  "%s fails when the email provider refuses the send",
+  async (endpoint) => {
     const response = await testAuth().handler(
       new Request(`http://localhost:3000/api/auth/${endpoint}`, {
         method: "POST",
@@ -76,13 +78,21 @@ for (const endpoint of ["send-verification-email", "request-password-reset"]) {
       }),
     );
     expect(response.status).toBe(500);
-    expect(events.some(({ event }) => event.error?.name === "SendAuthEmailFailed")).toBe(true);
+    expect(
+      events.some(
+        ({ event }) =>
+          z.object({ name: z.literal("SendAuthEmailFailed") }).safeParse(event.error).success,
+      ),
+    ).toBe(true);
     expect(await response.json()).toEqual({
       code: "SEND_AUTH_EMAIL_FAILED",
       message: "We couldn't send the email. Please try again.",
     });
-  });
-  test(`${endpoint} succeeds when the email provider accepts the send`, async () => {
+  },
+);
+test.each(["send-verification-email", "request-password-reset"])(
+  "%s succeeds when the email provider accepts the send",
+  async (endpoint) => {
     sendFails = false;
     const response = await testAuth().handler(
       new Request(`http://localhost:3000/api/auth/${endpoint}`, {
@@ -92,5 +102,5 @@ for (const endpoint of ["send-verification-email", "request-password-reset"]) {
       }),
     );
     expect(response.status).toBe(200);
-  });
-}
+  },
+);
