@@ -1117,6 +1117,12 @@
       "bug": "W-F6: fees edits show a second failure toast",
       "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
       "fixed": ["a failed fees edit shows one command toast and restores the saved total"]
+    },
+    {
+      "fix": "ed157e9268b821ad586201e701fd03ae76012ff3",
+      "bug": "W-F8: sync refusal rejects after its toast through TanStack Form",
+      "test": "apps/web/src/hooks/sync-submit-failure.test.tsx",
+      "fixed": ["a sync the server refuses shows safe text and settles the form submit"]
     }
   ],
   "lint": [
