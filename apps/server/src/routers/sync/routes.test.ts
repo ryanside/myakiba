@@ -1880,3 +1880,34 @@ test("hanging job status cache read settles within its deadline", async () => {
     await pending;
   }
 });
+
+test("a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status", async () => {
+  const run = await start("item", { items: [X] });
+  redisValues.set(getJobStatusSnapshotKey(run.jobId), '{"jobId":');
+  const { default: service } = await import("./service");
+  const events: unknown[] = [];
+  initLogger({
+    silent: true,
+    drain: ({ event }) => {
+      events.push(event);
+    },
+  });
+  try {
+    const result = await service.getJobStatus(run.jobId, userId, db);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk())
+      expect(result.value).toMatchObject({ jobId: run.jobId, terminalState: null });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        action: "sync.getJobStatus",
+        failure: expect.objectContaining({
+          _tag: "JobStatusSnapshotCorrupt",
+          jobId: run.jobId,
+          cause: expect.objectContaining({ _tag: "JobStatusPayloadInvalid" }),
+        }),
+      }),
+    );
+  } finally {
+    initLogger({ enabled: false });
+  }
+});
