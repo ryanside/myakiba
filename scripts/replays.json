@@ -1192,6 +1192,17 @@
       "bug": "Redis connection error events bypassed evlog",
       "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
       "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
+    },
+    {
+      "fix": "0d3e27374cd55a165ddd8748ab2e62c3985b6f85",
+      "bug": "fatal server errors during asynchronous boot bypassed evlog and did not exit",
+      "test": "apps/server/src/fatal-errors.test.ts",
+      "fixed": [
+        "server logs and exits for uncaughtException during boot with success flush",
+        "server logs and exits for unhandledRejection during boot with success flush",
+        "server logs and exits for unhandledRejection during boot with reject flush",
+        "server logs and exits for unhandledRejection during boot with stuck flush"
+      ]
     }
   ],
   "lint": [
