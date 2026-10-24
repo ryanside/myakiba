@@ -171,8 +171,15 @@ export function createThrottle(deps: {
       const previous = lastLoad;
       const ended = Promise.withResolvers<unknown>();
       lastLoad = Promise.all([previous, ended.promise]);
-      const waited = await unlessAborted(signal, previous);
-      const reserved = waited.isOk() ? await reserve(signal, timeoutMs) : waited;
+      let reserved: Result<void, TurnFailure>;
+      try {
+        const waited = await unlessAborted(signal, previous);
+        reserved = waited.isOk() ? await reserve(signal, timeoutMs) : waited;
+      } catch (error) {
+        // A defect while reserving still frees the turn, so it cannot leave every later load waiting.
+        ended.resolve(null);
+        throw error;
+      }
       if (reserved.isErr()) {
         ended.resolve(null);
         return Result.err(reserved.error);
