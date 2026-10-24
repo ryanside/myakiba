@@ -95,6 +95,21 @@ test("a sync refused with only whitespace shows the form's own text", async () =
   expect(options).toMatchObject(failureToast("Failed to submit collection items"));
 });
 
+test("a sync whose answer breaks its success handling shows the safe text, never the defect's message", async () => {
+  answerWith(async () => Response.json({ jobId: "job-1", syncSessionId: "session-1" }));
+  const error = spyOn(console, "error").mockImplementation(() => {});
+
+  const { options, rejection, submitted } = await submitCollectionAndReadToast();
+
+  expect(options).toMatchObject(
+    failureToast("Something went wrong. Reload the page and try again"),
+  );
+  expect(rejection).toBeNull();
+  expect(submitted).toBe("not_sent");
+  expect(error).toHaveBeenCalledTimes(1);
+  error.mockRestore();
+});
+
 test("TanStack Form rethrows a rejection from onSubmit", async () => {
   const failure = new Error("submit failed");
   const form = new FormApi({ defaultValues: {}, onSubmit: () => Promise.reject(failure) });

@@ -13,11 +13,19 @@ await mock.module("@/data/extension-run", () => ({
   ...realRun,
   refreshItemWithExtension: () => refresh(),
 }));
+const realOrders = await import("@/queries/orders");
+await mock.module("@/queries/orders", () => ({
+  ...realOrders,
+  updateOrderStatus: async () => {
+    throw new TypeError("cannot read properties of undefined (reading 'status')");
+  },
+}));
 
 const { toast } = await import("@/components/ui/toast");
 const { defineCommand, useResourceMutation } = await import("./client");
 const { refreshItemCommand } = await import("./resources/item");
 const { retrySyncSessionCommand } = await import("./resources/sync");
+const { updateKanbanOrderStatusCommand } = await import("./resources/dashboard");
 const { useMoveListsMutation } = await import("@/hooks/use-lists");
 
 const realFetch = globalThis.fetch;
@@ -131,3 +139,21 @@ test.each([
     error.mockRestore();
   },
 );
+
+test("a defect in a Kanban status write shows retry advice and the safe text, never its message", async () => {
+  const error = spyOn(console, "error").mockImplementation(() => {});
+  const queryClient = new QueryClient();
+  const { result } = renderHook(() => useResourceMutation(updateKanbanOrderStatusCommand), {
+    wrapper: wrapperFor(queryClient),
+  });
+
+  expect(
+    await lastToastAfter(() => result.current.run({ orderId: "od-alpha", status: "Paid" })),
+  ).toEqual({
+    type: "error",
+    title: "Failed to update order status. Please try again.",
+    description: "Something went wrong. Reload the page and try again",
+  });
+  expect(error).toHaveBeenCalledTimes(1);
+  error.mockRestore();
+});
