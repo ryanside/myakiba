@@ -9,6 +9,7 @@ import { RunClosed } from "@/lib/errors/run-closed";
 import { RunRateLimited } from "@/lib/errors/run-rate-limited";
 import { RunUploadFailed } from "@/lib/errors/run-upload-failed";
 import { extensionBridge } from "@/lib/extension-bridge";
+import { requireExtension } from "@/lib/extension-gate";
 import type {
   ExtensionBridge,
   ExtensionFetchEvent,
@@ -182,10 +183,14 @@ type FetchedPage = {
 
 type PromptTarget = { readonly runId: string; readonly sessionId: string | null };
 
-type FetchDeps = { readonly bridge: ExtensionBridge; readonly queuedPromptDelayMs: number };
+type FetchDeps = {
+  readonly bridge: ExtensionBridge;
+  readonly queuedPromptDelayMs: number;
+  readonly onResponse?: () => void;
+};
 
 async function* fetchPagesShowingPrompts(
-  { bridge, queuedPromptDelayMs }: FetchDeps,
+  { bridge, queuedPromptDelayMs, onResponse }: FetchDeps,
   { runId, sessionId }: PromptTarget,
   ids: readonly MfcItemId[],
   signal: AbortSignal,
@@ -205,6 +210,7 @@ async function* fetchPagesShowingPrompts(
   };
   try {
     for await (const event of bridge.fetchItems(ids, { signal })) {
+      onResponse?.();
       if (event.type === "status") {
         show(promptFor(event));
         continue;
@@ -472,24 +478,54 @@ function refreshFailureText(failure: RefreshFailure): string {
   });
 }
 
-async function fetchForRefresh(externalId: number): Promise<Result<ItemPage, RefreshFailure>> {
+type RefreshClock = {
+  readonly after: (ms: number, fire: () => void) => () => void;
+};
+
+const refreshClock: RefreshClock = {
+  after: (ms, fire) => {
+    const timer = setTimeout(fire, ms);
+    return () => clearTimeout(timer);
+  },
+};
+
+async function fetchForRefresh(
+  externalId: number,
+  clock: RefreshClock,
+): Promise<Result<ItemPage, RefreshFailure>> {
   const id = mfcItemId(externalId);
   if (id === null) return Result.err(new InvalidMfcItemId({ externalId }));
   let fetched: Result<ItemPage, ItemFetchFailure> = Result.err(new ExtensionStopped());
   const target = { runId: `resync:${id}`, sessionId: null };
-  for await (const { page } of fetchPagesShowingPrompts(
-    fetchDeps,
-    target,
-    [id],
-    new AbortController().signal,
-  )) {
-    fetched = page;
+  const controller = new AbortController();
+  let timedOut = false;
+  const cancelDeadline = clock.after(5000, () => {
+    timedOut = true;
+    controller.abort();
+  });
+  try {
+    // An answering extension may queue work or wait for the user's MFC security check.
+    // Only silence before its first response means no content script answered this request.
+    for await (const { page } of fetchPagesShowingPrompts(
+      { ...fetchDeps, onResponse: cancelDeadline },
+      target,
+      [id],
+      controller.signal,
+    )) {
+      fetched = page;
+    }
+  } finally {
+    cancelDeadline();
   }
+  if (timedOut) await requireExtension();
   return fetched;
 }
 
-export async function refreshItemWithExtension(externalId: number) {
-  const fetched = await fetchForRefresh(externalId);
+export async function refreshItemWithExtension(
+  externalId: number,
+  { clock = refreshClock }: { readonly clock?: RefreshClock } = {},
+) {
+  const fetched = await fetchForRefresh(externalId, clock);
   // The seam with useResourceMutation, which reads a failed refresh from the message it throws.
   if (fetched.isErr()) throw new Error(refreshFailureText(fetched.error));
   const { page, picture } = fetched.value;
