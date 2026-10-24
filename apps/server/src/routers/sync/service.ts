@@ -364,13 +364,21 @@ class SyncService {
     const session = viewSession(row, Date.now());
     const terminalState = sessionStatusToTerminalState(session.status);
 
-    const read = await Result.tryPromise({
-      try: () => withDeadline(() => redis.get(getJobStatusSnapshotKey(jobId))),
-      catch: (cause) => new JobStatusCacheUnavailable({ jobId, cause }),
-    });
+    const read =
+      redis.status === "ready"
+        ? await Result.tryPromise({
+            try: () => withDeadline(() => redis.get(getJobStatusSnapshotKey(jobId))),
+            catch: (cause) => new JobStatusCacheUnavailable({ jobId, cause }),
+          })
+        : Result.err(
+            new JobStatusCacheUnavailable({
+              jobId,
+              cause: new Error(`Redis is ${redis.status}`),
+            }),
+          );
     if (read.isErr()) {
       const cacheLog = createLogger({ action: "sync.getJobStatus", outcome: "warn", jobId });
-      cacheLog.error(read.error);
+      cacheLog.warn(read.error.message, { failure: read.error });
       cacheLog.emit();
     }
     const cached = read.isOk() ? read.value : null;

@@ -77,10 +77,18 @@ async function resyncState(
   itemId: string,
   log: RequestLogger,
 ): Promise<ItemResyncState> {
-  const held = await cooldownHeldUntil(tx, itemId);
+  const held =
+    redis.status === "ready"
+      ? await cooldownHeldUntil(tx, itemId)
+      : Result.err(
+          new ResyncCooldownUnavailable({
+            itemId,
+            cause: new Error(`Redis is ${redis.status}`),
+          }),
+        );
   if (held.isErr()) {
     log.set({ cooldown: { itemId, operation: "read", outcome: "unavailable" } });
-    log.error(held.error);
+    log.warn(held.error.message, { failure: held.error });
     return { status: "idle", cooldownExpiresAt: null };
   }
   if (held.value) return { status: "cooldown", cooldownExpiresAt: held.value };
@@ -565,10 +573,18 @@ export const Items = {
           warnings: page.warnings,
         },
       });
-      const cooldown = await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx));
+      const cooldown =
+        redis.status === "ready"
+          ? await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx))
+          : Result.err(
+              new ResyncCooldownUnavailable({
+                itemId,
+                cause: new Error(`Redis is ${redis.status}`),
+              }),
+            );
       if (cooldown.isErr()) {
         scope.log.set({ cooldown: { itemId, operation: "write", outcome: "unavailable" } });
-        scope.log.error(cooldown.error);
+        scope.log.warn(cooldown.error.message, { failure: cooldown.error });
         return Result.ok({
           status: "idle",
           cooldownExpiresAt: null,
