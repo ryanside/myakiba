@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 interface InlineTextCellProps {
   label: string;
   value: string;
-  onSubmit: (value: string) => Promise<void> | void;
+  onSubmit: (value: string) => Saving;
   validate?: (value: string) => boolean | string;
   previewClassName?: string;
   disabled?: boolean;

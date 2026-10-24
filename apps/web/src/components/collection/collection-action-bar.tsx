@@ -11,8 +11,9 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { Saving } from "@/data/client";
 
 export function CollectionActionBar({
   selectedItems,
@@ -29,17 +30,17 @@ export function CollectionActionBar({
     readonly orderIds: ReadonlySet<string>;
   };
   readonly onClearSelection: () => void;
-  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onAddCollectionItemsToOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onAddCollectionItemsToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly isDeletingCollectionItems: boolean;
   readonly isAddingCollectionItemsToOrder: boolean;
   readonly isCreatingCollectionOrder: boolean;
@@ -105,7 +106,7 @@ export function CollectionActionBar({
             </ActionBarItem>
           }
         />
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedCount === 0 || isDeletingCollectionItems}
@@ -119,8 +120,9 @@ export function CollectionActionBar({
           title={`Delete ${selectedCount} ${selectedCount === 1 ? "item" : "items"}?`}
           description={`This will permanently remove ${selectedCount === 1 ? "this item" : `${selectedCount} items`} from your collection.`}
           onConfirm={async () => {
-            await onDeleteCollectionItems(selectedItems.collectionIds);
-            onClearSelection();
+            const saved = await onDeleteCollectionItems(selectedItems.collectionIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
       </ActionBarGroup>

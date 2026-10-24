@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
@@ -39,11 +39,12 @@ import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Saving } from "@/data/client";
 
 interface OrderItemSubColumnsParams {
   orderId: string;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onEditItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteItem: (orderId: string, itemId: string) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -155,7 +156,7 @@ function OrderItemActionsCell({
           ) : null}
         </DropdownMenu>
       </div>
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Remove item?"
@@ -306,7 +307,7 @@ export function createOrderItemSubColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditItem({ ...item, orderDate: newValue });
+              return onEditItem({ ...item, orderDate: newValue });
             }}
           />
         );
@@ -342,7 +343,7 @@ export function createOrderItemSubColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newReleaseId) => {
-              await onEditItem({ ...item, releaseId: newReleaseId });
+              return onEditItem({ ...item, releaseId: newReleaseId });
             }}
           />
         );
@@ -368,7 +369,7 @@ export function createOrderItemSubColumns({
             value={item.count}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditItem({ ...item, count: newValue });
+              return onEditItem({ ...item, count: newValue });
             }}
           />
         );
@@ -396,7 +397,7 @@ export function createOrderItemSubColumns({
             colorMap={ORDER_STATUS_COLORS}
             disabled={isPending}
             onSubmit={async (value) => {
-              await onEditItem({
+              return onEditItem({
                 ...item,
                 status: value as OrderStatus,
               });
@@ -426,7 +427,7 @@ export function createOrderItemSubColumns({
             value={item.price}
             currency={currency}
             onSubmit={async (newValue) => {
-              await onEditItem({ ...item, price: newValue });
+              return onEditItem({ ...item, price: newValue });
             }}
             locale={locale}
             disabled={isPending}

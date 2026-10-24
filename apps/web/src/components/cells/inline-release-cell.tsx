@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import {
   Select,
   SelectContent,
@@ -12,6 +13,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 type ReleaseFallback = {
   readonly releaseDate: string | null;
@@ -28,7 +30,7 @@ interface InlineReleaseCellProps {
   readonly currency: Currency;
   readonly dateFormat?: DateFormat;
   readonly disabled?: boolean;
-  readonly onSubmit: (releaseId: string) => Promise<void>;
+  readonly onSubmit: (releaseId: string) => Saving;
 }
 
 export function InlineReleaseCell({
@@ -47,9 +49,9 @@ export function InlineReleaseCell({
     refetch: refetchReleases,
   } = useRead(items.releases, itemId, { enabled: false });
 
-  const [displayReleaseId, submit] = usePendingValue<string | null>(releaseId, async (next) => {
-    if (next !== null) await onSubmit(next);
-  });
+  const [displayReleaseId, submit] = usePendingValue<string | null>(releaseId, async (next) =>
+    next === null ? Result.ok() : onSubmit(next),
+  );
 
   const selectedRelease = releasesData?.releases.find((r) => r.id === displayReleaseId);
   const displayData = selectedRelease ?? {

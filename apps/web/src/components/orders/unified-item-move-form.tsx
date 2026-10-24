@@ -48,6 +48,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/cons
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import type { Saving } from "@/data/client";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger: React.ReactElement;
@@ -59,12 +60,12 @@ type UnifiedItemMoveFormProps = {
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   onMoveToNew: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly clearSelections?: () => void;
   readonly currency: Currency;
   readonly intent?: "move" | "add";
@@ -143,7 +144,13 @@ function UnifiedItemMoveFormContent({
       targetOrderId: "",
     },
     onSubmit: async ({ value }) => {
-      await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
+      const moved = await onMoveToExisting(
+        value.targetOrderId,
+        selectedItems.collectionIds,
+        sourceOrderIds,
+      );
+      // A failed move already rolled back and said why, so the dialog stays open to retry.
+      if (moved.isErr()) return;
       clearSelections?.();
       close();
     },
@@ -185,7 +192,12 @@ function UnifiedItemMoveFormContent({
         miscFees: parseMoneyToMinorUnits(value.miscFees),
         notes: value.notes,
       };
-      await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
+      const moved = await onMoveToNew(
+        transformedValue,
+        cascadeOptions,
+        selectedItems.collectionIds,
+      );
+      if (moved.isErr()) return;
       clearSelections?.();
       close();
     },
@@ -228,11 +240,7 @@ function UnifiedItemMoveFormContent({
             onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              try {
-                await existingOrderForm.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
-              }
+              await existingOrderForm.handleSubmit();
             }}
           >
             <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
@@ -389,11 +397,7 @@ function UnifiedItemMoveFormContent({
             onSubmit={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              try {
-                await newOrderForm.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
-              }
+              await newOrderForm.handleSubmit();
             }}
           >
             <div className="overflow-y-auto w-full max-h-[60vh] py-2">

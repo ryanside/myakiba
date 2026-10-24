@@ -13,7 +13,8 @@ import type { ReactNode } from "react";
 import { useEffect, useSyncExternalStore } from "react";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import { answer as answered, refusal } from "../../../test/request-answers";
+import { answer as answered, refusal, settledAs } from "../../../test/request-answers";
+import type { Saving } from "@/data/client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -174,12 +175,9 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
         for (const listener of url.listeners) listener();
       });
     },
-    act: (run: (current: Actions) => Promise<void>) => {
+    act: (run: (current: Actions) => Saving) => {
       if (!actions) throw new Error("the collection page has not rendered");
-      return run(actions).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      return settledAs(run(actions));
     },
   };
 }
@@ -281,7 +279,7 @@ describe("a Collection Item write on the collection page", () => {
 
 type CollectionHandlers = ReturnType<typeof useCollectionMutations> &
   ReturnType<typeof useCollectionOrderMutations>;
-const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Promise<void>])[] = [
+const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Saving])[] = [
   ["handleEditCollectionItem", (h) => h.handleEditCollectionItem(mikuAt(1500))],
   ["handleDeleteCollectionItems", (h) => h.handleDeleteCollectionItems(new Set([MIKU.id]))],
   [
@@ -320,10 +318,7 @@ describe("a Collection Item action's promise settles with the server write", () 
 
   test.each(HANDLERS)("%s: rejects when the write fails", async (_name, run) => {
     const handlers = renderHandlers();
-    const call = run(handlers.current).then(
-      () => "resolved",
-      () => "rejected",
-    );
+    const call = settledAs(run(handlers.current));
     await answer(0, "fail");
     expect(await call).toBe("rejected");
   });

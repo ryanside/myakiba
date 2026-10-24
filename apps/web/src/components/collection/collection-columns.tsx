@@ -23,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
@@ -43,20 +43,21 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import type { Saving } from "@/data/client";
 
 interface CollectionColumnsParams {
-  onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   onAddCollectionItemsToOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   onAddCollectionItemsToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -212,7 +213,7 @@ function CollectionActionsCell({
         targets={[{ type: "collectionItem", id: item.id }]}
         targetTitle={item.itemTitle}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete item?"
@@ -366,7 +367,7 @@ export function createCollectionColumns({
             value={item.count}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...item,
                 count: newValue,
               });
@@ -396,7 +397,7 @@ export function createCollectionColumns({
             value={item.score}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...item,
                 score: newValue,
               });
@@ -427,7 +428,7 @@ export function createCollectionColumns({
             value={item.shop}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...item,
                 shop: newValue,
               });
@@ -459,7 +460,7 @@ export function createCollectionColumns({
             value={item.price}
             currency={currency}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...item,
                 price: newValue,
               });
@@ -501,7 +502,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newReleaseId) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...item,
                 releaseId: newReleaseId,
               });
@@ -534,7 +535,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...row.original,
                 orderDate: newValue,
               });
@@ -567,7 +568,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...row.original,
                 paymentDate: newValue,
               });
@@ -600,7 +601,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...row.original,
                 shippingDate: newValue,
               });
@@ -633,7 +634,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
             disabled={isPending}
             onSubmit={async (newValue) => {
-              await onEditCollectionItem({
+              return onEditCollectionItem({
                 ...row.original,
                 collectionDate: newValue,
               });

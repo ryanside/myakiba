@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
@@ -47,6 +48,7 @@ import { useState } from "react";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import type { Saving } from "@/data/client";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -57,7 +59,7 @@ type MergeOrderFormProps = {
     value: NewOrder,
     cascadeOptions: CascadeOptions,
     orderIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   clearSelections: () => void;
   currency: Currency;
 };
@@ -72,7 +74,7 @@ type SplitOrderFormProps = {
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
     orderIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   clearSelections: () => void;
   currency: Currency;
 };
@@ -82,7 +84,7 @@ type EditOrderFormProps = {
   orderIds?: ReadonlySet<string>;
   collectionIds?: ReadonlySet<string>;
   type: "edit-order";
-  callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
+  callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   orderData: Order;
   clearSelections?: () => void;
   currency: Currency;
@@ -196,15 +198,19 @@ function OrderFormContent(
       if (type === "edit-order") {
         const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
         const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
-        await callbackFn(transformedValue, cascadeOptions);
+        const saved = await callbackFn(transformedValue, cascadeOptions);
+        // A failed write already rolled back and said why, so the form stays open to retry.
+        if (saved.isErr()) return;
       } else if (type === "split") {
         const { callbackFn, collectionIds, orderIds, clearSelections } =
           props as DeferredSplitOrderFormProps;
-        await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
+        const saved = await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
+        if (saved.isErr()) return;
         clearSelections?.();
       } else {
         const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
-        await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+        const saved = await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+        if (saved.isErr()) return;
         clearSelections?.();
       }
       close();
@@ -331,7 +337,10 @@ function OrderFormContent(
                   <PopoverReleaseDateCell
                     value={field.state.value ?? null}
                     orderId={orderData?.orderId}
-                    onSubmit={async (value) => field.handleChange(value)}
+                    onSubmit={async (value) => {
+                      field.handleChange(value);
+                      return Result.ok();
+                    }}
                     triggerVariant="outline"
                     triggerClassName="w-full justify-start"
                     placeholder="Select release"
@@ -581,11 +590,7 @@ function OrderFormContent(
           onSubmit={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            try {
-              await form.handleSubmit();
-            } catch {
-              // The mutation reports the error and the sheet stays open.
-            }
+            await form.handleSubmit();
           }}
         >
           <SheetHeader>
@@ -640,11 +645,7 @@ function OrderFormContent(
         onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch {
-            // The mutation reports the error and the dialog stays open.
-          }
+          await form.handleSubmit();
         }}
       >
         <DialogHeader>

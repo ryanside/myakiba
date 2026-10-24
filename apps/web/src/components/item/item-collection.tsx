@@ -13,6 +13,7 @@ import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/compon
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { Saving } from "@/data/client";
 
 export function ItemCollection({
   item,
@@ -39,18 +40,18 @@ export function ItemCollection({
   readonly errorMessage: string | undefined;
   readonly onSyncCollection: () => void;
   readonly onSyncOrder: () => void;
-  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
+  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onMoveToExistingOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onMoveToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly isCollectionOrderPending: (collectionId: string) => boolean;
 }): ReactNode {
   const { currency, locale, dateFormat } = useUserPreferences();

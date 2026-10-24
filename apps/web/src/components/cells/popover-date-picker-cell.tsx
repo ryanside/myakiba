@@ -9,11 +9,12 @@ import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
   dateFormat?: DateFormat;
-  onSubmit: (newValue: string | null) => Promise<void>;
+  onSubmit: (newValue: string | null) => Saving;
   disabled?: boolean;
   trigger?: ReactElement;
   triggerClassName?: string;

@@ -18,8 +18,9 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { Saving } from "@/data/client";
 
 const OWNED_ITEMS_DELETE_HINT =
   'Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.';
@@ -51,19 +52,19 @@ export function OrdersActionBar({
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     orderIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onSplit: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
+  ) => Saving;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly onMoveItem: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
-  readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  ) => Saving;
+  readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly isMerging: boolean;
   readonly isSplitting: boolean;
   readonly isDeletingOrders: boolean;
@@ -151,7 +152,7 @@ export function OrdersActionBar({
             </ActionBarItem>
           }
         />
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedOrderIds.size === 0 || isDeletingOrders}
@@ -165,11 +166,12 @@ export function OrdersActionBar({
           title={`Delete ${selectedOrderIds.size} ${selectedOrderIds.size === 1 ? "order" : "orders"}?`}
           description={OWNED_ITEMS_DELETE_HINT}
           onConfirm={async () => {
-            await onDeleteOrders(selectedOrderIds);
-            onClearSelection();
+            const saved = await onDeleteOrders(selectedOrderIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedItemCount === 0 || isDeletingItems}
@@ -183,8 +185,9 @@ export function OrdersActionBar({
           title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
           description={OWNED_ITEMS_DELETE_HINT}
           onConfirm={async () => {
-            await onDeleteItems(selectedItems.collectionIds);
-            onClearSelection();
+            const saved = await onDeleteItems(selectedItems.collectionIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
       </ActionBarGroup>

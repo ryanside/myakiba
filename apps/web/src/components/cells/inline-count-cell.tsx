@@ -2,10 +2,11 @@ import { useCallback, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 interface InlineCountCellProps {
   value: number;
-  onSubmit: (newValue: number) => Promise<void>;
+  onSubmit: (newValue: number) => Saving;
   disabled?: boolean;
 }
 

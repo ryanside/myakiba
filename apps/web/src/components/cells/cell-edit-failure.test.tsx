@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { InlineCountCell } from "./inline-count-cell";
 import { InlineTextCell } from "./inline-text-cell";
+import { writeRefusal } from "../../../test/request-answers";
 
 afterEach(() => {
   cleanup();
@@ -9,9 +10,9 @@ afterEach(() => {
 
 function failingWrite<Value>() {
   const writes: Value[] = [];
-  const onSubmit = async (value: Value) => {
+  const onSubmit = (value: Value) => {
     writes.push(value);
-    throw new Error("write failed");
+    return writeRefusal("write failed");
   };
   return { writes, onSubmit };
 }

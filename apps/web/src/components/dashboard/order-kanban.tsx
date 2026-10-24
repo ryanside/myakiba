@@ -22,7 +22,9 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import { functionalUpdate } from "@tanstack/react-table";
-import { orThrow, useResourceMutation } from "@/data/client";
+import { Result } from "better-result";
+import { useResourceMutation } from "@/data/client";
+import type { Saving } from "@/data/client";
 import {
   updateKanbanOrderDateCommand,
   updateKanbanOrderStatusCommand,
@@ -245,18 +247,14 @@ function updateOrderDateInColumns(
 
 async function drainMutationQueue<T>(
   mutations: T[],
-  mutate: (variables: T) => Promise<void>,
+  mutate: (variables: T) => Saving,
   recordResult: (variables: T, succeeded: boolean) => void,
   finalize: () => Promise<void>,
 ): Promise<void> {
   let variables = mutations.shift();
   while (variables) {
-    try {
-      await mutate(variables);
-      recordResult(variables, true);
-    } catch {
-      recordResult(variables, false);
-    }
+    const saved = await mutate(variables);
+    recordResult(variables, saved.isOk());
 
     variables = mutations.shift();
   }
@@ -349,14 +347,20 @@ function OrderCard({
                     value={dateValue}
                     dateFormat={dateFormat}
                     orderId={order.orderId}
-                    onSubmit={async (date) => onDateChange(order.orderId, field, date)}
+                    onSubmit={async (date) => {
+                      onDateChange(order.orderId, field, date);
+                      return Result.ok();
+                    }}
                     trigger={triggerButton}
                   />
                 ) : (
                   <PopoverDatePickerCell
                     value={dateValue}
                     dateFormat={dateFormat}
-                    onSubmit={async (date) => onDateChange(order.orderId, field, date)}
+                    onSubmit={async (date) => {
+                      onDateChange(order.orderId, field, date);
+                      return Result.ok();
+                    }}
                     trigger={triggerButton}
                   />
                 );
@@ -511,7 +515,7 @@ function OrderKanbanBoard({
             queue.persistedIndex = pendingVariables.previousIndex;
           }
 
-          await orThrow(statusWrite.run(pendingVariables));
+          return statusWrite.run(pendingVariables);
         },
         (persistedVariables, succeeded) => {
           queue.lastMutationSucceeded = succeeded;
@@ -557,9 +561,7 @@ function OrderKanbanBoard({
 
       void drainMutationQueue(
         queue.mutations,
-        async (pendingVariables) => {
-          await orThrow(dateWrite.run(pendingVariables));
-        },
+        (pendingVariables) => dateWrite.run(pendingVariables),
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 

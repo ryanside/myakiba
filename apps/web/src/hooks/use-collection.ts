@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
-import { orThrow, useRead, useResourceMutation } from "@/data/client";
+import { useRead, useResourceMutation } from "@/data/client";
+import type { Saving } from "@/data/client";
 import {
   assignToNewOrderCommand,
   assignToOrderCommand,
@@ -74,7 +75,7 @@ export function useCollectionOrderMutations() {
       targetOrderId: string,
       collectionIds: ReadonlySet<string>,
       orderIds?: ReadonlySet<string>,
-    ): Promise<void> => {
+    ): Saving => {
       const ids = [...collectionIds];
       const loadingToastId = toast.add({
         type: "loading",
@@ -83,12 +84,14 @@ export function useCollectionOrderMutations() {
       });
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(moveItemsMutationRef.current.run({ targetOrderId, collectionIds, orderIds }));
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await moveItemsMutationRef.current.run({
+        targetOrderId,
+        collectionIds,
+        orderIds,
+      });
+      toast.close(loadingToastId);
+      setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [],
   );
@@ -98,7 +101,7 @@ export function useCollectionOrderMutations() {
       values: NewOrder,
       cascadeOptions: CascadeOptions,
       collectionIds: ReadonlySet<string>,
-    ): Promise<void> => {
+    ): Saving => {
       const ids = [...collectionIds];
       const loadingToastId = toast.add({
         type: "loading",
@@ -107,12 +110,14 @@ export function useCollectionOrderMutations() {
       });
       setPendingCollectionIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(splitItemsMutationRef.current.run({ values, cascadeOptions, collectionIds }));
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await splitItemsMutationRef.current.run({
+        values,
+        cascadeOptions,
+        collectionIds,
+      });
+      toast.close(loadingToastId);
+      setPendingCollectionIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [],
   );
@@ -159,14 +164,13 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
   );
 
   const handleDeleteCollectionItems = useCallback(
-    async (collectionIds: ReadonlySet<string>): Promise<void> => {
+    async (collectionIds: ReadonlySet<string>): Saving => {
       const deleteMutationState = deleteMutationRef.current;
       const ids = [...collectionIds];
       const deleteList = listRef.current;
 
       if (!hasActiveFiltersOrSorting(deleteList)) {
-        await orThrow(deleteMutationState.run({ ids, list: deleteList }));
-        return;
+        return deleteMutationState.run({ ids, list: deleteList });
       }
 
       const loadingToastId = toast.add({
@@ -179,41 +183,33 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
         return [...nextIds];
       });
 
-      try {
-        await orThrow(deleteMutationState.run({ ids, list: deleteList }));
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionIdList((previous) =>
-          previous.filter((collectionId) => !collectionIds.has(collectionId)),
-        );
-      }
+      const saved = await deleteMutationState.run({ ids, list: deleteList });
+      toast.close(loadingToastId);
+      setPendingCollectionIdList((previous) =>
+        previous.filter((collectionId) => !collectionIds.has(collectionId)),
+      );
+      return saved;
     },
     [],
   );
 
-  const handleEditCollectionItem = useCallback(
-    async (values: CollectionItemFormValues): Promise<void> => {
-      const updateMutationState = updateMutationRef.current;
-      const editList = listRef.current;
-      if (!hasActiveFiltersOrSorting(editList)) {
-        await orThrow(updateMutationState.run({ values, list: editList }));
-        return;
-      }
-      setPendingCollectionIdList((previous) => {
-        const nextIds = new Set([...previous, values.id]);
-        return [...nextIds];
-      });
+  const handleEditCollectionItem = useCallback(async (values: CollectionItemFormValues): Saving => {
+    const updateMutationState = updateMutationRef.current;
+    const editList = listRef.current;
+    if (!hasActiveFiltersOrSorting(editList)) {
+      return updateMutationState.run({ values, list: editList });
+    }
+    setPendingCollectionIdList((previous) => {
+      const nextIds = new Set([...previous, values.id]);
+      return [...nextIds];
+    });
 
-      try {
-        await orThrow(updateMutationState.run({ values, list: editList }));
-      } finally {
-        setPendingCollectionIdList((previous) =>
-          previous.filter((collectionId) => collectionId !== values.id),
-        );
-      }
-    },
-    [],
-  );
+    const saved = await updateMutationState.run({ values, list: editList });
+    setPendingCollectionIdList((previous) =>
+      previous.filter((collectionId) => collectionId !== values.id),
+    );
+    return saved;
+  }, []);
 
   return {
     handleEditCollectionItem,

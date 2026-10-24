@@ -7,11 +7,12 @@ import {
 } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 interface InlineCurrencyCellProps {
   value: number;
   currency: string;
-  onSubmit: (newValue: number) => Promise<void>;
+  onSubmit: (newValue: number) => Saving;
   locale: string;
   disabled?: boolean;
 }

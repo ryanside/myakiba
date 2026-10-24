@@ -9,6 +9,9 @@ const { Result } = answersResults ? await import("better-result") : { Result: nu
 const { ApiServerError } = answersResults
   ? await import("@/lib/errors/api-server-error")
   : { ApiServerError: null };
+const { WriteFailed } = answersResults
+  ? await import("@/lib/errors/write-failed")
+  : { WriteFailed: null };
 
 /** What a faked request function answers when its write or read succeeds. */
 export function answer<Value>(value: Value) {
@@ -21,6 +24,14 @@ export function refusal(message: string) {
     return Promise.resolve(Result.err(new ApiServerError({ status: 500, body: message, message })));
   }
   return Promise.reject(new Error(message));
+}
+
+/** What a faked write handler answers when its write fails with `message`. */
+export function writeRefusal(message: string) {
+  const cause = new Error(message);
+  if (Result && WriteFailed)
+    return Promise.resolve(Result.err(new WriteFailed({ cause, message })));
+  return Promise.reject(cause);
 }
 
 type Settled = { readonly isErr: () => boolean; readonly error: Error };
@@ -38,4 +49,16 @@ export async function failureOf<Outcome>(request: Promise<Outcome>): Promise<Err
   }
   if (isSettled(outcome) && outcome.isErr()) return outcome.error;
   throw new Error("expected a failure");
+}
+
+/** How a write settled for its caller: "rejected" when it rejected or answered an Err. */
+export async function settledAs<Outcome>(
+  write: Promise<Outcome>,
+): Promise<"resolved" | "rejected"> {
+  try {
+    const outcome = await write;
+    return isSettled(outcome) && outcome.isErr() ? "rejected" : "resolved";
+  } catch {
+    return "rejected";
+  }
 }

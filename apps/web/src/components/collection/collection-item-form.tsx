@@ -44,11 +44,12 @@ import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { Saving } from "@/data/client";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
-  callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
+  callbackFn: (itemData: CollectionItemFormValues) => Saving;
   currency: Currency;
   dateFormat?: DateFormat;
 };
@@ -87,7 +88,9 @@ function CollectionItemFormContent({
         ...value,
         price: parseMoneyToMinorUnits(value.price),
       };
-      await callbackFn(transformedValue);
+      const saved = await callbackFn(transformedValue);
+      // A failed edit already rolled back and said why, so the form stays open to retry.
+      if (saved.isErr()) return;
       close();
     },
   });

@@ -3,7 +3,8 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
-import { answer as answered, refusal } from "../../../test/request-answers";
+import { answer as answered, refusal, settledAs } from "../../../test/request-answers";
+import type { Saving } from "@/data/client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -169,12 +170,9 @@ function renderOrdersPage(initialFilters: OrderFilters) {
         for (const listener of url.listeners) listener();
       });
     },
-    act: (run: (current: Actions) => Promise<void>) => {
+    act: (run: (current: Actions) => Saving) => {
       if (!actions) throw new Error("the orders page has not rendered");
-      return run(actions).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      return settledAs(run(actions));
     },
   };
 }

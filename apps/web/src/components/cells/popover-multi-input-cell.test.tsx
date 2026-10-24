@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Toaster } from "@/components/ui/toast";
 import { PopoverMultiInputCell } from "./popover-multi-input-cell";
+import { writeRefusal } from "../../../test/request-answers";
 
 afterEach(cleanup);
 
@@ -13,7 +14,7 @@ test("toasts the save error and shows the saved total again when saving the fees
         totalAmount={5000}
         currency="USD"
         locale="en-US"
-        onSubmit={() => Promise.reject(new Error("Couldn't save the fees"))}
+        onSubmit={() => writeRefusal("Couldn't save the fees")}
       />
     </Toaster>,
   );

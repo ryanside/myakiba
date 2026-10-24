@@ -27,6 +27,7 @@ import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { Saving } from "@/data/client";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [
@@ -54,8 +55,8 @@ export function OrderItemSubDataGrid({
   orderId: string;
   selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onEditItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteItem: (orderId: string, itemId: string) => Saving;
   isCollectionItemPending: (collectionId: string) => boolean;
   heading?: ReactNode;
   wrapped?: boolean;

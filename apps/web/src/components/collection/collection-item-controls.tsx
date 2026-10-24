@@ -17,7 +17,7 @@ import { useState } from "react";
 import CollectionItemForm from "@/components/collection/collection-item-form";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ import {
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import type { Saving } from "@/data/client";
 
 export function CollectionItemControls({
   item,
@@ -48,18 +49,18 @@ export function CollectionItemControls({
   readonly itemSize: number;
   readonly isPending: boolean;
   readonly isSelected: boolean;
-  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
+  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onAddCollectionItemsToOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onAddCollectionItemsToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onToggleSelection: () => void;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
@@ -195,7 +196,7 @@ export function CollectionItemControls({
         targets={[{ type: "collectionItem", id: item.id }]}
         targetTitle={item.itemTitle}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete item?"

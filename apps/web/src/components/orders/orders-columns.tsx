@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import type { ColumnDef, Row } from "@tanstack/react-table";
@@ -51,6 +51,7 @@ import type {
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import type { Saving } from "@/data/client";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -168,7 +169,7 @@ function OrderActionsCell({
         targets={[{ type: "order", id: order.orderId }]}
         targetTitle={order.title}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete order?"
@@ -180,10 +181,10 @@ function OrderActionsCell({
 }
 
 interface OrdersColumnsParams {
-  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
+  onEditItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteItem: (orderId: string, itemId: string) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -307,7 +308,7 @@ export function createOrdersColumns({
                   const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
                   void createdAt;
                   void updatedAt;
-                  await onEditOrder(
+                  return onEditOrder(
                     {
                       ...orderWithoutTimestamps,
                       title: newValue,
@@ -359,7 +360,7 @@ export function createOrdersColumns({
             const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
             void createdAt;
             void updatedAt;
-            await onEditOrder(
+            return onEditOrder(
               {
                 ...orderWithoutTimestamps,
                 shop: newValue,
@@ -396,7 +397,7 @@ export function createOrdersColumns({
                 const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
                 void createdAt;
                 void updatedAt;
-                await onEditOrder(
+                return onEditOrder(
                   {
                     ...orderWithoutTimestamps,
                     shippingMethod: value as ShippingMethod,
@@ -435,7 +436,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   releaseDate: newValue,
@@ -472,7 +473,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   orderDate: newValue,
@@ -510,7 +511,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   paymentDate: newValue,
@@ -548,7 +549,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   shippingDate: newValue,
@@ -586,7 +587,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   collectionDate: newValue,
@@ -682,7 +683,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   ...newValues,
@@ -721,7 +722,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   shippingFee: newValue,
@@ -761,7 +762,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   taxes: newValue,
@@ -801,7 +802,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   duties: newValue,
@@ -841,7 +842,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   tariffs: newValue,
@@ -881,7 +882,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   miscFees: newValue,
@@ -921,7 +922,7 @@ export function createOrdersColumns({
               const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
               void createdAt;
               void updatedAt;
-              await onEditOrder(
+              return onEditOrder(
                 {
                   ...orderWithoutTimestamps,
                   status: value as OrderStatus,

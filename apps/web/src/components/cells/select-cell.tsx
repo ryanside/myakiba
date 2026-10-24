@@ -10,6 +10,7 @@ import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
 type ColoredOption = {
   readonly value: string;
@@ -20,7 +21,7 @@ type ColoredOption = {
 interface SelectCellProps {
   value: string;
   options: readonly string[];
-  onSubmit: (value: string) => Promise<void>;
+  onSubmit: (value: string) => Saving;
   disabled?: boolean;
   colorMap?: Readonly<Record<string, string>>;
 }

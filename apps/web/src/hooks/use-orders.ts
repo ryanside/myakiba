@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
-import { orThrow, useRead, useResourceMutation } from "@/data/client";
+import { useRead, useResourceMutation } from "@/data/client";
+import type { Saving } from "@/data/client";
 import {
   deleteOrderItemCommand,
   deleteOrderItemsCommand,
@@ -110,14 +111,11 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       values: NewOrder,
       cascadeOptions: CascadeOptions,
       orderIds: ReadonlySet<string>,
-    ): Promise<void> => {
+    ): Saving => {
       const mutableOrderIds = new Set(orderIds);
 
       if (!filtersActive) {
-        await orThrow(
-          mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, cascadeOptions, list }),
-        );
-        return;
+        return mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, cascadeOptions, list });
       }
 
       const ids = [...mutableOrderIds];
@@ -128,14 +126,15 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(
-          mergeOrdersMutation.run({ values, orderIds: mutableOrderIds, cascadeOptions, list }),
-        );
-      } finally {
-        toast.close(loadingToastId);
-        setPendingOrderIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await mergeOrdersMutation.run({
+        values,
+        orderIds: mutableOrderIds,
+        cascadeOptions,
+        list,
+      });
+      toast.close(loadingToastId);
+      setPendingOrderIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [filtersActive, list, mergeOrdersMutation],
   );
@@ -145,14 +144,15 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       values: NewOrder,
       cascadeOptions: CascadeOptions,
       collectionIds: ReadonlySet<string>,
-    ): Promise<void> => {
+    ): Saving => {
       const mutableCollectionIds = new Set(collectionIds);
 
       if (!filtersActive) {
-        await orThrow(
-          splitOrdersMutation.run({ values, collectionIds: mutableCollectionIds, cascadeOptions }),
-        );
-        return;
+        return splitOrdersMutation.run({
+          values,
+          collectionIds: mutableCollectionIds,
+          cascadeOptions,
+        });
       }
 
       const ids = [...mutableCollectionIds];
@@ -163,45 +163,41 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(
-          splitOrdersMutation.run({ values, collectionIds: mutableCollectionIds, cascadeOptions }),
-        );
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await splitOrdersMutation.run({
+        values,
+        collectionIds: mutableCollectionIds,
+        cascadeOptions,
+      });
+      toast.close(loadingToastId);
+      setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [filtersActive, splitOrdersMutation],
   );
 
   const handleEditOrder = useCallback(
-    async (values: EditedOrder, cascadeOptions: CascadeOptions): Promise<void> => {
+    async (values: EditedOrder, cascadeOptions: CascadeOptions): Saving => {
       const editOrderMutationState = editOrderMutationRef.current;
       const editList = listRef.current;
       if (!hasActiveFiltersOrSorting(editList)) {
-        await orThrow(editOrderMutationState.run({ values, cascadeOptions, list: editList }));
-        return;
+        return editOrderMutationState.run({ values, cascadeOptions, list: editList });
       }
 
       setPendingOrderIdList((previous) => addPendingIds(previous, [values.orderId]));
 
-      try {
-        await orThrow(editOrderMutationState.run({ values, cascadeOptions, list: editList }));
-      } finally {
-        setPendingOrderIdList((previous) => removePendingIds(previous, [values.orderId]));
-      }
+      const saved = await editOrderMutationState.run({ values, cascadeOptions, list: editList });
+      setPendingOrderIdList((previous) => removePendingIds(previous, [values.orderId]));
+      return saved;
     },
     [],
   );
 
-  const handleDeleteOrders = useCallback(async (orderIds: ReadonlySet<string>): Promise<void> => {
+  const handleDeleteOrders = useCallback(async (orderIds: ReadonlySet<string>): Saving => {
     const deleteOrdersMutationState = deleteOrdersMutationRef.current;
     const mutableOrderIds = new Set(orderIds);
     const deleteList = listRef.current;
     if (!hasActiveFiltersOrSorting(deleteList)) {
-      await orThrow(deleteOrdersMutationState.run({ orderIds: mutableOrderIds, list: deleteList }));
-      return;
+      return deleteOrdersMutationState.run({ orderIds: mutableOrderIds, list: deleteList });
     }
 
     const ids = [...mutableOrderIds];
@@ -212,55 +208,49 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     });
     setPendingOrderIdList((previous) => addPendingIds(previous, ids));
 
-    try {
-      await orThrow(deleteOrdersMutationState.run({ orderIds: mutableOrderIds, list: deleteList }));
-    } finally {
-      toast.close(loadingToastId);
-      setPendingOrderIdList((previous) => removePendingIds(previous, ids));
-    }
+    const saved = await deleteOrdersMutationState.run({
+      orderIds: mutableOrderIds,
+      list: deleteList,
+    });
+    toast.close(loadingToastId);
+    setPendingOrderIdList((previous) => removePendingIds(previous, ids));
+    return saved;
   }, []);
 
-  const handleEditItem = useCallback(async (values: CollectionItemFormValues): Promise<void> => {
+  const handleEditItem = useCallback(async (values: CollectionItemFormValues): Saving => {
     const editItemMutationState = editItemMutationRef.current;
     const editList = listRef.current;
     if (!hasActiveFiltersOrSorting(editList)) {
-      await orThrow(editItemMutationState.run({ values, list: editList }));
-      return;
+      return editItemMutationState.run({ values, list: editList });
     }
 
     setPendingCollectionItemIdList((previous) => addPendingIds(previous, [values.id]));
 
-    try {
-      await orThrow(editItemMutationState.run({ values, list: editList }));
-    } finally {
-      setPendingCollectionItemIdList((previous) => removePendingIds(previous, [values.id]));
-    }
+    const saved = await editItemMutationState.run({ values, list: editList });
+    setPendingCollectionItemIdList((previous) => removePendingIds(previous, [values.id]));
+    return saved;
   }, []);
 
-  const handleDeleteItem = useCallback(async (orderId: string, itemId: string): Promise<void> => {
+  const handleDeleteItem = useCallback(async (orderId: string, itemId: string): Saving => {
     const deleteItemMutationState = deleteItemMutationRef.current;
     const deleteList = listRef.current;
     if (!hasActiveFiltersOrSorting(deleteList)) {
-      await orThrow(deleteItemMutationState.run({ orderId, itemId, list: deleteList }));
-      return;
+      return deleteItemMutationState.run({ orderId, itemId, list: deleteList });
     }
 
     setPendingCollectionItemIdList((previous) => addPendingIds(previous, [itemId]));
 
-    try {
-      await orThrow(deleteItemMutationState.run({ orderId, itemId, list: deleteList }));
-    } finally {
-      setPendingCollectionItemIdList((previous) => removePendingIds(previous, [itemId]));
-    }
+    const saved = await deleteItemMutationState.run({ orderId, itemId, list: deleteList });
+    setPendingCollectionItemIdList((previous) => removePendingIds(previous, [itemId]));
+    return saved;
   }, []);
 
   const handleDeleteItems = useCallback(
-    async (collectionIds: ReadonlySet<string>): Promise<void> => {
+    async (collectionIds: ReadonlySet<string>): Saving => {
       const mutableCollectionIds = new Set(collectionIds);
 
       if (!filtersActive) {
-        await orThrow(deleteItemsMutation.run({ collectionIds: mutableCollectionIds }));
-        return;
+        return deleteItemsMutation.run({ collectionIds: mutableCollectionIds });
       }
 
       const ids = [...mutableCollectionIds];
@@ -271,12 +261,10 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(deleteItemsMutation.run({ collectionIds: mutableCollectionIds }));
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await deleteItemsMutation.run({ collectionIds: mutableCollectionIds });
+      toast.close(loadingToastId);
+      setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [filtersActive, deleteItemsMutation],
   );
@@ -286,19 +274,16 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       targetOrderId: string,
       collectionIds: ReadonlySet<string>,
       orderIds?: ReadonlySet<string>,
-    ): Promise<void> => {
+    ): Saving => {
       const mutableCollectionIds = new Set(collectionIds);
       const mutableOrderIds = orderIds ? new Set(orderIds) : undefined;
 
       if (!filtersActive) {
-        await orThrow(
-          moveItemMutation.run({
-            targetOrderId,
-            collectionIds: mutableCollectionIds,
-            orderIds: mutableOrderIds,
-          }),
-        );
-        return;
+        return moveItemMutation.run({
+          targetOrderId,
+          collectionIds: mutableCollectionIds,
+          orderIds: mutableOrderIds,
+        });
       }
 
       const ids = [...mutableCollectionIds];
@@ -309,18 +294,14 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
       });
       setPendingCollectionItemIdList((previous) => addPendingIds(previous, ids));
 
-      try {
-        await orThrow(
-          moveItemMutation.run({
-            targetOrderId,
-            collectionIds: mutableCollectionIds,
-            orderIds: mutableOrderIds,
-          }),
-        );
-      } finally {
-        toast.close(loadingToastId);
-        setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
-      }
+      const saved = await moveItemMutation.run({
+        targetOrderId,
+        collectionIds: mutableCollectionIds,
+        orderIds: mutableOrderIds,
+      });
+      toast.close(loadingToastId);
+      setPendingCollectionItemIdList((previous) => removePendingIds(previous, ids));
+      return saved;
     },
     [filtersActive, moveItemMutation],
   );

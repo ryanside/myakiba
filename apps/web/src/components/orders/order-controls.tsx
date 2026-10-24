@@ -14,7 +14,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { OrderForm } from "@/components/orders/order-form";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { cn } from "@/lib/utils";
+import type { Saving } from "@/data/client";
 
 export function OrderControls({
   order,
@@ -41,8 +42,8 @@ export function OrderControls({
   readonly itemSize: number;
   readonly isPending: boolean;
   readonly isSelected: boolean;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly onToggleSelection: () => void;
   readonly currency: Currency;
 }): React.JSX.Element {
@@ -128,7 +129,7 @@ export function OrderControls({
         targets={[{ type: "order", id: order.orderId }]}
         targetTitle={order.title}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete order?"

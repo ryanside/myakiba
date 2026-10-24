@@ -4,21 +4,34 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { Order } from "@myakiba/contracts/orders/types";
+import type { Saving } from "@/data/client";
+
+type Answered = Awaited<Saving>;
+
+// Request functions and write handlers answer a Result. The replay also runs this file against
+// revisions from before that, which have no data/api.ts: there a request answered its value and
+// a write handler rejected on failure.
+const answers = await import("@/data/api").then(
+  async () => {
+    const [{ Result }, { WriteFailed }] = await Promise.all([
+      import("better-result"),
+      import("@/lib/errors/write-failed"),
+    ]);
+    return {
+      search: <Value,>(value: Value) => Result.ok(value),
+      saved: (): Answered => Result.ok(),
+      failed: (cause: Error): Answered =>
+        Result.err(new WriteFailed({ cause, message: cause.message })),
+    };
+  },
+  () => null,
+);
 
 const realSearch = await import("@/queries/search");
 const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] };
-// Request functions answer a Result. The replay also runs this file against revisions from
-// before that, which have no data/api.ts and answered the value itself.
-const searchAnswer = await import("@/data/api").then(
-  async () => {
-    const { Result } = await import("better-result");
-    return Result.ok(targets);
-  },
-  () => targets,
-);
 await mock.module("@/queries/search", () => ({
   ...realSearch,
-  searchOrders: async () => searchAnswer,
+  searchOrders: async () => (answers ? answers.search(targets) : targets),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -33,14 +46,14 @@ const settle = () =>
   );
 
 type HeldWrite = {
-  readonly send: (...args: unknown[]) => Promise<void>;
+  readonly send: (...args: unknown[]) => Saving;
   readonly calls: () => number;
   readonly finish: () => Promise<void>;
   readonly fail: () => Promise<void>;
 };
 
 function heldWrite(): HeldWrite {
-  const pending: { resolve: () => void; reject: (error: Error) => void }[] = [];
+  const pending: { resolve: (saved?: Answered) => void; reject: (error: Error) => void }[] = [];
   const answer = async (respond: (write: (typeof pending)[number]) => void) => {
     const [write] = pending;
     if (!write) throw new Error("no write reached the server");
@@ -49,12 +62,17 @@ function heldWrite(): HeldWrite {
   };
   return {
     send: () =>
-      new Promise<void>((resolve, reject) => {
-        pending.push({ resolve, reject });
+      new Promise<Answered>((resolve, reject) => {
+        pending.push({ resolve: (saved) => resolve(saved as Answered), reject });
       }),
     calls: () => pending.length,
-    finish: () => answer((write) => write.resolve()),
-    fail: () => answer((write) => write.reject(new Error("write rejected by server"))),
+    finish: () => answer((write) => write.resolve(answers?.saved())),
+    fail: () =>
+      answer((write) => {
+        const failure = new Error("write rejected by server");
+        if (answers) write.resolve(answers.failed(failure));
+        else write.reject(failure);
+      }),
   };
 }
 
@@ -162,7 +180,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
         renderTrigger={trigger}
         selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
         onMoveToExisting={(...args) => write.send(...args)}
-        onMoveToNew={async () => {}}
+        onMoveToNew={async () => answers?.saved() as Answered}
         clearSelections={clearSelections}
         currency="USD"
       />
@@ -181,7 +199,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
       <UnifiedItemMoveForm
         renderTrigger={trigger}
         selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
-        onMoveToExisting={async () => {}}
+        onMoveToExisting={async () => answers?.saved() as Answered}
         onMoveToNew={(...args) => write.send(...args)}
         clearSelections={clearSelections}
         currency="USD"

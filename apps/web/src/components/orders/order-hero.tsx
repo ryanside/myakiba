@@ -5,7 +5,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { OrderForm } from "@/components/orders/order-form";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { getStatusVariant } from "@/lib/orders";
@@ -13,6 +13,7 @@ import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/sche
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import type { Saving } from "@/data/client";
 
 export function OrderHero({
   order,
@@ -26,8 +27,8 @@ export function OrderHero({
   readonly isLoading: boolean;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrder: (orderId: string) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrder: (orderId: string) => Saving;
 }): ReactNode {
   if (isLoading) {
     return (
@@ -124,7 +125,7 @@ export function OrderHero({
             callbackFn={onEditOrder}
             currency={currency}
           />
-          <ConfirmDialog
+          <WriteConfirmDialog
             renderTrigger={
               <Button variant="destructive" size="sm">
                 <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" /> Delete

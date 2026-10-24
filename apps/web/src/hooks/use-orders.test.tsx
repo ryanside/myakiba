@@ -3,7 +3,8 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { answer, refusal } from "../../test/request-answers";
+import { answer, refusal, settledAs } from "../../test/request-answers";
+import type { Saving } from "@/data/client";
 
 type Write = { readonly name: string; finish: () => void; fail: () => void };
 const server = { inFlight: [] as Write[], finished: [] as string[] };
@@ -67,7 +68,7 @@ const cascade = [] as never;
 const ids = new Set(["a", "b"]);
 
 type Handlers = ReturnType<typeof useOrdersMutations>;
-const HANDLERS: readonly (readonly [string, (h: Handlers) => Promise<void>])[] = [
+const HANDLERS: readonly (readonly [string, (h: Handlers) => Saving])[] = [
   ["handleMerge", (h) => h.handleMerge(newOrder, cascade, ids)],
   ["handleSplit", (h) => h.handleSplit(newOrder, cascade, ids)],
   ["handleDeleteItems", (h) => h.handleDeleteItems(ids)],
@@ -123,10 +124,7 @@ describe.each(LISTS)(
 
     test.each(HANDLERS)("%s: a rejected write rejects the caller's await", async (_name, run) => {
       const handlers = renderOrdersPage(filters);
-      const call = run(handlers.current).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      const call = settledAs(run(handlers.current));
       await waitFor(() => expect(server.inFlight).toHaveLength(1));
       await act(async () => serverWrite().fail());
 
