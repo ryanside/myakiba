@@ -19,7 +19,8 @@
     "./data-transfer/*": "./src/data-transfer/*.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
   },
   "dependencies": {
     "zod": "catalog:"
