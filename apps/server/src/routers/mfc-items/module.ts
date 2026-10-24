@@ -2,7 +2,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
 import { item } from "@myakiba/db/schema/figure";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { command, fail, ok, proceed, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { command, query } from "@/domain/kernel";
+import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { ensureMfcItem, pictureLog, pictureOutcome, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import type { PictureOutcome } from "@/lib/mfc-item-ingest";
 
@@ -24,7 +26,7 @@ export const MfcItems = {
         .from(item)
         .where(and(eq(item.source, "mfc"), inArray(item.externalId, input.mfcItemIds)));
       const existing = new Set(found.map((row) => row.externalId));
-      return ok({ missing: input.mfcItemIds.filter((id) => !existing.has(id)) });
+      return Result.ok({ missing: input.mfcItemIds.filter((id) => !existing.has(id)) });
     },
   ),
 
@@ -34,15 +36,16 @@ export const MfcItems = {
       failure: "Failed to import item",
       before: async (scope, input: ItemUpload) => {
         const prepared = await prepareMfcItem(scope.tx, input);
-        if (prepared.kind === "parsed") return proceed(prepared);
+        if (prepared.kind === "parsed") return scope.proceed(prepared);
         scope.log.set({
           mfc: {
             itemId: prepared.mfcItemId,
             outcome: prepared.kind === "existing" ? "existing" : prepared.problem,
           },
         });
-        if (prepared.kind === "unreadable") return fail("bad_request", prepared.message);
-        return ok<IngestResult>({
+        if (prepared.kind === "unreadable")
+          return Result.err(new MfcPageRejected({ problem: prepared.problem }));
+        return Result.ok<IngestResult>({
           saved: "existing",
           itemId: prepared.itemId,
           mfcItemId: prepared.mfcItemId,
@@ -63,7 +66,7 @@ export const MfcItems = {
           warnings: page.warnings,
         },
       });
-      return ok<IngestResult>(
+      return Result.ok<IngestResult>(
         created
           ? { saved: "created", itemId, mfcItemId: id, picture }
           : { saved: "existing", itemId, mfcItemId: id },
