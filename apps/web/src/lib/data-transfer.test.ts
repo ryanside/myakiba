@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DATA_TRANSFER_FORMAT,
+  DATA_TRANSFER_MAX_BYTES,
   DATA_TRANSFER_VERSION,
 } from "@myakiba/contracts/data-transfer/schema";
 import { readDataTransferFile } from "./data-transfer";
@@ -44,6 +45,16 @@ describe("readDataTransferFile", () => {
     const read: unknown = await readDataTransferFile(exportFile(JSON.stringify(valid)));
 
     expect(read).toEqual(valid);
+  });
+
+  test("says the export is over the import limit before reading it", async () => {
+    const tooLarge = Object.defineProperty(exportFile("{}"), "size", {
+      value: DATA_TRANSFER_MAX_BYTES + 1,
+    });
+
+    await expect(readDataTransferFile(tooLarge)).rejects.toThrow(
+      new Error("The selected export is larger than the 50 MiB import limit."),
+    );
   });
 
   test("says the file is not valid JSON when it does not parse", async () => {
