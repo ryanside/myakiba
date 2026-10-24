@@ -4,7 +4,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
-import { SYNC_RUN_LEASE_MS } from "@myakiba/contracts/sync/constants";
+import { SYNC_RUN_LEASE_MS, SYNC_SESSION_RETRY_WINDOW_MS } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import * as authSchema from "@myakiba/db/schema/auth";
@@ -1704,4 +1704,89 @@ test("an item upload's wide event names its session, job, item and outcome", asy
     initLogger({ enabled: false });
     read.mockRestore();
   }
+});
+
+describe("answers a retry cannot start with", () => {
+  test("a retry past its window answers 409 and keeps the lapse it saved", async () => {
+    const run = await start("item", { items: [X, Y] });
+    expect(await complete(run, X)).toEqual(imported);
+    const longAgo = new Date(Date.now() - SYNC_SESSION_RETRY_WINDOW_MS - 1000);
+    await db
+      .update(syncSession)
+      .set({ createdAt: longAgo, updatedAt: longAgo })
+      .where(eq(syncSession.id, run.syncSessionId));
+
+    expect(await post(`/sessions/${run.syncSessionId}/retry`)).toEqual({
+      status: 409,
+      body: "The 20-day window to retry failed item results has expired",
+    });
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "partial", failCount: 1 });
+    expect(await results(run.syncSessionId)).toContainEqual({
+      id: Y,
+      status: "failed",
+      reason: SYNC_STATUS_MESSAGES.interrupted,
+    });
+  });
+
+  test("a completed run answers 409", async () => {
+    const run = await start("item", { items: [X] });
+    expect(await complete(run, X)).toEqual(imported);
+
+    expect(await post(`/sessions/${run.syncSessionId}/retry`)).toEqual({
+      status: 409,
+      body: "These failed item results cannot be retried",
+    });
+  });
+
+  test("an unknown import answers 404", async () => {
+    expect(await post("/sessions/missing/retry")).toEqual({
+      status: 404,
+      body: "Import not found",
+    });
+  });
+});
+
+describe("answers for a bad session request", () => {
+  test.each(["/sessions?page=0", "/sessions?page=x", "/sessions/missing?page=0"])(
+    "%s answers 400 for its page",
+    async (route) => {
+      expect(await get(route)).toEqual({ status: 400, body: "Invalid page parameter" });
+    },
+  );
+
+  test.each(["/sessions?limit=0", "/sessions?limit=101", "/sessions/missing?limit=0"])(
+    "%s answers 400 for its limit",
+    async (route) => {
+      expect(await get(route)).toEqual({ status: 400, body: "Invalid limit parameter" });
+    },
+  );
+
+  test("an unknown import's detail answers 404", async () => {
+    expect(await get("/sessions/missing")).toEqual({ status: 404, body: "Import not found" });
+  });
+
+  test.each(["/heartbeat", "/interrupt"])("%s for an unknown import answers 404", async (route) => {
+    expect(await post(`/sessions/missing${route}`, { jobId: "job" })).toEqual({
+      status: 404,
+      body: "Import not found",
+    });
+  });
+
+  test("a failure for an unknown import answers 404", async () => {
+    expect(
+      await post("/sessions/missing/failures", {
+        jobId: "job",
+        mfcItemId: X,
+        error: "hidden_or_missing",
+      }),
+    ).toEqual({ status: 404, body: "Import not found" });
+  });
+
+  test("an item outside the import answers 404", async () => {
+    const run = await start("item", { items: [X] });
+    expect(await complete(run, Z)).toEqual({
+      status: 404,
+      body: "This item is not part of the import",
+    });
+  });
 });

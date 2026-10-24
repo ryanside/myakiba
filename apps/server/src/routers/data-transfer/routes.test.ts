@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
 import { createRequestLogger, initLogger } from "evlog";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
 import { dataTransferImportSchema } from "@myakiba/contracts/data-transfer/schema";
 import type {
@@ -1118,4 +1118,158 @@ test("an import heartbeat's wide event names the import", async () => {
     initLogger({ enabled: false });
     beat.mockRestore();
   }
+});
+
+describe("an export that cannot be made", () => {
+  async function exportArchive() {
+    const { default: service } = await import("./service");
+    const { useLogger } = await import("evlog/elysia");
+    const original = service.exportArchive.bind(service);
+    let logged: ReturnType<typeof useLogger> | undefined;
+    const read = spyOn(service, "exportArchive").mockImplementation(async (...args) => {
+      logged = useLogger();
+      return original(...args);
+    });
+    initLogger({ enabled: true });
+    try {
+      const answered = await answer(
+        await app.handle(new Request("http://localhost/api/data-transfer/export", { headers })),
+      );
+      return { ...answered, logged: logged?.getContext() };
+    } finally {
+      initLogger({ enabled: false });
+      read.mockRestore();
+    }
+  }
+
+  const bulkOrders = (count: number) =>
+    db.execute(
+      `INSERT INTO "order" (id, user_id, title) SELECT 'bulk-' || n, '${userId}', 'Order ' || n FROM generate_series(1, ${count}) AS n`,
+    );
+
+  test("an account with nothing in it answers 409", async () => {
+    expect(await exportArchive()).toMatchObject({
+      status: 409,
+      body: "There is no data to export.",
+      logged: { outcome: "conflict", dataTransfer: { code: "DATA_TRANSFER_ARCHIVE_EMPTY" } },
+    });
+  });
+
+  test("a custom item in the collection answers 409", async () => {
+    const [custom] = await db
+      .insert(item)
+      .values({ source: "custom", title: "Custom figure", category: "Prepainted" })
+      .returning({ id: item.id });
+    if (!custom) throw new Error("item not seeded");
+    await db.insert(collection).values({ userId, itemId: custom.id });
+
+    expect(await exportArchive()).toMatchObject({
+      status: 409,
+      body: "Data transfer only supports MyFigureCollection-backed collection items.",
+      logged: {
+        outcome: "conflict",
+        dataTransfer: { code: "DATA_TRANSFER_UNSUPPORTED_COLLECTION_ITEM" },
+      },
+    });
+  });
+
+  test.each([
+    ["orders alone", 100_001, false],
+    ["orders and collection items together", 100_000, true],
+  ])("more records than the limit in %s answers 413", async (_case, orders, withItem) => {
+    await bulkOrders(orders);
+    if (withItem) {
+      const itemId = await seedItem(98_777);
+      await db.insert(collection).values({ userId, itemId });
+    }
+
+    expect(await exportArchive()).toMatchObject({
+      status: 413,
+      body: "The export exceeds the 100000 record limit.",
+      logged: {
+        outcome: "payload_too_large",
+        dataTransfer: { code: "DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS" },
+      },
+    });
+  });
+
+  test("an archive over 50 MiB answers 413", async () => {
+    const { DATA_TRANSFER_MAX_BYTES } = await import("@myakiba/contracts/data-transfer/schema");
+    await db
+      .insert(order)
+      .values({ userId, title: "Large", notes: "x".repeat(DATA_TRANSFER_MAX_BYTES) });
+
+    expect(await exportArchive()).toMatchObject({
+      status: 413,
+      body: "The export exceeds the 50 MiB limit.",
+      logged: {
+        outcome: "payload_too_large",
+        dataTransfer: { code: "DATA_TRANSFER_ARCHIVE_TOO_LARGE" },
+      },
+    });
+  });
+
+  test("a read that throws answers 500 and names its message as the code", async () => {
+    const { default: service } = await import("./service");
+    const { useLogger } = await import("evlog/elysia");
+    let logged: ReturnType<typeof useLogger> | undefined;
+    const read = spyOn(service, "exportArchive").mockImplementation(async () => {
+      logged = useLogger();
+      throw new Error("export read failed");
+    });
+    initLogger({ enabled: true });
+    try {
+      const answered = await answer(
+        await app.handle(new Request("http://localhost/api/data-transfer/export", { headers })),
+      );
+      expect(answered).toEqual({ status: 500, body: "Failed to export data." });
+      expect(logged?.getContext()).toMatchObject({
+        outcome: "error",
+        step: "dataTransfer.export",
+        error: { message: "export read failed" },
+        dataTransfer: { code: "export read failed" },
+      });
+    } finally {
+      initLogger({ enabled: false });
+      read.mockRestore();
+    }
+  });
+});
+
+describe("answers a retry or delete cannot proceed with", () => {
+  const remove = async () =>
+    answer(
+      await app.handle(
+        new Request("http://localhost/api/data-transfer/imports/current", {
+          method: "DELETE",
+          headers,
+        }),
+      ),
+    );
+
+  test("deleting with no import answers 404, and a running one 409", async () => {
+    expect(await remove()).toEqual({ status: 404, body: "No inactive import session was found." });
+    await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+    expect(await remove()).toEqual({ status: 409, body: "An active import cannot be deleted." });
+  });
+
+  test("retrying with no import answers 409", async () => {
+    expect(await post("/imports/current/retry")).toEqual({
+      status: 409,
+      body: "The import does not exist or cannot be retried in its current state.",
+    });
+  });
+
+  test("retrying an import whose retained archive no longer parses answers 500", async () => {
+    const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+    await fail(run.id, 98_777);
+    await db.execute(
+      sql`UPDATE data_transfer_import SET archive = '{"format":"something else"}'::jsonb WHERE user_id = ${userId}`,
+    );
+
+    expect(await post("/imports/current/retry")).toEqual({
+      status: 500,
+      body: "Failed to retry import.",
+    });
+  });
 });
