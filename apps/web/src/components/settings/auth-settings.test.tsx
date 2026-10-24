@@ -190,3 +190,20 @@ test("a username check the server refuses shows its text in the profile", async 
 
   expect(await screen.findByText("Username is invalid")).toBeTruthy();
 });
+
+for (const [name, submit] of [
+  ["profile", saveProfile],
+  ["preferences", savePreferences],
+  ["password change", changePassword],
+] as const) {
+  test(`a network failure during ${name} shows safe feedback without advancing`, async () => {
+    serve(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    await submit();
+    expect(
+      await screen.findByText("Couldn't connect. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(invalidations).toBe(0);
+  });
+}

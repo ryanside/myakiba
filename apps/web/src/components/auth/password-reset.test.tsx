@@ -105,3 +105,19 @@ test("a password reset refused without a message shows the page's own text", asy
 
   await waitFor(() => expect(screen.getByText("Failed to reset password")).toBeTruthy());
 });
+
+for (const [name, submit] of [
+  ["reset link request", requestReset],
+  ["password reset", resetPassword],
+] as const) {
+  test(`a network failure during ${name} shows safe feedback and stays`, async () => {
+    answerAuth(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    submit();
+    expect(
+      await screen.findByText("Couldn't connect. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(navigations).toEqual([]);
+  });
+}

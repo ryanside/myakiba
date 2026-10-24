@@ -112,3 +112,15 @@ test("a username check the server refuses shows its text during onboarding", asy
 
   expect(await screen.findByText("Username is invalid")).toBeTruthy();
 });
+
+test("a network failure saving onboarding preferences shows safe feedback and stays", async () => {
+  serve(() => {
+    throw new TypeError("Failed to fetch");
+  });
+  await savePreferences();
+  expect(
+    await screen.findByText("Couldn't connect. Check your connection and try again."),
+  ).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: PREFERENCES_STEP_TITLE })).toBeTruthy();
+  expect(invalidations).toBe(0);
+});

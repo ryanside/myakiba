@@ -202,3 +202,20 @@ test("a Google sign-in refused without a message shows the status text", async (
 
   expect(await screen.findByText("Service Unavailable")).toBeTruthy();
 });
+
+for (const [name, submit] of [
+  ["sign-in", signIn],
+  ["sign-up", signUp],
+] as const) {
+  test(`a network failure during email ${name} shows safe feedback`, async () => {
+    serve(({ path }) => {
+      if (path === "/is-username-available") return Response.json({ available: true });
+      throw new TypeError("Failed to fetch");
+    });
+    submit();
+    expect(
+      await screen.findByText("Couldn't connect. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(navigations).toEqual([]);
+  });
+}
