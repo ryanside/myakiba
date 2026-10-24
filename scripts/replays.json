@@ -1405,6 +1405,22 @@
         "a defect in the collector's tab > keeps the message of the Panic it hit while it read a picture",
         "a defect in the collector's tab > while it reads a fetched page crosses to the background as a Panic with its message"
       ]
+    },
+    {
+      "fix": "2261bfc9286d75e9178460e0b5db590d94f844ed",
+      "bug": "a defect in a Kanban status write showed its raw message as the failure toast's title",
+      "test": "apps/web/src/data/command-failure-toasts.test.tsx",
+      "fixed": [
+        "a defect in a Kanban status write shows retry advice and the safe text, never its message"
+      ]
+    },
+    {
+      "fix": "2261bfc9286d75e9178460e0b5db590d94f844ed",
+      "bug": "a defect in a sync submit showed its raw message under the sync's failure toast",
+      "test": "apps/web/src/hooks/sync-submit-failure.test.tsx",
+      "fixed": [
+        "a sync whose answer breaks its success handling shows the safe text, never the defect's message"
+      ]
     }
   ],
   "lint": [
