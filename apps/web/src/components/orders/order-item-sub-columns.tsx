@@ -27,6 +27,7 @@ import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/share
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { toast } from "@/components/ui/toast";
+import { writeClipboard } from "@/lib/clipboard";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
@@ -125,9 +126,8 @@ function OrderItemActionsCell({
                     return;
                   }
 
-                  try {
-                    await navigator.clipboard.writeText(String(item.itemExternalId));
-                  } catch {
+                  const copied = await writeClipboard(String(item.itemExternalId));
+                  if (copied.isErr()) {
                     toast.add({
                       type: "error",
                       title: "Could not copy MFC item ID to clipboard",

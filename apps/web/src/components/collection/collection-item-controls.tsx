@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { toast } from "@/components/ui/toast";
+import { writeClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import type { Saving } from "@/data/client";
 
@@ -134,9 +135,8 @@ export function CollectionItemControls({
                       return;
                     }
 
-                    try {
-                      await navigator.clipboard.writeText(String(item.itemExternalId));
-                    } catch {
+                    const copied = await writeClipboard(String(item.itemExternalId));
+                    if (copied.isErr()) {
                       toast.add({
                         type: "error",
                         title: "Could not copy MFC item ID to clipboard",

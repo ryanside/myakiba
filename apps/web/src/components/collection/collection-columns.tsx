@@ -30,6 +30,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
+import { writeClipboard } from "@/lib/clipboard";
 import CollectionItemForm from "./collection-item-form";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
@@ -151,9 +152,8 @@ function CollectionActionsCell({
                       return;
                     }
 
-                    try {
-                      await navigator.clipboard.writeText(String(item.itemExternalId));
-                    } catch {
+                    const copied = await writeClipboard(String(item.itemExternalId));
+                    if (copied.isErr()) {
                       toast.add({
                         type: "error",
                         title: "Could not copy MFC item ID to clipboard",
