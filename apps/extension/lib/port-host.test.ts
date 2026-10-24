@@ -97,6 +97,41 @@ describe("servePort", () => {
     ]);
   });
 
+  test("posts each kind of event to the port as the wire carries it", () => {
+    const port = connect(OWN_CONTENT_SCRIPT);
+    port.send({ type: "fetch-items", requestId: REQUEST_ID, mfcItemIds: [1, 2] });
+    const [run] = port.submitted;
+    const picture = { base64: "/9j/", contentType: "image/jpeg" };
+    run?.emit({ type: "status", state: "fetching", mfcItemId: itemId(1), untilMs: null });
+    run?.emit({
+      type: "item",
+      mfcItemId: itemId(1),
+      result: { ok: true, html: "<html>1</html>", picture },
+    });
+    run?.emit({ type: "item", mfcItemId: itemId(2), result: { ok: false, error: "timeout" } });
+    run?.emit({ type: "done", reason: "complete" });
+
+    expect(port.posted).toEqual([
+      {
+        requestId: REQUEST_ID,
+        event: { type: "status", state: "fetching", mfcItemId: itemId(1), untilMs: null },
+      },
+      {
+        requestId: REQUEST_ID,
+        event: {
+          type: "item",
+          mfcItemId: itemId(1),
+          result: { ok: true, html: "<html>1</html>", picture },
+        },
+      },
+      {
+        requestId: REQUEST_ID,
+        event: { type: "item", mfcItemId: itemId(2), result: { ok: false, error: "timeout" } },
+      },
+      { requestId: REQUEST_ID, event: { type: "done", reason: "complete" } },
+    ]);
+  });
+
   test("runs a fetch in the sender's container", () => {
     const port = connect({
       ...OWN_CONTENT_SCRIPT,

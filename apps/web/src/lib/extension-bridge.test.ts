@@ -195,6 +195,25 @@ describe("fetchItems", () => {
     ]);
   });
 
+  test("a fetch state, done reason or event type from a newer extension reads as unknown", async () => {
+    const extension = fakeExtension({
+      onFetch: (run) => {
+        run.status("warp_drive", 1);
+        run.send({ type: "progress" });
+        run.item(1);
+        run.done("solar_flare");
+      },
+    });
+
+    const events = await collect(createExtensionBridge(extension.window), ids(1, 2));
+
+    expect(events[0]).toEqual({ type: "status", state: "unknown", untilMs: null });
+    expect(outcomes(events)).toEqual([
+      [1, "ok"],
+      [2, "extension_stopped"],
+    ]);
+  });
+
   test("an item event the page cannot read leaves its id to end as extension_stopped", async () => {
     const extension = fakeExtension({
       onFetch: (run) => {

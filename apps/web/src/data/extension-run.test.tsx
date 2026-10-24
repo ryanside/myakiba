@@ -405,6 +405,20 @@ describe("failure reports", () => {
     ]);
   });
 
+  test("report a code from a newer extension as unknown", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.fail(1, "solar_flare");
+      fetch.done("complete");
+    });
+
+    await runner().run(sync(1));
+
+    expect(posted(`${SESSION}/failures`).map((request) => request.fields)).toEqual([
+      { jobId: "job-1", failures: [{ mfcItemId: 1, error: "unknown" }] },
+    ]);
+  });
+
   test("hold at most 1000 failures in one request", async () => {
     fakeFetch();
     loadExtension((fetch) => {
@@ -864,6 +878,49 @@ describe("refreshing an item", () => {
 
     expect(refreshesWhileFull).toBe(0);
     expect(posted("/api/item/98777/resync")).toHaveLength(1);
+  });
+
+  test.each([
+    ["mfc_signed_out", "Sign in to MyFigureCollection to import this item"],
+    [
+      "hidden_or_missing",
+      "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
+    ],
+    ["challenge_unsolved", "The MyFigureCollection security check was not completed"],
+    ["rate_limited", "MyFigureCollection asked us to slow down. Try again later"],
+    ["timeout", "MyFigureCollection took too long to answer"],
+    ["unexpected_page", "MyFigureCollection showed an unexpected page"],
+    ["solar_flare", "The extension could not fetch this item"],
+  ])("says why the extension could not fetch the page when it answers %s", async (code, text) => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.fail(98_777, code);
+      fetch.done("complete");
+    });
+
+    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(text);
+    expect(sent).toEqual([]);
+  });
+
+  test("says the extension stopped when it ends without the page", async () => {
+    fakeFetch();
+    loadExtension((fetch) => {
+      fetch.done("interrupted");
+    });
+
+    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
+      "The extension stopped. Reload the page and try again",
+    );
+    expect(sent).toEqual([]);
+  });
+
+  test("says an id that is no MFC item is not found, without asking the extension", async () => {
+    fakeFetch();
+    loadExtension(() => {});
+
+    await expect(refreshItemWithExtension(0)).rejects.toThrow("Item not found");
+    expect(extension.runs).toEqual([]);
+    expect(sent).toEqual([]);
   });
 
   test("sends nothing when the extension cannot fetch the page", async () => {
