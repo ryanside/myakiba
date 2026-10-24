@@ -9,7 +9,7 @@ const csvFile = (lines: readonly string[]) =>
   new File([[CSV_HEADER, ...lines].join("\n")], "mfc.csv", { type: "text/csv" });
 
 test("keeps items behind an MFC content label and drops wished ones", async () => {
-  const userItems = await transformCSVData({
+  const read = await transformCSVData({
     file: csvFile([
       csvLine(98_777, "[NSFW+] Hello, Good-bye", "Owned"),
       csvLine(2, "Public figure", "Ordered"),
@@ -17,7 +17,7 @@ test("keeps items behind an MFC content label and drops wished ones", async () =
     ]),
   });
 
-  expect(userItems.map((item) => [item.itemExternalId, item.status])).toEqual([
+  expect(read.unwrap().map((item) => [item.itemExternalId, item.status])).toEqual([
     [98_777, "Owned"],
     [2, "Ordered"],
   ]);

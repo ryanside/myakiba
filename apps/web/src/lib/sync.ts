@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { Result } from "better-result";
 import { csvSchema } from "@myakiba/contracts/sync/schema";
 import { SYNC_CSV_ITEM_STATUSES } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
@@ -9,6 +10,10 @@ import type {
   SyncSessionItemStatus,
 } from "@myakiba/contracts/shared/types";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { CsvFileMissing } from "@/lib/errors/csv-file-missing";
+import { CsvInvalid } from "@/lib/errors/csv-invalid";
+import { CsvNoImportableItems } from "@/lib/errors/csv-no-importable-items";
+import { CsvUnreadable } from "@/lib/errors/csv-unreadable";
 
 export const SESSION_STATUS_CONFIG = {
   pending: { label: "Pending", variant: "secondary" },
@@ -120,11 +125,16 @@ export const SYNC_OPTION_META = {
 >;
 
 const SYNC_CSV_STATUS_SET: ReadonlySet<string> = new Set(SYNC_CSV_ITEM_STATUSES);
-const csvTransformationCache = new WeakMap<File, Promise<UserItem[]>>();
 
-export function transformCSVData(value: { file: File | undefined }): Promise<UserItem[]> {
+type CsvReadFailure = CsvFileMissing | CsvUnreadable | CsvInvalid | CsvNoImportableItems;
+
+const csvTransformationCache = new WeakMap<File, Promise<Result<UserItem[], CsvReadFailure>>>();
+
+export function transformCSVData(value: {
+  file: File | undefined;
+}): Promise<Result<UserItem[], CsvReadFailure>> {
   if (!value.file) {
-    return Promise.reject(new Error("No file selected"));
+    return Promise.resolve(Result.err(new CsvFileMissing()));
   }
 
   const cachedTransformation = csvTransformationCache.get(value.file);
@@ -137,8 +147,15 @@ export function transformCSVData(value: { file: File | undefined }): Promise<Use
   return transformation;
 }
 
-async function readCsv(file: File): Promise<UserItem[]> {
-  const text = await file.text();
+async function readCsv(file: File): Promise<Result<UserItem[], CsvReadFailure>> {
+  const text = await Result.tryPromise({
+    try: () => file.text(),
+    catch: (cause) => new CsvUnreadable({ cause }),
+  });
+  return text.andThen(parseCsv);
+}
+
+function parseCsv(text: string): Result<UserItem[], CsvInvalid | CsvNoImportableItems> {
   const parsedCSV = Papa.parse(text, {
     header: true,
     skipEmptyLines: true,
@@ -147,14 +164,12 @@ async function readCsv(file: File): Promise<UserItem[]> {
 
   const validatedCSV = csvSchema.safeParse(parsedCSV.data);
   if (!validatedCSV.success) {
-    throw new Error("Please select a valid MyFigureCollection CSV file", {
-      cause: validatedCSV.error,
-    });
+    return Result.err(new CsvInvalid({ cause: validatedCSV.error }));
   }
 
   const filteredData = validatedCSV.data.filter((item) => SYNC_CSV_STATUS_SET.has(item.status));
   if (filteredData.length === 0) {
-    throw new Error("This CSV has no supported Owned or Ordered items to import");
+    return Result.err(new CsvNoImportableItems());
   }
   const userItems: UserItem[] = filteredData.map((item) => {
     const normalizedStatus = item.status === "Ordered" ? "Ordered" : "Owned";
@@ -174,5 +189,5 @@ async function readCsv(file: File): Promise<UserItem[]> {
       orderDate: item.payment_date,
     };
   });
-  return userItems;
+  return Result.ok(userItems);
 }

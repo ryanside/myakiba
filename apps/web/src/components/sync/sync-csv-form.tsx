@@ -36,13 +36,8 @@ export default function SyncCsvForm({
           name="file"
           validators={{
             onSubmitAsync: async ({ value }) => {
-              try {
-                await transformCSVData({ file: value });
-              } catch (error) {
-                return error instanceof Error
-                  ? error.message
-                  : "Please select a valid MyFigureCollection CSV file";
-              }
+              const read = await transformCSVData({ file: value });
+              return read.isErr() ? read.error.message : undefined;
             },
           }}
           children={(field) => {

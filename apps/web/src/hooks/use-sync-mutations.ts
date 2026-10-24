@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Result } from "better-result";
 import type { SyncCollectionItem, SyncOrder, SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
 import { syncSends, useSyncSubmit } from "@/data/resources/sync";
@@ -186,13 +185,12 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const handleSyncCsvSubmit = useCallback(
     async (value: File | undefined): Promise<SyncSubmit> => {
-      const userItems = await Result.tryPromise(() => transformCSVData({ file: value }));
+      const userItems = await transformCSVData({ file: value });
       if (userItems.isErr()) {
-        const { cause } = userItems.error;
         const toastId = toast.add({
           type: "error",
           title: SYNC_OPTION_META.csv.failureTitle,
-          description: cause instanceof Error ? cause.message : "An error occurred",
+          description: userItems.error.message,
           actionProps: {
             children: "View import history",
             onClick() {
