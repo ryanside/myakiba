@@ -1333,6 +1333,12 @@
         "a sync session status outside the enum > has no phase and panics",
         "a sync session status outside the enum > has no terminal state and panics"
       ]
+    },
+    {
+      "fix": "1632b158c6a6c53750c82590f59f18aa89e65934",
+      "bug": "a panicking throttle reservation left every later MFC load waiting",
+      "test": "apps/extension/lib/throttle.test.ts",
+      "fixed": ["a throttle turn > whose reservation panics lets the next load run"]
     }
   ],
   "lint": [
