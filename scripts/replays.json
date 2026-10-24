@@ -1147,6 +1147,15 @@
         "a silent refresh with extension status {\"kind\":\"outdated\",\"extensionVersion\":\"0.0.1\"} settles and shows its recovery",
         "a silent refresh with extension status {\"kind\":\"ready\",\"extensionVersion\":\"0.1.0\"} settles and shows its recovery"
       ]
+    },
+    {
+      "fix": "ac948c467917d31a2cba188fdfdc2be2a29e80db",
+      "bug": "Resend refused verification and reset emails but auth requests answered success",
+      "test": "packages/auth/src/server.test.ts",
+      "fixed": [
+        "send-verification-email fails when the email provider refuses the send",
+        "request-password-reset fails when the email provider refuses the send"
+      ]
     }
   ],
   "lint": [
