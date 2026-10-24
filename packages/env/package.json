@@ -12,10 +12,12 @@
     "./extension": "./src/extension.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
   },
   "dependencies": {
     "@t3-oss/env-core": "^0.13.1",
+    "better-result": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },

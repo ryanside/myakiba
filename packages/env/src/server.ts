@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 import { itemPictureBucketSchema, redisSchema } from "./schemas";
+import { panicOnInvalidEnv } from "./panic-on-invalid-env";
 
 export const env = createEnv({
   server: {
@@ -28,4 +29,5 @@ export const env = createEnv({
     }),
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
+  onValidationError: panicOnInvalidEnv,
 });

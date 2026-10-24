@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
+import { panicOnInvalidEnv } from "./panic-on-invalid-env";
 
 export const PRODUCTION_EXTENSION_ORIGINS = {
   WXT_WEB_ORIGIN: "https://myakiba.app",
@@ -23,4 +24,5 @@ export const env = createEnv({
   },
   runtimeEnv: import.meta.env,
   emptyStringAsUndefined: true,
+  onValidationError: panicOnInvalidEnv,
 });
