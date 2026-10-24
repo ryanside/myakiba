@@ -162,3 +162,25 @@ describe("a custom item that fails after its insert leaves nothing behind", () =
     expect(await counts()).toEqual(before);
   });
 });
+
+test("a named Entry missing after insert rolls back the custom Item instead of dropping its link", async () => {
+  await db.execute(
+    `CREATE FUNCTION drop_entry() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$`,
+  );
+  await db.execute(
+    `CREATE TRIGGER drop_entry BEFORE INSERT ON entry FOR EACH ROW EXECUTE FUNCTION drop_entry()`,
+  );
+  const before = await counts();
+  try {
+    expect(
+      await call("POST", "/custom", {
+        ...customItem,
+        entries: [{ name: "Dropped artist", category: "Artists" }],
+      }),
+    ).toMatchObject({ status: 500 });
+    expect(await counts()).toEqual(before);
+  } finally {
+    await db.execute("DROP TRIGGER drop_entry ON entry");
+    await db.execute("DROP FUNCTION drop_entry()");
+  }
+});

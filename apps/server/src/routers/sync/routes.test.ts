@@ -1911,3 +1911,16 @@ test("a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status"
     initLogger({ enabled: false });
   }
 });
+
+test("a missing Item import completion is refused instead of reporting success", async () => {
+  const { default: service } = await import("./service");
+  const update = spyOn(service, "updateSyncSession").mockResolvedValue(false);
+  try {
+    expect(await post("/item", { items: [PRESENT] })).toEqual({
+      status: 500,
+      body: "Failed to update import record",
+    });
+  } finally {
+    update.mockRestore();
+  }
+});
