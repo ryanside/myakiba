@@ -1396,6 +1396,15 @@
         "a defect in a write whose command words its failures shows the safe text under its title, never its message",
         "a defect in a write whose command words none shows the safe text under its title, never its message"
       ]
+    },
+    {
+      "fix": "010683336822df38cd0b7ba018ff916bc7bab9af",
+      "bug": "a defect while the collector read a page crossed as an invalid answer and was retried, and a picture defect lost its message",
+      "test": "apps/extension/lib/collector.test.ts",
+      "fixed": [
+        "a defect in the collector's tab > keeps the message of the Panic it hit while it read a picture",
+        "a defect in the collector's tab > while it reads a fetched page crosses to the background as a Panic with its message"
+      ]
     }
   ],
   "lint": [
