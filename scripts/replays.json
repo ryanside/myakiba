@@ -1123,6 +1123,15 @@
       "bug": "W-F8: sync refusal rejects after its toast through TanStack Form",
       "test": "apps/web/src/hooks/sync-submit-failure.test.tsx",
       "fixed": ["a sync the server refuses shows safe text and settles the form submit"]
+    },
+    {
+      "fix": "11ee27217286ea7b44a4924455b842e7613eaad1",
+      "bug": "Auth fetch rejection bypasses decodeAuth and screen feedback",
+      "test": "apps/web/src/components/auth/password-reset.test.tsx",
+      "fixed": [
+        "a network failure during reset link request shows safe feedback and stays",
+        "a network failure during password reset shows safe feedback and stays"
+      ]
     }
   ],
   "lint": [
