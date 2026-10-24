@@ -1,6 +1,8 @@
+import { Result } from "better-result";
 import { createLogger, initLogger, log } from "evlog";
-import { tryCatch } from "@myakiba/utils/result";
 import { drain } from "./lib/evlog";
+import { WorkerBootFailed } from "./lib/errors/worker-boot-failed";
+import { WorkerShutdownFailed } from "./lib/errors/worker-shutdown-failed";
 import { env } from "@myakiba/env/worker";
 
 type ShutdownSignal = "SIGINT" | "SIGTERM";
@@ -22,16 +24,20 @@ async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promis
 
     await healthServer.stop(true);
 
-    const { error } = await tryCatch(closeWorker());
-    if (error) {
-      if (error instanceof Error) {
+    const closed = await Result.tryPromise({
+      try: () => closeWorker(),
+      catch: (cause) => new WorkerShutdownFailed({ cause }),
+    });
+    if (closed.isErr()) {
+      const { cause } = closed.error;
+      if (cause instanceof Error) {
         const shutdownLog = createLogger({
           action: "worker.shutdown",
           outcome: "error",
           signal,
         });
 
-        shutdownLog.error(error);
+        shutdownLog.error(cause);
         shutdownLog.emit();
       }
 
@@ -57,9 +63,13 @@ log.info({
   },
 });
 
-const { data: workerModule, error } = await tryCatch(import("./worker"));
-if (error) {
-  const startupError = error instanceof Error ? error : new Error(String(error));
+const booted = await Result.tryPromise({
+  try: () => import("./worker"),
+  catch: (cause) => new WorkerBootFailed({ cause }),
+});
+if (booted.isErr()) {
+  const { cause } = booted.error;
+  const startupError = cause instanceof Error ? cause : new Error(String(cause));
 
   const startupLog = createLogger({
     action: "worker.boot",
@@ -72,6 +82,7 @@ if (error) {
   if (drain) await drain.flush();
   throw startupError;
 }
+const workerModule = booted.value;
 const closeWorker = workerModule.closeWorker;
 const healthServer = Bun.serve({
   hostname: "127.0.0.1",

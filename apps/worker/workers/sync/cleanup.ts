@@ -1,11 +1,12 @@
+import { Result } from "better-result";
 import { Queue, Worker } from "bullmq";
 import { lt } from "drizzle-orm";
 import { createLogger, log } from "evlog";
 import { db } from "@myakiba/db/client";
 import { syncSession } from "@myakiba/db/schema/figure";
 import { env } from "@myakiba/env/worker";
-import { tryCatch } from "@myakiba/utils/result";
 import { SYNC_SESSION_RETENTION_MS } from "@myakiba/contracts/sync/constants";
+import { SyncHistoryCleanupFailed } from "../../lib/errors/sync-history-cleanup-failed";
 
 const QUEUE_NAME = "sync-session-cleanup-queue";
 const connection = {
@@ -15,6 +16,19 @@ const connection = {
     return Math.max(Math.min(Math.exp(times), 20_000), 1000);
   },
 };
+
+function deleteExpiredSyncHistory(
+  cutoff: Date,
+): Promise<Result<{ id: string }[], SyncHistoryCleanupFailed>> {
+  return Result.tryPromise({
+    try: () =>
+      db
+        .delete(syncSession)
+        .where(lt(syncSession.createdAt, cutoff))
+        .returning({ id: syncSession.id }),
+    catch: (cause) => new SyncHistoryCleanupFailed({ cutoff, cause }),
+  });
+}
 
 const cleanupQueue = new Queue(QUEUE_NAME, { connection });
 export const cleanupWorker = new Worker(
@@ -28,20 +42,16 @@ export const cleanupWorker = new Worker(
     });
 
     try {
-      const { data, error } = await tryCatch(
-        db
-          .delete(syncSession)
-          .where(lt(syncSession.createdAt, cutoff))
-          .returning({ id: syncSession.id }),
-      );
-
-      if (error) {
+      const deleted = await deleteExpiredSyncHistory(cutoff);
+      if (deleted.isErr()) {
+        const { cause } = deleted.error;
+        const failure = cause instanceof Error ? cause : new Error(String(cause));
         jobLog.set({ outcome: "error" });
-        jobLog.error(error);
-        throw error;
+        jobLog.error(failure);
+        throw failure;
       }
 
-      jobLog.set({ outcome: "success", deletedSessions: data.length });
+      jobLog.set({ outcome: "success", deletedSessions: deleted.value.length });
     } finally {
       jobLog.emit();
     }

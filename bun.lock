@@ -142,6 +142,7 @@
         "@myakiba/env": "workspace:*",
         "@myakiba/redis": "workspace:*",
         "@myakiba/utils": "workspace:*",
+        "better-result": "catalog:",
         "bullmq": "catalog:",
         "drizzle-orm": "catalog:",
         "evlog": "catalog:",
