@@ -6,10 +6,21 @@ const answersResults = await import("@/data/api").then(
   () => false,
 );
 const { Result } = answersResults ? await import("better-result") : { Result: null };
+const { ApiServerError } = answersResults
+  ? await import("@/lib/errors/api-server-error")
+  : { ApiServerError: null };
 
 /** What a faked request function answers when its write or read succeeds. */
 export function answer<Value>(value: Value) {
   return Result ? Result.ok(value) : value;
+}
+
+/** What a faked request function answers when the server refuses it with a 500 and `message`. */
+export function refusal(message: string) {
+  if (Result && ApiServerError) {
+    return Promise.resolve(Result.err(new ApiServerError({ status: 500, body: message, message })));
+  }
+  return Promise.reject(new Error(message));
 }
 
 type Settled = { readonly isErr: () => boolean; readonly error: Error };

@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { useEffect, useSyncExternalStore } from "react";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
-import { answer as answered } from "../../../test/request-answers";
+import { answer as answered, refusal } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -61,14 +61,14 @@ const listPage = (items: readonly ServerItem[]) => {
 const held =
   (name: string, apply: (...args: never[]) => void) =>
   (...args: never[]) =>
-    new Promise((resolve, reject) => {
+    new Promise((resolve) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
           resolve(answered(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () => resolve(refusal(`${name} rejected by server`)),
       });
     });
 

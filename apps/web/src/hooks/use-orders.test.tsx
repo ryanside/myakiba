@@ -3,7 +3,7 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { answer } from "../../test/request-answers";
+import { answer, refusal } from "../../test/request-answers";
 
 type Write = { readonly name: string; finish: () => void; fail: () => void };
 const server = { inFlight: [] as Write[], finished: [] as string[] };
@@ -11,14 +11,14 @@ const server = { inFlight: [] as Write[], finished: [] as string[] };
 const write =
   (name: string) =>
   (..._args: unknown[]) =>
-    new Promise((resolve, reject) => {
+    new Promise((resolve) => {
       server.inFlight.push({
         name,
         finish: () => {
           server.finished.push(name);
           resolve(answer(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () => resolve(refusal(`${name} rejected by server`)),
       });
     });
 

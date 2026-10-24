@@ -7,11 +7,11 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
-import { Panic } from "better-result";
-import type { Result } from "better-result";
+import type { keepPreviousData, QueryClient, UseMutationResult } from "@tanstack/react-query";
+import { isTaggedError, Panic, Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
+import { WriteFailed } from "@/lib/errors/write-failed";
 import { call } from "./api";
 import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
@@ -326,7 +326,7 @@ type RefetchTiming =
       readonly refetchAfterFailure?: never;
     };
 
-type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
+type CommandSpec<Input, Output, Failure, F extends PersistedFamily> = RefetchTiming & {
   /** Families this write can change. `run` resolves after they refetch. */
   readonly invalidates: readonly [F, ...F[]];
   /** Narrows the refetch to these keys of the invalidated families. */
@@ -334,14 +334,14 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
   /** Keys to refetch when the write fails, such as a status that says why. */
   readonly failureRefetchKeys?: (input: Input) => readonly RefetchKey<F>[];
   /** The write. Its failure is the command's declared failure, and a throw is a defect. */
-  readonly persist: (input: Input) => Promise<Result<Output, unknown>>;
-  /** Patches the cache before the write and returns what puts it back if the write fails. */
+  readonly persist: (input: Input) => Promise<Result<Output, Failure>>;
+  /** Patches the cache before the write and returns what puts it back if the write fails. A throw is a defect. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
   /** A failure toast's title. A command without one shows no failure toast. */
-  readonly failureTitle?: (input: Input, error: Error) => string;
-  readonly failureDescription?: (input: Input, error: Error) => string;
+  readonly failureTitle?: (input: Input, failure: ReadFailure<Failure>) => string;
+  readonly failureDescription?: (input: Input, failure: ReadFailure<Failure>) => string;
   /** Cache patches that run after the write and before the refetch. */
   readonly saved?: (queryClient: QueryClient, input: Input, output: Output) => Promise<void>;
 };
@@ -349,19 +349,58 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
 const commandSpec = Symbol("commandSpec");
 
 /** Screens cannot reach `persist`, so every write goes through `useResourceMutation`. */
-type Command<Input, Output> = {
-  readonly [commandSpec]: CommandSpec<Input, Output, PersistedFamily>;
+type Command<Input, Output, Failure> = {
+  readonly [commandSpec]: CommandSpec<Input, Output, Failure, PersistedFamily>;
 };
 
-export function defineCommand<Input, Output, const F extends PersistedFamily>(
-  spec: CommandSpec<Input, Output, F>,
-): Command<Input, Output> {
-  return { [commandSpec]: spec as CommandSpec<Input, Output, PersistedFamily> };
+export function defineCommand<Input, Output, Failure, const F extends PersistedFamily>(
+  spec: CommandSpec<Input, Output, Failure, F>,
+): Command<Input, Output, Failure> {
+  return { [commandSpec]: spec as CommandSpec<Input, Output, Failure, PersistedFamily> };
 }
 
-type SaveResult<Output> =
-  | { readonly kind: "saved"; readonly value: Output }
-  | { readonly kind: "failed"; readonly error: unknown };
+/** What every write resolves with. A write never rejects. */
+type Saved<Output> = Result<Output, WriteFailed>;
+
+/** What a write handler returns, such as a form's `onSubmit` prop. */
+export type Saving<Output = unknown> = Promise<Saved<Output>>;
+
+/** Runs a callback the runner hands react-query. Whatever it throws is a defect. */
+async function guard<Value>(step: () => Value | Promise<Value>): Promise<Value> {
+  try {
+    return await step();
+  } catch (error) {
+    throw asPanic(error);
+  }
+}
+
+/**
+ * The one caller of `mutateAsync`, so a write's `run` never rejects: a failure resolves as
+ * WriteFailed. The write's own callbacks have already told the user, so a defect is only
+ * reported here, once.
+ */
+function useWrite<Input, Output, Failure>(
+  mutation: UseMutationResult<Output, ReadFailure<Failure>, Input, unknown>,
+) {
+  const { mutateAsync } = mutation;
+  const run = (input: Input): Saving<Output> =>
+    Result.tryPromise({
+      try: () => mutateAsync(input),
+      catch: (thrown) => {
+        const cause = !Panic.is(thrown) && isTaggedError(thrown) ? thrown : asPanic(thrown);
+        if (Panic.is(cause)) console.error(cause);
+        return new WriteFailed({ cause, message: cause.message });
+      },
+    });
+  return {
+    run,
+    isPending: mutation.isPending,
+    isSuccess: mutation.isSuccess,
+    error: mutation.error,
+    reset: mutation.reset,
+    pendingInput: mutation.isPending ? mutation.variables : undefined,
+  } as const;
+}
 
 type Feedback<Input, Output> = {
   /** Feedback that needs the screen, like a toast whose action navigates. Runs where `successTitle` does. */
@@ -369,8 +408,8 @@ type Feedback<Input, Output> = {
 };
 
 /** `run` never rejects. It resolves after the write and every declared refetch finish. */
-export function useResourceMutation<Input, Output>(
-  command: Command<Input, Output>,
+export function useResourceMutation<Input, Output, Failure>(
+  command: Command<Input, Output, Failure>,
   { onSaved }: Feedback<Input, Output> = {},
 ) {
   const spec = command[commandSpec];
@@ -384,53 +423,43 @@ export function useResourceMutation<Input, Output>(
     if (keys === undefined) await refetchFamilies();
     else await invalidateKeys(keys);
   };
-  const mutation = useMutation<Output, Error, Input, Rollback | undefined>({
+  const mutation = useMutation<Output, ReadFailure<Failure>, Input, Rollback | undefined>({
     mutationFn: (input) => settle(() => spec.persist(input)),
-    onMutate: optimistic && ((input) => optimistic(queryClient, input)),
-    onSuccess: async (output, input) => {
-      const successTitle = spec.successTitle?.(input, output);
-      if (successTitle !== undefined) toast.add({ type: "success", title: successTitle });
-      onSaved?.(input, output);
-      await spec.saved?.(queryClient, input, output);
-      if (!refetchAfterFailure && !refetchBy) await refetch(input);
-    },
-    onError: async (error, input, rollback) => {
-      rollback?.();
-      if (spec.failureTitle)
-        toast.add({
-          type: "error",
-          title: spec.failureTitle(input, error),
-          ...(spec.failureDescription && { description: spec.failureDescription(input, error) }),
-        });
-      await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
-    },
-    onSettled: refetchAfterFailure && ((_output, _error, input) => refetch(input)),
+    onMutate: optimistic && ((input) => guard(() => optimistic(queryClient, input))),
+    onSuccess: (output, input) =>
+      guard(async () => {
+        const successTitle = spec.successTitle?.(input, output);
+        if (successTitle !== undefined) toast.add({ type: "success", title: successTitle });
+        onSaved?.(input, output);
+        await spec.saved?.(queryClient, input, output);
+        if (!refetchAfterFailure && !refetchBy) await refetch(input);
+      }),
+    onError: (failure, input, rollback) =>
+      guard(async () => {
+        rollback?.();
+        if (spec.failureTitle)
+          toast.add({
+            type: "error",
+            title: spec.failureTitle(input, failure),
+            ...(spec.failureDescription && {
+              description: spec.failureDescription(input, failure),
+            }),
+          });
+        await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
+      }),
+    onSettled: refetchAfterFailure && ((_output, _failure, input) => guard(() => refetch(input))),
   });
-  const { mutateAsync } = mutation;
-
-  const run = async (input: Input): Promise<SaveResult<Output>> => {
-    try {
-      return { kind: "saved", value: await mutateAsync(input) };
-    } catch (error) {
-      return { kind: "failed", error };
-    }
-  };
 
   return {
-    run,
+    ...useWrite(mutation),
     /** Only for a `refetchBy: "caller"` command, after its writes settle. */
     refetch: refetchFamilies,
-    isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    error: mutation.error,
-    reset: mutation.reset,
-    pendingInput: mutation.isPending ? mutation.variables : undefined,
   } as const;
 }
 
-/** For a caller that must see a failed write, like a form that stays open: rejects with its error. */
-export async function orThrow<Output>(saving: Promise<SaveResult<Output>>): Promise<Output> {
-  const result = await saving;
-  if (result.kind === "failed") throw result.error;
-  return result.value;
+/** For a caller that must see a failed write, like a form that stays open: rejects with its failure. */
+export async function orThrow<Output>(saving: Saving<Output>): Promise<Output> {
+  const saved = await saving;
+  if (saved.isErr()) throw saved.error;
+  return saved.value;
 }

@@ -12,7 +12,7 @@ import {
   stopDrags,
   stubKanbanLayout,
 } from "../../../test/kanban-drag";
-import { answer } from "../../../test/request-answers";
+import { answer, refusal } from "../../../test/request-answers";
 
 type Write = {
   readonly orderId: string;
@@ -45,12 +45,12 @@ const holdFetches = () => {
 };
 
 const sendWrite = (orderId: string, change: Write["change"]) =>
-  new Promise((resolve, reject) => {
+  new Promise((resolve) => {
     writes.push({
       orderId,
       change,
       settle: () => resolve(answer(null)),
-      fail: () => reject(new Error("offline")),
+      fail: () => resolve(refusal("offline")),
     });
   });
 

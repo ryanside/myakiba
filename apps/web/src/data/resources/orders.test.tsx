@@ -3,7 +3,7 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
-import { answer as answered } from "../../../test/request-answers";
+import { answer as answered, refusal } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -47,14 +47,14 @@ const listRow = (order: ServerOrder) => ({
 const held =
   (name: string, apply: (...args: never[]) => void) =>
   (...args: never[]) =>
-    new Promise((resolve, reject) => {
+    new Promise((resolve) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
           resolve(answered(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () => resolve(refusal(`${name} rejected by server`)),
       });
     });
 
