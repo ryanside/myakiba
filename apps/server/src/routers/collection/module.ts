@@ -1,7 +1,10 @@
 import { and, arrayContains, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import { command, fail, ok, paginate, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { command, paginate, query } from "@/domain/kernel";
+import { CollectionItemNotFound } from "./errors/collection-item-not-found";
+import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
@@ -125,7 +128,7 @@ export const Collection = {
         })),
       };
       scope.log.set({ collection: { resultCount: result.items.length } });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -166,9 +169,9 @@ export const Collection = {
         .innerJoin(item, eq(collection.itemId, item.id))
         .leftJoin(item_release, eq(collection.releaseId, item_release.id))
         .where(and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id)));
-      if (!found) return fail("not_found", "Collection item not found");
+      if (!found) return Result.err(new CollectionItemNotFound());
 
-      return ok({
+      return Result.ok({
         collectionItem: {
           ...found,
           createdAt: found.createdAt.toISOString(),
@@ -187,7 +190,7 @@ export const Collection = {
         .select({ releaseId: collection.releaseId })
         .from(collection)
         .where(selected);
-      if (!existing) return fail("not_found", "Collection item not found");
+      if (!existing) return Result.err(new CollectionItemNotFound());
 
       const updated = await scope.tx
         .update(collection)
@@ -203,7 +206,7 @@ export const Collection = {
       }
 
       const [update] = updated;
-      return ok({ update: update && withTimestampStrings(update) });
+      return Result.ok({ update: update && withTimestampStrings(update) });
     },
   ),
 
@@ -215,9 +218,9 @@ export const Collection = {
         .delete(collection)
         .where(and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id)))
         .returning();
-      if (!deleted) return fail("not_found", "Collection item not found");
+      if (!deleted) return Result.err(new CollectionItemNotFound());
 
-      return ok({ deleted: withTimestampStrings(deleted) });
+      return Result.ok({ deleted: withTimestampStrings(deleted) });
     },
   ),
 
@@ -230,10 +233,10 @@ export const Collection = {
         .where(and(eq(collection.userId, scope.viewer.userId), inArray(collection.id, input.ids)))
         .returning();
       if (deleted.length === 0 || deleted.length < new Set(input.ids).size) {
-        return fail("not_found", "Collection item(s) not found");
+        return Result.err(new CollectionItemsNotFound());
       }
 
-      return ok("Collection item(s) deleted successfully");
+      return Result.ok("Collection item(s) deleted successfully" as const);
     },
   ),
 };
