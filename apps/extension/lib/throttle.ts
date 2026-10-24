@@ -197,7 +197,15 @@ export function createThrottle(deps: {
       const running: Promise<Result<T, E | AttemptAbandoned>> = signal.aborted
         ? Promise.resolve(Result.err(new AttemptAbandoned()))
         : work(timeout, holdUntil);
-      const settled = settle(running, finished, () => endsBy);
+      // The next turn waits for this load to end, not for its end to be booked. A defect at the end is reported here,
+      // once, so it fails no later load and is never left unhandled.
+      const settled = (async () => {
+        try {
+          await settle(running, finished, () => endsBy);
+        } catch (error) {
+          console.error("a defect stopped the end of an MFC page load", error);
+        }
+      })();
       ended.resolve(settled);
       const answer = await unlessAborted(
         signal,
