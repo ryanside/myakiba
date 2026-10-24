@@ -48,6 +48,22 @@ describe("readPicture", () => {
     expect(cancelled).toBe(true);
   });
 
+  test("drops a response that declares more than 10 MB without reading it", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array([0xff, 0xd8, 0xff]));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const response = new Response(body, { headers: { "content-length": String(10 * MB + 1) } });
+
+    expect(await readPicture(response)).toBeNull();
+    expect(cancelled).toBe(true);
+  });
+
   test("drops an empty or failed response", async () => {
     expect(await readPicture(new Response(new Uint8Array()))).toBeNull();
     expect(
