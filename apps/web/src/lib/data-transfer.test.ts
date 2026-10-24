@@ -42,9 +42,10 @@ const exportFile = (text: string) => new File([text], "export.json", { type: "ap
 describe("readDataTransferFile", () => {
   test("reads a valid export", async () => {
     const valid = archive([order]);
-    const read: unknown = await readDataTransferFile(exportFile(JSON.stringify(valid)));
+    const read = await readDataTransferFile(exportFile(JSON.stringify(valid)));
+    const archiveRead: unknown = read.unwrap();
 
-    expect(read).toEqual(valid);
+    expect(archiveRead).toEqual(valid);
   });
 
   test("says the export is over the import limit before reading it", async () => {
@@ -52,20 +53,29 @@ describe("readDataTransferFile", () => {
       value: DATA_TRANSFER_MAX_BYTES + 1,
     });
 
-    await expect(readDataTransferFile(tooLarge)).rejects.toThrow(
-      new Error("The selected export is larger than the 50 MiB import limit."),
-    );
+    const read = await readDataTransferFile(tooLarge);
+
+    expect(read.isErr() && read.error).toMatchObject({
+      _tag: "ExportFileTooLarge",
+      message: "The selected export is larger than the 50 MiB import limit.",
+    });
   });
 
   test("says the file is not valid JSON when it does not parse", async () => {
-    await expect(readDataTransferFile(exportFile("{format:"))).rejects.toThrow(
-      new Error("This file is not valid JSON."),
-    );
+    const read = await readDataTransferFile(exportFile("{format:"));
+
+    expect(read.isErr() && read.error).toMatchObject({
+      _tag: "ExportFileNotJson",
+      message: "This file is not valid JSON.",
+    });
   });
 
   test("shows the first schema issue when the JSON is not a supported export", async () => {
-    await expect(readDataTransferFile(exportFile(JSON.stringify(archive([]))))).rejects.toThrow(
-      new Error("This myakiba export is empty."),
-    );
+    const read = await readDataTransferFile(exportFile(JSON.stringify(archive([]))));
+
+    expect(read.isErr() && read.error).toMatchObject({
+      _tag: "ExportFileUnsupported",
+      message: "This myakiba export is empty.",
+    });
   });
 });

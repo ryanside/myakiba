@@ -100,22 +100,13 @@ export function DataTransfer() {
     resetStartMutation();
     resetRetryMutation();
 
-    try {
-      const archive = await readDataTransferFile(file);
-      if (readVersion.current !== version) return;
-      setPreparedFile({
-        kind: "ready",
-        file,
-        archive,
-      });
-    } catch (error) {
-      if (readVersion.current !== version) return;
-      setPreparedFile({
-        kind: "invalid",
-        file,
-        message: error instanceof Error ? error.message : "This export could not be read.",
-      });
-    }
+    const archive = await readDataTransferFile(file);
+    if (readVersion.current !== version) return;
+    setPreparedFile(
+      archive.isOk()
+        ? { kind: "ready", file, archive: archive.value }
+        : { kind: "invalid", file, message: archive.error.message },
+    );
   };
 
   let exportState: ActionState = { kind: "idle" };

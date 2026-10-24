@@ -97,7 +97,7 @@ await mock.module("@/hooks/use-data-transfer-import-status-query", () => ({
 const realFile = await import("@/lib/data-transfer");
 await mock.module("@/lib/data-transfer", () => ({
   ...realFile,
-  readDataTransferFile: async () => ({ orders: [{}], collectionItems: [{}, {}] }),
+  readDataTransferFile: async () => answer({ orders: [{}], collectionItems: [{}, {}] }),
 }));
 
 const { toast } = await import("@/components/ui/toast");

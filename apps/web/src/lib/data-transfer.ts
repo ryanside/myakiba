@@ -4,26 +4,41 @@ import {
 } from "@myakiba/contracts/data-transfer/schema";
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
 import { parseJson } from "@myakiba/utils/parse-json";
+import { Result } from "better-result";
+import { ExportFileNotJson } from "@/lib/errors/export-file-not-json";
+import { ExportFileTooLarge } from "@/lib/errors/export-file-too-large";
+import { ExportFileUnreadable } from "@/lib/errors/export-file-unreadable";
+import { ExportFileUnsupported } from "@/lib/errors/export-file-unsupported";
 
-function parseDataTransferJson(rawJson: string): DataTransferArchiveV1 {
-  const parsed = parseJson(dataTransferArchiveV1Schema, rawJson);
-  if (parsed.isOk()) return parsed.value;
+type ExportFileFailure =
+  | ExportFileTooLarge
+  | ExportFileUnreadable
+  | ExportFileNotJson
+  | ExportFileUnsupported;
 
-  throw new Error(
-    parsed.error.match({
-      InvalidJson: () => "This file is not valid JSON.",
-      JsonSchemaMismatch: ({ issues }) =>
-        issues[0]?.message ?? "This is not a supported myakiba export.",
+function parseDataTransferJson(
+  rawJson: string,
+): Result<DataTransferArchiveV1, ExportFileNotJson | ExportFileUnsupported> {
+  return parseJson(dataTransferArchiveV1Schema, rawJson).mapError((failure) =>
+    failure.match({
+      InvalidJson: () => new ExportFileNotJson(),
+      JsonSchemaMismatch: ({ cause }) => new ExportFileUnsupported({ cause }),
     }),
   );
 }
 
-export async function readDataTransferFile(file: File): Promise<DataTransferArchiveV1> {
+export async function readDataTransferFile(
+  file: File,
+): Promise<Result<DataTransferArchiveV1, ExportFileFailure>> {
   if (file.size > DATA_TRANSFER_MAX_BYTES) {
-    throw new Error("The selected export is larger than the 50 MiB import limit.");
+    return Result.err(new ExportFileTooLarge());
   }
 
-  return parseDataTransferJson(await file.text());
+  const text = await Result.tryPromise({
+    try: () => file.text(),
+    catch: (cause) => new ExportFileUnreadable({ cause }),
+  });
+  return text.andThen(parseDataTransferJson);
 }
 
 export function downloadDataTransferArchive(archive: DataTransferArchiveV1): void {
