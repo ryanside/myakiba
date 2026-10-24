@@ -230,6 +230,100 @@ describe("the throttle's books", () => {
     expect(extension.tabs.loads[0]?.at).toBeGreaterThanOrEqual(pausedUntil);
     expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
   });
+
+  describe("when storage fails", () => {
+    let warn: Mock<typeof console.warn>;
+    let error: Mock<typeof console.error>;
+
+    beforeEach(() => {
+      warn = spyOn(console, "warn").mockImplementation(() => {});
+      error = spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      warn.mockRestore();
+      error.mockRestore();
+    });
+
+    /** Fails the `nth` read or write of the books once item 1's page has answered. */
+    function failingBooks(op: "load" | "save", nth: number) {
+      const stored = memoryValue(OPEN_THROTTLE);
+      let armed = false;
+      let count = 0;
+      const failsNow = () => armed && ++count === nth;
+      return {
+        arm: () => {
+          armed = true;
+        },
+        throttleState: {
+          load: async () => {
+            if (op === "load" && failsNow()) throw new Error("storage is gone");
+            return stored.load();
+          },
+          save: async (next: typeof OPEN_THROTTLE) => {
+            if (op === "save" && failsNow()) throw new Error("QuotaExceededError");
+            await stored.save(next);
+          },
+        },
+      };
+    }
+
+    function armedOn(books: ReturnType<typeof failingBooks>) {
+      return ({ mfcItemId }: PageRequest) => {
+        if (mfcItemId === 1) books.arm();
+        return page(itemPage(mfcItemId));
+      };
+    }
+
+    test("a load whose end cannot be booked is logged, and the queue goes on", async () => {
+      const books = failingBooks("save", 1);
+      const extension = fakeExtension({
+        throttleState: books.throttleState,
+        pages: armedOn(books),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(2)]);
+      expect(error.mock.calls.map((call) => String(call[0]))).toEqual([
+        "could not book the end of an MFC page load",
+      ]);
+    });
+
+    test("an answer that cannot be booked stops the queue, which starts again and fetches the item again", async () => {
+      const books = failingBooks("save", 2);
+      const extension = fakeExtension({
+        throttleState: books.throttleState,
+        pages: armedOn(books),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
+      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(1), itemId(2)]);
+      expect(error.mock.calls.map((call) => String(call[0]))).toEqual([
+        "the MFC fetch queue stopped",
+      ]);
+    });
+
+    test("a turn whose books cannot be read fails only its item", async () => {
+      const books = failingBooks("load", 3);
+      const extension = fakeExtension({
+        throttleState: books.throttleState,
+        pages: armedOn(books),
+      });
+      const run = extension.run([1, 2, 3]);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results().map((result) => result.ok || result.error)).toEqual([
+        true,
+        "unexpected_page",
+        true,
+      ]);
+      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(3)]);
+    });
+  });
 });
 
 describe("cancel", () => {
