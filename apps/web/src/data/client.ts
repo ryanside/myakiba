@@ -8,12 +8,40 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
+import { Panic } from "better-result";
+import type { Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
-import { call, rejectErr } from "./api";
+import { call } from "./api";
 import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf } from "./catalog";
+
+/** What a read's `error` can be: the failures its load declares, or a defect. */
+export type ReadFailure<Failure> = Failure | Panic;
+
+function asPanic(cause: unknown): Panic {
+  if (Panic.is(cause)) return cause;
+  return new Panic({ message: cause instanceof Error ? cause.message : String(cause), cause });
+}
+
+/**
+ * Runs a load or a write for react-query, which reads a failure only from a throw. A failed
+ * Result is thrown as its own error. Anything the load throws is a defect, a Panic that keeps
+ * the thrown message, so a screen that shows `error.message` shows what it showed before.
+ */
+export async function settle<Value, Failure>(
+  load: () => Promise<Result<Value, Failure>>,
+): Promise<Value> {
+  let result: Result<Value, Failure>;
+  try {
+    result = await load();
+  } catch (error) {
+    throw asPanic(error);
+  }
+  if (result.isErr()) throw result.error;
+  return result.value;
+}
 
 type PageCursor = { readonly limit: number; readonly offset: number };
 type OffsetPage = { readonly items: readonly unknown[]; readonly totalCount: number };
@@ -50,9 +78,9 @@ function stampInfiniteRead<Input, Identity, Page extends OffsetPage>(
     options: (input: Input) =>
       infiniteQueryOptions({
         queryKey: key(spec.identify(input)),
-        queryFn: async ({ pageParam }): Promise<Page> =>
-          rejectErr(
-            await call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
+        queryFn: ({ pageParam }): Promise<Page> =>
+          settle(() =>
+            call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
               fallback: spec.failure,
             }),
           ),
@@ -102,23 +130,24 @@ type ReadCache = {
   readonly refetchIntervalInBackground?: false;
 };
 
-type RootedReadSpec<F extends Family, Input, Data> = ReadCache & {
+type RootedReadSpec<F extends Family, Input, Data, Failure> = ReadCache & {
   /** A hand-built key under one of the family's cataloged roots, so sync and the family's writes refresh it. */
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
-  readonly load: (input: Input) => Promise<Data>;
+  /** Its failure is what the screen sees as `error`. */
+  readonly load: (input: Input) => Promise<Result<Data, Failure>>;
   /** Shows the previous input's data while this input loads, when it still applies. */
   readonly keepPrevious?: (previousData: Data, input: Input) => boolean;
 };
 
-export function rootedRead<F extends Family, Input, Data>(
+export function rootedRead<F extends Family, Input, Data, Failure>(
   family: F,
-  { key, load, keepPrevious, placeholderData, ...cache }: RootedReadSpec<F, Input, Data>,
+  { key, load, keepPrevious, placeholderData, ...cache }: RootedReadSpec<F, Input, Data, Failure>,
 ) {
   return {
     family,
     key,
     options: (input: Input) =>
-      queryOptions({
+      queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
         ...cache,
         placeholderData: keepPrevious
           ? (previousData) =>
@@ -127,40 +156,52 @@ export function rootedRead<F extends Family, Input, Data>(
                 : undefined
           : placeholderData,
         queryKey: key(input),
-        queryFn: () => load(input),
+        queryFn: () => settle(() => load(input)),
       }),
   };
 }
 
-type RootedRead<F extends Family, Input, Data> = ReturnType<typeof rootedRead<F, Input, Data>>;
+type RootedRead<F extends Family, Input, Data, Failure> = ReturnType<
+  typeof rootedRead<F, Input, Data, Failure>
+>;
 
-type StreamedReadSpec<F extends Family, Input, Chunk, Data> = {
+type StreamedReadSpec<F extends Family, Input, Chunk, Data, Failure> = {
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
-  /** Opens the stream. `client` is the cache the read lives in, for what a chunk refreshes. */
+  /**
+   * Opens the stream. `client` is the cache the read lives in, for what a chunk refreshes.
+   * A failure while reading the stream is thrown from it, because streamedQuery reads only throws.
+   */
   readonly open: (
     input: Input,
     context: { readonly signal: AbortSignal; readonly client: QueryClient },
-  ) => Promise<AsyncIterable<Chunk>>;
+  ) => Promise<Result<AsyncIterable<Chunk>, Failure>>;
   readonly initialValue: (input: Input) => Data;
   readonly reducer: (data: Data, chunk: Chunk) => Data;
   /** Keeps the data a refetch reconnects from, instead of starting over. */
   readonly refetchMode?: "append";
-  readonly retry: false | ((failureCount: number, error: Error) => boolean);
+  readonly retry: false | ((failureCount: number, error: ReadFailure<Failure>) => boolean);
 };
 
 /** A read that follows a server stream. Focusing the window never reopens it. */
-export function streamedRead<F extends Family, Input, Chunk, Data>(
+export function streamedRead<F extends Family, Input, Chunk, Data, Failure>(
   family: F,
-  { key, open, initialValue, reducer, refetchMode, retry }: StreamedReadSpec<F, Input, Chunk, Data>,
+  {
+    key,
+    open,
+    initialValue,
+    reducer,
+    refetchMode,
+    retry,
+  }: StreamedReadSpec<F, Input, Chunk, Data, Failure>,
 ) {
   return {
     family,
     key,
     options: (input: Input) =>
-      queryOptions({
+      queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
         queryKey: key(input),
         queryFn: streamedQuery({
-          streamFn: ({ signal, client }) => open(input, { signal, client }),
+          streamFn: ({ signal, client }) => settle(() => open(input, { signal, client })),
           reducer,
           initialValue: initialValue(input),
           refetchMode,
@@ -171,8 +212,8 @@ export function streamedRead<F extends Family, Input, Chunk, Data>(
   };
 }
 
-type StreamedRead<F extends Family, Input, Chunk, Data> = ReturnType<
-  typeof streamedRead<F, Input, Chunk, Data>
+type StreamedRead<F extends Family, Input, Chunk, Data, Failure> = ReturnType<
+  typeof streamedRead<F, Input, Chunk, Data, Failure>
 >;
 
 type ReadSwitch = { readonly enabled?: boolean };
@@ -181,17 +222,18 @@ type ReadArgs<Input> = undefined extends Input
   ? [input?: Input, readSwitch?: ReadSwitch]
   : [input: Input, readSwitch?: ReadSwitch];
 
-export function useRead<F extends Family, Input, Data, Chunk = never>(
-  read: RootedRead<F, Input, Data> | StreamedRead<F, Input, Chunk, Data>,
+/** `error` is the read's declared failure or a defect, and its `message` is the text to show. */
+export function useRead<F extends Family, Input, Data, Failure, Chunk = never>(
+  read: RootedRead<F, Input, Data, Failure> | StreamedRead<F, Input, Chunk, Data, Failure>,
   ...[input, readSwitch]: ReadArgs<Input>
 ) {
   const enabled = readSwitch?.enabled;
   return useQuery({ ...read.options(input as Input), ...(enabled !== undefined && { enabled }) });
 }
 
-type RootedInfiniteReadSpec<F extends Family, Input, Page> = {
+type RootedInfiniteReadSpec<F extends Family, Input, Page, Failure> = {
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
-  readonly loadPage: (input: Input, offset: number) => Promise<Page>;
+  readonly loadPage: (input: Input, offset: number) => Promise<Result<Page, Failure>>;
   readonly nextOffset: (
     lastPage: Page,
     allPages: readonly Page[],
@@ -201,9 +243,9 @@ type RootedInfiniteReadSpec<F extends Family, Input, Page> = {
   readonly retry?: false;
 };
 
-export function rootedInfiniteRead<F extends Family, Input, Page>(
+export function rootedInfiniteRead<F extends Family, Input, Page, Failure>(
   family: F,
-  { key, loadPage, nextOffset, ...cache }: RootedInfiniteReadSpec<F, Input, Page>,
+  { key, loadPage, nextOffset, ...cache }: RootedInfiniteReadSpec<F, Input, Page, Failure>,
 ) {
   return {
     family,
@@ -212,19 +254,19 @@ export function rootedInfiniteRead<F extends Family, Input, Page>(
       infiniteQueryOptions({
         ...cache,
         queryKey: key(input),
-        queryFn: ({ pageParam }) => loadPage(input, pageParam),
+        queryFn: ({ pageParam }): Promise<Page> => settle(() => loadPage(input, pageParam)),
         initialPageParam: 0,
         getNextPageParam: nextOffset,
       }),
   };
 }
 
-type RootedInfiniteRead<F extends Family, Input, Page> = ReturnType<
-  typeof rootedInfiniteRead<F, Input, Page>
+type RootedInfiniteRead<F extends Family, Input, Page, Failure> = ReturnType<
+  typeof rootedInfiniteRead<F, Input, Page, Failure>
 >;
 
-export function useRootedInfiniteRead<F extends Family, Input, Page>(
-  read: RootedInfiniteRead<F, Input, Page>,
+export function useRootedInfiniteRead<F extends Family, Input, Page, Failure>(
+  read: RootedInfiniteRead<F, Input, Page, Failure>,
   ...[input, readSwitch]: ReadArgs<Input>
 ) {
   const enabled = readSwitch?.enabled;
@@ -235,7 +277,9 @@ export function useRootedInfiniteRead<F extends Family, Input, Page>(
 }
 
 /** Refetches one read's query the way an invalidation does, for a retry button. */
-export function useInvalidateRead<F extends Family, Input, Data>(read: RootedRead<F, Input, Data>) {
+export function useInvalidateRead<F extends Family, Input, Data, Failure>(
+  read: RootedRead<F, Input, Data, Failure>,
+) {
   const queryClient = useQueryClient();
   return useCallback(
     (input: Input) => queryClient.invalidateQueries({ queryKey: read.key(input) }),
@@ -244,7 +288,9 @@ export function useInvalidateRead<F extends Family, Input, Data>(read: RootedRea
 }
 
 /** Loads one read's query before it shows, like a row about to expand. It never rejects. */
-export function usePrefetchRead<F extends Family, Input, Data>(read: RootedRead<F, Input, Data>) {
+export function usePrefetchRead<F extends Family, Input, Data, Failure>(
+  read: RootedRead<F, Input, Data, Failure>,
+) {
   const queryClient = useQueryClient();
   return useCallback(
     (input: Input) => queryClient.prefetchQuery(read.options(input)),
@@ -287,7 +333,8 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
   readonly refetchKeys?: (input: Input) => readonly RefetchKey<F>[];
   /** Keys to refetch when the write fails, such as a status that says why. */
   readonly failureRefetchKeys?: (input: Input) => readonly RefetchKey<F>[];
-  readonly persist: (input: Input) => Promise<Output>;
+  /** The write. Its failure is the command's declared failure, and a throw is a defect. */
+  readonly persist: (input: Input) => Promise<Result<Output, unknown>>;
   /** Patches the cache before the write and returns what puts it back if the write fails. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
@@ -338,7 +385,7 @@ export function useResourceMutation<Input, Output>(
     else await invalidateKeys(keys);
   };
   const mutation = useMutation<Output, Error, Input, Rollback | undefined>({
-    mutationFn: spec.persist,
+    mutationFn: (input) => settle(() => spec.persist(input)),
     onMutate: optimistic && ((input) => optimistic(queryClient, input)),
     onSuccess: async (output, input) => {
       const successTitle = spec.successTitle?.(input, output);

@@ -12,6 +12,7 @@ import {
   stopDrags,
   stubKanbanLayout,
 } from "../../../test/kanban-drag";
+import { answer } from "../../../test/request-answers";
 
 type Write = {
   readonly orderId: string;
@@ -44,8 +45,13 @@ const holdFetches = () => {
 };
 
 const sendWrite = (orderId: string, change: Write["change"]) =>
-  new Promise<void>((resolve, reject) => {
-    writes.push({ orderId, change, settle: resolve, fail: () => reject(new Error("offline")) });
+  new Promise((resolve, reject) => {
+    writes.push({
+      orderId,
+      change,
+      settle: () => resolve(answer(null)),
+      fail: () => reject(new Error("offline")),
+    });
   });
 
 const realOrders = await import("@/queries/orders");

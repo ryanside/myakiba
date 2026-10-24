@@ -6,6 +6,7 @@ import type { ReactElement } from "react";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { RunOutcome } from "@/data/extension-run";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
+import { answer } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -55,10 +56,10 @@ await mock.module("@/queries/sync", () => ({
   ...realSync,
   sendItemSync: async () => {
     syncsSent += 1;
-    return syncAnswer;
+    return answer(syncAnswer);
   },
-  sendOrder: async () => syncAnswer,
-  retrySyncSession: async () => ({ jobId: "job-2", missingMfcItemIds: [11, 12] }),
+  sendOrder: async () => answer(syncAnswer),
+  retrySyncSession: async () => answer({ jobId: "job-2", missingMfcItemIds: [11, 12] }),
 }));
 const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
 const realRouter = await import("@tanstack/react-router");
@@ -82,18 +83,11 @@ let currentImport: DataTransferImport | null = null;
 const realDataTransfer = await import("@/queries/data-transfer");
 await mock.module("@/queries/data-transfer", () => ({
   ...realDataTransfer,
-  getCurrentDataTransferImport: async () => currentImport,
-  startDataTransferImport: async () => ({
-    ...partialImport,
-    id: "imp-2",
-    status: "running",
-    missingMfcItemIds: [21, 22],
-  }),
-  retryCurrentDataTransferImport: async () => ({
-    ...partialImport,
-    status: "running",
-    missingMfcItemIds: [31],
-  }),
+  getCurrentDataTransferImport: async () => answer(currentImport),
+  startDataTransferImport: async () =>
+    answer({ ...partialImport, id: "imp-2", status: "running", missingMfcItemIds: [21, 22] }),
+  retryCurrentDataTransferImport: async () =>
+    answer({ ...partialImport, status: "running", missingMfcItemIds: [31] }),
 }));
 const realStatus = await import("@/hooks/use-data-transfer-import-status-query");
 await mock.module("@/hooks/use-data-transfer-import-status-query", () => ({

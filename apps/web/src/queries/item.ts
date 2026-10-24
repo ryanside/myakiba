@@ -1,45 +1,54 @@
-import { call, rejectErr } from "@/data/api";
+import { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
 import { app } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 
-export async function getItem(externalId: number) {
-  const found = await call(app.api.item({ id: externalId }).get(), {
-    fallback: "Failed to get item",
-  });
-  if (found.isErr() && ApiNotFound.is(found.error)) return null;
-  return rejectErr(found);
+/** The item's page, or null when it has no row: the screen shows its not-found view for that. */
+export function getItem(externalId: number) {
+  return call(app.api.item({ id: externalId }).get(), { fallback: "Failed to get item" }).then(
+    Result.tryRecover((failure) =>
+      ApiNotFound.is(failure) ? Result.ok(null) : Result.err(failure),
+    ),
+  );
 }
 
-export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
+export function getItemReleases(itemId: string): Promise<Result<ItemReleasesResponse, ApiFailure>> {
   return call(app.api.item({ id: itemId }).releases.get(), {
     fallback: "Failed to get item releases",
-  }).then(rejectErr);
+  });
 }
 
-export async function getItemRelatedOrders(externalId: number) {
+export function getItemRelatedOrders(externalId: number) {
   return call(app.api.item({ id: externalId }).orders.get(), {
     fallback: "Failed to get item related orders",
-  }).then(rejectErr);
+  });
 }
 
-export async function getItemRelatedCollection(externalId: number) {
+export function getItemRelatedCollection(externalId: number) {
   return call(app.api.item({ id: externalId }).collection.get(), {
     fallback: "Failed to get item related collection",
-  }).then(rejectErr);
+  });
 }
 
-export async function getResyncStatus(externalId: number) {
+export function getResyncStatus(externalId: number) {
   return call(app.api.item({ id: externalId })["resync-status"].get(), {
     fallback: "Failed to check item refresh status",
     policy: "legacy",
-  }).then(rejectErr);
+  });
 }
 
+/**
+ * Still rejects with the failure, because data/extension-run.ts awaits a rejection. It returns the
+ * Result once the extension run's slice moves to Result.
+ */
 export async function requestResync(externalId: number, upload: ItemRefresh) {
-  return call(app.api.item({ id: externalId }).resync.post(upload), {
+  const sent = await call(app.api.item({ id: externalId }).resync.post(upload), {
     fallback: "Failed to request item refresh",
     policy: "legacy",
-  }).then(rejectErr);
+  });
+  if (sent.isErr()) throw sent.error;
+  return sent.value;
 }

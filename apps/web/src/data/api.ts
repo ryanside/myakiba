@@ -177,9 +177,3 @@ export async function call(
   });
   return answer.andThen((answered) => decode(answered, wording));
 }
-
-/** Throws a failed call's error, for a caller that still signals failure by rejecting. */
-export function rejectErr<Value, Failure>(result: Result<Value, Failure>): Value {
-  if (result.isErr()) throw result.error;
-  return result.value;
-}

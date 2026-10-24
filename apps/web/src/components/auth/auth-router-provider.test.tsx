@@ -1,4 +1,5 @@
 import { afterAll, afterEach, expect, mock, spyOn, test } from "bun:test";
+import { Result } from "better-result";
 import {
   act,
   cleanup,
@@ -182,7 +183,7 @@ const owner = rootedRead("dashboard", {
   load: async () => {
     ownerLoads++;
     if (!signedIn) throw new Error("Unauthorized");
-    return account.user.name;
+    return Result.ok(account.user.name);
   },
   staleTime: 5 * 60 * 1000,
 });

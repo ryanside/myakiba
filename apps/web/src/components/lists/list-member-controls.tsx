@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ReactNode } from "react";
@@ -8,7 +9,7 @@ import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/u
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
+type ListMembersPage = NonNullable<InferOk<Awaited<ReturnType<typeof getListMembers>>>>;
 type ListMember = ListMembersPage["items"][number];
 
 export function ListMemberControls({

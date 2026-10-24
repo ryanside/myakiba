@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
+import { answer } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -41,7 +42,7 @@ await mock.module("@/queries/sync", () => ({
   ...realSync,
   retrySyncSession: async (sessionId: string) => {
     retriedSessions.push(sessionId);
-    return { jobId: "job-2", missingMfcItemIds: [] };
+    return answer({ jobId: "job-2", missingMfcItemIds: [] });
   },
 }));
 

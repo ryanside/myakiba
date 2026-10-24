@@ -62,8 +62,12 @@ export function useListMutations({
     createList: (input: ListInput) => orThrow(createMutation.run(input)),
     updateList: (input: { readonly listId: string } & ListInput) =>
       orThrow(updateMutation.run(input)),
-    deleteList: (listId: string) => orThrow(deleteMutation.run([listId])),
-    deleteLists: (listIds: ReadonlySet<string>) => orThrow(deleteMutation.run([...listIds])),
+    deleteList: async (listId: string) => {
+      await orThrow(deleteMutation.run([listId]));
+    },
+    deleteLists: async (listIds: ReadonlySet<string>) => {
+      await orThrow(deleteMutation.run([...listIds]));
+    },
     isDeleting: deleteMutation.isPending,
   } as const;
 }

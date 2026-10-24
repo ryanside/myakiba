@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { failureOf } from "../../test/request-answers";
 import { exportDataTransfer } from "./data-transfer";
 import { requestResync } from "./item";
 import { retrySyncSession } from "./sync";
@@ -22,20 +23,24 @@ const calls = [
 describe.each(calls)("%s keeps the error text it had before F1", (_name, call) => {
   test("a 500 shows the server's text", async () => {
     answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
-    await expect(call()).rejects.toMatchObject({ message: "Failed to queue order creation" });
+    expect(await failureOf<unknown>(call())).toMatchObject({
+      message: "Failed to queue order creation",
+    });
   });
 
   test("a 422 shows the validator's message", async () => {
     answerWith(async () =>
       Response.json({ type: "validation", message: "Expected string" }, { status: 422 }),
     );
-    await expect(call()).rejects.toMatchObject({ message: "Expected string" });
+    expect(await failureOf<unknown>(call())).toMatchObject({ message: "Expected string" });
   });
 
   test("an unreachable server shows the fetch error's text", async () => {
     answerWith(async () => {
       throw new TypeError("Failed to fetch");
     });
-    await expect(call()).rejects.toMatchObject({ message: "TypeError: Failed to fetch" });
+    expect(await failureOf<unknown>(call())).toMatchObject({
+      message: "TypeError: Failed to fetch",
+    });
   });
 });

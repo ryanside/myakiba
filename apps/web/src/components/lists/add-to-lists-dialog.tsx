@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { ExternalLinkIcon } from "@hugeicons/core-free-icons";
@@ -47,7 +48,9 @@ import {
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
 
-type ListOptionsForTargets = NonNullable<Awaited<ReturnType<typeof getListOptionsForTargets>>>;
+type ListOptionsForTargets = NonNullable<
+  InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
+>;
 
 function CreateListForm({
   onCreated,

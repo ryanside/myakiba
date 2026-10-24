@@ -3,6 +3,7 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
+import { answer as answered } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -45,13 +46,13 @@ const listRow = (order: ServerOrder) => ({
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
-  (...args: never[]): Promise<void> =>
+  (...args: never[]) =>
     new Promise((resolve, reject) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
-          resolve();
+          resolve(answered(null));
         },
         fail: () => reject(new Error(`${name} rejected by server`)),
       });
@@ -76,16 +77,18 @@ await mock.module("@/queries/orders", () => ({
     const totals = { totalCount: matching.length, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
     // The 52f1b8fa replay runs this file from before S9, when the list was an array of rows that
     // each carried the totals, so the page is also that array.
-    return Object.assign(
-      matching.map((order) => ({ ...listRow(order), ...totals })),
-      { items: matching.map(listRow), ...totals },
+    return answered(
+      Object.assign(
+        matching.map((order) => ({ ...listRow(order), ...totals })),
+        { items: matching.map(listRow), ...totals },
+      ),
     );
   },
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },
-  getOrderItems: async () => ({ items: [], totalCount: 0 }),
-  getOrderItemReleases: async () => [],
+  getOrderItems: async () => answered({ items: [], totalCount: 0 }),
+  getOrderItemReleases: async () => answered([]),
   editOrder: held("edit order", editServerOrder),
   deleteOrders: held("delete orders", removeOrders),
   mergeOrders: held("merge", removeOrders),

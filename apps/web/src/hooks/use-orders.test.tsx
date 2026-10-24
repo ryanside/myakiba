@@ -3,37 +3,39 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import { answer } from "../../test/request-answers";
 
 type Write = { readonly name: string; finish: () => void; fail: () => void };
 const server = { inFlight: [] as Write[], finished: [] as string[] };
 
 const write =
   (name: string) =>
-  (..._args: unknown[]): Promise<void> =>
+  (..._args: unknown[]) =>
     new Promise((resolve, reject) => {
       server.inFlight.push({
         name,
         finish: () => {
           server.finished.push(name);
-          resolve();
+          resolve(answer(null));
         },
         fail: () => reject(new Error(`${name} rejected by server`)),
       });
     });
 
 await mock.module("@/queries/orders", () => ({
-  getOrders: async () => ({
-    items: [],
-    totalCount: 0,
-    totalSpent: 0,
-    activeOrders: 0,
-    unpaidCosts: 0,
-  }),
+  getOrders: async () =>
+    answer({
+      items: [],
+      totalCount: 0,
+      totalSpent: 0,
+      activeOrders: 0,
+      unpaidCosts: 0,
+    }),
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },
-  getOrderItems: async () => ({ items: [], totalCount: 0 }),
-  getOrderItemReleases: async () => [],
+  getOrderItems: async () => answer({ items: [], totalCount: 0 }),
+  getOrderItemReleases: async () => answer([]),
   mergeOrders: write("merge"),
   splitOrders: write("split"),
   editOrder: write("edit order"),

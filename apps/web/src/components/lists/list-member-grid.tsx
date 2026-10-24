@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { DragDropVerticalIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
@@ -18,7 +19,7 @@ import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 
-type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
+type ListMembersPage = NonNullable<InferOk<Awaited<ReturnType<typeof getListMembers>>>>;
 type ListMember = ListMembersPage["items"][number];
 
 const MEMBER_TYPE_LABELS = {

@@ -1,4 +1,6 @@
-import { call, rejectErr } from "@/data/api";
+import type { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 
 type DashboardClient = typeof app.api.dashboard;
@@ -15,25 +17,28 @@ export type ReleaseCalendarData = NonNullable<
 >;
 export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][number];
 
-export async function getDashboard(): Promise<DashboardResponse> {
-  return call(app.api.dashboard.get(), { fallback: "Failed to get dashboard" }).then(rejectErr);
+export function getDashboard(): Promise<Result<DashboardResponse, ApiFailure>> {
+  return call(app.api.dashboard.get(), { fallback: "Failed to get dashboard" });
 }
 
-export async function getMonthlyDashboard(month: number, year: number): Promise<MonthlyData> {
+export function getMonthlyDashboard(
+  month: number,
+  year: number,
+): Promise<Result<MonthlyData, ApiFailure>> {
   return call(
     app.api.dashboard["monthly"].get({
       query: { month, year },
     }),
     { fallback: "Failed to get monthly dashboard" },
-  ).then(rejectErr);
+  );
 }
 
-export async function getReleaseCalendar(
+export function getReleaseCalendar(
   month: number,
   year: number,
-): Promise<ReleaseCalendarData> {
+): Promise<Result<ReleaseCalendarData, ApiFailure>> {
   return call(app.api.dashboard["release-calendar"].get({ query: { month, year } }), {
     fallback: "Failed to get release calendar",
     invalid: "Invalid month or year",
-  }).then(rejectErr);
+  });
 }

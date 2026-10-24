@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
+import { answer } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -39,23 +40,23 @@ await mock.module("@/queries/sync", () => ({
   ...realSync,
   sendItemSync: async () => {
     sent.push("item");
-    return accepted;
+    return answer(accepted);
   },
   sendItems: async () => {
     sent.push("csv");
-    return accepted;
+    return answer(accepted);
   },
   sendOrder: async () => {
     sent.push("order");
-    return accepted;
+    return answer(accepted);
   },
   sendOrderItems: async () => {
     sent.push("order-item");
-    return accepted;
+    return answer(accepted);
   },
   sendCollection: async () => {
     sent.push("collection");
-    return accepted;
+    return answer(accepted);
   },
 }));
 

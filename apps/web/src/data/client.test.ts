@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
+import { Result } from "better-result";
 import { defineCommand, rootedRead } from "./client";
 import { orders } from "./resources/orders";
 import { wishlist } from "./resources/wishlist";
 
-const persist = async (itemId: string) => itemId;
+const persist = async (itemId: string) => Result.ok(itemId);
 const failureTitle = () => "Failed";
 const ITEMS_QUERY = { limit: 10, offset: 0, sort: "createdAt", order: "desc" } as const;
 
@@ -32,6 +33,9 @@ test("a write must name the cataloged families it refreshes", () => {
   // @ts-expect-error -- a live stream is never refreshed by a write.
   defineCommand({ invalidates: ["syncJobStatus"], persist, failureTitle });
 
+  // @ts-expect-error -- a write answers a Result, so its failure cannot be a bare rejection.
+  defineCommand({ invalidates: ["wishlist"], persist: async (itemId: string) => itemId });
+
   // @ts-expect-error -- the dated views need the day they were read on.
   wishlist.items.key({ releaseStatus: "upcoming" });
 
@@ -46,8 +50,12 @@ test("a rooted read keeps its family's hand-built key", () => {
     ITEMS_QUERY,
   ]);
 
-  const load = async () => null;
+  const load = async () => Result.ok(null);
   rootedRead("orders", { key: (orderId: string) => ["order", orderId] as const, load });
+
+  const bareLoad = async () => null;
+  // @ts-expect-error -- a read answers a Result, so its failure cannot be a bare rejection.
+  rootedRead("orders", { key: (orderId: string) => ["order", orderId] as const, load: bareLoad });
 
   // @ts-expect-error -- a read's key root is one of its family's cataloged roots, so sync refreshes it.
   rootedRead("collection", { key: (orderId: string) => ["order", orderId] as const, load });

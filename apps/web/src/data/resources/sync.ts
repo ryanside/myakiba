@@ -12,7 +12,10 @@ import {
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { app } from "@/lib/treaty-client";
-import { call, rejectErr } from "../api";
+import { panic } from "better-result";
+import type { Result } from "better-result";
+import type { ApiFailure } from "../api";
+import { call } from "../api";
 import {
   fetchSyncSessionDetail,
   fetchSyncSessions,
@@ -25,7 +28,7 @@ import {
 } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
 import { syncResultFamilies } from "../catalog";
-import { defineCommand, invalidateFamilies, rootedRead, streamedRead } from "../client";
+import { defineCommand, invalidateFamilies, rootedRead, settle, streamedRead } from "../client";
 
 type JobStatusChunk =
   Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
@@ -94,17 +97,20 @@ export const sync = {
   jobStatus: streamedRead("syncJobStatus", {
     key: ({ jobId }: JobWatch) => ["syncJobStatus", jobId] as const,
     open: async ({ jobId, onEnd }, { signal, client }) => {
-      if (jobId === null) throw new Error("jobId is null");
-      const stream = await call(
+      // The read is enabled only with a job, so a null job is a defect.
+      if (jobId === null) return panic("jobId is null");
+      const opened = await call(
         app.api.sync["job-status"].get({ query: { jobId }, fetch: { signal } }),
         {
           fallback: "Failed to connect to job status stream",
           empty: "No data received from job status stream",
           policy: "fixed",
         },
-      ).then(rejectErr);
+      );
 
-      async function* withFinishedCheck(): AsyncGenerator<JobStatusChunk> {
+      async function* withFinishedCheck(
+        stream: AsyncIterable<JobStatusChunk>,
+      ): AsyncGenerator<JobStatusChunk> {
         for await (const chunk of stream) {
           if (chunk.data.terminalState !== null) {
             await invalidateFamilies(client, syncResultFamilies);
@@ -114,7 +120,7 @@ export const sync = {
         }
       }
 
-      return withFinishedCheck();
+      return opened.map(withFinishedCheck);
     },
     initialValue: ({ jobId }): SyncJobStatus => {
       const now = new Date().toISOString();
@@ -154,12 +160,12 @@ type SubmitFeedback = {
  * every family a sync changes, and a queued one refetches the import history.
  */
 export function useSyncSubmit<Input>(
-  send: (input: Input) => Promise<SyncResponse>,
+  send: (input: Input) => Promise<Result<SyncResponse, ApiFailure>>,
   { onSaved, onFailed }: SubmitFeedback,
 ) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: send,
+    mutationFn: (input: Input) => settle(() => send(input)),
     onSuccess: (response) => {
       onSaved(response);
       if (response.isFinished) {

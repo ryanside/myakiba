@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { Delete02Icon, Edit03Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ListInput } from "@myakiba/contracts/lists/schema";
@@ -18,7 +19,7 @@ import {
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { cn } from "@/lib/utils";
 
-type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
+type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
 
 export function ListControls({

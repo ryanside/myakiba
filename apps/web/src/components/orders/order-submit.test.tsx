@@ -6,9 +6,19 @@ import type { ReactElement } from "react";
 import type { Order } from "@myakiba/contracts/orders/types";
 
 const realSearch = await import("@/queries/search");
+const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] };
+// Request functions answer a Result. The replay also runs this file against revisions from
+// before that, which have no data/api.ts and answered the value itself.
+const searchAnswer = await import("@/data/api").then(
+  async () => {
+    const { Result } = await import("better-result");
+    return Result.ok(targets);
+  },
+  () => targets,
+);
 await mock.module("@/queries/search", () => ({
   ...realSearch,
-  searchOrders: async () => ({ orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] }),
+  searchOrders: async () => searchAnswer,
 }));
 
 const { OrderForm } = await import("./order-form");

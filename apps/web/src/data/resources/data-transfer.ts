@@ -15,8 +15,11 @@ import {
   startDataTransferImport,
 } from "@/queries/data-transfer";
 import { syncResultFamilies } from "../catalog";
-import { call, rejectErr } from "../api";
-import { invalidateFamilies, rootedRead, streamedRead } from "../client";
+import { panic } from "better-result";
+import type { InferOk, Result } from "better-result";
+import { call } from "../api";
+import type { ApiFailure } from "../api";
+import { invalidateFamilies, rootedRead, settle, streamedRead } from "../client";
 
 type ImportStatusChunk =
   Treaty.Data<
@@ -39,7 +42,8 @@ export const dataTransfer = {
   importStatus: streamedRead("importStatus", {
     key: importStatusKey,
     open: async (importId, { signal, client }) => {
-      if (importId === null) throw new Error("No active import");
+      // The read is enabled only with an active import, so a null import is a defect.
+      if (importId === null) return panic("No active import");
 
       const opened = await call(
         app.api["data-transfer"].imports.current.status.get({ fetch: { signal } }),
@@ -49,15 +53,15 @@ export const dataTransfer = {
           policy: "legacy",
         },
       );
-      const data = rejectErr(
-        opened.mapError((failure) =>
-          ApiUnreachable.is(failure) || ApiServerError.is(failure)
-            ? new ImportStatusStreamDisconnected({ cause: failure, message: failure.message })
-            : failure,
-        ),
+      const disconnected = opened.mapError((failure) =>
+        ApiUnreachable.is(failure) || ApiServerError.is(failure)
+          ? new ImportStatusStreamDisconnected({ cause: failure, message: failure.message })
+          : failure,
       );
 
-      return (async function* (): AsyncGenerator<ImportStatusChunk> {
+      return disconnected.map(async function* (
+        data: AsyncIterable<ImportStatusChunk>,
+      ): AsyncGenerator<ImportStatusChunk> {
         try {
           for await (const chunk of data) {
             if (chunk.data.terminalState !== null) {
@@ -82,7 +86,7 @@ export const dataTransfer = {
             message: "Import status stream disconnected",
           });
         }
-      })();
+      });
     },
     initialValue: (): SyncJobStatus | null => null,
     reducer: (_previous, chunk) => chunk.data,
@@ -94,7 +98,7 @@ export const dataTransfer = {
 /** Builds an export for `onSaved` to download. Nothing caches it, so the write goes back to idle. */
 export function useExportData(onSaved: (archive: DataTransferArchiveV1) => void) {
   const mutation = useMutation({
-    mutationFn: exportDataTransfer,
+    mutationFn: () => settle(exportDataTransfer),
     onSuccess: (archive) => {
       onSaved(archive);
       mutation.reset();
@@ -105,13 +109,13 @@ export function useExportData(onSaved: (archive: DataTransferArchiveV1) => void)
 
 /** A write that shows the current import it returns at once and rereads it once it settles. */
 function useCurrentImportWrite<Output, Input = void>(
-  persist: (input: Input) => Promise<Output>,
+  persist: (input: Input) => Promise<Result<Output, ApiFailure>>,
   show: (queryClient: QueryClient, output: Output) => void,
   onSaved: (output: Output) => void,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: persist,
+    mutationFn: (input: Input) => settle(() => persist(input)),
     onSuccess: (output) => {
       onSaved(output);
       show(queryClient, output);
@@ -120,9 +124,9 @@ function useCurrentImportWrite<Output, Input = void>(
   });
 }
 
-type Started = Awaited<ReturnType<typeof startDataTransferImport>>;
-type Retried = Awaited<ReturnType<typeof retryCurrentDataTransferImport>>;
-type Deleted = Awaited<ReturnType<typeof deleteCurrentDataTransferImport>>;
+type Started = InferOk<Awaited<ReturnType<typeof startDataTransferImport>>>;
+type Retried = InferOk<Awaited<ReturnType<typeof retryCurrentDataTransferImport>>>;
+type Deleted = InferOk<Awaited<ReturnType<typeof deleteCurrentDataTransferImport>>>;
 
 export function useStartImport(onSaved: (started: Started) => void) {
   return useCurrentImportWrite(

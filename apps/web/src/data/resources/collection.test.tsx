@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { useEffect, useSyncExternalStore } from "react";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import { answer as answered } from "../../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -59,13 +60,13 @@ const listPage = (items: readonly ServerItem[]) => {
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
-  (...args: never[]): Promise<void> =>
+  (...args: never[]) =>
     new Promise((resolve, reject) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
-          resolve();
+          resolve(answered(null));
         },
         fail: () => reject(new Error(`${name} rejected by server`)),
       });
@@ -75,7 +76,9 @@ await mock.module("@/queries/collection", () => ({
   getCollection: async (filters: CollectionFilters) => {
     server.listReads++;
     await server.heldReads;
-    return listPage(server.items.filter((item) => item.itemTitle.includes(filters.search ?? "")));
+    return answered(
+      listPage(server.items.filter((item) => item.itemTitle.includes(filters.search ?? ""))),
+    );
   },
 
   deleteCollectionItems: held("delete", (ids: string[]) => {

@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { Add01Icon, DragDropVerticalIcon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
@@ -30,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 
-type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
+type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
 const VIEW_MODE_KEY = "lists:viewMode";
 export const Route = createFileRoute("/(app)/lists")({

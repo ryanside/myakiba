@@ -1,7 +1,10 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { hashKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
+import type { Result } from "better-result";
 import { toast } from "@/components/ui/toast";
+import type { ApiFailure } from "./api";
+import { settle } from "./client";
 
 const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
 
@@ -21,7 +24,7 @@ export function usePositionOrderMutation({
   failureTitle,
 }: {
   readonly queryKey: QueryKey;
-  readonly persist: (intent: PositionOrderInput) => Promise<void>;
+  readonly persist: (intent: PositionOrderInput) => Promise<Result<unknown, ApiFailure>>;
   readonly additionalInvalidations?: readonly {
     readonly queryKey: QueryKey;
     readonly exact?: boolean;
@@ -32,7 +35,9 @@ export function usePositionOrderMutation({
   const moveKey = hashKey(queryKey);
   const mutation = useMutation({
     mutationKey: queryKey,
-    mutationFn: persist,
+    mutationFn: async (intent: PositionOrderInput): Promise<void> => {
+      await settle(() => persist(intent));
+    },
     onMutate: async (intent) => {
       const pendingMoves = pendingMovesOf(queryClient);
       pendingMoves.set(moveKey, (pendingMoves.get(moveKey) ?? 0) + 1);
