@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ExtensionMissing } from "@/lib/errors/extension-missing";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 
-export type MissingExtension = Extract<ExtensionStatus, { kind: "absent" | "outdated" }>;
-
 export type MissingExtensionDialog = {
   readonly open: boolean;
-  readonly missing: MissingExtension;
+  readonly missing: ExtensionMissing;
 };
 
 let dialog: MissingExtensionDialog | null = null;
@@ -25,7 +24,11 @@ function subscribeDialog(listener: () => void): () => void {
 export async function requireExtension(): Promise<boolean> {
   const status = await extensionBridge.probe();
   if (status.kind === "ready") return true;
-  showDialog({ open: true, missing: status.kind === "outdated" ? status : { kind: "absent" } });
+  const missing =
+    status.kind === "outdated"
+      ? new ExtensionMissing({ kind: "outdated", version: status.extensionVersion })
+      : new ExtensionMissing({ kind: "absent", version: null });
+  showDialog({ open: true, missing });
   return false;
 }
 

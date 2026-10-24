@@ -15,6 +15,8 @@ import type {
   bridgeRequestSchema,
 } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
+import { ExtensionStopped } from "./errors/extension-stopped";
+import { MfcItemFetchFailed } from "./errors/mfc-item-fetch-failed";
 
 const HELLO_TIMEOUT_MS = 500;
 const HELLO_INTERVAL_MS = 100;
@@ -25,15 +27,14 @@ export type ExtensionStatus =
   | { readonly kind: "outdated"; readonly extensionVersion: string }
   | { readonly kind: "ready"; readonly extensionVersion: string };
 
-type FetchItemError = ItemFetchErrorCode | "unknown" | "extension_stopped";
+/** Why an item came back without its page. */
+export type ItemFetchFailure = MfcItemFetchFailed | ExtensionStopped;
 
 export type ExtensionFetchEvent =
   | {
       readonly type: "item";
       readonly mfcItemId: MfcItemId;
-      readonly result:
-        | { readonly ok: true; readonly html: string; readonly picture: Blob | null }
-        | { readonly ok: false; readonly error: FetchItemError };
+      readonly result: Result<ItemPage<Blob>, ItemFetchFailure>;
     }
   | {
       readonly type: "status";
@@ -209,25 +210,13 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
         if (event.type === "status") {
           yield { type: "status", state: event.state, untilMs: event.untilMs };
         } else if (event.type === "item" && unanswered.delete(event.mfcItemId)) {
-          const { result } = event;
-          if (result.isErr()) {
-            yield {
-              type: "item",
-              mfcItemId: event.mfcItemId,
-              result: { ok: false, error: result.error.code },
-            };
-            continue;
-          }
-          const { html, picture } = result.value;
-          yield {
-            type: "item",
-            mfcItemId: event.mfcItemId,
-            result: {
-              ok: true,
+          const result = event.result
+            .map(({ html, picture }) => ({
               html,
               picture: picture && new Blob([picture.bytes], { type: picture.contentType }),
-            },
-          };
+            }))
+            .mapError(({ code }) => new MfcItemFetchFailed({ code }));
+          yield { type: "item", mfcItemId: event.mfcItemId, result };
         }
       }
     } finally {
@@ -235,7 +224,7 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
       signal.removeEventListener("abort", onAbort);
     }
     for (const mfcItemId of unanswered) {
-      yield { type: "item", mfcItemId, result: { ok: false, error: "extension_stopped" } };
+      yield { type: "item", mfcItemId, result: Result.err(new ExtensionStopped()) };
     }
   }
 

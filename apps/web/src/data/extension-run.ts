@@ -1,8 +1,19 @@
 import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schema";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
+import { Result } from "better-result";
+import { ExtensionStopped } from "@/lib/errors/extension-stopped";
+import { InvalidMfcItemId } from "@/lib/errors/invalid-mfc-item-id";
+import type { MfcItemFetchFailed } from "@/lib/errors/mfc-item-fetch-failed";
+import { RunClosed } from "@/lib/errors/run-closed";
+import { RunRateLimited } from "@/lib/errors/run-rate-limited";
+import { RunUploadFailed } from "@/lib/errors/run-upload-failed";
 import { extensionBridge } from "@/lib/extension-bridge";
-import type { ExtensionBridge, ExtensionFetchEvent } from "@/lib/extension-bridge";
+import type {
+  ExtensionBridge,
+  ExtensionFetchEvent,
+  ItemFetchFailure,
+} from "@/lib/extension-bridge";
 import { setExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
 import { app } from "@/lib/treaty-client";
@@ -16,10 +27,8 @@ const MAX_RETRY_AFTER_MS = 60_000;
 // A page may have at most 64 KiB of keepalive request bodies in flight.
 const KEEPALIVE_BODY_BYTES = 64 * 1024;
 
-type ItemEvent = Extract<ExtensionFetchEvent, { readonly type: "item" }>;
 type StatusEvent = Extract<ExtensionFetchEvent, { readonly type: "status" }>;
-type FetchError = Extract<ItemEvent["result"], { readonly ok: false }>["error"];
-type ItemError = Exclude<FetchError, "extension_stopped">;
+type ItemError = MfcItemFetchFailed["code"];
 
 const ITEM_ERROR_MESSAGE = {
   mfc_signed_out: "Sign in to MyFigureCollection to import this item",
@@ -31,45 +40,43 @@ const ITEM_ERROR_MESSAGE = {
   unexpected_page: "MyFigureCollection showed an unexpected page",
   extension_stopped: "The extension stopped. Reload the page and try again",
   unknown: "The extension could not fetch this item",
-} as const satisfies Record<FetchError, string>;
+} as const satisfies Record<ItemError | "extension_stopped", string>;
 
-type Busy = { readonly kind: "busy"; readonly retryAfterMs: number | null };
-type Over = { readonly kind: "over" };
+type ServerFailure = RunUploadFailed | RunRateLimited | RunClosed;
 
-type ServerAnswer = { readonly kind: "ok" } | { readonly kind: "failed" } | Busy | Over;
+type ServerAnswer = Result<void, ServerFailure>;
 
 type EdenAnswer<Data> =
   | { readonly data: Data; readonly error: null; readonly response?: Response }
   | {
       readonly data: null;
-      readonly error: { readonly status: unknown };
+      readonly error: { readonly status: number };
       readonly response?: Response;
     };
 
-const OK: ServerAnswer = { kind: "ok" };
-const FAILED: ServerAnswer = { kind: "failed" };
-const OVER: Over = { kind: "over" };
-
-const RUN_CLOSED_STATUSES: ReadonlySet<unknown> = new Set([401, 403, 404]);
+const RUN_CLOSED_STATUSES: ReadonlySet<number> = new Set([401, 403, 404]);
 
 async function answerOf<Data>(
   sending: Promise<EdenAnswer<Data>>,
-  read: (data: Data) => ServerAnswer = () => OK,
+  read: (data: Data) => ServerAnswer = () => Result.ok(),
 ): Promise<ServerAnswer> {
   let answer: EdenAnswer<Data>;
   try {
     answer = await sending;
-  } catch {
+  } catch (error) {
     // Eden rejects when the connection drops after the headers, a request that failed like any other.
-    return FAILED;
+    return Result.err(new RunUploadFailed({ status: null, cause: error }));
   }
   if (answer.error === null) return read(answer.data);
   const { status } = answer.error;
-  if (RUN_CLOSED_STATUSES.has(status)) return OVER;
-  if (status !== 429) return FAILED;
+  if (RUN_CLOSED_STATUSES.has(status)) return Result.err(new RunClosed({ status }));
+  if (status !== 429) return Result.err(new RunUploadFailed({ status, cause: answer.error }));
   const seconds = Number(answer.response?.headers.get("retry-after") ?? Number.NaN);
-  return { kind: "busy", retryAfterMs: seconds >= 0 ? seconds * 1000 : null };
+  return Result.err(new RunRateLimited({ retryAfterMs: seconds >= 0 ? seconds * 1000 : null }));
 }
+
+const notSaved = () => Result.err(new RunUploadFailed({ status: null }));
+const ended = () => Result.err(new RunClosed({ status: null }));
 
 type ItemPage = { readonly mfcItemId: MfcItemId; readonly page: File; readonly picture?: File };
 
@@ -120,12 +127,14 @@ export function syncRun(run: {
     mfcItemIds: run.mfcItemIds,
     complete: (item) =>
       answerOf(session.items.post({ jobId, ...item }), (data) =>
-        data.outcome === "failed" ? FAILED : OK,
+        data.outcome === "failed" ? notSaved() : Result.ok(),
       ),
     report: (failures, { keepalive }) =>
       answerOf(session.failures.post(failureBody(jobId, failures), { fetch: { keepalive } })),
     heartbeat: () =>
-      answerOf(session.heartbeat.post(runBody(jobId)), (data) => (data.active ? OK : OVER)),
+      answerOf(session.heartbeat.post(runBody(jobId)), (data) =>
+        data.active ? Result.ok() : ended(),
+      ),
     interrupt: ({ keepalive }) =>
       answerOf(session.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
   };
@@ -145,7 +154,9 @@ export function importRun(run: {
     report: (failures, { keepalive }) =>
       answerOf(current.items.failure.post(failureBody(jobId, failures), { fetch: { keepalive } })),
     heartbeat: () =>
-      answerOf(current.heartbeat.post(runBody(jobId)), (data) => (data.running ? OK : OVER)),
+      answerOf(current.heartbeat.post(runBody(jobId)), (data) =>
+        data.running ? Result.ok() : ended(),
+      ),
     interrupt: ({ keepalive }) =>
       answerOf(current.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
   };
@@ -164,9 +175,10 @@ function promptFor(event: StatusEvent): ExtensionPrompt | null {
   }
 }
 
-type FetchedPage =
-  | { readonly mfcItemId: MfcItemId; readonly ok: true; readonly page: ItemPage }
-  | { readonly mfcItemId: MfcItemId; readonly ok: false; readonly error: FetchError };
+type FetchedPage = {
+  readonly mfcItemId: MfcItemId;
+  readonly page: Result<ItemPage, ItemFetchFailure>;
+};
 
 type PromptTarget = { readonly runId: string; readonly sessionId: string | null };
 
@@ -199,9 +211,7 @@ async function* fetchPagesShowingPrompts(
       }
       show(null);
       const { mfcItemId: id, result } = event;
-      yield result.ok
-        ? { mfcItemId: id, ok: true, page: itemPage(id, result.html, result.picture) }
-        : { mfcItemId: id, ok: false, error: result.error };
+      yield { mfcItemId: id, page: result.map(({ html, picture }) => itemPage(id, html, picture)) };
     }
   } finally {
     show(null);
@@ -227,10 +237,11 @@ async function completeOnce(
   signal: AbortSignal,
 ): Promise<ServerAnswer> {
   const answer = await run.complete(item);
-  if (answer.kind !== "busy" || answer.retryAfterMs === null) return answer;
-  if (answer.retryAfterMs > MAX_RETRY_AFTER_MS) return answer;
-  await waitUnlessAborted(answer.retryAfterMs, signal);
-  return signal.aborted ? FAILED : run.complete(item);
+  if (answer.isOk() || !RunRateLimited.is(answer.error)) return answer;
+  const { retryAfterMs } = answer.error;
+  if (retryAfterMs === null || retryAfterMs > MAX_RETRY_AFTER_MS) return answer;
+  await waitUnlessAborted(retryAfterMs, signal);
+  return signal.aborted ? Result.err(new RunUploadFailed({ status: null })) : run.complete(item);
 }
 
 function uploadSlots(size: number) {
@@ -288,7 +299,10 @@ export type RunOutcome =
 
 const ENDED: RunOutcome = { kind: "ended" };
 
-type Stop = Busy | Over | { readonly kind: "left" };
+type Stop =
+  | { readonly kind: "busy"; readonly retryAfterMs: number | null }
+  | { readonly kind: "over" }
+  | { readonly kind: "left" };
 
 const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
 
@@ -317,13 +331,17 @@ export function createExtensionRunner(deps: RunnerDeps) {
       tally.stop ??= stop;
       controller.abort();
     };
-    const refused = (answer: ServerAnswer, items: number) => {
+    const refused = (failure: ServerFailure, items: number) => {
       tally.unanswered += items;
-      if (answer.kind === "busy" || answer.kind === "over") halt(answer);
+      failure.match({
+        RunRateLimited: ({ retryAfterMs }) => halt({ kind: "busy", retryAfterMs }),
+        RunClosed: () => halt({ kind: "over" }),
+        RunUploadFailed: () => {},
+      });
     };
     const renew = async () => {
       const answer = await run.heartbeat();
-      if (answer.kind === "over") halt(answer);
+      if (answer.isErr() && RunClosed.is(answer.error)) halt({ kind: "over" });
     };
     const heartbeat = setInterval(() => {
       void renew();
@@ -332,7 +350,7 @@ export function createExtensionRunner(deps: RunnerDeps) {
     const reports: Promise<void>[] = [];
     const report = async (batch: readonly ItemFailure[]) => {
       const answer = await run.report(batch, { keepalive: false });
-      if (answer.kind !== "ok") refused(answer, batch.length);
+      if (answer.isErr()) refused(answer.error, batch.length);
     };
     let failures: ItemFailure[] = [];
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
@@ -378,8 +396,8 @@ export function createExtensionRunner(deps: RunnerDeps) {
     const upload = async (item: ItemPage) => {
       try {
         const answer = await completeOnce(run, item, controller.signal);
-        if (answer.kind === "ok") tally.imported += 1;
-        else refused(answer, 1);
+        if (answer.isOk()) tally.imported += 1;
+        else refused(answer.error, 1);
       } finally {
         tabUploadSlots.give();
       }
@@ -387,12 +405,21 @@ export function createExtensionRunner(deps: RunnerDeps) {
 
     const target = { runId: run.jobId, sessionId: run.sessionId };
     try {
-      for await (const fetched of fetchPagesShowingPrompts(deps, target, ids, controller.signal)) {
-        if (!fetched.ok) {
-          if (fetched.error === "extension_stopped") tally.unanswered += 1;
-          else fail({ mfcItemId: fetched.mfcItemId, error: fetched.error });
+      for await (const { mfcItemId: id, page: fetched } of fetchPagesShowingPrompts(
+        deps,
+        target,
+        ids,
+        controller.signal,
+      )) {
+        if (fetched.isErr()) {
+          fetched.error.match({
+            ExtensionStopped: () => {
+              tally.unanswered += 1;
+            },
+            MfcItemFetchFailed: ({ code }) => fail({ mfcItemId: id, error: code }),
+          });
         } else if (await takeSlotUnlessStopped()) {
-          uploads.push(upload(fetched.page));
+          uploads.push(upload(fetched.value));
         } else {
           tally.unanswered += 1;
         }
@@ -435,12 +462,22 @@ export function importDataTransferItems(run: Parameters<typeof importRun>[0]): P
   return runWithExtension(importRun(run));
 }
 
-export async function refreshItemWithExtension(externalId: number) {
+type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;
+
+function refreshFailureText(failure: RefreshFailure): string {
+  return failure.match({
+    InvalidMfcItemId: () => "Item not found",
+    ExtensionStopped: () => ITEM_ERROR_MESSAGE.extension_stopped,
+    MfcItemFetchFailed: ({ code }) => ITEM_ERROR_MESSAGE[code],
+  });
+}
+
+async function fetchForRefresh(externalId: number): Promise<Result<ItemPage, RefreshFailure>> {
   const id = mfcItemId(externalId);
-  if (id === null) throw new Error("Item not found");
-  let fetched: FetchedPage | undefined;
+  if (id === null) return Result.err(new InvalidMfcItemId({ externalId }));
+  let fetched: Result<ItemPage, ItemFetchFailure> = Result.err(new ExtensionStopped());
   const target = { runId: `resync:${id}`, sessionId: null };
-  for await (const page of fetchPagesShowingPrompts(
+  for await (const { page } of fetchPagesShowingPrompts(
     fetchDeps,
     target,
     [id],
@@ -448,9 +485,14 @@ export async function refreshItemWithExtension(externalId: number) {
   )) {
     fetched = page;
   }
-  if (fetched === undefined) throw new Error(ITEM_ERROR_MESSAGE.extension_stopped);
-  if (!fetched.ok) throw new Error(ITEM_ERROR_MESSAGE[fetched.error]);
-  const { page, picture } = fetched.page;
+  return fetched;
+}
+
+export async function refreshItemWithExtension(externalId: number) {
+  const fetched = await fetchForRefresh(externalId);
+  // The seam with useResourceMutation, which reads a failed refresh from the message it throws.
+  if (fetched.isErr()) throw new Error(refreshFailureText(fetched.error));
+  const { page, picture } = fetched.value;
   await tabUploadSlots.take();
   try {
     return await requestResync(externalId, picture ? { page, picture } : { page });

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
 import { dismissMissingExtension, useMissingExtensionDialog } from "@/lib/extension-gate";
-import type { MissingExtension } from "@/lib/extension-gate";
+import type { ExtensionMissing } from "@/lib/errors/extension-missing";
 
 const COPY = {
   absent: {
@@ -26,7 +26,7 @@ const COPY = {
       "This version of the extension is too old for myakiba. Update it, reload this page, then try again.",
     link: "How to update it",
   },
-} as const satisfies Record<MissingExtension["kind"], Record<string, string>>;
+} as const satisfies Record<ExtensionMissing["kind"], Record<string, string>>;
 
 export function ExtensionRequiredDialog() {
   const dialog = useMissingExtensionDialog();

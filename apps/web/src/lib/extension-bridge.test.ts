@@ -20,9 +20,17 @@ async function collect(
 }
 
 const outcomes = (events: readonly ExtensionFetchEvent[]) =>
-  events.flatMap((event): [number, string][] =>
-    event.type === "item" ? [[event.mfcItemId, event.result.ok ? "ok" : event.result.error]] : [],
-  );
+  events.flatMap((event): [number, string][] => {
+    if (event.type !== "item") return [];
+    const { result } = event;
+    const outcome = result.isOk()
+      ? "ok"
+      : result.error.match({
+          MfcItemFetchFailed: ({ code }) => code,
+          ExtensionStopped: () => "extension_stopped",
+        });
+    return [[event.mfcItemId, outcome]];
+  });
 
 describe("probe", () => {
   test("an extension that answers hello is ready", async () => {
@@ -185,12 +193,13 @@ describe("fetchItems", () => {
       [2, "mfc_signed_out"],
     ]);
     const first = events[1];
-    if (first?.type !== "item" || !first.result.ok || !first.result.picture) {
+    if (first?.type !== "item" || !first.result.isOk() || !first.result.value.picture) {
       throw new Error("expected item 1 to arrive with its picture");
     }
-    expect(first.result.html).toBe("<p>1</p>");
-    expect(first.result.picture.type).toBe("image/jpeg");
-    expect(new Uint8Array(await first.result.picture.arrayBuffer())).toEqual(
+    const { html, picture } = first.result.value;
+    expect(html).toBe("<p>1</p>");
+    expect(picture.type).toBe("image/jpeg");
+    expect(new Uint8Array(await picture.arrayBuffer())).toEqual(
       new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
     );
   });
