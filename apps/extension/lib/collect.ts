@@ -1,5 +1,5 @@
 import { mfcItemIdSchema, portPictureSchema } from "@myakiba/mfc/bridge";
-import { Result, ResultDeserializationError } from "better-result";
+import { Result, ResultDeserializationError, panic } from "better-result";
 import type { ResultCodec, StandardSchemaOutput, StandardSchemaV1 } from "better-result";
 import * as z from "zod";
 import type { AttemptAbandoned } from "./errors/attempt-abandoned";
@@ -132,6 +132,25 @@ export const pictureAnswerCodec = Result.codec({
   deserialize: { ok: portPictureSchema.nullable(), err: pictureFailureWireSchema },
 });
 
+const collectorDefectSchema = z.strictObject({
+  defect: z.strictObject({ name: z.string(), message: z.string(), stack: z.string().nullable() }),
+});
+
+/**
+ * What the collector answers for a defect in the tab, in place of a Result. A Panic cannot cross to the background, so
+ * it crosses as this, and `readAnswer` panics with it there.
+ */
+export type CollectorDefect = z.output<typeof collectorDefectSchema>;
+
+export function reportDefect(cause: unknown): CollectorDefect {
+  return {
+    defect:
+      cause instanceof Error
+        ? { name: cause.name, message: cause.message, stack: cause.stack ?? null }
+        : { name: "thrown value", message: String(cause), stack: null },
+  };
+}
+
 /** How the collector fails to answer any request. An aborted run answers AttemptAbandoned rather than throw. */
 export type CollectorFailure = CollectorInjectionFailed | CollectorAnswerInvalid | AttemptAbandoned;
 
@@ -146,13 +165,24 @@ export type AnswerCodec<Ok extends StandardSchemaV1, Fails extends StandardSchem
 /** What the browser reports for the collector's run in one frame. */
 type CollectorInjection = { readonly result?: unknown };
 
-/** A script that failed in the tab answers undefined, which no codec accepts, so it reads as an invalid answer. */
+/**
+ * A script that failed in the tab answers undefined, which no codec accepts, so it reads as an invalid answer. A defect
+ * the collector reported panics here, so it reaches the item's supervisor as a defect.
+ */
 export async function readAnswer<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1>(
   codec: AnswerCodec<Ok, Fails>,
   injection: CollectorInjection | undefined,
   tabId: number,
   kind: CollectRequest["kind"],
 ): Promise<Result<StandardSchemaOutput<Ok>, StandardSchemaOutput<Fails> | CollectorAnswerInvalid>> {
+  const reported = collectorDefectSchema.safeParse(injection?.result);
+  if (reported.success) {
+    const { name, message, stack } = reported.data.defect;
+    const cause = new Error(message);
+    cause.name = name;
+    if (stack !== null) cause.stack = stack;
+    panic(`The collector's ${kind} run in tab ${tabId} hit a defect: ${name}: ${message}`, cause);
+  }
   const decoded = await codec.deserialize(injection?.result);
   return decoded.mapError((failure) =>
     ResultDeserializationError.is(failure)

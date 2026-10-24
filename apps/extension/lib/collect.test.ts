@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { Result } from "better-result";
+import { Panic, Result } from "better-result";
 import { itemId } from "../test/fake-browser";
 import {
   armCollector,
   pageAnswerCodec,
   pictureAnswerCodec,
   readAnswer,
+  reportDefect,
   runArmed,
   stopCollector,
 } from "./collect";
@@ -104,6 +105,18 @@ describe("the collector's answer", () => {
     expect(read.isErr() && CollectorAnswerInvalid.is(read.error) && read.error).toMatchObject({
       tabId: TAB_ID,
       kind: "page",
+    });
+  });
+
+  test("a defect the collector reported panics with its name, message and stack", async () => {
+    const answer = reportDefect(new TypeError("toBase64 is not a function"));
+    const read = readAnswer(pictureAnswerCodec, injected(answer), TAB_ID, "gated-picture");
+
+    await expect(read).rejects.toBeInstanceOf(Panic);
+    await expect(read).rejects.toMatchObject({
+      message:
+        "The collector's gated-picture run in tab 7 hit a defect: TypeError: toBase64 is not a function",
+      stack: expect.stringContaining("Caused by: TypeError: toBase64 is not a function"),
     });
   });
 

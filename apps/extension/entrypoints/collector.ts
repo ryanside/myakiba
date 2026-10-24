@@ -1,13 +1,14 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
 import { scrubMfcPage } from "@myakiba/mfc/capture";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { Result } from "better-result";
+import { Panic, Result } from "better-result";
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
 import {
   NO_STATUS,
   PAGE_TIMEOUT_MS,
   pageAnswerCodec,
   pictureAnswerCodec,
+  reportDefect,
   runArmed,
 } from "../lib/collect";
 import type { CollectedPage, PictureFailure } from "../lib/collect";
@@ -70,6 +71,7 @@ async function fetchPicture(
         }),
       ),
     catch: (cause) => {
+      if (Panic.is(cause)) throw cause;
       const summary = summarize(cause);
       return summary.name === "TimeoutError"
         ? new PictureTimedOut({ timeoutMs: PICTURE_TIMEOUT_MS })
@@ -79,20 +81,27 @@ async function fetchPicture(
   return Result.flatten(read);
 }
 
+/** A picture is optional, but a defect while reading one is not, so it crosses to the background as a defect. */
+async function answerPicture(url: URL | null, cache: RequestCache, signal: AbortSignal) {
+  try {
+    return pictureAnswerCodec.serializeUnsafe(await fetchPicture(url, cache, signal));
+  } catch (error) {
+    return reportDefect(error);
+  }
+}
+
 export default defineUnlistedScript(async () =>
   runArmed(async (request, signal) => {
     if (request.kind === "gated-picture") {
-      const picture = await fetchPicture(toConfiguredUrl(request.url, ORIGINS), "default", signal);
-      return pictureAnswerCodec.serializeUnsafe(picture);
+      return answerPicture(toConfiguredUrl(request.url, ORIGINS), "default", signal);
     }
     if (request.kind === "public-picture") {
       // The tab just loaded the picture, so the browser's copy saves the CDN a second request.
-      const picture = await fetchPicture(
+      return answerPicture(
         pictureToRead(request.url, location.href, ORIGINS),
         "force-cache",
         signal,
       );
-      return pictureAnswerCodec.serializeUnsafe(picture);
     }
     const page =
       request.mode === "document"

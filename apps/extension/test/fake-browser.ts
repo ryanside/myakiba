@@ -1,7 +1,7 @@
 import type { ItemFailure, ItemPage, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { Err, Result } from "better-result";
+import { Err, Panic, Result } from "better-result";
 import type { Clock, SessionValue } from "../lib/clock";
 import type {
   CollectedPage,
@@ -497,7 +497,8 @@ function mortalValue<T>(value: SessionValue<T>, wrap: ReturnType<typeof mortal>)
 
 /**
  * What the collector's read answers for a picture: the picture, none, or how the read failed. A rejection is a fetch that
- * failed in the tab, which the collector answers as PictureFetchFailed.
+ * failed in the tab, which the collector answers as PictureFetchFailed, unless it is a Panic, which reaches the item as
+ * the defect it is.
  */
 export type PictureAnswer =
   | PortPicture
@@ -579,6 +580,7 @@ export function fakeExtension(options: {
       const picture = await Promise.race([answer(), stopped.promise, tabs.closed(read.tabId)]);
       return picture instanceof Err ? picture : Result.ok(picture);
     } catch (error) {
+      if (Panic.is(error)) throw error;
       return Result.err(new PictureFetchFailed({ cause: summarize(error) }));
     } finally {
       read.endedAt = clock.now();

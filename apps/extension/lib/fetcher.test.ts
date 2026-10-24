@@ -2018,6 +2018,45 @@ describe("a picture read that fails", () => {
   );
 });
 
+describe("a picture read that hits a defect in the tab", () => {
+  let error: Mock<typeof console.error>;
+
+  beforeEach(() => {
+    error = spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    error.mockRestore();
+  });
+
+  const defect = () =>
+    Promise.reject(
+      new Panic({ message: "andThen callback threw", cause: new TypeError("not a function") }),
+    );
+
+  test.each([
+    ["gated", { gatedPicture: defect }],
+    ["public", { publicPicture: defect }],
+  ] as const)(
+    "fails a %s picture's item as unexpected_page, reports the Panic, and the queue moves on",
+    async (access, readPicture) => {
+      const extension = fakeExtension({
+        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, mfcItemId === 1 ? access : null)),
+        ...readPicture,
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results()).toEqual([
+        { ok: false, error: "unexpected_page" },
+        { ok: true, html: itemPage(2), picture: null },
+      ]);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(Panic.is(error.mock.calls[0]?.[1])).toBe(true);
+    },
+  );
+});
+
 describe("a collector run that the turn stopped", () => {
   test("answers its abandoned run as the turn's timeout and keeps its own tab", async () => {
     const extension = fakeExtension({
