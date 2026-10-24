@@ -3,7 +3,10 @@ import { item, item_release, wishlistItem } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
-import { command, fail, ok, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { command, query } from "@/domain/kernel";
+import { ItemNotFound } from "@/routers/item/errors/item-not-found";
+import { WishlistItemNotFound } from "./errors/wishlist-item-not-found";
 import type { WishlistPageQuery } from "./model";
 
 function lockWishlist(tx: Tx, userId: string) {
@@ -67,7 +70,7 @@ export const Wishlist = {
       const totalCount = countRows[0]?.totalCount ?? 0;
 
       scope.log.set({ result: { count: rows.length, totalCount } });
-      return ok({
+      return Result.ok({
         items: rows.map((row) => ({
           id: row.id,
           itemId: row.itemId,
@@ -107,7 +110,7 @@ export const Wishlist = {
         .for("update");
 
       const plan = planPositionOrderMove(currentItems, movedIds, anchorId, placement);
-      if (plan.kind === "not_found") return fail("not_found", "Wishlist Item not found");
+      if (plan.kind === "not_found") return Result.err(new WishlistItemNotFound());
 
       for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
         const updates = plan.updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
@@ -131,7 +134,7 @@ export const Wishlist = {
           );
       }
 
-      return ok("Wishlist order saved");
+      return Result.ok("Wishlist order saved" as const);
     },
   ),
 
@@ -149,7 +152,7 @@ export const Wishlist = {
           .from(wishlistItem)
           .where(eq(wishlistItem.userId, userId)),
       ]);
-      if (itemRows.length === 0) return fail("not_found", "Item not found");
+      if (itemRows.length === 0) return Result.err(new ItemNotFound());
 
       const added = await scope.tx
         .insert(wishlistItem)
@@ -158,7 +161,7 @@ export const Wishlist = {
         .returning({ id: wishlistItem.id });
 
       scope.log.set({ addedCount: added.length });
-      return ok({ addedCount: added.length });
+      return Result.ok({ addedCount: added.length });
     },
   ),
 
@@ -174,7 +177,7 @@ export const Wishlist = {
         .returning({ id: wishlistItem.id });
 
       scope.log.set({ removedCount: removed.length });
-      return ok({ removedCount: removed.length });
+      return Result.ok({ removedCount: removed.length });
     },
   ),
 };
