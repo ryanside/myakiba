@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { SQL } from "bun";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
@@ -21,11 +22,11 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
-const logged: DrainContext["event"][] = [];
+let cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
 initLogger({
   silent: true,
   drain: ({ event }) => {
-    logged.push(event);
+    if ("cooldown" in event) cooldownLogged.resolve(event);
   },
 });
 
@@ -101,10 +102,19 @@ await mock.module("@/lib/item-images", () => ({
 const db = await createTestDatabase();
 
 async function dropOpenTransaction() {
-  const dropped = await db.execute<{ pid: number }>(
-    "SELECT pid FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid() AND state = 'idle in transaction' AND pg_terminate_backend(pid)",
-  );
-  if (dropped.length !== 1) throw new Error(`dropped ${dropped.length} transactions`);
+  const monitor = new SQL({ url: process.env.DATABASE_URL });
+  try {
+    const transactions = await monitor<{ pid: number }[]>`
+      SELECT pid FROM pg_stat_activity
+      WHERE datname = current_database() AND state = 'idle in transaction'
+    `;
+    const [transaction] = transactions;
+    if (transactions.length !== 1 || !transaction)
+      throw new Error(`found ${transactions.length} transactions`);
+    await monitor`SELECT pg_terminate_backend(${transaction.pid})`;
+  } finally {
+    await monitor.close();
+  }
 }
 
 // Bun's pool can hand out the dropped connection once more before it notices the close.
@@ -217,7 +227,7 @@ beforeEach(async () => {
   store = memoryStore();
   redisKeys.clear();
   rateLimited.length = 0;
-  logged.length = 0;
+  cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
   resyncsThisHour = 1;
   redisLost = false;
   loseRedis = null;
@@ -560,7 +570,7 @@ describe("best-effort cooldown failures", () => {
     });
     const { item: row } = await itemRows();
     expect(row?.title).toBe(RETITLED);
-    expect(logged).toContainEqual(
+    expect(await cooldownLogged.promise).toMatchObject(
       expect.objectContaining({
         error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
       }),
@@ -575,9 +585,9 @@ describe("best-effort cooldown failures", () => {
     await upload(page98777);
     expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
     redisLost = true;
-    logged.length = 0;
+    cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
     expect(await resyncStatus()).toEqual(IDLE);
-    expect(logged).toContainEqual(
+    expect(await cooldownLogged.promise).toMatchObject(
       expect.objectContaining({
         error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
       }),

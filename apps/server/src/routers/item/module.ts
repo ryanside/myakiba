@@ -17,6 +17,7 @@ import { redis } from "@myakiba/redis/client";
 import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
 import type { ResyncCooldownUnavailable } from "@myakiba/redis/errors/resync-cooldown-unavailable";
+import type { RequestLogger } from "evlog";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { EntryCategoryMismatch } from "./errors/entry-category-mismatch";
@@ -70,10 +71,17 @@ async function currentTransactionId(tx: Tx): Promise<string> {
   return row.id;
 }
 
-async function resyncState(tx: ReadTx, itemId: string): Promise<ItemResyncState> {
+async function resyncState(
+  tx: ReadTx,
+  itemId: string,
+  log: RequestLogger,
+): Promise<ItemResyncState> {
   const held = await cooldownHeldUntil(tx, itemId);
-  // A query has no recover, so an unanswered cooldown read is the driver failure it always was.
-  if (held.isErr()) throw held.error.cause;
+  if (held.isErr()) {
+    log.set({ cooldown: { itemId, operation: "read", outcome: "unavailable" } });
+    log.error(held.error);
+    return { status: "idle", cooldownExpiresAt: null };
+  }
   if (held.value) return { status: "cooldown", cooldownExpiresAt: held.value };
   return { status: "idle", cooldownExpiresAt: null };
 }
@@ -514,7 +522,7 @@ export const Items = {
       scope.log.set({ item: { externalId: input.id } });
       const found = await findResyncItem(scope.tx, input.id);
       if (!found) return Result.err(new ItemNotFound());
-      const state = await resyncState(scope.tx, found.itemId);
+      const state = await resyncState(scope.tx, found.itemId, scope.log);
       scope.log.set({ resyncStatus: state.status });
       return Result.ok(state);
     },
@@ -563,6 +571,15 @@ export const Items = {
         },
       });
       const cooldown = await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx));
+      if (cooldown.isErr()) {
+        scope.log.set({ cooldown: { itemId, operation: "write", outcome: "unavailable" } });
+        scope.log.error(cooldown.error);
+        return Result.ok({
+          status: "idle",
+          cooldownExpiresAt: null,
+          saved: outcome === "unchanged" ? "unchanged" : "refreshed",
+        } satisfies ResyncResult);
+      }
       return cooldown.map((cooldownExpiresAt): ResyncResult => ({
         status: "cooldown",
         cooldownExpiresAt,
@@ -570,8 +587,7 @@ export const Items = {
       }));
     },
     {
-      // Neither Redis nor S3 has a fallback yet, so each answers the logged 500 with the error
-      // it raised, after the rollback has dropped the refresh.
+      // Cooldown reads that guard a refresh and picture storage still fail closed.
       recover: async (_scope, _input, error) => {
         throw error.match({
           ResyncCooldownUnavailable: (unavailable) => unavailable.cause,
