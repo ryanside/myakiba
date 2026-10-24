@@ -1303,6 +1303,55 @@ describe("the MFC tab", () => {
     expect(extension.calls[0]?.tab?.windowId).toBe(OTHER_WINDOW);
   });
 
+  test("an MFC tab the user closes while it loads fails its item at once, and the next item opens a fresh tab", async () => {
+    let navigations = 0;
+    const extension = fakeExtension({
+      pages: itemPages(),
+      navigationMs: () => (navigations++ === 0 ? 5000 : 0),
+    });
+    const startedAt = extension.clock.now();
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+    await advance(extension.clock, 1000);
+    await extension.tabs.api.remove(101);
+    await extension.clock.runUntil(() => run.results().length === 1);
+    expect(extension.clock.now() - startedAt).toBeLessThan(SHORT_SETTLE_MS);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.calls.map((call) => [call.mfcItemId, call.tabId])).toEqual([[itemId(2), 102]]);
+    expect(extension.tabs.has(102)).toBe(false);
+  });
+
+  test("an item whose run's tab has closed fails without opening an MFC tab", async () => {
+    const extension = fakeExtension({ pages: itemPages() });
+    const gone = extension.tabs.open(`${ORIGINS.web}/sync`);
+    await extension.tabs.api.remove(gone);
+    const run = extension.run([1], { tabId: gone, context: NORMAL });
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(extension.tabs.log).toEqual([`remove ${gone}`]);
+  });
+
+  test("an item whose run's tab reports no window fails, and the queue moves on", async () => {
+    const extension = fakeExtension({ pages: itemPages() });
+    const windowless = extension.tabs.open(`${ORIGINS.web}/sync`);
+    extension.tabs.hideWindow(windowless);
+    const broken = extension.run([1], { tabId: windowless, context: NORMAL });
+    const next = extension.run([2]);
+    await extension.clock.runUntil(() => broken.done() && next.done());
+    await extension.settle();
+
+    expect(broken.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(next.results()).toEqual([{ ok: true, html: itemPage(2), picture: null }]);
+  });
+
   test("never borrows or opens an MFC tab outside an incognito requester's window", async () => {
     const extension = fakeExtension({ pages: itemPages() });
     const normal = extension.tabs.open(`${ORIGINS.mfc}/`);

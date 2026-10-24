@@ -222,6 +222,7 @@ function fakeTabs(
   const tabs = new Map<number, FakeTab>();
   const removed = new Map<number, PromiseWithResolvers<null>>();
   const dragged = new Set<number>();
+  const windowless = new Set<number>();
   const log: string[] = [];
   const loads: Load[] = [];
   const focused: number[] = [];
@@ -236,9 +237,10 @@ function fakeTabs(
 
   function seen(tab: FakeTab): Tab {
     const { id, windowId, active, incognito, cookieStoreId } = tab;
-    return cookieStoreId === undefined
-      ? { id, windowId, active, incognito }
-      : { id, windowId, active, incognito, cookieStoreId };
+    const shown: Tab = windowless.has(id)
+      ? { id, active, incognito }
+      : { id, windowId, active, incognito };
+    return cookieStoreId === undefined ? shown : { ...shown, cookieStoreId };
   }
 
   function view(tab: FakeTab): Tab {
@@ -396,6 +398,10 @@ function fakeTabs(
       if (tab) load(tab, change.url ?? tab.url, change.loadMs ?? 0, change.title, true);
     },
     activate,
+    /** The browser answers the tab without its window, which it never does for a normal tab. */
+    hideWindow(tabId: number): void {
+      windowless.add(tabId);
+    },
     /** While the user drags a tab, Chrome refuses to close or focus any tab. */
     drag(tabId: number, dragging: boolean): void {
       if (dragging) dragged.add(tabId);
