@@ -14,9 +14,10 @@ import {
   memoryValue,
   notFoundPage,
   page,
+  pageFetchFailed,
   tooClose,
 } from "../test/fake-browser";
-import type { FakeClock, FakeExtension } from "../test/fake-browser";
+import type { FakeClock, FakeExtension, PageAnswer } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
@@ -1652,5 +1653,88 @@ describe("an attempt that breaks", () => {
       { ok: true, html: itemPage(8), picture: null },
     ]);
     expect(asked(run.events, "needs_user")).toBe(false);
+  });
+});
+
+const COLLECTOR_FAILURES: readonly (readonly [
+  string,
+  (request: PageRequest, tabId: number) => PageAnswer,
+])[] = [
+  ["the browser will not inject it", (_request, tabId) => injectionFailed(tabId, ERROR_PAGE)],
+  ["its answer is invalid", (_request, tabId) => answerInvalid(tabId)],
+  [
+    "its fetch fails in the tab",
+    (request) => pageFetchFailed(request.mfcItemId, "TypeError", "Failed to fetch"),
+  ],
+  [
+    "it throws a defect",
+    () => {
+      throw new TypeError("page.html is not a function");
+    },
+  ],
+];
+
+describe("a collector run that fails", () => {
+  test.each(COLLECTOR_FAILURES)(
+    "because %s fails the item in its own tab as unexpected_page and closes that tab",
+    async (_name, failure) => {
+      const extension = fakeExtension({
+        pages: (request, _signal, tabId) =>
+          request.mfcItemId === 1 ? failure(request, tabId) : page(itemPage(request.mfcItemId)),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results()).toEqual([
+        { ok: false, error: "unexpected_page" },
+        { ok: true, html: itemPage(2), picture: null },
+      ]);
+      expect(extension.tabs.log).toEqual([
+        `create inactive ${ORIGINS.mfc}/`,
+        "remove 101",
+        `create inactive ${ORIGINS.mfc}/`,
+        "remove 102",
+      ]);
+    },
+  );
+
+  test.each(COLLECTOR_FAILURES)(
+    "because %s in a borrowed tab tries the item once more in its own tab",
+    async (_name, failure) => {
+      const extension = fakeExtension({
+        pages: (request, _signal, tabId) =>
+          tabId === borrowed ? failure(request, tabId) : page(itemPage(request.mfcItemId)),
+      });
+      const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
+      const run = extension.run([1]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed, 102]);
+      expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+    },
+  );
+
+  test("because the turn timed out and stopped its fetch, times out and keeps its own tab", async () => {
+    const extension = fakeExtension({
+      pages: (request, signal) =>
+        request.mfcItemId === 1
+          ? new Promise((resolve) => {
+              signal.addEventListener("abort", () => {
+                resolve(pageFetchFailed(request.mfcItemId, "AbortError", "signal is aborted"));
+              });
+            })
+          : page(itemPage(request.mfcItemId)),
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "timeout" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
   });
 });
