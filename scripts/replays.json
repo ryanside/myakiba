@@ -1156,6 +1156,17 @@
         "send-verification-email fails when the email provider refuses the send",
         "request-password-reset fails when the email provider refuses the send"
       ]
+    },
+    {
+      "fix": "55c7e87089c66ac6c3dbbf2e07ae36447fc11c11",
+      "bug": "unsupported user currency and date format values were accepted at sign-up and update",
+      "test": "packages/auth/src/server.test.ts",
+      "fixed": [
+        "sign-up rejects unsupported currency",
+        "update-user rejects unsupported currency",
+        "sign-up rejects unsupported dateFormat",
+        "update-user rejects unsupported dateFormat"
+      ]
     }
   ],
   "lint": [
