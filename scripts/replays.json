@@ -1234,6 +1234,24 @@
         "failed reset email does not disclose whether the account exists",
         "sign-up succeeds and logs when verification email fails"
       ]
+    },
+    {
+      "fix": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
+      "testAt": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
+      "bug": "optional Redis calls could hang indefinitely",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "hanging cooldown write settles within its deadline",
+        "hanging cooldown status settles within its deadline",
+        "hanging cooldown guard settles within its deadline"
+      ]
+    },
+    {
+      "fix": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
+      "testAt": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
+      "bug": "optional Redis calls could hang indefinitely",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": ["hanging job status cache read settles within its deadline"]
     }
   ],
   "lint": [
