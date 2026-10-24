@@ -867,7 +867,8 @@
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
         "the MFC tab > a focus that comes while the extension reads whose tab it is keeps the tab open and where it was, at every read"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "f4f14142",
@@ -875,7 +876,8 @@
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
         "a challenge > whose tab the browser refuses to show, as during a drag, stays the extension's and closes once it can"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "bce24b2b",
@@ -906,7 +908,8 @@
         "the MFC tab > a homepage that redirects to another origin it can read after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
         "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
         "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "a2ec7b6d",
@@ -922,7 +925,8 @@
         "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Chrome-style commits)",
         "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
         "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "e23ace1d",
@@ -931,7 +935,8 @@
       "fixed": [
         "the MFC tab > its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab",
         "the MFC tab > while every tab of its own shows the browser's error page, each item fails after one fresh tab"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "20290a0d",
