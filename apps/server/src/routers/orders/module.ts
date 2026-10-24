@@ -6,7 +6,13 @@ import type { Tx } from "@myakiba/db/tx";
 import type { CascadeOptions, NewOrder, OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { command, fail, ok, paginate, query } from "@/domain/kernel";
+import { Result, panic } from "better-result";
+import { command, paginate, query } from "@/domain/kernel";
+import { OrderItemNotFound } from "./errors/order-item-not-found";
+import { OrderItemsNotFound } from "./errors/order-items-not-found";
+import { OrderNotFound } from "./errors/order-not-found";
+import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
+import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrderUpdateType, OrdersQuery } from "./model";
 
 const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
@@ -181,7 +187,7 @@ export const Orders = {
         })),
       };
       scope.log.set({ orders: { resultCount: orders.items.length } });
-      return ok(orders);
+      return Result.ok(orders);
     },
   ),
 
@@ -217,7 +223,7 @@ export const Orders = {
         .leftJoin(collection, eq(order.id, collection.orderId))
         .where(and(eq(order.userId, scope.viewer.userId), eq(order.id, input.orderId)))
         .groupBy(order.id);
-      if (!found) return fail("not_found", "Order not found");
+      if (!found) return Result.err(new OrderNotFound());
 
       const result: Order = {
         ...found,
@@ -225,7 +231,7 @@ export const Orders = {
         createdAt: found.createdAt.toISOString(),
         updatedAt: found.updatedAt.toISOString(),
       };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -287,7 +293,7 @@ export const Orders = {
         tiebreak: [collection.createdAt, collection.id],
       });
       scope.log.set({ orders: { itemCount: items.items.length } });
-      return ok(items);
+      return Result.ok(items);
     },
   ),
 
@@ -308,7 +314,7 @@ export const Orders = {
         )
         .orderBy(asc(item_release.date), asc(item.title), asc(collection.id));
       scope.log.set({ orders: { releaseCount: releases.length } });
-      return ok(releases);
+      return Result.ok(releases);
     },
   ),
 
@@ -328,7 +334,10 @@ export const Orders = {
         .insert(order)
         .values({ userId, ...input.newOrder })
         .returning();
-      if (!inserted) throw new Error("FAILED_TO_INSERT_NEW_ORDER");
+      if (!inserted)
+        panic(
+          "Inserting the merged order returned no row, so orders.merge has no order to move items into",
+        );
 
       const cascadeProperties =
         input.cascadeOptions.length > 0
@@ -345,7 +354,7 @@ export const Orders = {
         .set({ orderId: inserted.id, ...cascadeProperties })
         .where(and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds)))
         .returning({ id: collection.id });
-      if (moved.length === 0) return fail("not_found", "Order items not found");
+      if (moved.length === 0) return Result.err(new OrderItemsNotFound());
 
       await advanceOrderReleaseDatesForCollectionItems(
         scope.tx,
@@ -357,10 +366,10 @@ export const Orders = {
         .where(and(eq(order.userId, userId), inArray(order.id, input.orderIds)))
         .returning({ id: order.id });
       if (!foundAll(input.orderIds, deleted.length)) {
-        return fail("not_found", "One or more orders not found");
+        return Result.err(new SomeOrdersNotFound());
       }
 
-      return ok("Orders merged successfully");
+      return Result.ok("Orders merged successfully" as const);
     },
   ),
 
@@ -380,7 +389,10 @@ export const Orders = {
         .insert(order)
         .values({ userId, ...input.newOrder })
         .returning();
-      if (!inserted) throw new Error("FAILED_TO_INSERT_NEW_ORDER");
+      if (!inserted)
+        panic(
+          "Inserting the split order returned no row, so orders.split has no order to move items into",
+        );
 
       const cascadeProperties =
         input.cascadeOptions.length > 0
@@ -398,7 +410,7 @@ export const Orders = {
         .where(and(eq(collection.userId, userId), inArray(collection.id, input.collectionIds)))
         .returning({ id: collection.id });
       if (!foundAll(input.collectionIds, moved.length)) {
-        return fail("not_found", "Order items not found");
+        return Result.err(new OrderItemsNotFound());
       }
 
       await advanceOrderReleaseDatesForCollectionItems(
@@ -406,7 +418,7 @@ export const Orders = {
         moved.map(({ id }) => id),
       );
 
-      return ok("Items split successfully");
+      return Result.ok("Items split successfully" as const);
     },
   ),
 
@@ -432,7 +444,7 @@ export const Orders = {
         .from(order)
         .where(and(eq(order.id, input.targetOrderId), eq(order.userId, userId)))
         .limit(1);
-      if (!target) return fail("not_found", "Order not found");
+      if (!target) return Result.err(new OrderNotFound());
 
       const moved = await scope.tx
         .update(collection)
@@ -448,14 +460,14 @@ export const Orders = {
         )
         .returning({ id: collection.id });
       if (!foundAll(input.collectionIds, moved.length)) {
-        return fail("not_found", "Order items not found");
+        return Result.err(new OrderItemsNotFound());
       }
 
       await advanceOrderReleaseDatesForCollectionItems(
         scope.tx,
         moved.map(({ id }) => id),
       );
-      return ok("Items moved successfully");
+      return Result.ok("Items moved successfully" as const);
     },
   ),
 
@@ -476,7 +488,7 @@ export const Orders = {
         .set({ ...input.order, updatedAt: new Date() })
         .where(and(eq(order.userId, userId), eq(order.id, input.orderId)))
         .returning({ id: order.id });
-      if (updated.length === 0) return fail("not_found", "Order not found");
+      if (updated.length === 0) return Result.err(new OrderNotFound());
 
       if (input.cascadeOptions.length > 0) {
         const cascadeProperties = Object.fromEntries(
@@ -491,7 +503,7 @@ export const Orders = {
           .set({ ...cascadeProperties })
           .where(and(eq(collection.userId, userId), eq(collection.orderId, input.orderId)));
       }
-      return ok("Order updated successfully");
+      return Result.ok("Order updated successfully" as const);
     },
   ),
 
@@ -514,10 +526,10 @@ export const Orders = {
         .where(and(eq(order.userId, userId), inArray(order.id, input.orderIds)))
         .returning({ id: order.id });
       if (!foundAll(input.orderIds, deleted.length)) {
-        return fail("not_found", "One or more orders not found");
+        return Result.err(new SomeOrdersNotFound());
       }
 
-      return ok("Orders deleted successfully");
+      return Result.ok("Orders deleted successfully" as const);
     },
   ),
 
@@ -527,10 +539,10 @@ export const Orders = {
       scope.log.set({ delete: { itemCount: input.collectionIds.length } });
       const removed = await removeItems(scope.tx, scope.viewer.userId, input.collectionIds);
       if (!foundAll(input.collectionIds, removed)) {
-        return fail("not_found", "One or more order items not found");
+        return Result.err(new SomeOrderItemsNotFound());
       }
 
-      return ok("Order items deleted successfully");
+      return Result.ok("Order items deleted successfully" as const);
     },
   ),
 
@@ -544,9 +556,9 @@ export const Orders = {
         [input.collectionId],
         input.orderId,
       );
-      if (removed === 0) return fail("not_found", "Order item not found");
+      if (removed === 0) return Result.err(new OrderItemNotFound());
 
-      return ok("Order item deleted successfully");
+      return Result.ok("Order item deleted successfully" as const);
     },
   ),
 };
