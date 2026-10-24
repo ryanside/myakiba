@@ -491,8 +491,8 @@ function bodyOf(op: AnyOp) {
   return body;
 }
 
-/** A committed failure keeps the attempt's writes, unless it carries a defect. */
-const keepsWrites = (error: Leftover) => isCommitted(error) && !Panic.is(error["~committed"]);
+/** A committed failure keeps the attempt's writes. */
+const keepsWrites = (error: Leftover) => isCommitted(error);
 
 type Effect = (scope: ReadScope) => Promise<void>;
 
@@ -507,7 +507,7 @@ async function runEffects(
       await effect({ viewer, tx: pool, log });
     } catch (error) {
       const failure = error instanceof Error ? error : new Error(String(error));
-      log.warn(failure.message, {
+      const details = {
         afterCommitErrors: [
           {
             step: op.action,
@@ -517,7 +517,13 @@ async function runEffects(
             cause: failure.cause,
           },
         ],
-      });
+      };
+      if (Panic.is(error)) {
+        log.set(details);
+        log.error(error);
+      } else {
+        log.warn(failure.message, details);
+      }
     }
   }
 }
@@ -653,7 +659,7 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
   if (UnhandledException.is(left)) throw left.cause;
   if (operationals.get(anyOp)?.some((declared) => left instanceof declared)) throw left;
   return panic(
-    `${op.action} answered an internal error that no recover handled; only a AnyFailure may reach serve`,
+    `${op.action} answered an internal error that no recover handled; only a public failure may reach serve`,
     settled.error,
   );
 }
