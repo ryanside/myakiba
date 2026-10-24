@@ -21,7 +21,8 @@
       "better-auth": "^1.6.23",
       "elysia": "^1.4.25",
       "date-fns": "^4.1.0",
-      "evlog": "^2.26.0"
+      "evlog": "^2.26.0",
+      "better-result": "^3.0.1"
     }
   },
   "type": "module",

@@ -1,13 +1,24 @@
 import type { ItemError, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
+import { Panic, Result, UnhandledException } from "better-result";
 import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
 import type { Clock, SessionValue } from "./clock";
-import { NO_STATUS } from "./collect";
-import type { CollectedPage, PageRequest } from "./collect";
+import { NO_STATUS, PAGE_TIMEOUT_MS } from "./collect";
+import type { CollectedPage, CollectorFailure, PageCollectFailure, PageRequest } from "./collect";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
+import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
+import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
+import { MfcPageUnrecognized } from "./errors/mfc-page-unrecognized";
+import { MfcQueueHalted } from "./errors/mfc-queue-halted";
+import { MfcRateLimited } from "./errors/mfc-rate-limited";
+import { MfcSignedOut } from "./errors/mfc-signed-out";
+import { MfcTabUnavailable } from "./errors/mfc-tab-unavailable";
+import { MfcWrongItem } from "./errors/mfc-wrong-item";
 import { createMfcTabs } from "./mfc-tab";
 import type { MfcTabLease, WindowsApi } from "./mfc-tab";
-import { ownedTab } from "./owned-tab";
+import { TabUnavailableError, ownedTab } from "./owned-tab";
 import type { LiveRequester, OwnedTab, TabsApi } from "./owned-tab";
 import { toConfiguredUrl } from "./origins";
 import type { Origins } from "./origins";
@@ -40,19 +51,19 @@ export type FetcherDeps = {
     tabId: number,
     request: PageRequest,
     signal: AbortSignal,
-  ) => Promise<CollectedPage>;
+  ) => Promise<Result<CollectedPage, PageCollectFailure>>;
   /** Runs in the MFC tab, so the request carries the user's MFC cookies. */
   readonly fetchGatedPicture: (
     tabId: number,
     url: string,
     signal: AbortSignal,
-  ) => Promise<PortPicture | null>;
+  ) => Promise<Result<PortPicture | null, CollectorFailure>>;
   /** Runs in the picture tab, and answers no picture unless the tab shows `url`. */
   readonly fetchPublicPicture: (
     tabId: number,
     url: string,
     signal: AbortSignal,
-  ) => Promise<PortPicture | null>;
+  ) => Promise<Result<PortPicture | null, CollectorFailure>>;
 };
 
 export type FetchRun = {
@@ -62,12 +73,33 @@ export type FetchRun = {
   readonly emit: (event: RunEvent<PortPicture>) => void;
 };
 
+/** What MFC showed for the item: the item itself, or a challenge for the user to solve. */
 type Reading =
   | { readonly kind: "item"; readonly ogImage: MfcOgImage }
-  | { readonly kind: "challenge"; readonly status: number; readonly pausedUntil: number | null }
-  | Exclude<Outcome, { readonly kind: "halted" }>;
+  | { readonly kind: "challenge"; readonly status: number; readonly pausedUntil: number | null };
 
-type Answer = Exclude<Reading, { readonly kind: "challenge" }>;
+type PageRejected =
+  | MfcRateLimited
+  | MfcSignedOut
+  | MfcItemHiddenOrMissing
+  | MfcWrongItem
+  | MfcPageUnrecognized;
+
+/** How a call into the throttle or the tabs fails. Both still throw, so each call is wrapped where it is made. */
+type LoadFailure =
+  | MfcLoadTimedOut
+  | MfcQueueHalted
+  | AttemptAbandoned
+  | MfcTabUnavailable
+  | UnhandledException;
+
+type PageFailure = LoadFailure | PageCollectFailure;
+
+type AttemptFailure = PageFailure | PageRejected | MfcChallengeUnsolved;
+
+type ItemPage = { readonly html: string; readonly picture: PortPicture | null };
+
+type ShownItem = { readonly page: CollectedPage; readonly ogImage: MfcOgImage };
 
 type ItemContext = {
   readonly tabId: number;
@@ -75,33 +107,115 @@ type ItemContext = {
   readonly signal: AbortSignal;
 };
 
+/**
+ * What a failed page fetch says about its tab. The browser's error page keeps the MFC URL, so an owned tab whose collector
+ * failed is closed rather than reused. A page that never came back from a borrowed tab is the tab's fault, so it is tried
+ * once more in one of the extension's own.
+ */
+const AFTER_PAGE_FAILURE = {
+  CollectorInjectionFailed: { closeOwned: true, retryOwned: true },
+  CollectorAnswerInvalid: { closeOwned: true, retryOwned: true },
+  MfcPageFetchFailed: { closeOwned: true, retryOwned: true },
+  MfcTabUnavailable: { closeOwned: true, retryOwned: true },
+  UnhandledException: { closeOwned: true, retryOwned: true },
+  MfcLoadTimedOut: { closeOwned: false, retryOwned: true },
+  MfcQueueHalted: { closeOwned: false, retryOwned: false },
+  AttemptAbandoned: { closeOwned: false, retryOwned: false },
+} as const satisfies Record<
+  PageFailure["_tag"],
+  { readonly closeOwned: boolean; readonly retryOwned: boolean }
+>;
+
 function failed(error: ItemError): Extract<Outcome, { readonly kind: "result" }> {
   return { kind: "result", result: { ok: false, error } };
 }
 
-function readPage(page: CollectedPage, job: Job, now: number): Reading {
+/** Ends the Result path at the queue's Outcome, until the queue takes the Result itself. Null answers nothing. */
+function outcomeOf(error: AttemptFailure): Outcome | null {
+  return error.match({
+    MfcSignedOut: () => failed("mfc_signed_out"),
+    MfcItemHiddenOrMissing: () => failed("hidden_or_missing"),
+    MfcWrongItem: () => failed("unexpected_page"),
+    MfcPageUnrecognized: () => failed("unexpected_page"),
+    MfcPageFetchFailed: () => failed("unexpected_page"),
+    CollectorInjectionFailed: () => failed("unexpected_page"),
+    CollectorAnswerInvalid: () => failed("unexpected_page"),
+    MfcTabUnavailable: () => failed("unexpected_page"),
+    UnhandledException: () => failed("unexpected_page"),
+    MfcLoadTimedOut: () => failed("timeout"),
+    MfcChallengeUnsolved: () => failed("challenge_unsolved"),
+    MfcRateLimited: ({ pausedUntil }): Outcome => ({ kind: "rate_limited", pausedUntil }),
+    MfcQueueHalted: ({ until }): Outcome => ({ kind: "halted", until }),
+    AttemptAbandoned: () => null,
+  });
+}
+
+function loadFailure(cause: unknown, signal: AbortSignal, phase: "page" | "tab"): LoadFailure {
+  // A defect reaches attempt as a Panic rather than reading as a failed load.
+  if (Panic.is(cause)) throw cause;
+  if (signal.aborted) return new AttemptAbandoned();
+  if (cause instanceof TimeoutError) {
+    return new MfcLoadTimedOut({ timeoutMs: cause.timeoutMs, phase });
+  }
+  if (cause instanceof HaltedError) return new MfcQueueHalted({ until: cause.until });
+  if (cause instanceof TabUnavailableError) {
+    return new MfcTabUnavailable({ tabId: cause.tabId, reason: cause.reason });
+  }
+  return new UnhandledException({ cause });
+}
+
+function loading<T>(
+  load: () => Promise<T>,
+  signal: AbortSignal,
+  phase: "page" | "tab",
+): Promise<Result<T, LoadFailure>> {
+  return Result.tryPromise({ try: load, catch: (cause) => loadFailure(cause, signal, phase) });
+}
+
+/** Only a halt or an abandoned attempt keeps its meaning when the challenge's tab cannot be shown. */
+function notShown(
+  error: LoadFailure,
+  mfcItemId: MfcItemId,
+): MfcQueueHalted | AttemptAbandoned | MfcChallengeUnsolved {
+  const unsolved = () => new MfcChallengeUnsolved({ mfcItemId, reason: "not_shown", cause: error });
+  return error.match({
+    MfcQueueHalted: (halted) => halted,
+    AttemptAbandoned: (abandoned) => abandoned,
+    MfcLoadTimedOut: unsolved,
+    MfcTabUnavailable: unsolved,
+    UnhandledException: unsolved,
+  });
+}
+
+function readPage(page: CollectedPage, job: Job, now: number): Result<Reading, PageRejected> {
+  const { mfcItemId } = job;
   const pauseMs = parseRetryAfter(page.retryAfter, now);
   // Cloudflare may serve its challenge with 503 and Retry-After. It still wants a person, after the pause.
   const challenged = page.cfMitigated?.trim().toLowerCase() === "challenge";
   if (!challenged && RATE_LIMIT_STATUSES.has(page.status)) {
-    return { kind: "rate_limited", pausedUntil: now + (pauseMs ?? THROTTLE.defaultPauseMs) };
+    const pausedUntil = now + (pauseMs ?? THROTTLE.defaultPauseMs);
+    return Result.err(new MfcRateLimited({ mfcItemId, status: page.status, pausedUntil }));
   }
   const envelope = readMfcEnvelope(page);
   switch (envelope.kind) {
     case "item":
-      return envelope.mfcItemId === job.mfcItemId
-        ? { kind: "item", ogImage: envelope.ogImage }
-        : failed("unexpected_page");
+      return envelope.mfcItemId === mfcItemId
+        ? Result.ok({ kind: "item", ogImage: envelope.ogImage })
+        : Result.err(new MfcWrongItem({ expected: mfcItemId, found: envelope.mfcItemId }));
     case "challenge":
-      return {
+      return Result.ok({
         kind: "challenge",
         status: page.status,
         pausedUntil: pauseMs === null ? null : now + pauseMs,
-      };
+      });
     case "not_found":
-      return failed(envelope.signedIn ? "hidden_or_missing" : "mfc_signed_out");
+      return Result.err(
+        envelope.signedIn
+          ? new MfcItemHiddenOrMissing({ mfcItemId })
+          : new MfcSignedOut({ mfcItemId }),
+      );
     case "unexpected":
-      return failed("unexpected_page");
+      return Result.err(new MfcPageUnrecognized({ mfcItemId, status: envelope.status }));
   }
 }
 
@@ -151,65 +265,90 @@ export function createFetcher(deps: FetcherDeps) {
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return null;
     try {
-      return picture.access === "gated"
-        ? await throttle.load(
-            signal,
-            (timeout) =>
-              deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
-            PICTURE_TIMEOUT_MS,
-          )
-        : await pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
-            deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
-          );
+      const read =
+        picture.access === "gated"
+          ? await throttle.load(
+              signal,
+              (timeout) =>
+                deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
+              PICTURE_TIMEOUT_MS,
+            )
+          : await pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
+              deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
+            );
+      return read.unwrapOr(null);
     } catch {
       return null;
     }
   }
 
-  async function itemResult(
+  async function itemPage(
     page: CollectedPage,
     ogImage: MfcOgImage,
     context: ItemContext,
-  ): Promise<Outcome> {
-    return {
-      kind: "result",
-      result: { ok: true, html: page.html, picture: await pictureOf(ogImage, context) },
-    };
+  ): Promise<ItemPage> {
+    return { html: page.html, picture: await pictureOf(ogImage, context) };
   }
 
-  /** The browser's error page keeps the MFC URL, so an owned tab whose collector failed is closed rather than reused. */
   async function fetchPage(
     lease: MfcTabLease,
     job: Job,
     signal: AbortSignal,
-  ): Promise<CollectedPage> {
+  ): Promise<Result<CollectedPage, PageFailure>> {
     const request = { kind: "page", mode: "fetch", mfcItemId: job.mfcItemId } as const;
-    try {
-      return await throttle.load(signal, (timeout) =>
-        deps.collectPage(lease.tabId, request, AbortSignal.any([signal, timeout])),
-      );
-    } catch (error) {
-      const tabFailed = !(error instanceof TimeoutError || error instanceof HaltedError);
-      if (lease.kind === "owned" && tabFailed && !signal.aborted) await mfcTabs.closeOwned();
-      throw error;
+    const loaded = await loading(
+      () =>
+        throttle.load(signal, async (timeout) => {
+          const page = await deps.collectPage(
+            lease.tabId,
+            request,
+            AbortSignal.any([signal, timeout]),
+          );
+          // The turn's timeout stops the collector, which then answers that its fetch was aborted.
+          return page.mapError((failure) =>
+            timeout.aborted
+              ? new MfcLoadTimedOut({ timeoutMs: PAGE_TIMEOUT_MS, phase: "page" })
+              : failure,
+          );
+        }),
+      signal,
+      "page",
+    );
+    const page = Result.flatten(loaded);
+    if (
+      page.isErr() &&
+      lease.kind === "owned" &&
+      AFTER_PAGE_FAILURE[page.error._tag].closeOwned &&
+      !signal.aborted
+    ) {
+      await mfcTabs.closeOwned();
     }
+    return page;
   }
 
-  /** A page that never came back from a borrowed tab is the tab's fault, so it is tried once more in one of the extension's own. */
-  async function fetchItem(job: Job, requester: LiveRequester, signal: AbortSignal) {
-    const lease = await mfcTabs.lease(requester, signal);
-    try {
-      return { page: await fetchPage(lease, job, signal), tabId: lease.tabId };
-    } catch (error) {
-      if (lease.kind === "owned" || signal.aborted || error instanceof HaltedError) {
-        throw error;
-      }
-    }
-    mfcTabs.stopBorrowing();
-    const own = await mfcTabs.lease(requester, signal);
-    return { page: await fetchPage(own, job, signal), tabId: own.tabId };
+  function fetchItem(
+    job: Job,
+    requester: LiveRequester,
+    signal: AbortSignal,
+  ): Promise<Result<{ readonly page: CollectedPage; readonly tabId: number }, PageFailure>> {
+    const lease = () => loading(() => mfcTabs.lease(requester, signal), signal, "tab");
+    return Result.gen(async function* () {
+      const first = yield* Result.await(lease());
+      const page = await fetchPage(first, job, signal);
+      const retry =
+        page.isErr() &&
+        first.kind === "borrowed" &&
+        AFTER_PAGE_FAILURE[page.error._tag].retryOwned &&
+        !signal.aborted;
+      if (!retry) return page.map((collected) => ({ page: collected, tabId: first.tabId }));
+      mfcTabs.stopBorrowing();
+      const own = yield* Result.await(lease());
+      const ownPage = await fetchPage(own, job, signal);
+      return ownPage.map((collected) => ({ page: collected, tabId: own.tabId }));
+    });
   }
 
+  /** Any read that fails means the page is not ready yet. */
   async function readShown(
     tabId: number,
     job: Job,
@@ -217,23 +356,27 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<CollectedPage | null> {
     const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
     for (let tries = 1; !open.aborted; tries++) {
-      const page = await unlessAborted(open, deps.collectPage(tabId, request, open)).catch(
-        () => null,
+      const read = await loading(
+        () => unlessAborted(open, deps.collectPage(tabId, request, open)),
+        open,
+        "page",
       );
-      if (page && page.status !== NO_STATUS) return page;
+      const page = Result.flatten(read);
+      if (page.isOk() && page.value.status !== NO_STATUS) return page.value;
       if (tries === READ_TRIES) break;
       await clock.sleep(READ_RETRY_MS, open);
     }
     return null;
   }
 
+  /** Waits for the challenge's tab to show something else. Null means it never did. */
   async function afterChallenge(
     tabId: number,
     job: Job,
     servedWith: number,
     deadline: number,
     signal: AbortSignal,
-  ): Promise<{ readonly page: CollectedPage; readonly reading: Answer } | null> {
+  ): Promise<Result<ShownItem, PageRejected> | null> {
     // Shown in the tab, a challenge Cloudflare served with 503 reads as a bare 503.
     const stillShown = (status: number) =>
       status === CHALLENGE_STATUS || (status === servedWith && status !== 200);
@@ -249,7 +392,10 @@ export function createFetcher(deps: FetcherDeps) {
         const page = await readShown(tabId, job, open);
         if (!page || stillShown(page.status)) continue;
         const reading = readPage(page, job, clock.now());
-        if (reading.kind !== "challenge") return { page, reading };
+        if (reading.isErr()) return Result.err(reading.error);
+        if (reading.value.kind === "item") {
+          return Result.ok({ page, ogImage: reading.value.ogImage });
+        }
       }
       return null;
     } finally {
@@ -257,49 +403,53 @@ export function createFetcher(deps: FetcherDeps) {
     }
   }
 
-  async function solveChallenge(
+  function solveChallenge(
     job: Job,
     requester: LiveRequester,
     servedWith: number,
     signal: AbortSignal,
-  ): Promise<Outcome> {
-    let tabId: number;
-    try {
-      tabId = await mfcTabs.showChallenge(requester, job.mfcItemId, signal);
-    } catch (error) {
-      if (signal.aborted || error instanceof HaltedError) throw error;
-      return failed("challenge_unsolved");
-    }
-    const deadline = clock.now() + CHALLENGE_WINDOW_MS;
-    dispatch({ type: "needs_user", untilMs: deadline });
-    const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
-    await mfcTabs.handBack(requester, signal);
-    signal.throwIfAborted();
-    if (!answer) return failed("challenge_unsolved");
-    const { page, reading } = answer;
-    return reading.kind === "item"
-      ? itemResult(page, reading.ogImage, { tabId, requester, signal })
-      : reading;
+  ): Promise<Result<ItemPage, AttemptFailure>> {
+    const { mfcItemId } = job;
+    return Result.gen(async function* () {
+      const shown = await loading(
+        () => mfcTabs.showChallenge(requester, mfcItemId, signal),
+        signal,
+        "tab",
+      );
+      const tabId = yield* shown.mapError((failure) => notShown(failure, mfcItemId));
+      const deadline = clock.now() + CHALLENGE_WINDOW_MS;
+      dispatch({ type: "needs_user", untilMs: deadline });
+      const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
+      await mfcTabs.handBack(requester, signal);
+      if (signal.aborted) return Result.err(new AttemptAbandoned());
+      if (answer === null) {
+        return Result.err(new MfcChallengeUnsolved({ mfcItemId, reason: "unanswered" }));
+      }
+      const { page, ogImage } = yield* answer;
+      return Result.ok(await itemPage(page, ogImage, { tabId, requester, signal }));
+    });
   }
 
-  async function attempt(job: Job, signal: AbortSignal): Promise<Outcome> {
+  /**
+   * Answers one item, and is where its failures end. An expected failure is answered with its wire code. A defect is
+   * answered unexpected_page, so the queue moves on instead of retrying it forever.
+   */
+  async function attempt(job: Job, signal: AbortSignal): Promise<Outcome | null> {
     const requester = liveRequester(job, signal);
     try {
-      const { page, tabId } = await fetchItem(job, requester, signal);
-      const reading = readPage(page, job, clock.now());
-      switch (reading.kind) {
-        case "item":
-          return await itemResult(page, reading.ogImage, { tabId, requester, signal });
-        case "challenge":
-          if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
-          return await solveChallenge(job, requester, reading.status, signal);
-        case "result":
-        case "rate_limited":
-          return reading;
-      }
-    } catch (error) {
-      if (error instanceof HaltedError) return { kind: "halted", until: error.until };
-      return failed(error instanceof TimeoutError ? "timeout" : "unexpected_page");
+      const answer = await Result.gen(async function* () {
+        const { page, tabId } = yield* Result.await(fetchItem(job, requester, signal));
+        const reading = yield* readPage(page, job, clock.now());
+        if (reading.kind === "item") {
+          return Result.ok(await itemPage(page, reading.ogImage, { tabId, requester, signal }));
+        }
+        if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
+        return await solveChallenge(job, requester, reading.status, signal);
+      });
+      if (answer.isOk()) return { kind: "result", result: { ok: true, ...answer.value } };
+      return outcomeOf(answer.error);
+    } catch {
+      return failed("unexpected_page");
     }
   }
 
@@ -326,7 +476,7 @@ export function createFetcher(deps: FetcherDeps) {
       current = { job, controller };
       const outcome = await attempt(job, controller.signal);
       current = null;
-      if (controller.signal.aborted) continue;
+      if (outcome === null || controller.signal.aborted) continue;
       dispatch({ type: "answered", job, outcome: await booked(outcome) });
     }
     await mfcTabs.release();

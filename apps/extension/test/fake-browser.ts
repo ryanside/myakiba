@@ -1,8 +1,12 @@
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
+import { Err, Result } from "better-result";
 import type { Clock, SessionValue } from "../lib/clock";
-import type { CollectedPage, PageRequest } from "../lib/collect";
+import type { CollectedPage, PageCollectFailure, PageRequest } from "../lib/collect";
+import { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
+import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
+import { MfcPageFetchFailed } from "../lib/errors/mfc-page-fetch-failed";
 import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { WindowsApi } from "../lib/mfc-tab";
@@ -423,6 +427,23 @@ export function notFoundPage(signedIn: boolean): string {
 
 export const CHALLENGE_PAGE = "<html><head><title>Just a moment...</title></head></html>";
 
+/** The browser would not run the collector in the tab, as when it shows the browser's error page. */
+export function injectionFailed(tabId: number, message: string): PageAnswer {
+  return Result.err(
+    new CollectorInjectionFailed({ tabId, kind: "page", cause: new Error(message) }),
+  );
+}
+
+/** The collector gave no valid answer, as when its script failed in the tab. */
+export function answerInvalid(tabId: number): PageAnswer {
+  return Result.err(new CollectorAnswerInvalid({ tabId, kind: "page", issues: [] }));
+}
+
+/** The collector's own fetch of the item failed in the tab. */
+export function pageFetchFailed(id: MfcItemId, name: string, message: string): PageAnswer {
+  return Result.err(new MfcPageFetchFailed({ mfcItemId: id, cause: { name, message } }));
+}
+
 export function page(html: string, overrides: Partial<CollectedPage> = {}): CollectedPage {
   return { status: 200, cfMitigated: null, retryAfter: null, html, ...overrides };
 }
@@ -458,11 +479,15 @@ function mortalValue<T>(value: SessionValue<T>, wrap: ReturnType<typeof mortal>)
   return { load: wrap(value.load), save: wrap(value.save) };
 }
 
+/** What the collector answers for a page: the page, or how it failed. A defect throws instead. */
+export type PageAnswer = CollectedPage | Err<CollectedPage, PageCollectFailure>;
+
 export function fakeExtension(options: {
   readonly pages: (
     request: PageRequest,
     signal: AbortSignal,
-  ) => CollectedPage | Promise<CollectedPage>;
+    tabId: number,
+  ) => PageAnswer | Promise<PageAnswer>;
   readonly clock?: FakeClock;
   readonly throttleState?: SessionValue<ThrottleState>;
   readonly ownedTab?: SessionValue<OwnedTab>;
@@ -510,7 +535,8 @@ export function fakeExtension(options: {
     };
     calls.push(call);
     try {
-      return await options.pages(request, signal);
+      const answer = await options.pages(request, signal, tabId);
+      return answer instanceof Err ? answer : Result.ok(answer);
     } finally {
       call.endedAt = clock.now();
     }
@@ -547,23 +573,25 @@ export function fakeExtension(options: {
       endedAt: null,
       ...(within && { within }),
     };
-    return readIn(read, signal, async () => {
+    const picture = await readIn(read, signal, async () => {
       if (!pictureToRead(requested, url.href, ORIGINS)) return null;
       return options.publicPicture
         ? options.publicPicture(url, signal)
         : { base64: "AQID", contentType: "image/jpeg" };
     });
+    return Result.ok(picture);
   }
 
   async function readGatedPicture(tabId: number, url: string, signal: AbortSignal) {
     signal.throwIfAborted();
     pictureUrls.push(url);
     const read: Load = { tabId, url, at: clock.now(), byUser: false, endedAt: null };
-    return readIn(read, signal, async () =>
+    const picture = await readIn(read, signal, async () =>
       options.gatedPicture
         ? options.gatedPicture(url, signal)
         : { base64: "/9j/", contentType: "image/jpeg" },
     );
+    return Result.ok(picture);
   }
 
   function startWorker(): Worker {

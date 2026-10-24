@@ -49,10 +49,20 @@ const LOAD_START_MS = 2000;
 /** The extension cannot stop a load in a tab the user took, so the turn waits for it, up to this long after it started. */
 const CLAIMED_LOAD_MS = 2 * 60_000;
 
-class TabTakenError extends Error {
-  constructor(tabId: number) {
-    super(`the user took tab ${tabId}`);
-    this.name = "TabTakenError";
+/** The extension gave up its tab, because the user took it or its load ended on another page. */
+export class TabUnavailableError extends Error {
+  readonly tabId: number;
+  readonly reason: "taken" | "ended_elsewhere";
+
+  constructor(tabId: number, reason: "taken" | "ended_elsewhere") {
+    super(
+      reason === "taken"
+        ? `the user took tab ${tabId}`
+        : `the load in tab ${tabId} ended on another page`,
+    );
+    this.name = "TabUnavailableError";
+    this.tabId = tabId;
+    this.reason = reason;
   }
 }
 
@@ -192,12 +202,12 @@ export function ownedTab(deps: {
     ended: (tab: Tab) => boolean,
   ): Promise<boolean> {
     const own = await record.load();
-    if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabTakenError(tabId);
+    if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabUnavailableError(tabId, "taken");
     if (own.state === "landed") return true;
     const tab = await tabs.get(tabId);
     if (!ended(tab)) return false;
     if (!onOrigin(tab.url, origin) || (tab.url ?? null) === urlAtStart) {
-      throw new Error(`the load in tab ${tabId} ended on another page`);
+      throw new TabUnavailableError(tabId, "ended_elsewhere");
     }
     await record.save({ state: "landed", tabId });
     return true;

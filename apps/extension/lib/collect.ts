@@ -1,5 +1,10 @@
+import { mfcItemIdSchema, portPictureSchema } from "@myakiba/mfc/bridge";
+import { Result, ResultDeserializationError } from "better-result";
+import type { ResultCodec, StandardSchemaOutput, StandardSchemaV1 } from "better-result";
 import * as z from "zod";
-import { mfcItemIdSchema } from "@myakiba/mfc/bridge";
+import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
+import type { CollectorInjectionFailed } from "./errors/collector-injection-failed";
+import { MfcPageFetchFailed } from "./errors/mfc-page-fetch-failed";
 
 export const PAGE_TIMEOUT_MS = 45_000;
 
@@ -53,10 +58,69 @@ export async function runArmed<T>(
 
 export const NO_STATUS = 0;
 
-export const collectedPageSchema = z.strictObject({
+const collectedPageSchema = z.strictObject({
   status: z.number().int(),
   cfMitigated: z.string().nullable(),
   retryAfter: z.string().nullable(),
   html: z.string(),
 });
 export type CollectedPage = z.output<typeof collectedPageSchema>;
+
+const errorSummarySchema = z.strictObject({ name: z.string(), message: z.string() });
+
+const pageFetchFailedWireSchema = z.strictObject({
+  _tag: z.literal("MfcPageFetchFailed"),
+  mfcItemId: mfcItemIdSchema,
+  cause: errorSummarySchema,
+});
+
+/** The collector's answer to a page request. Its only error is the in-tab fetch failing. */
+export const pageAnswerCodec = Result.codec({
+  serialize: {
+    ok: collectedPageSchema,
+    err: z
+      .instanceof(MfcPageFetchFailed)
+      .transform(({ _tag, mfcItemId, cause }) => ({ _tag, mfcItemId, cause })),
+  },
+  deserialize: {
+    ok: collectedPageSchema,
+    err: pageFetchFailedWireSchema.transform(
+      ({ mfcItemId, cause }) => new MfcPageFetchFailed({ mfcItemId, cause }),
+    ),
+  },
+});
+
+/** The collector's answer to a picture request, which answers no picture rather than fail. */
+export const pictureAnswerCodec = Result.codec({
+  serialize: { ok: portPictureSchema.nullable(), err: z.never() },
+  deserialize: { ok: portPictureSchema.nullable(), err: z.never() },
+});
+
+/** How the collector fails to answer any request. */
+export type CollectorFailure = CollectorInjectionFailed | CollectorAnswerInvalid;
+
+/** How the collector fails to answer a page request. */
+export type PageCollectFailure = CollectorFailure | MfcPageFetchFailed;
+
+export type AnswerCodec<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1> = Pick<
+  ResultCodec<StandardSchemaV1, StandardSchemaV1, Ok, Fails>,
+  "deserialize"
+>;
+
+/** What the browser reports for the collector's run in one frame. */
+type CollectorInjection = { readonly result?: unknown };
+
+/** A script that failed in the tab answers undefined, which no codec accepts, so it reads as an invalid answer. */
+export async function readAnswer<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1>(
+  codec: AnswerCodec<Ok, Fails>,
+  injection: CollectorInjection | undefined,
+  tabId: number,
+  kind: CollectRequest["kind"],
+): Promise<Result<StandardSchemaOutput<Ok>, StandardSchemaOutput<Fails> | CollectorAnswerInvalid>> {
+  const decoded = await codec.deserialize(injection?.result);
+  return decoded.mapError((failure) =>
+    ResultDeserializationError.is(failure)
+      ? new CollectorAnswerInvalid({ tabId, kind, issues: failure.issues ?? [] })
+      : failure,
+  );
+}

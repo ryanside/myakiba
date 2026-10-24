@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   CHALLENGE_PAGE,
   COMMIT_STYLES,
+  answerInvalid,
+  injectionFailed,
   INCOGNITO,
   ORIGINS,
   OTHER_WINDOW,
@@ -16,7 +18,7 @@ import {
 } from "../test/fake-browser";
 import type { FakeClock, FakeExtension } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
-import { PAGE_TIMEOUT_MS, collectedPageSchema } from "./collect";
+import { PAGE_TIMEOUT_MS } from "./collect";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -664,9 +666,9 @@ describe("a challenge", () => {
     const challenge = challengeOn([7]);
     let reads = 0;
     const extension = fakeExtension({
-      pages: (request) => {
+      pages: (request, _signal, tabId) => {
         if (request.mode === "document" && ++reads === 1) {
-          throw new Error("Frame with ID 0 was removed.");
+          return injectionFailed(tabId, "Frame with ID 0 was removed.");
         }
         return challenge.pages(request);
       },
@@ -687,9 +689,9 @@ describe("a challenge", () => {
     let solved = false;
     let failedReads = 0;
     const extension = fakeExtension({
-      pages: (request) => {
+      pages: (request, _signal, tabId) => {
         if (solved && request.mode === "document" && failedReads++ === 0) {
-          throw new Error("Frame with ID 0 was removed.");
+          return injectionFailed(tabId, "Frame with ID 0 was removed.");
         }
         return challenge.pages(request);
       },
@@ -1207,8 +1209,10 @@ describe("the MFC tab", () => {
 
   test("a failed injection in a borrowed tab tries the item once more in its own tab", async () => {
     const extension = fakeExtension({
-      pages: (request) => {
-        if (extension.calls.length === 1) throw new Error("Cannot access contents of the page.");
+      pages: (request, _signal, tabId) => {
+        if (extension.calls.length === 1) {
+          return injectionFailed(tabId, "Cannot access contents of the page.");
+        }
         return page(itemPage(request.mfcItemId));
       },
     });
@@ -1222,8 +1226,8 @@ describe("the MFC tab", () => {
 
   test("its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab", async () => {
     const extension = fakeExtension({
-      pages: (request) => {
-        if (extension.calls.at(-1)?.tabId === 101) throw new Error(ERROR_PAGE);
+      pages: (request, _signal, tabId) => {
+        if (tabId === 101) return injectionFailed(tabId, ERROR_PAGE);
         return page(itemPage(request.mfcItemId));
       },
     });
@@ -1243,9 +1247,7 @@ describe("the MFC tab", () => {
 
   test("while every tab of its own shows the browser's error page, each item fails after one fresh tab", async () => {
     const extension = fakeExtension({
-      pages: () => {
-        throw new Error(ERROR_PAGE);
-      },
+      pages: (_request, _signal, tabId) => injectionFailed(tabId, ERROR_PAGE),
     });
     const run = extension.run([1, 2, 3]);
     await extension.clock.runUntil(run.done);
@@ -1260,8 +1262,8 @@ describe("the MFC tab", () => {
 
   test("a collector answer that fails its schema in its own tab fails the item, and the next item loads a fresh tab", async () => {
     const extension = fakeExtension({
-      pages: (request) =>
-        request.mfcItemId === 1 ? collectedPageSchema.parse(undefined) : page(itemPage(2)),
+      pages: (request, _signal, tabId) =>
+        request.mfcItemId === 1 ? answerInvalid(tabId) : page(itemPage(2)),
     });
     const run = extension.run([1, 2]);
     await extension.clock.runUntil(run.done);

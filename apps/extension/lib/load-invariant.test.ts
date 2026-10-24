@@ -7,13 +7,15 @@ import {
   fakeClock,
   fakeExtension,
   itemPage,
+  injectionFailed,
   notFoundPage,
   page,
+  pageFetchFailed,
   tooClose,
 } from "../test/fake-browser";
-import type { CommitStyle, FakeClock } from "../test/fake-browser";
+import type { CommitStyle, FakeClock, PageAnswer } from "../test/fake-browser";
 import { PAGE_TIMEOUT_MS } from "./collect";
-import type { CollectedPage, PageRequest } from "./collect";
+import type { PageRequest } from "./collect";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { THROTTLE } from "./throttle";
 
@@ -79,7 +81,11 @@ async function play(seed: number, style: CommitStyle | undefined) {
   };
   const item = (id: number) => page(itemPage(id, pictureOf(id)));
 
-  async function mfc(request: PageRequest): Promise<CollectedPage> {
+  async function mfc(
+    request: PageRequest,
+    _signal: AbortSignal,
+    tabId: number,
+  ): Promise<PageAnswer> {
     const id = request.mfcItemId;
     if (request.mode === "document") {
       return solved.has(id) ? item(id) : page(CHALLENGE_PAGE, { status: 403 });
@@ -88,7 +94,7 @@ async function play(seed: number, style: CommitStyle | undefined) {
     await clock.sleep(Math.min(latency, COLLECTOR_TIMEOUT_MS));
     if (latency > PAGE_TIMEOUT_MS) {
       seen.timeouts += 1;
-      throw new DOMException("The operation timed out.", "TimeoutError");
+      return pageFetchFailed(id, "TimeoutError", "The operation timed out.");
     }
     if (id % 5 === 0 && !solved.has(id)) {
       seen.challenges += 1;
@@ -108,7 +114,7 @@ async function play(seed: number, style: CommitStyle | undefined) {
     }
     if (roll < 0.18) {
       seen.injectionErrors += 1;
-      throw new Error("Frame with ID 0 was removed.");
+      return injectionFailed(tabId, "Frame with ID 0 was removed.");
     }
     if (roll < 0.24) return page(notFoundPage(true), { status: 404 });
     return item(id);

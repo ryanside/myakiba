@@ -12,6 +12,7 @@
   "dependencies": {
     "@myakiba/env": "workspace:*",
     "@myakiba/mfc": "workspace:*",
+    "better-result": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

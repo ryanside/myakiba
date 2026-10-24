@@ -1,12 +1,21 @@
-import { portPictureSchema } from "@myakiba/mfc/bridge";
+import { Result } from "better-result";
+import type { StandardSchemaOutput, StandardSchemaV1 } from "better-result";
 import type * as z from "zod";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 import type { SessionValue } from "../lib/clock";
 import { systemClock } from "../lib/clock";
-import { armCollector, collectedPageSchema, stopCollector } from "../lib/collect";
-import type { CollectRequest } from "../lib/collect";
+import {
+  armCollector,
+  pageAnswerCodec,
+  pictureAnswerCodec,
+  readAnswer,
+  stopCollector,
+} from "../lib/collect";
+import type { AnswerCodec, CollectRequest } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
+import type { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
+import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
 import { servePort } from "../lib/port-host";
@@ -25,14 +34,27 @@ function sessionValue<T>(key: string, schema: z.ZodType<T>, fallback: T): Sessio
   };
 }
 
-async function runCollector<T>(
+async function runCollector<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1>(
   tabId: number,
   request: CollectRequest,
-  schema: z.ZodType<T>,
+  codec: AnswerCodec<Ok, Fails>,
   signal?: AbortSignal,
-): Promise<T> {
+): Promise<
+  Result<
+    StandardSchemaOutput<Ok>,
+    StandardSchemaOutput<Fails> | CollectorInjectionFailed | CollectorAnswerInvalid
+  >
+> {
+  const inject = <R>(script: () => Promise<R>) =>
+    Result.tryPromise({
+      try: script,
+      catch: (cause) => new CollectorInjectionFailed({ tabId, kind: request.kind, cause }),
+    });
   signal?.throwIfAborted();
-  await browser.scripting.executeScript({ target: { tabId }, func: armCollector, args: [request] });
+  const armed = await inject(() =>
+    browser.scripting.executeScript({ target: { tabId }, func: armCollector, args: [request] }),
+  );
+  if (armed.isErr()) return Result.err(armed.error);
   signal?.throwIfAborted();
   const stop = async () => {
     try {
@@ -43,11 +65,11 @@ async function runCollector<T>(
   };
   signal?.addEventListener("abort", stop, { once: true });
   try {
-    const [injection] = await browser.scripting.executeScript({
-      target: { tabId },
-      files: ["/collector.js"],
-    });
-    return schema.parse(injection?.result);
+    const injected = await inject(() =>
+      browser.scripting.executeScript({ target: { tabId }, files: ["/collector.js"] }),
+    );
+    if (injected.isErr()) return Result.err(injected.error);
+    return await readAnswer(codec, injected.value[0], tabId, request.kind);
   } finally {
     signal?.removeEventListener("abort", stop);
   }
@@ -63,12 +85,11 @@ export default defineBackground(() => {
     throttleState: sessionValue("throttle", throttleStateSchema, OPEN_THROTTLE),
     ownedTab: sessionValue("ownedTab", ownedTabSchema, null),
     ownedPictureTab: sessionValue("ownedPictureTab", ownedTabSchema, null),
-    collectPage: (tabId, request, signal) =>
-      runCollector(tabId, request, collectedPageSchema, signal),
+    collectPage: (tabId, request, signal) => runCollector(tabId, request, pageAnswerCodec, signal),
     fetchGatedPicture: (tabId, url, signal) =>
-      runCollector(tabId, { kind: "gated-picture", url }, portPictureSchema.nullable(), signal),
+      runCollector(tabId, { kind: "gated-picture", url }, pictureAnswerCodec, signal),
     fetchPublicPicture: (tabId, url, signal) =>
-      runCollector(tabId, { kind: "public-picture", url }, portPictureSchema.nullable(), signal),
+      runCollector(tabId, { kind: "public-picture", url }, pictureAnswerCodec, signal),
   });
 
   browser.tabs.onActivated.addListener(async ({ tabId }) => {
