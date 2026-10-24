@@ -1252,6 +1252,16 @@
       "bug": "optional Redis calls could hang indefinitely",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": ["hanging job status cache read settles within its deadline"]
+    },
+    {
+      "fix": "1114796ebd8b495b65d97032af33421a1579ae58",
+      "testAt": "1114796ebd8b495b65d97032af33421a1579ae58",
+      "bug": "job status failed on an optional cache outage despite holding its durable DB row",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "an unanswered status cache read uses the DB row and logs JobStatusCacheUnavailable",
+        "hanging job status cache read settles within its deadline"
+      ]
     }
   ],
   "lint": [
