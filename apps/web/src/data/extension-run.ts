@@ -1,7 +1,8 @@
 import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schema";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { Result } from "better-result";
+import { matchErrorPartial, Result } from "better-result";
+import type { InferOk, Panic } from "better-result";
 import { ExtensionStopped } from "@/lib/errors/extension-stopped";
 import { InvalidMfcItemId } from "@/lib/errors/invalid-mfc-item-id";
 import type { MfcItemFetchFailed } from "@/lib/errors/mfc-item-fetch-failed";
@@ -19,6 +20,7 @@ import { setExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
 import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
+import type { ApiFailure } from "./api";
 
 const HEARTBEAT_MS = 20_000;
 const FAILURE_FLUSH_MS = 1000;
@@ -470,12 +472,19 @@ export function importDataTransferItems(run: Parameters<typeof importRun>[0]): P
 
 type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;
 
-function refreshFailureText(failure: RefreshFailure): string {
-  return failure.match({
-    InvalidMfcItemId: () => "Item not found",
-    ExtensionStopped: () => ITEM_ERROR_MESSAGE.extension_stopped,
-    MfcItemFetchFailed: ({ code }) => ITEM_ERROR_MESSAGE[code],
-  });
+type Resynced = InferOk<Awaited<ReturnType<typeof requestResync>>>;
+
+/** The text an Item Refresh shows for its failure. A server answer and a defect show their own message. */
+export function refreshFailureText(failure: RefreshFailure | ApiFailure | Panic): string {
+  return matchErrorPartial(
+    failure,
+    {
+      InvalidMfcItemId: () => "Item not found",
+      ExtensionStopped: () => ITEM_ERROR_MESSAGE.extension_stopped,
+      MfcItemFetchFailed: ({ code }) => ITEM_ERROR_MESSAGE[code],
+    },
+    ({ message }) => message,
+  );
 }
 
 type RefreshClock = {
@@ -524,10 +533,9 @@ async function fetchForRefresh(
 export async function refreshItemWithExtension(
   externalId: number,
   { clock = refreshClock }: { readonly clock?: RefreshClock } = {},
-) {
+): Promise<Result<Resynced, RefreshFailure | ApiFailure>> {
   const fetched = await fetchForRefresh(externalId, clock);
-  // The seam with useResourceMutation, which reads a failed refresh from the message it throws.
-  if (fetched.isErr()) throw new Error(refreshFailureText(fetched.error));
+  if (fetched.isErr()) return Result.err(fetched.error);
   const { page, picture } = fetched.value;
   await tabUploadSlots.take();
   try {

@@ -21,7 +21,7 @@ await mock.module("@/lib/extension-bridge", () => ({
   extensionBridge: delegatingBridge(() => bridge),
 }));
 
-const { createExtensionRunner, importRun, refreshItemWithExtension, syncRun } =
+const { createExtensionRunner, importRun, refreshFailureText, refreshItemWithExtension, syncRun } =
   await import("./extension-run");
 const { ExtensionPromptNotice } = await import("@/components/extension/extension-prompt-notice");
 
@@ -807,6 +807,12 @@ describe("leaving the page with failures not yet reported", () => {
 });
 
 describe("refreshing an item", () => {
+  /** The text the refresh's failure shows, or null when it saved. */
+  async function failureTextOf(externalId: number) {
+    const refreshed = await refreshItemWithExtension(externalId);
+    return refreshed.isErr() ? refreshFailureText(refreshed.error) : null;
+  }
+
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
     answer = () =>
@@ -822,7 +828,7 @@ describe("refreshing an item", () => {
 
     const refreshed = await refreshItemWithExtension(98_777);
 
-    expect(refreshed).toEqual({
+    expect(refreshed.isOk() && refreshed.value).toEqual({
       status: "cooldown",
       cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
       saved: "refreshed",
@@ -844,9 +850,7 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
-      "Item details were recently refreshed",
-    );
+    expect(await failureTextOf(98_777)).toBe("Item details were recently refreshed");
   });
 
   test("waits for a free upload slot while runs hold both", async () => {
@@ -898,7 +902,7 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(text);
+    expect(await failureTextOf(98_777)).toBe(text);
     expect(sent).toEqual([]);
   });
 
@@ -908,7 +912,7 @@ describe("refreshing an item", () => {
       fetch.done("interrupted");
     });
 
-    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
+    expect(await failureTextOf(98_777)).toBe(
       "The extension stopped. Reload the page and try again",
     );
     expect(sent).toEqual([]);
@@ -918,7 +922,7 @@ describe("refreshing an item", () => {
     fakeFetch();
     loadExtension(() => {});
 
-    await expect(refreshItemWithExtension(0)).rejects.toThrow("Item not found");
+    expect(await failureTextOf(0)).toBe("Item not found");
     expect(extension.runs).toEqual([]);
     expect(sent).toEqual([]);
   });
@@ -930,9 +934,7 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    await expect(refreshItemWithExtension(98_777)).rejects.toThrow(
-      "Sign in to MyFigureCollection to import this item",
-    );
+    expect(await failureTextOf(98_777)).toBe("Sign in to MyFigureCollection to import this item");
     expect(sent).toEqual([]);
   });
 });

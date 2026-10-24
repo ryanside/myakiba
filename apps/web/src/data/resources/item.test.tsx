@@ -1,12 +1,15 @@
 import { afterEach, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, QueryObserver } from "@tanstack/react-query";
+import { Result } from "better-result";
 import type { ReactNode } from "react";
+import { ApiRejected } from "@/lib/errors/api-rejected";
 
 setDefaultTimeout(20_000);
 
 const COOLDOWN = { status: "cooldown", cooldownExpiresAt: "2026-10-25T00:00:00.000Z" } as const;
-const refreshed = async () => ({ ...COOLDOWN, saved: "refreshed" });
+type Refreshed = Result<typeof COOLDOWN & { readonly saved: "refreshed" }, ApiRejected>;
+const refreshed = async (): Promise<Refreshed> => Result.ok({ ...COOLDOWN, saved: "refreshed" });
 let refresh = refreshed;
 const realRun = await import("@/data/extension-run");
 await mock.module("@/data/extension-run", () => ({
@@ -95,9 +98,8 @@ test("a refresh refused during the item's cooldown shows the cooldown at once", 
   const stop = shown.subscribe(() => {});
   await queryClient.refetchQueries({ queryKey: itemResource.items.resyncStatus.key(98_777) });
   resyncStatus = COOLDOWN;
-  refresh = async () => {
-    throw new Error("Item details were recently refreshed");
-  };
+  const text = "Item details were recently refreshed";
+  refresh = async () => Result.err(new ApiRejected({ status: 429, body: text, message: text }));
   const { result } = renderRefresh(queryClient);
 
   await act(async () => {

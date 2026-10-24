@@ -40,15 +40,9 @@ export function getResyncStatus(externalId: number) {
   });
 }
 
-/**
- * Still rejects with the failure, because data/extension-run.ts awaits a rejection. It returns the
- * Result once the extension run's slice moves to Result.
- */
-export async function requestResync(externalId: number, upload: ItemRefresh) {
-  const sent = await call(app.api.item({ id: externalId }).resync.post(upload), {
+export function requestResync(externalId: number, upload: ItemRefresh) {
+  return call(app.api.item({ id: externalId }).resync.post(upload), {
     fallback: "Failed to request item refresh",
     policy: "legacy",
   });
-  if (sent.isErr()) throw sent.error;
-  return sent.value;
 }

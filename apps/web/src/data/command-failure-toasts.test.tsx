@@ -1,11 +1,13 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Result } from "better-result";
 import type { ReactNode } from "react";
+import { ApiRejected } from "@/lib/errors/api-rejected";
 
-const refresh = async (): Promise<never> => {
-  throw new Error("Item details were recently refreshed");
-};
+const COOLDOWN_TEXT = "Item details were recently refreshed";
+const refresh = async () =>
+  Result.err(new ApiRejected({ status: 429, body: COOLDOWN_TEXT, message: COOLDOWN_TEXT }));
 const realRun = await import("@/data/extension-run");
 await mock.module("@/data/extension-run", () => ({
   ...realRun,

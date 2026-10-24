@@ -5,11 +5,9 @@ import {
   getItemReleases,
   getResyncStatus,
 } from "@/queries/item";
-import { Result } from "better-result";
-import { ItemRefreshFailed } from "@/lib/errors/item-refresh-failed";
 import { syncResultFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
-import { refreshItemWithExtension } from "../extension-run";
+import { refreshFailureText, refreshItemWithExtension } from "../extension-run";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -47,18 +45,9 @@ export const refreshItemCommand = defineCommand({
   failureRefetchKeys: (externalId: number) => [
     { queryKey: items.resyncStatus.key(externalId), exact: true },
   ],
-  // The extension run still rejects with its reason. That rejection is this write's failure.
-  persist: (externalId: number) =>
-    Result.tryPromise({
-      try: () => refreshItemWithExtension(externalId),
-      catch: (cause) =>
-        new ItemRefreshFailed({
-          cause,
-          message: cause instanceof Error ? cause.message : String(cause),
-        }),
-    }),
+  persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) =>
     refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
   failureTitle: () => "Failed to request item refresh",
-  failureDescription: (_externalId, error) => error.message,
+  failureDescription: (_externalId, failure) => refreshFailureText(failure),
 });
