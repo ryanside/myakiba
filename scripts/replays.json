@@ -657,7 +657,8 @@
       "fixed": [
         "the upload cap > holds for two runs together",
         "the upload cap > lets no page waiting for a slot go out after a busy answer"
-      ]
+      ],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "09a8732b",
@@ -936,7 +937,8 @@
       "fix": "20290a0d",
       "bug": "the status widget flashed the queued prompt at the start of every extension batch",
       "test": "apps/web/src/data/extension-run.test.tsx",
-      "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"]
+      "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "5564a143",
@@ -957,7 +959,8 @@
         "a session retry says its run stopped when the run breaks off",
         "an Import/Export import says its run stopped when the run breaks off",
         "an Import/Export retry says its run stopped when the run breaks off"
-      ]
+      ],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "b6c069dc",
@@ -969,7 +972,8 @@
         "a run the user lost access to > stops fetching once a heartbeat answers 404",
         "a run the user lost access to > stops fetching once an upload answers 401",
         "a run the user lost access to > stops fetching once a failure report answers 401"
-      ]
+      ],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "37b4c360",
@@ -979,13 +983,15 @@
         "an upload waiting out a Retry-After > is not sent again once the page goes away",
         "an upload waiting out a Retry-After > is not sent again once a heartbeat says the run is over",
         "an upload waiting out a Retry-After > is not sent again once a heartbeat answers 401"
-      ]
+      ],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "8ec2fb08",
       "bug": "an item refresh posted its page beside two run uploads, past the tab's upload cap",
       "test": "apps/web/src/data/extension-run.test.tsx",
-      "fixed": ["refreshing an item > waits for a free upload slot while runs hold both"]
+      "fixed": ["refreshing an item > waits for a free upload slot while runs hold both"],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "22c19dde",
@@ -1014,13 +1020,15 @@
       "fix": "48c53fa1",
       "bug": "the extension probe threw in browsers without Promise.withResolvers",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
-      "fixed": ["probe > works in a browser without Promise.withResolvers"]
+      "fixed": ["probe > works in a browser without Promise.withResolvers"],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "48c53fa1",
       "bug": "a gate whose extension check threw stayed checking, so its button spun forever",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
-      "fixed": ["a gate whose check throws stops checking and can check again"]
+      "fixed": ["a gate whose check throws stops checking and can check again"],
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
     },
     {
       "fix": "3918467b",
