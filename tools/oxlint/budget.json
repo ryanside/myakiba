@@ -1,7 +1,5 @@
 {
-  "eslint(no-restricted-properties)": {
-    "apps/web/src/hooks/use-local-storage.ts": 1
-  },
+  "eslint(no-restricted-properties)": {},
   "myakiba(no-env-outside-env-package)": {
     "apps/server/src/index.ts": 3,
     "apps/web/src/main.tsx": 1,
