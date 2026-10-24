@@ -50,7 +50,8 @@ describe("the functions injected into the MFC tab", () => {
     const signal = await runArmed(async (_request, running) => running);
     stopCollector();
 
-    expect(signal.aborted).toBe(false);
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal instanceof AbortSignal && signal.aborted).toBe(false);
   });
 });
 

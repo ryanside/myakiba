@@ -1,5 +1,5 @@
 import { mfcItemIdSchema, portPictureSchema } from "@myakiba/mfc/bridge";
-import { Result, ResultDeserializationError, panic } from "better-result";
+import { Panic, Result, ResultDeserializationError, panic } from "better-result";
 import type { ResultCodec, StandardSchemaOutput, StandardSchemaV1 } from "better-result";
 import * as z from "zod";
 import type { AttemptAbandoned } from "./errors/attempt-abandoned";
@@ -47,14 +47,20 @@ export function stopCollector(): void {
   globalThis.myakibaCollectAbort?.abort();
 }
 
+/**
+ * Runs the request the background armed. A script that rejects reaches the background only as undefined, so a defect in
+ * the work for any request answers as a defect report instead.
+ */
 export async function runArmed<T>(
   work: (request: CollectRequest, signal: AbortSignal) => Promise<T>,
-): Promise<T> {
+): Promise<T | CollectorDefect> {
   const request = collectRequestSchema.parse(globalThis.myakibaCollectRequest);
   globalThis.myakibaCollectRequest = undefined;
   const controller = globalThis.myakibaCollectAbort ?? new AbortController();
   try {
     return await work(request, controller.signal);
+  } catch (error) {
+    return reportDefect(error);
   } finally {
     if (globalThis.myakibaCollectAbort === controller) globalThis.myakibaCollectAbort = undefined;
   }
@@ -143,11 +149,15 @@ const collectorDefectSchema = z.strictObject({
 export type CollectorDefect = z.output<typeof collectorDefectSchema>;
 
 export function reportDefect(cause: unknown): CollectorDefect {
+  // better-result wraps a Panic thrown in one of its callbacks, such as a catch handler that rethrows it, in a Panic of
+  // its own. The innermost Panic names what broke.
+  let defect = cause;
+  while (Panic.is(defect) && Panic.is(defect.cause)) defect = defect.cause;
   return {
     defect:
-      cause instanceof Error
-        ? { name: cause.name, message: cause.message, stack: cause.stack ?? null }
-        : { name: "thrown value", message: String(cause), stack: null },
+      defect instanceof Error
+        ? { name: defect.name, message: defect.message, stack: defect.stack ?? null }
+        : { name: "thrown value", message: String(defect), stack: null },
   };
 }
 
