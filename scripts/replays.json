@@ -1313,6 +1313,17 @@
       "fixed": [
         "a corrupt retained sync payload refuses retry explicitly and logs its schema failure"
       ]
+    },
+    {
+      "fix": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
+      "testAt": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
+      "bug": "auth session store failures had no tagged adapter diagnostic",
+      "test": "packages/auth/src/server.test.ts",
+      "fixed": [
+        "session storage get preserves its rejection and logs SessionStoreUnavailable",
+        "session storage set preserves its rejection and logs SessionStoreUnavailable",
+        "session storage delete preserves its rejection and logs SessionStoreUnavailable"
+      ]
     }
   ],
   "lint": [
