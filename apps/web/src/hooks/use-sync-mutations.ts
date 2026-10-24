@@ -11,6 +11,7 @@ import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import { requireExtension } from "@/lib/extension-gate";
 import { importSyncItems } from "@/data/extension-run";
 import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
+import type { Saving } from "@/data/client";
 
 export type SyncSubmit = "sent" | "not_sent";
 
@@ -24,11 +25,13 @@ export type UseSyncMutationsReturn = {
 };
 
 async function sendWithExtension<Input>(
-  send: (input: Input) => Promise<SyncResponse>,
+  send: (input: Input) => Saving<SyncResponse>,
   input: Input,
 ): Promise<SyncSubmit> {
   if (!(await requireExtension())) return "not_sent";
-  await send(input);
+  const sent = await send(input);
+  // A refused send still rejects the form's submit, after its toast, as it did before.
+  if (sent.isErr()) throw sent.error;
   return "sent";
 }
 

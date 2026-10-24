@@ -19,7 +19,7 @@ import { panic } from "better-result";
 import type { InferOk, Result } from "better-result";
 import { call } from "../api";
 import type { ApiFailure } from "../api";
-import { invalidateFamilies, rootedRead, settle, streamedRead } from "../client";
+import { invalidateFamilies, rootedRead, settle, streamedRead, useWrite } from "../client";
 
 type ImportStatusChunk =
   Treaty.Data<
@@ -104,7 +104,7 @@ export function useExportData(onSaved: (archive: DataTransferArchiveV1) => void)
       mutation.reset();
     },
   });
-  return mutation;
+  return useWrite(mutation);
 }
 
 /** A write that shows the current import it returns at once and rereads it once it settles. */
@@ -114,7 +114,7 @@ function useCurrentImportWrite<Output, Input = void>(
   onSaved: (output: Output) => void,
 ) {
   const queryClient = useQueryClient();
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: (input: Input) => settle(() => persist(input)),
     onSuccess: (output) => {
       onSaved(output);
@@ -122,6 +122,7 @@ function useCurrentImportWrite<Output, Input = void>(
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: currentImportKey }),
   });
+  return useWrite(mutation);
 }
 
 type Started = InferOk<Awaited<ReturnType<typeof startDataTransferImport>>>;

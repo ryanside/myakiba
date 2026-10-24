@@ -120,25 +120,25 @@ export function DataTransfer() {
 
   let exportState: ActionState = { kind: "idle" };
   if (exportMutation.isPending) exportState = { kind: "pending" };
-  else if (exportMutation.isError) {
+  else if (exportMutation.error) {
     exportState = { kind: "error", message: exportMutation.error.message };
   }
 
   let startState: ActionState = { kind: "idle" };
   if (startMutation.isPending) startState = { kind: "pending" };
-  else if (startMutation.isError) {
+  else if (startMutation.error) {
     startState = { kind: "error", message: startMutation.error.message };
   }
 
   let retryState: ActionState = { kind: "idle" };
   if (retryMutation.isPending) retryState = { kind: "pending" };
-  else if (retryMutation.isError) {
+  else if (retryMutation.error) {
     retryState = { kind: "error", message: retryMutation.error.message };
   }
 
   let deleteState: ActionState = { kind: "idle" };
   if (deleteMutation.isPending) deleteState = { kind: "pending" };
-  else if (deleteMutation.isError) {
+  else if (deleteMutation.error) {
     deleteState = { kind: "error", message: deleteMutation.error.message };
   }
 
@@ -186,7 +186,9 @@ export function DataTransfer() {
     <DataTransferView
       state={state}
       actions={{
-        handleExport: () => exportMutation.mutate(),
+        handleExport: () => {
+          void exportMutation.run();
+        },
         handleReconnectImportStatus: () => liveStatusQuery.refetch(),
         handleRetryCurrentImportLoad: () => currentImportQuery.refetch(),
         onFile: (file) => handleFile(file),
@@ -199,22 +201,18 @@ export function DataTransfer() {
         handleConfirmImport: async () => {
           if (preparedFile.kind !== "ready") return;
 
-          try {
-            await startMutation.mutateAsync({
-              fileName: preparedFile.file.name,
-              archive: preparedFile.archive,
-            });
-          } catch {
-            // The mutation keeps the actionable error beside the import controls.
-          }
+          // A failed start shows its error beside the import controls, so the dialog closes either way.
+          await startMutation.run({
+            fileName: preparedFile.file.name,
+            archive: preparedFile.archive,
+          });
         },
-        handleRetryCurrentImport: () => retryMutation.mutate(),
+        handleRetryCurrentImport: () => {
+          void retryMutation.run();
+        },
         handleDeleteCurrentImport: async () => {
-          try {
-            await deleteMutation.mutateAsync();
-          } catch {
-            // The mutation keeps the actionable error beside the import controls.
-          }
+          // A failed delete shows its error beside the import controls, so the dialog closes either way.
+          await deleteMutation.run();
         },
       }}
     />

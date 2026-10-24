@@ -28,7 +28,15 @@ import {
 } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
 import { syncResultFamilies } from "../catalog";
-import { defineCommand, invalidateFamilies, rootedRead, settle, streamedRead } from "../client";
+import {
+  defineCommand,
+  invalidateFamilies,
+  rootedRead,
+  settle,
+  streamedRead,
+  useWrite,
+} from "../client";
+import type { ReadFailure } from "../client";
 
 type JobStatusChunk =
   Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
@@ -152,7 +160,7 @@ export const syncSends = {
 
 type SubmitFeedback = {
   readonly onSaved: (response: SyncResponse) => void;
-  readonly onFailed: (error: Error) => void;
+  readonly onFailed: (failure: ReadFailure<ApiFailure>) => void;
 };
 
 /**
@@ -176,7 +184,8 @@ export function useSyncSubmit<Input>(
     },
     onError: onFailed,
   });
-  return { send: mutation.mutateAsync, isPending: mutation.isPending } as const;
+  const { run, isPending } = useWrite(mutation);
+  return { send: run, isPending } as const;
 }
 
 export const retrySyncSessionCommand = defineCommand({
