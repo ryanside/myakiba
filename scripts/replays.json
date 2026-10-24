@@ -1091,7 +1091,7 @@
       "testAt": "39f38f09"
     },
     {
-      "fix": "c8f5c32fedc776e843e8a9caff206823ba3893fc",
+      "fix": "26af6e8beb3be0cbccb6ed253dd6408e102e59b4",
       "bug": "W-F2: legacy API callers expose server and network details",
       "test": "apps/web/src/data/legacy-wording.test.ts",
       "fixed": [
@@ -1111,6 +1111,12 @@
         "refresh status hides server, validator and network details",
         "refresh item hides server, validator and network details"
       ]
+    },
+    {
+      "fix": "ff8199cb790afb4d03ee53f9374ed4a0aabc0e30",
+      "bug": "W-F6: fees edits show a second failure toast",
+      "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
+      "fixed": ["a failed fees edit shows one command toast and restores the saved total"]
     }
   ],
   "lint": [

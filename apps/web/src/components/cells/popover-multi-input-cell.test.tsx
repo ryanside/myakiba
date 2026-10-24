@@ -7,7 +7,7 @@ import { Toaster, toast } from "@/components/ui/toast";
 import { PopoverMultiInputCell } from "./popover-multi-input-cell";
 
 const command = defineCommand({
-  invalidates: [],
+  invalidates: ["orders"],
   persist: (_values: Record<string, number>) => refusal("Couldn't save the fees"),
   failureTitle: () => "Couldn't save the fees",
 });
