@@ -196,6 +196,7 @@
       "name": "@myakiba/contracts",
       "version": "0.0.0",
       "dependencies": {
+        "better-result": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

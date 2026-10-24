@@ -23,6 +23,7 @@
     "test": "bun test --isolate"
   },
   "dependencies": {
+    "better-result": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

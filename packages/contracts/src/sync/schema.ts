@@ -1,3 +1,4 @@
+import { panic } from "better-result";
 import * as z from "zod";
 import { itemUploadSchema, MAX_ITEM_FAILURES_PER_REPORT } from "../mfc-items/schema";
 import {
@@ -391,6 +392,8 @@ export const sessionStatusToPhase = (status: SyncSessionStatus): SyncJobPhase =>
       return "completed";
     case "failed":
       return "failed";
+    default:
+      return panic(`Unknown sync session status "${String(status satisfies never)}"`);
   }
 };
 
@@ -407,6 +410,8 @@ export const sessionStatusToTerminalState = (
     case "pending":
     case "processing":
       return null;
+    default:
+      return panic(`Unknown sync session status "${String(status satisfies never)}"`);
   }
 };
 export type NormalizedInternalCsvItem = z.infer<typeof internalCsvItemSchema>;
