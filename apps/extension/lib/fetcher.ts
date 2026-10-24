@@ -112,6 +112,7 @@ type ItemPage = { readonly html: string; readonly picture: PortPicture | null };
 type ShownItem = { readonly page: CollectedPage; readonly ogImage: MfcOgImage };
 
 type ItemContext = {
+  readonly mfcItemId: MfcItemId;
   readonly tabId: number;
   readonly requester: LiveRequester;
   readonly signal: AbortSignal;
@@ -298,14 +299,21 @@ export function createFetcher(deps: FetcherDeps) {
     return Result.flatten(read);
   }
 
-  /** A picture is optional, so an item whose picture fails imports without one. */
+  /** A picture is optional, so an item whose picture fails imports without one, and the failure is only logged. */
   async function itemPage(
     page: CollectedPage,
     ogImage: MfcOgImage,
     context: ItemContext,
   ): Promise<ItemPage> {
     const picture = await pictureOf(ogImage, context);
-    return { html: page.html, picture: picture.unwrapOr(null) };
+    const logged = picture.tapError((failure) => {
+      if (!AttemptAbandoned.is(failure)) {
+        console.warn(
+          `${failure._tag} for MFC item ${context.mfcItemId}'s picture: ${failure.message}`,
+        );
+      }
+    });
+    return { html: page.html, picture: logged.unwrapOr(null) };
   }
 
   async function fetchPage(
@@ -444,7 +452,7 @@ export function createFetcher(deps: FetcherDeps) {
         return Result.err(new MfcChallengeUnsolved({ mfcItemId, reason: "unanswered" }));
       }
       const { page, ogImage } = yield* answer;
-      return Result.ok(await itemPage(page, ogImage, { tabId, requester, signal }));
+      return Result.ok(await itemPage(page, ogImage, { mfcItemId, tabId, requester, signal }));
     });
   }
 
@@ -459,7 +467,14 @@ export function createFetcher(deps: FetcherDeps) {
         const { page, tabId } = yield* Result.await(fetchItem(job, requester, signal));
         const reading = yield* readPage(page, job, clock.now());
         if (reading.kind === "item") {
-          return Result.ok(await itemPage(page, reading.ogImage, { tabId, requester, signal }));
+          return Result.ok(
+            await itemPage(page, reading.ogImage, {
+              mfcItemId: job.mfcItemId,
+              tabId,
+              requester,
+              signal,
+            }),
+          );
         }
         if (reading.pausedUntil !== null) await throttle.pauseOrHalt(reading.pausedUntil);
         return await solveChallenge(job, requester, reading.status, signal);

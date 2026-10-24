@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { Mock } from "bun:test";
-import { Panic } from "better-result";
+import { Panic, Result } from "better-result";
 import {
   CHALLENGE_PAGE,
   COMMIT_STYLES,
@@ -22,6 +22,7 @@ import {
 import type { FakeClock, FakeExtension, PageAnswer } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
+import { PictureRejected } from "./errors/picture-rejected";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -1813,6 +1814,43 @@ describe("the developer log", () => {
     await extension.settle();
 
     expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("names a failed picture's error, item id and reason once, without its URL or bytes", async () => {
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
+      gatedPicture: async () =>
+        Result.err(new PictureRejected({ reason: "unknown_format", status: 200, bytes: 512 })),
+    });
+    const run = extension.run([4]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(4, "gated"), picture: null }]);
+    expect(warned()).toEqual([
+      expect.stringContaining("PictureRejected for MFC item 4's picture:"),
+    ]);
+    expect(warned()[0]).toContain("unknown_format");
+    expect(warned()[0]).not.toContain("objectId");
+    expect(warned()[0]).not.toContain("myfigurecollection.net");
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("stays quiet for a picture whose run was cancelled while it loaded", async () => {
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
+      gatedPicture: async (_url, signal) => {
+        await extension.clock.sleep(PICTURE_TIMEOUT_MS, signal);
+        return null;
+      },
+    });
+    const run = extension.run([5]);
+    await extension.clock.runUntil(() => extension.pictureUrls.length > 0);
+    extension.fetcher.cancel(run.key);
+    await extension.settle();
+
+    expect(run.results()).toEqual([]);
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
   });
