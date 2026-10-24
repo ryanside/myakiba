@@ -628,3 +628,20 @@ test.each([
     expect(signedIn).toBe(true);
   },
 );
+
+test("a session change whose route reload fails asks for a refresh", async () => {
+  const { router, refetch } = await openApp();
+  await screen.findByText("Collector's collection");
+  const invalidate = spyOn(router, "invalidate").mockRejectedValue(new Error("Loader failed"));
+
+  try {
+    account = otherSession;
+    await act(refetch);
+
+    expect(
+      await screen.findByText("Couldn't update your session. Refresh to try again."),
+    ).toBeTruthy();
+  } finally {
+    invalidate.mockRestore();
+  }
+});
