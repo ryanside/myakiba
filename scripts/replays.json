@@ -1339,6 +1339,14 @@
       "bug": "a panicking throttle reservation left every later MFC load waiting",
       "test": "apps/extension/lib/throttle.test.ts",
       "fixed": ["a throttle turn > whose reservation panics lets the next load run"]
+    },
+    {
+      "fix": "31e985a6419eb728040f07f7f2bd584469c9b48a",
+      "bug": "a defect while the collector read a picture in the tab imported the item without its picture",
+      "test": "apps/extension/lib/collector.test.ts",
+      "fixed": [
+        "the collector reading a picture in its tab > hands a defect while it reads the picture to the background as a Panic"
+      ]
     }
   ],
   "lint": [
