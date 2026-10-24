@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { Panic, Result } from "better-result";
 import { fakeClock, memoryValue } from "../test/fake-browser";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
@@ -206,6 +206,49 @@ describe("a throttle turn", () => {
     await clock.runUntil(() => answer !== null);
 
     expect(answer).toMatchObject({ status: "ok", value: 7 });
+  });
+
+  // bun fails the test on an unhandled rejection, so these loads also prove the defect is never left unhandled.
+  test("whose end of turn panics while it is booked reports it once and lets the next loads run", async () => {
+    const { clock } = turns();
+    const stored = memoryValue(OPEN_THROTTLE);
+    let saves = 0;
+    const throttle = createThrottle({
+      clock,
+      random: () => 0.5,
+      state: {
+        load: stored.load,
+        save: (next) => {
+          saves += 1;
+          // The first load's reservation is the first save, and the end of its turn the second.
+          if (saves === 2) throw new Error("the books broke");
+          return stored.save(next);
+        },
+      },
+    });
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const loads = Promise.allSettled(
+        [1, 2, 3].map((value) =>
+          throttle.load(new AbortController().signal, async () => Result.ok(value), 1000),
+        ),
+      );
+      await clock.runUntilIdle();
+      // A real tick, so bun sees any rejection left unhandled while this test still runs.
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      expect(await loads).toMatchObject([
+        { status: "fulfilled", value: { status: "ok", value: 1 } },
+        { status: "fulfilled", value: { status: "ok", value: 2 } },
+        { status: "fulfilled", value: { status: "ok", value: 3 } },
+      ]);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(error.mock.calls[0]?.[1]).toBeInstanceOf(Panic);
+    } finally {
+      error.mockRestore();
+    }
   });
 
   test.each([
