@@ -333,3 +333,15 @@ type ProbeData = NonNullable<Awaited<ReturnType<typeof client.probe.get>>["data"
 void (true satisfies Equal<ProbeData, "saved">);
 type PlainError = ErrorOf<ReturnType<typeof client.plain.get>>;
 void (true satisfies Equal<Extract<PlainError, { status: 404 }>, never>);
+
+// A recover that only rethrows still handles an internal error: rethrowing answers the 500.
+command(
+  config,
+  async (_scope, input: { readonly gone: boolean }) =>
+    input.gone ? Result.err(new Absent({ retryable: false, message: "gone" })) : Result.ok(1),
+  {
+    recover: async (_scope, _input, error) => {
+      throw error;
+    },
+  },
+);

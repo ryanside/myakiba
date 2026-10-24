@@ -74,8 +74,7 @@ function startOperation<const M extends string>(failure: M) {
       return started.map(() => null);
     },
     {
-      // A recover that only rethrows infers no answer, which the kernel would read as no recover.
-      recover: async (scope, input, error): Promise<Result<never, never>> => {
+      recover: async (scope, input, error) => {
         try {
           await scope.execute(failedStart, { ...input, failure: "before_start" });
         } catch {

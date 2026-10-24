@@ -158,7 +158,7 @@ type QueryConfig<M extends string> = OpConfig<M> & {
  * What a command does with what its body leaves behind. It is the third argument, after
  * the body, so that TS infers the body first and types `error` from it.
  */
-type Handlers<I, E, C> = {
+type Retrying<E> = {
   /**
    * Decides whether a rolled-back attempt runs again, starting at attempt 1. It sees an
    * internal Err or a thrown value, never a Failure, a committed failure or a defect.
@@ -166,12 +166,17 @@ type Handlers<I, E, C> = {
    * narrower parameter stops TS from inferring the body.
    */
   readonly retry?: (error: Recoverable<E>, attempt: number) => boolean;
+  readonly recover?: never;
+};
+
+/** Handlers with a recover. Its presence, not its answer type, lets an internal error through. */
+type Recovering<I, E, C> = Omit<Retrying<E>, "recover"> & {
   /**
    * Runs after rollback, for an internal Err or a throw from `before` or the last attempt.
    * A defect never reaches it. It answers with a Failure or a fresh operation, or throws
    * to answer 500; rethrowing `error` reports the value originally thrown.
    */
-  readonly recover?: (scope: RecoveryScope, input: I, error: Recoverable<E>) => Promise<C>;
+  readonly recover: (scope: RecoveryScope, input: I, error: Recoverable<E>) => Promise<C>;
 };
 
 /** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
@@ -219,8 +224,6 @@ type NoPanic<E> = [Extract<E, Panic>] extends [never]
 type Checked<Answer, E, Recovers extends boolean> = Literal<InferOk<Answer>> &
   Handled<E, Recovers> &
   NoPanic<E>;
-
-type HasRecover<C> = [C] extends [never] ? false : true;
 
 type AnyOp = Op<never, unknown, AnyFailure, string>;
 type Body = (scope: never, input: never) => Promise<AnyResult>;
@@ -300,10 +303,18 @@ export function command<
   body: (
     scope: CommandScope,
     input: HandoffOf<B>,
-  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, HasRecover<C>>>,
-  handlers?: Handlers<I, InferErr<B | R>, C>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, true>>,
+  handlers: Recovering<I, InferErr<B | R>, C>,
 ): Op<I, InferOk<AnswerOf<B> | R | C>, PublicOf<InferErr<B | R | C>>, M>;
-// Only the first overload takes a `before`: it reads the pool, so it can never be handed a Tx.
+export function command<I, B extends AnyResult, R extends AnyResult, const M extends string>(
+  config: OpConfig<M> & { readonly before: Before<I, B> },
+  body: (
+    scope: CommandScope,
+    input: HandoffOf<B>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, false>>,
+  handlers?: Retrying<InferErr<B | R>>,
+): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | R>>, M>;
+// Only the overloads above take a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
   R extends AnyResult,
@@ -311,13 +322,18 @@ export function command<
   C extends Result<unknown, AnyFailure> = never,
 >(
   config: OpConfig<M> & { readonly before?: never },
-  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, HasRecover<C>>>,
-  handlers?: Handlers<I, InferErr<R>, C>,
+  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, true>>,
+  handlers: Recovering<I, InferErr<R>, C>,
 ): Op<I, InferOk<R | C>, PublicOf<InferErr<R | C>>, M>;
+export function command<I, R extends AnyResult, const M extends string>(
+  config: OpConfig<M> & { readonly before?: never },
+  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, false>>,
+  handlers?: Retrying<InferErr<R>>,
+): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M>;
 export function command(
   config: OpConfig<string> & { readonly before?: Before<never, AnyResult> },
   body: (scope: CommandScope, input: never) => Promise<AnyResult>,
-  handlers?: Handlers<never, unknown, AnyResult>,
+  handlers?: Retrying<never> | Recovering<never, never, AnyResult>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body as Body);
