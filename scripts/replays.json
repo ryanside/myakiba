@@ -1149,7 +1149,7 @@
       ]
     },
     {
-      "fix": "ac948c467917d31a2cba188fdfdc2be2a29e80db",
+      "fix": "1a04de938c42c282a96daf5f41e92ddef2e919c0",
       "bug": "Resend refused verification and reset emails but auth requests answered success",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1158,7 +1158,7 @@
       ]
     },
     {
-      "fix": "a861fe25cca9ed6c3d74968b9a1e448bb344dfcb",
+      "fix": "92786dd1d15f71c9f6a8b4bdbd08916bacd7f926",
       "bug": "unsupported user currency and date format values were accepted at sign-up and update",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1169,7 +1169,7 @@
       ]
     },
     {
-      "fix": "b85ec7fd08bd530e8651c33de319396ad9a12f93",
+      "fix": "de7f6c623f4f0cfe690650f98fb0125d53d869dc",
       "bug": "worker shutdown exited zero on a thrown health stop and hung on stuck stages or rejected flush",
       "test": "apps/worker/shutdown.test.ts",
       "fixed": [
@@ -1182,19 +1182,19 @@
       ]
     },
     {
-      "fix": "62aea68914b8c1f882acf612ef7f21e0375660a9",
+      "fix": "70c3156aa6b2f7d25167e6b8f00c149178404d1b",
       "bug": "Redis connection error events bypassed evlog",
       "test": "packages/redis/src/client.test.ts",
       "fixed": ["the shared Redis client reports emitted errors through evlog"]
     },
     {
-      "fix": "62aea68914b8c1f882acf612ef7f21e0375660a9",
+      "fix": "70c3156aa6b2f7d25167e6b8f00c149178404d1b",
       "bug": "Redis connection error events bypassed evlog",
       "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
       "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
     },
     {
-      "fix": "4d7f019dab691e21ee0f146bfd9575b9e2d36269",
+      "fix": "8b680cf1bfb75810de5751258520c0b475991c96",
       "bug": "fatal server errors during asynchronous boot bypassed evlog and did not exit",
       "test": "apps/server/src/fatal-errors.test.ts",
       "fixed": [
@@ -1205,13 +1205,22 @@
       ]
     },
     {
-      "fix": "adfd43ec25a8ea2b71ae9a023422ba7b5eb3a9cc",
+      "fix": "9cad4bbd9287060ac33fe63c0d0280b235fa6b8f",
       "bug": "auth import eagerly generated OpenAPI and cached its possibly unhandled rejection",
       "test": "packages/auth/src/openapi.test.ts",
       "fixed": [
         "importing auth does not generate OpenAPI",
         "OpenAPI generation failures reach the requesting caller",
         "OpenAPI requests retry failed generation and share the successful schema"
+      ]
+    },
+    {
+      "fix": "2d141bc4c4977826ecc4cfac0e77094aa6fb8296",
+      "bug": "best-effort cooldown write failures rolled back Item Refresh and status read failures answered 500",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
+        "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
       ]
     }
   ],
