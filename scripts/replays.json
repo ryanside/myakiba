@@ -687,7 +687,8 @@
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": [
         "an Item Refresh refetches the item, its releases, and the collection, orders and calendar that show it"
-      ]
+      ],
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
     },
     {
       "fix": "ebb23965a56ea8b39fad07944004842d10054b7d",
@@ -1020,13 +1021,15 @@
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": [
         "an Item Refresh refetches the dashboard, analytics, searches, Wishlist, lists and expenses that show it"
-      ]
+      ],
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
     },
     {
       "fix": "ea0f1215b0d4399637213312aaecf502b33608fb",
       "bug": "a refresh refused for the item's cooldown left the button idle until the status refetched",
       "test": "apps/web/src/data/resources/item.test.tsx",
-      "fixed": ["a refresh refused during the item's cooldown shows the cooldown at once"]
+      "fixed": ["a refresh refused during the item's cooldown shows the cooldown at once"],
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
     },
     {
       "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
@@ -1347,6 +1350,12 @@
       "fixed": [
         "the collector reading a picture in its tab > hands a defect while it reads the picture to the background as a Panic"
       ]
+    },
+    {
+      "fix": "de69a35ba1a3c4e6a608793998d0201c9b50f343",
+      "bug": "a defect in an Item Refresh was read as a refused refresh and logged nowhere",
+      "test": "apps/web/src/data/item-refresh.test.tsx",
+      "fixed": ["a defect in the refresh is reported as a Panic, not read as a refused refresh"]
     }
   ],
   "lint": [
