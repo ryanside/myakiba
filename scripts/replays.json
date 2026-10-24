@@ -1281,6 +1281,13 @@
       "bug": "commit effect Panics were logged only at warning level",
       "test": "apps/server/src/domain/kernel.test.ts",
       "fixed": ["a Panic in a commit effect logs at error level and keeps the response"]
+    },
+    {
+      "fix": "58ed44e3455b219a0787dae6e0479fed6b5cfb2a",
+      "testAt": "58ed44e3455b219a0787dae6e0479fed6b5cfb2a",
+      "bug": "corrupt status cache diagnostics discarded the typed parser failure",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": ["a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status"]
     }
   ],
   "lint": [
