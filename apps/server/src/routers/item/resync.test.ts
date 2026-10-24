@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import type { DrainContext } from "evlog";
 import path from "node:path";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
@@ -20,7 +21,13 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
-initLogger({ enabled: false });
+const logged: DrainContext["event"][] = [];
+initLogger({
+  silent: true,
+  drain: ({ event }) => {
+    logged.push(event);
+  },
+});
 
 const userId = "user-1";
 const redisKeys = new Map<string, { readonly value: string; readonly expiresAt: number }>();
@@ -210,6 +217,7 @@ beforeEach(async () => {
   store = memoryStore();
   redisKeys.clear();
   rateLimited.length = 0;
+  logged.length = 0;
   resyncsThisHour = 1;
   redisLost = false;
   loseRedis = null;
@@ -510,20 +518,6 @@ describe("a resync that fails part way leaves no cooldown and no refresh", () =>
     expect(await resyncStatus()).toEqual(IDLE);
   });
 
-  test("Redis lost at the cooldown write rolls the refresh back, and a retry refreshes", async () => {
-    await upload(page98777);
-    const before = await itemRows();
-    loseRedis = "at the cooldown write";
-
-    expect(await resync(derivedRetitledPage)).toMatchObject({ status: 500 });
-
-    redisLost = false;
-    loseRedis = null;
-    expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-  });
-
   test("Redis lost right after the cooldown write still commits the refresh the cooldown names", async () => {
     await upload(page98777);
     loseRedis = "after the cooldown write";
@@ -552,6 +546,42 @@ describe("a resync that fails part way leaves no cooldown and no refresh", () =>
     expect(await itemRows()).toEqual(before);
     expect(await resyncStatus()).toEqual(IDLE);
     expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+  });
+});
+
+describe("best-effort cooldown failures", () => {
+  test("Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure", async () => {
+    await upload(page98777);
+    loseRedis = "at the cooldown write";
+
+    expect(await resync(derivedRetitledPage)).toEqual({
+      status: 200,
+      body: { status: "idle", cooldownExpiresAt: null, saved: "refreshed" },
+    });
+    const { item: row } = await itemRows();
+    expect(row?.title).toBe(RETITLED);
+    expect(logged).toContainEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
+      }),
+    );
+    redisLost = false;
+    loseRedis = null;
+    expect(await resyncStatus()).toEqual(IDLE);
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("unchanged"));
+  });
+
+  test("Redis lost during a status read reports idle and logs the failure", async () => {
+    await upload(page98777);
+    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+    redisLost = true;
+    logged.length = 0;
+    expect(await resyncStatus()).toEqual(IDLE);
+    expect(logged).toContainEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({ name: "ResyncCooldownUnavailable" }),
+      }),
+    );
   });
 });
 
