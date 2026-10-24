@@ -1,6 +1,7 @@
 import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { syncJobStatusSchema } from "@myakiba/contracts/sync/schema";
+import { parseJson } from "@myakiba/utils/parse-json";
 import {
   JOB_STATUS_CHANNEL_PREFIX,
   JOB_STATUS_KEY_PREFIX,
@@ -14,15 +15,8 @@ export const getJobStatusSnapshotKey = (jobId: string): string =>
 export const getJobStatusChannel = (jobId: string): string =>
   `${JOB_STATUS_CHANNEL_PREFIX}${jobId}`;
 
-export const parseJobStatusPayload = (value: string): SyncJobStatus | null => {
-  try {
-    const parsed = JSON.parse(value);
-    const result = syncJobStatusSchema.safeParse(parsed);
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
-};
+export const parseJobStatusPayload = (value: string): SyncJobStatus | null =>
+  parseJson(syncJobStatusSchema, value).unwrapOr(null);
 
 const WRITE_REVISION_SCRIPT = `
 local cached = redis.call('GET', KEYS[1])

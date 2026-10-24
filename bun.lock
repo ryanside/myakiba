@@ -259,6 +259,7 @@
       "dependencies": {
         "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
+        "@myakiba/utils": "workspace:*",
         "ioredis": "catalog:",
       },
       "devDependencies": {

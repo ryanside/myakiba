@@ -1,7 +1,6 @@
 {
   "eslint(no-restricted-properties)": {
-    "apps/web/src/hooks/use-local-storage.ts": 1,
-    "packages/redis/src/job-status.ts": 1
+    "apps/web/src/hooks/use-local-storage.ts": 1
   },
   "myakiba(no-env-outside-env-package)": {
     "apps/server/src/index.ts": 3,
