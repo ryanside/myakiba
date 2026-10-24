@@ -104,3 +104,57 @@ test.each(["send-verification-email", "request-password-reset"])(
     expect(response.status).toBe(200);
   },
 );
+
+for (const [field, value, message] of [
+  ["currency", "not-money", "Choose a supported currency."],
+  ["dateFormat", "not-a-date-format", "Choose a supported date format."],
+] as const) {
+  test(`sign-up rejects unsupported ${field}`, async () => {
+    sendFails = false;
+    const response = await testAuth().handler(
+      new Request("http://localhost:3000/api/auth/sign-up/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3001" },
+        body: JSON.stringify({
+          name: "New collector",
+          email: "new@example.com",
+          password: "password-123456",
+          [field]: value,
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
+  });
+  test(`update-user rejects unsupported ${field}`, async () => {
+    const instance = testAuth();
+    const context = await instance.$context;
+    await context.internalAdapter.linkAccount({
+      userId: "user-id",
+      accountId: "user-id",
+      providerId: "credential",
+      password: await context.password.hash("password-123456"),
+    });
+    instance.options.emailAndPassword.requireEmailVerification = false;
+    const signedIn = await instance.api.signInEmail({
+      body: { email: "collector@example.com", password: "password-123456" },
+      asResponse: true,
+    });
+    expect(signedIn.status).toBe(200);
+    const cookie = signedIn.headers
+      .getSetCookie()
+      .map((entry) => entry.split(";")[0])
+      .join("; ");
+    const response = await instance.handler(
+      new Request("http://localhost:3000/api/auth/update-user", {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: "http://localhost:3001", cookie },
+        body: JSON.stringify({ [field]: value }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
+    const session = await instance.api.getSession({ headers: new Headers({ cookie }) });
+    expect(session?.user).toMatchObject({ currency: "USD", dateFormat: "MM/DD/YYYY" });
+  });
+}
