@@ -12,7 +12,6 @@ export {
   itemSyncSchema,
   syncItemFailureSchema,
   internalCsvItemSchema,
-  syncJobStatusSchema,
   syncOrderItemsSchema,
 } from "@myakiba/contracts/sync/schema";
 

@@ -12,7 +12,7 @@ import {
 } from "./run";
 import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
-import { Result } from "better-result";
+import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { EmailNotVerified } from "./errors/email-not-verified";
 import { ImportNotFound } from "./errors/import-not-found";

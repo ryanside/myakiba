@@ -580,6 +580,7 @@ void (true satisfies Equal<
       | S<500, "Failed to import item">;
     retry:
       | S<409, "The 20-day window to retry failed item results has expired">
+      | S<409, "This import can't be retried">
       | S<409, "These failed item results cannot be retried">
       | S<
           403,
