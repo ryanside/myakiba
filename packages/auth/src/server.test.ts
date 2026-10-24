@@ -69,7 +69,7 @@ beforeEach(() => {
 });
 
 test.each(["send-verification-email", "request-password-reset"])(
-  "%s fails when the email provider refuses the send",
+  "%s succeeds and logs when the email provider refuses the send",
   async (endpoint) => {
     const response = await testAuth().handler(
       new Request(`http://localhost:3000/api/auth/${endpoint}`, {
@@ -78,17 +78,14 @@ test.each(["send-verification-email", "request-password-reset"])(
         body: JSON.stringify({ email: "collector@example.com" }),
       }),
     );
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(
       events.some(
         ({ event }) =>
           z.object({ name: z.literal("SendAuthEmailFailed") }).safeParse(event.error).success,
       ),
     ).toBe(true);
-    expect(await response.json()).toEqual({
-      code: "SEND_AUTH_EMAIL_FAILED",
-      message: "We couldn't send the email. Please try again.",
-    });
+
   },
 );
 test.each(["send-verification-email", "request-password-reset"])(
@@ -160,3 +157,23 @@ test.each(invalidPreferences)(
     expect(session?.user).toMatchObject({ currency: "USD", dateFormat: "MM/DD/YYYY" });
   },
 );
+
+
+test("failed reset email does not disclose whether the account exists", async () => {
+  const instance = testAuth();
+  const statuses: number[] = [];
+  for (const email of ["collector@example.com", "absent@example.com"]) {
+    const response = await instance.api.requestPasswordReset({ body: { email }, asResponse: true });
+    statuses.push(response.status);
+  }
+  expect(statuses).toEqual([200, 200]);
+});
+
+test("sign-up succeeds and logs when verification email fails", async () => {
+  const response = await testAuth().api.signUpEmail({
+    body: { name: "New collector", email: "new@example.com", password: "password-123456" },
+    asResponse: true,
+  });
+  expect(response.status).toBe(200);
+  expect(events.some(({ event }) => event.action === "auth.sendEmail" && event.purpose === "verification" && z.object({ name: z.literal("SendAuthEmailFailed"), cause: z.unknown() }).safeParse(event.error).success)).toBe(true);
+});
