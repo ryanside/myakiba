@@ -90,10 +90,14 @@ export default function SyncCollectionForm({
   return (
     <div className="w-full">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          void collectionForm.handleSubmit();
+          try {
+            await collectionForm.handleSubmit();
+          } catch (submitError) {
+            console.error(submitError);
+          }
         }}
         className="space-y-3 w-full"
       >

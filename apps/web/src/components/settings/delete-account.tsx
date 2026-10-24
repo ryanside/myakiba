@@ -78,10 +78,14 @@ export function DeleteAccount() {
                 </DialogDescription>
               </DialogHeader>
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  form.handleSubmit();
+                  try {
+                    await form.handleSubmit();
+                  } catch (submitError) {
+                    console.error(submitError);
+                  }
                 }}
                 className="flex flex-col gap-4"
               >

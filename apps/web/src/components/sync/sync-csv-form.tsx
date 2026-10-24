@@ -25,10 +25,14 @@ export default function SyncCsvForm({
   return (
     <div className="w-full">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          void csvForm.handleSubmit();
+          try {
+            await csvForm.handleSubmit();
+          } catch (submitError) {
+            console.error(submitError);
+          }
         }}
         className="rounded-lg space-y-4 w-full"
       >

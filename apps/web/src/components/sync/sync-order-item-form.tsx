@@ -103,10 +103,14 @@ export default function SyncOrderItemForm({
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        void orderItemForm.handleSubmit();
+        try {
+          await orderItemForm.handleSubmit();
+        } catch (submitError) {
+          console.error(submitError);
+        }
       }}
       className="space-y-3 w-full"
     >

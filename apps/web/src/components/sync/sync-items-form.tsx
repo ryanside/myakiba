@@ -36,10 +36,14 @@ export function SyncItemsForm({
   return (
     <form
       className="space-y-3 w-full"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        void form.handleSubmit();
+        try {
+          await form.handleSubmit();
+        } catch (submitError) {
+          console.error(submitError);
+        }
       }}
     >
       <SyncNotice />

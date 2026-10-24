@@ -38,8 +38,8 @@ async function submitCollectionAndReadToast() {
     ),
   });
 
-  let rejection: unknown = null;
-  let submitted: unknown;
+  let rejection: Error | null = null;
+  let submitted: Awaited<ReturnType<typeof result.current.handleSyncCollectionSubmit>> | undefined;
   await act(async () => {
     try {
       const form = new FormApi({
@@ -51,6 +51,7 @@ async function submitCollectionAndReadToast() {
       form.mount();
       await form.handleSubmit();
     } catch (error) {
+      if (!(error instanceof Error)) throw error;
       rejection = error;
     }
   });

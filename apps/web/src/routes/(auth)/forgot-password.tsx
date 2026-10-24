@@ -109,10 +109,14 @@ function RouteComponent() {
           </div>
         </div>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            form.handleSubmit();
+            try {
+              await form.handleSubmit();
+            } catch (submitError) {
+              console.error(submitError);
+            }
           }}
           className="grid gap-4"
         >

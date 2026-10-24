@@ -138,10 +138,14 @@ function PopoverMultiInputCellContent({
   return (
     <PopoverContent className="w-72 p-0" align="start">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          try {
+            await form.handleSubmit();
+          } catch (submitError) {
+            console.error(submitError);
+          }
         }}
       >
         <PopoverHeader className="px-3 pt-3 pb-2">

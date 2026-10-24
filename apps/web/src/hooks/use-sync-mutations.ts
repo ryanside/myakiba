@@ -29,8 +29,7 @@ async function sendWithExtension<Input>(
 ): Promise<SyncSubmit> {
   if (!(await requireExtension())) return "not_sent";
   const sent = await send(input);
-  // A refused send still rejects the form's submit, after its toast, as it did before.
-  if (sent.isErr()) throw sent.error;
+  if (sent.isErr()) return "not_sent";
   return "sent";
 }
 

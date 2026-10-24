@@ -41,10 +41,14 @@ export function Profile({ user }: { user: User }) {
   });
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        form.handleSubmit();
+        try {
+          await form.handleSubmit();
+        } catch (submitError) {
+          console.error(submitError);
+        }
       }}
     >
       <SettingsGroup>

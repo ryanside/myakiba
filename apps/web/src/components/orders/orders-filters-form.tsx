@@ -178,10 +178,14 @@ function OrdersFiltersDraft({
     return `${items.length} selected`;
   };
 
-  const handleSubmit = (e: React.FormEvent): void => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     e.stopPropagation();
-    form.handleSubmit();
+    try {
+      await form.handleSubmit();
+    } catch (submitError) {
+      console.error(submitError);
+    }
   };
 
   const formFieldsContent = (
