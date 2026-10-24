@@ -1652,37 +1652,35 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
   }
 });
 
-test("an unanswered status cache read answers the stream's error and logs JobStatusCacheUnavailable", async () => {
+test("an unanswered status cache read uses the DB row and logs JobStatusCacheUnavailable", async () => {
   const run = await start("item", { items: [X] });
   const { default: service } = await import("./service");
-  const { useLogger } = await import("evlog/elysia");
-  const original = service.getJobStatus.bind(service);
-  let logged: ReturnType<typeof useLogger> | undefined;
-  const read = spyOn(service, "getJobStatus").mockImplementation(async (...args) => {
-    logged = useLogger();
-    return original(...args);
+  const { initLogger } = await import("evlog");
+  const events: unknown[] = [];
+  initLogger({
+    silent: true,
+    drain: ({ event }) => {
+      events.push(event);
+    },
   });
   statusReadFailures = 1;
-  initLogger({ enabled: true });
-  const stream = await openStream(run.jobId);
   try {
-    expect(await stream.next()).toMatchObject({
-      terminalState: "error",
-      error: { code: "unknown", message: "Error fetching job status" },
-    });
-    expect(logged?.getContext()).toMatchObject({
-      action: "sync.jobStatus",
-      outcome: "error",
-      error: {
-        name: "JobStatusCacheUnavailable",
-        message: `Redis did not answer for the cached status of job ${run.jobId}, so the status was not read.`,
-        cause: new Error("Redis temporarily unavailable"),
-      },
-    });
+    const result = await service.getJobStatus(run.jobId, userId, db);
+    expect(result.isOk()).toBe(true);
+    if (result.isOk())
+      expect(result.value).toMatchObject({
+        jobId: run.jobId,
+        phase: "importing",
+        terminalState: null,
+      });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        action: "sync.getJobStatus",
+        error: expect.objectContaining({ name: "JobStatusCacheUnavailable" }),
+      }),
+    );
   } finally {
-    await stream.close();
     initLogger({ enabled: false });
-    read.mockRestore();
   }
 });
 
@@ -1862,8 +1860,9 @@ test("hanging job status cache read settles within its deadline", async () => {
       }),
     ]);
     expect(result).not.toBeNull();
-    expect(result?.isErr()).toBe(true);
-    if (result?.isErr()) expect(result.error).toMatchObject({ _tag: "JobStatusCacheUnavailable" });
+    expect(result?.isOk()).toBe(true);
+    if (result?.isOk())
+      expect(result.value).toMatchObject({ jobId: run.jobId, terminalState: null });
   } finally {
     clearTimeout(guard);
     timer.mockRestore();
