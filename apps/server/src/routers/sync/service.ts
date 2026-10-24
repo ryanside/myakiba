@@ -342,7 +342,7 @@ class SyncService {
     jobId: string,
     userId: string,
     db: ReadTx,
-  ): Promise<Result<SyncJobStatus, SyncJobNotFound | JobStatusCacheUnavailable>> {
+  ): Promise<Result<SyncJobStatus, SyncJobNotFound>> {
     const [row] = await db
       .select({
         id: syncSession.id,
@@ -368,8 +368,12 @@ class SyncService {
       try: () => withDeadline(() => redis.get(getJobStatusSnapshotKey(jobId))),
       catch: (cause) => new JobStatusCacheUnavailable({ jobId, cause }),
     });
-    if (read.isErr()) return read;
-    const cached = read.value;
+    if (read.isErr()) {
+      const cacheLog = createLogger({ action: "sync.getJobStatus", outcome: "warn", jobId });
+      cacheLog.error(read.error);
+      cacheLog.emit();
+    }
+    const cached = read.isOk() ? read.value : null;
     if (cached) {
       const parsedStatus = parseJobStatusPayload(cached);
       const sessionOverridesSnapshot =
