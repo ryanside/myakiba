@@ -37,9 +37,13 @@ export const MfcItems = {
       before: async (scope, input: ItemUpload) => {
         const prepared = await prepareMfcItem(scope.tx, input);
         if (prepared.isErr()) {
-          const { mfcItemId, problem } = prepared.error;
-          scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
-          return Result.err(new MfcPageRejected({ problem: problem.kind }));
+          return prepared.error.match({
+            MfcPageUnreadable: ({ mfcItemId, problem }) => {
+              scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
+              return Result.err(new MfcPageRejected({ problem: problem.kind }));
+            },
+            StoreItemPictureFailed: (failed) => Result.err(failed),
+          });
         }
         const ready = prepared.value;
         if (ready.kind === "parsed") return scope.proceed(ready);
@@ -70,6 +74,15 @@ export const MfcItems = {
           ? { saved: "created", itemId, mfcItemId: id, picture }
           : { saved: "existing", itemId, mfcItemId: id },
       );
+    },
+    {
+      // S3 has no fallback, so a picture it did not take answers the logged 500 with its error.
+      recover: async (_scope, _input, error) => {
+        throw error.match({
+          StoreItemPictureFailed: (failed) => failed.cause,
+          UnhandledException: (thrown) => thrown,
+        });
+      },
     },
   ),
 };

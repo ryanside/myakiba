@@ -25,6 +25,7 @@ import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { fetchedItemRows, idsToFetch, insertItemRows, retryRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
@@ -470,9 +471,12 @@ export async function completeSyncItem(
   userId: string,
   { jobId, ...upload }: SyncItemUpload,
   prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
-): Promise<Result<CompleteSyncItemResult | null, SyncOrderAbsent | SyncOrderUnowned>> {
+): Promise<
+  Result<CompleteSyncItemResult | null, SyncOrderAbsent | SyncOrderUnowned | StoreItemPictureFailed>
+> {
   const mfcItemId = upload.mfcItemId;
   if (prepared.isErr()) {
+    if (StoreItemPictureFailed.is(prepared.error)) return Result.err(prepared.error);
     const reason = PROBLEM_MESSAGE[prepared.error.problem.kind];
     const recorded = await recordItemFailures(scope, sessionId, userId, jobId, [
       { mfcItemId, kind: "reported", reason },

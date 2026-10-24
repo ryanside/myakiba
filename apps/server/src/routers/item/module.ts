@@ -16,6 +16,7 @@ import { mfcItemId } from "@myakiba/mfc/page";
 import { redis } from "@myakiba/redis/client";
 import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
+import type { ResyncCooldownUnavailable } from "@myakiba/redis/errors/resync-cooldown-unavailable";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { EntryCategoryMismatch } from "./errors/entry-category-mismatch";
@@ -39,10 +40,15 @@ async function findResyncItem(tx: ReadTx, externalId: number) {
 // The cooldown is written before the refresh commits, so it holds only while the
 // transaction that wrote it has not aborted. A transaction Postgres can no longer look up,
 // or one newer than this database after a restore, counts as committed.
-async function cooldownHeldUntil(tx: ReadTx, itemId: string): Promise<string | null> {
-  const cooldown = await getResyncCooldown(redis, itemId);
-  if (!cooldown) return null;
-  if (cooldown.transactionId === null) return cooldown.expiresAt;
+async function cooldownHeldUntil(
+  tx: ReadTx,
+  itemId: string,
+): Promise<Result<string | null, ResyncCooldownUnavailable>> {
+  const read = await getResyncCooldown(redis, itemId);
+  if (read.isErr()) return read;
+  const cooldown = read.value;
+  if (!cooldown) return Result.ok(null);
+  if (cooldown.transactionId === null) return Result.ok(cooldown.expiresAt);
   const xid = sql`${cooldown.transactionId}::xid8`;
   const [writer] = await tx
     .select({
@@ -52,7 +58,7 @@ async function cooldownHeldUntil(tx: ReadTx, itemId: string): Promise<string | n
     })
     .from(item)
     .where(eq(item.id, itemId));
-  return writer?.status === "aborted" ? null : cooldown.expiresAt;
+  return Result.ok(writer?.status === "aborted" ? null : cooldown.expiresAt);
 }
 
 async function currentTransactionId(tx: Tx): Promise<string> {
@@ -65,8 +71,10 @@ async function currentTransactionId(tx: Tx): Promise<string> {
 }
 
 async function resyncState(tx: ReadTx, itemId: string): Promise<ItemResyncState> {
-  const cooldownExpiresAt = await cooldownHeldUntil(tx, itemId);
-  if (cooldownExpiresAt) return { status: "cooldown", cooldownExpiresAt };
+  const held = await cooldownHeldUntil(tx, itemId);
+  // A query has no recover, so an unanswered cooldown read is the driver failure it always was.
+  if (held.isErr()) throw held.error.cause;
+  if (held.value) return { status: "cooldown", cooldownExpiresAt: held.value };
   return { status: "idle", cooldownExpiresAt: null };
 }
 
@@ -520,14 +528,18 @@ export const Items = {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, input.id);
         if (!found) return Result.err(new ItemNotFound());
-        if (await cooldownHeldUntil(scope.tx, found.itemId)) {
-          return Result.err(new ResyncCooldownActive());
-        }
+        const held = await cooldownHeldUntil(scope.tx, found.itemId);
+        if (held.isErr()) return held;
+        if (held.value) return Result.err(new ResyncCooldownActive());
         const read = await readMfcItemPage(found.id, input);
         if (read.isErr()) {
-          const problem = read.error.problem.kind;
-          scope.log.set({ mfc: { itemId: found.id, outcome: problem } });
-          return Result.err(new MfcPageRejected({ problem }));
+          return read.error.match({
+            MfcPageUnreadable: ({ problem }) => {
+              scope.log.set({ mfc: { itemId: found.id, outcome: problem.kind } });
+              return Result.err(new MfcPageRejected({ problem: problem.kind }));
+            },
+            StoreItemPictureFailed: (failure) => Result.err(failure),
+          });
         }
         const { page, stored } = read.value;
         return scope.proceed({ itemId: found.itemId, page, stored });
@@ -536,9 +548,9 @@ export const Items = {
     async (scope, { itemId, page, stored }) => {
       const locked = await lockItem(scope.tx, itemId);
       if (!locked) return Result.err(new ItemNotFound());
-      if (await cooldownHeldUntil(scope.tx, itemId)) {
-        return Result.err(new ResyncCooldownActive());
-      }
+      const held = await cooldownHeldUntil(scope.tx, itemId);
+      if (held.isErr()) return held;
+      if (held.value) return Result.err(new ResyncCooldownActive());
       const image = stored?.kind === "stored" ? stored.url : locked.image;
       const outcome = await refreshItem(scope.tx, locked, page, image);
       scope.log.set({
@@ -550,16 +562,23 @@ export const Items = {
           warnings: page.warnings,
         },
       });
-      const cooldownExpiresAt = await setResyncCooldown(
-        redis,
-        itemId,
-        await currentTransactionId(scope.tx),
-      );
-      return Result.ok<ResyncResult>({
+      const cooldown = await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx));
+      return cooldown.map((cooldownExpiresAt): ResyncResult => ({
         status: "cooldown",
         cooldownExpiresAt,
         saved: outcome === "unchanged" ? "unchanged" : "refreshed",
-      });
+      }));
+    },
+    {
+      // Neither Redis nor S3 has a fallback yet, so each answers the logged 500 with the error
+      // it raised, after the rollback has dropped the refresh.
+      recover: async (_scope, _input, error) => {
+        throw error.match({
+          ResyncCooldownUnavailable: (unavailable) => unavailable.cause,
+          StoreItemPictureFailed: (failed) => failed.cause,
+          UnhandledException: (thrown) => thrown,
+        });
+      },
     },
   ),
 };

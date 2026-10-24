@@ -35,6 +35,7 @@ import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import type { MfcPageProblem } from "@myakiba/mfc/parse";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
@@ -584,14 +585,18 @@ const DataTransferService = {
     upload: DataTransferImportItemUpload,
     prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
   ): Promise<
-    | { readonly kind: "imported"; readonly import: DataTransferImport | null }
-    | {
-        readonly kind: "problem";
-        readonly problem: MfcPageProblem["kind"];
-        readonly message: string;
-      }
+    Result<
+      | { readonly kind: "imported"; readonly import: DataTransferImport | null }
+      | {
+          readonly kind: "problem";
+          readonly problem: MfcPageProblem["kind"];
+          readonly message: string;
+        },
+      StoreItemPictureFailed
+    >
   > {
     if (prepared.isErr()) {
+      if (StoreItemPictureFailed.is(prepared.error)) return Result.err(prepared.error);
       const problem = prepared.error.problem.kind;
       const message = PROBLEM_MESSAGE[problem];
       await DataTransferService.failItem(scope, userId, {
@@ -599,7 +604,7 @@ const DataTransferService = {
         mfcItemId: upload.mfcItemId,
         reason: message,
       });
-      return { kind: "problem", problem, message };
+      return Result.ok({ kind: "problem", problem, message });
     }
     const ready = prepared.value;
 
@@ -644,7 +649,7 @@ const DataTransferService = {
       return { value: await settle(tx, userId, now), changed: true };
     });
 
-    return { kind: "imported", import: view ? toImport(view) : null };
+    return Result.ok({ kind: "imported", import: view ? toImport(view) : null });
   },
 
   async failItem(

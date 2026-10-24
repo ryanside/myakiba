@@ -7,7 +7,9 @@
  * tradeoff avoids Postgres schema changes for per-item cooldown tracking while
  * keeping the common path fast and simple.
  */
+import { Result } from "better-result";
 import type Redis from "ioredis";
+import { ResyncCooldownUnavailable } from "./errors/resync-cooldown-unavailable";
 
 const COOLDOWN_KEY_PREFIX = "item-resync:cooldown";
 const COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60; // 3 days
@@ -30,12 +32,15 @@ export async function setResyncCooldown(
   redis: Redis,
   itemId: string,
   transactionId?: string,
-): Promise<string> {
+): Promise<Result<string, ResyncCooldownUnavailable>> {
   const now = Date.now();
   const value =
     transactionId === undefined ? now.toString() : `${TRANSACTION_PREFIX}${transactionId}`;
-  await redis.set(getCooldownKey(itemId), value, "EX", COOLDOWN_TTL_SECONDS);
-  return new Date(now + COOLDOWN_TTL_SECONDS * 1000).toISOString();
+  const written = await Result.tryPromise({
+    try: () => redis.set(getCooldownKey(itemId), value, "EX", COOLDOWN_TTL_SECONDS),
+    catch: (cause) => new ResyncCooldownUnavailable({ itemId, cause }),
+  });
+  return written.map(() => new Date(now + COOLDOWN_TTL_SECONDS * 1000).toISOString());
 }
 
 type ResyncCooldown = {
@@ -47,16 +52,18 @@ type ResyncCooldown = {
 export async function getResyncCooldown(
   redis: Redis,
   itemId: string,
-): Promise<ResyncCooldown | null> {
-  const [value, ttl] = await Promise.all([
-    redis.get(getCooldownKey(itemId)),
-    redis.ttl(getCooldownKey(itemId)),
-  ]);
-  if (value === null || ttl <= 0) return null;
-  return {
+): Promise<Result<ResyncCooldown | null, ResyncCooldownUnavailable>> {
+  const read = await Result.tryPromise({
+    try: () => Promise.all([redis.get(getCooldownKey(itemId)), redis.ttl(getCooldownKey(itemId))]),
+    catch: (cause) => new ResyncCooldownUnavailable({ itemId, cause }),
+  });
+  if (read.isErr()) return read;
+  const [value, ttl] = read.value;
+  if (value === null || ttl <= 0) return Result.ok(null);
+  return Result.ok({
     expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
     transactionId: value.startsWith(TRANSACTION_PREFIX)
       ? value.slice(TRANSACTION_PREFIX.length)
       : null,
-  };
+  });
 }

@@ -734,6 +734,10 @@ export const SyncRuns = {
         const { missingOrder, original } = error.match({
           SyncOrderAbsent: (absent) => ({ missingOrder: true, original: absent }),
           SyncOrderUnowned: (unowned) => ({ missingOrder: false, original: unowned }),
+          StoreItemPictureFailed: ({ cause }) => ({
+            missingOrder: false,
+            original: cause instanceof Error ? cause : new Error(String(cause)),
+          }),
           UnhandledException: (thrown) => ({
             missingOrder: false,
             original:
@@ -746,7 +750,7 @@ export const SyncRuns = {
           return recorded;
         } catch (recordError) {
           // A missing Order reports why recording failed; anything else reports the original.
-          throw missingOrder ? recordError : error;
+          throw missingOrder ? recordError : original;
         }
       },
     },

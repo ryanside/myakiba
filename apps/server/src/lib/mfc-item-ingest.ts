@@ -9,6 +9,7 @@ import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 
 export type PictureOutcome = "stored" | "absent" | "rejected";
 
@@ -34,20 +35,25 @@ export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | u
 export async function readMfcItemPage(
   id: MfcItemId,
   upload: ItemRefresh,
-): Promise<Result<ParsedMfcItem, MfcPageUnreadable>> {
+): Promise<Result<ParsedMfcItem, MfcPageUnreadable | StoreItemPictureFailed>> {
   const html = upload.page instanceof File ? await upload.page.text() : upload.page;
   const parsed = parseMfcItemPage(html, id);
   if (parsed.isErr()) return Result.err(parsed.error);
   const page = parsed.value;
-  const stored = page.picture && upload.picture ? await itemImages.store(id, upload.picture) : null;
-  return Result.ok({ kind: "parsed", page, stored });
+  const { picture } = upload;
+  if (!page.picture || !picture) return Result.ok({ kind: "parsed", page, stored: null });
+  const stored = await Result.tryPromise({
+    try: () => itemImages.store(id, picture),
+    catch: (cause) => new StoreItemPictureFailed({ mfcItemId: id, cause }),
+  });
+  return stored.map((saved) => ({ kind: "parsed", page, stored: saved }));
 }
 
 /** The slow half of an ingest: an Item already in the pool answers at once, otherwise the page is read. */
 export async function prepareMfcItem(
   pool: ReadTx,
   upload: ItemUpload,
-): Promise<Result<PreparedMfcItem, MfcPageUnreadable>> {
+): Promise<Result<PreparedMfcItem, MfcPageUnreadable | StoreItemPictureFailed>> {
   const id = upload.mfcItemId as MfcItemId;
   const existingId = await findMfcItem(pool, id);
   if (existingId) return Result.ok({ kind: "existing", mfcItemId: id, itemId: existingId });

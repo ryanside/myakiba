@@ -163,12 +163,14 @@ export const DataTransfer = {
       },
     },
     async (scope, input) => {
-      const result = await DataTransferService.completeItem(
+      const completed = await DataTransferService.completeItem(
         scope,
         scope.viewer.userId,
         input.upload,
         input.prepared,
       );
+      if (completed.isErr()) return completed;
+      const result = completed.value;
       if (result.kind === "problem") {
         scope.log.set({ dataTransfer: { code: result.message } });
         return scope.failAfterCommit(new MfcPageRejected({ problem: result.problem }));
@@ -178,15 +180,15 @@ export const DataTransfer = {
     },
     {
       recover: async (scope, input, error) => {
+        const { cause } = error;
+        const original = cause instanceof Error ? cause : new Error(String(cause));
         try {
           const recorded = await scope.execute(recordFailure, {
             jobId: input.jobId,
             mfcItemId: input.mfcItemId,
             reason: UNSAVED_ITEM_REASON,
           });
-          scope.log.error(
-            error.cause instanceof Error ? error.cause : new Error(String(error.cause)),
-          );
+          scope.log.error(original);
           return recorded;
         } catch (recordError) {
           const failure =
@@ -202,7 +204,7 @@ export const DataTransfer = {
               },
             ],
           });
-          throw error;
+          throw cause;
         }
       },
     },
