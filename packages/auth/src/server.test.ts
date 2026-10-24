@@ -9,11 +9,21 @@ process.env.REDIS_HOST = "127.0.0.1";
 process.env.REDIS_PORT = "1";
 process.env.DATABASE_URL = "postgres://unused@127.0.0.1:1/unused";
 const storage = new Map<string, string>();
+let storageFailure: Error | null = null;
 await mock.module("@myakiba/redis/client", () => ({
   redis: {
-    get: async (key: string) => storage.get(key) ?? null,
-    set: async (key: string, value: string) => storage.set(key, value),
-    del: async (key: string) => storage.delete(key),
+    get: async (key: string) => {
+      if (storageFailure) throw storageFailure;
+      return storage.get(key) ?? null;
+    },
+    set: async (key: string, value: string) => {
+      if (storageFailure) throw storageFailure;
+      return storage.set(key, value);
+    },
+    del: async (key: string) => {
+      if (storageFailure) throw storageFailure;
+      return storage.delete(key);
+    },
   },
 }));
 const events: DrainContext[] = [];
@@ -64,6 +74,7 @@ function testAuth(requireEmailVerification = true) {
 
 beforeEach(() => {
   storage.clear();
+  storageFailure = null;
   events.length = 0;
   sendFails = true;
 });
@@ -184,3 +195,29 @@ test("sign-up succeeds and logs when verification email fails", async () => {
     ),
   ).toBe(true);
 });
+
+test.each(["get", "set", "delete"] as const)(
+  "session storage %s preserves its rejection and logs SessionStoreUnavailable",
+  async (operation) => {
+    const cause = new Error("Redis unavailable");
+    storageFailure = cause;
+    const secondary = auth.options.secondaryStorage;
+    if (!secondary) throw new Error("secondary storage missing");
+    const pending =
+      operation === "set"
+        ? secondary.set("private-session-key", "private-value", 60)
+        : secondary[operation]("private-session-key");
+    await expect(pending).rejects.toBe(cause);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          action: "auth.sessionStore",
+          operation,
+          error: expect.objectContaining({ name: "SessionStoreUnavailable" }),
+        }),
+      }),
+    );
+    expect(JSON.stringify(events)).not.toContain("private-session-key");
+    expect(JSON.stringify(events)).not.toContain("private-value");
+  },
+);
