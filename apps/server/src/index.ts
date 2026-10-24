@@ -69,7 +69,7 @@ type OpenAPIDocumentation = NonNullable<
 
 const authDocs = includeAuthDocs
   ? ({
-      components: await OpenAPI.components,
+      components: await OpenAPI.components(),
       paths: await OpenAPI.getPaths(),
     } as OpenAPIDocumentation)
   : undefined;

@@ -169,7 +169,12 @@ type OpenAPIComponents = NonNullable<OpenAPISchema["components"]>;
 let schemaPromise: ReturnType<typeof auth.api.generateOpenAPISchema> | undefined;
 const getSchema = async (): Promise<OpenAPISchema> => {
   schemaPromise ??= auth.api.generateOpenAPISchema();
-  return await schemaPromise;
+  try {
+    return await schemaPromise;
+  } catch (error) {
+    schemaPromise = undefined;
+    throw error;
+  }
 };
 
 export const OpenAPI = {
@@ -191,8 +196,8 @@ export const OpenAPI = {
 
     return reference;
   },
-  components: (async (): Promise<OpenAPIComponents> => {
+  components: async (): Promise<OpenAPIComponents> => {
     const { components } = await getSchema();
     return components as OpenAPIComponents;
-  })(),
+  },
 } as const;

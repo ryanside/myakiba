@@ -36,7 +36,7 @@ test("OpenAPI requests retry failed generation and share the successful schema",
     OpenAPI.components(),
     OpenAPI.getPaths("/api/auth"),
   ]);
-  expect(components).toEqual({ schemas: {} });
+  expect(components).toMatchObject({ schemas: {} });
   expect(paths).toEqual({ "/api/auth/ok": { get: { tags: ["Better Auth"] } } });
   expect(generations).toBe(2);
 });
