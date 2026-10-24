@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-const entry = new URL("./index.ts", import.meta.url).pathname;
+const entry = new URL("index.ts", import.meta.url).pathname;
 
 async function shutdownProcess(stage: string, mode: string) {
   const child = Bun.spawn(
@@ -16,21 +16,18 @@ async function shutdownProcess(stage: string, mode: string) {
       throw new Error("injected " + stage + " failure");
     };
     await mock.module("@myakiba/env/worker", () => ({ env: { NODE_ENV: "test" } }));
-    await mock.module(${JSON.stringify(new URL("./worker.ts", import.meta.url).pathname)}, () => ({
+    await mock.module(${JSON.stringify(new URL("worker.ts", import.meta.url).pathname)}, () => ({
       closeWorker: async () => { if (stage === "consumers") await fail(); },
       redis: { status: "ready" }, workerConsumers: [],
     }));
-    await mock.module(${JSON.stringify(new URL("./lib/evlog.ts", import.meta.url).pathname)}, () => ({
+    await mock.module(${JSON.stringify(new URL("lib/evlog.ts", import.meta.url).pathname)}, () => ({
       drain: Object.assign(async () => {}, { flush: async () => { if (stage === "flush") await fail(); } }),
     }));
     spyOn(Bun, "serve").mockImplementation(() => ({
       stop: () => stage === "health" ? fail() : Promise.resolve(),
     }));
     const realSetTimeout = globalThis.setTimeout;
-    await mock.module("node:timers", () => ({
-      setTimeout: (callback) => realSetTimeout(callback, 20),
-      clearTimeout: globalThis.clearTimeout,
-    }));
+    spyOn(globalThis, "setTimeout").mockImplementation((callback) => realSetTimeout(callback, 20));
     realSetTimeout(() => process.exit(90), 1200);
     await import(${JSON.stringify(entry)});
     process.emit("SIGTERM");
@@ -61,5 +58,6 @@ test.each([
 });
 
 test("worker shutdown exits zero after all stages succeed", async () => {
-  expect((await shutdownProcess("none", "success")).code).toBe(0);
+  const result = await shutdownProcess("none", "success");
+  expect(result.code).toBe(0);
 });

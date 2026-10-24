@@ -9,44 +9,58 @@ type ShutdownSignal = "SIGINT" | "SIGTERM";
 
 let isShuttingDown = false;
 
+async function shutdownStage(
+  stage: "health" | "consumers" | "flush",
+  run: () => Promise<void>,
+): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const completed = await Result.tryPromise({
+    try: () =>
+      Promise.race([
+        Promise.resolve().then(run),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error("Shutdown stage exceeded 5000 ms")), 5000);
+        }),
+      ]),
+    catch: (cause) => new WorkerShutdownFailed({ stage, cause }),
+  });
+  clearTimeout(timer);
+  if (completed.isOk()) return true;
+  const shutdownLog = createLogger({
+    action: "worker.shutdown",
+    outcome: "error",
+    stage,
+    failure: completed.error._tag,
+  });
+  shutdownLog.error(completed.error);
+  shutdownLog.emit();
+  return false;
+}
+
 async function shutdown(signal: ShutdownSignal, initialExitCode: number): Promise<void> {
   if (isShuttingDown) return;
-
   isShuttingDown = true;
-
+  log.info({ action: "worker.shutdown", outcome: "success", signal });
   let exitCode = initialExitCode;
-  try {
-    log.info({
-      action: "worker.shutdown",
-      outcome: "success",
-      signal,
-    });
-
-    await healthServer.stop(true);
-
-    const closed = await Result.tryPromise({
-      try: () => closeWorker(),
-      catch: (cause) => new WorkerShutdownFailed({ cause }),
-    });
-    if (closed.isErr()) {
-      const { cause } = closed.error;
-      if (cause instanceof Error) {
-        const shutdownLog = createLogger({
-          action: "worker.shutdown",
-          outcome: "error",
-          signal,
-        });
-
-        shutdownLog.error(cause);
-        shutdownLog.emit();
-      }
-
-      exitCode = 1;
-    }
-  } finally {
-    if (drain) await drain.flush();
-    process.exit(exitCode);
-  }
+  if (
+    !(await shutdownStage("health", async () => {
+      await healthServer.stop(true);
+    }))
+  )
+    exitCode = 1;
+  if (
+    !(await shutdownStage("consumers", async () => {
+      await closeWorker();
+    }))
+  )
+    exitCode = 1;
+  if (
+    !(await shutdownStage("flush", async () => {
+      await drain?.flush();
+    }))
+  )
+    exitCode = 1;
+  process.exit(exitCode);
 }
 
 initLogger({
@@ -128,7 +142,9 @@ function handleFatalError(kind: "uncaughtException" | "unhandledRejection", caus
 
   isShuttingDown = true;
   void (async () => {
-    if (drain) await drain.flush();
+    await shutdownStage("flush", async () => {
+      await drain?.flush();
+    });
     process.exit(1);
   })();
 }
