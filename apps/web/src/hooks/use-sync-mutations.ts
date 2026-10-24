@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { tryCatch } from "@myakiba/utils/result";
+import { Result } from "better-result";
 import type { SyncCollectionItem, SyncOrder, SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
 import { syncSends, useSyncSubmit } from "@/data/resources/sync";
@@ -183,12 +183,13 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const handleSyncCsvSubmit = useCallback(
     async (value: File | undefined): Promise<SyncSubmit> => {
-      const { data: userItems, error } = await tryCatch(transformCSVData({ file: value }));
-      if (error) {
+      const userItems = await Result.tryPromise(() => transformCSVData({ file: value }));
+      if (userItems.isErr()) {
+        const { cause } = userItems.error;
         const toastId = toast.add({
           type: "error",
           title: SYNC_OPTION_META.csv.failureTitle,
-          description: error instanceof Error ? error.message : "An error occurred",
+          description: cause instanceof Error ? cause.message : "An error occurred",
           actionProps: {
             children: "View import history",
             onClick() {
@@ -200,7 +201,7 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
         return "not_sent";
       }
 
-      return sendWithExtension(csvSync.send, userItems);
+      return sendWithExtension(csvSync.send, userItems.value);
     },
     [csvSync, navigate],
   );

@@ -10,13 +10,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
+import { Result } from "better-result";
 import { useMemo, useRef, useState } from "react";
 import {
   formatCurrencyFromMinorUnits,
   minorUnitsToMajorString,
   parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
-import { tryCatch } from "@myakiba/utils/result";
 import { toast } from "@/components/ui/toast";
 
 interface PopoverInput {
@@ -71,10 +71,11 @@ export function PopoverMultiInputCell({
 
   const handleSubmit = async (newValues: Record<string, number>): Promise<void> => {
     setPending(newValues);
-    const { error } = await tryCatch(onSubmit(newValues));
-    if (error) {
+    const saved = await Result.tryPromise(() => onSubmit(newValues));
+    if (saved.isErr()) {
+      const { cause } = saved.error;
       setPending(null);
-      toast.add({ type: "error", title: error.message });
+      toast.add({ type: "error", title: cause instanceof Error ? cause.message : undefined });
     }
   };
 
