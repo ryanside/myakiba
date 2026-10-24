@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { collection, order } from "@myakiba/db/schema/figure";
-import { ok, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { query } from "@/domain/kernel";
 import type { ExpenseFilters, ExpenseShopFilters } from "./model";
 import {
   projectCollectionDashboard,
@@ -48,7 +49,7 @@ export const Expenses = {
         ...new Set([...collectionShops, ...orderShops].map(({ shop }) => shop)),
       ].toSorted((left, right) => left.localeCompare(right));
 
-      return ok({ shopOptions });
+      return Result.ok({ shopOptions });
     },
   ),
 
@@ -64,7 +65,9 @@ export const Expenses = {
         getOwnedItemSeries(scope.tx, userId, filters, bucket),
       ]);
 
-      return ok(projectCollectionDashboard({ filters, bucket, summary, categories, series }));
+      return Result.ok(
+        projectCollectionDashboard({ filters, bucket, summary, categories, series }),
+      );
     },
   ),
 
@@ -72,7 +75,7 @@ export const Expenses = {
     { action: "get_expenses_shops", failure: "Failed to get expense shops" },
     async (scope, filters: ExpenseShopFilters) => {
       scope.log.set({ query: filters });
-      return ok(await getScopedShopRows(scope.tx, scope.viewer.userId, filters));
+      return Result.ok(await getScopedShopRows(scope.tx, scope.viewer.userId, filters));
     },
   ),
 
@@ -88,7 +91,7 @@ export const Expenses = {
         getUnpaidOrderAggregates(scope.tx, userId, filters),
       ]);
 
-      return ok(
+      return Result.ok(
         projectOrdersDashboard({
           filters,
           bucket,
@@ -112,7 +115,9 @@ export const Expenses = {
         getBundleEfficiencyRows(scope.tx, userId, filters),
       ]);
 
-      return ok(projectShippingDashboard({ filters, bucket, methodTotals, series, bundleRows }));
+      return Result.ok(
+        projectShippingDashboard({ filters, bucket, methodTotals, series, bundleRows }),
+      );
     },
   ),
 
@@ -120,7 +125,7 @@ export const Expenses = {
     { action: "get_expenses_shop_expansion", failure: "Failed to get shop expansion" },
     async (scope, input: { readonly shopId: string; readonly filters: ExpenseShopFilters }) => {
       scope.log.set({ shop: input.shopId, query: input.filters });
-      return ok(
+      return Result.ok(
         await loadScopedShopExpansion(scope.tx, scope.viewer.userId, input.shopId, input.filters),
       );
     },
