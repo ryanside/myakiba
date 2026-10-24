@@ -1,9 +1,9 @@
+import { call, rejectErr } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 
 export async function getVersion() {
-  const { data, error } = await app.api.version.get();
-  if (error) {
-    throw new Error(error.value?.message || "Failed to get version");
-  }
-  return data;
+  return call(app.api.version.get(), {
+    fallback: "Failed to get version",
+    policy: "bodyMessage",
+  }).then(rejectErr);
 }

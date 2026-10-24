@@ -1,4 +1,5 @@
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { call, rejectErr } from "@/data/api";
+import { app } from "@/lib/treaty-client";
 
 type DashboardClient = typeof app.api.dashboard;
 
@@ -15,38 +16,24 @@ export type ReleaseCalendarData = NonNullable<
 export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][number];
 
 export async function getDashboard(): Promise<DashboardResponse> {
-  const { data, error } = await app.api.dashboard.get();
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get dashboard"));
-  }
-
-  return data;
+  return call(app.api.dashboard.get(), { fallback: "Failed to get dashboard" }).then(rejectErr);
 }
 
 export async function getMonthlyDashboard(month: number, year: number): Promise<MonthlyData> {
-  const { data, error } = await app.api.dashboard["monthly"].get({
-    query: { month, year },
-  });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get monthly dashboard"));
-  }
-
-  return data;
+  return call(
+    app.api.dashboard["monthly"].get({
+      query: { month, year },
+    }),
+    { fallback: "Failed to get monthly dashboard" },
+  ).then(rejectErr);
 }
 
 export async function getReleaseCalendar(
   month: number,
   year: number,
 ): Promise<ReleaseCalendarData> {
-  const { data, error } = await app.api.dashboard["release-calendar"].get({
-    query: { month, year },
-  });
-  if (error) {
-    if (error.status === 422) {
-      throw new Error(getUserErrorMessage(error, "Invalid month or year"));
-    }
-    throw new Error(getUserErrorMessage(error, "Failed to get release calendar"));
-  }
-
-  return data;
+  return call(app.api.dashboard["release-calendar"].get({ query: { month, year } }), {
+    fallback: "Failed to get release calendar",
+    invalid: "Invalid month or year",
+  }).then(rejectErr);
 }

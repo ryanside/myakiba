@@ -2,7 +2,6 @@ import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } fro
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -55,7 +54,7 @@ const wishlistEndpoint = Object.assign(
   },
 );
 
-const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
+const getErrorMessage = (_error: { readonly status: number }, fallback: string) => fallback;
 await mock.module("@/lib/treaty-client", () => ({
   app: { api: { wishlist: wishlistEndpoint } },
   getErrorMessage,

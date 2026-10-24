@@ -1,4 +1,5 @@
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { call, rejectErr } from "@/data/api";
+import { app } from "@/lib/treaty-client";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
@@ -32,29 +33,22 @@ export async function getCollection(filters: CollectionFilters) {
     condition: filters.condition,
   };
 
-  const { data, error } = await app.api.collection.get({
-    query: queryParams,
-  });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get collection"));
-  }
-  if (!data) {
-    throw new Error("Failed to get collection");
-  }
-
-  return data;
+  return call(
+    app.api.collection.get({
+      query: queryParams,
+    }),
+    { fallback: "Failed to get collection", empty: "Failed to get collection" },
+  ).then(rejectErr);
 }
 
 export async function deleteCollectionItems(ids: string[]) {
-  const { error } = await app.api.collection.delete({ ids });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to delete collection items"));
-  }
+  await call(app.api.collection.delete({ ids }), {
+    fallback: "Failed to delete collection items",
+  }).then(rejectErr);
 }
 
 export async function updateCollectionItem(values: CollectionItemFormValues) {
-  const { error } = await app.api.collection({ id: values.id }).put(values);
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to update collection item"));
-  }
+  await call(app.api.collection({ id: values.id }).put(values), {
+    fallback: "Failed to update collection item",
+  }).then(rejectErr);
 }

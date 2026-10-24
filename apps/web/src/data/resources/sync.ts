@@ -12,6 +12,7 @@ import {
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { app } from "@/lib/treaty-client";
+import { call, rejectErr } from "../api";
 import {
   fetchSyncSessionDetail,
   fetchSyncSessions,
@@ -94,13 +95,14 @@ export const sync = {
     key: ({ jobId }: JobWatch) => ["syncJobStatus", jobId] as const,
     open: async ({ jobId, onEnd }, { signal, client }) => {
       if (jobId === null) throw new Error("jobId is null");
-      const { data, error } = await app.api.sync["job-status"].get({
-        query: { jobId },
-        fetch: { signal },
-      });
-      if (error) throw new Error("Failed to connect to job status stream");
-      if (!data) throw new Error("No data received from job status stream");
-      const stream = data;
+      const stream = await call(
+        app.api.sync["job-status"].get({ query: { jobId }, fetch: { signal } }),
+        {
+          fallback: "Failed to connect to job status stream",
+          empty: "No data received from job status stream",
+          policy: "fixed",
+        },
+      ).then(rejectErr);
 
       async function* withFinishedCheck(): AsyncGenerator<JobStatusChunk> {
         for await (const chunk of stream) {

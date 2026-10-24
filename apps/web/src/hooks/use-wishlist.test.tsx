@@ -11,7 +11,6 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useEffect } from "react";
-import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -112,7 +111,7 @@ const fakeApp = {
   },
 };
 
-const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
+const getErrorMessage = (_error: { readonly status: number }, fallback: string) => fallback;
 await mock.module("@/lib/treaty-client", () => ({
   app: fakeApp,
   getErrorMessage,

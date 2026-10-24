@@ -1,4 +1,5 @@
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { call, rejectErr } from "@/data/api";
+import { app } from "@/lib/treaty-client";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import type {
   UserItem,
@@ -13,44 +14,41 @@ import type {
 } from "@myakiba/contracts/shared/types";
 
 export async function sendItems(userItems: UserItem[]) {
-  const { data, error } = await app.api.sync.csv.post(userItems);
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to submit MyFigureCollection CSV"));
-  }
-  return data;
+  return call(app.api.sync.csv.post(userItems), {
+    fallback: "Failed to submit MyFigureCollection CSV",
+    policy: "legacy",
+  }).then(rejectErr);
 }
 
 export async function sendItemSync(input: ItemSyncInput) {
-  const { data, error } = await app.api.sync.item.post(input);
-  if (error) throw new Error(getErrorMessage(error, "Failed to submit item database items"));
-  return data;
+  return call(app.api.sync.item.post(input), {
+    fallback: "Failed to submit item database items",
+    policy: "legacy",
+  }).then(rejectErr);
 }
 
 export async function sendOrder(order: SyncOrder) {
-  const { data, error } = await app.api.sync.order.post(order);
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to submit order"));
-  }
-  return data;
+  return call(app.api.sync.order.post(order), {
+    fallback: "Failed to submit order",
+    policy: "legacy",
+  }).then(rejectErr);
 }
 
 export async function sendOrderItems(orderItems: SyncOrderItems) {
-  const { data, error } = await app.api.sync["order-item"].post({
-    orderId: orderItems.orderId,
-    items: [...orderItems.items],
-  });
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to submit order items"));
-  }
-  return data;
+  return call(
+    app.api.sync["order-item"].post({
+      orderId: orderItems.orderId,
+      items: [...orderItems.items],
+    }),
+    { fallback: "Failed to submit order items", policy: "legacy" },
+  ).then(rejectErr);
 }
 
 export async function sendCollection(collection: SyncCollectionItem[]) {
-  const { data, error } = await app.api.sync.collection.post(collection);
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to submit collection items"));
-  }
-  return data;
+  return call(app.api.sync.collection.post(collection), {
+    fallback: "Failed to submit collection items",
+    policy: "legacy",
+  }).then(rejectErr);
 }
 
 export type SyncResponse = Awaited<ReturnType<typeof sendItems>>;
@@ -61,18 +59,17 @@ export async function fetchSyncSessions(params: {
   readonly status?: SyncSessionStatus[];
   readonly syncType?: SyncType[];
 }) {
-  const { data, error } = await app.api.sync.sessions.get({
-    query: {
-      page: params.page?.toString(),
-      limit: params.limit?.toString(),
-      status: params.status,
-      syncType: params.syncType,
-    },
-  });
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to load import history"));
-  }
-  return data;
+  return call(
+    app.api.sync.sessions.get({
+      query: {
+        page: params.page?.toString(),
+        limit: params.limit?.toString(),
+        status: params.status,
+        syncType: params.syncType,
+      },
+    }),
+    { fallback: "Failed to load import history", policy: "legacy" },
+  ).then(rejectErr);
 }
 
 export async function fetchSyncSessionDetail(
@@ -83,23 +80,21 @@ export async function fetchSyncSessionDetail(
     readonly status?: SyncSessionItemStatus[];
   },
 ) {
-  const { data, error } = await app.api.sync.sessions({ id: sessionId }).get({
-    query: {
-      page: params?.page?.toString(),
-      limit: params?.limit?.toString(),
-      status: params?.status,
-    },
-  });
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to load import details"));
-  }
-  return data;
+  return call(
+    app.api.sync.sessions({ id: sessionId }).get({
+      query: {
+        page: params?.page?.toString(),
+        limit: params?.limit?.toString(),
+        status: params?.status,
+      },
+    }),
+    { fallback: "Failed to load import details", policy: "legacy" },
+  ).then(rejectErr);
 }
 
 export async function retrySyncSession(sessionId: string) {
-  const { data, error } = await app.api.sync.sessions({ id: sessionId }).retry.post();
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to retry failed item results"));
-  }
-  return data;
+  return call(app.api.sync.sessions({ id: sessionId }).retry.post(), {
+    fallback: "Failed to retry failed item results",
+    policy: "legacy",
+  }).then(rejectErr);
 }

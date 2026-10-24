@@ -1,95 +1,103 @@
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { call, rejectErr } from "@/data/api";
+import { app } from "@/lib/treaty-client";
 
 export async function getLists(limit: number, offset: number) {
-  const { data, error } = await app.api.lists.get({ query: { limit, offset } });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get lists"));
-  return data;
+  return call(app.api.lists.get({ query: { limit, offset } }), {
+    fallback: "Failed to get lists",
+  }).then(rejectErr);
 }
 
 export async function createList(input: ListInput) {
-  const { data, error } = await app.api.lists.post(input);
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to create list"));
-  return data;
+  return call(app.api.lists.post(input), { fallback: "Failed to create list" }).then(rejectErr);
 }
 
 export async function moveLists(intent: PositionOrderInput): Promise<void> {
-  const { error } = await app.api.lists.order.patch({
-    ...intent,
-    movedIds: [...intent.movedIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to move lists"));
+  await call(
+    app.api.lists.order.patch({
+      ...intent,
+      movedIds: [...intent.movedIds],
+    }),
+    { fallback: "Failed to move lists" },
+  ).then(rejectErr);
 }
 
 export async function updateList(listId: string, input: ListInput) {
-  const { data, error } = await app.api.lists({ listId }).put(input);
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to update list"));
-  return data;
+  return call(app.api.lists({ listId }).put(input), { fallback: "Failed to update list" }).then(
+    rejectErr,
+  );
 }
 
 export async function deleteLists(listIds: readonly string[]): Promise<void> {
-  const { error } = await app.api.lists.delete({ listIds: [...listIds] });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to delete lists"));
+  await call(app.api.lists.delete({ listIds: [...listIds] }), {
+    fallback: "Failed to delete lists",
+  }).then(rejectErr);
 }
 
 export async function getList(listId: string) {
-  const { data, error } = await app.api.lists({ listId }).get();
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get list"));
-  return data;
+  return call(app.api.lists({ listId }).get(), { fallback: "Failed to get list" }).then(rejectErr);
 }
 
 export async function getListMembers(listId: string, limit: number, offset: number) {
-  const { data, error } = await app.api.lists({ listId }).members.get({
-    query: { limit, offset },
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to load List"));
-  return data;
+  return call(
+    app.api.lists({ listId }).members.get({
+      query: { limit, offset },
+    }),
+    { fallback: "Failed to load List" },
+  ).then(rejectErr);
 }
 
 export async function getListOptionsForTargets(targets: readonly ListTarget[]) {
-  const { data, error } = await app.api.lists.targets.options.post({
-    targets: [...targets],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get List options"));
-  return data;
+  return call(
+    app.api.lists.targets.options.post({
+      targets: [...targets],
+    }),
+    { fallback: "Failed to get List options" },
+  ).then(rejectErr);
 }
 
 export async function addTargetsToLists(
   targets: readonly ListTarget[],
   listIds: readonly string[],
 ) {
-  const { data, error } = await app.api.lists.targets.put({
-    targets: [...targets],
-    listIds: [...listIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to add to Lists"));
-  return data;
+  return call(
+    app.api.lists.targets.put({
+      targets: [...targets],
+      listIds: [...listIds],
+    }),
+    { fallback: "Failed to add to Lists" },
+  ).then(rejectErr);
 }
 
 export async function removeTargetsFromList(targets: readonly ListTarget[], listId: string) {
-  const { data, error } = await app.api.lists.targets.delete({
-    targets: [...targets],
-    listId,
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
-  return data;
+  return call(
+    app.api.lists.targets.delete({
+      targets: [...targets],
+      listId,
+    }),
+    { fallback: "Failed to remove from List" },
+  ).then(rejectErr);
 }
 
 export async function removeListMembers(
   listId: string,
   memberIds: readonly string[],
 ): Promise<void> {
-  const { error } = await app.api.lists({ listId }).members.delete({
-    memberIds: [...memberIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
+  await call(
+    app.api.lists({ listId }).members.delete({
+      memberIds: [...memberIds],
+    }),
+    { fallback: "Failed to remove from List" },
+  ).then(rejectErr);
 }
 
 export async function moveListMembers(listId: string, intent: PositionOrderInput): Promise<void> {
-  const { error } = await app.api.lists({ listId }).members.order.patch({
-    ...intent,
-    movedIds: [...intent.movedIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to save List order"));
+  await call(
+    app.api.lists({ listId }).members.order.patch({
+      ...intent,
+      movedIds: [...intent.movedIds],
+    }),
+    { fallback: "Failed to save List order" },
+  ).then(rejectErr);
 }

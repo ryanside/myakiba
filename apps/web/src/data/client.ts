@@ -10,23 +10,10 @@ import {
 import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
-import { getUserErrorMessage } from "@/lib/treaty-client";
+import { call, rejectErr } from "./api";
+import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf } from "./catalog";
-
-type EdenResult<Data> =
-  | { readonly data: Data; readonly error: null }
-  | { readonly data: null; readonly error: Parameters<typeof getUserErrorMessage>[0] };
-
-/** The one place an Eden response becomes data or a thrown Error. */
-export async function unwrap<Data>(
-  response: PromiseLike<EdenResult<Data>>,
-  fallback: string,
-): Promise<Data> {
-  const { data, error } = await response;
-  if (error) throw new Error(getUserErrorMessage(error, fallback));
-  return data;
-}
 
 type PageCursor = { readonly limit: number; readonly offset: number };
 type OffsetPage = { readonly items: readonly unknown[]; readonly totalCount: number };
@@ -36,7 +23,7 @@ type InfiniteReadSpec<Input, Identity, Page extends OffsetPage> = {
   readonly failure: string;
   /** The part of the input that changes the result. It becomes the key. */
   readonly identify: (input: Input) => Identity;
-  readonly request: (input: Input, cursor: PageCursor) => PromiseLike<EdenResult<Page>>;
+  readonly request: (input: Input, cursor: PageCursor) => PromiseLike<EdenAnswer<Page>>;
 };
 
 export function infiniteRead<Input, Identity, Page extends OffsetPage>(
@@ -63,8 +50,12 @@ function stampInfiniteRead<Input, Identity, Page extends OffsetPage>(
     options: (input: Input) =>
       infiniteQueryOptions({
         queryKey: key(spec.identify(input)),
-        queryFn: ({ pageParam }) =>
-          unwrap(spec.request(input, { limit: spec.pageSize, offset: pageParam }), spec.failure),
+        queryFn: async ({ pageParam }): Promise<Page> =>
+          rejectErr(
+            await call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
+              fallback: spec.failure,
+            }),
+          ),
         initialPageParam: 0,
         getNextPageParam: offsetAfterLoaded,
       }),

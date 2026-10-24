@@ -3,7 +3,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { Treaty } from "@elysiajs/eden";
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { ApiUnreachable } from "@/lib/errors/api-unreachable";
+import { ImportStatusStreamDisconnected } from "@/lib/errors/import-status-stream-disconnected";
+import { app } from "@/lib/treaty-client";
 import {
   deleteCurrentDataTransferImport,
   exportDataTransfer,
@@ -12,6 +15,7 @@ import {
   startDataTransferImport,
 } from "@/queries/data-transfer";
 import { syncResultFamilies } from "../catalog";
+import { call, rejectErr } from "../api";
 import { invalidateFamilies, rootedRead, streamedRead } from "../client";
 
 type ImportStatusChunk =
@@ -20,10 +24,6 @@ type ImportStatusChunk =
   > extends AsyncIterable<infer Chunk>
     ? Chunk
     : never;
-
-class ImportStatusStreamDisconnectedError extends Error {
-  override readonly name = "ImportStatusStreamDisconnectedError";
-}
 
 const currentImportKey = ["dataTransferImport", "current"] as const;
 const importStatusKey = (importId: string | null) =>
@@ -41,21 +41,21 @@ export const dataTransfer = {
     open: async (importId, { signal, client }) => {
       if (importId === null) throw new Error("No active import");
 
-      const {
-        data,
-        error: responseError,
-        status,
-      } = await app.api["data-transfer"].imports.current.status.get({
-        fetch: { signal },
-      });
-      if (responseError) {
-        const message = getErrorMessage(responseError, "Failed to connect to import status");
-        if (status >= 500) {
-          throw new ImportStatusStreamDisconnectedError(message, { cause: responseError });
-        }
-        throw new Error(message);
-      }
-      if (!data) throw new Error("No import status stream received");
+      const opened = await call(
+        app.api["data-transfer"].imports.current.status.get({ fetch: { signal } }),
+        {
+          fallback: "Failed to connect to import status",
+          empty: "No import status stream received",
+          policy: "legacy",
+        },
+      );
+      const data = rejectErr(
+        opened.mapError((failure) =>
+          ApiUnreachable.is(failure) || ApiServerError.is(failure)
+            ? new ImportStatusStreamDisconnected({ cause: failure, message: failure.message })
+            : failure,
+        ),
+      );
 
       return (async function* (): AsyncGenerator<ImportStatusChunk> {
         try {
@@ -71,21 +71,23 @@ export const dataTransfer = {
           }
         } catch (error) {
           if (signal.aborted || !(error instanceof TypeError)) throw error;
-          throw new ImportStatusStreamDisconnectedError("Import status stream disconnected", {
+          throw new ImportStatusStreamDisconnected({
             cause: error,
+            message: "Import status stream disconnected",
           });
         }
 
         if (!signal.aborted) {
-          throw new ImportStatusStreamDisconnectedError("Import status stream disconnected");
+          throw new ImportStatusStreamDisconnected({
+            message: "Import status stream disconnected",
+          });
         }
       })();
     },
     initialValue: (): SyncJobStatus | null => null,
     reducer: (_previous, chunk) => chunk.data,
     refetchMode: "append",
-    retry: (failureCount, error) =>
-      failureCount < 3 && error instanceof ImportStatusStreamDisconnectedError,
+    retry: (failureCount, error) => failureCount < 3 && ImportStatusStreamDisconnected.is(error),
   }),
 };
 
