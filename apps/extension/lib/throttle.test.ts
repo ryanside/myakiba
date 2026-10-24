@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Result } from "better-result";
+import { Panic, Result } from "better-result";
 import { fakeClock, memoryValue } from "../test/fake-browser";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
@@ -174,6 +174,38 @@ describe("a throttle turn", () => {
 
     expect(turn.isErr() && turn.error).toBe(unavailable);
     expect(ran).toBe(false);
+  });
+
+  test("whose reservation panics lets the next load run", async () => {
+    const { clock } = turns();
+    const stored = memoryValue(OPEN_THROTTLE);
+    let reads = 0;
+    const throttle = createThrottle({
+      clock,
+      random: () => 0.5,
+      state: {
+        load: () => {
+          reads += 1;
+          if (reads === 1) throw new Error("the books broke");
+          return stored.load();
+        },
+        save: stored.save,
+      },
+    });
+
+    await expect(
+      throttle.load(new AbortController().signal, async () => Result.ok(null)),
+    ).rejects.toBeInstanceOf(Panic);
+
+    let answer: Result<number, TurnFailure> | null = null;
+    void throttle
+      .load(new AbortController().signal, async () => Result.ok(7), 1000)
+      .then((turn) => {
+        answer = turn;
+      });
+    await clock.runUntil(() => answer !== null);
+
+    expect(answer).toMatchObject({ status: "ok", value: 7 });
   });
 
   test.each([
