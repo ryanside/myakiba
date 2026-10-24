@@ -648,7 +648,8 @@
         "a sync run > stops driving the extension once the page enters the back-forward cache",
         "a sync run stops when the server says it is over",
         "an Import/Export run stops when the server says it is over"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "90682bd9",
@@ -666,7 +667,8 @@
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": [
         "a sync run > a busy run counts every item it did not import, reported failures included"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "09a8732b",
@@ -714,7 +716,8 @@
         "failure reports > stop the run on a busy answer, like an upload does",
         "failure reports > still go out after a busy upload, and are answered before the final interrupt",
         "an Import/Export run reports to the import's endpoints"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "35c7296c",
@@ -955,7 +958,8 @@
         "an answer that breaks off after its headers > counts its upload as failed and frees the upload slot for later runs",
         "an answer that breaks off after its headers > counts a failure report as failed and still ends the run with an interrupt",
         "an answer that breaks off after its headers > keeps the run going on a heartbeat"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "5564a143",
@@ -980,7 +984,7 @@
         "a run the user lost access to > stops fetching once an upload answers 401",
         "a run the user lost access to > stops fetching once a failure report answers 401"
       ],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "37b4c360",
@@ -991,7 +995,7 @@
         "an upload waiting out a Retry-After > is not sent again once a heartbeat says the run is over",
         "an upload waiting out a Retry-After > is not sent again once a heartbeat answers 401"
       ],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "8ec2fb08",
@@ -1007,7 +1011,8 @@
       "fixed": [
         "leaving the page with failures not yet reported > reports them with their reasons before the keepalive interrupt",
         "leaving the page with failures not yet reported > reports what fits in the page's 64 KiB keepalive budget, in order"
-      ]
+      ],
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
     },
     {
       "fix": "e9b38285",
