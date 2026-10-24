@@ -37,6 +37,8 @@ type TypesReplay = {
   package: string;
   config: string[];
   errors: string[];
+  /** The revision to take `config` from, when HEAD's copy no longer compiles against the fix. */
+  configAt?: string;
 };
 
 /** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
@@ -509,7 +511,11 @@ try {
 
   for (const replay of selectedTypes) {
     const parent = `${replay.fix}^`;
-    await checkOut(parent, { packageDir: replay.package, files: replay.config });
+    await checkOut(parent, {
+      packageDir: replay.package,
+      files: replay.config,
+      at: replay.configAt,
+    });
 
     const run = await checkTypes(worktree, replay.package);
     const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));

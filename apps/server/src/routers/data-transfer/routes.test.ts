@@ -999,7 +999,7 @@ test("a mixed import failure batch preserves imported Items and ignores a stale 
 test("an oversized archive answers before opening a transaction", async () => {
   const { DATA_TRANSFER_MAX_BYTES } = await import("@myakiba/contracts/data-transfer/schema");
   const { DataTransfer } = await import("./module");
-  const { run } = await import("@/domain/kernel");
+  const { serve } = await import("@/domain/kernel");
   const { Viewer } = await import("@/domain/viewer");
   const archive = archiveOf(
     [],
@@ -1008,17 +1008,12 @@ test("an oversized archive answers before opening a transaction", async () => {
   const transaction = spyOn(db, "transaction");
   try {
     expect(
-      await run(
-        Viewer.fromSession({ user: { id: userId } }),
+      await serve(
+        { viewer: Viewer.fromSession({ user: { id: userId } }), log: createRequestLogger() },
         DataTransfer.start,
         { fileName: "large.json", archive },
-        createRequestLogger(),
       ),
-    ).toEqual({
-      ok: false,
-      category: "payload_too_large",
-      message: "The import archive exceeds the 50 MiB limit.",
-    });
+    ).toMatchObject({ code: 413, response: "The import archive exceeds the 50 MiB limit." });
     expect(transaction).not.toHaveBeenCalled();
     expect(await db.$count(dataTransferImport)).toBe(0);
   } finally {

@@ -57,18 +57,7 @@ const failedStart = command(
 
 function startOperation<const M extends string>(failure: M) {
   return command(
-    {
-      action: "sync.start",
-      failure,
-      recover: async (scope, input: PlannedSync, error) => {
-        try {
-          await scope.execute(failedStart, { ...input, failure: "before_start" });
-        } catch {
-          /* The original persistence error takes precedence over history. */
-        }
-        throw error;
-      },
-    },
+    { action: "sync.start", failure },
     async (scope, input: PlannedSync) => {
       await SyncService.startSyncRun(
         { session: input.session, requestPayload: input.requestPayload, existingRows: input.rows },
@@ -77,16 +66,29 @@ function startOperation<const M extends string>(failure: M) {
       );
       return ok(null);
     },
+    {
+      recover: async (scope, input, error) => {
+        try {
+          await scope.execute(failedStart, { ...input, failure: "before_start" });
+        } catch {
+          /* The original persistence error takes precedence over history. */
+        }
+        throw error;
+      },
+    },
   );
 }
 
 type ExistingSync = Parameters<typeof SyncService.completeSyncSessionFromExisting>[0];
 function completeOperation<const M extends string>(failure: M) {
   return command(
+    { action: "sync.completeExisting", failure },
+    async (scope, input: ExistingSync) => {
+      await SyncService.completeSyncSessionFromExisting(input, scope.tx);
+      return ok(null);
+    },
     {
-      action: "sync.completeExisting",
-      failure,
-      recover: async (scope, input: ExistingSync, error) => {
+      recover: async (scope, input, error) => {
         try {
           await scope.execute(failedStart, {
             session: input.session,
@@ -98,10 +100,6 @@ function completeOperation<const M extends string>(failure: M) {
         }
         throw error;
       },
-    },
-    async (scope, input: ExistingSync) => {
-      await SyncService.completeSyncSessionFromExisting(input, scope.tx);
-      return ok(null);
     },
   );
 }
@@ -716,21 +714,8 @@ export const SyncRuns = {
     {
       action: "sync.completeItem",
       failure: "Failed to import item",
-      retry: retryOrderLock,
       before: async (scope, input: { readonly id: string; readonly upload: SyncItemUpload }) =>
         proceed({ ...input, prepared: await prepareMfcItem(scope.tx, input.upload) }),
-      recover: async (scope, input, error) => {
-        const missingOrder = error instanceof OrderAbsentError;
-        try {
-          const recorded = await scope.execute(runFailure, { ...input, missingOrder });
-          if (!missingOrder)
-            scope.log.error(error instanceof Error ? error : new Error(String(error)));
-          return recorded;
-        } catch (recordError) {
-          if (missingOrder) throw recordError;
-          throw error;
-        }
-      },
     },
     async (scope, input) => {
       const result = await completeSyncItem(
@@ -743,6 +728,23 @@ export const SyncRuns = {
       if (result === null) return fail("not_found", "This item is not part of the import");
       scope.log.set({ outcome: result.outcome });
       return ok(result);
+    },
+    {
+      retry: retryOrderLock,
+      recover: async (scope, input, error) => {
+        const missingOrder = error.cause instanceof OrderAbsentError;
+        try {
+          const recorded = await scope.execute(runFailure, { ...input, missingOrder });
+          if (!missingOrder)
+            scope.log.error(
+              error.cause instanceof Error ? error.cause : new Error(String(error.cause)),
+            );
+          return recorded;
+        } catch (recordError) {
+          if (missingOrder) throw recordError;
+          throw error;
+        }
+      },
     },
   ),
   failure: command(

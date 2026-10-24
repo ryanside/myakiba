@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
+import { Panic, Result, UnhandledException, matchError, panic } from "better-result";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
@@ -8,34 +9,52 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, fail, failAfterCommit, ok, prepared, proceed, query, run, serve } =
-  await import("./kernel");
+const { command, prepared, query, run, serve } = await import("./kernel");
+const { Failure } = await import("./failure");
+const { tagged } = await import("./tagged");
 const { Viewer } = await import("./viewer");
+
+const NothingToWrite = Failure("NothingToWrite", "not_found", "Nothing to write");
+const NoSuchUser = Failure("NoSuchUser", "not_found", "No such user");
+const NotThisOne = Failure("NotThisOne", "bad_request", "Not this one");
+const PickAnotherSection = Failure("PickAnotherSection", "bad_request", "Pick another section");
+const Rejected = Failure("Rejected", "bad_request", "Rejected");
+const LeaseExpired = Failure("LeaseExpired", "conflict", "The saved lease has expired");
+const Contended = tagged("Contended");
 
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
 const log = createRequestLogger();
 const config = { action: "test.write", failure: "Failed to write" };
 
+const newUser = (id: string) => ({ id, name: id, email: `${id}@example.com`, username: id });
+
 const writeThen = (ending: "ok" | "fail" | "throw") =>
   command(config, async (scope, input: { readonly id: string }) => {
-    await scope.tx.insert(user).values({
-      id: input.id,
-      name: input.id,
-      email: `${input.id}@example.com`,
-      username: input.id,
-    });
-    if (ending === "fail") return fail("not_found", "Nothing to write");
+    await scope.tx.insert(user).values(newUser(input.id));
+    if (ending === "fail") return Result.err(new NothingToWrite());
     if (ending === "throw") throw new Error("injected failure after the write");
-    return ok("written");
+    return Result.ok("written" as const);
   });
 
 const readUser = query(
   { action: "test.read", failure: "Failed to read" },
   async (scope, input: { readonly id: string }) => {
     const [found] = await scope.tx.select({ id: user.id }).from(user).where(eq(user.id, input.id));
-    return found ? ok(found) : fail("not_found", "No such user");
+    return found ? Result.ok(found) : Result.err(new NoSuchUser());
   },
 );
+
+async function valueOf<T, E>(answer: Promise<Result<T, E>>): Promise<T> {
+  const outcome = await answer;
+  return outcome.unwrap();
+}
+
+/** A Postgres call that fails, as a step inside `Result.gen`. */
+const rejected = async (error: Error): Promise<Result<number, never>> => {
+  throw error;
+};
+/** A lookup that finds no row, for a body whose invariant says one exists. */
+const missingRow = async (): Promise<Result<null, never>> => Result.ok(null);
 
 const userExists = async (id: string) => {
   const found = await db.select({ id: user.id }).from(user).where(eq(user.id, id));
@@ -44,19 +63,14 @@ const userExists = async (id: string) => {
 
 describe("an operation runs in one transaction", () => {
   test("a command's writes commit when it returns ok", async () => {
-    expect(await run(viewer, writeThen("ok"), { id: "committed" }, log)).toEqual({
-      ok: true,
-      value: "written",
-    });
+    expect(await valueOf(run(viewer, writeThen("ok"), { id: "committed" }, log))).toBe("written");
     expect(await userExists("committed")).toBe(true);
   });
 
   test("a failure rolls back the writes made before it", async () => {
-    expect(await run(viewer, writeThen("fail"), { id: "failed" }, log)).toEqual({
-      ok: false,
-      category: "not_found",
-      message: "Nothing to write",
-    });
+    const outcome = await run(viewer, writeThen("fail"), { id: "failed" }, log);
+
+    expect(outcome.isErr() && outcome.error).toBeInstanceOf(NothingToWrite);
     expect(await userExists("failed")).toBe(false);
   });
 
@@ -70,9 +84,8 @@ describe("an operation runs in one transaction", () => {
   test("a query sees committed rows", async () => {
     await run(viewer, writeThen("ok"), { id: "visible" }, log);
 
-    expect(await run(viewer, readUser, { id: "visible" }, log)).toEqual({
-      ok: true,
-      value: { id: "visible" },
+    expect(await valueOf(run(viewer, readUser, { id: "visible" }, log))).toEqual({
+      id: "visible",
     });
   });
 });
@@ -83,7 +96,7 @@ const transactionIds = (kind: "command" | "query" | "snapshot") => {
       scope.tx.select({ id: sql<string>`txid_current()::text` }).from(sql`(select 1) as one`);
     const [first] = await read();
     const [second] = await read();
-    return ok([first?.id, second?.id]);
+    return Result.ok([first?.id, second?.id]);
   };
   const readConfig = { action: `test.${kind}`, failure: "Failed to read" };
   if (kind === "command") return command(readConfig, body);
@@ -93,20 +106,18 @@ const transactionIds = (kind: "command" | "query" | "snapshot") => {
 test.each(["command", "snapshot"] as const)(
   "every statement of one %s shares a transaction, and each call gets its own",
   async (kind) => {
-    const one = await run(viewer, transactionIds(kind), undefined, log);
-    const two = await run(viewer, transactionIds(kind), undefined, log);
-    if (!one.ok || !two.ok) throw new Error("the operation failed");
+    const one = await valueOf(run(viewer, transactionIds(kind), undefined, log));
+    const two = await valueOf(run(viewer, transactionIds(kind), undefined, log));
 
-    expect(one.value[0]).toBe(one.value[1]);
-    expect(two.value[0]).not.toBe(one.value[0]);
+    expect(one[0]).toBe(one[1]);
+    expect(two[0]).not.toBe(one[0]);
   },
 );
 
 test("a query without a snapshot reads from the pool, one autocommit statement at a time", async () => {
-  const outcome = await run(viewer, transactionIds("query"), undefined, log);
-  if (!outcome.ok) throw new Error("the query failed");
+  const ids = await valueOf(run(viewer, transactionIds("query"), undefined, log));
 
-  expect(outcome.value[0]).not.toBe(outcome.value[1]);
+  expect(ids[0]).not.toBe(ids[1]);
 });
 
 test("a snapshot query reads one repeatable-read, read-only snapshot", async () => {
@@ -118,16 +129,16 @@ test("a snapshot query reads one repeatable-read, read-only snapshot", async () 
           readOnly: sql<string>`current_setting('transaction_read_only')`,
         })
         .from(sql`(select 1) as one`);
-      return ok(row);
+      return Result.ok(row);
     });
 
-  expect(await run(viewer, settings(true), undefined, log)).toEqual({
-    ok: true,
-    value: { isolation: "repeatable read", readOnly: "on" },
+  expect(await valueOf(run(viewer, settings(true), undefined, log))).toEqual({
+    isolation: "repeatable read",
+    readOnly: "on",
   });
-  expect(await run(viewer, settings(), undefined, log)).toEqual({
-    ok: true,
-    value: { isolation: "read committed", readOnly: "off" },
+  expect(await valueOf(run(viewer, settings(), undefined, log))).toEqual({
+    isolation: "read committed",
+    readOnly: "off",
   });
 });
 
@@ -152,21 +163,16 @@ describe("a command's before step", () => {
         before: async (scope, input: { readonly id: string }) => {
           const reads = [await currentTxid(scope), await currentTxid(scope)];
           const open = await openTransactions();
-          if (answer === "ok") return ok({ reads, open });
-          if (answer === "fail") return fail("bad_request", "Not this one");
+          if (answer === "ok") return Result.ok({ reads, open });
+          if (answer === "fail") return Result.err(new NotThisOne());
           if (answer === "throw") throw new Error("injected failure in before");
-          return proceed({ id: input.id, reads, open });
+          return scope.proceed({ id: input.id, reads, open });
         },
       },
       async (scope, input) => {
         bodyRuns += 1;
-        await scope.tx.insert(user).values({
-          id: input.id,
-          name: input.id,
-          email: `${input.id}@example.com`,
-          username: input.id,
-        });
-        return ok({ reads: input.reads, open: input.open });
+        await scope.tx.insert(user).values(newUser(input.id));
+        return Result.ok({ reads: input.reads, open: input.open });
       },
     );
     return { op, bodyRuns: () => bodyRuns };
@@ -175,11 +181,10 @@ describe("a command's before step", () => {
   test("reads from the pool before the transaction, then hands its value to the body", async () => {
     const { op } = writeAfter("proceed");
 
-    const outcome = await run(viewer, op, { id: "after-before" }, log);
-    if (!outcome.ok) throw new Error("the command failed");
+    const answered = await valueOf(run(viewer, op, { id: "after-before" }, log));
 
-    expect(outcome.value.open).toBe(0);
-    expect(outcome.value.reads[0]).not.toBe(outcome.value.reads[1]);
+    expect(answered.open).toBe(0);
+    expect(answered.reads[0]).not.toBe(answered.reads[1]);
     expect(await userExists("after-before")).toBe(true);
   });
 
@@ -190,7 +195,7 @@ describe("a command's before step", () => {
 
       const outcome = await run(viewer, op, { id: `answered-${answer}` }, log);
 
-      expect(outcome.ok).toBe(answer === "ok");
+      expect(outcome.isOk()).toBe(answer === "ok");
       expect(bodyRuns()).toBe(0);
       expect(await userExists(`answered-${answer}`)).toBe(false);
     },
@@ -226,7 +231,7 @@ describe("a prepared read", () => {
     { action: "test.prepared", failure: "Failed to read" },
     async (scope, input: { readonly id: string }) => {
       const [found] = await scope.read(createdAt, { id: input.id });
-      return found ? ok(found) : fail("not_found", "No such user");
+      return found ? Result.ok(found) : Result.err(new NoSuchUser());
     },
   );
 
@@ -234,25 +239,24 @@ describe("a prepared read", () => {
     await run(viewer, writeThen("ok"), { id: "prepared-1" }, log);
     await run(viewer, writeThen("ok"), { id: "prepared-2" }, log);
 
-    const one = await run(viewer, readCreatedAt, { id: "prepared-1" }, log);
-    const two = await run(viewer, readCreatedAt, { id: "prepared-2" }, log);
-    if (!one.ok || !two.ok) throw new Error("the prepared read failed");
+    const one = await valueOf(run(viewer, readCreatedAt, { id: "prepared-1" }, log));
+    const two = await valueOf(run(viewer, readCreatedAt, { id: "prepared-2" }, log));
 
     expect(builds).toBe(1);
-    expect([one.value.id, two.value.id]).toEqual(["prepared-1", "prepared-2"]);
-    expect(one.value.createdAt).toBeInstanceOf(Date);
+    expect([one.id, two.id]).toEqual(["prepared-1", "prepared-2"]);
+    expect(one.createdAt).toBeInstanceOf(Date);
   });
 
   test("only a query without a snapshot can run one, because it reads from the pool", () => {
     query({ action: "test.snapshot", failure: "Failed to read", snapshot: true }, async (scope) => {
       // @ts-expect-error a snapshot query reads one transaction
       await scope.read(createdAt, { id: "x" });
-      return ok(1);
+      return Result.ok(1);
     });
     command(config, async (scope) => {
       // @ts-expect-error a command's reads must see its own writes
       await scope.read(createdAt, { id: "x" });
-      return ok(1);
+      return Result.ok(1);
     });
   });
 });
@@ -273,7 +277,7 @@ describe("serve answers with the outcome", () => {
 
   test("a bad request answers 400 with its message", async () => {
     const rejects = query({ action: "test.bad_request", failure: "Failed to read" }, async () =>
-      fail("bad_request", "Pick another section"),
+      Result.err(new PickAnotherSection()),
     );
     expect(await serve(caller, rejects, {})).toMatchObject({
       code: 400,
@@ -295,16 +299,14 @@ describe("command commit hooks and recovery", () => {
     const observed: string[] = [];
     const operation = (ending: "ok" | "fail" | "throw") =>
       command(config, async (scope, id: string) => {
-        await scope.tx
-          .insert(user)
-          .values({ id, name: id, email: `${id}@example.com`, username: id });
+        await scope.tx.insert(user).values(newUser(id));
         scope.afterCommit(async (committed) => {
           const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
           for (const row of rows) observed.push(row.id);
         });
-        if (ending === "fail") return fail("bad_request", "Rejected");
+        if (ending === "fail") return Result.err(new Rejected());
         if (ending === "throw") throw new Error("rolled back");
-        return ok(id);
+        return Result.ok({ id });
       });
     await run(viewer, operation("ok"), "effect-committed", log);
     await run(viewer, operation("fail"), "effect-failed", log);
@@ -323,29 +325,28 @@ describe("command commit hooks and recovery", () => {
     const operation = command(
       {
         ...config,
-        before: async (_scope, id: string) => {
+        before: async (scope, id: string) => {
           preparations += 1;
-          return proceed(id);
+          return scope.proceed(id);
         },
-        retry: (error, attempt) =>
-          error instanceof Error && error.message === "retry" && attempt < 3,
       },
       async (scope, id) => {
         attempts += 1;
         const attempt = attempts;
-        await scope.tx
-          .insert(user)
-          .values({ id, name: id, email: `${id}@example.com`, username: id });
+        await scope.tx.insert(user).values(newUser(id));
         scope.afterCommit(async () => {
           effects.push(attempt);
         });
         if (attempt < 3) throw new Error("retry");
-        return ok(id);
+        return Result.ok({ id });
+      },
+      {
+        retry: (error, attempt) =>
+          error.cause instanceof Error && error.cause.message === "retry" && attempt < 3,
       },
     );
-    expect(await run(viewer, operation, "retried-write", log)).toEqual({
-      ok: true,
-      value: "retried-write",
+    expect(await valueOf(run(viewer, operation, "retried-write", log))).toEqual({
+      id: "retried-write",
     });
     expect({ preparations, attempts, effects }).toEqual({
       preparations: 1,
@@ -354,31 +355,49 @@ describe("command commit hooks and recovery", () => {
     });
   });
 
+  test("an internal Err rolls back and drives retry like a throw", async () => {
+    let attempts = 0;
+    const operation = command(
+      config,
+      async (scope, id: string) => {
+        attempts += 1;
+        await scope.tx.insert(user).values(newUser(`${id}-${attempts}`));
+        if (attempts < 3) return Result.err(new Contended({ message: "the row was locked" }));
+        return Result.ok(attempts);
+      },
+      {
+        retry: (error, attempt) => Contended.is(error) && attempt < 3,
+        recover: async () => Result.err(new Rejected()),
+      },
+    );
+
+    expect(await valueOf(run(viewer, operation, "contended", log))).toBe(3);
+    expect(await userExists("contended-1")).toBe(false);
+    expect(await userExists("contended-2")).toBe(false);
+    expect(await userExists("contended-3")).toBe(true);
+  });
+
   test("recovery runs after rollback and commits a fresh operation", async () => {
     let attempts = 0;
     const original = new Error("original write failed");
     const operation = command(
+      config,
+      async (scope, id: string) => {
+        attempts += 1;
+        await scope.tx.insert(user).values(newUser(id));
+        throw original;
+      },
       {
-        ...config,
         retry: (_error, attempt) => attempt < 2,
-        recover: async (scope, id: string, error) => {
-          expect(error).toBe(original);
+        recover: async (scope, id, error) => {
+          expect(error).toBeInstanceOf(UnhandledException);
+          expect(error.cause).toBe(original);
           expect(await userExists(id)).toBe(false);
           return scope.execute(writeThen("ok"), { id });
         },
       },
-      async (scope, id: string) => {
-        attempts += 1;
-        await scope.tx
-          .insert(user)
-          .values({ id, name: id, email: `${id}@example.com`, username: id });
-        throw original;
-      },
     );
-    expect(await run(viewer, operation, "recovered-write", log)).toEqual({
-      ok: true,
-      value: "written",
-    });
+    expect(await valueOf(run(viewer, operation, "recovered-write", log))).toBe("written");
     expect(attempts).toBe(2);
     expect(await userExists("recovered-write")).toBe(true);
   });
@@ -387,7 +406,7 @@ describe("command commit hooks and recovery", () => {
     let recoveries = 0;
     const recover = async () => {
       recoveries += 1;
-      return ok("recovered");
+      return Result.ok("recovered" as const);
     };
     const beforeThrows = command(
       {
@@ -395,25 +414,41 @@ describe("command commit hooks and recovery", () => {
         before: async () => {
           throw new Error("preparation");
         },
-        recover,
       },
-      async () => ok("unused"),
+      async () => Result.ok("unused" as const),
+      { recover },
     );
-    expect(await run(viewer, beforeThrows, undefined, log)).toEqual({
-      ok: true,
-      value: "recovered",
-    });
-    const effectThrows = command({ ...config, recover }, async (scope) => {
-      scope.afterCommit(async () => {
-        throw new Error("effect");
-      });
-      return ok("committed");
-    });
-    expect(await run(viewer, effectThrows, undefined, log)).toEqual({
-      ok: true,
-      value: "committed",
-    });
+    expect(await valueOf(run(viewer, beforeThrows, undefined, log))).toBe("recovered");
+    const effectThrows = command(
+      config,
+      async (scope) => {
+        scope.afterCommit(async () => {
+          throw new Error("effect");
+        });
+        return Result.ok("committed" as const);
+      },
+      { recover },
+    );
+    expect(await valueOf(run(viewer, effectThrows, undefined, log))).toBe("committed");
     expect(recoveries).toBe(1);
+  });
+
+  test("a rethrown error reaches the caller as the value originally thrown", async () => {
+    const original = new Error("original persistence error");
+    const operation = command(
+      config,
+      async () =>
+        Result.gen(async function* () {
+          return Result.ok(yield* Result.await(rejected(original)));
+        }),
+      {
+        recover: async (_scope, _input, error) => {
+          throw error;
+        },
+      },
+    );
+
+    await expect(run(viewer, operation, undefined, log)).rejects.toBe(original);
   });
 });
 
@@ -427,7 +462,7 @@ test("failed commit effects keep the committed response and run later effects", 
   const warnings = spyOn(caller.log, "warn");
   const observed: string[] = [];
   const operation = command(config, async (scope, id: string) => {
-    await scope.tx.insert(user).values({ id, name: id, email: `${id}@example.com`, username: id });
+    await scope.tx.insert(user).values(newUser(id));
     for (const message of ["first effect failed", "second effect failed"]) {
       scope.afterCommit(async () => {
         throw new Error(message);
@@ -437,7 +472,7 @@ test("failed commit effects keep the committed response and run later effects", 
       const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
       for (const row of rows) observed.push(row.id);
     });
-    return ok("committed");
+    return Result.ok("committed" as const);
   });
 
   expect(await serve(caller, operation, "failed-effects")).toBe("committed");
@@ -452,45 +487,45 @@ test("failed commit effects keep the committed response and run later effects", 
   });
 });
 
-test("a committed failure saves its writes and effects before answering its status", async () => {
-  let effects = 0;
-  let retries = 0;
-  let recoveries = 0;
-  const operation = command(
-    {
-      ...config,
-      retry: (_error, attempt) => {
-        retries += 1;
-        return attempt < 2;
+describe("a committed failure saves its writes and effects before answering its status", () => {
+  test.each(["returned", "yielded inside Result.gen"] as const)("when %s", async (how) => {
+    let effects = 0;
+    let retries = 0;
+    let recoveries = 0;
+    const operation = command(
+      config,
+      async (scope, id: string) =>
+        Result.gen(async function* () {
+          await scope.tx.insert(user).values(newUser(id));
+          scope.afterCommit(async () => {
+            effects += 1;
+          });
+          if (how === "returned") return scope.failAfterCommit(new LeaseExpired());
+          yield* scope.failAfterCommit(new LeaseExpired());
+          return Result.ok(1);
+        }),
+      {
+        retry: (_error, attempt) => {
+          retries += 1;
+          return attempt < 2;
+        },
+        recover: async () => {
+          recoveries += 1;
+          return Result.ok(0);
+        },
       },
-      recover: async () => {
-        recoveries += 1;
-        return ok("unused");
-      },
-    },
-    async (scope, id: string) => {
-      await scope.tx
-        .insert(user)
-        .values({ id, name: id, email: `${id}@example.com`, username: id });
-      scope.afterCommit(async () => {
-        effects += 1;
-      });
-      return failAfterCommit("conflict", "The saved lease has expired");
-    },
-  );
+    );
 
-  expect(await run(viewer, operation, "committed-failure", log)).toEqual({
-    ok: false,
-    category: "conflict",
-    message: "The saved lease has expired",
+    const outcome = await run(viewer, operation, `committed-${how}`, log);
+    expect(outcome.isErr() && outcome.error).toBeInstanceOf(LeaseExpired);
+    expect(await serve({ viewer, log }, operation, `served-${how}`)).toMatchObject({
+      code: 409,
+      response: "The saved lease has expired",
+    });
+    expect(await userExists(`committed-${how}`)).toBe(true);
+    expect(await userExists(`served-${how}`)).toBe(true);
+    expect({ effects, retries, recoveries }).toEqual({ effects: 2, retries: 0, recoveries: 0 });
   });
-  expect(await serve({ viewer, log }, operation, "served-committed-failure")).toMatchObject({
-    code: 409,
-    response: "The saved lease has expired",
-  });
-  expect(await userExists("committed-failure")).toBe(true);
-  expect(await userExists("served-committed-failure")).toBe(true);
-  expect({ effects, retries, recoveries }).toEqual({ effects: 2, retries: 0, recoveries: 0 });
 });
 
 test("several operations in a route keep its first action and log the failing step", async () => {
@@ -499,13 +534,17 @@ test("several operations in a route keep its first action and log the failing st
   initLogger({ enabled: false });
   await serve(caller, writeThen("ok"), { id: "route-action" });
   const original = new Error("later operation failed");
-  const later = query({ action: "test.later", failure: "Later failed" }, async () => {
-    throw original;
-  });
+  const later = query({ action: "test.later", failure: "Later failed" }, async () =>
+    Result.gen(async function* () {
+      return Result.ok(yield* Result.await(rejected(original)));
+    }),
+  );
+  const logged = spyOn(caller.log, "error");
   expect(await serve(caller, later, {})).toMatchObject({
     code: 500,
     response: "Later failed",
   });
+  expect(logged).toHaveBeenCalledWith(original, { step: "test.later" });
   expect(caller.log.getContext()).toMatchObject({
     action: "test.write",
     user: { id: viewer.userId },
@@ -513,4 +552,237 @@ test("several operations in a route keep its first action and log the failing st
     step: "test.later",
     error: { message: original.message },
   });
+});
+
+describe("a defect is never retried or recovered", () => {
+  const defects = {
+    "a panic": async (): Promise<Result<number, never>> => panic("the row must exist"),
+    "a panic inside Result.gen": async () =>
+      Result.gen(async function* () {
+        const row = yield* Result.await(missingRow());
+        return row ? Result.ok(1) : panic("the row must exist");
+      }),
+    "a panic with a raw cause inside Result.gen": async () =>
+      Result.gen(async function* () {
+        const row = yield* Result.await(missingRow());
+        return row ? Result.ok(1) : panic("the row must exist", new Error("zod"));
+      }),
+    "an unwrapped Err": async () =>
+      Result.ok(Result.err(new Contended({ message: "locked" })).unwrap("the row must exist")),
+  };
+
+  test.each(Object.entries(defects))(
+    "%s rolls back and answers a logged 500",
+    async (name, end) => {
+      let retries = 0;
+      let recoveries = 0;
+      const id = `defect-${Object.keys(defects).indexOf(name)}`;
+      const operation = command(
+        config,
+        async (scope, input: string) => {
+          await scope.tx.insert(user).values(newUser(input));
+          return end();
+        },
+        {
+          retry: () => {
+            retries += 1;
+            return true;
+          },
+          recover: async () => {
+            recoveries += 1;
+            return Result.ok(0);
+          },
+        },
+      );
+      const caller = { viewer, log: createRequestLogger() };
+      const logged = spyOn(caller.log, "error");
+
+      expect(await serve(caller, operation, id)).toMatchObject({
+        code: 500,
+        response: "Failed to write",
+      });
+      expect(logged.mock.lastCall?.[0]).toBeInstanceOf(Panic);
+      expect({ retries, recoveries }).toEqual({ retries: 0, recoveries: 0 });
+      expect(await userExists(id)).toBe(false);
+    },
+  );
+
+  test.each(["body", "before", "recover"] as const)(
+    "a Panic returned as an Err from %s is refused before any hook",
+    async (from) => {
+      const defect = new Panic({ message: "returned instead of thrown" });
+      let retries = 0;
+      const returned = () => Result.err(defect) as Result<number, never>;
+      const operation = command(
+        {
+          ...config,
+          before: async (scope, input: string) =>
+            from === "before" ? returned() : scope.proceed(input),
+        },
+        async (scope, input) => {
+          await scope.tx.insert(user).values(newUser(`returned-${from}`));
+          if (from === "body") return returned();
+          throw new Error(input);
+        },
+        {
+          retry: () => {
+            retries += 1;
+            return false;
+          },
+          recover: async () => returned(),
+        },
+      );
+
+      await expect(run(viewer, operation, "go", log)).rejects.toBe(defect);
+      expect(retries).toBe(from === "recover" ? 1 : 0);
+      expect(await userExists(`returned-${from}`)).toBe(false);
+    },
+  );
+});
+
+describe("a defect raised while recovering always answers", () => {
+  const broken = command({ ...config, action: "test.broken" }, async () =>
+    panic("a recovery operation found a broken invariant"),
+  );
+  test("even when recover catches it and answers ok", async () => {
+    const operation = command(
+      config,
+      async () => {
+        throw new Error("persistence failed");
+      },
+      {
+        recover: async (scope) => {
+          try {
+            await scope.execute(broken, {});
+          } catch {
+            /* a recovery that hides the defect */
+          }
+          return Result.ok("hidden" as const);
+        },
+      },
+    );
+
+    await expect(run(viewer, operation, undefined, log)).rejects.toThrow(
+      "a recovery operation found a broken invariant",
+    );
+  });
+
+  test("and when recover rethrows it after catching it", async () => {
+    const operation = command(
+      config,
+      async () => {
+        throw new Error("persistence failed");
+      },
+      {
+        recover: async (scope) => {
+          try {
+            return await scope.execute(broken, {});
+          } catch (error) {
+            scope.log.set({ recovery: "failed" });
+            throw error;
+          }
+        },
+      },
+    );
+    const caller = { viewer, log: createRequestLogger() };
+    const logged = spyOn(caller.log, "error");
+
+    expect(await serve(caller, operation, {})).toMatchObject({ code: 500 });
+    expect(logged.mock.lastCall?.[0]).toBeInstanceOf(Panic);
+  });
+});
+
+/**
+ * Each message better-result wraps a thrown value in. The kernel looks through every one,
+ * so a value thrown in any of them reaches the caller as itself, not as a defect.
+ */
+describe("better-result's rethrow wrappers", () => {
+  const Tagged = tagged("Tagged");
+  const failing = () => Result.err(new Tagged({ message: "expected" }));
+  const throwing = () => {
+    throw thrown;
+  };
+  const rejecting = async () => {
+    throw thrown;
+  };
+  const throwingSchema = {
+    "~standard": { version: 1 as const, vendor: "test", validate: throwing },
+  };
+  const codec = Result.codec({
+    serialize: { ok: throwingSchema, err: throwingSchema },
+    deserialize: { ok: throwingSchema, err: throwingSchema },
+  });
+  let thrown = new Error("thrown inside better-result");
+  const producers = {
+    "generator body threw": () =>
+      Result.gen(function* () {
+        const value = yield* Result.ok(1);
+        return value ? throwing() : Result.ok(value);
+      }),
+    "generator cleanup threw": () =>
+      Result.gen(function* () {
+        try {
+          yield* failing();
+          return Result.ok(1);
+        } finally {
+          throwing();
+        }
+      }),
+    "map callback threw": () => Result.ok(1).map(throwing),
+    "mapError callback threw": () => failing().mapError(throwing),
+    "andThen callback threw": () => Result.ok(1).andThen(throwing),
+    "andThenAsync callback threw": () => Result.ok(1).andThenAsync(rejecting),
+    "tryRecover callback threw": () => failing().tryRecover(throwing),
+    "tryRecoverAsync callback threw": () => failing().tryRecoverAsync(rejecting),
+    "match ok handler threw": () => Result.ok(1).match({ ok: throwing, err: () => 0 }),
+    "match err handler threw": () => failing().match({ ok: () => 0, err: throwing }),
+    "matchError handler threw": () =>
+      matchError(new Tagged({ message: "x" }), { Tagged: throwing }),
+    "tap callback threw": () => Result.ok(1).tap(throwing),
+    "tapAsync callback threw": () => Result.ok(1).tapAsync(rejecting),
+    "tapError callback threw": () => failing().tapError(throwing),
+    "tapErrorAsync callback threw": () => failing().tapErrorAsync(rejecting),
+    "tapBoth ok callback threw": () => Result.ok(1).tapBoth({ ok: throwing, err: () => {} }),
+    "tapBoth err callback threw": () => failing().tapBoth({ ok: () => {}, err: throwing }),
+    "tapBothAsync ok callback threw": () =>
+      Result.ok(1).tapBothAsync({ ok: rejecting, err: async () => {} }),
+    "tapBothAsync err callback threw": () =>
+      failing().tapBothAsync({ ok: async () => {}, err: rejecting }),
+    "Result.try catch handler threw": () => Result.try({ try: throwing, catch: throwing }),
+    "Result.tryPromise catch handler threw": () =>
+      Result.tryPromise({ try: rejecting, catch: throwing }),
+    "Result.allAsync input promise rejected": () => Result.allAsync([rejecting()]),
+    "Result.partitionAsync input promise rejected": () => Result.partitionAsync([rejecting()]),
+    "shouldRetry predicate threw": () =>
+      Result.tryPromise(
+        { try: rejecting, catch: () => new Tagged({ message: "x" }) },
+        { retry: { times: 1, delayMs: 0, backoff: "constant", shouldRetry: throwing } },
+      ),
+    "Result.tryPromise delayMs callback threw": () =>
+      Result.tryPromise(
+        { try: rejecting, catch: () => new Tagged({ message: "x" }) },
+        { retry: { times: 1, delayMs: throwing } },
+      ),
+    "Result.codec serialize schema threw": () => codec.serialize(Result.ok(1)),
+    "Result.codec deserialize schema threw": () => codec.deserialize({ status: "ok", value: 1 }),
+  };
+
+  test.each(Object.entries(producers))(
+    "%s reaches the caller as the value thrown",
+    async (name, produce) => {
+      thrown = new Error(`thrown inside ${name}`);
+      const wrapped = await (async () => produce())().then(
+        () => panic(`${name} did not throw`),
+        (error) => error,
+      );
+      expect(wrapped).toBeInstanceOf(Panic);
+      expect(Panic.is(wrapped) && wrapped.message).toBe(name);
+
+      const operation = query({ action: "test.wrapped", failure: "Failed to read" }, async () => {
+        await produce();
+        return Result.ok(1);
+      });
+      await expect(run(viewer, operation, undefined, log)).rejects.toBe(thrown);
+    },
+  );
 });

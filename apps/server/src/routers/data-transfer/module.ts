@@ -179,6 +179,22 @@ export const DataTransfer = {
         scope.log.set({ dataTransfer: { importId: input.jobId, mfcItemId: input.mfcItemId } });
         return proceed({ upload: input, prepared: await prepareMfcItem(scope.tx, input) });
       },
+    },
+    async (scope, input) => {
+      const result = await DataTransferService.completeItem(
+        scope,
+        scope.viewer.userId,
+        input.upload,
+        input.prepared,
+      );
+      if (result.kind === "problem") {
+        scope.log.set({ dataTransfer: { code: result.message } });
+        return failAfterCommit("bad_request", result.message);
+      }
+      scope.log.set({ dataTransfer: { status: result.import?.status ?? null } });
+      return ok(result.import);
+    },
+    {
       recover: async (scope, input, error) => {
         try {
           const recorded = await scope.execute(recordFailure, {
@@ -186,7 +202,9 @@ export const DataTransfer = {
             mfcItemId: input.mfcItemId,
             reason: UNSAVED_ITEM_REASON,
           });
-          scope.log.error(error);
+          scope.log.error(
+            error.cause instanceof Error ? error.cause : new Error(String(error.cause)),
+          );
           return recorded;
         } catch (recordError) {
           const failure =
@@ -205,20 +223,6 @@ export const DataTransfer = {
           throw error;
         }
       },
-    },
-    async (scope, input) => {
-      const result = await DataTransferService.completeItem(
-        scope,
-        scope.viewer.userId,
-        input.upload,
-        input.prepared,
-      );
-      if (result.kind === "problem") {
-        scope.log.set({ dataTransfer: { code: result.message } });
-        return failAfterCommit("bad_request", result.message);
-      }
-      scope.log.set({ dataTransfer: { status: result.import?.status ?? null } });
-      return ok(result.import);
     },
   ),
   failure: recordFailure,

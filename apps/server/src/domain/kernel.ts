@@ -4,9 +4,13 @@ import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
+import { Panic, Result, TaggedError, UnhandledException, panic } from "better-result";
+import type { AnyTaggedError, Err, InferErr, InferOk, Ok } from "better-result";
 import { db } from "@myakiba/db/client";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
+import { Failure } from "./failure";
+import type { AnyFailure, Category, FailureInstance } from "./failure";
 import type { Viewer } from "./viewer";
 
 /**
@@ -14,17 +18,23 @@ import type { Viewer } from "./viewer";
  * operations built with `query` or `command`, and a route answers with
  * `serve(ctx, Module.op, input)`.
  *
- * A command runs in one transaction. A body that returns `fail(...)` or throws
- * rolls it back; `failAfterCommit(...)` saves its writes before answering a failure.
- * A query reads from the pool, so its parallel reads run on
- * separate connections and may see different commits; a query whose reads must
- * agree sets `snapshot: true` and reads one snapshot in one transaction. A
- * command whose slow work must not hold a connection does it in `before`, which
- * reads from the pool before the transaction opens. `serve` turns the outcome
- * into the response: the value, the failure's status and message, or a logged
- * 500 with the operation's `failure`.
+ * A body returns a better-result `Result`. Every error a client may see is a
+ * `Failure`, a class that carries its own category and literal message. Any other
+ * Err is internal, and only a command's `recover` may see it. A deliberate `panic`
+ * is a defect: it is never retried or recovered and answers a logged 500. Any other
+ * throw also answers that 500, after `retry` and `recover` see it as an
+ * `UnhandledException`.
+ *
+ * A command runs in one transaction. Any Err or throw rolls it back;
+ * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
+ * A query reads from the pool, so its parallel reads run on separate connections
+ * and may see different commits; a query whose reads must agree sets
+ * `snapshot: true` and reads one snapshot in one transaction. A command whose slow
+ * work must not hold a connection does it in `before`, which reads from the pool
+ * before the transaction opens. `serve` turns the outcome into the response: the
+ * value, the failure's status and message, or a logged 500 with the operation's
+ * `failure`.
  */
-
 const FAILURE_STATUS = {
   bad_request: 400,
   forbidden: 403,
@@ -32,54 +42,84 @@ const FAILURE_STATUS = {
   payload_too_large: 413,
   not_found: 404,
   too_many_requests: 429,
-} as const;
+} as const satisfies Record<Category, number>;
 
-type FailureCategory = keyof typeof FAILURE_STATUS;
+/** A failure that answers after the command commits. Only `CommandScope.failAfterCommit` makes one. */
+type Committed<F extends AnyFailure> = { readonly "~committed": F };
 
-type Ok<T> = { readonly ok: true; readonly value: T };
-type Failure<C extends FailureCategory = FailureCategory, M extends string = string> = {
-  readonly ok: false;
-  readonly category: C;
-  readonly message: M;
-};
-type Outcome<T, F extends Failure> = Ok<T> | F;
-type CommittedFailure<F extends Failure = Failure> = { readonly afterCommit: F };
-type CommandResult = Ok<unknown> | Failure | CommittedFailure;
+/** A `before` that hands its value to the body. Only `BeforeScope.proceed` makes one. */
+type Proceed<P> = { readonly "~proceed": P };
 
-type Proceed<P> = { readonly proceed: P };
-type BeforeResult = Ok<unknown> | Failure | Proceed<unknown>;
-type HandoffOf<B> = B extends Proceed<infer P> ? P : never;
+/** The brands the kernel made, so that a lookalike object is never read as one. */
+const brands = new WeakSet<object>();
 
-/** Splits what a body returns, so a body that never fails has no failure entry. */
-type ValueOf<R> = R extends Ok<infer T> ? T : never;
-type FailureOf<R> = R extends CommittedFailure<infer F> ? F : Extract<R, Failure>;
-
-/** A message keeps its literal type for Eden. Any other body keeps the shape it has. */
-export function ok<const T extends string>(value: T): Ok<T>;
-export function ok<T>(value: T): Ok<T>;
-export function ok<T>(value: T): Ok<T> {
-  return { ok: true, value };
+function brand<T extends object>(value: T): T {
+  brands.add(value);
+  return value;
 }
 
-/** An expected failure. The message is the response body. */
-export function fail<const C extends FailureCategory, const M extends string>(
+const committed = <F extends AnyFailure>(failure: F): Committed<F> =>
+  brand({ "~committed": failure });
+const proceeding = <P>(value: P): Proceed<P> => brand({ "~proceed": value });
+
+const isCommitted = (error: Leftover): error is Committed<AnyFailure> =>
+  brands.has(error) && "~committed" in error;
+const isProceed = (result: AnyResult): result is Ok<Proceed<unknown>, Leftover> =>
+  result.isOk() &&
+  typeof result.value === "object" &&
+  result.value !== null &&
+  brands.has(result.value) &&
+  "~proceed" in result.value;
+
+function isFailure(error: Leftover): error is AnyFailure {
+  return (
+    TaggedError.is(error) &&
+    "category" in error &&
+    typeof error.category === "string" &&
+    Object.hasOwn(FAILURE_STATUS, error.category)
+  );
+}
+
+/** The public failure an Err stands for, after a commit or not. */
+type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailure ? E : never;
+
+/** An Err the client never sees: it exists for `retry` and `recover`. */
+type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
+
+/** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
+type Recoverable<E> = InternalOf<E> | UnhandledException;
+
+/**
+ * @deprecated Write `Result.ok(value)`, and a string answer as `Result.ok("…" as const)`.
+ * A bridge for routers not yet moved to better-result.
+ */
+export function ok<const T extends string>(value: T): Ok<T, never>;
+export function ok<T>(value: T): Ok<T, never>;
+export function ok<T>(value: T): Ok<T, never> {
+  return Result.ok(value);
+}
+
+/** @deprecated Return `Result.err(new X())` with `X` declared by `Failure(tag, category, message)`. */
+export function fail<const C extends Category, const M extends string>(
   category: C,
   message: M,
-): Failure<C, M> {
-  return { ok: false, category, message };
+): Err<never, FailureInstance<"LegacyFailure", C, M, Record<never, never>>> {
+  const Legacy = Failure("LegacyFailure", category, message);
+  return Result.err(new Legacy({}));
 }
 
-/** Commits a command's writes and effects, then answers with an expected failure. */
-export function failAfterCommit<const C extends FailureCategory, const M extends string>(
+/** @deprecated Return `scope.failAfterCommit(new X())`. */
+export function failAfterCommit<const C extends Category, const M extends string>(
   category: C,
   message: M,
-): CommittedFailure<Failure<C, M>> {
-  return { afterCommit: fail(category, message) };
+): Err<never, Committed<FailureInstance<"LegacyFailure", C, M, Record<never, never>>>> {
+  const Legacy = Failure("LegacyFailure", category, message);
+  return Result.err(committed(new Legacy({})));
 }
 
-/** Ends a command's `before` and runs its body in the transaction with `value`. */
-export function proceed<P>(value: P): Proceed<P> {
-  return { proceed: value };
+/** @deprecated Return `scope.proceed(value)`. */
+export function proceed<P>(value: P): Ok<Proceed<P>, never> {
+  return Result.ok(proceeding(value));
 }
 
 type ReadScope = {
@@ -110,30 +150,36 @@ export function prepared<T>(
   return { statement: build(pool).prepare(name) };
 }
 
+/** A command's `before`: the pool, plus the one way to hand a value to the body. */
+type BeforeScope = PoolScope & {
+  readonly proceed: <P>(value: P) => Ok<Proceed<P>, never>;
+};
+
 export type CommandScope = Omit<ReadScope, "tx"> & {
   readonly tx: Tx;
   /** Runs only after this attempt commits, reading the pool. A rollback discards its callbacks. */
   readonly afterCommit: (effect: (scope: ReadScope) => Promise<void>) => void;
+  /** Commits this attempt's writes and effects, then answers with `failure`. Return it, or yield it inside `Result.gen`. */
+  readonly failAfterCommit: <F extends AnyFailure>(failure: F) => Err<never, Committed<F>>;
 };
 
 type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
-  readonly execute: <I, T, F extends Failure, M extends string>(
+  /**
+   * Runs a fresh operation with `run`'s contract: a Failure comes back as an Err, an
+   * unhandled throw throws the value originally thrown, and a defect throws its Panic.
+   * A defect raised here always wins: once `recover` settles, the kernel answers with
+   * it even if `recover` caught it, so a recovery can never hide a broken invariant.
+   */
+  readonly execute: <I, T, F extends AnyFailure, M extends string>(
     op: Op<I, T, F, M>,
     input: NoInfer<I>,
-  ) => Promise<Outcome<T, F>>;
-};
-
-type CommandConfig<I, R, M extends string> = OpConfig<M> & {
-  /** Decides whether a thrown transaction should run again, starting at attempt 1. */
-  readonly retry?: (error: Error, attempt: number) => boolean;
-  /** Runs after rollback, including a failed before, with access only to fresh operations. */
-  readonly recover?: (scope: RecoveryScope, input: I, error: Error) => Promise<R>;
+  ) => Promise<Result<T, F>>;
 };
 
 type OpConfig<M extends string> = {
   /** The wide event's `action`, such as "orders.delete_item". */
   readonly action: string;
-  /** The 500 body when the body throws. */
+  /** The 500 body for a defect or an unrecovered throw. */
   readonly failure: M;
 };
 
@@ -142,8 +188,28 @@ type QueryConfig<M extends string> = OpConfig<M> & {
   readonly snapshot?: true;
 };
 
+/**
+ * What a command does with what its body leaves behind. It is the third argument, after
+ * the body, so that TS infers the body first and types `error` from it.
+ */
+type Handlers<I, E, C> = {
+  /**
+   * Decides whether a rolled-back attempt runs again, starting at attempt 1. It sees an
+   * internal Err or a thrown value, never a Failure, a committed failure or a defect.
+   * `before` is not repeated. A predicate passed by name takes `error: unknown`, because a
+   * narrower parameter stops TS from inferring the body.
+   */
+  readonly retry?: (error: Recoverable<E>, attempt: number) => boolean;
+  /**
+   * Runs after rollback, for an internal Err or a throw from `before` or the last attempt.
+   * A defect never reaches it. It answers with a Failure or a fresh operation, or throws
+   * to answer 500; rethrowing `error` reports the value originally thrown.
+   */
+  readonly recover?: (scope: RecoveryScope, input: I, error: Recoverable<E>) => Promise<C>;
+};
+
 /** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
-type Op<I, T, F extends Failure, M extends string> = OpConfig<M> & {
+type Op<I, T, F extends AnyFailure, M extends string> = OpConfig<M> & {
   /** Type-only: carries the operation's types for `serve`. Never set at runtime. */
   readonly "~types"?: {
     readonly input: (input: I) => void;
@@ -152,17 +218,54 @@ type Op<I, T, F extends Failure, M extends string> = OpConfig<M> & {
   };
 };
 
-type AnyOp = Op<never, unknown, Failure, string>;
+/** What an Err holds: a Failure, an internal tagged error, a Panic, or a committed failure. */
+type Leftover = AnyTaggedError | Committed<AnyFailure>;
+type AnyResult = Result<unknown, Leftover>;
 
-const bodies = new WeakMap<AnyOp, (scope: never, input: never) => Promise<CommandResult>>();
+/**
+ * better-result widens `Result.ok("Saved")` to `Ok<string>`, which would hide a message
+ * body's literal from Eden, so a body whose answer is a plain `string` fails to compile.
+ */
+type Literal<T> = [T] extends [never]
+  ? unknown
+  : unknown extends T
+    ? unknown
+    : string extends T
+      ? { readonly fix: 'write a string answer as Result.ok("…" as const)' }
+      : unknown;
 
-const befores = new WeakMap<AnyOp, Before<never, BeforeResult>>();
+/** An internal Err with nowhere to go fails to compile at the body. */
+type Handled<E, Recovers extends boolean> = [InternalOf<E>] extends [never]
+  ? unknown
+  : Recovers extends true
+    ? unknown
+    : { readonly fix: "an internal error needs recover, or must be a Failure" };
 
-const retries = new WeakMap<AnyOp, (error: Error, attempt: number) => boolean>();
-const recoveries = new WeakMap<
-  AnyOp,
-  (scope: RecoveryScope, input: never, error: Error) => Promise<Outcome<unknown, Failure>>
->();
+/** A defect is thrown with `panic(...)`, so that no hook can mistake it for an expected failure. */
+type NoPanic<E> = [Extract<E, Panic>] extends [never]
+  ? unknown
+  : { readonly fix: "throw a defect with panic(...); never return a Panic as an Err" };
+
+/**
+ * A body's return type is `R & Checked<…>`: TS infers R from the body, then checks the
+ * body against the intersection. A failed check names its fix as a missing `fix` property.
+ */
+type Checked<Answer, E, Recovers extends boolean> = Literal<InferOk<Answer>> &
+  Handled<E, Recovers> &
+  NoPanic<E>;
+
+type HasRecover<C> = [C] extends [never] ? false : true;
+
+type AnyOp = Op<never, unknown, AnyFailure, string>;
+type Body = (scope: never, input: never) => Promise<AnyResult>;
+type Hook = (scope: BeforeScope, input: never) => Promise<AnyResult>;
+type Retry = (error: AnyTaggedError, attempt: number) => boolean;
+type Recover = (scope: RecoveryScope, input: never, error: AnyTaggedError) => Promise<AnyResult>;
+
+const bodies = new WeakMap<AnyOp, Body>();
+const befores = new WeakMap<AnyOp, Hook>();
+const retries = new WeakMap<AnyOp, Retry>();
+const recoveries = new WeakMap<AnyOp, Recover>();
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
@@ -177,159 +280,190 @@ export async function ping(): Promise<void> {
   await db.execute(sql`select 1`);
 }
 
-/** A read. The body takes the scope and one input object, never positional params. */
+/**
+ * A read. The body takes the scope and one input object, never positional params, and
+ * returns a Result whose errors are all Failures. Without `snapshot` it reads the pool;
+ * with it, one repeatable-read, read-only snapshot.
+ */
 export function query<
   I,
-  R extends Ok<unknown> | Failure,
+  R extends AnyResult,
   const M extends string,
   const S extends true | undefined = undefined,
 >(
   config: QueryConfig<M> & { readonly snapshot?: S },
-  body: (scope: S extends true ? ReadScope : PoolScope, input: I) => Promise<R>,
-): Op<I, ValueOf<R>, FailureOf<R>, M> {
+  body: (
+    scope: S extends true ? ReadScope : PoolScope,
+    input: I,
+  ) => Promise<R & Checked<R, InferErr<R>, false>>,
+): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M> {
   const op = { action: config.action, failure: config.failure };
-  bodies.set(op, body);
+  bodies.set(op, body as Body);
   (config.snapshot ? snapshots : poolReads).add(op);
   return op;
 }
 
-type Before<I, B extends BeforeResult> = (scope: PoolScope, input: I) => Promise<B>;
+type Before<I, B extends AnyResult> = (scope: BeforeScope, input: I) => Promise<B>;
+
+/** What a `before` hands the body. */
+type HandoffOf<B> = B extends Ok<Proceed<infer P>, unknown> ? P : never;
+/** What a `before` answers by itself, without the transaction. */
+type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 
 /**
- * A write. Everything the body does through `scope.tx` commits together or not at all.
- * `before` runs first, for work such as parsing or a network call, and reads the pool
- * outside the transaction. A row it read can change before the body runs, so the body
- * must re-check inside the transaction anything it writes against. Its effects outside the
- * database, such as a stored file, are never rolled back. It returns `proceed(value)` to
- * run the body with `value`, or an outcome that answers without opening a transaction.
- * `retry` reruns a thrown transaction without repeating `before`. `recover` handles a
- * thrown preparation or exhausted attempt through fresh operations after rollback.
- * Commit effects run afterwards; their errors never retry or recover committed writes.
+ * A write. Everything the body does through `scope.tx` commits together or not at all:
+ * any Err or throw rolls the attempt back, and only `scope.failAfterCommit(failure)`
+ * keeps the writes. `before` runs first, for work such as parsing or a network call,
+ * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
+ * the body with `value`, or a Result that answers without opening a transaction. A row
+ * it read can change before the body runs, so the body must re-check inside the
+ * transaction anything it writes against. Its effects outside the database, such as a
+ * stored file, are never rolled back. `handlers.retry` reruns a rolled-back attempt
+ * without repeating `before`. `handlers.recover` handles what `before` or the last
+ * attempt left internal or threw, through fresh operations after rollback. Commit
+ * effects run afterwards; their errors never retry or recover committed writes.
  */
 export function command<
   I,
-  B extends BeforeResult,
-  R extends CommandResult,
+  B extends AnyResult,
+  R extends AnyResult,
   const M extends string,
-  C extends Ok<unknown> | Failure = never,
+  C extends Result<unknown, AnyFailure> = never,
 >(
-  config: CommandConfig<I, C, M> & { readonly before: Before<I, B> },
-  body: (scope: CommandScope, input: HandoffOf<B>) => Promise<R>,
-): Op<I, ValueOf<B | R | C>, FailureOf<B | R | C>, M>;
+  config: OpConfig<M> & { readonly before: Before<I, B> },
+  body: (
+    scope: CommandScope,
+    input: HandoffOf<B>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, HasRecover<C>>>,
+  handlers?: Handlers<I, InferErr<B | R>, C>,
+): Op<I, InferOk<AnswerOf<B> | R | C>, PublicOf<InferErr<B | R | C>>, M>;
 // Only the first overload takes a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
-  R extends CommandResult,
+  R extends AnyResult,
   const M extends string,
-  C extends Ok<unknown> | Failure = never,
+  C extends Result<unknown, AnyFailure> = never,
 >(
-  config: CommandConfig<I, C, M> & { readonly before?: never },
-  body: (scope: CommandScope, input: I) => Promise<R>,
-): Op<I, ValueOf<R | C>, FailureOf<R | C>, M>;
+  config: OpConfig<M> & { readonly before?: never },
+  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, HasRecover<C>>>,
+  handlers?: Handlers<I, InferErr<R>, C>,
+): Op<I, InferOk<R | C>, PublicOf<InferErr<R | C>>, M>;
 export function command(
-  config: CommandConfig<never, Ok<unknown> | Failure, string> & {
-    readonly before?: Before<never, BeforeResult>;
-  },
-  body: (scope: CommandScope, input: never) => Promise<CommandResult>,
+  config: OpConfig<string> & { readonly before?: Before<never, AnyResult> },
+  body: (scope: CommandScope, input: never) => Promise<AnyResult>,
+  handlers?: Handlers<never, unknown, AnyResult>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
-  bodies.set(op, body);
+  bodies.set(op, body as Body);
   if (config.before) befores.set(op, config.before);
-  if (config.retry) retries.set(op, config.retry);
-  if (config.recover) recoveries.set(op, config.recover);
+  if (handlers?.retry) retries.set(op, handlers.retry as Retry);
+  if (handlers?.recover) recoveries.set(op, handlers.recover as Recover);
   return op;
 }
 
-type FailureResponse<F extends Failure> =
-  F extends Failure<infer C, infer M>
-    ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
-    : never;
+type FailureResponse<F> = F extends {
+  readonly category: infer C extends Category;
+  readonly message: infer M;
+}
+  ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
+  : never;
 
+/** Thrown inside the transaction so that it rolls back, carrying the Err that asked for it. */
 class Rollback {
-  readonly failure: Failure;
+  readonly result: Err<unknown, Leftover>;
 
-  constructor(failure: Failure) {
-    this.failure = failure;
+  constructor(result: Err<unknown, Leftover>) {
+    this.result = result;
+  }
+}
+
+/**
+ * better-result rethrows a value thrown inside `Result.gen` or a combinator callback as a
+ * Panic with one of these messages and the value as its cause. The kernel looks through
+ * them, so a Postgres error means the same thing whether or not the body used gen.
+ * `kernel.test.ts` makes better-result produce each one.
+ */
+const RETHROWN = new Set([
+  "generator body threw",
+  "generator cleanup threw",
+  "map callback threw",
+  "mapError callback threw",
+  "andThen callback threw",
+  "andThenAsync callback threw",
+  "tryRecover callback threw",
+  "tryRecoverAsync callback threw",
+  "match ok handler threw",
+  "match err handler threw",
+  "matchError handler threw",
+  "tap callback threw",
+  "tapAsync callback threw",
+  "tapError callback threw",
+  "tapErrorAsync callback threw",
+  "tapBoth ok callback threw",
+  "tapBoth err callback threw",
+  "tapBothAsync ok callback threw",
+  "tapBothAsync err callback threw",
+  "Result.try catch handler threw",
+  "Result.tryPromise catch handler threw",
+  "Result.allAsync input promise rejected",
+  "Result.partitionAsync input promise rejected",
+  "shouldRetry predicate threw",
+  "Result.tryPromise delayMs callback threw",
+  "Result.codec serialize schema threw",
+  "Result.codec deserialize schema threw",
+]);
+
+/** How an operation ended, before `run` turns it into a Result or a throw. */
+type Settled =
+  | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
+  /** A deliberate `panic` or `unwrap`, possibly wrapped: never retried or recovered. */
+  | { readonly kind: "defect"; readonly panic: Panic }
+  /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
+  | { readonly kind: "left"; readonly error: AnyTaggedError };
+
+/** Walks better-result's rethrow wrappers to what was really thrown. */
+function classify(cause: unknown): Settled {
+  let value = cause;
+  while (Panic.is(value) && RETHROWN.has(value.message)) value = value.cause;
+  if (Panic.is(value)) return { kind: "defect", panic: value };
+  if (UnhandledException.is(value)) return { kind: "left", error: value };
+  return { kind: "left", error: new UnhandledException({ cause: value }) };
+}
+
+/** Sorts what a body, `before` or `recover` returned. A returned Panic is a defect. */
+function settle(result: AnyResult): Settled {
+  if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
+  const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
+  if (Panic.is(error)) return { kind: "defect", panic: error };
+  if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
+  return { kind: "left", error };
+}
+
+async function guarded(step: () => Promise<Settled>): Promise<Settled> {
+  try {
+    return await step();
+  } catch (error) {
+    return classify(error);
   }
 }
 
 function bodyOf(op: AnyOp) {
   const body = bodies.get(op);
-  if (!body) throw new Error(`${op.action} was not built by query() or command()`);
+  if (!body) panic(`${op.action} was not built by query() or command(), so it has no body to run`);
   return body;
 }
 
-/** Runs `op` and returns its outcome. Routes call `serve`; tests call this. */
-export async function run<I, T, F extends Failure, M extends string>(
+/** A committed failure keeps the attempt's writes, unless it carries a defect. */
+const keepsWrites = (error: Leftover) => isCommitted(error) && !Panic.is(error["~committed"]);
+
+type Effect = (scope: ReadScope) => Promise<void>;
+
+async function runEffects(
+  op: AnyOp,
+  effects: readonly Effect[],
   viewer: Viewer,
-  op: Op<I, T, F, M>,
-  input: NoInfer<I>,
   log: RequestLogger,
-): Promise<Outcome<T, F>> {
-  const body = bodyOf(op as AnyOp);
-  if (poolReads.has(op as AnyOp)) {
-    const read = body as (scope: PoolScope, input: never) => Promise<Outcome<T, F>>;
-    return read({ viewer, tx: pool, read: readPrepared, log }, input as never);
-  }
-  let outcome: Outcome<T, F>;
-  let effects: ((scope: ReadScope) => Promise<void>)[] = [];
-  try {
-    const before = befores.get(op as AnyOp);
-    let handoff: unknown = input;
-    if (before) {
-      const first = await before({ viewer, tx: pool, read: readPrepared, log }, input as never);
-      if (!("proceed" in first)) return first as Outcome<T, F>;
-      handoff = first.proceed;
-    }
-    const inTransaction = body as (
-      scope: CommandScope,
-      input: never,
-    ) => Promise<Outcome<T, F> | CommittedFailure<F>>;
-    for (let attempt = 1; ; attempt += 1) {
-      const attemptEffects: ((scope: ReadScope) => Promise<void>)[] = [];
-      try {
-        outcome = await db.transaction(
-          async (tx) => {
-            const result = await inTransaction(
-              {
-                viewer,
-                tx,
-                log,
-                afterCommit: (effect) => {
-                  attemptEffects.push(effect);
-                },
-              },
-              handoff as never,
-            );
-            if ("afterCommit" in result) return result.afterCommit;
-            if (!result.ok) throw new Rollback(result);
-            return result as Ok<T>;
-          },
-          snapshots.has(op as AnyOp) ? SNAPSHOT : undefined,
-        );
-        effects = attemptEffects;
-        break;
-      } catch (error) {
-        if (error instanceof Rollback) return error.failure as F;
-        if (
-          retries.get(op as AnyOp)?.(
-            error instanceof Error ? error : new Error(String(error)),
-            attempt,
-          )
-        )
-          continue;
-        throw error;
-      }
-    }
-  } catch (error) {
-    const recover = recoveries.get(op as AnyOp);
-    if (!recover) throw error;
-    return (await recover(
-      { viewer, log, execute: (next, value) => run(viewer, next, value, log) },
-      input as never,
-      error instanceof Error ? error : new Error(String(error)),
-    )) as Outcome<T, F>;
-  }
+) {
   for (const effect of effects) {
     try {
       await effect({ viewer, tx: pool, log });
@@ -348,14 +482,146 @@ export async function run<I, T, F extends Failure, M extends string>(
       });
     }
   }
-  return outcome;
+}
+
+/** Runs a query that reads the pool, one autocommit statement at a time. */
+async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
+  const body = bodyOf(op);
+  try {
+    return settle(await body({ viewer, tx: pool, read: readPrepared, log } as never, input));
+  } catch (error) {
+    return classify(error);
+  }
+}
+
+/** Runs `before` and every attempt of a command, retrying what `retry` accepts. */
+async function attempts(
+  op: AnyOp,
+  viewer: Viewer,
+  input: never,
+  log: RequestLogger,
+): Promise<Settled> {
+  let handoff: unknown = input;
+  const before = befores.get(op);
+  if (before) {
+    let first: AnyResult;
+    try {
+      first = await before(
+        {
+          viewer,
+          tx: pool,
+          read: readPrepared,
+          log,
+          proceed: (value) => Result.ok(proceeding(value)),
+        },
+        input,
+      );
+    } catch (error) {
+      return classify(error);
+    }
+    if (!isProceed(first)) return settle(first);
+    handoff = first.value["~proceed"];
+  }
+  const body = bodyOf(op);
+  const retry = retries.get(op);
+  for (let attempt = 1; ; attempt += 1) {
+    const attemptEffects: Effect[] = [];
+    let settled: Settled;
+    try {
+      const result = await db.transaction(
+        async (tx) => {
+          const scope: CommandScope = {
+            viewer,
+            tx,
+            log,
+            afterCommit: (effect) => {
+              attemptEffects.push(effect);
+            },
+            failAfterCommit: (failure) => Result.err(committed(failure)),
+          };
+          const answered = await body(scope as never, handoff as never);
+          if (answered.isErr() && !keepsWrites(answered.error)) throw new Rollback(answered);
+          return answered;
+        },
+        snapshots.has(op) ? SNAPSHOT : undefined,
+      );
+      await runEffects(op, attemptEffects, viewer, log);
+      settled = settle(result);
+    } catch (error) {
+      settled = error instanceof Rollback ? settle(error.result) : classify(error);
+    }
+    if (settled.kind !== "left" || !retry) return settled;
+    let again: boolean;
+    try {
+      again = retry(settled.error, attempt);
+    } catch (error) {
+      return classify(error);
+    }
+    if (!again) return settled;
+  }
+}
+
+/** Runs `recover` with fresh operations, and answers with any defect they raised. */
+async function recovered(
+  recover: Recover,
+  viewer: Viewer,
+  input: never,
+  left: AnyTaggedError,
+  log: RequestLogger,
+): Promise<Settled> {
+  let defect: Panic | undefined;
+  const execute: RecoveryScope["execute"] = async (next, value) => {
+    try {
+      return await run(viewer, next, value, log);
+    } catch (error) {
+      const sorted = classify(error);
+      if (sorted.kind === "defect") defect ??= sorted.panic;
+      throw error;
+    }
+  };
+  const settled = await guarded(async () =>
+    settle(await recover({ viewer, log, execute }, input, left)),
+  );
+  return defect ? { kind: "defect", panic: defect } : settled;
+}
+
+/**
+ * Runs `op` and returns its Result. Routes call `serve`; tests call this.
+ *
+ * Expected failures come back as Err. A defect throws its Panic. A throw nobody
+ * recovered throws the value originally thrown, including one that `recover` rethrew.
+ */
+export async function run<I, T, F extends AnyFailure, M extends string>(
+  viewer: Viewer,
+  op: Op<I, T, F, M>,
+  input: NoInfer<I>,
+  log: RequestLogger,
+): Promise<Result<T, F>> {
+  const anyOp = op as AnyOp;
+  let settled: Settled;
+  if (poolReads.has(anyOp)) {
+    settled = await readPool(anyOp, viewer, input as never, log);
+  } else {
+    settled = await attempts(anyOp, viewer, input as never, log);
+    const recover = recoveries.get(anyOp);
+    if (settled.kind === "left" && recover) {
+      settled = await recovered(recover, viewer, input as never, settled.error, log);
+    }
+  }
+  if (settled.kind === "answer") return settled.result as Result<T, F>;
+  if (settled.kind === "defect") throw settled.panic;
+  if (UnhandledException.is(settled.error)) throw settled.error.cause;
+  return panic(
+    `${op.action} answered an internal error that no recover handled; only a AnyFailure may reach serve`,
+    settled.error,
+  );
 }
 
 /**
  * Runs `op` for the signed-in caller and answers with its value, its failure's
- * status and message, or a 500. Eden sees one entry per failure.
+ * status and message, or a 500. Eden sees one entry per Failure class.
  */
-export async function serve<I, T, F extends Failure, M extends string>(
+export async function serve<I, T, F extends AnyFailure, M extends string>(
   caller: { readonly viewer: Viewer; readonly log: RequestLogger },
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
@@ -365,14 +631,17 @@ export async function serve<I, T, F extends Failure, M extends string>(
     user: { id: caller.viewer.userId },
   });
   try {
-    const outcome = await run(caller.viewer, op, input, caller.log);
-    if (outcome.ok) {
+    const result = await run(caller.viewer, op, input, caller.log);
+    if (result.isOk()) {
       // An operation may name its own outcome, such as "imported", in place of "success".
       caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
-      return outcome.value;
+      return result.value;
     }
-    caller.log.set({ outcome: outcome.category });
-    return status(FAILURE_STATUS[outcome.category], outcome.message) as FailureResponse<F>;
+    caller.log.set({ outcome: result.error.category });
+    return status(
+      FAILURE_STATUS[result.error.category],
+      result.error.message,
+    ) as FailureResponse<F>;
   } catch (error) {
     caller.log.error(error instanceof Error ? error : new Error(String(error)), {
       step: op.action,
@@ -435,7 +704,7 @@ function named(field: SortColumn, name: string): SQL.Aliased {
 /** Reads a named field of a CTE, which keeps the field's decoder. */
 function fieldOf(source: NamedFields, name: string): SQL.Aliased {
   const field = source[name];
-  if (!field) throw new Error(`${name} is not a named field`);
+  if (!field) panic(`paginateBy read ${name} from a CTE that does not name it`);
   return field;
 }
 
@@ -471,7 +740,7 @@ export async function paginateBy<
 ): Promise<PageOf<TRows, TTotals>> {
   const keys = Object.keys(source.select);
   const reserved = keys.find((key) => RESERVED_NAME.test(key));
-  if (reserved) throw new Error(`paginateBy reserves the field name ${reserved}`);
+  if (reserved) panic(`paginateBy reserves the field name ${reserved}, which the list selected`);
   const totals = [
     ["totalCount", sql<number>`COUNT(*) OVER ()`.mapWith(Number)] as const,
     ...Object.entries(source.totals ?? {}).map(
@@ -573,7 +842,7 @@ function paginateDistinct<TFields extends Fields, TRows extends PgSelect, TTotal
   },
 ): Promise<PageOf<TRows, TTotals>> {
   if (Object.keys(source.totals ?? {}).length > 0) {
-    throw new Error("paginateBy counts a DISTINCT source but cannot total its columns");
+    panic("paginateBy counts a DISTINCT source but cannot total its columns");
   }
   const keys = Object.keys(source.select);
   const selection: NamedFields = Object.fromEntries([

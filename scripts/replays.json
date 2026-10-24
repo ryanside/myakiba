@@ -1211,34 +1211,47 @@
         "src/domain/kernel.type-test.ts(105,1): error TS2578: Unused '@ts-expect-error' directive.",
         "src/domain/kernel.type-test.ts(116,12): error TS1360: Type 'true' does not satisfy the expected type 'false'.",
         "src/domain/kernel.type-test.ts(117,12): error TS1360: Type 'true' does not satisfy the expected type 'false'."
-      ]
+      ],
+      "configAt": "2759d153"
     }
   ],
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, and the removed internal_error category",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error with no recover from a query, a command body and a before, a recover match that skips an error, a recover that answers an internal error, a returned Panic from a body and a recover, a Failure given another message, and a message function called without its props",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
-        "src/domain/kernel.type-test.ts(20,15): error TS2345",
-        "src/domain/kernel.type-test.ts(20,22): error TS7006",
-        "src/domain/kernel.type-test.ts(24,18): error TS2339",
-        "src/domain/kernel.type-test.ts(29,29): error TS2769",
-        "src/domain/kernel.type-test.ts(32,34): error TS2345",
-        "src/domain/kernel.type-test.ts(38,59): error TS2741",
-        "src/domain/kernel.type-test.ts(41,14): error TS2741",
-        "src/domain/kernel.type-test.ts(52,55): error TS2322",
-        "src/domain/kernel.type-test.ts(58,5): error TS2741",
-        "src/domain/kernel.type-test.ts(82,30): error TS2339",
-        "src/domain/kernel.type-test.ts(91,22): error TS2339",
-        "src/domain/kernel.type-test.ts(106,9): error TS2769",
-        "src/domain/kernel.type-test.ts(136,24): error TS2339",
-        "src/domain/kernel.type-test.ts(146,19): error TS2339",
-        "src/domain/kernel.type-test.ts(161,27): error TS2322",
-        "src/domain/kernel.type-test.ts(165,16): error TS2769",
-        "src/domain/kernel.type-test.ts(171,16): error TS2769",
-        "src/domain/kernel.type-test.ts(185,34): error TS2345"
+        "src/domain/kernel.type-test.ts(26,15): error TS2345",
+        "src/domain/kernel.type-test.ts(26,22): error TS7006",
+        "src/domain/kernel.type-test.ts(30,18): error TS2339",
+        "src/domain/kernel.type-test.ts(35,29): error TS2769",
+        "src/domain/kernel.type-test.ts(38,28): error TS2345",
+        "src/domain/kernel.type-test.ts(44,59): error TS2741",
+        "src/domain/kernel.type-test.ts(47,14): error TS2741",
+        "src/domain/kernel.type-test.ts(58,55): error TS2322",
+        "src/domain/kernel.type-test.ts(64,5): error TS2741",
+        "src/domain/kernel.type-test.ts(86,29): error TS2769",
+        "src/domain/kernel.type-test.ts(91,30): error TS2339",
+        "src/domain/kernel.type-test.ts(100,22): error TS2339",
+        "src/domain/kernel.type-test.ts(118,9): error TS2769",
+        "src/domain/kernel.type-test.ts(146,24): error TS2339",
+        "src/domain/kernel.type-test.ts(160,19): error TS2339",
+        "src/domain/kernel.type-test.ts(174,9): error TS2339",
+        "src/domain/kernel.type-test.ts(181,5): error TS2769",
+        "src/domain/kernel.type-test.ts(181,20): error TS7006",
+        "src/domain/kernel.type-test.ts(188,35): error TS2339",
+        "src/domain/kernel.type-test.ts(198,28): error TS2345",
+        "src/domain/kernel.type-test.ts(201,27): error TS2322",
+        "src/domain/kernel.type-test.ts(207,27): error TS2322",
+        "src/domain/kernel.type-test.ts(210,17): error TS2769",
+        "src/domain/kernel.type-test.ts(218,5): error TS2769",
+        "src/domain/kernel.type-test.ts(237,19): error TS2769",
+        "src/domain/kernel.type-test.ts(245,3): error TS2769",
+        "src/domain/kernel.type-test.ts(249,29): error TS2769",
+        "src/domain/kernel.type-test.ts(253,3): error TS2769",
+        "src/domain/kernel.type-test.ts(287,17): error TS2322",
+        "src/domain/kernel.type-test.ts(300,6): error TS2554"
       ]
     }
   ]

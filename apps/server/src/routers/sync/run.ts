@@ -1,3 +1,5 @@
+import { UnhandledException } from "better-result";
+import type { AnyTaggedError } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
 import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -33,8 +35,11 @@ import type { RunEnd } from "./run-state";
 import SyncService from "./service";
 
 const RECENT_ITEMS_LIMIT = 5;
-export const retryOrderLock = (error: Error, attempt: number) =>
-  error instanceof OrderAbsentError && error.retryable && attempt < 3;
+export const retryOrderLock = (error: AnyTaggedError, attempt: number) =>
+  UnhandledException.is(error) &&
+  error.cause instanceof OrderAbsentError &&
+  error.cause.retryable &&
+  attempt < 3;
 const OPEN_ITEM_STATUSES = [
   "pending",
   "failed",

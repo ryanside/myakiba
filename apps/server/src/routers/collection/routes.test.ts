@@ -1,5 +1,5 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import { Elysia } from "elysia";
+import { Elysia, ElysiaCustomStatusResponse } from "elysia";
 import { createRequestLogger, initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
@@ -25,7 +25,7 @@ await mock.module("@myakiba/auth/server", () => ({
 const db = await createTestDatabase();
 const { default: collectionRouter } = await import("./index");
 const { Collection } = await import("./module");
-const { run } = await import("@/domain/kernel");
+const { serve } = await import("@/domain/kernel");
 const { Viewer } = await import("@/domain/viewer");
 const app = new Elysia({ prefix: "/api" }).use(collectionRouter);
 
@@ -105,15 +105,18 @@ test("a delete answers its row with ISO timestamp strings", async () => {
 });
 
 test("the edit and delete operations return strings, so Eden types them as strings", async () => {
-  const log = createRequestLogger();
-  const updated = await run(viewer, Collection.update, { id: "c-1", update: edit }, log);
-  const deleted = await run(viewer, Collection.remove, { id: "c-1" }, log);
-  const update = updated.ok ? updated.value.update : undefined;
-  if (!update || !deleted.ok) throw new Error("expected both operations to succeed");
+  const caller = { viewer, log: createRequestLogger() };
+  const updated = await serve(caller, Collection.update, { id: "c-1", update: edit });
+  const deleted = await serve(caller, Collection.remove, { id: "c-1" });
+  if (updated instanceof ElysiaCustomStatusResponse || !updated.update) {
+    throw new Error("expected the edit to succeed");
+  }
+  if (deleted instanceof ElysiaCustomStatusResponse)
+    throw new Error("expected the delete to succeed");
 
   const rows: readonly { readonly createdAt: string; readonly updatedAt: string }[] = [
-    update,
-    deleted.value.deleted,
+    updated.update,
+    deleted.deleted,
   ];
   const timestamps = { createdAt: createdAt.toISOString(), updatedAt: expect.stringMatching(ISO) };
   expect(rows).toMatchObject([timestamps, timestamps]);

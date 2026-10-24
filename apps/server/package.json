@@ -23,6 +23,7 @@
     "@myakiba/redis": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
+    "better-result": "catalog:",
     "date-fns": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
@@ -34,6 +35,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@elysiajs/eden": "^1.4.8",
     "@myakiba/config": "workspace:*",
     "@types/bun": "catalog:",
     "drizzle-kit": "^0.31.9",
