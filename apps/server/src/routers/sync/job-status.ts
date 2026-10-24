@@ -29,17 +29,16 @@ export async function publishJobStatus(
   status: ServerSyncJobStatus,
   syncSessionId: string,
 ): Promise<void> {
-  try {
-    await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
-  } catch (error) {
-    const cacheLog = createLogger({
-      action: "sync.jobStatusCache",
-      outcome: "warn",
-      jobId: status.jobId,
-      syncSessionId,
-      message: "Failed to publish job status; the saved session is still available",
-    });
-    cacheLog.error(error instanceof Error ? error : String(error));
-    cacheLog.emit();
-  }
+  const published = await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
+  if (published.isOk()) return;
+  const { cause } = published.error;
+  const cacheLog = createLogger({
+    action: "sync.jobStatusCache",
+    outcome: "warn",
+    jobId: status.jobId,
+    syncSessionId,
+    message: "Failed to publish job status; the saved session is still available",
+  });
+  cacheLog.error(cause instanceof Error ? cause : String(cause));
+  cacheLog.emit();
 }

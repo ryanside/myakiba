@@ -1,7 +1,9 @@
+import { Result } from "better-result";
 import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { syncJobStatusSchema } from "@myakiba/contracts/sync/schema";
 import { parseJson } from "@myakiba/utils/parse-json";
+import { PublishJobStatusFailed } from "./errors/publish-job-status-failed";
 import {
   JOB_STATUS_CHANNEL_PREFIX,
   JOB_STATUS_KEY_PREFIX,
@@ -33,33 +35,37 @@ export const writeJobStatusSnapshotAndPublish = async (
   redis: Redis,
   jobId: string,
   status: SyncJobStatus,
-): Promise<void> => {
+): Promise<Result<"written" | "stale", PublishJobStatusFailed>> => {
   const serializedStatus = JSON.stringify(status);
+  const failed = (cause: unknown) => new PublishJobStatusFailed({ jobId, cause });
   if (status.revision !== undefined) {
-    await redis.eval(
-      WRITE_REVISION_SCRIPT,
-      2,
-      getJobStatusSnapshotKey(jobId),
-      getJobStatusChannel(jobId),
-      serializedStatus,
-      status.revision,
-      JOB_STATUS_TTL_SECONDS,
-    );
-    return;
+    const revision = status.revision;
+    const written = await Result.tryPromise({
+      try: () =>
+        redis.eval(
+          WRITE_REVISION_SCRIPT,
+          2,
+          getJobStatusSnapshotKey(jobId),
+          getJobStatusChannel(jobId),
+          serializedStatus,
+          revision,
+          JOB_STATUS_TTL_SECONDS,
+        ),
+      catch: failed,
+    });
+    return written.map((stored) => (stored === 1 ? "written" : "stale"));
   }
-  const results = await redis
-    .multi()
-    .set(getJobStatusSnapshotKey(jobId), serializedStatus, "EX", JOB_STATUS_TTL_SECONDS)
-    .publish(getJobStatusChannel(jobId), serializedStatus)
-    .exec();
-
-  if (results === null) {
-    throw new Error("FAILED_TO_WRITE_JOB_STATUS");
-  }
-
-  for (const [commandError] of results) {
-    if (commandError) {
-      throw commandError instanceof Error ? commandError : new Error(String(commandError));
-    }
-  }
+  const executed = await Result.tryPromise({
+    try: () =>
+      redis
+        .multi()
+        .set(getJobStatusSnapshotKey(jobId), serializedStatus, "EX", JOB_STATUS_TTL_SECONDS)
+        .publish(getJobStatusChannel(jobId), serializedStatus)
+        .exec(),
+    catch: failed,
+  });
+  if (executed.isErr()) return executed;
+  if (executed.value === null) return Result.err(failed("the MULTI transaction was discarded"));
+  const commandError = executed.value.find(([error]) => error)?.[0];
+  return commandError ? Result.err(failed(commandError)) : Result.ok("written");
 };
