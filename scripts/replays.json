@@ -1355,6 +1355,7 @@
     },
     {
       "fix": "de69a35ba1a3c4e6a608793998d0201c9b50f343",
+      "testAt": "9d5af6afb7b2137f6074a8c2807419dc77be6f6d",
       "bug": "a defect in an Item Refresh was read as a refused refresh and logged nowhere",
       "test": "apps/web/src/data/item-refresh.test.tsx",
       "fixed": ["a defect in the refresh is reported as a Panic, not read as a refused refresh"]
@@ -1377,6 +1378,23 @@
       "test": "apps/extension/lib/throttle.test.ts",
       "fixed": [
         "a throttle turn > whose end of turn panics while it is booked reports it once and lets the next loads run"
+      ]
+    },
+    {
+      "fix": "46e1e09109d39fd0213348378dc0d889478816f4",
+      "bug": "a defect in an Item Refresh showed its raw message under the failure toast",
+      "test": "apps/web/src/data/item-refresh.test.tsx",
+      "fixed": [
+        "a defect in the refresh is reported as a Panic and shows the safe text, not its message"
+      ]
+    },
+    {
+      "fix": "46e1e09109d39fd0213348378dc0d889478816f4",
+      "bug": "a defect in a write showed its raw message, or nothing, under the failure toast",
+      "test": "apps/web/src/data/command-failure-toasts.test.tsx",
+      "fixed": [
+        "a defect in a write whose command words its failures shows the safe text under its title, never its message",
+        "a defect in a write whose command words none shows the safe text under its title, never its message"
       ]
     }
   ],
