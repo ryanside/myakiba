@@ -16,7 +16,7 @@ import { mfcItemId } from "@myakiba/mfc/page";
 import { redis } from "@myakiba/redis/client";
 import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
-import type { ResyncCooldownUnavailable } from "@myakiba/redis/errors/resync-cooldown-unavailable";
+import { ResyncCooldownUnavailable } from "@myakiba/redis/errors/resync-cooldown-unavailable";
 import type { RequestLogger } from "evlog";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
@@ -24,6 +24,7 @@ import { EntryCategoryMismatch } from "./errors/entry-category-mismatch";
 import { EntryNotFound } from "./errors/entry-not-found";
 import { ItemNotFound } from "./errors/item-not-found";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { ResyncCooldownActive } from "./errors/resync-cooldown-active";
 import { findMfcItem, pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
 import type { CustomItemInput, EntriesWithRoles } from "./model";
@@ -532,6 +533,9 @@ export const Items = {
     {
       action: "item.requestResync",
       failure: "Failed to request item refresh",
+      // Cooldown reads that guard a refresh and picture storage still fail closed: each
+      // answers the logged 500 after the rollback has dropped the refresh.
+      operational: [ResyncCooldownUnavailable, StoreItemPictureFailed],
       before: async (scope, input: { readonly id: number } & ItemRefresh) => {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, input.id);
@@ -585,16 +589,6 @@ export const Items = {
         cooldownExpiresAt,
         saved: outcome === "unchanged" ? "unchanged" : "refreshed",
       }));
-    },
-    {
-      // Cooldown reads that guard a refresh and picture storage still fail closed.
-      recover: async (_scope, _input, error) => {
-        throw error.match({
-          ResyncCooldownUnavailable: (unavailable) => unavailable.cause,
-          StoreItemPictureFailed: (failed) => failed.cause,
-          UnhandledException: (thrown) => thrown,
-        });
-      },
     },
   ),
 };

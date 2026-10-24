@@ -4,7 +4,9 @@ import { item } from "@myakiba/db/schema/figure";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
 import { command, query } from "@/domain/kernel";
+import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { ensureMfcItem, pictureLog, pictureOutcome, prepareMfcItem } from "@/lib/mfc-item-ingest";
 import type { PictureOutcome } from "@/lib/mfc-item-ingest";
 
@@ -34,6 +36,8 @@ export const MfcItems = {
     {
       action: "mfc_items.ingest",
       failure: "Failed to import item",
+      // Neither failure has a fallback, so each answers the logged 500.
+      operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {
         const prepared = await prepareMfcItem(scope.tx, input);
         if (prepared.isErr()) {
@@ -76,16 +80,6 @@ export const MfcItems = {
           ? { saved: "created", itemId, mfcItemId: id, picture }
           : { saved: "existing", itemId, mfcItemId: id },
       );
-    },
-    {
-      // Neither failure has a fallback, so each answers the logged 500 with the error it raised.
-      recover: async (_scope, _input, error) => {
-        throw error.match({
-          StoreItemPictureFailed: (failed) => failed.cause,
-          MfcItemNotPersisted: (unsaved) => unsaved,
-          UnhandledException: (thrown) => thrown,
-        });
-      },
     },
   ),
 };
