@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 import type { AnyRouter } from "@tanstack/react-router";
+import { Result } from "better-result";
 import { authClient, classifySession } from "@/lib/auth-client";
 import { useClearServerData, useResetServerData } from "@/data/resources/session";
 import type { SessionSource } from "@/lib/session";
 import { toast } from "@/components/ui/toast";
+import { SessionReloadFailed } from "@/lib/errors/session-reload-failed";
 
 export function AuthRouterProvider({
   router,
@@ -37,11 +39,11 @@ export function AuthRouterProvider({
       return;
     }
     async function reload() {
-      try {
-        await Promise.all([resetting, router.invalidate()]);
-      } catch {
-        toast.add({ type: "error", title: "Couldn't update your session. Refresh to try again." });
-      }
+      const reloaded = await Result.tryPromise({
+        try: () => Promise.all([resetting, router.invalidate()]),
+        catch: (cause) => new SessionReloadFailed({ cause }),
+      });
+      if (reloaded.isErr()) toast.add({ type: "error", title: reloaded.error.message });
     }
     void reload();
   }, [router, sessions, session, userId, state, clearServerData, resetServerData]);
