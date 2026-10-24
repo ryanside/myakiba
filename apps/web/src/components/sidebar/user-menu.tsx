@@ -31,7 +31,7 @@ export default function UserMenu({ session }: { session: Session }) {
 
   const handleSignOut = async () => {
     const result = await endSession(() => authClient.signOut());
-    if (result.error) {
+    if (result.isErr()) {
       toast.add({
         type: "error",
         title: result.error.message || "Couldn't sign out. Try again.",

@@ -2,6 +2,8 @@ import { createAuthClient } from "better-auth/react";
 import { adminClient, usernameClient, inferAdditionalFields } from "better-auth/client/plugins";
 import type { auth } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/web";
+import { Result } from "better-result";
+import { AuthRequestFailed } from "@/lib/errors/auth-request-failed";
 
 export const authClient = createAuthClient({
   baseURL: env.VITE_SERVER_URL,
@@ -35,21 +37,42 @@ export function classifySession({
   return "signed-out";
 }
 
-export async function endSession<T extends { error: unknown }>(operation: () => Promise<T>) {
-  let result: T;
-  try {
-    result = await operation();
-  } catch {
-    return { error: { message: undefined } };
-  }
-  if (result.error) return result;
+type AuthAnswer = {
+  readonly error: {
+    readonly code?: string;
+    readonly message?: string;
+    readonly status: number;
+  } | null;
+};
+
+/** Signs out or deletes the account, and on success settles the session store as signed out. */
+export async function endSession(
+  operation: () => Promise<AuthAnswer>,
+): Promise<Result<void, AuthRequestFailed>> {
+  const answered = await Result.tryPromise({
+    try: operation,
+    catch: (cause) => new AuthRequestFailed({ code: null, status: null, cause, message: "" }),
+  });
+  const ended = answered.andThen(({ error }) =>
+    error
+      ? Result.err(
+          new AuthRequestFailed({
+            code: error.code ?? null,
+            status: error.status,
+            cause: error,
+            message: error.message ?? "",
+          }),
+        )
+      : Result.ok(),
+  );
+  if (ended.isErr()) return ended;
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.
   sessionStore.listen((state) => {
     if (state.data || state.error) settleSignedOut();
   });
   settleSignedOut();
-  return result;
+  return ended;
 }
 
 function settleSignedOut() {

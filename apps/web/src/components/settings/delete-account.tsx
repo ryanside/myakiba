@@ -36,7 +36,7 @@ export function DeleteAccount() {
       const result = await endSession(() =>
         authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
       );
-      if (result.error) {
+      if (result.isErr()) {
         toast.add({
           type: "error",
           title: result.error.message || "Couldn't delete account. Try again.",
