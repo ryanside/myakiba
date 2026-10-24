@@ -864,3 +864,21 @@ describe("an operational error the operation lists answers the 500 a throw answe
     await expect(run(viewer, operation, undefined, log)).rejects.toBeInstanceOf(Panic);
   });
 });
+
+test("a Panic in a commit effect logs at error level and keeps the response", async () => {
+  initLogger({ enabled: true });
+  const caller = { viewer, log: createRequestLogger() };
+  initLogger({ enabled: false });
+  const errors = spyOn(caller.log, "error");
+  const operation = command(config, async (scope, id: string) => {
+    await scope.tx.insert(user).values(newUser(id));
+    scope.afterCommit(async () => {
+      panic("committed effect invariant failed");
+    });
+    return Result.ok("committed" as const);
+  });
+  expect(await serve(caller, operation, "panic-effect")).toBe("committed");
+  expect(await userExists("panic-effect")).toBe(true);
+  expect(errors).toHaveBeenCalledTimes(1);
+  expect(errors.mock.lastCall?.[0]).toBeInstanceOf(Panic);
+});
