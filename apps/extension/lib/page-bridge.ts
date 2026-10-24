@@ -7,6 +7,8 @@ import {
   portItemCodec,
 } from "@myakiba/mfc/bridge";
 import type { BridgeEventMessage, PortEvent, PortRequest } from "@myakiba/mfc/bridge";
+import { Result } from "better-result";
+import { ExtensionContextInvalidated } from "./errors/extension-context-invalidated";
 
 /** Chrome stops an idle service worker after 30 s, and a challenge waits up to 120 s. */
 export const KEEPALIVE_MS = 20_000;
@@ -34,6 +36,9 @@ export type BridgeRuntime = {
   readonly version: () => string;
   readonly alive: () => boolean;
 };
+
+/** How a runtime call fails: the runtime throws once the extension reloads under the page. */
+const invalidated = (cause: unknown) => new ExtensionContextInvalidated({ cause });
 
 /** Relays the page's requests to the background and the background's events to the page. */
 export function startPageBridge(deps: {
@@ -109,19 +114,19 @@ export function startPageBridge(deps: {
   }
 
   function send(request: PortRequest): void {
-    try {
-      port ??= connect();
-      port.postMessage(request);
-    } catch {
-      detach();
-    }
+    const sent = Result.try({
+      try: () => {
+        port ??= connect();
+        port.postMessage(request);
+      },
+      catch: invalidated,
+    });
+    if (sent.isErr()) detach();
   }
 
   function announce(requestId: string | null): void {
-    let extensionVersion: string;
-    try {
-      extensionVersion = runtime.version();
-    } catch {
+    const extensionVersion = Result.try({ try: () => runtime.version(), catch: invalidated });
+    if (extensionVersion.isErr()) {
       detach();
       return;
     }
@@ -130,7 +135,7 @@ export function startPageBridge(deps: {
       requestId,
       event: {
         type: "announce",
-        extensionVersion,
+        extensionVersion: extensionVersion.value,
         protocols: { min: BRIDGE_PROTOCOL, max: BRIDGE_PROTOCOL },
       },
     });
