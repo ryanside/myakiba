@@ -306,6 +306,18 @@ export function invalidateFamilies(
 
 type Rollback = () => void;
 
+/** What a failure toast says under its title for a defect, whose own message is never shown. */
+const DEFECT_DESCRIPTION = "Something went wrong. Reload the page and try again";
+
+function failureDescription<Input, Failure>(
+  describe: ((input: Input, failure: Failure) => string) | undefined,
+  input: Input,
+  failure: ReadFailure<Failure>,
+): string | undefined {
+  if (Panic.is(failure)) return DEFECT_DESCRIPTION;
+  return describe?.(input, failure);
+}
+
 type RefetchKey<F extends PersistedFamily> = {
   readonly queryKey: readonly [RootOf<F>, ...unknown[]];
   readonly exact?: true;
@@ -337,7 +349,8 @@ type CommandSpec<Input, Output, Failure, F extends PersistedFamily> = RefetchTim
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
   /** A failure toast's title. A command without one shows no failure toast. */
   readonly failureTitle?: (input: Input, failure: ReadFailure<Failure>) => string;
-  readonly failureDescription?: (input: Input, failure: ReadFailure<Failure>) => string;
+  /** The text under the title for a declared failure. A defect always shows `DEFECT_DESCRIPTION` instead. */
+  readonly failureDescription?: (input: Input, failure: Failure) => string;
   /** Cache patches that run after the write and before the refetch. */
   readonly saved?: (queryClient: QueryClient, input: Input, output: Output) => Promise<void>;
 };
@@ -433,14 +446,14 @@ export function useResourceMutation<Input, Output, Failure>(
     onError: (failure, input, rollback) =>
       guard(async () => {
         rollback?.();
-        if (spec.failureTitle)
+        if (spec.failureTitle) {
+          const description = failureDescription(spec.failureDescription, input, failure);
           toast.add({
             type: "error",
             title: spec.failureTitle(input, failure),
-            ...(spec.failureDescription && {
-              description: spec.failureDescription(input, failure),
-            }),
+            ...(description !== undefined && { description }),
           });
+        }
         await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
       }),
     onSettled: refetchAfterFailure && ((_output, _failure, input) => guard(() => refetch(input))),

@@ -2,7 +2,7 @@ import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schem
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { matchErrorPartial, Result } from "better-result";
-import type { InferOk, Panic } from "better-result";
+import type { InferOk } from "better-result";
 import { ExtensionStopped } from "@/lib/errors/extension-stopped";
 import { InvalidMfcItemId } from "@/lib/errors/invalid-mfc-item-id";
 import type { MfcItemFetchFailed } from "@/lib/errors/mfc-item-fetch-failed";
@@ -474,8 +474,8 @@ type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;
 
 type Resynced = InferOk<Awaited<ReturnType<typeof requestResync>>>;
 
-/** The text an Item Refresh shows for its failure. A server answer and a defect show their own message. */
-export function refreshFailureText(failure: RefreshFailure | ApiFailure | Panic): string {
+/** The text an Item Refresh shows for its failure. A server answer shows its own message. */
+export function refreshFailureText(failure: RefreshFailure | ApiFailure): string {
   return matchErrorPartial(
     failure,
     {
