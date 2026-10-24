@@ -19,10 +19,11 @@ import type { Viewer } from "./viewer";
  *
  * A body returns a better-result `Result`. Every error a client may see is a
  * `Failure`, a class that carries its own category and literal message. Any other
- * Err is internal, and only a command's `recover` may see it. A deliberate `panic`
- * is a defect: it is never retried or recovered and answers a logged 500. Any other
- * throw also answers that 500, after `retry` and `recover` see it as an
- * `UnhandledException`.
+ * Err is internal, and only a command's `recover` may see it, unless the operation
+ * lists its class in `operational`. A deliberate `panic` is a defect: it is never
+ * retried or recovered and answers a logged 500. Any other throw also answers that
+ * 500, after `retry` and `recover` see it as an `UnhandledException`, and so does an
+ * operational error that nothing recovered.
  *
  * A command runs in one transaction. Any Err or throw rolls it back;
  * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
@@ -132,7 +133,8 @@ export type CommandScope = Omit<ReadScope, "tx"> & {
 type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
   /**
    * Runs a fresh operation with `run`'s contract: a Failure comes back as an Err, an
-   * unhandled throw throws the value originally thrown, and a defect throws its Panic.
+   * unhandled throw throws the value originally thrown, an operational error throws
+   * itself, and a defect throws its Panic.
    * A defect raised here always wins: once `recover` settles, the kernel answers with
    * it even if `recover` caught it, so a recovery can never hide a broken invariant.
    */
@@ -142,14 +144,45 @@ type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
   ) => Promise<Result<T, F>>;
 };
 
-type OpConfig<M extends string> = {
+/**
+ * A tagged error class an operation lists in `operational`: an outage it has no answer
+ * for, such as Redis not answering. It is never a Failure, which the client sees.
+ */
+type OperationalClass = abstract new (...args: never[]) => AnyTaggedError;
+type Operational = readonly OperationalClass[];
+
+/**
+ * A listed Failure fails to compile at its place in the list, and so does a class whose
+ * instances TS reads as `any`, such as a bare `tagged("Tag")`, which would list every error.
+ */
+type Listable<O extends Operational> = {
+  readonly [K in keyof O]: O[K] extends OperationalClass
+    ? 0 extends 1 & InstanceType<O[K]>
+      ? { readonly fix: "list a class declared as extends tagged(tag)<Props>" }
+      : InstanceType<O[K]> extends AnyFailure
+        ? { readonly fix: "a Failure answers its own status; never list it in operational" }
+        : O[K]
+    : O[K];
+};
+/** What a body may leave for the 500. A Panic or an UnhandledException is never answered. */
+type OperationalOf<O extends Operational> = Exclude<
+  InstanceType<O[number]>,
+  Panic | UnhandledException
+>;
+
+type OpConfig<M extends string, O extends Operational = Operational> = {
   /** The wide event's `action`, such as "orders.delete_item". */
   readonly action: string;
-  /** The 500 body for a defect or an unrecovered throw. */
+  /** The 500 body for a defect, an unrecovered throw or an unrecovered operational error. */
   readonly failure: M;
+  /**
+   * Internal errors the operation answers with its logged 500, as if they were thrown:
+   * `retry` and `recover` still see them, and the log carries the error and its cause.
+   */
+  readonly operational?: O & Listable<O>;
 };
 
-type QueryConfig<M extends string> = OpConfig<M> & {
+type QueryConfig<M extends string, O extends Operational> = OpConfig<M, O> & {
   /** Reads every statement from one snapshot, for a body whose reads must agree with each other. */
   readonly snapshot?: true;
 };
@@ -206,11 +239,13 @@ type Literal<T> = [T] extends [never]
       : unknown;
 
 /** An internal Err with nowhere to go fails to compile at the body. */
-type Handled<E, Recovers extends boolean> = [InternalOf<E>] extends [never]
+type Handled<E, Recovers extends boolean, D> = [Exclude<InternalOf<E>, D>] extends [never]
   ? unknown
   : Recovers extends true
     ? unknown
-    : { readonly fix: "an internal error needs recover, or must be a Failure" };
+    : {
+        readonly fix: "an internal error needs recover or a class in operational, or must be a Failure";
+      };
 
 /** A defect is thrown with `panic(...)`, so that no hook can mistake it for an expected failure. */
 type NoPanic<E> = [Extract<E, Panic>] extends [never]
@@ -221,8 +256,8 @@ type NoPanic<E> = [Extract<E, Panic>] extends [never]
  * A body's return type is `R & Checked<…>`: TS infers R from the body, then checks the
  * body against the intersection. A failed check names its fix as a missing `fix` property.
  */
-type Checked<Answer, E, Recovers extends boolean> = Literal<InferOk<Answer>> &
-  Handled<E, Recovers> &
+type Checked<Answer, E, Recovers extends boolean, D = never> = Literal<InferOk<Answer>> &
+  Handled<E, Recovers, D> &
   NoPanic<E>;
 
 type AnyOp = Op<never, unknown, AnyFailure, string>;
@@ -235,6 +270,7 @@ const bodies = new WeakMap<AnyOp, Body>();
 const befores = new WeakMap<AnyOp, Hook>();
 const retries = new WeakMap<AnyOp, Retry>();
 const recoveries = new WeakMap<AnyOp, Recover>();
+const operationals = new WeakMap<AnyOp, Operational>();
 
 const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 const snapshots = new WeakSet<AnyOp>();
@@ -251,23 +287,25 @@ export async function ping(): Promise<void> {
 
 /**
  * A read. The body takes the scope and one input object, never positional params, and
- * returns a Result whose errors are all Failures. Without `snapshot` it reads the pool;
- * with it, one repeatable-read, read-only snapshot.
+ * returns a Result whose errors are all Failures or listed in `operational`. Without
+ * `snapshot` it reads the pool; with it, one repeatable-read, read-only snapshot.
  */
 export function query<
   I,
   R extends AnyResult,
   const M extends string,
   const S extends true | undefined = undefined,
+  const O extends Operational = [],
 >(
-  config: QueryConfig<M> & { readonly snapshot?: S },
+  config: QueryConfig<M, O> & { readonly snapshot?: S },
   body: (
     scope: S extends true ? ReadScope : PoolScope,
     input: I,
-  ) => Promise<R & Checked<R, InferErr<R>, false>>,
+  ) => Promise<R & Checked<R, InferErr<R>, false, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M> {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body as Body);
+  if (config.operational) operationals.set(op, config.operational);
   (config.snapshot ? snapshots : poolReads).add(op);
   return op;
 }
@@ -289,8 +327,9 @@ type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
  * transaction anything it writes against. Its effects outside the database, such as a
  * stored file, are never rolled back. `handlers.retry` reruns a rolled-back attempt
  * without repeating `before`. `handlers.recover` handles what `before` or the last
- * attempt left internal or threw, through fresh operations after rollback. Commit
- * effects run afterwards; their errors never retry or recover committed writes.
+ * attempt left internal or threw, through fresh operations after rollback. Without a
+ * recover, an internal error must be listed in `operational`. Commit effects run
+ * afterwards; their errors never retry or recover committed writes.
  */
 export function command<
   I,
@@ -298,20 +337,27 @@ export function command<
   R extends AnyResult,
   const M extends string,
   C extends Result<unknown, AnyFailure> = never,
+  const O extends Operational = [],
 >(
-  config: OpConfig<M> & { readonly before: Before<I, B> },
+  config: OpConfig<M, O> & { readonly before: Before<I, B> },
   body: (
     scope: CommandScope,
     input: HandoffOf<B>,
   ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, true>>,
   handlers: Recovering<I, InferErr<B | R>, C>,
 ): Op<I, InferOk<AnswerOf<B> | R | C>, PublicOf<InferErr<B | R | C>>, M>;
-export function command<I, B extends AnyResult, R extends AnyResult, const M extends string>(
-  config: OpConfig<M> & { readonly before: Before<I, B> },
+export function command<
+  I,
+  B extends AnyResult,
+  R extends AnyResult,
+  const M extends string,
+  const O extends Operational = [],
+>(
+  config: OpConfig<M, O> & { readonly before: Before<I, B> },
   body: (
     scope: CommandScope,
     input: HandoffOf<B>,
-  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, false>>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, false, OperationalOf<O>>>,
   handlers?: Retrying<InferErr<B | R>>,
 ): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | R>>, M>;
 // Only the overloads above take a `before`: it reads the pool, so it can never be handed a Tx.
@@ -320,14 +366,23 @@ export function command<
   R extends AnyResult,
   const M extends string,
   C extends Result<unknown, AnyFailure> = never,
+  const O extends Operational = [],
 >(
-  config: OpConfig<M> & { readonly before?: never },
+  config: OpConfig<M, O> & { readonly before?: never },
   body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, true>>,
   handlers: Recovering<I, InferErr<R>, C>,
 ): Op<I, InferOk<R | C>, PublicOf<InferErr<R | C>>, M>;
-export function command<I, R extends AnyResult, const M extends string>(
-  config: OpConfig<M> & { readonly before?: never },
-  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, false>>,
+export function command<
+  I,
+  R extends AnyResult,
+  const M extends string,
+  const O extends Operational = [],
+>(
+  config: OpConfig<M, O> & { readonly before?: never },
+  body: (
+    scope: CommandScope,
+    input: I,
+  ) => Promise<R & Checked<R, InferErr<R>, false, OperationalOf<O>>>,
   handlers?: Retrying<InferErr<R>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M>;
 export function command(
@@ -340,6 +395,7 @@ export function command(
   if (config.before) befores.set(op, config.before);
   if (handlers?.retry) retries.set(op, handlers.retry as Retry);
   if (handlers?.recover) recoveries.set(op, handlers.recover as Recover);
+  if (config.operational) operationals.set(op, config.operational);
   return op;
 }
 
@@ -571,7 +627,8 @@ async function recovered(
  * Runs `op` and returns its Result. Routes call `serve`; tests call this.
  *
  * Expected failures come back as Err. A defect throws its Panic. A throw nobody
- * recovered throws the value originally thrown, including one that `recover` rethrew.
+ * recovered throws the value originally thrown, including one that `recover` rethrew,
+ * and an operational error nobody recovered throws itself.
  */
 export async function run<I, T, F extends AnyFailure, M extends string>(
   viewer: Viewer,
@@ -592,7 +649,9 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
   }
   if (settled.kind === "answer") return settled.result as Result<T, F>;
   if (settled.kind === "defect") throw settled.panic;
-  if (UnhandledException.is(settled.error)) throw settled.error.cause;
+  const left = settled.error;
+  if (UnhandledException.is(left)) throw left.cause;
+  if (operationals.get(anyOp)?.some((declared) => left instanceof declared)) throw left;
   return panic(
     `${op.action} answered an internal error that no recover handled; only a AnyFailure may reach serve`,
     settled.error,

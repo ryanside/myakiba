@@ -15,6 +15,7 @@ import type { Tx } from "@myakiba/db/tx";
 import type { PageRequest } from "@myakiba/contracts/shared/pagination";
 import { betterAuth } from "@/middleware/better-auth";
 import { privateApi } from "@/boundary/private-api";
+import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
 import { command, paginate, query, serve } from "./kernel";
@@ -345,3 +346,61 @@ command(
     },
   },
 );
+
+const unreachable = () => new DependencyUnavailable({ dependency: "redis", reason: "down" });
+
+// An operation that lists an internal error's class answers it with its logged 500.
+const outage = query(
+  { ...config, operational: [DependencyUnavailable] },
+  async (_scope, input: number) => (input > 0 ? Result.ok(input) : Result.err(unreachable())),
+);
+void (true satisfies Equal<FailuresOf<typeof outage>, never>);
+command(
+  { ...config, operational: [DependencyUnavailable] },
+  async (_scope, input: number) => (input > 0 ? Result.ok(input) : Result.err(unreachable())),
+  {
+    retry: (error) => {
+      void (true satisfies Equal<typeof error, DependencyUnavailable | UnhandledException>);
+      return false;
+    },
+  },
+);
+command(
+  {
+    ...config,
+    operational: [DependencyUnavailable],
+    before: async (scope, input: number) =>
+      input > 0 ? scope.proceed(input) : Result.err(unreachable()),
+  },
+  async (_scope, input) => Result.ok(input),
+);
+
+// @ts-expect-error an operation answers with its 500 only the internal errors it lists
+query({ ...config, operational: [DependencyUnavailable] }, async (_scope, input: number) =>
+  input > 0
+    ? Result.err(unreachable())
+    : Result.err(new Absent({ retryable: false, message: "gone" })),
+);
+
+command(
+  { ...config, operational: [DependencyUnavailable] },
+  // @ts-expect-error a command without recover answers with its 500 only the errors it lists
+  async (_scope, input: number) =>
+    input > 0 ? Result.ok(input) : Result.err(new Absent({ retryable: false, message: "gone" })),
+);
+
+// @ts-expect-error a Failure answers its own status, so it is never listed as operational
+query({ ...config, operational: [NoId] }, async () => Result.err(new NoId()));
+
+query({ ...config, operational: [Panic] }, async () =>
+  // @ts-expect-error a defect is thrown with panic(...), even from an operation that lists Panic
+  Result.err(new Panic({ message: "defect" })),
+);
+
+query({ ...config, operational: [UnhandledException] }, async () =>
+  // @ts-expect-error a thrown value is the kernel's to classify, even for an operation that lists it
+  Result.err(new UnhandledException({ cause: "boom" })),
+);
+
+// @ts-expect-error a bare tagged class reads as any to TS, which would list every internal error
+query({ ...config, operational: [Absent] }, async () => Result.ok(1));

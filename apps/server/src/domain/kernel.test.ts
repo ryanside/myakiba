@@ -786,3 +786,81 @@ describe("better-result's rethrow wrappers", () => {
     },
   );
 });
+
+describe("an operational error the operation lists answers the 500 a throw answers", () => {
+  class Unreachable extends tagged("Unreachable")<{
+    readonly cause: unknown;
+    readonly message: string;
+  }> {}
+  const original = new Error("Connection is closed.");
+  const outage = new Unreachable({ cause: original, message: "Redis did not answer" });
+  const readConfig = { action: "test.outage", failure: "Failed to read" };
+  const reads = {
+    thrown: query(readConfig, async () => rejected(original)),
+    listed: query({ ...readConfig, operational: [Unreachable] }, async () => Result.err(outage)),
+  };
+
+  test("with the same status and body, logging the tagged error and its cause", async () => {
+    initLogger({ enabled: true });
+    const caller = { viewer, log: createRequestLogger() };
+    initLogger({ enabled: false });
+    const logged = spyOn(caller.log, "error");
+
+    const answered = await serve(caller, reads.listed, {});
+
+    expect<unknown>(answered).toEqual(await serve({ viewer, log }, reads.thrown, {}));
+    expect(answered).toMatchObject({ code: 500, response: "Failed to read" });
+    expect(logged).toHaveBeenCalledWith(outage, { step: "test.outage" });
+    expect(caller.log.getContext()).toMatchObject({
+      outcome: "error",
+      step: "test.outage",
+      error: { message: "Redis did not answer", cause: original },
+    });
+  });
+
+  test("after its command rolls back, and retry still sees it", async () => {
+    const seen: unknown[] = [];
+    const operation = command(
+      { ...config, operational: [Unreachable] },
+      async (scope, id: string) => {
+        await scope.tx.insert(user).values(newUser(id));
+        return Result.err(outage);
+      },
+      {
+        retry: (error, attempt) => {
+          seen.push(error);
+          return attempt < 2;
+        },
+      },
+    );
+
+    await expect(run(viewer, operation, "operational-write", log)).rejects.toBe(outage);
+    expect(seen).toEqual([outage, outage]);
+    expect(await userExists("operational-write")).toBe(false);
+  });
+
+  test("unless a recover answers it", async () => {
+    const operation = command(
+      { ...config, operational: [Unreachable] },
+      async () => Result.err(outage),
+      {
+        recover: async (_scope, _input, error) => {
+          expect(error).toBe(outage);
+          return Result.ok("recovered" as const);
+        },
+      },
+    );
+
+    expect(await valueOf(run(viewer, operation, undefined, log))).toBe("recovered");
+  });
+
+  test("and an internal Err the operation does not list stays a defect", async () => {
+    const Unlisted = tagged("Unlisted");
+    const operation = query(
+      { ...readConfig, operational: [Unreachable] },
+      async () => Result.err(new Unlisted({ message: "not listed" })) as Result<number, never>,
+    );
+
+    await expect(run(viewer, operation, undefined, log)).rejects.toBeInstanceOf(Panic);
+  });
+});
