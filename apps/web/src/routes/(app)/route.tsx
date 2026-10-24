@@ -5,7 +5,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { version } from "@/data/resources/version";
-import { SessionUnavailable } from "@/components/auth/session-unavailable";
+import { SessionUnavailable as SessionUnavailableView } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { PageBackground } from "@/components/page-background";
@@ -18,7 +18,7 @@ import { AppCommand } from "@/components/command/app-command";
 import { ExtensionRequiredDialog } from "@/components/extension/extension-required-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { SessionUnavailableError } from "@/lib/session";
+import { SessionUnavailable } from "@/lib/errors/session-unavailable";
 import { env } from "@myakiba/env/web";
 
 export const Route = createFileRoute("/(app)")({
@@ -26,7 +26,8 @@ export const Route = createFileRoute("/(app)")({
   errorComponent: AppRouteError,
   beforeLoad: async ({ context, location, cause, matches }) => {
     const { session, unavailable } = await context.readSession();
-    if (unavailable) throw new SessionUnavailableError();
+    // TanStack Router reads a failed beforeLoad only from a throw, and AppRouteError shows it.
+    if (unavailable) throw new SessionUnavailable();
     if (!session) {
       throw redirect({
         to: "/login",
@@ -62,7 +63,7 @@ function afterNextPaint() {
 }
 
 function AppRouteError(props: ErrorComponentProps) {
-  if (props.error instanceof SessionUnavailableError) return <SessionUnavailable />;
+  if (SessionUnavailable.is(props.error)) return <SessionUnavailableView />;
   return <RouteError {...props} />;
 }
 

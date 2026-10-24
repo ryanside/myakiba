@@ -7,13 +7,6 @@ export type SessionCheck = {
   readonly unavailable: boolean;
 };
 
-export class SessionUnavailableError extends Error {
-  constructor() {
-    super("Couldn't check your session");
-    this.name = "SessionUnavailableError";
-  }
-}
-
 export type SessionSource = {
   readonly read: () => Promise<SessionCheck>;
   readonly settle: (check: SessionCheck) => void;
