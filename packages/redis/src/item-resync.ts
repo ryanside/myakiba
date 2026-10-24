@@ -7,6 +7,7 @@
  * tradeoff avoids Postgres schema changes for per-item cooldown tracking while
  * keeping the common path fast and simple.
  */
+import { withDeadline } from "@myakiba/utils/with-deadline";
 import { Result } from "better-result";
 import type Redis from "ioredis";
 import { ResyncCooldownUnavailable } from "./errors/resync-cooldown-unavailable";
@@ -37,7 +38,8 @@ export async function setResyncCooldown(
   const value =
     transactionId === undefined ? now.toString() : `${TRANSACTION_PREFIX}${transactionId}`;
   const written = await Result.tryPromise({
-    try: () => redis.set(getCooldownKey(itemId), value, "EX", COOLDOWN_TTL_SECONDS),
+    try: () =>
+      withDeadline(() => redis.set(getCooldownKey(itemId), value, "EX", COOLDOWN_TTL_SECONDS)),
     catch: (cause) => new ResyncCooldownUnavailable({ itemId, cause }),
   });
   return written.map(() => new Date(now + COOLDOWN_TTL_SECONDS * 1000).toISOString());
@@ -54,7 +56,10 @@ export async function getResyncCooldown(
   itemId: string,
 ): Promise<Result<ResyncCooldown | null, ResyncCooldownUnavailable>> {
   const read = await Result.tryPromise({
-    try: () => Promise.all([redis.get(getCooldownKey(itemId)), redis.ttl(getCooldownKey(itemId))]),
+    try: () =>
+      withDeadline(() =>
+        Promise.all([redis.get(getCooldownKey(itemId)), redis.ttl(getCooldownKey(itemId))]),
+      ),
     catch: (cause) => new ResyncCooldownUnavailable({ itemId, cause }),
   });
   if (read.isErr()) return read;

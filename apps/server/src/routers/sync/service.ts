@@ -28,6 +28,7 @@ import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_RETRY_WINDOW_MS,
 } from "@myakiba/contracts/sync/constants";
+import { withDeadline } from "@myakiba/utils/with-deadline";
 import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
 import { createLogger } from "evlog";
@@ -364,7 +365,7 @@ class SyncService {
     const terminalState = sessionStatusToTerminalState(session.status);
 
     const read = await Result.tryPromise({
-      try: () => redis.get(getJobStatusSnapshotKey(jobId)),
+      try: () => withDeadline(() => redis.get(getJobStatusSnapshotKey(jobId))),
       catch: (cause) => new JobStatusCacheUnavailable({ jobId, cause }),
     });
     if (read.isErr()) return read;
