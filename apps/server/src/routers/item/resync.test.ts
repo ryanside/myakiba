@@ -701,8 +701,12 @@ test.each(["write", "status", "guard"] as const)(
     hungRedis = Promise.withResolvers<never>();
     hangRedis = operation === "write" ? "write" : "read";
     const realTimer = globalThis.setTimeout;
-    const timer = spyOn(globalThis, "setTimeout").mockImplementation((fn, ms, ...args) =>
-      realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+    const timer = spyOn(globalThis, "setTimeout").mockImplementation(
+      Object.assign(
+        (...[fn, ms, ...args]: Parameters<typeof setTimeout>) =>
+          realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+        { __promisify__: realTimer.__promisify__ },
+      ),
     );
     const pending = operation === "status" ? resyncStatus() : resync(derivedRetitledPage);
     let guard: ReturnType<typeof setTimeout> | undefined;
@@ -713,14 +717,18 @@ test.each(["write", "status", "guard"] as const)(
           guard = realTimer(() => resolve(null), 250);
         }),
       ]);
-      expect(response).toMatchObject(
-        operation === "guard"
-          ? { status: 500, body: "Failed to request item refresh" }
-          : operation === "status"
-            ? IDLE
-            : { status: 200, body: { status: "idle", saved: "refreshed" } },
-      );
-      if (operation === "write") expect((await itemRows()).item?.title).toBe(RETITLED);
+      if (operation === "guard") {
+        expect(response).toMatchObject({ status: 500, body: "Failed to request item refresh" });
+      } else if (operation === "status") {
+        expect(response).toEqual(IDLE);
+      } else {
+        expect(response).toMatchObject({
+          status: 200,
+          body: { status: "idle", saved: "refreshed" },
+        });
+        const rows = await itemRows();
+        expect(rows.item?.title).toBe(RETITLED);
+      }
     } finally {
       clearTimeout(guard);
       timer.mockRestore();
