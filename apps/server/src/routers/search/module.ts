@@ -18,7 +18,8 @@ import type {
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { ok, paginateBy, prepared, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { paginateBy, prepared, query } from "@/domain/kernel";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
@@ -83,7 +84,7 @@ export const Search = {
           orderCount: orderResults.length,
         },
       });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -239,7 +240,7 @@ export const Search = {
         totalCount: page.totalCount,
       };
       scope.log.set({ result: { count: result.items.length, totalCount: result.totalCount } });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -262,7 +263,7 @@ export const Search = {
 
       scope.log.set({ result: { count: entries.length } });
       const result = { entries };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -285,7 +286,7 @@ export const Search = {
         .offset(offset);
 
       const result = { orderIdsAndTitles };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 };
