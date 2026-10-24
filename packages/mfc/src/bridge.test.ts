@@ -3,7 +3,6 @@ import type * as z from "zod";
 import {
   BRIDGE_CHANNEL,
   BRIDGE_PROTOCOL,
-  ITEM_ERRORS,
   MAX_ITEMS_PER_REQUEST,
   bridgeEventSchema,
   bridgeRequestSchema,
@@ -11,6 +10,7 @@ import {
   portRequestSchema,
 } from "./bridge";
 import type { BridgeEventMessage, PortEvent } from "./bridge";
+import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/sync/constants";
 import { itemId } from "../test/fixtures";
 
 const REQUEST_ID = "6f1c1f43-1e5b-4c39-9df5-5b0c2a3e8b11";
@@ -101,7 +101,7 @@ describe("decodeBridgeEvent is lenient", () => {
     expect(decodeBridgeEvent(message)).toEqual(message);
   });
 
-  test.each([...ITEM_ERRORS])("the error code %p reads as itself", (code) => {
+  test.each([...ITEM_FETCH_ERROR_CODES])("the error code %p reads as itself", (code) => {
     expect(
       decodeBridgeEvent(event({ type: "item", mfcItemId: 1, result: { ok: false, error: code } }))
         ?.event,

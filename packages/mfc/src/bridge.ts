@@ -1,3 +1,5 @@
+import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/sync/constants";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
 import * as z from "zod";
 import { mfcItemId } from "./page";
 import type { MfcItemId } from "./page";
@@ -5,16 +7,6 @@ import type { MfcItemId } from "./page";
 export const BRIDGE_CHANNEL = "myakiba-mfc-bridge";
 export const BRIDGE_PROTOCOL = 1;
 export const MAX_ITEMS_PER_REQUEST = 1000;
-
-export const ITEM_ERRORS = [
-  "mfc_signed_out",
-  "hidden_or_missing",
-  "challenge_unsolved",
-  "rate_limited",
-  "timeout",
-  "unexpected_page",
-] as const;
-export type ItemError = (typeof ITEM_ERRORS)[number];
 
 const FETCH_STATES = ["queued", "fetching", "needs_user", "backing_off"] as const;
 type FetchState = (typeof FETCH_STATES)[number];
@@ -50,7 +42,7 @@ export const bridgeRequestSchema = z.strictObject({
 
 export type ItemResult<Picture> =
   | { readonly ok: true; readonly html: string; readonly picture: Picture | null }
-  | { readonly ok: false; readonly error: ItemError };
+  | { readonly ok: false; readonly error: ItemFetchErrorCode };
 
 export type RunEvent<Picture> =
   | { readonly type: "item"; readonly mfcItemId: MfcItemId; readonly result: ItemResult<Picture> }
@@ -95,7 +87,7 @@ const receivedEventSchema = z.union([
         html: z.string(),
         picture: z.object({ bytes: z.instanceof(ArrayBuffer), contentType: z.string() }).nullable(),
       }),
-      z.object({ ok: z.literal(false), error: leniently(ITEM_ERRORS) }),
+      z.object({ ok: z.literal(false), error: leniently(ITEM_FETCH_ERROR_CODES) }),
     ]),
   }),
   z.object({
@@ -142,7 +134,7 @@ export const portEventSchema = z.strictObject({
           html: z.string(),
           picture: portPictureSchema.nullable(),
         }),
-        z.strictObject({ ok: z.literal(false), error: z.enum(ITEM_ERRORS) }),
+        z.strictObject({ ok: z.literal(false), error: z.enum(ITEM_FETCH_ERROR_CODES) }),
       ]),
     }),
     z.strictObject({

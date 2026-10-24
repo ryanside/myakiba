@@ -11,7 +11,7 @@ import {
 } from "../shared/constants";
 import type { SyncSessionStatus } from "../shared/types";
 import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
-import { MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
+import { ITEM_FETCH_ERROR_CODES, MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 const MFC_ITEM_URL_PATTERN =
   /^(?:https?:\/\/)?(?:(?:www|de|es|fi|fr|it|ja|nl|no|pl|pt|ru|sv|zh)\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
@@ -60,15 +60,7 @@ export const itemSyncSchema = z.object({
 
 export type ItemSyncInput = z.infer<typeof itemSyncSchema>;
 
-const syncItemFetchErrorSchema = z.enum([
-  "mfc_signed_out",
-  "hidden_or_missing",
-  "challenge_unsolved",
-  "rate_limited",
-  "timeout",
-  "unexpected_page",
-  "unknown",
-]);
+const syncItemFetchErrorSchema = z.enum([...ITEM_FETCH_ERROR_CODES, "unknown"]);
 const syncItemFailureEntrySchema = z.strictObject({
   mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
   error: syncItemFetchErrorSchema,

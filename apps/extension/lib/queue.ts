@@ -1,4 +1,5 @@
-import type { ItemError, ItemResult, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import type { ItemResult, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Result } from "better-result";
 import type { ItemFetchError } from "./fetcher";
@@ -76,7 +77,7 @@ export function waitersOf(state: QueueState, job: Job): readonly Run[] {
 
 function failAll(
   runs: readonly { readonly key: RunKey; readonly waitingFor: readonly MfcItemId[] }[],
-  error: ItemError,
+  error: ItemFetchErrorCode,
 ): Emission[] {
   return runs.flatMap((run) => [
     ...run.waitingFor.map((mfcItemId) => ({
@@ -116,7 +117,7 @@ function toActiveWaiters(state: QueueState, event: RunEvent<PortPicture>): Emiss
 
 function answer(state: QueueState, job: Job, answered: ItemAnswer): QueueStep {
   if (answered.isOk()) return settle(state, job, { ok: true, ...answered.value });
-  const failed = (error: ItemError) => () => settle(state, job, { ok: false, error });
+  const failed = (error: ItemFetchErrorCode) => () => settle(state, job, { ok: false, error });
   return answered.error.match({
     // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
     MfcChallengeUnsolved: () => ({

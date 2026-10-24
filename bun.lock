@@ -21,6 +21,7 @@
       "name": "extension",
       "version": "0.1.0",
       "dependencies": {
+        "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/mfc": "workspace:*",
         "better-result": "catalog:",

@@ -5,7 +5,8 @@ import {
   MAX_ITEMS_PER_REQUEST,
   bridgeEventSchema,
 } from "@myakiba/mfc/bridge";
-import type { ItemError, bridgeRequestSchema } from "@myakiba/mfc/bridge";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import type { bridgeRequestSchema } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
 
 const HELLO_TIMEOUT_MS = 500;
@@ -17,7 +18,7 @@ export type ExtensionStatus =
   | { readonly kind: "outdated"; readonly extensionVersion: string }
   | { readonly kind: "ready"; readonly extensionVersion: string };
 
-type FetchItemError = ItemError | "unknown" | "extension_stopped";
+type FetchItemError = ItemFetchErrorCode | "unknown" | "extension_stopped";
 
 export type ExtensionFetchEvent =
   | {

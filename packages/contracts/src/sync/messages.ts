@@ -1,3 +1,4 @@
+import type { ItemFetchErrorCode } from "./constants";
 import type { SyncJobRecentItem } from "./schema";
 
 export const SYNC_STATUS_MESSAGES = {
@@ -33,4 +34,4 @@ export const ITEM_FETCH_ERROR_MESSAGE = {
   timeout: "MyFigureCollection took too long to answer",
   unexpected_page: "MyFigureCollection showed an unexpected page",
   unknown: "The extension could not fetch this item",
-} as const;
+} as const satisfies Record<ItemFetchErrorCode | "unknown", string>;

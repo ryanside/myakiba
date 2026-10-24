@@ -28,3 +28,17 @@ export const JOB_STATUS_CHANNEL_PREFIX = "job:status:";
 export const SYNC_CSV_ITEM_STATUSES = ["Owned", "Ordered"] as const;
 
 export const MAX_ITEM_SYNC_ITEMS = 10;
+
+/**
+ * Why the extension could not fetch an MFC item. The extension sends these codes, the web app shows a message for each,
+ * and Import History stores them.
+ */
+export const ITEM_FETCH_ERROR_CODES = [
+  "mfc_signed_out",
+  "hidden_or_missing",
+  "challenge_unsolved",
+  "rate_limited",
+  "timeout",
+  "unexpected_page",
+] as const;
+export type ItemFetchErrorCode = (typeof ITEM_FETCH_ERROR_CODES)[number];
