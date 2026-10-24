@@ -23,11 +23,6 @@ const testImports = [
 ];
 const routeMatcherBans = [
   {
-    name: "@myakiba/utils/result",
-    importNames: ["tryCatch"],
-    message: "Return fail(category, message) from the operation. serve() answers it.",
-  },
-  {
     name: "elysia",
     importNames: ["status"],
     message: "Return fail(category, message) from the operation. serve() answers it.",
