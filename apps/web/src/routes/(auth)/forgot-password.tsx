@@ -41,8 +41,8 @@ function RouteComponent() {
   });
 
   const handleForgotPassword = async (email: string, turnstileToken: string) => {
-    const requested = decodeAuth(
-      await authClient.requestPasswordReset(
+    const requested = await decodeAuth(() =>
+      authClient.requestPasswordReset(
         { email, redirectTo: getAuthRedirectUrl("/reset-password") },
         { headers: { "x-captcha-response": turnstileToken } },
       ),

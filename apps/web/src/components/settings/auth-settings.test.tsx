@@ -191,12 +191,13 @@ test("a username check the server refuses shows its text in the profile", async 
   expect(await screen.findByText("Username is invalid")).toBeTruthy();
 });
 
-for (const [name, submit] of [
+test.each([
   ["profile", saveProfile],
   ["preferences", savePreferences],
   ["password change", changePassword],
-] as const) {
-  test(`a network failure during ${name} shows safe feedback without advancing`, async () => {
+] as const)(
+  "a network failure during %s shows safe feedback without advancing",
+  async (_name, submit) => {
     serve(() => {
       throw new TypeError("Failed to fetch");
     });
@@ -205,5 +206,16 @@ for (const [name, submit] of [
       await screen.findByText("Couldn't connect. Check your connection and try again."),
     ).toBeTruthy();
     expect(invalidations).toBe(0);
+  },
+);
+
+test("a network failure checking a profile username shows safe feedback", async () => {
+  answerAuth(() => {
+    throw new TypeError("Failed to fetch");
   });
-}
+  renderSettings(<Profile user={user} />);
+  type("Username", "collector2");
+  expect(
+    await screen.findByText("Couldn't connect. Check your connection and try again."),
+  ).toBeTruthy();
+});

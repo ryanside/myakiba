@@ -19,7 +19,7 @@ export function Profile({ user }: { user: User }) {
       username: user.username || "",
     },
     onSubmit: async ({ value }) => {
-      const updated = decodeAuth(await authClient.updateUser({ username: value.username }));
+      const updated = await decodeAuth(() => authClient.updateUser({ username: value.username }));
 
       if (updated.isErr()) {
         toast.add({ type: "error", title: updated.error.message || "Failed to update profile" });
@@ -59,7 +59,9 @@ export function Profile({ user }: { user: User }) {
             onChangeAsync: async ({ value }) => {
               if (value.length < 3 || value.length > 30) return;
               if (value === user.username) return;
-              const checked = decodeAuth(await authClient.isUsernameAvailable({ username: value }));
+              const checked = await decodeAuth(() =>
+                authClient.isUsernameAvailable({ username: value }),
+              );
               if (checked.isErr()) return checked.error.message;
               if (checked.value.available === false) return "Username is already taken";
             },

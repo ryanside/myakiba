@@ -38,8 +38,8 @@ function GoogleIcon() {
 
 export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   const handleGoogleAuth = async () => {
-    const started = decodeAuth(
-      await authClient.signIn.social({
+    const started = await decodeAuth(() =>
+      authClient.signIn.social({
         provider: "google",
         callbackURL: getAuthRedirectUrl(redirectTo),
       }),
@@ -56,8 +56,8 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      const signedIn = decodeAuth(
-        await authClient.signIn.email(
+      const signedIn = await decodeAuth(() =>
+        authClient.signIn.email(
           { email: value.email, password: value.password },
           { headers: { "x-captcha-response": value.turnstileToken } },
         ),

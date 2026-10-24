@@ -47,7 +47,9 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    const reset = decodeAuth(await authClient.resetPassword({ newPassword: password, token }));
+    const reset = await decodeAuth(() =>
+      authClient.resetPassword({ newPassword: password, token }),
+    );
     if (reset.isErr()) {
       toast.add({ type: "error", title: reset.error.message || "Failed to reset password" });
       return;

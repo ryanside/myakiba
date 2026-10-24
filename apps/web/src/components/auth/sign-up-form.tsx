@@ -41,8 +41,8 @@ export default function SignUpForm() {
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
-    const started = decodeAuth(
-      await authClient.signIn.social({
+    const started = await decodeAuth(() =>
+      authClient.signIn.social({
         provider: "google",
         callbackURL: getAuthRedirectUrl("/dashboard"),
       }),
@@ -60,8 +60,8 @@ export default function SignUpForm() {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      const signedUp = decodeAuth(
-        await authClient.signUp.email(
+      const signedUp = await decodeAuth(() =>
+        authClient.signUp.email(
           {
             email: value.email,
             password: value.password,
@@ -140,7 +140,9 @@ export default function SignUpForm() {
               } else if (value.length > 30) {
                 return;
               }
-              const checked = decodeAuth(await authClient.isUsernameAvailable({ username: value }));
+              const checked = await decodeAuth(() =>
+                authClient.isUsernameAvailable({ username: value }),
+              );
               if (checked.isErr()) {
                 return checked.error.message;
               }

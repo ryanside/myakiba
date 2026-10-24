@@ -124,3 +124,14 @@ test("a network failure saving onboarding preferences shows safe feedback and st
   expect(screen.getByRole("dialog", { name: PREFERENCES_STEP_TITLE })).toBeTruthy();
   expect(invalidations).toBe(0);
 });
+
+test("a network failure checking an onboarding username shows safe feedback", async () => {
+  answerAuth(() => {
+    throw new TypeError("Failed to fetch");
+  });
+  await openPreferencesStep();
+  type("Username", "collector");
+  expect(
+    await screen.findByText("Couldn't connect. Check your connection and try again."),
+  ).toBeTruthy();
+});

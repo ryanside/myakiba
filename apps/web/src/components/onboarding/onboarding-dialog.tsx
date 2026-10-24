@@ -178,8 +178,8 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
         return;
       }
 
-      const updated = decodeAuth(
-        await authClient.updateUser({
+      const updated = await decodeAuth(() =>
+        authClient.updateUser({
           username: trimmedUsername,
           currency: value.currency,
           dateFormat: value.dateFormat,
@@ -327,8 +327,8 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                           onChangeAsync: async ({ value }) => {
                             if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
                             if (value === sessionUsername) return;
-                            const checked = decodeAuth(
-                              await authClient.isUsernameAvailable({ username: value }),
+                            const checked = await decodeAuth(() =>
+                              authClient.isUsernameAvailable({ username: value }),
                             );
                             if (checked.isErr()) return checked.error.message;
                             if (checked.value.available === false)

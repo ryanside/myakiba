@@ -50,11 +50,8 @@ type AuthAnswer<Data> =
       };
     };
 
-/**
- * The one reader of Better Auth's `{ data, error }`. A refusal is AuthRequestFailed. It reads
- * answers only, so a request that throws still rejects its caller as it did before.
- */
-export function decodeAuth<Answer extends AuthAnswer<unknown>>(
+/** Reads a Better Auth answer without changing the server's refusal text. */
+function decodeAuthAnswer<Answer extends AuthAnswer<unknown>>(
   answer: Answer,
 ): Result<Extract<Answer, { readonly error: null }>["data"], AuthRequestFailed> {
   if (answer.error === null) return Result.ok(answer.data);
@@ -70,6 +67,24 @@ export function decodeAuth<Answer extends AuthAnswer<unknown>>(
   );
 }
 
+/** Owns the request so a fetch rejection answers AuthRequestFailed too. */
+export async function decodeAuth<Answer extends AuthAnswer<unknown>>(
+  operation: () => PromiseLike<Answer>,
+): Promise<Result<Extract<Answer, { readonly error: null }>["data"], AuthRequestFailed>> {
+  const answered = await Result.tryPromise({
+    try: async () => operation(),
+    catch: (cause) =>
+      new AuthRequestFailed({
+        code: null,
+        status: null,
+        statusText: "",
+        cause,
+        message: "Couldn't connect. Check your connection and try again.",
+      }),
+  });
+  return answered.andThen(decodeAuthAnswer);
+}
+
 /** Signs out or deletes the account, and on success settles the session store as signed out. */
 export async function endSession(
   operation: () => Promise<AuthAnswer<unknown>>,
@@ -79,7 +94,7 @@ export async function endSession(
     catch: (cause) =>
       new AuthRequestFailed({ code: null, status: null, statusText: "", cause, message: "" }),
   });
-  const ended = answered.andThen(decodeAuth);
+  const ended = answered.andThen(decodeAuthAnswer);
   if (ended.isErr()) return Result.err(ended.error);
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.

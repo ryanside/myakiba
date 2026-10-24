@@ -55,8 +55,8 @@ export function Account() {
         return;
       }
 
-      const changed = decodeAuth(
-        await authClient.changePassword({
+      const changed = await decodeAuth(() =>
+        authClient.changePassword({
           newPassword: value.newPassword,
           currentPassword: value.currentPassword,
           revokeOtherSessions: true,

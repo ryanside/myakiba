@@ -219,3 +219,32 @@ for (const [name, submit] of [
     expect(navigations).toEqual([]);
   });
 }
+
+for (const page of ["sign-in", "sign-up"] as const) {
+  test(`a network failure starting Google ${page} shows safe feedback`, async () => {
+    serve(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    render(
+      <Toaster>
+        {page === "sign-in" ? <SignInForm redirectTo="/dashboard" /> : <SignUpForm />}
+      </Toaster>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+    expect(
+      await screen.findByText("Couldn't connect. Check your connection and try again."),
+    ).toBeTruthy();
+    expect(navigations).toEqual([]);
+  });
+}
+
+test("a network failure checking a signup username shows safe feedback", async () => {
+  serve(() => {
+    throw new TypeError("Failed to fetch");
+  });
+  render(<SignUpForm />);
+  type("Username", "collector");
+  expect(
+    await screen.findByText("Couldn't connect. Check your connection and try again."),
+  ).toBeTruthy();
+});

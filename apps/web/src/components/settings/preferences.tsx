@@ -24,8 +24,8 @@ export function Preferences({ user }: { user: User }) {
       dateFormat: user.dateFormat,
     },
     onSubmit: async ({ value }) => {
-      const updated = decodeAuth(
-        await authClient.updateUser({
+      const updated = await decodeAuth(() =>
+        authClient.updateUser({
           currency: value.currency,
           dateFormat: value.dateFormat,
         }),
