@@ -888,6 +888,19 @@ describe("a challenge", () => {
     expect(extension.tabs.get(other)?.active).toBe(true);
   });
 
+  test("still answers its item when the run's tab closed before focus could go back", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({ pages: challenge.pages });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    await extension.tabs.api.remove(extension.myakiba.tabId);
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(7), picture: null }]);
+    expect(extension.tabs.focused).toEqual([1]);
+  });
+
   test("gives challenge_unsolved when the window closes", async () => {
     const extension = fakeExtension({ pages: challengeOn([7]).pages });
     const run = extension.run([7]);
@@ -1987,6 +2000,97 @@ describe("the developer log", () => {
     expect(run.results()).toEqual([]);
     expect(warn).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["closed", (extension: FakeExtension) => extension.tabs.api.remove(101)],
+    ["taken", (extension: FakeExtension) => extension.tabs.activate(101)],
+  ] as const)(
+    "names why the extension gave its tab up when it was %s while it loaded",
+    async (reason, lose) => {
+      let navigations = 0;
+      const extension = fakeExtension({
+        pages: itemPages(),
+        navigationMs: () => (navigations++ === 0 ? 5000 : 0),
+      });
+      const run = extension.run([1]);
+      await extension.clock.runUntil(() => extension.tabs.loads.length === 1);
+      await lose(extension);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+      expect(warned()).toEqual([expect.stringContaining("MfcTabUnavailable for MFC item 1:")]);
+      expect(warned()[0]).toContain(`as ${reason},`);
+    },
+  );
+
+  test("names a new tab whose load ended off MFC's origin", async () => {
+    const extension = fakeExtension({
+      pages: itemPages(),
+      redirect: (url) => (url === HOMEPAGE ? "https://example.com/" : undefined),
+    });
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(warned()).toEqual([expect.stringContaining("as left_origin,")]);
+  });
+
+  test("names a challenge load that ended back on the page its tab showed", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({
+      pages: challenge.pages,
+      dropsNavigation: (url) => url === `${ORIGINS.mfc}/item/7`,
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: false, error: "challenge_unsolved" }]);
+    expect(warned()).toEqual([expect.stringContaining("MfcChallengeUnsolved for MFC item 7:")]);
+    expect(warned()[0]).toContain("as ended_at_start,");
+  });
+
+  test("names a run's tab that closed before its MFC tab opened", async () => {
+    const extension = fakeExtension({ pages: itemPages() });
+    const gone = extension.tabs.open(`${ORIGINS.web}/sync`);
+    await extension.tabs.api.remove(gone);
+    const run = extension.run([1], { tabId: gone, context: NORMAL });
+    await extension.clock.runUntil(run.done);
+
+    expect(warned()).toEqual([expect.stringContaining("TabClosed for MFC item 1:")]);
+    expect(warned()[0]).toContain(`tab ${gone}`);
+  });
+
+  test("names the refused focus behind a challenge that could not be shown", async () => {
+    const challenge = challengeOn([7]);
+    const extension = fakeExtension({
+      pages: (request) => {
+        extension.tabs.drag(extension.myakiba.tabId, true);
+        return challenge.pages(request);
+      },
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+
+    expect(warned()).toEqual([expect.stringContaining("MfcChallengeUnsolved for MFC item 7:")]);
+    expect(warned()[0]).toContain("refused to update tab 101");
+  });
+
+  test("reports a run's tab without a window as a defect with its Panic", async () => {
+    const extension = fakeExtension({ pages: itemPages() });
+    const windowless = extension.tabs.open(`${ORIGINS.web}/sync`);
+    extension.tabs.hideWindow(windowless);
+    const run = extension.run([1], { tabId: windowless, context: NORMAL });
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledTimes(1);
+    const [, defect] = error.mock.calls[0] ?? [];
+    expect(Panic.is(defect)).toBe(true);
+    expect(String(defect instanceof Error ? defect.stack : defect)).toContain(
+      `answered tab ${windowless} with no windowId`,
+    );
   });
 
   test("names an unexpected throw from the collector as an unhandled exception", async () => {

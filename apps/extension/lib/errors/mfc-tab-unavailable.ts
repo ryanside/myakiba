@@ -17,7 +17,7 @@ export class MfcTabUnavailable extends tagged("MfcTabUnavailable")<{
   constructor(args: { tabId: number; reason: Unavailability }) {
     super({
       ...args,
-      message: `The extension gave up MFC tab ${args.tabId} because ${WHY[args.reason]}. The item was not fetched, and a tab the user took is left to them. The next item opens a fresh tab.`,
+      message: `The extension gave up MFC tab ${args.tabId} as ${args.reason}, because ${WHY[args.reason]}. The item was not fetched, and a tab the user took is left to them. The next item opens a fresh tab.`,
     });
   }
 }
