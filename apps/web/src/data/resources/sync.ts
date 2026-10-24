@@ -30,13 +30,14 @@ import type { SyncResponse } from "@/queries/sync";
 import { syncResultFamilies } from "../catalog";
 import {
   defineCommand,
+  failureText,
+  guard,
   invalidateFamilies,
   rootedRead,
   settle,
   streamedRead,
   useWrite,
 } from "../client";
-import type { ReadFailure } from "../client";
 
 type JobStatusChunk =
   Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
@@ -160,7 +161,8 @@ export const syncSends = {
 
 type SubmitFeedback = {
   readonly onSaved: (response: SyncResponse) => void;
-  readonly onFailed: (failure: ReadFailure<ApiFailure>) => void;
+  /** Gets the text under the failure toast's title, which for a defect never is its message. */
+  readonly onFailed: (description: string) => void;
 };
 
 /**
@@ -174,15 +176,16 @@ export function useSyncSubmit<Input>(
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (input: Input) => settle(() => send(input)),
-    onSuccess: (response) => {
-      onSaved(response);
-      if (response.isFinished) {
-        void invalidateFamilies(queryClient, syncResultFamilies);
-      } else {
-        void queryClient.invalidateQueries(allSessions);
-      }
-    },
-    onError: onFailed,
+    onSuccess: (response) =>
+      guard(() => {
+        onSaved(response);
+        if (response.isFinished) {
+          void invalidateFamilies(queryClient, syncResultFamilies);
+        } else {
+          void queryClient.invalidateQueries(allSessions);
+        }
+      }),
+    onError: (failure) => onFailed(failureText(failure)),
   });
   const { run, isPending } = useWrite(mutation);
   return { send: run, isPending } as const;

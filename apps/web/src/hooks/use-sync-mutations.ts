@@ -89,11 +89,11 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const itemSync = useSyncSubmit(syncSends.item, {
     onSaved: (data) => handleSuccess(data, "item"),
-    onFailed: (error) => {
+    onFailed: (description) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["item"].failureTitle,
-        description: error.message.trim() || "Failed to submit item database items.",
+        description: description.trim() || "Failed to submit item database items.",
         actionProps: {
           children: "View import history",
           onClick() {
@@ -107,11 +107,11 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const csvSync = useSyncSubmit(syncSends.csv, {
     onSaved: (data) => handleSuccess(data, "csv"),
-    onFailed: (error) => {
+    onFailed: (description) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["csv"].failureTitle,
-        description: error.message.trim() || "Failed to submit MyFigureCollection CSV.",
+        description: description.trim() || "Failed to submit MyFigureCollection CSV.",
         actionProps: {
           children: "View import history",
           onClick() {
@@ -125,11 +125,11 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const orderSync = useSyncSubmit(syncSends.order, {
     onSaved: (data) => handleSuccess(data, "order"),
-    onFailed: (error) => {
+    onFailed: (description) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["order"].failureTitle,
-        description: error.message.trim() || "Failed to submit order.",
+        description: description.trim() || "Failed to submit order.",
         actionProps: {
           children: "View import history",
           onClick() {
@@ -143,11 +143,11 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const orderItemSync = useSyncSubmit(syncSends.orderItem, {
     onSaved: (data) => handleSuccess(data, "order-item"),
-    onFailed: (error) => {
+    onFailed: (description) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["order-item"].failureTitle,
-        description: error.message.trim() || "Failed to submit order items.",
+        description: description.trim() || "Failed to submit order items.",
         actionProps: {
           children: "View import history",
           onClick() {
@@ -161,11 +161,11 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
   const collectionSync = useSyncSubmit(syncSends.collection, {
     onSaved: (data) => handleSuccess(data, "collection"),
-    onFailed: (error) => {
+    onFailed: (description) => {
       const toastId = toast.add({
         type: "error",
         title: SYNC_OPTION_META["collection"].failureTitle,
-        description: error.message.trim() || "Failed to submit collection items.",
+        description: description.trim() || "Failed to submit collection items.",
         actionProps: {
           children: "View import history",
           onClick() {

@@ -309,13 +309,32 @@ type Rollback = () => void;
 /** What a failure toast says under its title for a defect, whose own message is never shown. */
 const DEFECT_DESCRIPTION = "Something went wrong. Reload the page and try again";
 
-function failureDescription<Input, Failure>(
-  describe: ((input: Input, failure: Failure) => string) | undefined,
+/** The text under a failure toast that a screen words itself: the declared failure's message, or the safe text for a defect. */
+export function failureText(failure: ReadFailure<Error>): string {
+  return Panic.is(failure) ? DEFECT_DESCRIPTION : failure.message;
+}
+
+type FailureToast = { readonly title: string; readonly description?: string };
+
+/** A command's failure toast. Only a declared failure reaches the command's wording of it. */
+function failureToast<Input, Failure>(
+  title: string,
+  {
+    declaredFailureTitle,
+    failureDescription,
+  }: Pick<
+    CommandSpec<Input, unknown, Failure, PersistedFamily>,
+    "declaredFailureTitle" | "failureDescription"
+  >,
   input: Input,
   failure: ReadFailure<Failure>,
-): string | undefined {
-  if (Panic.is(failure)) return DEFECT_DESCRIPTION;
-  return describe?.(input, failure);
+): FailureToast {
+  if (Panic.is(failure)) return { title, description: DEFECT_DESCRIPTION };
+  const description = failureDescription?.(input, failure);
+  return {
+    title: declaredFailureTitle?.(input, failure) ?? title,
+    ...(description !== undefined && { description }),
+  };
 }
 
 type RefetchKey<F extends PersistedFamily> = {
@@ -347,8 +366,10 @@ type CommandSpec<Input, Output, Failure, F extends PersistedFamily> = RefetchTim
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
-  /** A failure toast's title. A command without one shows no failure toast. */
-  readonly failureTitle?: (input: Input, failure: ReadFailure<Failure>) => string;
+  /** A failure toast's title. It never sees the failure, so a defect shows it too. A command without one shows no failure toast. */
+  readonly failureTitle?: (input: Input) => string;
+  /** The title for a declared failure, in place of `failureTitle` unless it returns undefined. */
+  readonly declaredFailureTitle?: (input: Input, failure: Failure) => string | undefined;
   /** The text under the title for a declared failure. A defect always shows `DEFECT_DESCRIPTION` instead. */
   readonly failureDescription?: (input: Input, failure: Failure) => string;
   /** Cache patches that run after the write and before the refetch. */
@@ -375,7 +396,7 @@ type Saved<Output> = Result<Output, WriteFailed>;
 export type Saving<Output = unknown> = Promise<Saved<Output>>;
 
 /** Runs a callback the runner hands react-query. Whatever it throws is a defect. */
-async function guard<Value>(step: () => Value | Promise<Value>): Promise<Value> {
+export async function guard<Value>(step: () => Value | Promise<Value>): Promise<Value> {
   try {
     return await step();
   } catch (error) {
@@ -447,12 +468,8 @@ export function useResourceMutation<Input, Output, Failure>(
       guard(async () => {
         rollback?.();
         if (spec.failureTitle) {
-          const description = failureDescription(spec.failureDescription, input, failure);
-          toast.add({
-            type: "error",
-            title: spec.failureTitle(input, failure),
-            ...(description !== undefined && { description }),
-          });
+          const title = spec.failureTitle(input);
+          toast.add({ type: "error", ...failureToast(title, spec, input, failure) });
         }
         await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
       }),

@@ -401,6 +401,6 @@ export const moveOrderItemsCommand = defineCommand({
   }) => moveItem(targetOrderId, collectionIds, orderIds),
   successTitle: ({ collectionIds }) =>
     collectionIds.size === 1 ? "Item moved" : `Successfully moved ${collectionIds.size} items`,
-  failureTitle: (_input, error) =>
-    MoveTargetGone.is(error) ? error.message : "Failed to move items. Please try again.",
+  failureTitle: () => "Failed to move items. Please try again.",
+  declaredFailureTitle: (_input, error) => (MoveTargetGone.is(error) ? error.message : undefined),
 });
