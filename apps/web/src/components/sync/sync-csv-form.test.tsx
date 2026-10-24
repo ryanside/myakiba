@@ -73,6 +73,9 @@ test("a file the dropzone rejects is only logged to the console", async () => {
     const dropzoneLogs = logged.mock.calls.filter(([label]) => label === "Dropzone error:");
     expect(dropzoneLogs).toHaveLength(1);
     expect(dropzoneLogs[0]?.[1]).toMatchObject({
+      _tag: "FileRejected",
+      code: "file-invalid-type",
+      fileName: "notes.txt",
       message: "File type must be one of text/csv, .csv",
     });
     expect(document.querySelector("em[role=alert]")).toBeNull();

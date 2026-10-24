@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { FileRejected } from "@/lib/errors/file-rejected";
 import { transformCSVData } from "@/lib/sync";
 
 export default function SyncCsvForm({
@@ -69,7 +70,9 @@ export default function SyncCsvForm({
                   maxFiles={1}
                   src={field.state.value ? [field.state.value] : undefined}
                   onDrop={(files) => field.handleChange(files[0] ?? undefined)}
-                  onError={(error) => console.error("Dropzone error:", error)}
+                  onDropRejected={([rejection]) => {
+                    if (rejection) console.error("Dropzone error:", new FileRejected(rejection));
+                  }}
                 >
                   <DropzoneEmptyState />
                   <DropzoneContent />
