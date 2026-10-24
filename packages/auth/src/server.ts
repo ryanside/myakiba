@@ -12,6 +12,7 @@ import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 
 import { parseUserPreference } from "./user-preference";
+import { accessSessionStore } from "./session-store";
 import { sendAuthEmail } from "./send-auth-email";
 
 const resend = new Resend(env.RESEND_API_KEY);
@@ -20,14 +21,15 @@ export const auth = betterAuth({
   appName: "myakiba",
   secondaryStorage: {
     get: async (key) => {
-      return await redis.get(key);
+      return await accessSessionStore("get", () => redis.get(key));
     },
     set: async (key, value, ttl) => {
-      if (ttl) await redis.set(key, value, "EX", ttl);
-      else await redis.set(key, value);
+      await accessSessionStore("set", () =>
+        ttl ? redis.set(key, value, "EX", ttl) : redis.set(key, value),
+      );
     },
     delete: async (key) => {
-      await redis.del(key);
+      await accessSessionStore("delete", () => redis.del(key));
     },
   },
   experimental: {
