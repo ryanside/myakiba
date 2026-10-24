@@ -1167,6 +1167,19 @@
         "sign-up rejects unsupported dateFormat",
         "update-user rejects unsupported dateFormat"
       ]
+    },
+    {
+      "fix": "7d892b3a36dcac004e6edeaaf624e0a1311ddae7",
+      "bug": "worker shutdown exited zero on a thrown health stop and hung on stuck stages or rejected flush",
+      "test": "apps/worker/shutdown.test.ts",
+      "fixed": [
+        "worker shutdown exits nonzero without hanging when health throw",
+        "worker shutdown exits nonzero without hanging when health stuck",
+        "worker shutdown exits nonzero without hanging when consumers throw",
+        "worker shutdown exits nonzero without hanging when consumers stuck",
+        "worker shutdown exits nonzero without hanging when flush throw",
+        "worker shutdown exits nonzero without hanging when flush stuck"
+      ]
     }
   ],
   "lint": [
