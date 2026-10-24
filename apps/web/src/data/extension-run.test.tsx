@@ -49,7 +49,7 @@ async function readSent(input: RequestInfo | URL, init?: RequestInit): Promise<S
   const base = { path: new URL(request.url).pathname, keepalive: init?.keepalive ?? false };
   if (!request.headers.get("content-type")?.startsWith("multipart/form-data")) {
     const body = await request.text();
-    const fields = parseJson(runFields, body).data ?? {};
+    const fields = parseJson(runFields, body).unwrapOr({});
     const bodyBytes = new TextEncoder().encode(body).byteLength;
     return { ...base, fields, bodyBytes, formKeys: [], page: null };
   }

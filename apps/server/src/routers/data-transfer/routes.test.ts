@@ -676,9 +676,7 @@ describe("the import status stream", () => {
         .split("\n")
         .find((line) => line.startsWith("data:"))
         ?.slice(5);
-      const parsed = parseJson(syncJobStatusSchema, data ?? "");
-      if (parsed.error) throw parsed.error;
-      return parsed.data;
+      return parseJson(syncJobStatusSchema, data ?? "").unwrap();
     };
 
     expect(await nextStatus()).toMatchObject({
@@ -881,9 +879,7 @@ test("import polling keeps its last status through a database blip and retries",
           .split("\n")
           .find((line) => line.startsWith("data:"))
           ?.slice(5) ?? "";
-      const result = parseJson(syncJobStatusSchema, raw);
-      if (result.error) throw result.error;
-      return result.data;
+      return parseJson(syncJobStatusSchema, raw).unwrap();
     };
     const initial = await readStatus();
     await Bun.sleep(20);
