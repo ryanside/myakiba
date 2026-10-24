@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { evlog } from "evlog/elysia";
-import { initLogger, log } from "evlog";
+import { createLogger, initLogger, log } from "evlog";
 import type { DrainContext } from "evlog";
 import { createPostHogDrain } from "evlog/posthog";
 import { createDrainPipeline } from "evlog/pipeline";
@@ -26,7 +26,31 @@ const drain = env.POSTHOG_API_KEY
       }),
     )
   : undefined;
-initLogger({ env: { service: "api" } });
+initLogger({ env: { service: "api" }, drain });
+
+let exitingAfterFatal = false;
+function handleFatal(kind: "uncaughtException" | "unhandledRejection", cause: unknown): void {
+  if (exitingAfterFatal) return;
+  exitingAfterFatal = true;
+  const fatalLog = createLogger({ action: `server.${kind}`, outcome: "error" });
+  fatalLog.error(cause instanceof Error ? cause : new Error(String(cause)));
+  fatalLog.emit();
+  const deadline = setTimeout(() => process.exit(1), 5000);
+  void (async () => {
+    try {
+      await drain?.flush();
+    } catch (error) {
+      const flushLog = createLogger({ action: "server.fatalFlush", outcome: "error" });
+      flushLog.error(error instanceof Error ? error : new Error(String(error)));
+      flushLog.emit();
+    } finally {
+      clearTimeout(deadline);
+      process.exit(1);
+    }
+  })();
+}
+process.on("uncaughtException", (cause: Error) => handleFatal("uncaughtException", cause));
+process.on("unhandledRejection", (cause: unknown) => handleFatal("unhandledRejection", cause));
 
 log.info({
   msg: "server booting",
