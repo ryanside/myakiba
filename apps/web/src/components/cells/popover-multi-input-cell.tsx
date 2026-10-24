@@ -16,7 +16,6 @@ import {
   minorUnitsToMajorString,
   parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
-import { toast } from "@/components/ui/toast";
 import type { Saving } from "@/data/client";
 
 interface PopoverInput {
@@ -74,7 +73,6 @@ export function PopoverMultiInputCell({
     const saved = await onSubmit(newValues);
     if (saved.isErr()) {
       setPending(null);
-      toast.add({ type: "error", title: saved.error.message });
     }
   };
 
