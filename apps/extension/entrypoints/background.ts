@@ -1,9 +1,7 @@
 import { Result } from "better-result";
 import type { StandardSchemaOutput, StandardSchemaV1 } from "better-result";
-import type * as z from "zod";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
-import type { SessionValue } from "../lib/clock";
 import { systemClock } from "../lib/clock";
 import {
   armCollector,
@@ -19,20 +17,8 @@ import { CollectorInjectionFailed } from "../lib/errors/collector-injection-fail
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
 import { servePort } from "../lib/port-host";
+import { sessionValue } from "../lib/session-value";
 import { OPEN_THROTTLE, throttleStateSchema } from "../lib/throttle";
-
-function sessionValue<T>(key: string, schema: z.ZodType<T>, fallback: T): SessionValue<T> {
-  return {
-    async load() {
-      const stored = await browser.storage.session.get(key);
-      const parsed = schema.safeParse(stored[key]);
-      return parsed.success ? parsed.data : fallback;
-    },
-    async save(value) {
-      await browser.storage.session.set({ [key]: value });
-    },
-  };
-}
 
 async function runCollector<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1>(
   tabId: number,
@@ -82,9 +68,14 @@ export default defineBackground(() => {
     clock: systemClock,
     random: Math.random,
     origins: ORIGINS,
-    throttleState: sessionValue("throttle", throttleStateSchema, OPEN_THROTTLE),
-    ownedTab: sessionValue("ownedTab", ownedTabSchema, null),
-    ownedPictureTab: sessionValue("ownedPictureTab", ownedTabSchema, null),
+    throttleState: sessionValue(
+      browser.storage.session,
+      "throttle",
+      throttleStateSchema,
+      OPEN_THROTTLE,
+    ),
+    ownedTab: sessionValue(browser.storage.session, "ownedTab", ownedTabSchema, null),
+    ownedPictureTab: sessionValue(browser.storage.session, "ownedPictureTab", ownedTabSchema, null),
     collectPage: (tabId, request, signal) => runCollector(tabId, request, pageAnswerCodec, signal),
     fetchGatedPicture: (tabId, url, signal) =>
       runCollector(tabId, { kind: "gated-picture", url }, pictureAnswerCodec, signal),
