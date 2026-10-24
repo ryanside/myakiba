@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun run --hot index.ts",
     "start": "bun run index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
   },
   "dependencies": {
     "@myakiba/contracts": "workspace:*",
