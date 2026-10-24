@@ -68,6 +68,38 @@ initLogger({
   drain,
 });
 
+function handleFatalError(kind: "uncaughtException" | "unhandledRejection", cause: unknown): void {
+  if (isShuttingDown) return;
+
+  const fatalLog = createLogger({
+    action: `worker.${kind}`,
+    outcome: "error",
+  });
+
+  if (cause instanceof Error) {
+    fatalLog.error(cause);
+  } else {
+    fatalLog.error(new Error(String(cause)));
+  }
+  fatalLog.emit();
+
+  isShuttingDown = true;
+  void (async () => {
+    await shutdownStage("flush", async () => {
+      await drain?.flush();
+    });
+    process.exit(1);
+  })();
+}
+
+process.on("uncaughtException", (err: Error) => {
+  handleFatalError("uncaughtException", err);
+});
+
+process.on("unhandledRejection", (cause: unknown) => {
+  handleFatalError("unhandledRejection", cause);
+});
+
 log.info({
   action: "worker.boot",
   outcome: "success",
@@ -123,36 +155,4 @@ process.once("SIGINT", () => {
 
 process.once("SIGTERM", () => {
   void shutdown("SIGTERM", 0);
-});
-
-function handleFatalError(kind: "uncaughtException" | "unhandledRejection", cause: unknown): void {
-  if (isShuttingDown) return;
-
-  const fatalLog = createLogger({
-    action: `worker.${kind}`,
-    outcome: "error",
-  });
-
-  if (cause instanceof Error) {
-    fatalLog.error(cause);
-  } else {
-    fatalLog.error(new Error(String(cause)));
-  }
-  fatalLog.emit();
-
-  isShuttingDown = true;
-  void (async () => {
-    await shutdownStage("flush", async () => {
-      await drain?.flush();
-    });
-    process.exit(1);
-  })();
-}
-
-process.on("uncaughtException", (err: Error) => {
-  handleFatalError("uncaughtException", err);
-});
-
-process.on("unhandledRejection", (cause: unknown) => {
-  handleFatalError("unhandledRejection", cause);
 });
