@@ -19,10 +19,14 @@ import {
   pageFetchFailed,
   tooClose,
 } from "../test/fake-browser";
-import type { FakeClock, FakeExtension, PageAnswer } from "../test/fake-browser";
+import type { FakeClock, FakeExtension, PageAnswer, PictureAnswer } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
+import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
+import { CollectorInjectionFailed } from "./errors/collector-injection-failed";
+import { PictureFetchFailed } from "./errors/picture-fetch-failed";
 import { PictureRejected } from "./errors/picture-rejected";
+import { PictureTimedOut } from "./errors/picture-timed-out";
 import { CHALLENGE_WINDOW_MS } from "./fetcher";
 import type { OwnedTab } from "./owned-tab";
 import { PICTURE_TIMEOUT_MS } from "./picture";
@@ -1764,6 +1768,87 @@ describe("a collector run that fails", () => {
     ]);
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
   });
+});
+
+const PICTURE_FAILURES: readonly (readonly [string, () => PictureAnswer])[] = [
+  [
+    "it drops what MFC served",
+    () => Result.err(new PictureRejected({ reason: "http_status", status: 404, bytes: null })),
+  ],
+  [
+    "its fetch fails in the tab",
+    () =>
+      Result.err(
+        new PictureFetchFailed({ cause: { name: "TypeError", message: "Failed to fetch" } }),
+      ),
+  ],
+  [
+    "its own timer stops it",
+    () => Result.err(new PictureTimedOut({ timeoutMs: PICTURE_TIMEOUT_MS })),
+  ],
+  [
+    "the browser will not inject it",
+    () =>
+      Result.err(
+        new CollectorInjectionFailed({
+          tabId: 101,
+          kind: "gated-picture",
+          cause: new Error(ERROR_PAGE),
+        }),
+      ),
+  ],
+  [
+    "its answer is invalid",
+    () => Result.err(new CollectorAnswerInvalid({ tabId: 101, kind: "gated-picture", issues: [] })),
+  ],
+];
+
+describe("a picture read that fails", () => {
+  let warn: Mock<typeof console.warn>;
+
+  beforeEach(() => {
+    warn = spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  test.each(PICTURE_FAILURES)(
+    "because %s imports a gated picture's item without it and keeps the MFC tab",
+    async (_name, failure) => {
+      const extension = fakeExtension({
+        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "gated")),
+        gatedPicture: async () => failure(),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
+
+      expect(run.results()).toEqual([
+        { ok: true, html: itemPage(1, "gated"), picture: null },
+        { ok: true, html: itemPage(2, "gated"), picture: null },
+      ]);
+      expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+    },
+  );
+
+  test.each(PICTURE_FAILURES)(
+    "because %s imports a public picture's item without it",
+    async (_name, failure) => {
+      const extension = fakeExtension({
+        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "public")),
+        publicPicture: async () => failure(),
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+
+      expect(run.results()).toEqual([
+        { ok: true, html: itemPage(1, "public"), picture: null },
+        { ok: true, html: itemPage(2, "public"), picture: null },
+      ]);
+    },
+  );
 });
 
 describe("the developer log", () => {

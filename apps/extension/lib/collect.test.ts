@@ -12,6 +12,9 @@ import {
 import type { CollectRequest, CollectedPage } from "./collect";
 import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
 import { MfcPageFetchFailed } from "./errors/mfc-page-fetch-failed";
+import { PictureFetchFailed } from "./errors/picture-fetch-failed";
+import { PictureRejected } from "./errors/picture-rejected";
+import { PictureTimedOut } from "./errors/picture-timed-out";
 
 const REQUEST: CollectRequest = { kind: "page", mode: "fetch", mfcItemId: itemId(1) };
 
@@ -118,5 +121,58 @@ describe("the collector's answer", () => {
     const read = await readAnswer(pictureAnswerCodec, injected(answer), TAB_ID, "public-picture");
 
     expect(read.isOk() && read.value).toEqual(picture);
+  });
+
+  test.each([
+    [
+      "a rejected picture",
+      new PictureRejected({ reason: "too_large", status: 200, bytes: 11 }),
+      { _tag: "PictureRejected", reason: "too_large", status: 200, bytes: 11 } as const,
+    ],
+    [
+      "a failed picture fetch",
+      new PictureFetchFailed({ cause: { name: "TypeError", message: "Failed to fetch" } }),
+      {
+        _tag: "PictureFetchFailed",
+        cause: { name: "TypeError", message: "Failed to fetch" },
+      } as const,
+    ],
+    [
+      "a picture that timed out",
+      new PictureTimedOut({ timeoutMs: 20_000 }),
+      { _tag: "PictureTimedOut", timeoutMs: 20_000 } as const,
+    ],
+  ])("%s goes through as that failure, with only its safe fields", async (_name, failure, wire) => {
+    const answer = pictureAnswerCodec.serializeUnsafe(Result.err(failure));
+    const read = await readAnswer(pictureAnswerCodec, injected(answer), TAB_ID, "gated-picture");
+
+    expect(answer).toEqual({ status: "error", error: wire });
+    expect(read.isErr() && read.error).toBeInstanceOf(failure.constructor);
+    expect(read.isErr() && read.error).toMatchObject(wire);
+  });
+
+  test.each([
+    ["a picture from a collector without the envelope", { base64: "AQID" }],
+    [
+      "a rejection with a reason the codec does not know",
+      {
+        status: "error",
+        error: { _tag: "PictureRejected", reason: "blurry", status: 200, bytes: null },
+      },
+    ],
+    [
+      "a page failure in a picture answer",
+      {
+        status: "error",
+        error: { _tag: "MfcPageFetchFailed", mfcItemId: 1, cause: { name: "E", message: "m" } },
+      },
+    ],
+  ])("%s is an invalid answer from that tab", async (_name, answer) => {
+    const read = await readAnswer(pictureAnswerCodec, injected(answer), TAB_ID, "public-picture");
+
+    expect(read.isErr() && CollectorAnswerInvalid.is(read.error) && read.error).toMatchObject({
+      tabId: TAB_ID,
+      kind: "public-picture",
+    });
   });
 });

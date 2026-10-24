@@ -76,6 +76,63 @@ describe("readPicture", () => {
   });
 });
 
+describe("readPicture's rejections", () => {
+  async function rejection(response: Response) {
+    const read = await readPicture(response);
+    return read.isErr() && read.error;
+  }
+
+  test("an error status is http_status", async () => {
+    const response = new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 404 });
+
+    expect(await rejection(response)).toMatchObject({
+      _tag: "PictureRejected",
+      reason: "http_status",
+      status: 404,
+      bytes: null,
+    });
+  });
+
+  test("an answer with no body, or an empty one, is no_body", async () => {
+    expect(await rejection(new Response(null))).toMatchObject({
+      reason: "no_body",
+      status: 200,
+      bytes: null,
+    });
+    expect(await rejection(new Response(new Uint8Array()))).toMatchObject({
+      reason: "no_body",
+      bytes: 0,
+    });
+  });
+
+  test("a body over 10 MB is too_large, by its declared length or by what was read", async () => {
+    const declared = new Response(new Uint8Array([0xff, 0xd8, 0xff]), {
+      headers: { "content-length": String(10 * MB + 1) },
+    });
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(MB).fill(0xff));
+      },
+    });
+
+    expect(await rejection(declared)).toMatchObject({ reason: "too_large", bytes: 10 * MB + 1 });
+    expect(await rejection(new Response(endless))).toMatchObject({
+      reason: "too_large",
+      bytes: 11 * MB,
+    });
+  });
+
+  test("bytes of no known image format are unknown_format, with their count", async () => {
+    const html = "<!DOCTYPE html><title>Sign in</title>";
+
+    expect(await rejection(new Response(html))).toMatchObject({
+      reason: "unknown_format",
+      status: 200,
+      bytes: html.length,
+    });
+  });
+});
+
 describe("pictureToRead", () => {
   const origins: Origins = {
     web: "http://myakiba.test",

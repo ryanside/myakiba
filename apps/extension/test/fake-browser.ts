@@ -5,6 +5,7 @@ import { Err, Result } from "better-result";
 import type { Clock, SessionValue } from "../lib/clock";
 import type {
   CollectedPage,
+  CollectorFailure,
   PageCollectFailure,
   PageRequest,
   PictureFailure,
@@ -490,7 +491,10 @@ function mortalValue<T>(value: SessionValue<T>, wrap: ReturnType<typeof mortal>)
  * What the collector's read answers for a picture: the picture, none, or how the read failed. A rejection is a fetch that
  * failed in the tab, which the collector answers as PictureFetchFailed.
  */
-export type PictureAnswer = PortPicture | null | Err<PortPicture | null, PictureFailure>;
+export type PictureAnswer =
+  | PortPicture
+  | null
+  | Err<PortPicture | null, PictureFailure | CollectorFailure>;
 
 /** What the collector answers for a page: the page, or how it failed. A defect throws instead. */
 export type PageAnswer = CollectedPage | Err<CollectedPage, PageCollectFailure>;
@@ -559,7 +563,7 @@ export function fakeExtension(options: {
     read: Load,
     signal: AbortSignal,
     answer: () => Promise<PictureAnswer>,
-  ): Promise<Result<PortPicture | null, PictureFailure>> {
+  ): Promise<Result<PortPicture | null, PictureFailure | CollectorFailure>> {
     pictureReads.push(read);
     const stopped = Promise.withResolvers<null>();
     signal.addEventListener("abort", () => stopped.resolve(null), { once: true });
