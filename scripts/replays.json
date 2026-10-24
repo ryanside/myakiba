@@ -1132,6 +1132,16 @@
         "a network failure during reset link request shows safe feedback and stays",
         "a network failure during password reset shows safe feedback and stays"
       ]
+    },
+    {
+      "fix": "d470370df9cd74c8f71c929c2972bdd85bac0de4",
+      "bug": "Item refresh waits forever when no content script responds",
+      "test": "apps/web/src/data/refresh-timeout.test.tsx",
+      "fixed": [
+        "a silent refresh with extension status {\"kind\":\"absent\"} settles and shows its recovery",
+        "a silent refresh with extension status {\"kind\":\"outdated\",\"extensionVersion\":\"0.0.1\"} settles and shows its recovery",
+        "a silent refresh with extension status {\"kind\":\"ready\",\"extensionVersion\":\"0.1.0\"} settles and shows its recovery"
+      ]
     }
   ],
   "lint": [
