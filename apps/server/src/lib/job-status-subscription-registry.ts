@@ -1,3 +1,4 @@
+import { panic } from "better-result";
 import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { getJobStatusChannel, parseJobStatusPayload } from "@myakiba/redis/job-status";
@@ -229,7 +230,7 @@ class JobStatusSubscriptionRegistry {
         }
 
         if (consumerState.resolvePending !== null) {
-          throw new Error("Concurrent next() calls are not supported");
+          panic("A job-status subscription's next() was called while an earlier call still waits");
         }
 
         return await new Promise<JobStatusSubscriptionEvent>((resolve) => {

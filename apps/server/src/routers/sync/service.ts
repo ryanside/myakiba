@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
@@ -31,6 +32,8 @@ import { getJobStatusSnapshotKey, parseJobStatusPayload } from "@myakiba/redis/j
 import { redis } from "@myakiba/redis/client";
 import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
+import type { SyncOrderUnowned } from "./errors/sync-order-unowned";
+import { SyncJobNotFound } from "./errors/sync-job-not-found";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
 import { persistenceFailure, settleRun, viewSession, viewedStatusSql } from "./run-state";
@@ -258,11 +261,12 @@ class SyncService {
     },
     tx: Tx,
     afterCommit: (effect: () => Promise<void>) => void,
-  ): Promise<void> {
+  ): Promise<Result<void, SyncOrderUnowned>> {
     const existingIds = session.existingItemExternalIds ?? [];
     const createsOrder = requestPayload.type === "order" && existingRows.collectionItems.length > 0;
     await this.insertSyncSession(tx, session);
-    await insertItemRows(tx, requestPayload.type, existingRows);
+    const written = await insertItemRows(tx, requestPayload.type, existingRows);
+    if (written.isErr()) return written;
     if (existingIds.length > 0) {
       await tx
         .update(syncSessionItem)
@@ -289,6 +293,7 @@ class SyncService {
     afterCommit(() =>
       publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id),
     );
+    return Result.ok();
   }
 
   async recordFailedStart(
@@ -331,7 +336,11 @@ class SyncService {
       .where(eq(syncSession.id, session.id));
   }
 
-  async getJobStatus(jobId: string, userId: string, db: ReadTx): Promise<SyncJobStatus> {
+  async getJobStatus(
+    jobId: string,
+    userId: string,
+    db: ReadTx,
+  ): Promise<Result<SyncJobStatus, SyncJobNotFound>> {
     const [row] = await db
       .select({
         id: syncSession.id,
@@ -349,9 +358,7 @@ class SyncService {
       .from(syncSession)
       .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
 
-    if (!row) {
-      throw new Error("SYNC_JOB_NOT_FOUND");
-    }
+    if (!row) return Result.err(new SyncJobNotFound());
     const session = viewSession(row, Date.now());
     const terminalState = sessionStatusToTerminalState(session.status);
 
@@ -363,7 +370,9 @@ class SyncService {
         (session.interrupted ||
           parsedStatus.terminalState !== terminalState ||
           (parsedStatus.revision ?? 0) !== session.revision);
-      if (parsedStatus && !sessionOverridesSnapshot) return syncJobStatusSchema.parse(parsedStatus);
+      if (parsedStatus && !sessionOverridesSnapshot) {
+        return Result.ok(syncJobStatusSchema.parse(parsedStatus));
+      }
 
       if (!parsedStatus) {
         createLogger({
@@ -389,7 +398,7 @@ class SyncService {
 
     const end = session.interrupted ? "interrupted" : (session.endCause ?? "finished");
     const error = terminalState === null ? null : settleRun(session, end).error;
-    return {
+    return Result.ok({
       revision: session.revision,
       jobId,
       phase: sessionStatusToPhase(session.status),
@@ -400,7 +409,7 @@ class SyncService {
       startedAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
       terminalState,
-    };
+    });
   }
 
   async createSyncSession(session: SyncSessionCreation, tx: Tx): Promise<void> {

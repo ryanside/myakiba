@@ -267,6 +267,13 @@ async function retry(syncSessionId: string): Promise<Run & { missingMfcItemIds: 
 }
 
 const imported = { status: 200, body: { outcome: "imported", reason: null } };
+
+/** The job status the service reads back from Postgres and the Redis snapshot. */
+async function storedJobStatus(jobId: string) {
+  const { default: service } = await import("./service");
+  const status = await service.getJobStatus(jobId, userId, db);
+  return status.unwrap();
+}
 const outcomeSchema = z.object({ outcome: z.string() });
 
 const listedSchema = z.object({
@@ -1094,8 +1101,7 @@ test("a cached partial status cannot hide a later successful completion", async 
   const stale = redisValues.get(getJobStatusSnapshotKey(run.jobId)) ?? "";
   await complete(run, Y);
   redisValues.set(getJobStatusSnapshotKey(run.jobId), stale);
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(run.jobId)).toMatchObject({
     terminalState: "success",
     progress: { succeeded: 2, failed: 0 },
   });
@@ -1242,8 +1248,7 @@ test("a cached partial snapshot cannot hide a newer partial revision", async () 
   const stale = redisValues.get(getJobStatusSnapshotKey(run.jobId)) ?? "";
   await complete(run, Y);
   redisValues.set(getJobStatusSnapshotKey(run.jobId), stale);
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(run.jobId)).toMatchObject({
     terminalState: "partial",
     progress: { succeeded: 2, failed: 1 },
   });
@@ -1331,15 +1336,14 @@ test("persistence failure survives cache expiry and a changed display message", 
     .update(syncSession)
     .set({ statusMessage: "Translated persistence failure" })
     .where(eq(syncSession.id, run.syncSessionId));
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(run.jobId)).toMatchObject({
     error: { code: "persistence_failed" },
   });
   failS3 = false;
   const retried = await retry(run.syncSessionId);
   expect(await complete(retried, X)).toEqual(imported);
   redisValues.delete(getJobStatusSnapshotKey(retried.jobId));
-  expect(await service.getJobStatus(retried.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(retried.jobId)).toMatchObject({
     terminalState: "success",
     error: null,
   });
@@ -1356,8 +1360,7 @@ test("display text alone cannot classify a persistence failure", async () => {
     .set({ status: "failed", errorReason: SYNC_STATUS_MESSAGES.failedPersist })
     .where(eq(syncSessionItem.syncSessionId, run.syncSessionId));
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(run.jobId)).toMatchObject({
     terminalState: "error",
     error: { code: "fetch_failed", message: SYNC_STATUS_MESSAGES.failedFetch },
   });
@@ -1413,8 +1416,7 @@ test("a fetch failure cannot hide a recorded persistence failure", async () => {
   await complete(run, Y);
   expect(snapshot(run.jobId)).toMatchObject({ error: { code: "persistence_failed" } });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
-  const { default: service } = await import("./service");
-  expect(await service.getJobStatus(run.jobId, userId, db)).toMatchObject({
+  expect(await storedJobStatus(run.jobId)).toMatchObject({
     error: { code: "persistence_failed" },
   });
 });
@@ -1527,8 +1529,7 @@ test("interruption keeps its error after an earlier persistence failure and cach
     message: SYNC_STATUS_MESSAGES.interrupted,
   });
   redisValues.delete(getJobStatusSnapshotKey(run.jobId));
-  const { default: service } = await import("./service");
-  const after = await service.getJobStatus(run.jobId, userId, db);
+  const after = await storedJobStatus(run.jobId);
   expect(after.error).toEqual(before.error);
 });
 
@@ -1789,4 +1790,18 @@ describe("answers for a bad session request", () => {
       body: "This item is not part of the import",
     });
   });
+});
+
+test("a broken invariant in an item upload answers a logged 500 and records nothing", async () => {
+  const run = await start("item", { items: [X] });
+  const { default: service } = await import("./service");
+  const lookup = spyOn(service, "getExistingItemsWithLatestReleaseByExternalIds").mockResolvedValue(
+    [],
+  );
+  try {
+    expect(await complete(run, X)).toEqual({ status: 500, body: "Failed to import item" });
+  } finally {
+    lookup.mockRestore();
+  }
+  expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "pending", reason: null }]);
 });

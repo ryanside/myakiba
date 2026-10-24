@@ -1,3 +1,4 @@
+import { Result } from "better-result";
 import { inArray } from "drizzle-orm";
 import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import type { JobData, UpdatedSyncOrder } from "@myakiba/contracts/sync/schema";
@@ -6,6 +7,7 @@ import { collection, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import { buildRetryJobData } from "./retry";
 import type { ExistingItemWithLatestRelease } from "./model";
+import { SyncOrderUnowned } from "./errors/sync-order-unowned";
 
 export type ItemRows = {
   readonly collectionItems: readonly (typeof collection.$inferInsert)[];
@@ -102,7 +104,7 @@ export async function insertItemRows(
   tx: Tx,
   syncType: JobData["type"],
   { collectionItems, orders }: ItemRows,
-): Promise<void> {
+): Promise<Result<void, SyncOrderUnowned>> {
   if (orders.length > 0) {
     const uniqueOrders = [...new Map(orders.map((row) => [row.id, row])).values()];
     await tx.insert(order).values(uniqueOrders).onConflictDoNothing({ target: order.id });
@@ -119,11 +121,14 @@ export async function insertItemRows(
       .orderBy(order.id)
       .for("update");
     const userByOrderId = new Map(owners.map((row) => [row.id, row.userId]));
-    if (references.some((row) => userByOrderId.get(row.id) !== row.userId)) {
-      throw new Error("ORDER_NOT_FOUND");
+    const unowned = references.filter((row) => userByOrderId.get(row.id) !== row.userId);
+    if (unowned.length > 0) {
+      return Result.err(
+        new SyncOrderUnowned({ orderIds: [...new Set(unowned.map(({ id }) => id))] }),
+      );
     }
   }
-  if (collectionItems.length === 0) return;
+  if (collectionItems.length === 0) return Result.ok();
   const inserted = await tx
     .insert(collection)
     .values([...collectionItems])
@@ -134,4 +139,5 @@ export async function insertItemRows(
       inserted.map(({ id }) => id),
     );
   }
+  return Result.ok();
 }
