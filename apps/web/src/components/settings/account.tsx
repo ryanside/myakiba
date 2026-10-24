@@ -12,6 +12,7 @@ import * as z from "zod";
 import { DeleteAccount } from "./delete-account";
 import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
 import { SettingsRow } from "./settings-row";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MIN_PASSWORD_MESSAGE = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
@@ -90,18 +91,7 @@ export function Account() {
         </p>
       ) : null}
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-        className="flex flex-col gap-4"
-      >
+      <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
         <SettingsGroup title="Change password">
           {PASSWORD_FIELDS.map(({ name, title, description, placeholder }) => (
             <form.Field key={name} name={name}>

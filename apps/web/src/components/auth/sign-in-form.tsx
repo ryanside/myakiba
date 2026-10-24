@@ -12,6 +12,7 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { env } from "@myakiba/env/web";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 function GoogleIcon() {
   return (
@@ -107,18 +108,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         <span className="bg-background text-muted-foreground relative z-10 px-2">or</span>
       </div>
 
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-        className="grid gap-4"
-      >
+      <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
         <form.Field name="email">
           {(field) => (
             <div className="space-y-2">

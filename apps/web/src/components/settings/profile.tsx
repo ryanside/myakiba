@@ -11,6 +11,7 @@ import * as z from "zod";
 import type { User } from "@/lib/auth-client";
 import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
 import { SettingsRow } from "./settings-row";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export function Profile({ user }: { user: User }) {
   const router = useRouter();
@@ -40,17 +41,7 @@ export function Profile({ user }: { user: User }) {
     },
   });
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          await form.handleSubmit();
-        } catch (submitError) {
-          console.error(submitError);
-        }
-      }}
-    >
+    <form onSubmit={formSubmitHandler(form)}>
       <SettingsGroup>
         <form.Field
           name="username"

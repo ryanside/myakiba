@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export const Route = createFileRoute("/(auth)/reset-password")({
   component: RouteComponent,
@@ -103,18 +104,7 @@ function RouteComponent() {
             <p className="text-sm text-muted-foreground mt-2">Enter your new password below.</p>
           </div>
         </div>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            try {
-              await form.handleSubmit();
-            } catch (submitError) {
-              console.error(submitError);
-            }
-          }}
-          className="grid gap-4"
-        >
+        <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
           <form.Field
             name="password"
             validators={{

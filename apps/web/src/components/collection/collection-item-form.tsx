@@ -45,6 +45,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -104,17 +105,7 @@ function CollectionItemFormContent({
 
   return (
     <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <SheetHeader>
           <SheetTitle>Edit Item</SheetTitle>
           <SheetDescription>{itemData.itemTitle}</SheetDescription>

@@ -15,6 +15,7 @@ import { useState } from "react";
 import { env } from "@myakiba/env/web";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
   component: RouteComponent,
@@ -108,18 +109,7 @@ function RouteComponent() {
             </p>
           </div>
         </div>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            try {
-              await form.handleSubmit();
-            } catch (submitError) {
-              console.error(submitError);
-            }
-          }}
-          className="grid gap-4"
-        >
+        <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
           <form.Field name="email">
             {(field) => (
               <div className="space-y-2">

@@ -28,6 +28,7 @@ import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
@@ -178,15 +179,7 @@ function OrdersFiltersDraft({
     return `${items.length} selected`;
   };
 
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      await form.handleSubmit();
-    } catch (submitError) {
-      console.error(submitError);
-    }
-  };
+  const handleSubmit = formSubmitHandler(form);
 
   const formFieldsContent = (
     <div className="grid gap-4">

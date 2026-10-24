@@ -48,6 +48,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export default function SyncOrderForm({
   handleSyncOrderSubmit,
@@ -159,18 +160,7 @@ export default function SyncOrderForm({
 
   return (
     <div>
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await orderForm.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-        className="space-y-3 w-full"
-      >
+      <form onSubmit={formSubmitHandler(orderForm)} className="space-y-3 w-full">
         <SyncNotice />
         <div className="flex flex-row gap-2 items-center">
           <Label className="text-lg text-foreground">Order Details</Label>

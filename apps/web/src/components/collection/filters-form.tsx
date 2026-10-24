@@ -52,6 +52,7 @@ import {
 import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
@@ -189,17 +190,7 @@ function FiltersDraft({
   const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
 
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          await form.handleSubmit();
-        } catch (submitError) {
-          console.error(submitError);
-        }
-      }}
-    >
+    <form onSubmit={formSubmitHandler(form)}>
       <DialogHeader className="pb-4 px-4">
         <DialogTitle>Filters</DialogTitle>
         <DialogDescription>Apply filters to narrow down your collection</DialogDescription>

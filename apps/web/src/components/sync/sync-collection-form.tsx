@@ -30,6 +30,7 @@ import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constant
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type SyncCollectionFormValues = {
   items: SyncFormCollectionItem[];
@@ -89,18 +90,7 @@ export default function SyncCollectionForm({
 
   return (
     <div className="w-full">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await collectionForm.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-        className="space-y-3 w-full"
-      >
+      <form onSubmit={formSubmitHandler(collectionForm)} className="space-y-3 w-full">
         <SyncNotice />
         <collectionForm.Field
           name="items"

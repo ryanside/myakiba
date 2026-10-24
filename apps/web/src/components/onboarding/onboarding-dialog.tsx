@@ -48,6 +48,7 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type StepId = "welcome" | "preferences" | "extension" | "sync";
 
@@ -308,18 +309,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                 >
                   <StepHeader meta={meta} />
                   {meta.id === "preferences" ? (
-                    <form
-                      onSubmit={async (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        try {
-                          await form.handleSubmit();
-                        } catch (submitError) {
-                          console.error(submitError);
-                        }
-                      }}
-                      className="flex flex-col gap-4"
-                    >
+                    <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
                       <form.Field
                         name="username"
                         asyncDebounceMs={1000}

@@ -17,6 +17,7 @@ import {
   parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 interface PopoverInput {
   readonly title: string;
@@ -137,17 +138,7 @@ function PopoverMultiInputCellContent({
 
   return (
     <PopoverContent className="w-72 p-0" align="start">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <PopoverHeader className="px-3 pt-3 pb-2">
           <PopoverTitle className="text-xs">{title}</PopoverTitle>
           {description && <p className="text-[11px] text-muted-foreground">{description}</p>}

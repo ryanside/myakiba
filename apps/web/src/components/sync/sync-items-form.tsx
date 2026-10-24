@@ -11,6 +11,7 @@ import { Badge } from "@/components/reui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export function SyncItemsForm({
   handleSyncItemsSubmit,
@@ -34,18 +35,7 @@ export function SyncItemsForm({
   });
 
   return (
-    <form
-      className="space-y-3 w-full"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        try {
-          await form.handleSubmit();
-        } catch (submitError) {
-          console.error(submitError);
-        }
-      }}
-    >
+    <form className="space-y-3 w-full" onSubmit={formSubmitHandler(form)}>
       <SyncNotice />
       <form.Field
         name="items"

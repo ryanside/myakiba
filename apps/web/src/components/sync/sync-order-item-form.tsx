@@ -42,6 +42,7 @@ import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { SyncNotice } from "@/components/sync/sync-notice";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type SyncOrderItemFormProps = {
   readonly orderId: string;
@@ -102,18 +103,7 @@ export default function SyncOrderItemForm({
   });
 
   return (
-    <form
-      onSubmit={async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          await orderItemForm.handleSubmit();
-        } catch (submitError) {
-          console.error(submitError);
-        }
-      }}
-      className="space-y-3 w-full"
-    >
+    <form onSubmit={formSubmitHandler(orderItemForm)} className="space-y-3 w-full">
       <SyncNotice />
       <div className="flex flex-row gap-2">
         <Label className="text-lg text-foreground">Order Items</Label>

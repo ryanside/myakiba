@@ -21,6 +21,7 @@ import {
 import * as z from "zod";
 import { SettingsGroup } from "./settings-group";
 import { SettingsRow } from "./settings-row";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export function DeleteAccount() {
   const { data, isPending, isError, error } = useRead(settings.accountType);
@@ -77,18 +78,7 @@ export function DeleteAccount() {
                   all your data from our servers.
                 </DialogDescription>
               </DialogHeader>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    await form.handleSubmit();
-                  } catch (submitError) {
-                    console.error(submitError);
-                  }
-                }}
-                className="flex flex-col gap-4"
-              >
+              <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
                 {hasCredentialAccount ? (
                   <form.Field
                     name="password"

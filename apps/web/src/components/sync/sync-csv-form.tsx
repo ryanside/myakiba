@@ -8,6 +8,7 @@ import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo
 import { SyncNotice } from "@/components/sync/sync-notice";
 import { FileRejected } from "@/lib/errors/file-rejected";
 import { transformCSVData } from "@/lib/sync";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export default function SyncCsvForm({
   handleSyncCsvSubmit,
@@ -24,18 +25,7 @@ export default function SyncCsvForm({
   });
   return (
     <div className="w-full">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await csvForm.handleSubmit();
-          } catch (submitError) {
-            console.error(submitError);
-          }
-        }}
-        className="rounded-lg space-y-4 w-full"
-      >
+      <form onSubmit={formSubmitHandler(csvForm)} className="rounded-lg space-y-4 w-full">
         <SyncNotice />
         <csvForm.Field
           name="file"
