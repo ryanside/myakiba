@@ -58,7 +58,9 @@ export const MfcItems = {
     async (scope, { page, stored }) => {
       const id = page.mfcItemId;
       const picture = pictureOutcome(stored);
-      const { itemId, created } = await ensureMfcItem(scope.tx, page, stored);
+      const ensured = await ensureMfcItem(scope.tx, page, stored);
+      if (ensured.isErr()) return ensured;
+      const { itemId, created } = ensured.value;
 
       scope.log.set({
         mfc: {
@@ -76,10 +78,11 @@ export const MfcItems = {
       );
     },
     {
-      // S3 has no fallback, so a picture it did not take answers the logged 500 with its error.
+      // Neither failure has a fallback, so each answers the logged 500 with the error it raised.
       recover: async (_scope, _input, error) => {
         throw error.match({
           StoreItemPictureFailed: (failed) => failed.cause,
+          MfcItemNotPersisted: (unsaved) => unsaved,
           UnhandledException: (thrown) => thrown,
         });
       },

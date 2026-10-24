@@ -180,8 +180,12 @@ export const DataTransfer = {
     },
     {
       recover: async (scope, input, error) => {
-        const { cause } = error;
-        const original = cause instanceof Error ? cause : new Error(String(cause));
+        const thrown = error.match({
+          StoreItemPictureFailed: ({ cause }) => cause,
+          MfcItemNotPersisted: (unsaved) => unsaved,
+          UnhandledException: ({ cause }) => cause,
+        });
+        const original = thrown instanceof Error ? thrown : new Error(String(thrown));
         try {
           const recorded = await scope.execute(recordFailure, {
             jobId: input.jobId,
@@ -204,7 +208,7 @@ export const DataTransfer = {
               },
             ],
           });
-          throw cause;
+          throw thrown;
         }
       },
     },

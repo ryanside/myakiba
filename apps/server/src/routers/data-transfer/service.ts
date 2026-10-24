@@ -36,6 +36,7 @@ import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
+import type { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import type { MfcPageProblem } from "@myakiba/mfc/parse";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
@@ -592,7 +593,7 @@ const DataTransferService = {
           readonly problem: MfcPageProblem["kind"];
           readonly message: string;
         },
-      StoreItemPictureFailed
+      StoreItemPictureFailed | MfcItemNotPersisted
     >
   > {
     if (prepared.isErr()) {
@@ -609,45 +610,57 @@ const DataTransferService = {
     const ready = prepared.value;
 
     const now = new Date();
-    const view = await mutateImport(scope, userId, now, async (tx, current) => {
-      if (ready.kind === "parsed") await ensureMfcItem(tx, ready.page, ready.stored);
-      if (!current) return { value: current, changed: false };
-      if (current.row.jobId === upload.jobId) {
+    const mutated = await mutateImport<Result<ImportView | undefined, MfcItemNotPersisted>>(
+      scope,
+      userId,
+      now,
+      async (tx, current) => {
+        if (ready.kind === "parsed") {
+          const ensured = await ensureMfcItem(tx, ready.page, ready.stored);
+          if (ensured.isErr()) return { value: Result.err(ensured.error), changed: false };
+        }
+        if (!current) return { value: Result.ok(current), changed: false };
+        if (current.row.jobId === upload.jobId) {
+          await tx
+            .update(dataTransferImport)
+            .set({ heartbeatAt: now })
+            .where(eq(dataTransferImport.userId, userId));
+        }
+
+        const [waiting] = await tx
+          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
+          .from(dataTransferImportItem)
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        if (!waiting || waiting.status === "imported") {
+          return { value: Result.ok(current), changed: false };
+        }
+
+        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+        if (!arrived.has(upload.mfcItemId)) {
+          panic(
+            `MFC item ${upload.mfcItemId} was neither created nor found by its ingest for import ${upload.jobId}`,
+          );
+        }
+        await applyItemRows(tx, current, arrived, waiting.rows);
         await tx
-          .update(dataTransferImport)
-          .set({ heartbeatAt: now })
-          .where(eq(dataTransferImport.userId, userId));
-      }
-
-      const [waiting] = await tx
-        .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
-        .from(dataTransferImportItem)
-        .where(
-          and(
-            eq(dataTransferImportItem.userId, userId),
-            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-          ),
-        );
-      if (!waiting || waiting.status === "imported") return { value: current, changed: false };
-
-      const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
-      if (!arrived.has(upload.mfcItemId)) {
-        panic(
-          `MFC item ${upload.mfcItemId} was neither created nor found by its ingest for import ${upload.jobId}`,
-        );
-      }
-      await applyItemRows(tx, current, arrived, waiting.rows);
-      await tx
-        .update(dataTransferImportItem)
-        .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
-        .where(
-          and(
-            eq(dataTransferImportItem.userId, userId),
-            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-          ),
-        );
-      return { value: await settle(tx, userId, now), changed: true };
-    });
+          .update(dataTransferImportItem)
+          .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
+          .where(
+            and(
+              eq(dataTransferImportItem.userId, userId),
+              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+            ),
+          );
+        return { value: Result.ok(await settle(tx, userId, now)), changed: true };
+      },
+    );
+    if (mutated.isErr()) return Result.err(mutated.error);
+    const view = mutated.value;
 
     return Result.ok({ kind: "imported", import: view ? toImport(view) : null });
   },

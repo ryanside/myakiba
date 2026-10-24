@@ -1,4 +1,4 @@
-import { Result } from "better-result";
+import { Result, panic } from "better-result";
 import { and, eq, sql } from "drizzle-orm";
 import type { ItemRefresh, ItemUpload } from "@myakiba/contracts/mfc-items/schema";
 import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
@@ -10,6 +10,7 @@ import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
+import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 
 export type PictureOutcome = "stored" | "absent" | "rejected";
 
@@ -109,7 +110,11 @@ export async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Pr
   await tx.insert(entry_to_item).values(
     links.map((link) => {
       const entryId = entryIds.get(link.externalId);
-      if (!entryId) throw new Error(`Entry ${link.externalId} was not saved`);
+      if (!entryId) {
+        panic(
+          `Entry ${link.externalId} was not returned by its upsert while linking item ${itemId}`,
+        );
+      }
       return {
         entryId,
         itemId,
@@ -157,14 +162,14 @@ export async function ensureMfcItem(
   tx: Tx,
   page: MfcItemPage,
   stored: StoredPicture | null,
-): Promise<{ readonly itemId: string; readonly created: boolean }> {
+): Promise<Result<{ readonly itemId: string; readonly created: boolean }, MfcItemNotPersisted>> {
   const createdId = await createMfcItemIfAbsent(
     tx,
     page,
     stored?.kind === "stored" ? stored.url : null,
   );
-  if (createdId) return { itemId: createdId, created: true };
+  if (createdId) return Result.ok({ itemId: createdId, created: true });
   const existingId = await findMfcItem(tx, page.mfcItemId);
-  if (!existingId) throw new Error(`MFC item ${page.mfcItemId} was neither created nor found`);
-  return { itemId: existingId, created: false };
+  if (!existingId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
+  return Result.ok({ itemId: existingId, created: false });
 }

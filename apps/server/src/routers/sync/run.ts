@@ -26,6 +26,7 @@ import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
+import type { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { fetchedItemRows, idsToFetch, insertItemRows, retryRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
@@ -472,7 +473,10 @@ export async function completeSyncItem(
   { jobId, ...upload }: SyncItemUpload,
   prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
 ): Promise<
-  Result<CompleteSyncItemResult | null, SyncOrderAbsent | SyncOrderUnowned | StoreItemPictureFailed>
+  Result<
+    CompleteSyncItemResult | null,
+    SyncOrderAbsent | SyncOrderUnowned | StoreItemPictureFailed | MfcItemNotPersisted
+  >
 > {
   const mfcItemId = upload.mfcItemId;
   if (prepared.isErr()) {
@@ -484,7 +488,7 @@ export async function completeSyncItem(
     return recorded.map((outcome) => (outcome === null ? null : { outcome: "failed", reason }));
   }
   const ready = prepared.value;
-  return withRun<CompleteSyncItemResult, SyncOrderAbsent | SyncOrderUnowned>(
+  return withRun<CompleteSyncItemResult, SyncOrderAbsent | SyncOrderUnowned | MfcItemNotPersisted>(
     scope,
     sessionId,
     userId,
@@ -506,7 +510,8 @@ export async function completeSyncItem(
 
         const absent = missingOrder(run);
         if (absent) return Result.err(absent);
-        if (ready.kind === "parsed") await ensureMfcItem(tx, ready.page, ready.stored);
+        if (ready.kind === "parsed")
+          yield* Result.await(ensureMfcItem(tx, ready.page, ready.stored));
         const [imported] = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
           [mfcItemId],
           tx,

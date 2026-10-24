@@ -734,6 +734,7 @@ export const SyncRuns = {
         const { missingOrder, original } = error.match({
           SyncOrderAbsent: (absent) => ({ missingOrder: true, original: absent }),
           SyncOrderUnowned: (unowned) => ({ missingOrder: false, original: unowned }),
+          MfcItemNotPersisted: (unsaved) => ({ missingOrder: false, original: unsaved }),
           StoreItemPictureFailed: ({ cause }) => ({
             missingOrder: false,
             original: cause instanceof Error ? cause : new Error(String(cause)),
