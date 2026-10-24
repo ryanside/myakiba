@@ -380,12 +380,21 @@ for (const [signal, exitCode] of [
 }
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
-let installedLock = "";
+let installedManifests = "";
+/**
+ * Installs once per set of manifests. The key covers every package.json as well as bun.lock,
+ * because a commit can declare a dependency without touching the lockfile, and reusing the
+ * last revision's node_modules would then leave that dependency unlinked.
+ */
 async function install(revision: string) {
-  const lock = await $`git rev-parse ${`${revision}:bun.lock`}`.cwd(worktree).text();
-  if (lock !== installedLock) {
+  const tree = await $`git ls-tree -r ${revision}`.cwd(worktree).text();
+  const manifests = tree
+    .split("\n")
+    .filter((line) => /\t(?:bun\.lock|(?:.*\/)?package\.json)$/.test(line))
+    .join("\n");
+  if (manifests !== installedManifests) {
     await $`bun install --frozen-lockfile`.cwd(worktree).quiet();
-    installedLock = lock;
+    installedManifests = manifests;
   }
 }
 
