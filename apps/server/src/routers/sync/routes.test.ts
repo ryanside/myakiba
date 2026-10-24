@@ -1924,3 +1924,32 @@ test("a missing Item import completion is refused instead of reporting success",
     update.mockRestore();
   }
 });
+
+test("a corrupt retained sync payload refuses retry explicitly and logs its schema failure", async () => {
+  const run = await start("item", { items: [X] });
+  await fail(run, X);
+  await db.execute(
+    sql`UPDATE sync_session SET request_payload = '{"type":"obsolete"}'::jsonb WHERE id = ${run.syncSessionId}`,
+  );
+  const events: unknown[] = [];
+  initLogger({
+    silent: true,
+    drain: ({ event }) => {
+      events.push(event);
+    },
+  });
+  try {
+    expect(await post(`/sessions/${run.syncSessionId}/retry`)).toEqual({
+      status: 409,
+      body: "This import can't be retried",
+    });
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        error: expect.objectContaining({ name: "StoredSyncPayloadInvalid" }),
+      }),
+    );
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "failed" });
+  } finally {
+    initLogger({ enabled: false });
+  }
+});
