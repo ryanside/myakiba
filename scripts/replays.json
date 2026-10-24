@@ -1149,7 +1149,7 @@
       ]
     },
     {
-      "fix": "1a04de938c42c282a96daf5f41e92ddef2e919c0",
+      "fix": "860b425edd00fd7c5156d0d6b2fb8ee77d7cbd29",
       "bug": "Resend refused verification and reset emails but auth requests answered success",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1158,7 +1158,7 @@
       ]
     },
     {
-      "fix": "92786dd1d15f71c9f6a8b4bdbd08916bacd7f926",
+      "fix": "b53a73fda737e4082e273dacc80323d7617bbf5d",
       "bug": "unsupported user currency and date format values were accepted at sign-up and update",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1169,7 +1169,7 @@
       ]
     },
     {
-      "fix": "de7f6c623f4f0cfe690650f98fb0125d53d869dc",
+      "fix": "619a9044e76ed5bdb1de1050e4923f8ef6639c5a",
       "bug": "worker shutdown exited zero on a thrown health stop and hung on stuck stages or rejected flush",
       "test": "apps/worker/shutdown.test.ts",
       "fixed": [
@@ -1182,19 +1182,19 @@
       ]
     },
     {
-      "fix": "70c3156aa6b2f7d25167e6b8f00c149178404d1b",
+      "fix": "bba418eae667673676c4758ba667e80830fbcce8",
       "bug": "Redis connection error events bypassed evlog",
       "test": "packages/redis/src/client.test.ts",
       "fixed": ["the shared Redis client reports emitted errors through evlog"]
     },
     {
-      "fix": "70c3156aa6b2f7d25167e6b8f00c149178404d1b",
+      "fix": "bba418eae667673676c4758ba667e80830fbcce8",
       "bug": "Redis connection error events bypassed evlog",
       "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
       "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
     },
     {
-      "fix": "8b680cf1bfb75810de5751258520c0b475991c96",
+      "fix": "6dbb035be7d5d521243352fdf57d445b344cf08f",
       "bug": "fatal server errors during asynchronous boot bypassed evlog and did not exit",
       "test": "apps/server/src/fatal-errors.test.ts",
       "fixed": [
@@ -1205,7 +1205,7 @@
       ]
     },
     {
-      "fix": "9cad4bbd9287060ac33fe63c0d0280b235fa6b8f",
+      "fix": "89dd81426801639af37b213341673c04420ed17e",
       "bug": "auth import eagerly generated OpenAPI and cached its possibly unhandled rejection",
       "test": "packages/auth/src/openapi.test.ts",
       "fixed": [
@@ -1215,7 +1215,7 @@
       ]
     },
     {
-      "fix": "2d141bc4c4977826ecc4cfac0e77094aa6fb8296",
+      "fix": "31e122b927e8362597b91b6f22eecc0ad98fda33",
       "bug": "best-effort cooldown write failures rolled back Item Refresh and status read failures answered 500",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
