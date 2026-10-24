@@ -12,7 +12,6 @@ import {
 } from "@myakiba/db/schema/figure";
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, sql } from "drizzle-orm";
-import { syncJobStatusSchema } from "./model";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
@@ -375,14 +374,14 @@ class SyncService {
     }
     const cached = read.isOk() ? read.value : null;
     if (cached) {
-      const parsedStatus = parseJobStatusPayload(cached);
+      const parsedStatus = parseJobStatusPayload(cached).unwrapOr(null);
       const sessionOverridesSnapshot =
         parsedStatus !== null &&
         (session.interrupted ||
           parsedStatus.terminalState !== terminalState ||
           (parsedStatus.revision ?? 0) !== session.revision);
       if (parsedStatus && !sessionOverridesSnapshot) {
-        return Result.ok(syncJobStatusSchema.parse(parsedStatus));
+        return Result.ok(parsedStatus);
       }
 
       if (!parsedStatus) {

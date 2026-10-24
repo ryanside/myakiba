@@ -3,6 +3,7 @@ import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { syncJobStatusSchema } from "@myakiba/contracts/sync/schema";
 import { parseJson } from "@myakiba/utils/parse-json";
+import { JobStatusPayloadInvalid } from "./errors/job-status-payload-invalid";
 import { PublishJobStatusFailed } from "./errors/publish-job-status-failed";
 import {
   JOB_STATUS_CHANNEL_PREFIX,
@@ -17,8 +18,10 @@ export const getJobStatusSnapshotKey = (jobId: string): string =>
 export const getJobStatusChannel = (jobId: string): string =>
   `${JOB_STATUS_CHANNEL_PREFIX}${jobId}`;
 
-export const parseJobStatusPayload = (value: string): SyncJobStatus | null =>
-  parseJson(syncJobStatusSchema, value).unwrapOr(null);
+export const parseJobStatusPayload = (
+  value: string,
+): Result<SyncJobStatus, JobStatusPayloadInvalid> =>
+  parseJson(syncJobStatusSchema, value).mapError((cause) => new JobStatusPayloadInvalid(cause));
 
 const WRITE_REVISION_SCRIPT = `
 local cached = redis.call('GET', KEYS[1])

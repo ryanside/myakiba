@@ -16,12 +16,18 @@ const status: SyncJobStatus = {
 };
 
 test("reads a stored job status", () => {
-  expect(parseJobStatusPayload(JSON.stringify(status))).toEqual(status);
+  expect(parseJobStatusPayload(JSON.stringify(status)).unwrap()).toEqual(status);
 });
 
 test.each([
   ["text that is not JSON", '{"jobId":'],
   ["JSON that is not a job status", JSON.stringify({ ...status, phase: "lost" })],
-])("answers null for %s", (_case, payload) => {
-  expect(parseJobStatusPayload(payload)).toBeNull();
+])("answers JobStatusPayloadInvalid for %s", (_case, payload) => {
+  const parsed = parseJobStatusPayload(payload);
+  expect(parsed.isErr()).toBe(true);
+  if (parsed.isErr())
+    expect(parsed.error).toMatchObject({
+      _tag: "JobStatusPayloadInvalid",
+      cause: expect.anything(),
+    });
 });

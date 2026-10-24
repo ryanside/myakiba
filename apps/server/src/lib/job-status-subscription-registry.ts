@@ -74,7 +74,7 @@ class JobStatusSubscriptionRegistry {
   private readonly handleMessage = (channel: string, payload: string): void => {
     const parsedStatus = parseJobStatusPayload(payload);
 
-    if (parsedStatus === null) {
+    if (parsedStatus.isErr()) {
       this.publishToChannel(channel, {
         kind: "error",
         error: new JobStatusSubscriptionLost({ reason: "invalid_payload" }),
@@ -84,7 +84,7 @@ class JobStatusSubscriptionRegistry {
 
     this.publishToChannel(channel, {
       kind: "message",
-      status: parsedStatus,
+      status: parsedStatus.value,
     });
   };
 

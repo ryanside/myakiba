@@ -79,8 +79,8 @@ await mock.module("@myakiba/redis/client", () => ({
       const [channel, raw] = args;
       const decoded = z.tuple([z.string(), z.string()]).parse([channel, raw]);
       const [snapshotChannel, serialized] = decoded;
-      const next = parseJobStatusPayload(serialized);
-      const current = parseJobStatusPayload(redisValues.get(key) ?? "");
+      const next = parseJobStatusPayload(serialized).unwrapOr(null);
+      const current = parseJobStatusPayload(redisValues.get(key) ?? "").unwrapOr(null);
       if ((current?.revision ?? -1) > (next?.revision ?? 0)) return 0;
       redisValues.set(key, serialized);
       for (const relay of subscribers) relay(snapshotChannel, serialized);
@@ -311,7 +311,9 @@ const detailSchema = z.object({
 const HIDDEN = "MyFigureCollection hides this item. Check your MyFigureCollection content settings";
 
 function snapshot(jobId: string): SyncJobStatus {
-  const status = parseJobStatusPayload(redisValues.get(getJobStatusSnapshotKey(jobId)) ?? "");
+  const status = parseJobStatusPayload(
+    redisValues.get(getJobStatusSnapshotKey(jobId)) ?? "",
+  ).unwrapOr(null);
   if (!status) throw new Error(`no snapshot for ${jobId}`);
   return status;
 }
@@ -1031,7 +1033,7 @@ async function openStream(jobId: string) {
             .filter((line) => line.startsWith("data:"))
             .map((line) => line.slice("data:".length).trim())
             .join("");
-          const status = parseJobStatusPayload(data);
+          const status = parseJobStatusPayload(data).unwrapOr(null);
           if (status) return status;
           continue;
         }
@@ -1304,7 +1306,7 @@ test("failure reporting accepts the full hourly ingest budget", async () => {
   expect(await fail(run, X)).toMatchObject({ status: 429 });
 });
 
-test("polling keeps the last status through a Redis blip and retries", async () => {
+test("polling uses durable status through a Redis blip and retries", async () => {
   const run = await start("item", { items: [X] });
   const stream = await openStream(run.jobId);
   const clock = spyOn(Date, "now");
@@ -1317,7 +1319,11 @@ test("polling keeps the last status through a Redis blip and retries", async () 
     statusReadFailures = 1;
     const now = Date.now();
     clock.mockReturnValue(now + 31_000);
-    expect(await stream.next()).toEqual(initial);
+    expect(await stream.next()).toMatchObject({
+      phase: "importing",
+      terminalState: null,
+      progress: { total: 1, processed: 0 },
+    });
     expect(statusReadFailures).toBe(0);
     clock.mockReturnValue(now + 62_000);
     expect(await stream.next()).toMatchObject({ terminalState: null });
@@ -1655,7 +1661,6 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
 test("an unanswered status cache read uses the DB row and logs JobStatusCacheUnavailable", async () => {
   const run = await start("item", { items: [X] });
   const { default: service } = await import("./service");
-  const { initLogger } = await import("evlog");
   const events: unknown[] = [];
   initLogger({
     silent: true,
@@ -1847,8 +1852,12 @@ test("hanging job status cache read settles within its deadline", async () => {
   const hung = Promise.withResolvers<never>();
   hungStatusRead = hung;
   const realTimer = globalThis.setTimeout;
-  const timer = spyOn(globalThis, "setTimeout").mockImplementation((fn, ms, ...args) =>
-    realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+  const timer = spyOn(globalThis, "setTimeout").mockImplementation(
+    Object.assign(
+      (...[fn, ms, ...args]: Parameters<typeof setTimeout>) =>
+        realTimer(fn, ms === 1000 ? 5 : ms, ...args),
+      { __promisify__: realTimer.__promisify__ },
+    ),
   );
   const pending = service.getJobStatus(run.jobId, userId, db);
   let guard: ReturnType<typeof setTimeout> | undefined;

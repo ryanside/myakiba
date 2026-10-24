@@ -21,7 +21,7 @@ test.skipIf(!redisUrl && !process.env.CI)(
     const received: number[] = [];
     const published = Promise.withResolvers<null>();
     subscriber.on("message", (_channel, raw: string) => {
-      received.push(parseJobStatusPayload(raw)?.revision ?? 0);
+      received.push(parseJobStatusPayload(raw).unwrapOr(null)?.revision ?? 0);
       if (received.length === 2) published.resolve(null);
     });
     const now = new Date().toISOString();
@@ -43,7 +43,7 @@ test.skipIf(!redisUrl && !process.env.CI)(
       await writeJobStatusSnapshotAndPublish(client, jobId, snapshot(3));
       await published.promise;
       await writeJobStatusSnapshotAndPublish(client, jobId, snapshot(2));
-      expect(parseJobStatusPayload((await client.get(key)) ?? "")?.revision).toBe(3);
+      expect(parseJobStatusPayload((await client.get(key)) ?? "").unwrapOr(null)?.revision).toBe(3);
       expect(await client.ttl(key)).toBeGreaterThan(0);
       expect(received).toEqual([1, 3]);
     } finally {
