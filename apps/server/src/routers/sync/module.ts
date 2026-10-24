@@ -648,11 +648,15 @@ export const Sync = {
   completeItemSession: command(
     { action: "sync.completeItemSession", failure: "Failed to update import record" },
     async (scope, input: { readonly id: string; readonly statusMessage: string }) => {
-      await SyncService.updateSyncSession(
+      const updated = await SyncService.updateSyncSession(
         input.id,
         { status: "completed", statusMessage: input.statusMessage, completedAt: new Date() },
         scope.tx,
       );
+      if (!updated)
+        panic(
+          `sync.completeItemSession could not update the Item import session ${input.id} that sync.createSession just created`,
+        );
       return Result.ok(null);
     },
   ),

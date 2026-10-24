@@ -232,39 +232,30 @@ export const Items = {
         ]),
       );
 
-      const entryToItemLinks = entryLinks
-        .map((entryLink) => {
-          if (entryLink.entryId) {
-            return {
-              entryId: entryLink.entryId,
-              role: entryLink.role ?? "",
-              category: entryLink.category,
-              name: existingEntriesById.get(entryLink.entryId)?.name ?? "",
-            };
-          }
-
-          const lookupKey = `${entryLink.name}|${entryLink.category}`;
-          const matchedEntry = entriesByNameCategory.get(lookupKey);
-          if (!matchedEntry) {
-            return null;
-          }
+      const entryToItemLinks = entryLinks.map((entryLink) => {
+        if (entryLink.entryId) {
           return {
-            entryId: matchedEntry.id,
+            entryId: entryLink.entryId,
             role: entryLink.role ?? "",
-            category: matchedEntry.category,
-            name: matchedEntry.name,
+            category: entryLink.category,
+            name: existingEntriesById.get(entryLink.entryId)?.name ?? "",
           };
-        })
-        .filter(
-          (
-            entryLink,
-          ): entryLink is {
-            entryId: string;
-            role: string;
-            category: string;
-            name: string;
-          } => entryLink !== null,
-        );
+        }
+
+        const lookupKey = `${entryLink.name}|${entryLink.category}`;
+        const matchedEntry = entriesByNameCategory.get(lookupKey);
+        if (!matchedEntry) {
+          panic(
+            `item.createCustom could not link named Entry ${lookupKey} after reading and inserting its Entries`,
+          );
+        }
+        return {
+          entryId: matchedEntry.id,
+          role: entryLink.role ?? "",
+          category: matchedEntry.category,
+          name: matchedEntry.name,
+        };
+      });
 
       if (entryToItemLinks.length > 0) {
         await scope.tx
