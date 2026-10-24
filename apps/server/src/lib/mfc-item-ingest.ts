@@ -8,16 +8,7 @@ import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageProblem } from "@myakiba/mfc/parse";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
-
-const PROBLEM_MESSAGE = {
-  challenge: "MyFigureCollection showed a security check instead of the item",
-  not_found: "MyFigureCollection did not show this item",
-  not_an_item_page: "The page is not a MyFigureCollection item page",
-  wrong_item: "The page is for a different item",
-  missing_title: "The item page has no title",
-  missing_category: "The item page has no category",
-  unsupported_category: "This item category is not supported",
-} as const satisfies Record<MfcPageProblem["kind"], string>;
+import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
 
 export type PictureOutcome = "stored" | "absent" | "rejected";
 

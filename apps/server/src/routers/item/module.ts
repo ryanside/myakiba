@@ -16,12 +16,16 @@ import { mfcItemId } from "@myakiba/mfc/page";
 import { redis } from "@myakiba/redis/client";
 import { getResyncCooldown, setResyncCooldown } from "@myakiba/redis/item-resync";
 import type { ItemResyncState } from "@myakiba/redis/item-resync";
-import { command, fail, ok, proceed, query } from "@/domain/kernel";
+import { Result, panic } from "better-result";
+import { command, query } from "@/domain/kernel";
+import { EntryCategoryMismatch } from "./errors/entry-category-mismatch";
+import { EntryNotFound } from "./errors/entry-not-found";
+import { ItemNotFound } from "./errors/item-not-found";
+import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
+import { ResyncCooldownActive } from "./errors/resync-cooldown-active";
 import { findMfcItem, pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
 import type { CustomItemInput, EntriesWithRoles } from "./model";
 import { lockItem, refreshItem } from "./refresh-item";
-
-const RECENTLY_REFRESHED = "Item details were recently refreshed";
 
 type ResyncResult = ItemResyncState & { readonly saved: "refreshed" | "unchanged" };
 
@@ -53,7 +57,10 @@ async function cooldownHeldUntil(tx: ReadTx, itemId: string): Promise<string | n
 
 async function currentTransactionId(tx: Tx): Promise<string> {
   const [row] = await tx.execute<{ id: string }>(sql`select pg_current_xact_id()::text as id`);
-  if (!row) throw new Error("pg_current_xact_id returned no row");
+  if (!row)
+    panic(
+      "select pg_current_xact_id() returned no row, so item.resync cannot name its transaction",
+    );
   return row.id;
 }
 
@@ -96,7 +103,9 @@ export const Items = {
         });
 
       if (!createdItem) {
-        throw new Error("FAILED_TO_CREATE_CUSTOM_ITEM");
+        panic(
+          "Inserting the custom item returned no row, so item.createCustom has nothing to link",
+        );
       }
 
       const entryLinks = input.entries ?? [];
@@ -123,7 +132,7 @@ export const Items = {
       );
 
       if (entryIds.length > existingEntries.length) {
-        return fail("not_found", "Entry not found");
+        return Result.err(new EntryNotFound());
       }
 
       for (const entryLink of entryLinks) {
@@ -132,10 +141,10 @@ export const Items = {
         }
         const matchedEntry = existingEntriesById.get(entryLink.entryId);
         if (!matchedEntry) {
-          return fail("not_found", "Entry not found");
+          return Result.err(new EntryNotFound());
         }
         if (matchedEntry.category !== entryLink.category) {
-          return fail("bad_request", "Entry category mismatch");
+          return Result.err(new EntryCategoryMismatch());
         }
       }
 
@@ -295,7 +304,7 @@ export const Items = {
           entries: entrySummary,
         },
       };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -319,7 +328,7 @@ export const Items = {
 
       const result: ItemReleasesResponse = { releases };
       scope.log.set({ result: { count: result.releases.length } });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -400,7 +409,7 @@ export const Items = {
         )
         .where(and(eq(item.source, "mfc"), eq(item.externalId, input.id)));
 
-      if (!itemData) return fail("not_found", "Item not found");
+      if (!itemData) return Result.err(new ItemNotFound());
 
       const { isWishlisted, ...itemRecord } = itemData;
       const result = {
@@ -410,7 +419,7 @@ export const Items = {
         },
         isWishlisted,
       };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -444,7 +453,7 @@ export const Items = {
         .orderBy(desc(order.releaseDate), desc(order.createdAt), desc(order.id));
 
       const result = { orders };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -487,7 +496,7 @@ export const Items = {
         .orderBy(desc(collection.createdAt), desc(collection.id));
 
       const result = { collection: collectionItems };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -496,10 +505,10 @@ export const Items = {
     async (scope, input: { readonly id: number }) => {
       scope.log.set({ item: { externalId: input.id } });
       const found = await findResyncItem(scope.tx, input.id);
-      if (!found) return fail("not_found", "Item not found");
+      if (!found) return Result.err(new ItemNotFound());
       const state = await resyncState(scope.tx, found.itemId);
       scope.log.set({ resyncStatus: state.status });
-      return ok(state);
+      return Result.ok(state);
     },
   ),
 
@@ -510,23 +519,23 @@ export const Items = {
       before: async (scope, input: { readonly id: number } & ItemRefresh) => {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, input.id);
-        if (!found) return fail("not_found", "Item not found");
+        if (!found) return Result.err(new ItemNotFound());
         if (await cooldownHeldUntil(scope.tx, found.itemId)) {
-          return fail("too_many_requests", RECENTLY_REFRESHED);
+          return Result.err(new ResyncCooldownActive());
         }
         const read = await readMfcItemPage(found.id, input);
         if (read.kind === "unreadable") {
           scope.log.set({ mfc: { itemId: found.id, outcome: read.problem } });
-          return fail("bad_request", read.message);
+          return Result.err(new MfcPageRejected({ problem: read.problem }));
         }
-        return proceed({ itemId: found.itemId, page: read.page, stored: read.stored });
+        return scope.proceed({ itemId: found.itemId, page: read.page, stored: read.stored });
       },
     },
     async (scope, { itemId, page, stored }) => {
       const locked = await lockItem(scope.tx, itemId);
-      if (!locked) return fail("not_found", "Item not found");
+      if (!locked) return Result.err(new ItemNotFound());
       if (await cooldownHeldUntil(scope.tx, itemId)) {
-        return fail("too_many_requests", RECENTLY_REFRESHED);
+        return Result.err(new ResyncCooldownActive());
       }
       const image = stored?.kind === "stored" ? stored.url : locked.image;
       const outcome = await refreshItem(scope.tx, locked, page, image);
@@ -544,7 +553,7 @@ export const Items = {
         itemId,
         await currentTransactionId(scope.tx),
       );
-      return ok<ResyncResult>({
+      return Result.ok<ResyncResult>({
         status: "cooldown",
         cooldownExpiresAt,
         saved: outcome === "unchanged" ? "unchanged" : "refreshed",
