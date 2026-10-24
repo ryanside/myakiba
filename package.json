@@ -68,7 +68,10 @@
     "ultracite": "7.10.7"
   },
   "overrides": {
-    "@better-auth/core": "1.6.23"
+    "@better-auth/core": "1.6.23",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
