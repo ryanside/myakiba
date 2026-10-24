@@ -809,6 +809,10 @@ export const SyncRuns = {
       if (result.outcome === "not_found") return Result.err(new ImportNotFound());
       if (result.outcome === "expired") return scope.failAfterCommit(new RetryWindowExpired());
       if (result.outcome === "unavailable") return scope.failAfterCommit(new RetryUnavailable());
+      if (result.outcome === "invalid_payload") {
+        scope.log.error(result.failure);
+        return scope.failAfterCommit(result.failure);
+      }
       scope.log.set({
         sync: { jobId: result.jobId },
         items: { toFetch: result.missingMfcItemIds.length },

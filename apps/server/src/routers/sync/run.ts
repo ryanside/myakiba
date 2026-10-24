@@ -36,6 +36,7 @@ import { buildRetryJobData } from "./retry";
 import { isLapsed, persistenceFailure, settleRun } from "./run-state";
 import type { RunEnd } from "./run-state";
 import SyncService from "./service";
+import { StoredSyncPayloadInvalid } from "./errors/stored-sync-payload-invalid";
 import { SyncOrderAbsent } from "./errors/sync-order-absent";
 import type { SyncOrderUnowned } from "./errors/sync-order-unowned";
 
@@ -610,6 +611,7 @@ export type RetrySyncRunResult =
     }
   | { readonly outcome: "not_found" }
   | { readonly outcome: "expired" }
+  | { readonly outcome: "invalid_payload"; readonly failure: StoredSyncPayloadInvalid }
   | { readonly outcome: "unavailable" };
 
 const unavailable = Result.ok({ result: { outcome: "unavailable" }, change: null } as const);
@@ -638,7 +640,14 @@ export async function retrySyncRun(
         return Result.ok({ result: { outcome: "expired" }, change: null });
       }
       const parsed = jobDataSchema.safeParse(run.payload);
-      if (!parsed.success) return unavailable;
+      if (!parsed.success)
+        return Result.ok({
+          result: {
+            outcome: "invalid_payload",
+            failure: new StoredSyncPayloadInvalid({ sessionId, cause: parsed.error }),
+          },
+          change: null,
+        });
       const payload = parsed.data;
       if (missingOrder(run)) return unavailable;
 

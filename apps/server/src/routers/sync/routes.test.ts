@@ -1931,23 +1931,24 @@ test("a corrupt retained sync payload refuses retry explicitly and logs its sche
   await db.execute(
     sql`UPDATE sync_session SET request_payload = '{"type":"obsolete"}'::jsonb WHERE id = ${run.syncSessionId}`,
   );
-  const events: unknown[] = [];
-  initLogger({
-    silent: true,
-    drain: ({ event }) => {
-      events.push(event);
-    },
-  });
+  const { createRequestLogger } = await import("evlog");
+  const { serve } = await import("@/domain/kernel");
+  const { Viewer } = await import("@/domain/viewer");
+  const { SyncRuns } = await import("./module");
+  initLogger({ enabled: true });
+  const log = createRequestLogger();
   try {
+    await serve({ viewer: Viewer.fromSession({ user: { id: userId } }), log }, SyncRuns.retry, {
+      id: run.syncSessionId,
+      emailVerified: true,
+    });
+    expect(log.getContext()).toMatchObject({
+      error: { name: "StoredSyncPayloadInvalid", cause: expect.anything() },
+    });
     expect(await post(`/sessions/${run.syncSessionId}/retry`)).toEqual({
       status: 409,
       body: "This import can't be retried",
     });
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        error: expect.objectContaining({ name: "StoredSyncPayloadInvalid" }),
-      }),
-    );
     expect(await session(run.syncSessionId)).toMatchObject({ status: "failed" });
   } finally {
     initLogger({ enabled: false });
