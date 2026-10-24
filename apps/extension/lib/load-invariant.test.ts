@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import type { Mock } from "bun:test";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import {
   CHALLENGE_PAGE,
@@ -280,6 +281,17 @@ async function play(seed: number, style: CommitStyle | undefined) {
     },
   };
 }
+
+let warn: Mock<typeof console.warn>;
+
+// Every failed item logs a warning, and a soak fails hundreds. A defect still logs an error.
+beforeEach(() => {
+  warn = spyOn(console, "warn").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  warn.mockRestore();
+});
 
 test.each(COMMIT_STYLES)(
   "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (%s commits)",

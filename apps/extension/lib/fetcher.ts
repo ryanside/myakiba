@@ -431,8 +431,8 @@ export function createFetcher(deps: FetcherDeps) {
   }
 
   /**
-   * Answers one item, and is where its failures end. An expected failure is answered with its wire code. A defect is
-   * answered unexpected_page, so the queue moves on instead of retrying it forever.
+   * Answers one item, and is where its failures end. An expected failure is logged and answered with its wire code.
+   * A defect is reported and answered unexpected_page, so the queue moves on instead of retrying it forever.
    */
   async function attempt(job: Job, signal: AbortSignal): Promise<Outcome | null> {
     const requester = liveRequester(job, signal);
@@ -447,8 +447,16 @@ export function createFetcher(deps: FetcherDeps) {
         return await solveChallenge(job, requester, reading.status, signal);
       });
       if (answer.isOk()) return { kind: "result", result: { ok: true, ...answer.value } };
-      return outcomeOf(answer.error);
-    } catch {
+      const outcome = outcomeOf(answer.error);
+      if (outcome !== null && outcome.kind !== "rate_limited") {
+        console.warn(`${answer.error._tag} for MFC item ${job.mfcItemId}: ${answer.error.message}`);
+      }
+      return outcome;
+    } catch (error) {
+      console.error(
+        `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
+        error,
+      );
       return failed("unexpected_page");
     }
   }

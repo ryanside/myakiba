@@ -1,4 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import type { Mock } from "bun:test";
+import { Panic } from "better-result";
 import {
   CHALLENGE_PAGE,
   COMMIT_STYLES,
@@ -1736,5 +1738,97 @@ describe("a collector run that fails", () => {
       { ok: true, html: itemPage(2), picture: null },
     ]);
     expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+  });
+});
+
+describe("the developer log", () => {
+  let warn: Mock<typeof console.warn>;
+  let error: Mock<typeof console.error>;
+  const warned = () => warn.mock.calls.map((call) => call.join(" "));
+
+  beforeEach(() => {
+    warn = spyOn(console, "warn").mockImplementation(() => {});
+    error = spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+    error.mockRestore();
+  });
+
+  test("names each failed item's error and id once, without the page", async () => {
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) =>
+        mfcItemId === 1 ? page(notFoundPage(false), { status: 404 }) : page(itemPage(99)),
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+
+    expect(warned()).toHaveLength(2);
+    expect(warned()[0]).toContain("MfcSignedOut for MFC item 1:");
+    expect(warned()[1]).toContain("MfcWrongItem for MFC item 2:");
+    expect(warned().join("\n")).not.toContain("<html");
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("stays quiet for an item that imports, a rate limit it backs off from and a cancelled item", async () => {
+    let limited = false;
+    const extension = fakeExtension({
+      pages: ({ mfcItemId }) => {
+        if (mfcItemId !== 1 || limited) return page(itemPage(mfcItemId));
+        limited = true;
+        return rateLimited("5");
+      },
+      navigationMs: () => 5000,
+    });
+    const run = extension.run([1]);
+    await extension.clock.runUntil(run.done);
+    const cancelled = extension.run([2]);
+    await extension.clock.runUntil(() => extension.tabs.loads.length > 0);
+    extension.fetcher.cancel(cancelled.key);
+    await extension.settle();
+
+    expect(run.results()).toEqual([{ ok: true, html: itemPage(1), picture: null }]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("names an unexpected throw from the collector as an unhandled exception", async () => {
+    const extension = fakeExtension({
+      pages: () => {
+        throw new TypeError("page.html is not a function");
+      },
+    });
+    const run = extension.run([3]);
+    await extension.clock.runUntil(run.done);
+
+    expect(warned()).toEqual([
+      expect.stringContaining(
+        "UnhandledException for MFC item 3: Unhandled exception: page.html is not a function",
+      ),
+    ]);
+  });
+
+  test("reports a defect inside the attempt as an error with its Panic", async () => {
+    const stored = memoryValue(OPEN_THROTTLE);
+    const extension = fakeExtension({
+      throttleState: {
+        load: stored.load,
+        save: async (next) => {
+          if (next.pausedUntil > 0) throw new Error("QuotaExceededError");
+          await stored.save(next);
+        },
+      },
+      pages: () => page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" }),
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledTimes(1);
+    const [message, defect] = error.mock.calls[0] ?? [];
+    expect(String(message)).toContain("MFC item 7");
+    expect(Panic.is(defect)).toBe(true);
   });
 });
