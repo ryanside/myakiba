@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { memoryValue } from "../test/fake-browser";
+import { Result } from "better-result";
+import { fakeClock, memoryValue } from "../test/fake-browser";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcQueueHalted } from "./errors/mfc-queue-halted";
+import { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import { OPEN_THROTTLE, THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
-import type { Throttle } from "./throttle";
+import type { Throttle, TurnFailure } from "./throttle";
 
 const START = 1_000_000;
 const MINUTE = 60_000;
@@ -71,6 +75,131 @@ describe("MFC's answers on the books", () => {
 
     expect(state.peek().haltedUntil).toBe(at(MINUTE) + THROTTLE.maxPauseMs);
   });
+});
+
+describe("a throttle turn", () => {
+  function turns(initial = OPEN_THROTTLE) {
+    const clock = fakeClock(START);
+    const state = memoryValue(initial);
+    const throttle = createThrottle({ clock, random: () => 0.5, state });
+    return { clock, state, throttle };
+  }
+
+  test("runs its work and answers what the work answers", async () => {
+    const { throttle } = turns();
+    const turn = await throttle.load(new AbortController().signal, async () => Result.ok(7), 1000);
+
+    expect(turn.isOk() && turn.value).toBe(7);
+  });
+
+  test("while the queue is halted, answers MfcQueueHalted without running its work or writing the books", async () => {
+    const halted = { ...OPEN_THROTTLE, haltedUntil: START + MINUTE };
+    const { throttle, state } = turns(halted);
+    let ran = false;
+    const turn = await throttle.load(new AbortController().signal, async () => {
+      ran = true;
+      return Result.ok(null);
+    });
+
+    expect(turn.isErr() && MfcQueueHalted.is(turn.error) && turn.error.until).toBe(START + MINUTE);
+    expect(ran).toBe(false);
+    expect(state.peek()).toEqual(halted);
+  });
+
+  test("whose attempt was abandoned answers AttemptAbandoned without running its work", async () => {
+    const { throttle } = turns();
+    const cancelled = new AbortController();
+    cancelled.abort();
+    let ran = false;
+    const turn = await throttle.load(cancelled.signal, async () => {
+      ran = true;
+      return Result.ok(null);
+    });
+
+    expect(turn.isErr() && AttemptAbandoned.is(turn.error)).toBe(true);
+    expect(ran).toBe(false);
+  });
+
+  test("whose work never answers times out once its grace has run out", async () => {
+    const { clock, throttle } = turns();
+    let answer: Result<never, TurnFailure> | null = null;
+    void throttle
+      .load<never, never>(new AbortController().signal, () => new Promise<never>(() => {}), 1000)
+      .then((turn) => {
+        answer = turn;
+      });
+    await clock.runUntil(() => answer !== null);
+
+    expect(clock.now() - START).toBe(1000 + THROTTLE.graceMs);
+    expect(answer).toMatchObject({
+      status: "error",
+      error: { _tag: "MfcLoadTimedOut", timeoutMs: 1000 },
+    });
+  });
+
+  test("reads an error its work answers after the timeout stopped it as that timeout", async () => {
+    const { clock, throttle } = turns();
+    let answer: Result<never, Error | TurnFailure> | null = null;
+    void throttle
+      .load<never, Error>(
+        new AbortController().signal,
+        (timeout) =>
+          new Promise<Result<never, Error>>((resolve) => {
+            timeout.addEventListener("abort", () => resolve(Result.err(new Error("aborted"))));
+          }),
+        1000,
+      )
+      .then((turn) => {
+        answer = turn;
+      });
+    await clock.runUntil(() => answer !== null);
+
+    expect(clock.now() - START).toBe(1000);
+    expect(answer).toMatchObject({ status: "error", error: { _tag: "MfcLoadTimedOut" } });
+  });
+
+  test("whose books cannot be read answers SessionStorageUnavailable without running its work", async () => {
+    const { clock } = turns();
+    const unavailable = new SessionStorageUnavailable({ key: "throttle", op: "get", cause: null });
+    const throttle = createThrottle({
+      clock,
+      random: () => 0.5,
+      state: { load: async () => Result.err(unavailable), save: async () => Result.ok() },
+    });
+    let ran = false;
+    const turn = await throttle.load(new AbortController().signal, async () => {
+      ran = true;
+      return Result.ok(null);
+    });
+
+    expect(turn.isErr() && turn.error).toBe(unavailable);
+    expect(ran).toBe(false);
+  });
+
+  test.each([
+    ["pauseOrHalt", (throttle: Throttle) => throttle.pauseOrHalt(START + 5000)],
+    ["rateLimited", (throttle: Throttle) => throttle.rateLimited(START + 5000)],
+    ["answered", (throttle: Throttle) => throttle.answered()],
+    ["noteLoad", (throttle: Throttle) => throttle.noteLoad()],
+  ] as const)(
+    "%s answers a write it could not make as SessionStorageUnavailable",
+    async (_name, book) => {
+      const stored = memoryValue(OPEN_THROTTLE);
+      const throttle = createThrottle({
+        clock: fakeClock(START),
+        random: () => 0.5,
+        state: {
+          load: stored.load,
+          save: async () =>
+            Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null })),
+        },
+      });
+      const written = await book(throttle);
+
+      expect(written.isErr() && SessionStorageUnavailable.is(written.error)).toBe(true);
+      expect(stored.peek()).toEqual(OPEN_THROTTLE);
+    },
+  );
 });
 
 describe("parseRetryAfter", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { SessionValue } from "./clock";
+import { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import { sessionValue } from "./session-value";
 import { OPEN_THROTTLE, throttleStateSchema } from "./throttle";
 import type { ThrottleState } from "./throttle";
@@ -47,5 +48,41 @@ describe("a session value", () => {
     const value = sessionValue(area, "throttle", throttleStateSchema, OPEN_THROTTLE);
 
     expect(await loaded(value)).toEqual(OPEN_THROTTLE);
+  });
+});
+
+describe("a session value whose storage fails", () => {
+  const refused = () => Promise.reject(new Error("storage is gone"));
+
+  test("answers a refused read as SessionStorageUnavailable for its key", async () => {
+    const value = sessionValue(
+      { ...memoryArea(), get: refused },
+      "throttle",
+      throttleStateSchema,
+      OPEN_THROTTLE,
+    );
+    const read = await value.load();
+
+    expect(read.isErr() && SessionStorageUnavailable.is(read.error) && read.error).toMatchObject({
+      key: "throttle",
+      op: "get",
+    });
+  });
+
+  test("answers a refused write as SessionStorageUnavailable for its key", async () => {
+    const value = sessionValue(
+      { ...memoryArea(), set: refused },
+      "ownedTab",
+      throttleStateSchema,
+      OPEN_THROTTLE,
+    );
+    const written = await value.save(PAUSED);
+
+    expect(written.isErr() && written.error).toMatchObject({
+      _tag: "SessionStorageUnavailable",
+      key: "ownedTab",
+      op: "set",
+      cause: new Error("storage is gone"),
+    });
   });
 });

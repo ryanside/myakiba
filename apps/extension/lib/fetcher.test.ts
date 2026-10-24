@@ -22,6 +22,7 @@ import {
 import type { FakeClock, FakeExtension, PageAnswer, PictureAnswer } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
 import { CollectorInjectionFailed } from "./errors/collector-injection-failed";
 import { PictureFetchFailed } from "./errors/picture-fetch-failed";
@@ -2017,6 +2018,56 @@ describe("a picture read that fails", () => {
   );
 });
 
+describe("a collector run that the turn stopped", () => {
+  test("answers its abandoned run as the turn's timeout and keeps its own tab", async () => {
+    const extension = fakeExtension({
+      pages: (request, signal) =>
+        request.mfcItemId === 1
+          ? new Promise((resolve) => {
+              signal.addEventListener("abort", () => resolve(Result.err(new AttemptAbandoned())));
+            })
+          : page(itemPage(request.mfcItemId)),
+    });
+    const run = extension.run([1, 2]);
+    await extension.clock.runUntil(run.done);
+    await extension.settle();
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "timeout" },
+      { ok: true, html: itemPage(2), picture: null },
+    ]);
+    expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+  });
+});
+
+describe("a tab focus", () => {
+  test("that cannot be recorded answers SessionStorageUnavailable", async () => {
+    const extension = fakeExtension({
+      pages: itemPages(),
+      ownedTab: {
+        load: async () =>
+          Result.err(new SessionStorageUnavailable({ key: "ownedTab", op: "get", cause: null })),
+        save: async () => Result.ok(),
+      },
+    });
+    const noted = await extension.fetcher.noteTabActivated(5);
+
+    expect(noted.isErr() && noted.error).toMatchObject({
+      _tag: "SessionStorageUnavailable",
+      key: "ownedTab",
+    });
+  });
+
+  test("that is recorded answers Ok and makes the tab the user's", async () => {
+    const ownedTab = memoryValue<OwnedTab>({ state: "landed", tabId: 5 });
+    const extension = fakeExtension({ pages: itemPages(), ownedTab });
+    const noted = await extension.fetcher.noteTabActivated(5);
+
+    expect(noted.isOk()).toBe(true);
+    expect(ownedTab.peek()).toBeNull();
+  });
+});
+
 describe("the developer log", () => {
   let warn: Mock<typeof console.warn>;
   let error: Mock<typeof console.error>;
@@ -2195,6 +2246,65 @@ describe("the developer log", () => {
     expect(String(defect instanceof Error ? defect.stack : defect)).toContain(
       `answered tab ${windowless} with no windowId`,
     );
+  });
+
+  test("names a challenge's pause that cannot be booked, and fails only its item", async () => {
+    const stored = memoryValue(OPEN_THROTTLE);
+    const extension = fakeExtension({
+      throttleState: {
+        load: stored.load,
+        save: async (next) =>
+          next.pausedUntil > 0
+            ? Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null }))
+            : stored.save(next),
+      },
+      pages: (request) =>
+        request.mfcItemId === 7
+          ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
+          : page(itemPage(request.mfcItemId)),
+    });
+    const run = extension.run([7, 8]);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([
+      { ok: false, error: "unexpected_page" },
+      { ok: true, html: itemPage(8), picture: null },
+    ]);
+    expect(warned()).toEqual([
+      expect.stringContaining(
+        "SessionStorageUnavailable for MFC item 7: storage.session would not set throttle",
+      ),
+    ]);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("names a solved challenge's reload that cannot be booked, and fails its item", async () => {
+    const challenge = challengeOn([7]);
+    const stored = memoryValue(OPEN_THROTTLE);
+    let failNext = false;
+    const extension = fakeExtension({
+      throttleState: {
+        load: stored.load,
+        save: async (next) => {
+          if (!failNext) return stored.save(next);
+          failNext = false;
+          return Result.err(
+            new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null }),
+          );
+        },
+      },
+      pages: challenge.pages,
+    });
+    const run = extension.run([7]);
+    await extension.clock.runUntil(() => asked(run.events, "needs_user"));
+    failNext = true;
+    challenge.solve(extension, 7);
+    await extension.clock.runUntil(run.done);
+
+    expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    expect(warned()).toEqual([
+      expect.stringContaining("SessionStorageUnavailable for MFC item 7:"),
+    ]);
   });
 
   test("names an unexpected throw from the collector as an unhandled exception", async () => {
