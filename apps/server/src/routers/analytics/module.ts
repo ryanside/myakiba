@@ -22,7 +22,9 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import type { Page } from "@myakiba/contracts/shared/pagination";
-import { fail, ok, paginateBy, prepared, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { paginateBy, prepared, query } from "@/domain/kernel";
+import { RelatedSectionSameAsSource } from "./errors/related-section-same-as-source";
 import type {
   AnalyticsResult,
   AnalyticsSectionItemsResult,
@@ -768,7 +770,7 @@ export const Analytics = {
         scope.read(scaleRankingsRead, { userId }),
       ]);
       const analytics = rankAnalytics(entryRows, shopRows, scaleRows);
-      return ok({ analytics });
+      return Result.ok({ analytics });
     },
   ),
 
@@ -802,7 +804,7 @@ export const Analytics = {
           totalCount: analytics.totalCount,
         },
       });
-      return ok({ analytics });
+      return Result.ok({ analytics });
     },
   ),
 
@@ -833,7 +835,7 @@ export const Analytics = {
           totalCount: items.totalCount,
         },
       });
-      return ok(items);
+      return Result.ok(items);
     },
   ),
 
@@ -852,7 +854,7 @@ export const Analytics = {
       },
     ) => {
       if (input.sectionName === input.relatedSection) {
-        return fail("bad_request", "Related section must differ from source section");
+        return Result.err(new RelatedSectionSameAsSource());
       }
 
       const analytics = {
@@ -877,7 +879,7 @@ export const Analytics = {
           totalCount: relationships.totalCount,
         },
       });
-      return ok(relationships);
+      return Result.ok(relationships);
     },
   ),
 };
