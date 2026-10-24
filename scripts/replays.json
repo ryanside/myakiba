@@ -1356,6 +1356,12 @@
       "bug": "a defect in an Item Refresh was read as a refused refresh and logged nowhere",
       "test": "apps/web/src/data/item-refresh.test.tsx",
       "fixed": ["a defect in the refresh is reported as a Panic, not read as a refused refresh"]
+    },
+    {
+      "fix": "ce466a1c2e35af14dbde49a5b4e4271956d293b1",
+      "bug": "a form submit that rejected was logged as a bare error, not as a defect the way useWrite reports one",
+      "test": "apps/web/src/lib/form-submit.test.tsx",
+      "fixed": ["reports any other rejection as a defect, a Panic with the rejection as its cause"]
     }
   ],
   "lint": [
