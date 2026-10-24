@@ -138,9 +138,9 @@ function RouteComponent(): React.JSX.Element {
           hasNextPage={itemsQuery.hasNextPage}
           isFetchingNextPage={itemsQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
-          onRemove={async (itemId, itemExternalId) => {
-            await itemMutation.run({ itemId, itemExternalId, wishlisted: false });
-          }}
+          onRemove={(itemId, itemExternalId) =>
+            itemMutation.run({ itemId, itemExternalId, wishlisted: false })
+          }
           onMove={async (intent) => {
             await moveMutation.move(intent);
           }}

@@ -18,6 +18,7 @@ import { ItemControl } from "@/components/ui/item-controls";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
 import { useSortableItems } from "@/hooks/use-sortable-items";
+import type { Saving } from "@/data/client";
 
 type ListMembersPage = NonNullable<InferOk<Awaited<ReturnType<typeof getListMembers>>>>;
 type ListMember = ListMembersPage["items"][number];
@@ -146,7 +147,7 @@ function SortableListMember({
   readonly selected: boolean;
   readonly dropIndicator?: "before" | "after";
   readonly onToggleSelection: () => void;
-  readonly onRemove: (memberId: string) => Promise<void>;
+  readonly onRemove: (memberId: string) => Saving;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
   const removeDisabled = removingMemberIds !== undefined;
@@ -241,7 +242,7 @@ export function ListMemberGrid({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onRemove: (memberId: string) => Promise<void>;
+  readonly onRemove: (memberId: string) => Saving;
   readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;

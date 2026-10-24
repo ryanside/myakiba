@@ -18,6 +18,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import type { Saving } from "@/data/client";
 
 export function ListFormDialog({
   renderTrigger,
@@ -40,7 +41,7 @@ export function ListFormDialog({
   readonly initialDescription?: string;
   readonly submitLabel: string;
   readonly pendingLabel: string;
-  readonly onSubmit: (input: ListInput) => Promise<void>;
+  readonly onSubmit: (input: ListInput) => Saving;
 }): React.JSX.Element {
   const titleInputId = useId();
   const descriptionInputId = useId();
@@ -51,7 +52,12 @@ export function ListFormDialog({
     validators: { onSubmit: listInputSchema },
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: async ({ value }) => {
-      await onSubmit({ title: value.title.trim(), description: value.description.trim() });
+      const saved = await onSubmit({
+        title: value.title.trim(),
+        description: value.description.trim(),
+      });
+      // A failed write already said why, so the dialog stays open to retry.
+      if (saved.isErr()) return;
       setOpen(false);
     },
   });
@@ -77,11 +83,7 @@ export function ListFormDialog({
             onSubmit={async (event) => {
               event.preventDefault();
               event.stopPropagation();
-              try {
-                await form.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
-              }
+              await form.handleSubmit();
             }}
           >
             <FieldGroup>

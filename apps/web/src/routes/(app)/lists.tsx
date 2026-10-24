@@ -30,6 +30,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
+import type { Saving } from "@/data/client";
 
 type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
@@ -60,8 +61,8 @@ function SortableList({
   readonly selected: boolean;
   readonly dropIndicator?: "before" | "after";
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
   readonly onEntranceAnimationEnd?: () => void;
 }): React.JSX.Element {
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
@@ -198,8 +199,8 @@ function SortableLists({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
   readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
@@ -316,12 +317,14 @@ function RouteComponent(): React.JSX.Element {
   const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { selectedIds, setSelection } = useSelection();
   const handleDeleteList = useCallback(
-    async (listId: string): Promise<void> => {
-      await deleteList(listId);
+    async (listId: string): Saving => {
+      const deleted = await deleteList(listId);
+      if (deleted.isErr()) return deleted;
       setSelection((current) => {
         const { [listId]: _removed, ...next } = current;
         return next;
       });
+      return deleted;
     },
     [deleteList, setSelection],
   );
@@ -343,9 +346,7 @@ function RouteComponent(): React.JSX.Element {
             description="Give your new List a title and an optional description."
             submitLabel="Create"
             pendingLabel="Creating..."
-            onSubmit={async (input) => {
-              await createList(input);
-            }}
+            onSubmit={(input) => createList(input)}
           />
         </div>
       </div>
@@ -408,9 +409,7 @@ function RouteComponent(): React.JSX.Element {
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           onLoadMore={handleLoadMore}
-          onUpdate={async (listId, input) => {
-            await updateList({ listId, ...input });
-          }}
+          onUpdate={(listId, input) => updateList({ listId, ...input })}
           onDelete={handleDeleteList}
           onMove={async (intent) => {
             await handleMove(intent);

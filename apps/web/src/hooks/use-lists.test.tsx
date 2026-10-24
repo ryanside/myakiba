@@ -3,6 +3,8 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useEffect } from "react";
+import type { Saving } from "@/data/client";
+import { settledAs } from "../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -509,7 +511,7 @@ function ListScreens() {
   return null;
 }
 
-async function writeToLists(write: (actions: ListActions) => Promise<void>): Promise<WriteResult> {
+async function writeToLists(write: (actions: ListActions) => Saving): Promise<WriteResult> {
   const queryClient = new QueryClient();
   render(
     <QueryClientProvider client={queryClient}>
@@ -525,9 +527,7 @@ async function writeToLists(write: (actions: ListActions) => Promise<void>): Pro
   await act(async () => {
     const actions = currentActions;
     if (!actions) throw new Error("the list screens did not render");
-    await write(actions).catch(() => {
-      outcome = "rejected";
-    });
+    outcome = await settledAs(write(actions));
   });
   const refetchedBeforeResolve = [...server.fetches].toSorted();
   await settled();
@@ -544,15 +544,13 @@ async function writeToLists(write: (actions: ListActions) => Promise<void>): Pro
 
 const LIST_WRITES: readonly {
   readonly name: string;
-  readonly run: (actions: ListActions) => Promise<void>;
+  readonly run: (actions: ListActions) => Saving;
   readonly saved: WriteResult;
   readonly failed: WriteResult;
 }[] = [
   {
     name: "create a List",
-    run: async ({ lists }) => {
-      await lists.createList({ title: "Shelf", description: "" });
-    },
+    run: ({ lists }) => lists.createList({ title: "Shelf", description: "" }),
     saved: {
       outcome: "resolved",
       writes: ["create Shelf"],
@@ -570,9 +568,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "create a List from the add dialog",
-    run: async ({ quietLists }) => {
-      await quietLists.createList({ title: "Shelf", description: "" });
-    },
+    run: ({ quietLists }) => quietLists.createList({ title: "Shelf", description: "" }),
     saved: {
       outcome: "resolved",
       writes: ["create Shelf"],
@@ -590,9 +586,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "update a List",
-    run: async ({ lists }) => {
-      await lists.updateList({ listId: "l1", title: "Grails 2", description: "" });
-    },
+    run: ({ lists }) => lists.updateList({ listId: "l1", title: "Grails 2", description: "" }),
     saved: {
       outcome: "resolved",
       writes: ["update l1"],
@@ -610,9 +604,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "delete a List",
-    run: async ({ lists }) => {
-      await lists.deleteList("l1");
-    },
+    run: ({ lists }) => lists.deleteList("l1"),
     saved: {
       outcome: "resolved",
       writes: ["delete l1"],
@@ -630,9 +622,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "delete two Lists",
-    run: async ({ lists }) => {
-      await lists.deleteLists(new Set(["l1", "l2"]));
-    },
+    run: ({ lists }) => lists.deleteLists(new Set(["l1", "l2"])),
     saved: {
       outcome: "resolved",
       writes: ["delete l1,l2"],
@@ -650,9 +640,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "add an Item to two Lists",
-    run: async ({ add }) => {
-      await add.mutateAsync({ targets: [...TARGETS], listIds: ["l1", "l2"] });
-    },
+    run: ({ add }) => add.run({ targets: [...TARGETS], listIds: ["l1", "l2"] }),
     saved: {
       outcome: "resolved",
       writes: ["add to l1,l2"],
@@ -670,9 +658,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "remove an Item from a List",
-    run: async ({ removeTarget }) => {
-      await removeTarget.mutateAsync("l1");
-    },
+    run: ({ removeTarget }) => removeTarget.run("l1"),
     saved: {
       outcome: "resolved",
       writes: ["remove target from l1"],
@@ -690,9 +676,7 @@ const LIST_WRITES: readonly {
   },
   {
     name: "remove members from a List",
-    run: async ({ removeMembers }) => {
-      await removeMembers.mutateAsync(["m1", "m2"]);
-    },
+    run: ({ removeMembers }) => removeMembers.run(["m1", "m2"]),
     saved: {
       outcome: "resolved",
       writes: ["remove m1,m2 from l1"],

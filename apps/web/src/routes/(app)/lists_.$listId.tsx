@@ -7,7 +7,7 @@ import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { ListMemberGrid } from "@/components/lists/list-member-grid";
 import { ListMembersActionBar } from "@/components/lists/list-members-action-bar";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   Empty,
   EmptyContent,
@@ -28,6 +28,7 @@ import {
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useSelection } from "@/hooks/use-selection";
 import { useCallback, useMemo } from "react";
+import type { Saving } from "@/data/client";
 
 const VIEW_MODE_KEY = "lists:viewMode";
 
@@ -61,15 +62,17 @@ function RouteComponent(): React.JSX.Element {
   const handleMove = moveMutation.move;
   const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
   const { selectedIds, setSelection } = useSelection();
-  const removeMembers = removeMembersMutation.mutateAsync;
+  const removeMembers = removeMembersMutation.run;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
   const handleRemove = useCallback(
-    async (memberId: string): Promise<void> => {
-      await removeMembers([memberId]);
+    async (memberId: string): Saving => {
+      const removed = await removeMembers([memberId]);
+      if (removed.isErr()) return removed;
       setSelection((current) => {
         const { [memberId]: _removed, ...next } = current;
         return next;
       });
+      return removed;
     },
     [removeMembers, setSelection],
   );
@@ -130,11 +133,9 @@ function RouteComponent(): React.JSX.Element {
                 initialDescription={data.description}
                 submitLabel="Save"
                 pendingLabel="Saving..."
-                onSubmit={async (input) => {
-                  await updateList({ listId, ...input });
-                }}
+                onSubmit={(input) => updateList({ listId, ...input })}
               />
-              <ConfirmDialog
+              <WriteConfirmDialog
                 renderTrigger={
                   <Button variant="destructive">
                     <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
@@ -144,8 +145,9 @@ function RouteComponent(): React.JSX.Element {
                 title="Delete List?"
                 description="This removes the List. Its Items, Collection Items, and Orders will not be deleted."
                 onConfirm={async () => {
-                  await deleteList(listId);
-                  await navigate({ to: "/lists" });
+                  const deleted = await deleteList(listId);
+                  if (deleted.isOk()) await navigate({ to: "/lists" });
+                  return deleted;
                 }}
               />
             </>
@@ -157,9 +159,7 @@ function RouteComponent(): React.JSX.Element {
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
         onClearSelection={() => setSelection({})}
-        onRemoveMembers={async (memberIds) => {
-          await removeMembersMutation.mutateAsync(memberIds);
-        }}
+        onRemoveMembers={(memberIds) => removeMembersMutation.run(memberIds)}
       />
 
       {isPending && viewMode === "grid" ? (

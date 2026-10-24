@@ -47,6 +47,7 @@ import {
 } from "@/hooks/use-lists";
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
+import type { Saving } from "@/data/client";
 
 type ListOptionsForTargets = NonNullable<
   InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
@@ -69,9 +70,13 @@ function CreateListForm({
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: async ({ value }) => {
       const created = await createList({ title: value.title.trim(), description: "" });
+      if (created.isErr()) {
+        setSubmitError(true);
+        return;
+      }
       form.reset();
       setSubmitError(false);
-      onCreated(created.id);
+      onCreated(created.value.id);
     },
   });
 
@@ -82,11 +87,7 @@ function CreateListForm({
         event.stopPropagation();
         if (disabled) return;
         setSubmitError(false);
-        try {
-          await form.handleSubmit();
-        } catch {
-          setSubmitError(true);
-        }
+        await form.handleSubmit();
       }}
     >
       <form.Field name="title">
@@ -224,11 +225,8 @@ function ListOptionRow({
               aria-describedby={removeMutation.error ? errorId : undefined}
               onClick={async () => {
                 onRemoveStarted();
-                try {
-                  await removeMutation.mutateAsync(list.id);
-                } catch {
-                  // The inline row error remains available for retry.
-                }
+                // A failed removal shows its inline row error, which stays for a retry.
+                await removeMutation.run(list.id);
               }}
             >
               {isRemoving ? "Removing..." : "Remove"}
@@ -261,7 +259,7 @@ function AddToListsForm({
   readonly targetCount: number;
   readonly isSaving: boolean;
   readonly addError: Error | null;
-  readonly addToLists: (listIds: string[]) => Promise<void>;
+  readonly addToLists: (listIds: string[]) => Saving;
   readonly close: () => void;
   readonly onSuccess?: () => void;
 }): React.JSX.Element {
@@ -276,7 +274,9 @@ function AddToListsForm({
   const form = useForm({
     defaultValues: { selectedListIds: [] as string[] },
     onSubmit: async ({ value }) => {
-      await addToLists(value.selectedListIds);
+      const added = await addToLists(value.selectedListIds);
+      // A failed add shows its inline error, and the dialog stays open to retry.
+      if (added.isErr()) return;
       close();
       onSuccess?.();
     },
@@ -306,11 +306,7 @@ function AddToListsForm({
         onSubmit={async (event) => {
           event.preventDefault();
           event.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch {
-            // The inline error stays visible and the dialog remains open.
-          }
+          await form.handleSubmit();
         }}
       >
         <form.Field name="selectedListIds" mode="array">
@@ -450,9 +446,9 @@ export function AddToListsDialog({
               targetCount={targets.length}
               isSaving={addMutation.isPending}
               addError={addMutation.error}
-              addToLists={async (listIds) => {
+              addToLists={(listIds) => {
                 addMutation.reset();
-                await addMutation.mutateAsync({ targets: [...targets], listIds });
+                return addMutation.run({ targets: [...targets], listIds });
               }}
               close={closeAfterSuccess}
               onSuccess={onSuccess}

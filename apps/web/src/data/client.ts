@@ -456,10 +456,3 @@ export function useResourceMutation<Input, Output, Failure>(
     refetch: refetchFamilies,
   } as const;
 }
-
-/** For a caller that must see a failed write, like a form that stays open: rejects with its failure. */
-export async function orThrow<Output>(saving: Saving<Output>): Promise<Output> {
-  const saved = await saving;
-  if (saved.isErr()) throw saved.error;
-  return saved.value;
-}

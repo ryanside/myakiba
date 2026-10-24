@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { getLists } from "@/queries/lists";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { cn } from "@/lib/utils";
+import type { Saving } from "@/data/client";
 
 type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
@@ -37,8 +38,8 @@ export function ListControls({
   readonly selected: boolean;
   readonly active: boolean;
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
   readonly children: ReactNode;
 }): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -89,7 +90,7 @@ export function ListControls({
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <ConfirmDialog
+            <WriteConfirmDialog
               triggerNativeButton={false}
               triggerRole="menuitem"
               renderTrigger={
