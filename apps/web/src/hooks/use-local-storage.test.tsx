@@ -33,6 +33,23 @@ test("reads a stored value that matches the schema", () => {
   expect(renderStored().current[0]).toEqual({ step: 2 });
 });
 
+test("reads any stored JSON when the caller has no schema", () => {
+  localStorage.setItem(KEY, JSON.stringify(["name", "price"]));
+
+  const { result } = renderHook(() => useLocalStorage<readonly string[]>(KEY, []));
+
+  expect(result.current[0]).toEqual(["name", "price"]);
+});
+
+test("falls back to the initial value without a schema when the stored text is not JSON", () => {
+  localStorage.setItem(KEY, "[name");
+  const initial: readonly string[] = [];
+
+  const { result } = renderHook(() => useLocalStorage(KEY, initial));
+
+  expect(result.current[0]).toBe(initial);
+});
+
 test.each([
   ["nothing is stored", null],
   ["the stored text is not JSON", "{step:"],
