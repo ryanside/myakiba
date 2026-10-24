@@ -3,6 +3,7 @@ import type Redis from "ioredis";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { getJobStatusChannel, parseJobStatusPayload } from "@myakiba/redis/job-status";
 import { redis } from "@myakiba/redis/client";
+import { JobStatusSubscriptionLost } from "@/lib/errors/job-status-subscription-lost";
 
 type JobStatusSubscriptionEvent =
   | Readonly<{
@@ -11,7 +12,7 @@ type JobStatusSubscriptionEvent =
     }>
   | Readonly<{
       kind: "error";
-      error: Error;
+      error: JobStatusSubscriptionLost;
     }>;
 
 type PendingResolver = (event: JobStatusSubscriptionEvent) => void;
@@ -31,8 +32,6 @@ export type JobStatusSubscription = Readonly<{
   next: () => Promise<JobStatusSubscriptionEvent>;
   unsubscribe: () => Promise<void>;
 }>;
-
-const CONNECTION_CLOSED_ERROR = new Error("Job status subscriber connection closed");
 
 const pushToConsumerState = (
   consumerState: SubscriptionConsumerState,
@@ -59,7 +58,7 @@ const pushToConsumerState = (
 const closeConsumerState = (consumerState: SubscriptionConsumerState): void => {
   pushToConsumerState(consumerState, {
     kind: "error",
-    error: CONNECTION_CLOSED_ERROR,
+    error: new JobStatusSubscriptionLost({ reason: "closed" }),
   });
 };
 
@@ -77,7 +76,7 @@ class JobStatusSubscriptionRegistry {
     if (parsedStatus === null) {
       this.publishToChannel(channel, {
         kind: "error",
-        error: new Error("Received invalid job status payload from Redis"),
+        error: new JobStatusSubscriptionLost({ reason: "invalid_payload" }),
       });
       return;
     }
@@ -89,11 +88,11 @@ class JobStatusSubscriptionRegistry {
   };
 
   private readonly handleError = (error: Error): void => {
-    this.failAllConsumers(error);
+    this.failAllConsumers(new JobStatusSubscriptionLost({ reason: "redis_error", cause: error }));
   };
 
   private readonly handleClose = (): void => {
-    this.failAllConsumers(CONNECTION_CLOSED_ERROR);
+    this.failAllConsumers(new JobStatusSubscriptionLost({ reason: "closed" }));
   };
 
   private ensureSubscriber(): Redis {
@@ -134,7 +133,7 @@ class JobStatusSubscriptionRegistry {
     }
   }
 
-  private failAllConsumers(error: Error): void {
+  private failAllConsumers(error: JobStatusSubscriptionLost): void {
     for (const channelState of this.channels.values()) {
       for (const consumerState of channelState.consumers.values()) {
         pushToConsumerState(consumerState, {
