@@ -1,4 +1,4 @@
-import { BRIDGE_CHANNEL, bridgeRequestSchema } from "@myakiba/mfc/bridge";
+import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL, bridgeRequestSchema } from "@myakiba/mfc/bridge";
 import type { BridgeRequestMessage, BridgeWindow, ExtensionBridge } from "@/lib/extension-bridge";
 
 export const PAGE_ORIGIN = "http://localhost:3001";
@@ -9,10 +9,12 @@ type LooseWireEvent = {
   readonly type: string;
   readonly mfcItemId?: number | null;
   readonly result?: {
-    readonly ok: boolean;
-    readonly html?: string;
-    readonly error?: string;
-    readonly picture?: { readonly bytes: ArrayBuffer; readonly contentType: string } | null;
+    readonly status: string;
+    readonly value?: {
+      readonly html?: string;
+      readonly picture?: { readonly bytes: ArrayBuffer; readonly contentType: string } | null;
+    };
+    readonly error?: { readonly code: string } | string;
   };
   readonly state?: string;
   readonly untilMs?: number | null;
@@ -36,7 +38,7 @@ export type FakeRun = {
 
 export function fakeExtension({
   installed: initiallyInstalled = true,
-  protocols = { min: 1, max: 1 },
+  protocols = { min: BRIDGE_PROTOCOL, max: BRIDGE_PROTOCOL },
   onFetch = (run: FakeRun) => {
     for (const id of run.mfcItemIds) run.item(id);
     run.done("complete");
@@ -94,8 +96,9 @@ export function fakeExtension({
       mfcItemIds: request.mfcItemIds,
       send,
       item: (mfcItemId, html = `<html>${mfcItemId}</html>`) =>
-        send({ type: "item", mfcItemId, result: { ok: true, html, picture: null } }),
-      fail: (mfcItemId, error) => send({ type: "item", mfcItemId, result: { ok: false, error } }),
+        send({ type: "item", mfcItemId, result: { status: "ok", value: { html, picture: null } } }),
+      fail: (mfcItemId, code) =>
+        send({ type: "item", mfcItemId, result: { status: "error", error: { code } } }),
       status: (state, mfcItemId = null) =>
         send({ type: "status", state, mfcItemId, untilMs: null }),
       done: (reason) => send({ type: "done", reason }),

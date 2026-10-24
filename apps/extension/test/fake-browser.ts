@@ -1,4 +1,4 @@
-import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
+import type { ItemFailure, ItemPage, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Err, Result } from "better-result";
@@ -652,6 +652,12 @@ export function fakeExtension(options: {
 
   let worker = startWorker();
 
+  /** An item's result as the tests read it: ok with its page, or not with its wire code. */
+  const asAnswered = (result: Result<ItemPage<PortPicture>, ItemFailure>) =>
+    result.isOk()
+      ? ({ ok: true, ...result.value } as const)
+      : ({ ok: false, error: result.error.code } as const);
+
   function run(ids: readonly number[], requester: Requester = myakiba) {
     const key = crypto.randomUUID() as RunKey;
     const events: RunEvent<PortPicture>[] = [];
@@ -666,7 +672,8 @@ export function fakeExtension(options: {
       events,
       done: () => events.some((event) => event.type === "done"),
       items: () => events.filter((event) => event.type === "item"),
-      results: () => events.flatMap((event) => (event.type === "item" ? [event.result] : [])),
+      results: () =>
+        events.flatMap((event) => (event.type === "item" ? [asAnswered(event.result)] : [])),
     };
   }
 

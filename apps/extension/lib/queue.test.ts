@@ -5,7 +5,7 @@ import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import { MfcRateLimited } from "./errors/mfc-rate-limited";
 import { EMPTY_QUEUE, reduceQueue } from "./queue";
-import type { Job, QueueAction, Requester, RunKey } from "./queue";
+import type { Job, QueueAction, QueueStep, Requester, RunKey } from "./queue";
 import { THROTTLE } from "./throttle";
 
 const START = 1_000_000;
@@ -41,7 +41,7 @@ function answered(id: number, ok: boolean): QueueAction {
 
 function play(actions: readonly QueueAction[]) {
   let state = EMPTY_QUEUE;
-  const emitted: { readonly run: string; readonly event: unknown }[] = [];
+  const emitted: QueueStep["emit"][number][] = [];
   for (const action of actions) {
     const step = reduceQueue(state, action);
     state = step.state;
@@ -50,7 +50,18 @@ function play(actions: readonly QueueAction[]) {
   return {
     state,
     eventsOf: (run: string) =>
-      emitted.filter((emission) => emission.run === run).map((emission) => emission.event),
+      emitted
+        .filter((emission) => emission.run === run)
+        .map(({ event }): object =>
+          event.type === "item"
+            ? {
+                ...event,
+                result: event.result.isOk()
+                  ? { ok: true, ...event.result.value }
+                  : { ok: false, error: event.result.error.code },
+              }
+            : event,
+        ),
   };
 }
 

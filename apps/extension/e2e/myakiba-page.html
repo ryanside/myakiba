@@ -16,7 +16,7 @@
 
   function send(request) {
     const requestId = crypto.randomUUID();
-    window.postMessage({ channel: CHANNEL, protocol: 1, requestId, request }, location.origin);
+    window.postMessage({ channel: CHANNEL, protocol: 2, requestId, request }, location.origin);
     return requestId;
   }
 
@@ -57,12 +57,13 @@
           if (event.type === "status") window.bridge.statuses.push(event);
           if (event.type === "item") {
             const { result } = event;
-            const picture = result.ok ? result.picture : null;
+            const ok = result.status === "ok";
+            const picture = ok ? result.value.picture : null;
             items.push({
               mfcItemId: event.mfcItemId,
-              ok: result.ok,
-              error: result.ok ? null : result.error,
-              html: result.ok ? result.html : null,
+              ok,
+              error: ok ? null : result.error.code,
+              html: ok ? result.value.html : null,
               picture: picture && {
                 isArrayBuffer: picture.bytes instanceof ArrayBuffer,
                 byteLength: picture.bytes.byteLength,
@@ -80,7 +81,7 @@
       window.postMessage(
         {
           channel: CHANNEL,
-          protocol: 1,
+          protocol: 2,
           requestId,
           request: { type: "fetch-url", url: "http://127.0.0.1:4601/item/98777" },
         },

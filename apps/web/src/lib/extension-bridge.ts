@@ -1,12 +1,19 @@
 import type * as z from "zod";
+import { Result, ResultDeserializationError } from "better-result";
 import {
   BRIDGE_CHANNEL,
   BRIDGE_PROTOCOL,
   MAX_ITEMS_PER_REQUEST,
   bridgeEventSchema,
+  pageItemCodec,
 } from "@myakiba/mfc/bridge";
 import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
-import type { bridgeRequestSchema } from "@myakiba/mfc/bridge";
+import type {
+  BridgePicture,
+  ItemFailure,
+  ItemPage,
+  bridgeRequestSchema,
+} from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
 
 const HELLO_TIMEOUT_MS = 500;
@@ -62,7 +69,12 @@ export type BridgeWindow = {
 };
 
 type ReceivedEvent = z.output<typeof bridgeEventSchema>["event"];
-type RunEvent = Exclude<ReceivedEvent, { readonly type: "announce" }>;
+
+type ReceivedItem = Result<ItemPage<BridgePicture>, ItemFailure<ItemFetchErrorCode | "unknown">>;
+
+type RunEvent =
+  | Exclude<ReceivedEvent, { readonly type: "announce" | "item" }>
+  | { readonly type: "item"; readonly mfcItemId: MfcItemId; readonly result: ReceivedItem };
 
 function statusFromAnnounce(
   announce: Extract<ReceivedEvent, { type: "announce" }>,
@@ -115,7 +127,20 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
       else setStatus(next);
       return;
     }
-    if (requestId !== null) runs.get(requestId)?.(event);
+    const run = requestId === null ? undefined : runs.get(requestId);
+    if (run === undefined) return;
+    if (event.type !== "item") {
+      run(event);
+      return;
+    }
+    // The extension is released apart from this page, so a result the page cannot read is dropped like any unreadable event.
+    const read = pageItemCodec.deserialize(event.result);
+    if (read.isOk()) {
+      run({ ...event, result: Result.ok(read.value) });
+      return;
+    }
+    if (ResultDeserializationError.is(read.error)) return;
+    run({ ...event, result: Result.err(read.error) });
   });
 
   function probe(): Promise<ExtensionStatus> {
@@ -185,14 +210,23 @@ export function createExtensionBridge(win: BridgeWindow): ExtensionBridge {
           yield { type: "status", state: event.state, untilMs: event.untilMs };
         } else if (event.type === "item" && unanswered.delete(event.mfcItemId)) {
           const { result } = event;
-          const picture =
-            result.ok && result.picture
-              ? new Blob([result.picture.bytes], { type: result.picture.contentType })
-              : null;
+          if (result.isErr()) {
+            yield {
+              type: "item",
+              mfcItemId: event.mfcItemId,
+              result: { ok: false, error: result.error.code },
+            };
+            continue;
+          }
+          const { html, picture } = result.value;
           yield {
             type: "item",
             mfcItemId: event.mfcItemId,
-            result: result.ok ? { ok: true, html: result.html, picture } : result,
+            result: {
+              ok: true,
+              html,
+              picture: picture && new Blob([picture.bytes], { type: picture.contentType }),
+            },
           };
         }
       }

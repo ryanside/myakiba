@@ -1,12 +1,16 @@
 import { describe, expect, expectTypeOf, test } from "bun:test";
-import type * as z from "zod";
+import { Panic, Result, ResultDeserializationError, ResultSerializationError } from "better-result";
+import { parseJson } from "@myakiba/utils/parse-json";
+import * as z from "zod";
 import {
   BRIDGE_CHANNEL,
   BRIDGE_PROTOCOL,
   MAX_ITEMS_PER_REQUEST,
   bridgeEventSchema,
   bridgeRequestSchema,
+  pageItemCodec,
   portEventSchema,
+  portItemCodec,
   portRequestSchema,
 } from "./bridge";
 import type { BridgeEventMessage, PortEvent } from "./bridge";
@@ -76,7 +80,7 @@ describe("decodeBridgeRequest is strict", () => {
       ),
     ).toBeNull();
     expect(decodeBridgeRequest(request({ type: "hello" }, { channel: "other" }))).toBeNull();
-    expect(decodeBridgeRequest(request({ type: "hello" }, { protocol: 2 }))).toBeNull();
+    expect(decodeBridgeRequest(request({ type: "hello" }, { protocol: 1 }))).toBeNull();
     expect(decodeBridgeRequest(request({ type: "hello" }, { requestId: "1" }))).toBeNull();
     expect(decodeBridgeRequest(request({ type: "hello" }, { extra: true }))).toBeNull();
   });
@@ -87,7 +91,7 @@ describe("decodeBridgeRequest is strict", () => {
 });
 
 describe("decodeBridgeEvent is lenient", () => {
-  test("reads an item with picture bytes", () => {
+  test("reads an item and leaves its result to the page codec", () => {
     const bytes = new Uint8Array([0xff, 0xd8, 0xff]).buffer;
     const message: BridgeEventMessage = {
       channel: BRIDGE_CHANNEL,
@@ -95,25 +99,16 @@ describe("decodeBridgeEvent is lenient", () => {
       event: {
         type: "item",
         mfcItemId: itemId(98_777),
-        result: { ok: true, html: "<html></html>", picture: { bytes, contentType: "image/jpeg" } },
+        result: {
+          status: "ok",
+          value: { html: "<html></html>", picture: { bytes, contentType: "image/jpeg" } },
+        },
       },
     };
     expect(decodeBridgeEvent(message)).toEqual(message);
   });
 
-  test.each([...ITEM_FETCH_ERROR_CODES])("the error code %p reads as itself", (code) => {
-    expect(
-      decodeBridgeEvent(event({ type: "item", mfcItemId: 1, result: { ok: false, error: code } }))
-        ?.event,
-    ).toEqual({ type: "item", mfcItemId: itemId(1), result: { ok: false, error: code } });
-  });
-
-  test("an unknown error code, state or reason reads as unknown", () => {
-    expect(
-      decodeBridgeEvent(
-        event({ type: "item", mfcItemId: 1, result: { ok: false, error: "new_code" } }),
-      )?.event,
-    ).toEqual({ type: "item", mfcItemId: itemId(1), result: { ok: false, error: "unknown" } });
+  test("an unknown state or reason reads as unknown", () => {
     expect(
       decodeBridgeEvent(event({ type: "status", state: "new_state", mfcItemId: null, untilMs: 1 }))
         ?.event,
@@ -148,6 +143,84 @@ describe("decodeBridgeEvent is lenient", () => {
   });
 });
 
+describe("an item result between the content script and the page", () => {
+  test("crosses with its picture bytes, which stay the same buffer to transfer", () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff]).buffer;
+    const page = { html: "<html></html>", picture: { bytes, contentType: "image/jpeg" } };
+
+    const wire = pageItemCodec.serializeUnsafe(Result.ok(page));
+    const read = pageItemCodec.deserialize(structuredClone(wire, { transfer: [bytes] }));
+
+    expect(wire).toEqual({ status: "ok", value: page });
+    expect(wire.status === "ok" && wire.value.picture?.bytes).toBe(bytes);
+    expect(read.isOk() && new Uint8Array(read.value.picture?.bytes ?? new ArrayBuffer(0))).toEqual(
+      new Uint8Array([0xff, 0xd8, 0xff]),
+    );
+  });
+
+  test.each([...ITEM_FETCH_ERROR_CODES])("the error code %p crosses as itself", (code) => {
+    const wire = pageItemCodec.serializeUnsafe(Result.err({ code }));
+
+    expect(wire).toEqual({ status: "error", error: { code } });
+    expect(pageItemCodec.deserialize(wire)).toEqual(Result.err({ code }));
+  });
+
+  test("an error code from a newer extension reads as unknown", () => {
+    expect(pageItemCodec.deserialize({ status: "error", error: { code: "new_code" } })).toEqual(
+      Result.err({ code: "unknown" }),
+    );
+  });
+
+  test("a result the page cannot read is a deserialization error", () => {
+    for (const wire of [
+      { ok: false, error: "timeout" },
+      { status: "ok", value: { html: "<html></html>" } },
+      { status: "error", error: "timeout" },
+      undefined,
+    ]) {
+      const read = pageItemCodec.deserialize(wire);
+      expect(read.isErr() && ResultDeserializationError.is(read.error)).toBe(true);
+    }
+  });
+
+  test("a failure with more than its code does not cross", () => {
+    const written = pageItemCodec.serialize(
+      Result.err({ code: "timeout", message: "MFC took 45 s", stack: "at fetch" }),
+    );
+
+    expect(written.isErr() && ResultSerializationError.is(written.error)).toBe(true);
+  });
+});
+
+describe("an item result between the background and the content script", () => {
+  test("crosses JSON with its picture as base64 and arrives as bytes", () => {
+    const page = { html: "<html></html>", picture: { base64: "/9j/2Q==", contentType: "" } };
+
+    const json = JSON.stringify(portItemCodec.serializeUnsafe(Result.ok(page)));
+    const wire = parseJson(z.unknown(), json).unwrap();
+    const read = portItemCodec.deserializeUnsafe(wire);
+
+    expect(wire).toEqual({ status: "ok", value: page });
+    expect(read.isOk() && read.value.html).toBe("<html></html>");
+    expect(read.isOk() && new Uint8Array(read.value.picture?.bytes ?? new ArrayBuffer(0))).toEqual(
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    );
+  });
+
+  test.each([...ITEM_FETCH_ERROR_CODES])("the error code %p crosses as itself", (code) => {
+    const wire = portItemCodec.serializeUnsafe(Result.err({ code }));
+
+    expect(wire).toEqual({ status: "error", error: { code } });
+    expect(portItemCodec.deserializeUnsafe(wire)).toEqual(Result.err({ code }));
+  });
+
+  test("a result one end of the build cannot read is a defect", () => {
+    expect(() =>
+      portItemCodec.deserializeUnsafe({ status: "error", error: { code: "new" } }),
+    ).toThrow(Panic);
+  });
+});
+
 describe("port messages inside the extension", () => {
   test("a request is strict and carries only ids", () => {
     expect(
@@ -167,14 +240,20 @@ describe("port messages inside the extension", () => {
       event: {
         type: "item",
         mfcItemId: itemId(98_777),
-        result: { ok: true, html: "<html></html>", picture: { base64: "/9j/", contentType: "" } },
+        result: {
+          status: "ok",
+          value: { html: "<html></html>", picture: { base64: "/9j/", contentType: "" } },
+        },
       },
     };
     expect(portEventSchema.parse(portEvent)).toEqual(portEvent);
     expect(
       portEventSchema.safeParse({
         ...portEvent,
-        event: { ...portEvent.event, result: { ok: true, html: "", picture: { base64: "%" } } },
+        event: {
+          ...portEvent.event,
+          result: { status: "ok", value: { html: "", picture: { base64: "%" } } },
+        },
       }).success,
     ).toBe(false);
   });

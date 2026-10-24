@@ -1,11 +1,13 @@
 import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/sync/constants";
 import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import { Result } from "better-result";
+import type { SerializedResult, StandardSchemaV1 } from "better-result";
 import * as z from "zod";
 import { mfcItemId } from "./page";
 import type { MfcItemId } from "./page";
 
 export const BRIDGE_CHANNEL = "myakiba-mfc-bridge";
-export const BRIDGE_PROTOCOL = 1;
+export const BRIDGE_PROTOCOL = 2;
 export const MAX_ITEMS_PER_REQUEST = 1000;
 
 const FETCH_STATES = ["queued", "fetching", "needs_user", "backing_off"] as const;
@@ -40,19 +42,39 @@ export const bridgeRequestSchema = z.strictObject({
   ]),
 });
 
-export type ItemResult<Picture> =
-  | { readonly ok: true; readonly html: string; readonly picture: Picture | null }
-  | { readonly ok: false; readonly error: ItemFetchErrorCode };
+/** An item the extension fetched: its page, and its picture when it could read one. */
+export type ItemPage<Picture> = { readonly html: string; readonly picture: Picture | null };
+
+/** Why the extension could not fetch an item. Only the code crosses the bridge. */
+export type ItemFailure<Code extends string = ItemFetchErrorCode> = { readonly code: Code };
+
+type StatusEvent = {
+  readonly type: "status";
+  readonly state: FetchState;
+  readonly mfcItemId: MfcItemId | null;
+  readonly untilMs: number | null;
+};
+
+type DoneEvent = { readonly type: "done"; readonly reason: DoneReason };
 
 export type RunEvent<Picture> =
-  | { readonly type: "item"; readonly mfcItemId: MfcItemId; readonly result: ItemResult<Picture> }
   | {
-      readonly type: "status";
-      readonly state: FetchState;
-      readonly mfcItemId: MfcItemId | null;
-      readonly untilMs: number | null;
+      readonly type: "item";
+      readonly mfcItemId: MfcItemId;
+      readonly result: Result<ItemPage<Picture>, ItemFailure>;
     }
-  | { readonly type: "done"; readonly reason: DoneReason };
+  | StatusEvent
+  | DoneEvent;
+
+/** A run event as it crosses the bridge: an item's result is better-result's serialized envelope. */
+type WireEvent<Picture> =
+  | {
+      readonly type: "item";
+      readonly mfcItemId: MfcItemId;
+      readonly result: SerializedResult<ItemPage<Picture>, ItemFailure>;
+    }
+  | StatusEvent
+  | DoneEvent;
 
 type AnnounceEvent = {
   readonly type: "announce";
@@ -60,17 +82,104 @@ type AnnounceEvent = {
   readonly protocols: { readonly min: number; readonly max: number };
 };
 
-type BridgePicture = { readonly bytes: ArrayBuffer; readonly contentType: string };
+/** The picture as the page gets it: bytes the content script transfers rather than copies. */
+export type BridgePicture = { readonly bytes: ArrayBuffer; readonly contentType: string };
 
 export type BridgeEventMessage = {
   readonly channel: typeof BRIDGE_CHANNEL;
   readonly requestId: string | null;
-  readonly event: AnnounceEvent | RunEvent<BridgePicture>;
+  readonly event: AnnounceEvent | WireEvent<BridgePicture>;
 };
+
+type SynchronousSchema<Input, Output> = {
+  readonly "~standard": Omit<StandardSchemaV1.Props<Input, Output>, "validate"> & {
+    readonly validate: (
+      ...args: Parameters<StandardSchemaV1.Props["validate"]>
+    ) => StandardSchemaV1.Result<Output>;
+  };
+};
+
+/**
+ * Zod types its Standard Schema validation as maybe async, so a codec built on it would answer maybe a Promise. These
+ * schemas never are, and a synchronous codec relays each event in the order it came.
+ */
+function synchronous<Schema extends z.ZodType>(
+  schema: Schema,
+): SynchronousSchema<z.input<Schema>, z.output<Schema>> {
+  return {
+    "~standard": {
+      version: 1,
+      vendor: "zod",
+      validate: (value) => {
+        const parsed = schema.safeParse(value);
+        return parsed.success ? { value: parsed.data } : { issues: parsed.error.issues };
+      },
+    },
+  };
+}
 
 function leniently<const Values extends readonly [string, ...string[]]>(values: Values) {
   return z.union([z.enum(values), z.string().transform(() => "unknown" as const)]);
 }
+
+const itemFailureSchema = z.strictObject({ code: z.enum(ITEM_FETCH_ERROR_CODES) });
+
+/** Chrome JSON-serializes runtime messages, so picture bytes cross the extension as base64. */
+export const portPictureSchema = z.strictObject({ base64: z.base64(), contentType: z.string() });
+export type PortPicture = Readonly<z.output<typeof portPictureSchema>>;
+
+const portItemPageSchema = z.strictObject({
+  html: z.string(),
+  picture: portPictureSchema.nullable(),
+});
+
+const portItemPageToWire = synchronous(portItemPageSchema);
+const portItemFailureToWire = synchronous(itemFailureSchema);
+const portItemPageFromWire = synchronous(
+  portItemPageSchema.transform(({ html, picture }): ItemPage<BridgePicture> => ({
+    html,
+    picture: picture && {
+      bytes: Uint8Array.fromBase64(picture.base64).buffer,
+      contentType: picture.contentType,
+    },
+  })),
+);
+const portItemFailureFromWire = synchronous(itemFailureSchema);
+
+/**
+ * An item's result between the background and the content script. One build holds both ends, so each side uses the
+ * unsafe methods, and a result they disagree on is a defect.
+ */
+export const portItemCodec = Result.codec({
+  serialize: { ok: portItemPageToWire, err: portItemFailureToWire },
+  deserialize: { ok: portItemPageFromWire, err: portItemFailureFromWire },
+});
+
+const bridgePictureSchema = z.strictObject({
+  bytes: z.instanceof(ArrayBuffer),
+  contentType: z.string(),
+});
+
+const pageItemPageToWire = synchronous(
+  z.strictObject({ html: z.string(), picture: bridgePictureSchema.nullable() }),
+);
+const pageItemFailureToWire = synchronous(itemFailureSchema);
+const pageItemPageFromWire = synchronous(
+  z.object({
+    html: z.string(),
+    picture: z.object({ bytes: z.instanceof(ArrayBuffer), contentType: z.string() }).nullable(),
+  }),
+);
+const pageItemFailureFromWire = synchronous(z.object({ code: leniently(ITEM_FETCH_ERROR_CODES) }));
+
+/**
+ * An item's result between the content script and the web page, which the browser's store and the deploy release
+ * apart. The page reads it with the safe methods and leniently: a newer extension's error code reads as "unknown".
+ */
+export const pageItemCodec = Result.codec({
+  serialize: { ok: pageItemPageToWire, err: pageItemFailureToWire },
+  deserialize: { ok: pageItemPageFromWire, err: pageItemFailureFromWire },
+});
 
 const receivedEventSchema = z.union([
   z.object({
@@ -78,18 +187,7 @@ const receivedEventSchema = z.union([
     extensionVersion: z.string(),
     protocols: z.object({ min: z.number().int(), max: z.number().int() }),
   }),
-  z.object({
-    type: z.literal("item"),
-    mfcItemId: mfcItemIdSchema,
-    result: z.discriminatedUnion("ok", [
-      z.object({
-        ok: z.literal(true),
-        html: z.string(),
-        picture: z.object({ bytes: z.instanceof(ArrayBuffer), contentType: z.string() }).nullable(),
-      }),
-      z.object({ ok: z.literal(false), error: leniently(ITEM_FETCH_ERROR_CODES) }),
-    ]),
-  }),
+  z.object({ type: z.literal("item"), mfcItemId: mfcItemIdSchema, result: z.unknown() }),
   z.object({
     type: z.literal("status"),
     state: leniently(FETCH_STATES),
@@ -100,16 +198,15 @@ const receivedEventSchema = z.union([
   z.object({ type: z.string() }).transform(() => ({ type: "unknown" as const })),
 ]);
 
-/** Lenient, for the web page: a newer extension's event types and codes read as "unknown". */
+/**
+ * Lenient, for the web page: a newer extension's event types and states read as "unknown". An item's result is left
+ * for `pageItemCodec` to read.
+ */
 export const bridgeEventSchema = z.object({
   channel: z.literal(BRIDGE_CHANNEL),
   requestId: z.string().nullable(),
   event: receivedEventSchema,
 });
-
-/** Chrome JSON-serializes runtime messages, so picture bytes cross the extension as base64. */
-export const portPictureSchema = z.strictObject({ base64: z.base64(), contentType: z.string() });
-export type PortPicture = Readonly<z.output<typeof portPictureSchema>>;
 
 export const portRequestSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -128,13 +225,9 @@ export const portEventSchema = z.strictObject({
     z.strictObject({
       type: z.literal("item"),
       mfcItemId: mfcItemIdSchema,
-      result: z.discriminatedUnion("ok", [
-        z.strictObject({
-          ok: z.literal(true),
-          html: z.string(),
-          picture: portPictureSchema.nullable(),
-        }),
-        z.strictObject({ ok: z.literal(false), error: z.enum(ITEM_FETCH_ERROR_CODES) }),
+      result: z.discriminatedUnion("status", [
+        z.strictObject({ status: z.literal("ok"), value: portItemPageSchema }),
+        z.strictObject({ status: z.literal("error"), error: itemFailureSchema }),
       ]),
     }),
     z.strictObject({
@@ -146,4 +239,4 @@ export const portEventSchema = z.strictObject({
     z.strictObject({ type: z.literal("done"), reason: z.enum(DONE_REASONS) }),
   ]),
 });
-export type PortEvent = { readonly requestId: string; readonly event: RunEvent<PortPicture> };
+export type PortEvent = { readonly requestId: string; readonly event: WireEvent<PortPicture> };

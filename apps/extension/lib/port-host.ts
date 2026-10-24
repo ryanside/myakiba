@@ -1,5 +1,5 @@
-import { portRequestSchema } from "@myakiba/mfc/bridge";
-import type { PortEvent, PortRequest } from "@myakiba/mfc/bridge";
+import { portItemCodec, portRequestSchema } from "@myakiba/mfc/bridge";
+import type { PortEvent, PortPicture, PortRequest, RunEvent } from "@myakiba/mfc/bridge";
 import type { Fetcher } from "./fetcher";
 import type { Requester, RunKey } from "./queue";
 
@@ -40,6 +40,12 @@ function trustedRequester(
   };
 }
 
+function toPort(event: RunEvent<PortPicture>): PortEvent["event"] {
+  return event.type === "item"
+    ? { ...event, result: portItemCodec.serializeUnsafe(event.result) }
+    : event;
+}
+
 export function servePort(
   port: BridgePort,
   fetcher: Pick<Fetcher, "submit" | "cancel">,
@@ -73,7 +79,7 @@ export function servePort(
           mfcItemIds: request.mfcItemIds,
           emit: (event) => {
             if (event.type === "done") openRuns.delete(key);
-            if (connected) port.postMessage({ requestId: request.requestId, event });
+            if (connected) port.postMessage({ requestId: request.requestId, event: toPort(event) });
           },
         });
         break;

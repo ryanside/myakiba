@@ -1,7 +1,12 @@
 import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
-import type { ItemResult, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
+import type {
+  ItemFailure,
+  ItemPage as FetchedPage,
+  PortPicture,
+  RunEvent,
+} from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import type { Result } from "better-result";
+import { Result } from "better-result";
 import type { ItemFetchError } from "./fetcher";
 
 export type RunKey = string & { readonly __brand: "RunKey" };
@@ -31,7 +36,7 @@ export type QueueState = {
   readonly active: Job | null;
 };
 
-export type ItemPage = { readonly html: string; readonly picture: PortPicture | null };
+export type ItemPage = FetchedPage<PortPicture>;
 
 /** What one attempt at an item answered: its page, or why there is none. */
 export type ItemAnswer = Result<ItemPage, ItemFetchError>;
@@ -77,12 +82,12 @@ export function waitersOf(state: QueueState, job: Job): readonly Run[] {
 
 function failAll(
   runs: readonly { readonly key: RunKey; readonly waitingFor: readonly MfcItemId[] }[],
-  error: ItemFetchErrorCode,
+  code: ItemFetchErrorCode,
 ): Emission[] {
   return runs.flatMap((run) => [
     ...run.waitingFor.map((mfcItemId) => ({
       run: run.key,
-      event: { type: "item", mfcItemId, result: { ok: false, error } } as const,
+      event: { type: "item", mfcItemId, result: Result.err({ code }) } as const,
     })),
     { run: run.key, event: { type: "done", reason: "complete" } as const },
   ]);
@@ -95,7 +100,7 @@ function halt(state: QueueState, until: number): QueueStep {
   };
 }
 
-function settle(state: QueueState, job: Job, result: ItemResult<PortPicture>): QueueStep {
+function settle(state: QueueState, job: Job, result: Result<ItemPage, ItemFailure>): QueueStep {
   const emit: Emission[] = [];
   const runs: Run[] = [];
   for (const run of state.runs) {
@@ -116,8 +121,8 @@ function toActiveWaiters(state: QueueState, event: RunEvent<PortPicture>): Emiss
 }
 
 function answer(state: QueueState, job: Job, answered: ItemAnswer): QueueStep {
-  if (answered.isOk()) return settle(state, job, { ok: true, ...answered.value });
-  const failed = (error: ItemFetchErrorCode) => () => settle(state, job, { ok: false, error });
+  if (answered.isOk()) return settle(state, job, Result.ok(answered.value));
+  const failed = (code: ItemFetchErrorCode) => () => settle(state, job, Result.err({ code }));
   return answered.error.match({
     // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
     MfcChallengeUnsolved: () => ({

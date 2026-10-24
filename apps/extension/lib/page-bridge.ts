@@ -2,7 +2,9 @@ import {
   BRIDGE_CHANNEL,
   BRIDGE_PROTOCOL,
   bridgeRequestSchema,
+  pageItemCodec,
   portEventSchema,
+  portItemCodec,
 } from "@myakiba/mfc/bridge";
 import type { BridgeEventMessage, PortEvent, PortRequest } from "@myakiba/mfc/bridge";
 
@@ -83,26 +85,18 @@ export function startPageBridge(deps: {
       post({ channel: BRIDGE_CHANNEL, requestId, event });
       return;
     }
-    const { result } = event;
-    if (!result.ok || !result.picture) {
-      post({
-        channel: BRIDGE_CHANNEL,
-        requestId,
-        event: { ...event, result: result.ok ? { ...result, picture: null } : result },
-      });
-      return;
-    }
-    const bytes = Uint8Array.fromBase64(result.picture.base64).buffer;
-    const picture = { bytes, contentType: result.picture.contentType };
+    const result = pageItemCodec.serializeUnsafe(portItemCodec.deserializeUnsafe(event.result));
+    const picture = result.status === "ok" ? result.value.picture : null;
     post(
-      { channel: BRIDGE_CHANNEL, requestId, event: { ...event, result: { ...result, picture } } },
-      [bytes],
+      { channel: BRIDGE_CHANNEL, requestId, event: { ...event, result } },
+      picture ? [picture.bytes] : [],
     );
   }
 
   function connect(): BridgePort {
     const opened = runtime.connect();
     opened.onMessage.addListener((message) => {
+      // The port codec panics on a result it cannot read, so a malformed event is dropped here first.
       const parsed = portEventSchema.safeParse(message);
       if (parsed.success) relay(parsed.data);
     });

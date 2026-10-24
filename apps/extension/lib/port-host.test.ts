@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import type { PortEvent, PortRequest } from "@myakiba/mfc/bridge";
 import { ORIGINS, itemId } from "../test/fake-browser";
 import type { FetchRun } from "./fetcher";
@@ -106,9 +107,9 @@ describe("servePort", () => {
     run?.emit({
       type: "item",
       mfcItemId: itemId(1),
-      result: { ok: true, html: "<html>1</html>", picture },
+      result: Result.ok({ html: "<html>1</html>", picture }),
     });
-    run?.emit({ type: "item", mfcItemId: itemId(2), result: { ok: false, error: "timeout" } });
+    run?.emit({ type: "item", mfcItemId: itemId(2), result: Result.err({ code: "timeout" }) });
     run?.emit({ type: "done", reason: "complete" });
 
     expect(port.posted).toEqual([
@@ -121,12 +122,16 @@ describe("servePort", () => {
         event: {
           type: "item",
           mfcItemId: itemId(1),
-          result: { ok: true, html: "<html>1</html>", picture },
+          result: { status: "ok", value: { html: "<html>1</html>", picture } },
         },
       },
       {
         requestId: REQUEST_ID,
-        event: { type: "item", mfcItemId: itemId(2), result: { ok: false, error: "timeout" } },
+        event: {
+          type: "item",
+          mfcItemId: itemId(2),
+          result: { status: "error", error: { code: "timeout" } },
+        },
       },
       { requestId: REQUEST_ID, event: { type: "done", reason: "complete" } },
     ]);

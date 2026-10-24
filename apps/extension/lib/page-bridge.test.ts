@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BRIDGE_CHANNEL } from "@myakiba/mfc/bridge";
+import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL } from "@myakiba/mfc/bridge";
 import type { BridgeEventMessage, PortEvent, PortRequest } from "@myakiba/mfc/bridge";
 import { ORIGINS } from "../test/fake-browser";
 import { KEEPALIVE_MS, startPageBridge } from "./page-bridge";
@@ -33,7 +33,7 @@ function fakePage() {
       listener({
         source: page,
         origin: ORIGINS.web,
-        data: { channel: BRIDGE_CHANNEL, protocol: 1, requestId, request },
+        data: { channel: BRIDGE_CHANNEL, protocol: BRIDGE_PROTOCOL, requestId, request },
       }),
   };
 }
@@ -190,8 +190,16 @@ describe("relaying the background's events", () => {
     const bridge = running();
     const events: Json[] = [
       { type: "status", state: "needs_user", mfcItemId: 1, untilMs: 5000 },
-      { type: "item", mfcItemId: 1, result: { ok: true, html: "<html>1</html>", picture: null } },
-      { type: "item", mfcItemId: 2, result: { ok: false, error: "hidden_or_missing" } },
+      {
+        type: "item",
+        mfcItemId: 1,
+        result: { status: "ok", value: { html: "<html>1</html>", picture: null } },
+      },
+      {
+        type: "item",
+        mfcItemId: 2,
+        result: { status: "error", error: { code: "hidden_or_missing" } },
+      },
       { type: "done", reason: "complete" },
     ];
     for (const event of events) bridge.extension.receive({ requestId: REQUEST_ID, event });
@@ -210,34 +218,43 @@ describe("relaying the background's events", () => {
         type: "item",
         mfcItemId: 3,
         result: {
-          ok: true,
-          html: "<html>3</html>",
-          picture: { base64: "/9j/2Q==", contentType: "image/jpeg" },
+          status: "ok",
+          value: {
+            html: "<html>3</html>",
+            picture: { base64: "/9j/2Q==", contentType: "image/jpeg" },
+          },
         },
       },
     });
 
     const [message] = bridge.posted;
     const event = message?.event;
-    if (event?.type !== "item" || !event.result.ok || !event.result.picture) {
+    if (event?.type !== "item" || event.result.status !== "ok" || !event.result.value.picture) {
       throw new Error("expected item 3 to reach the page with its picture");
     }
-    expect(event.result.html).toBe("<html>3</html>");
-    expect(event.result.picture.contentType).toBe("image/jpeg");
-    expect(new Uint8Array(event.result.picture.bytes)).toEqual(
-      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
-    );
-    expect(bridge.transfers).toEqual([[event.result.picture.bytes]]);
-    expect(bridge.transfers[0]?.[0]).toBe(event.result.picture.bytes);
+    const { html, picture } = event.result.value;
+    expect(html).toBe("<html>3</html>");
+    expect(picture.contentType).toBe("image/jpeg");
+    expect(new Uint8Array(picture.bytes)).toEqual(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]));
+    expect(bridge.transfers).toEqual([[picture.bytes]]);
+    expect(bridge.transfers[0]?.[0]).toBe(picture.bytes);
   });
 
   test("drops an event the port should not carry", () => {
     const bridge = running();
     const malformed: Json[] = [
-      { requestId: REQUEST_ID, event: { type: "item", mfcItemId: 1, result: { ok: true } } },
+      { requestId: REQUEST_ID, event: { type: "item", mfcItemId: 1, result: { status: "ok" } } },
       {
         requestId: REQUEST_ID,
-        event: { type: "item", mfcItemId: 1, result: { ok: false, error: "solar_flare" } },
+        event: {
+          type: "item",
+          mfcItemId: 1,
+          result: { status: "error", error: { code: "solar_flare" } },
+        },
+      },
+      {
+        requestId: REQUEST_ID,
+        event: { type: "item", mfcItemId: 1, result: { ok: false, error: "timeout" } },
       },
       { requestId: REQUEST_ID, event: { type: "teleport" } },
       { requestId: "1", event: { type: "done", reason: "complete" } },

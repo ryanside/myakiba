@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BRIDGE_CHANNEL } from "@myakiba/mfc/bridge";
+import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { PAGE_ORIGIN, fakeExtension } from "../../test/fake-extension";
@@ -36,6 +36,12 @@ describe("probe", () => {
 
   test("an extension that speaks no protocol this page speaks is outdated", async () => {
     const bridge = createExtensionBridge(fakeExtension({ protocols: { min: 0, max: 0 } }).window);
+
+    expect(await bridge.probe()).toEqual({ kind: "outdated", extensionVersion: "0.1.0" });
+  });
+
+  test("an extension that speaks only protocol 1 is outdated", async () => {
+    const bridge = createExtensionBridge(fakeExtension({ protocols: { min: 1, max: 1 } }).window);
 
     expect(await bridge.probe()).toEqual({ kind: "outdated", extensionVersion: "0.1.0" });
   });
@@ -137,7 +143,11 @@ describe("probe", () => {
     const announce = {
       channel: BRIDGE_CHANNEL,
       requestId: null,
-      event: { type: "announce", extensionVersion: "6.6.6", protocols: { min: 1, max: 1 } },
+      event: {
+        type: "announce",
+        extensionVersion: "6.6.6",
+        protocols: { min: BRIDGE_PROTOCOL, max: BRIDGE_PROTOCOL },
+      },
     };
 
     extension.deliver(announce, { origin: "https://evil.example" });
@@ -156,7 +166,10 @@ describe("fetchItems", () => {
         run.send({
           type: "item",
           mfcItemId: 1,
-          result: { ok: true, html: "<p>1</p>", picture: { bytes, contentType: "image/jpeg" } },
+          result: {
+            status: "ok",
+            value: { html: "<p>1</p>", picture: { bytes, contentType: "image/jpeg" } },
+          },
         });
         run.fail(2, "mfc_signed_out");
         run.done("complete");
@@ -217,7 +230,8 @@ describe("fetchItems", () => {
   test("an item event the page cannot read leaves its id to end as extension_stopped", async () => {
     const extension = fakeExtension({
       onFetch: (run) => {
-        run.send({ type: "item", mfcItemId: 1, result: { ok: true } });
+        run.send({ type: "item", mfcItemId: 1, result: { status: "ok", value: { html: "" } } });
+        run.send({ type: "item", mfcItemId: 1, result: { status: "error", error: "timeout" } });
         run.send({ type: "teleport", mfcItemId: 1 });
         run.item(2);
         run.item(2);
@@ -252,7 +266,7 @@ describe("fetchItems", () => {
         extension.emit(crypto.randomUUID(), {
           type: "item",
           mfcItemId: 1,
-          result: { ok: false, error: "timeout" },
+          result: { status: "error", error: { code: "timeout" } },
         });
         run.item(1);
         run.done("complete");
