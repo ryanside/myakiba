@@ -1158,7 +1158,7 @@
       ]
     },
     {
-      "fix": "55c7e87089c66ac6c3dbbf2e07ae36447fc11c11",
+      "fix": "a861fe25cca9ed6c3d74968b9a1e448bb344dfcb",
       "bug": "unsupported user currency and date format values were accepted at sign-up and update",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1169,7 +1169,7 @@
       ]
     },
     {
-      "fix": "7d892b3a36dcac004e6edeaaf624e0a1311ddae7",
+      "fix": "b85ec7fd08bd530e8651c33de319396ad9a12f93",
       "bug": "worker shutdown exited zero on a thrown health stop and hung on stuck stages or rejected flush",
       "test": "apps/worker/shutdown.test.ts",
       "fixed": [
@@ -1182,19 +1182,19 @@
       ]
     },
     {
-      "fix": "175b1de6e3ea4882a84da0c5af5cd51e74b999d5",
+      "fix": "62aea68914b8c1f882acf612ef7f21e0375660a9",
       "bug": "Redis connection error events bypassed evlog",
       "test": "packages/redis/src/client.test.ts",
       "fixed": ["the shared Redis client reports emitted errors through evlog"]
     },
     {
-      "fix": "175b1de6e3ea4882a84da0c5af5cd51e74b999d5",
+      "fix": "62aea68914b8c1f882acf612ef7f21e0375660a9",
       "bug": "Redis connection error events bypassed evlog",
       "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
       "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
     },
     {
-      "fix": "0d3e27374cd55a165ddd8748ab2e62c3985b6f85",
+      "fix": "4d7f019dab691e21ee0f146bfd9575b9e2d36269",
       "bug": "fatal server errors during asynchronous boot bypassed evlog and did not exit",
       "test": "apps/server/src/fatal-errors.test.ts",
       "fixed": [
@@ -1202,6 +1202,16 @@
         "server logs and exits for unhandledRejection during boot with success flush",
         "server logs and exits for unhandledRejection during boot with reject flush",
         "server logs and exits for unhandledRejection during boot with stuck flush"
+      ]
+    },
+    {
+      "fix": "adfd43ec25a8ea2b71ae9a023422ba7b5eb3a9cc",
+      "bug": "auth import eagerly generated OpenAPI and cached its possibly unhandled rejection",
+      "test": "packages/auth/src/openapi.test.ts",
+      "fixed": [
+        "importing auth does not generate OpenAPI",
+        "OpenAPI generation failures reach the requesting caller",
+        "OpenAPI requests retry failed generation and share the successful schema"
       ]
     }
   ],
