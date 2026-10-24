@@ -1,5 +1,6 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { FormApi } from "@tanstack/react-form";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { toast } from "@/components/ui/toast";
@@ -37,17 +38,25 @@ async function submitCollectionAndReadToast() {
     ),
   });
 
-  let rejection: Error | null = null;
+  let rejection: unknown = null;
+  let submitted: unknown;
   await act(async () => {
     try {
-      await result.current.handleSyncCollectionSubmit([]);
+      const form = new FormApi({
+        defaultValues: {},
+        onSubmit: async () => {
+          submitted = await result.current.handleSyncCollectionSubmit([]);
+        },
+      });
+      form.mount();
+      await form.handleSubmit();
     } catch (error) {
-      rejection = error as Error;
+      rejection = error;
     }
   });
   const [options] = added.mock.calls.at(-1) ?? [];
   added.mockRestore();
-  return { options, rejection };
+  return { options, rejection, submitted };
 }
 
 const failureToast = (description: string) => ({
@@ -57,13 +66,14 @@ const failureToast = (description: string) => ({
   actionProps: { children: "View import history" },
 });
 
-test("a sync the server refuses shows safe text and still rejects the submit", async () => {
+test("a sync the server refuses shows safe text and settles the form submit", async () => {
   answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
 
-  const { options, rejection } = await submitCollectionAndReadToast();
+  const { options, rejection, submitted } = await submitCollectionAndReadToast();
 
   expect(options).toMatchObject(failureToast("Failed to submit collection items"));
-  expect(rejection).toMatchObject({ message: "Failed to submit collection items" });
+  expect(rejection).toBeNull();
+  expect(submitted).toBe("not_sent");
 });
 
 test("a sync that never reaches the server shows safe text", async () => {
@@ -82,4 +92,12 @@ test("a sync refused with only whitespace shows the form's own text", async () =
   const { options } = await submitCollectionAndReadToast();
 
   expect(options).toMatchObject(failureToast("Failed to submit collection items"));
+});
+
+test("TanStack Form rethrows a rejection from onSubmit", async () => {
+  const failure = new Error("submit failed");
+  const form = new FormApi({ defaultValues: {}, onSubmit: () => Promise.reject(failure) });
+  form.mount();
+  await expect(form.handleSubmit()).rejects.toBe(failure);
+  expect(form.state.isSubmitting).toBe(false);
 });
