@@ -1155,7 +1155,8 @@
       "fixed": [
         "send-verification-email fails when the email provider refuses the send",
         "request-password-reset fails when the email provider refuses the send"
-      ]
+      ],
+      "testAt": "860b425edd00fd7c5156d0d6b2fb8ee77d7cbd29"
     },
     {
       "fix": "b53a73fda737e4082e273dacc80323d7617bbf5d",
@@ -1221,6 +1222,17 @@
       "fixed": [
         "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
         "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
+      ]
+    },
+    {
+      "fix": "f75b692b5f6069590b333da9cd93718a14840a7d",
+      "bug": "email provider failure disclosed account existence and failed sign-up after persistence",
+      "test": "packages/auth/src/server.test.ts",
+      "fixed": [
+        "send-verification-email succeeds and logs when the email provider refuses the send",
+        "request-password-reset succeeds and logs when the email provider refuses the send",
+        "failed reset email does not disclose whether the account exists",
+        "sign-up succeeds and logs when verification email fails"
       ]
     }
   ],
