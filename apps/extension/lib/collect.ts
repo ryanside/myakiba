@@ -5,6 +5,9 @@ import * as z from "zod";
 import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
 import type { CollectorInjectionFailed } from "./errors/collector-injection-failed";
 import { MfcPageFetchFailed } from "./errors/mfc-page-fetch-failed";
+import { PictureFetchFailed } from "./errors/picture-fetch-failed";
+import { PictureRejected } from "./errors/picture-rejected";
+import { PictureTimedOut } from "./errors/picture-timed-out";
 
 export const PAGE_TIMEOUT_MS = 45_000;
 
@@ -90,10 +93,42 @@ export const pageAnswerCodec = Result.codec({
   },
 });
 
-/** The collector's answer to a picture request, which answers no picture rather than fail. */
+/** How the collector fails to read a picture in the tab. */
+export type PictureFailure = PictureRejected | PictureFetchFailed | PictureTimedOut;
+
+const pictureFailureWireSchema = z.union([
+  z
+    .strictObject({
+      _tag: z.literal("PictureRejected"),
+      reason: z.enum(["http_status", "no_body", "too_large", "unknown_format"]),
+      status: z.number().int(),
+      bytes: z.number().int().nullable(),
+    })
+    .transform(({ reason, status, bytes }) => new PictureRejected({ reason, status, bytes })),
+  z
+    .strictObject({ _tag: z.literal("PictureFetchFailed"), cause: errorSummarySchema })
+    .transform(({ cause }) => new PictureFetchFailed({ cause })),
+  z
+    .strictObject({ _tag: z.literal("PictureTimedOut"), timeoutMs: z.number() })
+    .transform(({ timeoutMs }) => new PictureTimedOut({ timeoutMs })),
+]);
+
+/**
+ * The collector's answer to a picture request. No picture means the tab does not show the picture asked for, which is
+ * not a failure.
+ */
 export const pictureAnswerCodec = Result.codec({
-  serialize: { ok: portPictureSchema.nullable(), err: z.never() },
-  deserialize: { ok: portPictureSchema.nullable(), err: z.never() },
+  serialize: {
+    ok: portPictureSchema.nullable(),
+    err: z.union([
+      z
+        .instanceof(PictureRejected)
+        .transform(({ _tag, reason, status, bytes }) => ({ _tag, reason, status, bytes })),
+      z.instanceof(PictureFetchFailed).transform(({ _tag, cause }) => ({ _tag, cause })),
+      z.instanceof(PictureTimedOut).transform(({ _tag, timeoutMs }) => ({ _tag, timeoutMs })),
+    ]),
+  },
+  deserialize: { ok: portPictureSchema.nullable(), err: pictureFailureWireSchema },
 });
 
 /** How the collector fails to answer any request. */

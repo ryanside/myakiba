@@ -5,7 +5,13 @@ import { Panic, Result, UnhandledException } from "better-result";
 import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
 import type { Clock, SessionValue } from "./clock";
 import { NO_STATUS, PAGE_TIMEOUT_MS } from "./collect";
-import type { CollectedPage, CollectorFailure, PageCollectFailure, PageRequest } from "./collect";
+import type {
+  CollectedPage,
+  CollectorFailure,
+  PageCollectFailure,
+  PageRequest,
+  PictureFailure,
+} from "./collect";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
@@ -57,13 +63,13 @@ export type FetcherDeps = {
     tabId: number,
     url: string,
     signal: AbortSignal,
-  ) => Promise<Result<PortPicture | null, CollectorFailure>>;
+  ) => Promise<Result<PortPicture | null, PictureCollectFailure>>;
   /** Runs in the picture tab, and answers no picture unless the tab shows `url`. */
   readonly fetchPublicPicture: (
     tabId: number,
     url: string,
     signal: AbortSignal,
-  ) => Promise<Result<PortPicture | null, CollectorFailure>>;
+  ) => Promise<Result<PortPicture | null, PictureCollectFailure>>;
 };
 
 export type FetchRun = {
@@ -94,6 +100,10 @@ type LoadFailure =
   | UnhandledException;
 
 type PageFailure = LoadFailure | PageCollectFailure;
+
+type PictureCollectFailure = CollectorFailure | PictureFailure;
+
+type PictureReadFailure = LoadFailure | PictureCollectFailure;
 
 type AttemptFailure = PageFailure | PageRejected | MfcChallengeUnsolved;
 
@@ -259,35 +269,43 @@ export function createFetcher(deps: FetcherDeps) {
   async function pictureOf(
     ogImage: MfcOgImage,
     { tabId, requester, signal }: ItemContext,
-  ): Promise<PortPicture | null> {
-    if (ogImage.kind !== "picture") return null;
+  ): Promise<Result<PortPicture | null, PictureReadFailure>> {
+    if (ogImage.kind !== "picture") return Result.ok(null);
     const { picture } = ogImage;
     const url = toConfiguredUrl(picture.url, origins);
-    if (!url) return null;
-    try {
-      const read =
-        picture.access === "gated"
-          ? await throttle.load(
-              signal,
-              (timeout) =>
-                deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
-              PICTURE_TIMEOUT_MS,
-            )
-          : await pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
-              deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
-            );
-      return read.unwrapOr(null);
-    } catch {
-      return null;
-    }
+    if (!url) return Result.ok(null);
+    const read =
+      picture.access === "gated"
+        ? await loading(
+            () =>
+              throttle.load(
+                signal,
+                (timeout) =>
+                  deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
+                PICTURE_TIMEOUT_MS,
+              ),
+            signal,
+            "page",
+          )
+        : await loading(
+            () =>
+              pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
+                deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
+              ),
+            signal,
+            "tab",
+          );
+    return Result.flatten(read);
   }
 
+  /** A picture is optional, so an item whose picture fails imports without one. */
   async function itemPage(
     page: CollectedPage,
     ogImage: MfcOgImage,
     context: ItemContext,
   ): Promise<ItemPage> {
-    return { html: page.html, picture: await pictureOf(ogImage, context) };
+    const picture = await pictureOf(ogImage, context);
+    return { html: page.html, picture: picture.unwrapOr(null) };
   }
 
   async function fetchPage(

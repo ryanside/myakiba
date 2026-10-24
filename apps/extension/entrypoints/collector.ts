@@ -10,9 +10,11 @@ import {
   pictureAnswerCodec,
   runArmed,
 } from "../lib/collect";
-import type { CollectedPage } from "../lib/collect";
+import type { CollectedPage, PictureFailure } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
 import { MfcPageFetchFailed } from "../lib/errors/mfc-page-fetch-failed";
+import { PictureFetchFailed } from "../lib/errors/picture-fetch-failed";
+import { PictureTimedOut } from "../lib/errors/picture-timed-out";
 import { summarize } from "../lib/errors/summary";
 import { toConfiguredUrl } from "../lib/origins";
 import { PICTURE_TIMEOUT_MS, pictureToRead, readPicture } from "../lib/picture";
@@ -56,26 +58,32 @@ async function fetchPicture(
   url: URL | null,
   cache: RequestCache,
   signal: AbortSignal,
-): Promise<PortPicture | null> {
-  if (url?.origin !== location.origin) return null;
-  try {
-    return await readPicture(
-      await fetch(url, {
-        credentials: "include",
-        cache,
-        signal: AbortSignal.any([signal, AbortSignal.timeout(PICTURE_TIMEOUT_MS)]),
-      }),
-    );
-  } catch {
-    return null;
-  }
+): Promise<Result<PortPicture | null, PictureFailure>> {
+  if (url?.origin !== location.origin) return Result.ok(null);
+  const read = await Result.tryPromise({
+    try: async () =>
+      readPicture(
+        await fetch(url, {
+          credentials: "include",
+          cache,
+          signal: AbortSignal.any([signal, AbortSignal.timeout(PICTURE_TIMEOUT_MS)]),
+        }),
+      ),
+    catch: (cause) => {
+      const summary = summarize(cause);
+      return summary.name === "TimeoutError"
+        ? new PictureTimedOut({ timeoutMs: PICTURE_TIMEOUT_MS })
+        : new PictureFetchFailed({ cause: summary });
+    },
+  });
+  return Result.flatten(read);
 }
 
 export default defineUnlistedScript(async () =>
   runArmed(async (request, signal) => {
     if (request.kind === "gated-picture") {
       const picture = await fetchPicture(toConfiguredUrl(request.url, ORIGINS), "default", signal);
-      return pictureAnswerCodec.serializeUnsafe(Result.ok(picture));
+      return pictureAnswerCodec.serializeUnsafe(picture);
     }
     if (request.kind === "public-picture") {
       // The tab just loaded the picture, so the browser's copy saves the CDN a second request.
@@ -84,7 +92,7 @@ export default defineUnlistedScript(async () =>
         "force-cache",
         signal,
       );
-      return pictureAnswerCodec.serializeUnsafe(Result.ok(picture));
+      return pictureAnswerCodec.serializeUnsafe(picture);
     }
     const page =
       request.mode === "document"

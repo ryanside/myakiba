@@ -3,10 +3,17 @@ import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Err, Result } from "better-result";
 import type { Clock, SessionValue } from "../lib/clock";
-import type { CollectedPage, PageCollectFailure, PageRequest } from "../lib/collect";
+import type {
+  CollectedPage,
+  PageCollectFailure,
+  PageRequest,
+  PictureFailure,
+} from "../lib/collect";
 import { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { MfcPageFetchFailed } from "../lib/errors/mfc-page-fetch-failed";
+import { PictureFetchFailed } from "../lib/errors/picture-fetch-failed";
+import { summarize } from "../lib/errors/summary";
 import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { WindowsApi } from "../lib/mfc-tab";
@@ -479,6 +486,12 @@ function mortalValue<T>(value: SessionValue<T>, wrap: ReturnType<typeof mortal>)
   return { load: wrap(value.load), save: wrap(value.save) };
 }
 
+/**
+ * What the collector's read answers for a picture: the picture, none, or how the read failed. A rejection is a fetch that
+ * failed in the tab, which the collector answers as PictureFetchFailed.
+ */
+export type PictureAnswer = PortPicture | null | Err<PortPicture | null, PictureFailure>;
+
 /** What the collector answers for a page: the page, or how it failed. A defect throws instead. */
 export type PageAnswer = CollectedPage | Err<CollectedPage, PageCollectFailure>;
 
@@ -497,9 +510,9 @@ export function fakeExtension(options: {
   readonly deferNavigationCommit?: CommitStyle | undefined;
   readonly redirect?: (url: string) => string | undefined;
   readonly dropsNavigation?: (url: string) => boolean;
-  readonly gatedPicture?: (url: string, signal: AbortSignal) => Promise<PortPicture | null>;
+  readonly gatedPicture?: (url: string, signal: AbortSignal) => Promise<PictureAnswer>;
   /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
-  readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PortPicture | null>;
+  readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PictureAnswer>;
 }) {
   const clock = options.clock ?? fakeClock();
   const throttleState = options.throttleState ?? memoryValue(OPEN_THROTTLE);
@@ -545,13 +558,16 @@ export function fakeExtension(options: {
   async function readIn(
     read: Load,
     signal: AbortSignal,
-    answer: () => Promise<PortPicture | null>,
-  ): Promise<PortPicture | null> {
+    answer: () => Promise<PictureAnswer>,
+  ): Promise<Result<PortPicture | null, PictureFailure>> {
     pictureReads.push(read);
     const stopped = Promise.withResolvers<null>();
     signal.addEventListener("abort", () => stopped.resolve(null), { once: true });
     try {
-      return await Promise.race([answer(), stopped.promise, tabs.closed(read.tabId)]);
+      const picture = await Promise.race([answer(), stopped.promise, tabs.closed(read.tabId)]);
+      return picture instanceof Err ? picture : Result.ok(picture);
+    } catch (error) {
+      return Result.err(new PictureFetchFailed({ cause: summarize(error) }));
     } finally {
       read.endedAt = clock.now();
     }
@@ -573,25 +589,23 @@ export function fakeExtension(options: {
       endedAt: null,
       ...(within && { within }),
     };
-    const picture = await readIn(read, signal, async () => {
+    return readIn(read, signal, async () => {
       if (!pictureToRead(requested, url.href, ORIGINS)) return null;
       return options.publicPicture
         ? options.publicPicture(url, signal)
         : { base64: "AQID", contentType: "image/jpeg" };
     });
-    return Result.ok(picture);
   }
 
   async function readGatedPicture(tabId: number, url: string, signal: AbortSignal) {
     signal.throwIfAborted();
     pictureUrls.push(url);
     const read: Load = { tabId, url, at: clock.now(), byUser: false, endedAt: null };
-    const picture = await readIn(read, signal, async () =>
+    return readIn(read, signal, async () =>
       options.gatedPicture
         ? options.gatedPicture(url, signal)
         : { base64: "/9j/", contentType: "image/jpeg" },
     );
-    return Result.ok(picture);
   }
 
   function startWorker(): Worker {

@@ -4,6 +4,10 @@ import { pictureToRead, readPicture } from "./picture";
 
 const MB = 1024 * 1024;
 const ascii = (text: string) => [...new TextEncoder().encode(text)];
+async function kept(response: Response) {
+  const read = await readPicture(response);
+  return read.unwrapOr(null);
+}
 
 describe("readPicture", () => {
   test.each([
@@ -17,7 +21,7 @@ describe("readPicture", () => {
       headers: { "content-type": "application/octet-stream" },
     });
 
-    expect(await readPicture(response)).toEqual({
+    expect(await kept(response)).toEqual({
       base64: new Uint8Array(bytes).toBase64(),
       contentType,
     });
@@ -28,7 +32,7 @@ describe("readPicture", () => {
       headers: { "content-type": "image/jpeg" },
     });
 
-    expect(await readPicture(response)).toBeNull();
+    expect(await kept(response)).toBeNull();
   });
 
   test("stops reading past 10 MB without waiting for the rest", async () => {
@@ -44,7 +48,7 @@ describe("readPicture", () => {
       },
     });
 
-    expect(await readPicture(new Response(endless))).toBeNull();
+    expect(await kept(new Response(endless))).toBeNull();
     expect(cancelled).toBe(true);
   });
 
@@ -60,14 +64,14 @@ describe("readPicture", () => {
     });
     const response = new Response(body, { headers: { "content-length": String(10 * MB + 1) } });
 
-    expect(await readPicture(response)).toBeNull();
+    expect(await kept(response)).toBeNull();
     expect(cancelled).toBe(true);
   });
 
   test("drops an empty or failed response", async () => {
-    expect(await readPicture(new Response(new Uint8Array()))).toBeNull();
+    expect(await kept(new Response(new Uint8Array()))).toBeNull();
     expect(
-      await readPicture(new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 404 })),
+      await kept(new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 404 })),
     ).toBeNull();
   });
 });

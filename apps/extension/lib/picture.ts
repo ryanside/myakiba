@@ -1,4 +1,6 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
+import { Result } from "better-result";
+import { PictureRejected } from "./errors/picture-rejected";
 import { toConfiguredUrl } from "./origins";
 import type { Origins } from "./origins";
 
@@ -35,7 +37,19 @@ const FORMATS = [
   readonly matches: (bytes: Uint8Array) => boolean;
 }[];
 
-async function readAtMost(body: ReadableStream<Uint8Array>, limit: number) {
+function rejected(
+  reason: PictureRejected["reason"],
+  status: number,
+  bytes: number | null = null,
+): Result<never, PictureRejected> {
+  return Result.err(new PictureRejected({ reason, status, bytes }));
+}
+
+async function readAtMost(
+  body: ReadableStream<Uint8Array>,
+  limit: number,
+  status: number,
+): Promise<Result<Uint8Array, PictureRejected>> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -43,7 +57,7 @@ async function readAtMost(body: ReadableStream<Uint8Array>, limit: number) {
     size += chunk.value.byteLength;
     if (size > limit) {
       await reader.cancel();
-      return null;
+      return rejected("too_large", status, size);
     }
     chunks.push(chunk.value);
   }
@@ -53,19 +67,29 @@ async function readAtMost(body: ReadableStream<Uint8Array>, limit: number) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return bytes;
+  return Result.ok(bytes);
 }
 
 /** Only an image of a known format leaves the tab, so an HTML error page never passes as a picture. */
-export async function readPicture(response: Response): Promise<PortPicture | null> {
-  if (!response.ok || !response.body) return null;
-  if (Number(response.headers.get("content-length")) > MAX_PICTURE_BYTES) {
-    await response.body.cancel();
-    return null;
+export async function readPicture(
+  response: Response,
+): Promise<Result<PortPicture, PictureRejected>> {
+  const { status, body } = response;
+  if (!response.ok) return rejected("http_status", status);
+  if (!body) return rejected("no_body", status);
+  const declared = Number(response.headers.get("content-length"));
+  if (declared > MAX_PICTURE_BYTES) {
+    await body.cancel();
+    return rejected("too_large", status, declared);
   }
-  const bytes = await readAtMost(response.body, MAX_PICTURE_BYTES);
-  const format = bytes && FORMATS.find((candidate) => candidate.matches(bytes));
-  return bytes && format ? { base64: bytes.toBase64(), contentType: format.contentType } : null;
+  const read = await readAtMost(body, MAX_PICTURE_BYTES, status);
+  return read.andThen((bytes) => {
+    if (bytes.byteLength === 0) return rejected("no_body", status, 0);
+    const format = FORMATS.find((candidate) => candidate.matches(bytes));
+    return format
+      ? Result.ok({ base64: bytes.toBase64(), contentType: format.contentType })
+      : rejected("unknown_format", status, bytes.byteLength);
+  });
 }
 
 /**
