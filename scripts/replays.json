@@ -1274,6 +1274,13 @@
         "worker logs and exits for unhandledRejection during boot with reject flush",
         "worker logs and exits for unhandledRejection during boot with stuck flush"
       ]
+    },
+    {
+      "fix": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
+      "testAt": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
+      "bug": "commit effect Panics were logged only at warning level",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": ["a Panic in a commit effect logs at error level and keeps the response"]
     }
   ],
   "lint": [
