@@ -1,3 +1,4 @@
+import { Result, panic } from "better-result";
 import { Buffer } from "node:buffer";
 import { createId } from "@paralleldrive/cuid2";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
@@ -33,6 +34,7 @@ import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
+import type { MfcPageProblem } from "@myakiba/mfc/parse";
 import { createImportId, planCollectionRows } from "./import-plan";
 import type { ImportableItem, PlannedCollectionRow } from "./import-plan";
 import {
@@ -45,6 +47,20 @@ import {
   toImport,
 } from "./import-state";
 import type { ImportRow, ImportView } from "./import-state";
+import { ExportArchiveEmpty } from "./errors/export-archive-empty";
+import { ExportArchiveTooLarge } from "./errors/export-archive-too-large";
+import { ExportTooManyRecords } from "./errors/export-too-many-records";
+import { ExportUnsupportedCollectionItem } from "./errors/export-unsupported-collection-item";
+import { ImportAlreadyActive } from "./errors/import-already-active";
+import { ImportNotRetryable } from "./errors/import-not-retryable";
+
+type Applied = Awaited<ReturnType<typeof applyArchive>>;
+
+type ExportFailure =
+  | ExportArchiveEmpty
+  | ExportArchiveTooLarge
+  | ExportTooManyRecords
+  | ExportUnsupportedCollectionItem;
 
 // Postgres binds at most 65535 parameters per statement, so rows are written in chunks.
 const INSERT_CHUNK_SIZE = 500;
@@ -256,7 +272,10 @@ async function applyItemRows(
 }
 
 const DataTransferService = {
-  async exportArchive(userId: string, tx: ReadTx): Promise<DataTransferArchiveV1> {
+  async exportArchive(
+    userId: string,
+    tx: ReadTx,
+  ): Promise<Result<DataTransferArchiveV1, ExportFailure>> {
     const orderRows = await tx
       .select({
         id: orderTable.id,
@@ -283,9 +302,7 @@ const DataTransferService = {
       .orderBy(asc(orderTable.createdAt), asc(orderTable.id))
       .limit(DATA_TRANSFER_MAX_RECORDS + 1);
 
-    if (orderRows.length > DATA_TRANSFER_MAX_RECORDS) {
-      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
-    }
+    if (orderRows.length > DATA_TRANSFER_MAX_RECORDS) return Result.err(new ExportTooManyRecords());
 
     const collectionRows = await tx
       .select({
@@ -331,7 +348,7 @@ const DataTransferService = {
       .limit(DATA_TRANSFER_MAX_RECORDS - orderRows.length + 1);
 
     if (orderRows.length + collectionRows.length > DATA_TRANSFER_MAX_RECORDS) {
-      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS");
+      return Result.err(new ExportTooManyRecords());
     }
 
     const orders = orderRows;
@@ -360,55 +377,53 @@ const DataTransferService = {
       updatedAt: order.updatedAt.toISOString(),
     }));
 
-    const exportedCollectionItems: DataTransferArchiveV1["collectionItems"] = collectionItems.map(
-      (collectionItem, index) => {
-        if (collectionItem.itemSource !== "mfc" || collectionItem.itemExternalId === null) {
-          throw new Error("DATA_TRANSFER_UNSUPPORTED_COLLECTION_ITEM");
-        }
-
-        return {
-          collectionKey: `collection-${index + 1}`,
-          orderKey: collectionItem.orderId
-            ? (orderKeysById.get(collectionItem.orderId) ?? null)
-            : null,
-          status: collectionItem.status,
-          count: collectionItem.count,
-          score: collectionItem.score,
-          price: collectionItem.price,
-          shop: collectionItem.shop,
-          orderDate: collectionItem.orderDate,
-          paymentDate: collectionItem.paymentDate,
-          shippingDate: collectionItem.shippingDate,
-          collectionDate: collectionItem.collectionDate,
-          shippingMethod: collectionItem.shippingMethod,
-          soldFor: collectionItem.soldFor,
-          soldDate: collectionItem.soldDate,
-          tags: collectionItem.tags,
-          condition: collectionItem.condition,
-          notes: collectionItem.notes,
-          createdAt: collectionItem.createdAt.toISOString(),
-          updatedAt: collectionItem.updatedAt.toISOString(),
-          item: {
-            source: "mfc",
-            externalId: collectionItem.itemExternalId,
-            sourceTitle: collectionItem.itemTitle,
-            selectedRelease:
-              collectionItem.releaseDate === null
-                ? null
-                : {
-                    date: collectionItem.releaseDate,
-                    type: collectionItem.releaseType,
-                    price: collectionItem.releasePrice,
-                    priceCurrency: collectionItem.releasePriceCurrency,
-                    barcode: collectionItem.releaseBarcode,
-                  },
-          },
-        };
-      },
-    );
+    const exportedCollectionItems: DataTransferArchiveV1["collectionItems"] = [];
+    for (const [index, collectionItem] of collectionItems.entries()) {
+      if (collectionItem.itemSource !== "mfc" || collectionItem.itemExternalId === null) {
+        return Result.err(new ExportUnsupportedCollectionItem());
+      }
+      exportedCollectionItems.push({
+        collectionKey: `collection-${index + 1}`,
+        orderKey: collectionItem.orderId
+          ? (orderKeysById.get(collectionItem.orderId) ?? null)
+          : null,
+        status: collectionItem.status,
+        count: collectionItem.count,
+        score: collectionItem.score,
+        price: collectionItem.price,
+        shop: collectionItem.shop,
+        orderDate: collectionItem.orderDate,
+        paymentDate: collectionItem.paymentDate,
+        shippingDate: collectionItem.shippingDate,
+        collectionDate: collectionItem.collectionDate,
+        shippingMethod: collectionItem.shippingMethod,
+        soldFor: collectionItem.soldFor,
+        soldDate: collectionItem.soldDate,
+        tags: collectionItem.tags,
+        condition: collectionItem.condition,
+        notes: collectionItem.notes,
+        createdAt: collectionItem.createdAt.toISOString(),
+        updatedAt: collectionItem.updatedAt.toISOString(),
+        item: {
+          source: "mfc",
+          externalId: collectionItem.itemExternalId,
+          sourceTitle: collectionItem.itemTitle,
+          selectedRelease:
+            collectionItem.releaseDate === null
+              ? null
+              : {
+                  date: collectionItem.releaseDate,
+                  type: collectionItem.releaseType,
+                  price: collectionItem.releasePrice,
+                  priceCurrency: collectionItem.releasePriceCurrency,
+                  barcode: collectionItem.releaseBarcode,
+                },
+        },
+      });
+    }
 
     if (exportedOrders.length === 0 && exportedCollectionItems.length === 0) {
-      throw new Error("DATA_TRANSFER_ARCHIVE_EMPTY");
+      return Result.err(new ExportArchiveEmpty());
     }
 
     const archive = dataTransferArchiveV1Schema.parse({
@@ -424,9 +439,9 @@ const DataTransferService = {
     if (
       Buffer.byteLength(`${JSON.stringify(archive, null, 2)}\n`, "utf-8") > DATA_TRANSFER_MAX_BYTES
     ) {
-      throw new Error("DATA_TRANSFER_ARCHIVE_TOO_LARGE");
+      return Result.err(new ExportArchiveTooLarge());
     }
-    return archive;
+    return Result.ok(archive);
   },
 
   async startImport(
@@ -440,41 +455,54 @@ const DataTransferService = {
       readonly fileName: string;
       readonly archive: DataTransferArchiveV1;
     },
-  ): Promise<DataTransferImportRun> {
+  ): Promise<Result<DataTransferImportRun, ImportAlreadyActive>> {
     const importId = createId();
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
 
-    const started = await mutateImport(scope, userId, now, async (tx, current) => {
-      if (current && isActive(current.status)) throw new Error("DATA_TRANSFER_ACTIVE_IMPORT");
+    const started = await mutateImport<Result<Applied, ImportAlreadyActive>>(
+      scope,
+      userId,
+      now,
+      async (tx, current) => {
+        if (current && isActive(current.status)) {
+          return { value: Result.err(new ImportAlreadyActive()), changed: false };
+        }
 
-      const values = {
-        importId,
-        jobId,
-        fileName,
-        archive,
-        status: "running",
-        phase: "preparing_items",
-        report: null,
-        importedOrders: 0,
-        importedCollectionItems: 0,
-        failedCollectionItems: 0,
-        totalCollectionItems: archive.collectionItems.length,
-        error: null,
-        startedAt: now,
-        updatedAt: now,
-        heartbeatAt: now,
-      } as const;
-      const [row] = await tx
-        .insert(dataTransferImport)
-        .values({ userId, ...values })
-        .onConflictDoUpdate({ target: dataTransferImport.userId, set: values })
-        .returning(importRowColumns);
-      if (!row) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
-      return { value: await applyArchive(tx, row, archive, now), changed: true };
-    });
+        const values = {
+          importId,
+          jobId,
+          fileName,
+          archive,
+          status: "running",
+          phase: "preparing_items",
+          report: null,
+          importedOrders: 0,
+          importedCollectionItems: 0,
+          failedCollectionItems: 0,
+          totalCollectionItems: archive.collectionItems.length,
+          error: null,
+          startedAt: now,
+          updatedAt: now,
+          heartbeatAt: now,
+        } as const;
+        const [row] = await tx
+          .insert(dataTransferImport)
+          .values({ userId, ...values })
+          .onConflictDoUpdate({ target: dataTransferImport.userId, set: values })
+          .returning(importRowColumns);
+        if (!row)
+          panic(
+            `Saving import ${importId} returned no row, so dataTransfer.startImport has nothing to apply`,
+          );
+        return { value: Result.ok(await applyArchive(tx, row, archive, now)), changed: true };
+      },
+    );
 
-    return { ...toImport(started.view), missingMfcItemIds: started.missingMfcItemIds };
+    return started.map((applied) => ({
+      ...toImport(applied.view),
+      missingMfcItemIds: applied.missingMfcItemIds,
+    }));
   },
 
   async getCurrentImport(userId: string, db: ReadTx): Promise<DataTransferImport | null> {
@@ -496,40 +524,57 @@ const DataTransferService = {
     });
   },
 
-  async retryImport(scope: CommandScope, userId: string): Promise<DataTransferImportRun> {
+  async retryImport(
+    scope: CommandScope,
+    userId: string,
+  ): Promise<Result<DataTransferImportRun, ImportNotRetryable>> {
     const jobId = `data-transfer-import-${createId()}`;
     const now = new Date();
-    const retried = await mutateImport(scope, userId, now, async (tx, current) => {
-      if (
-        !current?.row.hasArchive ||
-        (current.status !== "partial" && current.status !== "failed")
-      ) {
-        throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
-      }
+    const retried = await mutateImport<Result<Applied, ImportNotRetryable>>(
+      scope,
+      userId,
+      now,
+      async (tx, current) => {
+        if (
+          !current?.row.hasArchive ||
+          (current.status !== "partial" && current.status !== "failed")
+        ) {
+          return { value: Result.err(new ImportNotRetryable()), changed: false };
+        }
 
-      const [retrying] = await tx
-        .update(dataTransferImport)
-        .set({
-          jobId,
-          status: "running",
-          phase: "preparing_items",
-          error: null,
-          startedAt: now,
-          updatedAt: now,
-          heartbeatAt: now,
-        })
-        .where(eq(dataTransferImport.userId, userId))
-        .returning({ ...importRowColumns, archive: dataTransferImport.archive });
-      if (!retrying) throw new Error("DATA_TRANSFER_IMPORT_NOT_RETRYABLE");
+        const [retrying] = await tx
+          .update(dataTransferImport)
+          .set({
+            jobId,
+            status: "running",
+            phase: "preparing_items",
+            error: null,
+            startedAt: now,
+            updatedAt: now,
+            heartbeatAt: now,
+          })
+          .where(eq(dataTransferImport.userId, userId))
+          .returning({ ...importRowColumns, archive: dataTransferImport.archive });
+        if (!retrying) return { value: Result.err(new ImportNotRetryable()), changed: false };
 
-      const parsedArchive = dataTransferArchiveV1Schema.safeParse(retrying.archive);
-      if (!parsedArchive.success) {
-        throw new Error("DATA_TRANSFER_RETAINED_ARCHIVE_INVALID", { cause: parsedArchive.error });
-      }
-      return { value: await applyArchive(tx, retrying, parsedArchive.data, now), changed: true };
-    });
+        const parsedArchive = dataTransferArchiveV1Schema.safeParse(retrying.archive);
+        if (!parsedArchive.success) {
+          panic(
+            `The archive import ${retrying.importId} retained fails its schema, so dataTransfer.retryImport cannot apply it`,
+            parsedArchive.error,
+          );
+        }
+        return {
+          value: Result.ok(await applyArchive(tx, retrying, parsedArchive.data, now)),
+          changed: true,
+        };
+      },
+    );
 
-    return { ...toImport(retried.view), missingMfcItemIds: retried.missingMfcItemIds };
+    return retried.map((applied) => ({
+      ...toImport(applied.view),
+      missingMfcItemIds: applied.missingMfcItemIds,
+    }));
   },
 
   async completeItem(
@@ -539,7 +584,11 @@ const DataTransferService = {
     prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
   ): Promise<
     | { readonly kind: "imported"; readonly import: DataTransferImport | null }
-    | { readonly kind: "problem"; readonly message: string }
+    | {
+        readonly kind: "problem";
+        readonly problem: MfcPageProblem["kind"];
+        readonly message: string;
+      }
   > {
     if (prepared.kind === "unreadable") {
       await DataTransferService.failItem(scope, userId, {
@@ -547,7 +596,7 @@ const DataTransferService = {
         mfcItemId: upload.mfcItemId,
         reason: prepared.message,
       });
-      return { kind: "problem", message: prepared.message };
+      return { kind: "problem", problem: prepared.problem, message: prepared.message };
     }
 
     const now = new Date();
@@ -574,7 +623,9 @@ const DataTransferService = {
 
       const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
       if (!arrived.has(upload.mfcItemId)) {
-        throw new Error(`MFC item ${upload.mfcItemId} was neither created nor found`);
+        panic(
+          `MFC item ${upload.mfcItemId} was neither created nor found by its ingest for import ${upload.jobId}`,
+        );
       }
       await applyItemRows(tx, current, arrived, waiting.rows);
       await tx

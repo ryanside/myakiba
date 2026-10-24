@@ -1,3 +1,4 @@
+import { panic } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { createLogger } from "evlog";
@@ -283,7 +284,8 @@ async function saveView(tx: Tx, view: ImportView, now: Date): Promise<ImportView
 
 export async function settle(tx: Tx, userId: string, now: Date): Promise<ImportView> {
   const view = await readView(tx, userId, now);
-  if (!view) throw new Error("DATA_TRANSFER_IMPORT_NOT_SAVED");
+  if (!view)
+    panic(`Settling the import of user ${userId} found no import row inside its own transaction`);
   return saveView(tx, view, now);
 }
 

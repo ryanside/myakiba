@@ -9,8 +9,7 @@ import type { AnyTaggedError, Err, InferErr, InferOk, Ok } from "better-result";
 import { db } from "@myakiba/db/client";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
-import { Failure } from "./failure";
-import type { AnyFailure, Category, FailureInstance } from "./failure";
+import type { AnyFailure, Category } from "./failure";
 import type { Viewer } from "./viewer";
 
 /**
@@ -88,39 +87,6 @@ type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
 
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
 type Recoverable<E> = InternalOf<E> | UnhandledException;
-
-/**
- * @deprecated Write `Result.ok(value)`, and a string answer as `Result.ok("…" as const)`.
- * A bridge for routers not yet moved to better-result.
- */
-export function ok<const T extends string>(value: T): Ok<T, never>;
-export function ok<T>(value: T): Ok<T, never>;
-export function ok<T>(value: T): Ok<T, never> {
-  return Result.ok(value);
-}
-
-/** @deprecated Return `Result.err(new X())` with `X` declared by `Failure(tag, category, message)`. */
-export function fail<const C extends Category, const M extends string>(
-  category: C,
-  message: M,
-): Err<never, FailureInstance<"LegacyFailure", C, M, Record<never, never>>> {
-  const Legacy = Failure("LegacyFailure", category, message);
-  return Result.err(new Legacy({}));
-}
-
-/** @deprecated Return `scope.failAfterCommit(new X())`. */
-export function failAfterCommit<const C extends Category, const M extends string>(
-  category: C,
-  message: M,
-): Err<never, Committed<FailureInstance<"LegacyFailure", C, M, Record<never, never>>>> {
-  const Legacy = Failure("LegacyFailure", category, message);
-  return Result.err(committed(new Legacy({})));
-}
-
-/** @deprecated Return `scope.proceed(value)`. */
-export function proceed<P>(value: P): Ok<Proceed<P>, never> {
-  return Result.ok(proceeding(value));
-}
 
 type ReadScope = {
   readonly viewer: Viewer;

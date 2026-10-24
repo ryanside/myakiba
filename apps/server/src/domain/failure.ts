@@ -20,19 +20,14 @@ type ArgsOf<P> = keyof P extends never ? [props?: Fixed] : [props: P & Fixed];
  */
 export type AnyFailure = AnyTaggedError & { readonly category: Category };
 
-export type FailureInstance<
-  Tag extends string,
-  C extends Category,
-  M extends string,
-  P extends object,
-> = TaggedErrorInstance<Tag, P & { readonly message: M }> & { readonly category: C };
-
 type FailureClass<
   Tag extends string,
   C extends Category,
   M extends string,
   A extends object,
-> = new (...args: ArgsOf<A>) => FailureInstance<Tag, C, M, A>;
+> = new (
+  ...args: ArgsOf<A>
+) => TaggedErrorInstance<Tag, A & { readonly message: M; readonly category: C }>;
 
 const isMessageOf = <A>(
   message: string | ((props: A) => string),
