@@ -1288,6 +1288,22 @@
       "bug": "corrupt status cache diagnostics discarded the typed parser failure",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": ["a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status"]
+    },
+    {
+      "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
+      "testAt": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
+      "bug": "server silently discarded an invariant failure and reported success",
+      "test": "apps/server/src/routers/item/routes.test.ts",
+      "fixed": [
+        "a named Entry missing after insert rolls back the custom Item instead of dropping its link"
+      ]
+    },
+    {
+      "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
+      "testAt": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
+      "bug": "server silently discarded an invariant failure and reported success",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": ["a missing Item import completion is refused instead of reporting success"]
     }
   ],
   "lint": [
