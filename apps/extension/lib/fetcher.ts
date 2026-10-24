@@ -1,8 +1,8 @@
 import type { ItemError, PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
-import { Panic, Result, UnhandledException } from "better-result";
-import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
+import { Result } from "better-result";
+import { timeoutSignal, unlessAborted } from "./clock";
 import type { Clock, SessionValue } from "./clock";
 import { NO_STATUS, PAGE_TIMEOUT_MS } from "./collect";
 import type {
@@ -17,22 +17,23 @@ import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcPageUnrecognized } from "./errors/mfc-page-unrecognized";
-import { MfcQueueHalted } from "./errors/mfc-queue-halted";
+import type { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import { MfcRateLimited } from "./errors/mfc-rate-limited";
 import { MfcSignedOut } from "./errors/mfc-signed-out";
-import { MfcTabUnavailable } from "./errors/mfc-tab-unavailable";
 import { MfcWrongItem } from "./errors/mfc-wrong-item";
 import { createMfcTabs } from "./mfc-tab";
-import type { MfcTabLease, WindowsApi } from "./mfc-tab";
-import { TabUnavailableError, ownedTab } from "./owned-tab";
-import type { LiveRequester, OwnedTab, TabsApi } from "./owned-tab";
+import type { ChallengeShowFailure, LeaseFailure, MfcTabLease } from "./mfc-tab";
+import { ownedTab } from "./owned-tab";
+import type { LiveRequester, OwnedTab, TabOpenFailure } from "./owned-tab";
 import { toConfiguredUrl } from "./origins";
 import type { Origins } from "./origins";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { EMPTY_QUEUE, reduceQueue, sameJob, waitersOf } from "./queue";
 import type { Job, Outcome, QueueAction, Requester, RunKey } from "./queue";
-import { HaltedError, THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
-import type { ThrottleState } from "./throttle";
+import { resultTabs } from "./tabs";
+import type { TabsApi, WindowsApi } from "./tabs";
+import { THROTTLE, createThrottle, loading, parseRetryAfter } from "./throttle";
+import type { ThrottleState, TurnFailure } from "./throttle";
 
 export const CHALLENGE_WINDOW_MS = 120_000;
 const RATE_LIMIT_STATUSES = new Set([429, 503]);
@@ -91,21 +92,15 @@ type PageRejected =
   | MfcWrongItem
   | MfcPageUnrecognized;
 
-/** How a call into the throttle or the tabs fails. Both still throw, so each call is wrapped where it is made. */
-type LoadFailure =
-  | MfcLoadTimedOut
-  | MfcQueueHalted
-  | AttemptAbandoned
-  | MfcTabUnavailable
-  | UnhandledException;
+type PageFailure = TurnFailure | PageCollectFailure;
 
-type PageFailure = LoadFailure | PageCollectFailure;
+type ItemFetchFailure = PageFailure | LeaseFailure;
 
 type PictureCollectFailure = CollectorFailure | PictureFailure;
 
-type PictureReadFailure = LoadFailure | PictureCollectFailure;
+type PictureReadFailure = TurnFailure | TabOpenFailure | PictureCollectFailure;
 
-type AttemptFailure = PageFailure | PageRejected | MfcChallengeUnsolved;
+type AttemptFailure = ItemFetchFailure | PageRejected | MfcChallengeUnsolved;
 
 type ItemPage = { readonly html: string; readonly picture: PortPicture | null };
 
@@ -127,7 +122,6 @@ const AFTER_PAGE_FAILURE = {
   CollectorInjectionFailed: { closeOwned: true, retryOwned: true },
   CollectorAnswerInvalid: { closeOwned: true, retryOwned: true },
   MfcPageFetchFailed: { closeOwned: true, retryOwned: true },
-  MfcTabUnavailable: { closeOwned: true, retryOwned: true },
   UnhandledException: { closeOwned: true, retryOwned: true },
   MfcLoadTimedOut: { closeOwned: false, retryOwned: true },
   MfcQueueHalted: { closeOwned: false, retryOwned: false },
@@ -152,6 +146,10 @@ function outcomeOf(error: AttemptFailure): Outcome | null {
     CollectorInjectionFailed: () => failed("unexpected_page"),
     CollectorAnswerInvalid: () => failed("unexpected_page"),
     MfcTabUnavailable: () => failed("unexpected_page"),
+    TabClosed: () => failed("unexpected_page"),
+    TabEditRefused: () => failed("unexpected_page"),
+    TabOpenFailed: () => failed("unexpected_page"),
+    TabQueryFailed: () => failed("unexpected_page"),
     UnhandledException: () => failed("unexpected_page"),
     MfcLoadTimedOut: () => failed("timeout"),
     MfcChallengeUnsolved: () => failed("challenge_unsolved"),
@@ -161,31 +159,9 @@ function outcomeOf(error: AttemptFailure): Outcome | null {
   });
 }
 
-function loadFailure(cause: unknown, signal: AbortSignal, phase: "page" | "tab"): LoadFailure {
-  // A defect reaches attempt as a Panic rather than reading as a failed load.
-  if (Panic.is(cause)) throw cause;
-  if (signal.aborted) return new AttemptAbandoned();
-  if (cause instanceof TimeoutError) {
-    return new MfcLoadTimedOut({ timeoutMs: cause.timeoutMs, phase });
-  }
-  if (cause instanceof HaltedError) return new MfcQueueHalted({ until: cause.until });
-  if (cause instanceof TabUnavailableError) {
-    return new MfcTabUnavailable({ tabId: cause.tabId, reason: cause.reason });
-  }
-  return new UnhandledException({ cause });
-}
-
-function loading<T>(
-  load: () => Promise<T>,
-  signal: AbortSignal,
-  phase: "page" | "tab",
-): Promise<Result<T, LoadFailure>> {
-  return Result.tryPromise({ try: load, catch: (cause) => loadFailure(cause, signal, phase) });
-}
-
 /** Only a halt or an abandoned attempt keeps its meaning when the challenge's tab cannot be shown. */
 function notShown(
-  error: LoadFailure,
+  error: ChallengeShowFailure,
   mfcItemId: MfcItemId,
 ): MfcQueueHalted | AttemptAbandoned | MfcChallengeUnsolved {
   const unsolved = () => new MfcChallengeUnsolved({ mfcItemId, reason: "not_shown", cause: error });
@@ -194,6 +170,10 @@ function notShown(
     AttemptAbandoned: (abandoned) => abandoned,
     MfcLoadTimedOut: unsolved,
     MfcTabUnavailable: unsolved,
+    TabClosed: unsolved,
+    TabEditRefused: unsolved,
+    TabOpenFailed: unsolved,
+    WindowFocusRefused: unsolved,
     UnhandledException: unsolved,
   });
 }
@@ -233,9 +213,10 @@ function readPage(page: CollectedPage, job: Job, now: number): Result<Reading, P
 export function createFetcher(deps: FetcherDeps) {
   const { clock, origins } = deps;
   const throttle = createThrottle({ clock, random: deps.random, state: deps.throttleState });
-  const mfcTabs = createMfcTabs({ ...deps, owned: deps.ownedTab, throttle });
+  const tabs = resultTabs(deps.tabs, deps.windows);
+  const mfcTabs = createMfcTabs({ tabs, clock, origins, owned: deps.ownedTab, throttle });
   const pictureTab = ownedTab({
-    tabs: deps.tabs,
+    tabs,
     clock,
     origin: origins.mfcStatic,
     record: deps.ownedPictureTab,
@@ -260,10 +241,9 @@ export function createFetcher(deps: FetcherDeps) {
   function liveRequester(job: Job, signal: AbortSignal): LiveRequester {
     return () => {
       const requester = waitersOf(state, job)[0]?.requester;
-      if (signal.aborted || !requester) {
-        throw new DOMException("no run waits for this item", "AbortError");
-      }
-      return requester;
+      return signal.aborted || !requester
+        ? Result.err(new AttemptAbandoned())
+        : Result.ok(requester);
     };
   }
 
@@ -275,27 +255,22 @@ export function createFetcher(deps: FetcherDeps) {
     const { picture } = ogImage;
     const url = toConfiguredUrl(picture.url, origins);
     if (!url) return Result.ok(null);
-    const read =
-      picture.access === "gated"
-        ? await loading(
-            () =>
-              throttle.load(
-                signal,
-                (timeout) =>
-                  deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
-                PICTURE_TIMEOUT_MS,
-              ),
-            signal,
-            "page",
-          )
-        : await loading(
-            () =>
-              pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
-                deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
-              ),
-            signal,
-            "tab",
-          );
+    if (picture.access === "public") {
+      return pictureTab.loadAndRead(requester, url.href, signal, (pictureTabId, inTurn) =>
+        deps.fetchPublicPicture(pictureTabId, picture.url, inTurn),
+      );
+    }
+    const read = await loading(
+      () =>
+        throttle.load(
+          signal,
+          (timeout) =>
+            deps.fetchGatedPicture(tabId, picture.url, AbortSignal.any([signal, timeout])),
+          PICTURE_TIMEOUT_MS,
+        ),
+      signal,
+      "page",
+    );
     return Result.flatten(read);
   }
 
@@ -356,8 +331,8 @@ export function createFetcher(deps: FetcherDeps) {
     job: Job,
     requester: LiveRequester,
     signal: AbortSignal,
-  ): Promise<Result<{ readonly page: CollectedPage; readonly tabId: number }, PageFailure>> {
-    const lease = () => loading(() => mfcTabs.lease(requester, signal), signal, "tab");
+  ): Promise<Result<{ readonly page: CollectedPage; readonly tabId: number }, ItemFetchFailure>> {
+    const lease = () => mfcTabs.lease(requester, signal);
     return Result.gen(async function* () {
       const first = yield* Result.await(lease());
       const page = await fetchPage(first, job, signal);
@@ -437,15 +412,12 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<Result<ItemPage, AttemptFailure>> {
     const { mfcItemId } = job;
     return Result.gen(async function* () {
-      const shown = await loading(
-        () => mfcTabs.showChallenge(requester, mfcItemId, signal),
-        signal,
-        "tab",
-      );
+      const shown = await mfcTabs.showChallenge(requester, mfcItemId, signal);
       const tabId = yield* shown.mapError((failure) => notShown(failure, mfcItemId));
       const deadline = clock.now() + CHALLENGE_WINDOW_MS;
       dispatch({ type: "needs_user", untilMs: deadline });
       const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
+      // Handing focus back is a courtesy: a run whose tab closed meanwhile still gets its answer.
       await mfcTabs.handBack(requester, signal);
       if (signal.aborted) return Result.err(new AttemptAbandoned());
       if (answer === null) {

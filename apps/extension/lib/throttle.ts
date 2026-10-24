@@ -1,7 +1,11 @@
+import { Panic, Result, UnhandledException } from "better-result";
 import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
 import { TimeoutError, timeoutSignal, unlessAborted } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
+import { MfcQueueHalted } from "./errors/mfc-queue-halted";
 
 export const THROTTLE = {
   minGapMs: 2500,
@@ -35,7 +39,7 @@ export const OPEN_THROTTLE: ThrottleState = {
  */
 export type HoldTurn = (at: number) => Promise<void>;
 
-export class HaltedError extends Error {
+class HaltedError extends Error {
   readonly until: number;
 
   constructor(until: number) {
@@ -212,6 +216,28 @@ export function createThrottle(deps: {
 }
 
 export type Throttle = ReturnType<typeof createThrottle>;
+
+/** How a throttle turn fails. `load` still throws, so each call is wrapped where it is made. */
+export type TurnFailure = MfcLoadTimedOut | MfcQueueHalted | AttemptAbandoned | UnhandledException;
+
+function turnFailure(cause: unknown, signal: AbortSignal, phase: "page" | "tab"): TurnFailure {
+  // A defect reaches attempt as a Panic rather than reading as a failed load.
+  if (Panic.is(cause)) throw cause;
+  if (signal.aborted) return new AttemptAbandoned();
+  if (cause instanceof TimeoutError) {
+    return new MfcLoadTimedOut({ timeoutMs: cause.timeoutMs, phase });
+  }
+  if (cause instanceof HaltedError) return new MfcQueueHalted({ until: cause.until });
+  return new UnhandledException({ cause });
+}
+
+export function loading<T>(
+  load: () => Promise<T>,
+  signal: AbortSignal,
+  phase: "page" | "tab",
+): Promise<Result<T, TurnFailure>> {
+  return Result.tryPromise({ try: load, catch: (cause) => turnFailure(cause, signal, phase) });
+}
 
 export function parseRetryAfter(header: string | null, now: number): number | null {
   if (header === null) return null;

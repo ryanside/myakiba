@@ -1,39 +1,20 @@
+import { Result, panic } from "better-result";
 import * as z from "zod";
 import type { Clock, SessionValue } from "./clock";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
+import { MfcTabUnavailable } from "./errors/mfc-tab-unavailable";
+import type { TabClosed } from "./errors/tab-closed";
+import type { TabEditRefused } from "./errors/tab-edit-refused";
+import type { TabOpenFailed } from "./errors/tab-open-failed";
 import { sameContext } from "./queue";
 import type { Requester, TabContext } from "./queue";
-import type { HoldTurn, Throttle } from "./throttle";
-
-export type Tab = {
-  readonly id?: number;
-  readonly windowId?: number;
-  readonly status?: string;
-  readonly url?: string;
-  readonly pendingUrl?: string;
-  readonly title?: string;
-  readonly active?: boolean;
-  readonly incognito?: boolean;
-  readonly cookieStoreId?: string;
-};
-
-export type TabsApi = {
-  readonly get: (tabId: number) => Promise<Tab>;
-  readonly query: (query: { url: string; status: "complete"; discarded: false }) => Promise<Tab[]>;
-  readonly create: (properties: {
-    url: string;
-    active: boolean;
-    windowId: number;
-    cookieStoreId?: string;
-  }) => Promise<Tab>;
-  readonly update: (
-    tabId: number,
-    properties: { url?: string; active?: boolean },
-  ) => Promise<Tab | undefined>;
-  readonly remove: (tabId: number) => Promise<void>;
-};
+import type { Tab, Tabs } from "./tabs";
+import { loading } from "./throttle";
+import type { HoldTurn, Throttle, TurnFailure } from "./throttle";
 
 /** The first run still waiting for the job. Read at each tab step, since runs cancel at any time. */
-export type LiveRequester = () => Requester;
+export type LiveRequester = () => Result<Requester, AttemptAbandoned>;
 
 export const ownedTabSchema = z
   .discriminatedUnion("state", [
@@ -49,23 +30,6 @@ const LOAD_START_MS = 2000;
 /** The extension cannot stop a load in a tab the user took, so the turn waits for it, up to this long after it started. */
 const CLAIMED_LOAD_MS = 2 * 60_000;
 
-/** The extension gave up its tab, because the user took it or its load ended on another page. */
-export class TabUnavailableError extends Error {
-  readonly tabId: number;
-  readonly reason: "taken" | "ended_elsewhere";
-
-  constructor(tabId: number, reason: "taken" | "ended_elsewhere") {
-    super(
-      reason === "taken"
-        ? `the user took tab ${tabId}`
-        : `the load in tab ${tabId} ended on another page`,
-    );
-    this.name = "TabUnavailableError";
-    this.tabId = tabId;
-    this.reason = reason;
-  }
-}
-
 export function inContext(tab: Tab, context: TabContext): boolean {
   return (
     tab.incognito !== undefined &&
@@ -76,6 +40,19 @@ export function inContext(tab: Tab, context: TabContext): boolean {
 function onOrigin(url: string | undefined, origin: string): boolean {
   return URL.parse(url ?? "")?.origin === origin;
 }
+
+/** How the extension fails to get its own tab to show a page. */
+export type TabOpenFailure =
+  | MfcTabUnavailable
+  | TabClosed
+  | TabEditRefused
+  | TabOpenFailed
+  | AttemptAbandoned
+  | MfcLoadTimedOut
+  | TurnFailure;
+
+/** Why a load stopped once its signal aborted: the attempt was abandoned, or the turn ran out. */
+type Stopped = () => AttemptAbandoned | MfcLoadTimedOut;
 
 type Load = {
   readonly tabId: number;
@@ -101,7 +78,7 @@ function endOf({ urlAtStart, startedAt }: Load, clock: Clock): (tab: Tab) => boo
 }
 
 export function ownedTab(deps: {
-  readonly tabs: TabsApi;
+  readonly tabs: Tabs;
   readonly clock: Clock;
   readonly origin: string;
   readonly record: SessionValue<OwnedTab>;
@@ -128,17 +105,22 @@ export function ownedTab(deps: {
     }
   }
 
-  async function windowOf(tabId: number): Promise<number> {
-    const { windowId } = await tabs.get(tabId);
-    if (windowId === undefined) throw new Error(`tab ${tabId} has no window`);
-    return windowId;
+  async function windowOf(tabId: number): Promise<Result<number, TabClosed>> {
+    const tab = await tabs.get(tabId);
+    if (tab.isErr()) return Result.err(tab.error);
+    return Result.ok(
+      tab.value.windowId ??
+        panic(
+          `Opening an MFC tab needs the run's tab to have a window, but the browser answered tab ${tabId} with no windowId.`,
+        ),
+    );
   }
 
   async function landedTab(): Promise<{ readonly tabId: number; readonly tab: Tab } | null> {
     const own = await record.load();
     if (own?.state !== "landed") return null;
-    const tab = await tabs.get(own.tabId).catch(() => null);
-    if (tab) return claimed.has(own.tabId) ? null : { tabId: own.tabId, tab };
+    const tab = await tabs.get(own.tabId);
+    if (tab.isOk()) return claimed.has(own.tabId) ? null : { tabId: own.tabId, tab: tab.value };
     await record.save(null);
     return null;
   }
@@ -146,13 +128,17 @@ export function ownedTab(deps: {
   async function stillOursAfterRemoving(tabId: number): Promise<boolean> {
     const own = await record.load();
     if (own?.tabId !== tabId || claimed.has(tabId)) return false;
-    await tabs.remove(tabId).catch(() => null);
-    if ((await tabs.get(tabId).catch(() => null)) !== null) return true;
+    await tabs.remove(tabId);
+    const left = await tabs.get(tabId);
+    if (left.isOk()) return true;
     await record.save(null);
     return false;
   }
 
-  /** Chrome refuses to close a tab while the user drags it, and the drag may claim it before the next try. */
+  /**
+   * Chrome refuses to close a tab while the user drags it, and the drag may claim it before the next try. Whether the
+   * tab is gone, not whether the removal was refused, decides another try.
+   */
   async function closeUntilGone(tabId: number): Promise<void> {
     while (await exclusively(() => stillOursAfterRemoving(tabId))) await clock.sleep(POLL_MS);
   }
@@ -162,55 +148,94 @@ export function ownedTab(deps: {
     if (own) await closeUntilGone(own.tabId);
   }
 
-  async function navigateUnlessShown(
+  function navigateUnlessShown(
     requester: LiveRequester,
     url: string,
     signal: AbortSignal,
-  ): Promise<Load | null> {
-    const { tabId: requesterTabId, context } = requester();
-    const windowId = await windowOf(requesterTabId);
-    return exclusively(async () => {
-      const own = await landedTab();
-      if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) return null;
-      const load = { tabId: own.tabId, urlAtStart: own.tab.url ?? null, startedAt: clock.now() };
-      if (own.tab.url === url) return load;
-      signal.throwIfAborted();
-      await tabs.update(own.tabId, { url });
-      await record.save({ state: "loading", tabId: own.tabId });
-      return load;
+    stopped: Stopped,
+  ): Promise<Result<Load | null, TabOpenFailure>> {
+    return Result.gen(async function* () {
+      const { tabId: requesterTabId, context } = yield* requester();
+      const windowId = yield* Result.await(windowOf(requesterTabId));
+      return await exclusively(async (): Promise<Result<Load | null, TabOpenFailure>> => {
+        const own = await landedTab();
+        if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) {
+          return Result.ok(null);
+        }
+        const load = { tabId: own.tabId, urlAtStart: own.tab.url ?? null, startedAt: clock.now() };
+        if (own.tab.url === url) return Result.ok(load);
+        if (signal.aborted) return Result.err(stopped());
+        const navigated = await tabs.update(own.tabId, { url });
+        if (navigated.isErr()) return Result.err(navigated.error);
+        await record.save({ state: "loading", tabId: own.tabId });
+        return Result.ok(load);
+      });
     });
   }
 
-  async function create(requester: LiveRequester, url: string, signal: AbortSignal): Promise<Load> {
+  async function create(
+    requester: LiveRequester,
+    url: string,
+    signal: AbortSignal,
+    stopped: Stopped,
+  ): Promise<Result<Load, TabOpenFailure>> {
     await release();
-    const { tabId: requesterTabId, context } = requester();
-    const windowId = await windowOf(requesterTabId);
-    const properties: Parameters<TabsApi["create"]>[0] = { url, active: false, windowId };
-    if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
-    signal.throwIfAborted();
-    const startedAt = clock.now();
-    const { id: tabId } = await tabs.create(properties);
-    if (tabId === undefined) throw new Error("the new tab has no id");
-    await exclusively(async () => {
-      if (!claimed.has(tabId)) await record.save({ state: "loading", tabId });
+    return Result.gen(async function* () {
+      const { tabId: requesterTabId, context } = yield* requester();
+      const windowId = yield* Result.await(windowOf(requesterTabId));
+      const properties: Parameters<Tabs["create"]>[0] = { url, active: false, windowId };
+      if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
+      if (signal.aborted) return Result.err(stopped());
+      const startedAt = clock.now();
+      const created = yield* Result.await(tabs.create(properties));
+      const tabId =
+        created.id ??
+        panic(
+          `Opening an MFC tab needs the new tab to have an id, but the browser created one in window ${windowId} with no id.`,
+        );
+      await exclusively(async () => {
+        if (!claimed.has(tabId)) await record.save({ state: "loading", tabId });
+      });
+      return Result.ok({ tabId, urlAtStart: null, startedAt });
     });
-    return { tabId, urlAtStart: null, startedAt };
   }
 
   async function landed(
     { tabId, urlAtStart }: Load,
     ended: (tab: Tab) => boolean,
-  ): Promise<boolean> {
+  ): Promise<Result<boolean, MfcTabUnavailable>> {
     const own = await record.load();
-    if (own?.tabId !== tabId || claimed.has(tabId)) throw new TabUnavailableError(tabId, "taken");
-    if (own.state === "landed") return true;
-    const tab = await tabs.get(tabId);
-    if (!ended(tab)) return false;
-    if (!onOrigin(tab.url, origin) || (tab.url ?? null) === urlAtStart) {
-      throw new TabUnavailableError(tabId, "ended_elsewhere");
+    if (own?.tabId !== tabId || claimed.has(tabId)) {
+      return Result.err(new MfcTabUnavailable({ tabId, reason: "taken" }));
+    }
+    if (own.state === "landed") return Result.ok(true);
+    const shown = await tabs.get(tabId);
+    if (shown.isErr()) return Result.err(new MfcTabUnavailable({ tabId, reason: "closed" }));
+    const tab = shown.value;
+    if (!ended(tab)) return Result.ok(false);
+    if (!onOrigin(tab.url, origin)) {
+      return Result.err(new MfcTabUnavailable({ tabId, reason: "left_origin" }));
+    }
+    if ((tab.url ?? null) === urlAtStart) {
+      return Result.err(new MfcTabUnavailable({ tabId, reason: "ended_at_start" }));
     }
     await record.save({ state: "landed", tabId });
-    return true;
+    return Result.ok(true);
+  }
+
+  async function untilLanded(
+    load: Load,
+    ended: (tab: Tab) => boolean,
+    signal: AbortSignal,
+    stopped: Stopped,
+  ): Promise<Result<number, TabOpenFailure>> {
+    for (;;) {
+      if (signal.aborted) return Result.err(stopped());
+      const shown = await exclusively(() => landed(load, ended));
+      if (shown.isErr()) return Result.err(shown.error);
+      if (shown.value) return Result.ok(load.tabId);
+      await clock.sleep(POLL_MS, signal);
+    }
   }
 
   async function holdTurnUntilLoadEnds(
@@ -219,13 +244,13 @@ export function ownedTab(deps: {
     holdUntil: HoldTurn,
   ): Promise<void> {
     const until = startedAt + CLAIMED_LOAD_MS;
-    const loading = async () => {
-      const tab = await tabs.get(tabId).catch(() => null);
-      return tab !== null && !ended(tab);
+    const stillLoading = async () => {
+      const tab = await tabs.get(tabId);
+      return tab.isOk() && !ended(tab.value);
     };
-    if (!(await loading())) return;
+    if (!(await stillLoading())) return;
     await holdUntil(until);
-    while (clock.now() < until && (await loading())) await clock.sleep(POLL_MS);
+    while (clock.now() < until && (await stillLoading())) await clock.sleep(POLL_MS);
   }
 
   async function open(
@@ -234,48 +259,67 @@ export function ownedTab(deps: {
     cancel: AbortSignal,
     timeout: AbortSignal,
     holdUntil: HoldTurn,
-  ): Promise<number> {
+  ): Promise<Result<number, TabOpenFailure>> {
     const signal = AbortSignal.any([cancel, timeout]);
-    const load =
-      (await navigateUnlessShown(requester, url, signal)) ?? (await create(requester, url, signal));
+    const stopped: Stopped = () =>
+      cancel.aborted
+        ? new AttemptAbandoned()
+        : new MfcLoadTimedOut({ timeoutMs: turnMs, phase: "tab" });
+    const shown = await navigateUnlessShown(requester, url, signal, stopped);
+    if (shown.isErr()) return Result.err(shown.error);
+    const started =
+      shown.value === null ? await create(requester, url, signal, stopped) : Result.ok(shown.value);
+    if (started.isErr()) return Result.err(started.error);
+    const load = started.value;
     const ended = endOf(load, clock);
-    try {
-      for (;;) {
-        signal.throwIfAborted();
-        if (await exclusively(() => landed(load, ended))) return load.tabId;
-        await clock.sleep(POLL_MS, signal);
-      }
-    } catch (error) {
+    const opened = await untilLanded(load, ended, signal, stopped);
+    if (opened.isErr()) {
       await closeUntilGone(load.tabId);
       await holdTurnUntilLoadEnds(load, ended, holdUntil);
-      throw error;
     }
+    return opened;
   }
 
   return {
-    load(requester: LiveRequester, url: string, signal: AbortSignal): Promise<number> {
-      return throttle.load(
-        signal,
-        (timeout, holdUntil) => open(requester, url, signal, timeout, holdUntil),
-        turnMs,
-      );
-    },
-
-    loadAndRead<T>(
+    async load(
       requester: LiveRequester,
       url: string,
       signal: AbortSignal,
-      read: (tabId: number, signal: AbortSignal) => Promise<T>,
-    ): Promise<T> {
-      return throttle.load(
-        signal,
-        async (timeout, holdUntil) =>
-          read(
-            await open(requester, url, signal, timeout, holdUntil),
-            AbortSignal.any([signal, timeout]),
+    ): Promise<Result<number, TabOpenFailure>> {
+      const turn = await loading(
+        () =>
+          throttle.load(
+            signal,
+            (timeout, holdUntil) => open(requester, url, signal, timeout, holdUntil),
+            turnMs,
           ),
-        turnMs,
+        signal,
+        "tab",
       );
+      return Result.flatten(turn);
+    },
+
+    async loadAndRead<T, E>(
+      requester: LiveRequester,
+      url: string,
+      signal: AbortSignal,
+      read: (tabId: number, signal: AbortSignal) => Promise<Result<T, E>>,
+    ): Promise<Result<T, E | TabOpenFailure>> {
+      const turn = await loading(
+        () =>
+          throttle.load(
+            signal,
+            async (timeout, holdUntil): Promise<Result<T, E | TabOpenFailure>> => {
+              const opened = await open(requester, url, signal, timeout, holdUntil);
+              if (opened.isErr()) return Result.err(opened.error);
+              return read(opened.value, AbortSignal.any([signal, timeout]));
+            },
+            turnMs,
+          ),
+        signal,
+        "tab",
+      );
+      return Result.flatten(turn);
     },
 
     async landedIn(context: TabContext): Promise<number | null> {

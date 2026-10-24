@@ -1,29 +1,36 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
+import { Result } from "better-result";
 import type { Clock, SessionValue } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
+import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import type { TabEditRefused } from "./errors/tab-edit-refused";
+import type { TabQueryFailed } from "./errors/tab-query-failed";
+import type { WindowFocusRefused } from "./errors/window-focus-refused";
 import { mfcItemUrl } from "./origins";
 import type { Origins } from "./origins";
 import { inContext, ownedTab } from "./owned-tab";
-import type { LiveRequester, OwnedTab, TabsApi } from "./owned-tab";
+import type { LiveRequester, OwnedTab, TabOpenFailure } from "./owned-tab";
+import type { Tabs } from "./tabs";
 import type { Throttle } from "./throttle";
 
-export type WindowsApi = {
-  readonly update: (windowId: number, info: { focused: boolean }) => Promise<{ id?: number }>;
-};
-
 export type MfcTabLease = { readonly kind: "borrowed" | "owned"; readonly tabId: number };
+
+/** How the extension fails to find or open an MFC tab for an item. */
+export type LeaseFailure = TabOpenFailure | TabQueryFailed;
+
+/** How the extension fails to show the user the challenge's tab. */
+export type ChallengeShowFailure = TabOpenFailure | TabEditRefused | WindowFocusRefused;
 
 const NAVIGATION_POLL_MS = 500;
 
 export function createMfcTabs(deps: {
-  readonly tabs: TabsApi;
-  readonly windows: WindowsApi;
+  readonly tabs: Tabs;
   readonly clock: Clock;
   readonly origins: Origins;
   readonly owned: SessionValue<OwnedTab>;
   readonly throttle: Pick<Throttle, "load">;
 }) {
-  const { tabs, windows, clock, origins } = deps;
+  const { tabs, clock, origins } = deps;
   const own = ownedTab({
     tabs,
     clock,
@@ -34,34 +41,49 @@ export function createMfcTabs(deps: {
   });
   let borrowing = true;
 
+  async function borrowable(
+    context: Parameters<typeof inContext>[1],
+  ): Promise<Result<number | null, TabQueryFailed>> {
+    if (!borrowing) return Result.ok(null);
+    const open = await tabs.query({
+      url: `${origins.mfc}/*`,
+      status: "complete",
+      discarded: false,
+    });
+    return open.map((found) => found.find((tab) => inContext(tab, context))?.id ?? null);
+  }
+
   return {
-    async lease(requester: LiveRequester, signal: AbortSignal): Promise<MfcTabLease> {
-      const { context } = requester();
-      const owned = await own.landedIn(context);
-      if (owned !== null) return { kind: "owned", tabId: owned };
-      if (borrowing) {
-        const open = await tabs.query({
-          url: `${origins.mfc}/*`,
-          status: "complete",
-          discarded: false,
-        });
-        const borrowed = open.find((tab) => inContext(tab, context))?.id;
-        if (borrowed !== undefined) return { kind: "borrowed", tabId: borrowed };
-      }
-      return { kind: "owned", tabId: await own.load(requester, `${origins.mfc}/`, signal) };
+    lease(
+      requester: LiveRequester,
+      signal: AbortSignal,
+    ): Promise<Result<MfcTabLease, LeaseFailure>> {
+      return Result.gen(async function* () {
+        const { context } = yield* requester();
+        const owned = await own.landedIn(context);
+        if (owned !== null) return Result.ok({ kind: "owned", tabId: owned } as const);
+        const borrowed = yield* Result.await(borrowable(context));
+        if (borrowed !== null) return Result.ok({ kind: "borrowed", tabId: borrowed } as const);
+        const tabId = yield* Result.await(own.load(requester, `${origins.mfc}/`, signal));
+        return Result.ok({ kind: "owned", tabId } as const);
+      });
     },
 
-    async showChallenge(
+    showChallenge(
       requester: LiveRequester,
       mfcItemId: MfcItemId,
       signal: AbortSignal,
-    ): Promise<number> {
-      const tabId = await own.load(requester, mfcItemUrl(mfcItemId, origins), signal);
-      signal.throwIfAborted();
-      const shown = await tabs.update(tabId, { active: true });
-      await own.claim(tabId);
-      if (shown?.windowId !== undefined) await windows.update(shown.windowId, { focused: true });
-      return tabId;
+    ): Promise<Result<number, ChallengeShowFailure>> {
+      return Result.gen(async function* () {
+        const tabId = yield* Result.await(
+          own.load(requester, mfcItemUrl(mfcItemId, origins), signal),
+        );
+        if (signal.aborted) return Result.err(new AttemptAbandoned());
+        const shown = yield* Result.await(tabs.update(tabId, { active: true }));
+        await own.claim(tabId);
+        if (shown?.windowId !== undefined) yield* Result.await(tabs.focusWindow(shown.windowId));
+        return Result.ok(tabId);
+      });
     },
 
     /**
@@ -72,8 +94,9 @@ export function createMfcTabs(deps: {
       let shown: string | null = null;
       let loading = false;
       while (!signal.aborted) {
-        const tab = await tabs.get(tabId).catch(() => null);
-        if (!tab) return;
+        const watched = await tabs.get(tabId);
+        if (watched.isErr()) return;
+        const tab = watched.value;
         const page = `${tab.url ?? ""}\n${tab.title ?? ""}`;
         if (tab.status !== "complete") loading = true;
         else if (shown === null || loading || page !== shown) {
@@ -86,14 +109,18 @@ export function createMfcTabs(deps: {
       }
     },
 
-    async handBack(requester: LiveRequester, signal: AbortSignal): Promise<void> {
-      if (signal.aborted) return;
-      try {
-        const tab = await tabs.update(requester().tabId, { active: true });
-        if (tab?.windowId !== undefined) await windows.update(tab.windowId, { focused: true });
-      } catch {
-        // The myakiba tab closed during the challenge, or its run ended.
-      }
+    /** Fails when the myakiba tab closed during the challenge or its run ended, which leaves focus where it is. */
+    handBack(
+      requester: LiveRequester,
+      signal: AbortSignal,
+    ): Promise<Result<void, AttemptAbandoned | TabEditRefused | WindowFocusRefused>> {
+      return Result.gen(async function* () {
+        if (signal.aborted) return Result.err(new AttemptAbandoned());
+        const { tabId } = yield* requester();
+        const tab = yield* Result.await(tabs.update(tabId, { active: true }));
+        if (tab?.windowId !== undefined) yield* Result.await(tabs.focusWindow(tab.windowId));
+        return Result.ok();
+      });
     },
 
     claim: own.claim,
