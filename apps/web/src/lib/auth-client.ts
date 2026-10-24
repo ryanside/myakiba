@@ -37,42 +37,57 @@ export function classifySession({
   return "signed-out";
 }
 
-type AuthAnswer = {
-  readonly error: {
-    readonly code?: string;
-    readonly message?: string;
-    readonly status: number;
-  } | null;
-};
+/** What a Better Auth client call resolves with when it gets an answer. */
+type AuthAnswer<Data> =
+  | { readonly data: Data; readonly error: null }
+  | {
+      readonly data: null;
+      readonly error: {
+        readonly code?: string | undefined;
+        readonly message?: string | undefined;
+        readonly status: number;
+        readonly statusText: string;
+      };
+    };
+
+/**
+ * The one reader of Better Auth's `{ data, error }`. A refusal is AuthRequestFailed. It reads
+ * answers only, so a request that throws still rejects its caller as it did before.
+ */
+export function decodeAuth<Answer extends AuthAnswer<unknown>>(
+  answer: Answer,
+): Result<Extract<Answer, { readonly error: null }>["data"], AuthRequestFailed> {
+  if (answer.error === null) return Result.ok(answer.data);
+  const { code, message, status, statusText } = answer.error;
+  return Result.err(
+    new AuthRequestFailed({
+      code: code ?? null,
+      status,
+      statusText,
+      cause: answer.error,
+      message: message ?? "",
+    }),
+  );
+}
 
 /** Signs out or deletes the account, and on success settles the session store as signed out. */
 export async function endSession(
-  operation: () => Promise<AuthAnswer>,
+  operation: () => Promise<AuthAnswer<unknown>>,
 ): Promise<Result<void, AuthRequestFailed>> {
   const answered = await Result.tryPromise({
     try: operation,
-    catch: (cause) => new AuthRequestFailed({ code: null, status: null, cause, message: "" }),
+    catch: (cause) =>
+      new AuthRequestFailed({ code: null, status: null, statusText: "", cause, message: "" }),
   });
-  const ended = answered.andThen(({ error }) =>
-    error
-      ? Result.err(
-          new AuthRequestFailed({
-            code: error.code ?? null,
-            status: error.status,
-            cause: error,
-            message: error.message ?? "",
-          }),
-        )
-      : Result.ok(),
-  );
-  if (ended.isErr()) return ended;
+  const ended = answered.andThen(decodeAuth);
+  if (ended.isErr()) return Result.err(ended.error);
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.
   sessionStore.listen((state) => {
     if (state.data || state.error) settleSignedOut();
   });
   settleSignedOut();
-  return ended;
+  return Result.ok();
 }
 
 function settleSignedOut() {

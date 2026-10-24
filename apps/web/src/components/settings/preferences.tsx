@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
@@ -24,15 +24,17 @@ export function Preferences({ user }: { user: User }) {
       dateFormat: user.dateFormat,
     },
     onSubmit: async ({ value }) => {
-      const { error } = await authClient.updateUser({
-        currency: value.currency,
-        dateFormat: value.dateFormat,
-      });
+      const updated = decodeAuth(
+        await authClient.updateUser({
+          currency: value.currency,
+          dateFormat: value.dateFormat,
+        }),
+      );
 
-      if (error) {
+      if (updated.isErr()) {
         toast.add({
           type: "error",
-          title: error.message || "Failed to update preferences",
+          title: updated.error.message || "Failed to update preferences",
         });
         return;
       }

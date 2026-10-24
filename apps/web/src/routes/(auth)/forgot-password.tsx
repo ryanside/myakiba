@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
@@ -41,27 +41,21 @@ function RouteComponent() {
   });
 
   const handleForgotPassword = async (email: string, turnstileToken: string) => {
-    await authClient.requestPasswordReset(
-      {
-        email,
-        redirectTo: getAuthRedirectUrl("/reset-password"),
-      },
-      {
-        headers: {
-          "x-captcha-response": turnstileToken,
-        },
-        onSuccess: () => {
-          setSentEmail(email);
-          setEmailSent(true);
-        },
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || "Failed to send password reset email",
-          });
-        },
-      },
+    const requested = decodeAuth(
+      await authClient.requestPasswordReset(
+        { email, redirectTo: getAuthRedirectUrl("/reset-password") },
+        { headers: { "x-captcha-response": turnstileToken } },
+      ),
     );
+    if (requested.isErr()) {
+      toast.add({
+        type: "error",
+        title: requested.error.message || "Failed to send password reset email",
+      });
+      return;
+    }
+    setSentEmail(email);
+    setEmailSent(true);
   };
 
   if (emailSent) {

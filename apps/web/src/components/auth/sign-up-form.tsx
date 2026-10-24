@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
@@ -41,20 +41,15 @@ export default function SignUpForm() {
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
-    await authClient.signIn.social(
-      {
+    const started = decodeAuth(
+      await authClient.signIn.social({
         provider: "google",
         callbackURL: getAuthRedirectUrl("/dashboard"),
-      },
-      {
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || error.error.statusText,
-          });
-        },
-      },
+      }),
     );
+    if (started.isErr()) {
+      toast.add({ type: "error", title: started.error.message || started.error.statusText });
+    }
   };
 
   const form = useForm({
@@ -65,32 +60,26 @@ export default function SignUpForm() {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signUp.email(
-        {
-          email: value.email,
-          password: value.password,
-          name: value.username,
-          username: value.username,
-          callbackURL: getAuthRedirectUrl("/dashboard"),
-        },
-        {
-          headers: {
-            "x-captcha-response": value.turnstileToken,
+      const signedUp = decodeAuth(
+        await authClient.signUp.email(
+          {
+            email: value.email,
+            password: value.password,
+            name: value.username,
+            username: value.username,
+            callbackURL: getAuthRedirectUrl("/dashboard"),
           },
-          onSuccess: () => {
-            navigate({
-              to: "/login",
-              search: { view: "verify-email", email: value.email },
-            });
-          },
-          onError: (error) => {
-            toast.add({
-              type: "error",
-              title: error.error.message || error.error.statusText,
-            });
-          },
-        },
+          { headers: { "x-captcha-response": value.turnstileToken } },
+        ),
       );
+      if (signedUp.isErr()) {
+        toast.add({ type: "error", title: signedUp.error.message || signedUp.error.statusText });
+        return;
+      }
+      navigate({
+        to: "/login",
+        search: { view: "verify-email", email: value.email },
+      });
     },
     validators: {
       onSubmit: z.object({
@@ -147,14 +136,12 @@ export default function SignUpForm() {
               } else if (value.length > 30) {
                 return;
               }
-              const { data, error } = await authClient.isUsernameAvailable({
-                username: value,
-              });
-              if (data?.available === false) {
-                return "Username is already taken";
+              const checked = decodeAuth(await authClient.isUsernameAvailable({ username: value }));
+              if (checked.isErr()) {
+                return checked.error.message;
               }
-              if (error) {
-                return error.message;
+              if (checked.value.available === false) {
+                return "Username is already taken";
               }
             },
             onBlur: z

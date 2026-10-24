@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
@@ -47,26 +47,15 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    await authClient.resetPassword(
-      {
-        newPassword: password,
-        token,
-      },
-      {
-        onSuccess: () => {
-          toast.add({ type: "success", title: "Password reset successfully" });
-          navigate({
-            to: "/login",
-          });
-        },
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || "Failed to reset password",
-          });
-        },
-      },
-    );
+    const reset = decodeAuth(await authClient.resetPassword({ newPassword: password, token }));
+    if (reset.isErr()) {
+      toast.add({ type: "error", title: reset.error.message || "Failed to reset password" });
+      return;
+    }
+    toast.add({ type: "success", title: "Password reset successfully" });
+    navigate({
+      to: "/login",
+    });
   };
 
   if (!token) {

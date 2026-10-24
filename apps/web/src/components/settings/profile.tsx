@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,10 @@ export function Profile({ user }: { user: User }) {
       username: user.username || "",
     },
     onSubmit: async ({ value }) => {
-      const { error } = await authClient.updateUser({
-        username: value.username,
-      });
+      const updated = decodeAuth(await authClient.updateUser({ username: value.username }));
 
-      if (error) {
-        toast.add({ type: "error", title: error.message || "Failed to update profile" });
+      if (updated.isErr()) {
+        toast.add({ type: "error", title: updated.error.message || "Failed to update profile" });
         return;
       }
 
@@ -57,11 +55,9 @@ export function Profile({ user }: { user: User }) {
             onChangeAsync: async ({ value }) => {
               if (value.length < 3 || value.length > 30) return;
               if (value === user.username) return;
-              const { data, error } = await authClient.isUsernameAvailable({
-                username: value,
-              });
-              if (data?.available === false) return "Username is already taken";
-              if (error) return error.message;
+              const checked = decodeAuth(await authClient.isUsernameAvailable({ username: value }));
+              if (checked.isErr()) return checked.error.message;
+              if (checked.value.available === false) return "Username is already taken";
             },
             onBlur: z
               .string()

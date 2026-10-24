@@ -37,7 +37,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
 import { useOnboarding } from "@/hooks/use-onboarding";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
 import { SYNC_OPTION_META } from "@/lib/sync";
@@ -178,15 +178,17 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
         return;
       }
 
-      const { error } = await authClient.updateUser({
-        username: trimmedUsername,
-        currency: value.currency,
-        dateFormat: value.dateFormat,
-      });
-      if (error) {
+      const updated = decodeAuth(
+        await authClient.updateUser({
+          username: trimmedUsername,
+          currency: value.currency,
+          dateFormat: value.dateFormat,
+        }),
+      );
+      if (updated.isErr()) {
         toast.add({
           type: "error",
-          title: error.message ?? "Couldn't save preferences.",
+          title: updated.error.message || "Couldn't save preferences.",
         });
         return;
       }
@@ -321,11 +323,12 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                           onChangeAsync: async ({ value }) => {
                             if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
                             if (value === sessionUsername) return;
-                            const { data, error } = await authClient.isUsernameAvailable({
-                              username: value,
-                            });
-                            if (data?.available === false) return "Username is already taken";
-                            if (error) return error.message;
+                            const checked = decodeAuth(
+                              await authClient.isUsernameAvailable({ username: value }),
+                            );
+                            if (checked.isErr()) return checked.error.message;
+                            if (checked.value.available === false)
+                              return "Username is already taken";
                           },
                           onBlur: z
                             .string()

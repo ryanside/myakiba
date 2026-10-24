@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useRead } from "@/data/client";
 import { settings } from "@/data/resources/settings";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
@@ -55,25 +55,19 @@ export function Account() {
         return;
       }
 
-      await authClient.changePassword(
-        {
+      const changed = decodeAuth(
+        await authClient.changePassword({
           newPassword: value.newPassword,
           currentPassword: value.currentPassword,
           revokeOtherSessions: true,
-        },
-        {
-          onSuccess: () => {
-            toast.add({ type: "success", title: "Password changed successfully" });
-            form.reset();
-          },
-          onError: (changePasswordError) => {
-            toast.add({
-              type: "error",
-              title: changePasswordError.error.message || "Failed to change password",
-            });
-          },
-        },
+        }),
       );
+      if (changed.isErr()) {
+        toast.add({ type: "error", title: changed.error.message || "Failed to change password" });
+        return;
+      }
+      toast.add({ type: "success", title: "Password changed successfully" });
+      form.reset();
     },
     validators: {
       onSubmit: z.object({
