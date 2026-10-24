@@ -85,7 +85,6 @@ test.each(["send-verification-email", "request-password-reset"])(
           z.object({ name: z.literal("SendAuthEmailFailed") }).safeParse(event.error).success,
       ),
     ).toBe(true);
-
   },
 );
 test.each(["send-verification-email", "request-password-reset"])(
@@ -158,7 +157,6 @@ test.each(invalidPreferences)(
   },
 );
 
-
 test("failed reset email does not disclose whether the account exists", async () => {
   const instance = testAuth();
   const statuses: number[] = [];
@@ -175,5 +173,14 @@ test("sign-up succeeds and logs when verification email fails", async () => {
     asResponse: true,
   });
   expect(response.status).toBe(200);
-  expect(events.some(({ event }) => event.action === "auth.sendEmail" && event.purpose === "verification" && z.object({ name: z.literal("SendAuthEmailFailed"), cause: z.unknown() }).safeParse(event.error).success)).toBe(true);
+  expect(
+    events.some(
+      ({ event }) =>
+        event.action === "auth.sendEmail" &&
+        event.purpose === "verification" &&
+        z
+          .object({ name: z.literal("SendAuthEmailFailed"), cause: z.unknown() })
+          .safeParse(event.error).success,
+    ),
+  ).toBe(true);
 });

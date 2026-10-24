@@ -1,5 +1,4 @@
 import { Result } from "better-result";
-import { APIError } from "better-auth/api";
 import { createLogger } from "evlog";
 import type { Resend } from "resend";
 import { SendAuthEmailFailed } from "./errors/send-auth-email-failed";
@@ -20,8 +19,4 @@ export async function sendAuthEmail(
   const emailLog = createLogger({ action: "auth.sendEmail", outcome: "error", purpose });
   emailLog.error(checked.error);
   emailLog.emit();
-  throw new APIError("INTERNAL_SERVER_ERROR", {
-    code: "SEND_AUTH_EMAIL_FAILED",
-    message: "We couldn't send the email. Please try again.",
-  });
 }

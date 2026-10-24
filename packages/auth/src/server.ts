@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@myakiba/db/client";
 import * as schema from "@myakiba/db/schema/auth";
@@ -19,15 +18,6 @@ const resend = new Resend(env.RESEND_API_KEY);
 
 export const auth = betterAuth({
   appName: "myakiba",
-  hooks: {
-    before: createAuthMiddleware(async (ctx) => {
-      // Email delivery belongs to the request. Better Auth's default helper
-      // catches even awaited failures and would otherwise answer success.
-      ctx.context.runInBackgroundOrAwait = async (task) => {
-        await task;
-      };
-    }),
-  },
   secondaryStorage: {
     get: async (key) => {
       return await redis.get(key);
