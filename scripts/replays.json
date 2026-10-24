@@ -1370,6 +1370,14 @@
       "bug": "an extension import run that crashed showed a generic toast and was logged nowhere",
       "test": "apps/web/src/components/extension/run-outcome-toast.test.ts",
       "fixed": ["a run that crashes shows the generic toast and reports the crash as a Panic"]
+    },
+    {
+      "fix": "9a6f9f3fcf5e9181d2c05e17547d95c61fa04d9f",
+      "bug": "a Panic while the end of a throttle turn was booked failed every later MFC load and went unhandled",
+      "test": "apps/extension/lib/throttle.test.ts",
+      "fixed": [
+        "a throttle turn > whose end of turn panics while it is booked reports it once and lets the next loads run"
+      ]
     }
   ],
   "lint": [
