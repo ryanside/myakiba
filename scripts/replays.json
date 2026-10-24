@@ -434,7 +434,7 @@
     },
     {
       "fix": "9597fbf5",
-      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101–5 of 5 on a page past the end",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     },
@@ -1089,6 +1089,28 @@
         "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
       ],
       "testAt": "39f38f09"
+    },
+    {
+      "fix": "c8f5c32fedc776e843e8a9caff206823ba3893fc",
+      "bug": "W-F2: legacy API callers expose server and network details",
+      "test": "apps/web/src/data/legacy-wording.test.ts",
+      "fixed": [
+        "CSV sync hides server, validator and network details",
+        "item sync hides server, validator and network details",
+        "order sync hides server, validator and network details",
+        "order item sync hides server, validator and network details",
+        "collection sync hides server, validator and network details",
+        "import history hides server, validator and network details",
+        "import details hides server, validator and network details",
+        "sync retry hides server, validator and network details",
+        "data export hides server, validator and network details",
+        "import status hides server, validator and network details",
+        "start import hides server, validator and network details",
+        "retry import hides server, validator and network details",
+        "delete import hides server, validator and network details",
+        "refresh status hides server, validator and network details",
+        "refresh item hides server, validator and network details"
+      ]
     }
   ],
   "lint": [
