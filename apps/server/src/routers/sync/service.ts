@@ -34,6 +34,7 @@ import { createLogger } from "evlog";
 import { insertItemRows } from "./item-rows";
 import type { SyncOrderUnowned } from "./errors/sync-order-unowned";
 import { SyncJobNotFound } from "./errors/sync-job-not-found";
+import { JobStatusSnapshotCorrupt } from "./errors/job-status-snapshot-corrupt";
 import { JobStatusCacheUnavailable } from "./errors/job-status-cache-unavailable";
 import type { ItemRows } from "./item-rows";
 import { publishJobStatus, queuedJobStatus } from "./job-status";
@@ -374,7 +375,8 @@ class SyncService {
     }
     const cached = read.isOk() ? read.value : null;
     if (cached) {
-      const parsedStatus = parseJobStatusPayload(cached).unwrapOr(null);
+      const parsed = parseJobStatusPayload(cached);
+      const parsedStatus = parsed.unwrapOr(null);
       const sessionOverridesSnapshot =
         parsedStatus !== null &&
         (session.interrupted ||
@@ -384,12 +386,14 @@ class SyncService {
         return Result.ok(parsedStatus);
       }
 
-      if (!parsedStatus) {
+      if (parsed.isErr()) {
+        const failure = new JobStatusSnapshotCorrupt({ jobId, cause: parsed.error });
         createLogger({
           action: "sync.getJobStatus",
           outcome: "warn",
           jobId,
-          message: "Corrupt Redis job status cache; falling back to DB",
+          message: failure.message,
+          failure,
         }).emit();
       }
     }
