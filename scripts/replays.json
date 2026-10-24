@@ -1324,6 +1324,15 @@
         "session storage set preserves its rejection and logs SessionStoreUnavailable",
         "session storage delete preserves its rejection and logs SessionStoreUnavailable"
       ]
+    },
+    {
+      "fix": "c23da077651843394e7f962396c8c88183f4f4db",
+      "bug": "a sync session status outside the enum read as an undefined phase and terminal state instead of stopping as a defect",
+      "test": "packages/contracts/src/sync/schema.test.ts",
+      "fixed": [
+        "a sync session status outside the enum > has no phase and panics",
+        "a sync session status outside the enum > has no terminal state and panics"
+      ]
     }
   ],
   "lint": [
