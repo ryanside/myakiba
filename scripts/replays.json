@@ -710,6 +710,17 @@
       "bug": "order detail pages showed the Orders list background, unlike item pages",
       "test": "apps/web/src/components/page-background.test.tsx",
       "fixed": ["page background > an order detail page shows no background"]
+    },
+    {
+      "fix": "50674ee8",
+      "bug": "analytics sort icons still faded and blurred, and the chart brush still sprang, under the device's reduced-motion setting and the app's Reduce motion switch",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "analytics sort icons > swap at once under the device's reduced-motion setting",
+        "analytics sort icons > swap at once under the app's Reduce motion switch",
+        "chart brush > jumps to a new range under the device's reduced-motion setting",
+        "chart brush > jumps to a new range under the app's Reduce motion switch"
+      ]
     }
   ],
   "lint": [
