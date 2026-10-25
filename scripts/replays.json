@@ -649,6 +649,19 @@
       "bug": "a drag label wider than two columns excluded neighboring tile centers from keyboard moves",
       "test": "apps/web/src/hooks/use-sortable-items.test.tsx",
       "fixed": ["a label wider than two columns moves one slot left and right"]
+    },
+    {
+      "fix": "04b7cfe1",
+      "bug": "gallery image links in Collection, Orders and Analytics had no accessible name, or a name that was not the title, when a picture was missing or several were shown",
+      "test": "apps/web/src/components/gallery-links.test.tsx",
+      "fixed": [
+        "Collection square gallery > names each image link by its title alone",
+        "Orders square gallery > names each image link by its title alone",
+        "Collection masonry gallery > names each image link by its title alone",
+        "Orders masonry gallery > names each image link by its title alone",
+        "Analytics section items > names each image link by its title alone",
+        "Analytics shared item previews > names each image link by its title alone"
+      ]
     }
   ],
   "lint": [
