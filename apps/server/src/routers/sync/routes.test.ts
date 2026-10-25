@@ -2002,3 +2002,34 @@ test("a corrupt retained sync payload refuses retry explicitly and logs its sche
     initLogger({ enabled: false });
   }
 });
+
+test.each(["order", "order-item", "csv"])(
+  "a malformed retained %s payload refuses retry before reading Order lock fields",
+  async (type) => {
+    const run = await start("item", { items: [X] });
+    await fail(run, X);
+    const malformed = JSON.stringify({ type, payloadVersion: 3 });
+    await db.execute(
+      sql`UPDATE sync_session SET request_payload = ${malformed}::jsonb WHERE id = ${run.syncSessionId}`,
+    );
+    expect(await post(`/sessions/${run.syncSessionId}/retry`)).toEqual({
+      status: 409,
+      body: "This import can't be retried",
+    });
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "failed" });
+  },
+);
+
+test.each(["order", "order-item", "csv"])(
+  "completion of a malformed retained %s payload rolls back with a logged 500",
+  async (type) => {
+    const run = await start("item", { items: [X] });
+    const malformed = JSON.stringify({ type, payloadVersion: 3 });
+    await db.execute(
+      sql`UPDATE sync_session SET request_payload = ${malformed}::jsonb WHERE id = ${run.syncSessionId}`,
+    );
+    expect(await complete(run, X)).toEqual({ status: 500, body: "Failed to import item" });
+    expect(await results(run.syncSessionId)).toEqual([{ id: X, status: "pending", reason: null }]);
+    expect(await db.select({ id: item.id }).from(item).where(eq(item.externalId, X))).toEqual([]);
+  },
+);
