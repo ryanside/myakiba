@@ -27,13 +27,18 @@ const searchText = z
   .optional();
 
 const settingsSearchSchema = z.object({
-  section: z.enum(SETTINGS_SECTION_IDS).optional(),
+  /** A link to a section that no longer exists, or never did, opens Settings without one. */
+  section: z
+    .unknown()
+    .transform((value) => SETTINGS_SECTION_IDS.find((id) => id === value))
+    .optional(),
   q: searchText,
   /** Better Auth's code for a Google link that failed, on the way back from Google. */
   error: searchText,
 });
 
 export const Route = createFileRoute("/(app)/settings")({
+  // A function keeps links typed by the parsed search, not by the unknown section it accepts.
   validateSearch: settingsSearchSchema.parse,
   component: RouteComponent,
   head: ({ match }) => {

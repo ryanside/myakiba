@@ -32,6 +32,21 @@ async function openSettings(url: string) {
   return { status: match?.status, search: match?.search };
 }
 
+test("a link to a section that no longer exists, or never did, opens Settings without one", async () => {
+  expect(await openSettings("/settings?section=shortcuts&q=theme")).toEqual({
+    status: "success",
+    search: { q: "theme" },
+  });
+  expect(await openSettings("/settings?section=not-a-section")).toEqual({
+    status: "success",
+    search: {},
+  });
+  expect(await openSettings("/settings?section=appearance")).toEqual({
+    status: "success",
+    search: { section: "appearance" },
+  });
+});
+
 test("a search the router reads as a number, a boolean, null or JSON opens Settings with its text", async () => {
   expect(await openSettings("/settings?section=preferences&q=123")).toEqual({
     status: "success",
