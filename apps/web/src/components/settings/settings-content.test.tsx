@@ -36,7 +36,7 @@ function SettingsScreen({ layout }: { readonly layout: "phone" | "desktop" }) {
         </button>
       </nav>
       <div style={isPhone && !selected ? { display: "none" } : undefined}>
-        <SettingsContent key={section} section={section}>
+        <SettingsContent key={section} section={section} isSelected={selected !== undefined}>
           <p>{section} rows</p>
         </SettingsContent>
       </div>
@@ -57,6 +57,12 @@ async function openSection(layout: "phone" | "desktop", name: string) {
   fireEvent.click(navItem);
   return navItem;
 }
+
+test("opening the default section from the phone's list moves focus to its heading", async () => {
+  await openSection("phone", "Preferences");
+
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Preferences" }));
+});
 
 test("opening a section beside the nav leaves focus on the nav", async () => {
   const navItem = await openSection("desktop", "Appearance");

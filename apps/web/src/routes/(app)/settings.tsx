@@ -100,7 +100,7 @@ function RouteComponent() {
           {isSearching ? (
             <SettingsSearchResults query={query} />
           ) : (
-            <SettingsContent key={section} section={section}>
+            <SettingsContent key={section} section={section} isSelected={selected !== undefined}>
               {SECTION_CONTENT[section](session)}
             </SettingsContent>
           )}

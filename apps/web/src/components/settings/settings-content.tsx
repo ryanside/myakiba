@@ -6,6 +6,8 @@ import type { SettingsSectionId } from "./settings-registry";
 
 type SettingsContentProps = {
   readonly section: SettingsSectionId;
+  /** The user opened this section, rather than landing on the default one beside the list. */
+  readonly isSelected: boolean;
   readonly children: ReactNode;
 };
 
@@ -17,14 +19,15 @@ export function hasLostFocus(): boolean {
   return !(active.checkVisibility?.() ?? active.getClientRects().length > 0);
 }
 
-export function SettingsContent({ section, children }: SettingsContentProps) {
+export function SettingsContent({ section, isSelected, children }: SettingsContentProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { label, description } = SETTINGS_SECTIONS[section];
 
-  // On a phone the section replaces the nav, which hides the link that opened it.
+  // On a phone the section replaces the nav, which hides the link that opened it. The default
+  // section is already mounted behind the phone's list, so selecting it shows it without a remount.
   useEffect(() => {
-    if (hasLostFocus()) headingRef.current?.focus({ preventScroll: true });
-  }, []);
+    if (isSelected && hasLostFocus()) headingRef.current?.focus({ preventScroll: true });
+  }, [isSelected]);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6">
