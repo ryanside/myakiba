@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -78,7 +79,7 @@ export function CollectionCardGrid({
           <Card
             key={i}
             size="sm"
-            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
+            className="gap-0 rounded-[17px] border border-transparent bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
           >
             <Skeleton className="aspect-4/5 w-full rounded-[10px]" />
             <div
@@ -122,7 +123,7 @@ export function CollectionCardGrid({
             key={item.id}
             size="sm"
             className={cn(
-              "group/item relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
+              "group/item relative gap-0 rounded-[17px] border border-transparent bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]",
               isSelected
                 ? "ring-2 ring-primary"
                 : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
@@ -149,14 +150,16 @@ export function CollectionCardGrid({
                     to: "/item/$externalId",
                     params: { externalId: item.itemExternalId },
                   } as const))}
-              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block overflow-hidden rounded-[10px] bg-muted"
+              tabIndex={-1}
+              aria-hidden="true"
               title={item.itemTitle}
             >
-              <div className="animate-data-in relative aspect-4/5 w-full overflow-hidden bg-muted">
+              <div className="animate-data-in relative aspect-4/5 w-full overflow-hidden rounded-[inherit] bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:outline after:-outline-offset-1 after:outline-black/10 dark:after:outline-white/10">
                 {item.itemImage ? (
                   <img
                     src={item.itemImage}
-                    alt={item.itemTitle}
+                    alt=""
                     className="h-full w-full object-cover object-top"
                     loading="lazy"
                   />
@@ -174,13 +177,13 @@ export function CollectionCardGrid({
                 isCompact && "px-2 pt-2.5 pb-2",
               )}
             >
-              <div className="flex min-w-0 items-center gap-2 text-[11px] leading-none">
+              <div className="flex h-3 min-w-0 items-center gap-2 text-xs leading-none">
                 {item.itemCategory ? (
                   <span className="truncate" style={{ color: getCategoryColor(item.itemCategory) }}>
                     {item.itemCategory}
                   </span>
                 ) : null}
-                {item.itemScale ? (
+                {item.itemScale && item.itemScale !== NO_SCALE ? (
                   <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>
@@ -200,7 +203,7 @@ export function CollectionCardGrid({
                         to: "/item/$externalId",
                         params: { externalId: item.itemExternalId },
                       } as const))}
-                  className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="line-clamp-2 hover:underline underline-offset-2 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={item.itemTitle}
                 >
                   {item.itemTitle}
@@ -218,7 +221,7 @@ export function CollectionCardGrid({
                 </span>
                 {item.shop && !isCompact ? (
                   <span
-                    className="min-w-0 truncate text-[11px] leading-none text-muted-foreground"
+                    className="min-w-0 truncate text-xs leading-none text-muted-foreground"
                     title={item.shop}
                   >
                     {item.shop}

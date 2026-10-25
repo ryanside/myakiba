@@ -63,7 +63,7 @@ export function OrdersCardGrid({
           <Card
             key={i}
             size="sm"
-            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
+            className="gap-0 rounded-[17px] border border-transparent bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
           >
             <Skeleton className="aspect-8/5 w-full rounded-[10px]" />
             <div
@@ -73,7 +73,7 @@ export function OrdersCardGrid({
               )}
             >
               <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-5 w-14" />
                 <Skeleton className="h-3 w-10" />
               </div>
               <div className="space-y-1.5">
@@ -112,7 +112,7 @@ export function OrdersCardGrid({
             key={order.orderId}
             size="sm"
             className={cn(
-              "group/item relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
+              "group/item relative gap-0 rounded-[17px] border border-transparent bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]",
               isSelected
                 ? "ring-2 ring-primary"
                 : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
@@ -132,10 +132,12 @@ export function OrdersCardGrid({
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}
-              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block overflow-hidden rounded-[10px] bg-muted"
+              tabIndex={-1}
+              aria-hidden="true"
               title={order.title}
             >
-              <div className="animate-data-in relative aspect-8/5 w-full overflow-hidden bg-muted">
+              <div className="animate-data-in relative aspect-8/5 w-full overflow-hidden rounded-[inherit] bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:outline after:-outline-offset-1 after:outline-black/10 dark:after:outline-white/10">
                 {(() => {
                   if (displayImages.length === 0) {
                     return (
@@ -151,7 +153,7 @@ export function OrdersCardGrid({
                     return (
                       <img
                         src={displayImages[0]}
-                        alt={order.title}
+                        alt=""
                         className="h-full w-full object-cover object-top"
                         loading="lazy"
                       />
@@ -170,7 +172,7 @@ export function OrdersCardGrid({
                         <img
                           key={`${src}-${idx}`}
                           src={src}
-                          alt={`${order.title} item ${idx + 1}`}
+                          alt=""
                           className="h-full w-full object-cover object-top"
                           loading="lazy"
                         />
@@ -188,13 +190,8 @@ export function OrdersCardGrid({
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <ThemedBadge
-                  variant={getStatusVariant(order.status)}
-                  size={isCompact ? "xs" : "sm"}
-                >
-                  {order.status}
-                </ThemedBadge>
-                <span className="shrink-0 text-[11px] leading-none text-muted-foreground tabular-nums">
+                <ThemedBadge variant={getStatusVariant(order.status)}>{order.status}</ThemedBadge>
+                <span className="shrink-0 text-xs leading-none text-muted-foreground tabular-nums">
                   {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                 </span>
               </div>
@@ -208,18 +205,20 @@ export function OrdersCardGrid({
                 <Link
                   to="/orders/$id"
                   params={{ id: order.orderId }}
-                  className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="line-clamp-2 hover:underline underline-offset-2 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={order.title}
                 >
                   {order.title}
                 </Link>
               </h3>
-              <p
-                className="mt-1 truncate text-xs leading-normal text-muted-foreground"
-                title={order.shop || undefined}
-              >
-                {order.shop || "—"}
-              </p>
+              {order.shop ? (
+                <p
+                  className="mt-1 truncate text-xs leading-normal text-muted-foreground"
+                  title={order.shop}
+                >
+                  {order.shop}
+                </p>
+              ) : null}
 
               <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
                 <span
@@ -231,7 +230,7 @@ export function OrdersCardGrid({
                   {formatCurrencyFromMinorUnits(order.total, currency, locale)}
                 </span>
                 {order.shippingMethod !== "n/a" && !isCompact ? (
-                  <span className="min-w-0 truncate text-[11px] leading-none text-muted-foreground">
+                  <span className="min-w-0 truncate text-xs leading-none text-muted-foreground">
                     {order.shippingMethod}
                   </span>
                 ) : null}

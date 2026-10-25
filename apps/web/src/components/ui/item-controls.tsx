@@ -40,7 +40,7 @@ function ItemControls({
         data-slot="item-controls"
         data-size={size}
         className={cn(
-          "z-20 flex shrink-0 translate-y-0 items-center gap-px rounded-[12px] p-0.5 transition-[translate,opacity] duration-150 ease-out pointer-coarse:rounded-[13px]",
+          "z-20 flex shrink-0 items-center gap-px rounded-[12px] p-0.5 transition-opacity duration-150 ease-out pointer-coarse:rounded-[13px]",
           variant === "media" &&
             "absolute top-2 right-2 bg-black/45 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)] backdrop-blur-md",
           size === "md" &&
@@ -51,9 +51,6 @@ function ItemControls({
             "top-1 right-1 rounded-[8px] p-px [&_[data-slot=item-control]]:size-5 [&_[data-slot=item-selection]]:size-5 [&_[data-slot=item-control]]:rounded-[7px] [&_[data-slot=item-selection]]:rounded-[7px] [&_svg]:size-3",
           !active &&
             "pointer-fine:pointer-events-none pointer-fine:opacity-0 pointer-fine:group-hover/item:pointer-events-auto pointer-fine:group-hover/item:opacity-100 pointer-fine:group-has-[:focus-visible]/item:pointer-events-auto pointer-fine:group-has-[:focus-visible]/item:opacity-100",
-          !active &&
-            variant === "media" &&
-            "pointer-fine:-translate-y-1 pointer-fine:group-hover/item:translate-y-0 pointer-fine:group-has-[:focus-visible]/item:translate-y-0",
           className,
         )}
         {...props}
