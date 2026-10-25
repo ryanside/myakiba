@@ -255,3 +255,57 @@ test("a devices anchor focuses again after its hash is deactivated and reactivat
   await act(() => router.navigate({ to: "/settings", hash: "setting-devices" }));
   expect(document.activeElement === document.querySelector("#setting-devices")).toBe(true);
 });
+
+test.each(["needs-fresh-sign-in", "unavailable"] as const)(
+  "refreshing targeted sign out others through %s does not steal focus",
+  async (state) => {
+    resetServer("ok");
+    const { client } = openAccount("/settings#setting-sign-out-others");
+    await screen.findByText("This device");
+    const row = document.querySelector("#setting-sign-out-others");
+    expect(row).not.toBeNull();
+    expect(document.activeElement === row).toBe(true);
+
+    const password = screen.getByRole("button", { name: "Change password" });
+    password.focus();
+    server.devices = state;
+    await act(() => client.invalidateQueries({ queryKey: ["devices"] }));
+    if (state === "needs-fresh-sign-in") {
+      await screen.findByText("Sign in again to see your devices");
+    } else {
+      await screen.findByRole("button", { name: "Try again" });
+    }
+    expect(document.querySelector("#setting-sign-out-others")).toBeNull();
+    expect(document.activeElement === password).toBe(true);
+
+    server.devices = "listed";
+    await act(() => client.invalidateQueries({ queryKey: ["devices"] }));
+    await screen.findByText("This device");
+    expect(document.querySelector("#setting-sign-out-others")).not.toBeNull();
+    expect(document.activeElement === password).toBe(true);
+  },
+);
+
+test("returning to an already focused devices history entry preserves focus", async () => {
+  resetServer("ok");
+  const { router } = openAccount("/settings#setting-devices");
+  await screen.findByText("This device");
+  expect(document.activeElement === document.querySelector("#setting-devices")).toBe(true);
+
+  await act(() => router.navigate({ to: "/settings" }));
+  const password = screen.getByRole("button", { name: "Change password" });
+  password.focus();
+  await act(async () => {
+    router.history.back();
+    await router.load();
+  });
+  expect(router.state.location.hash).toBe("setting-devices");
+  expect(document.activeElement === password).toBe(true);
+
+  await act(async () => {
+    router.history.forward();
+    await router.load();
+  });
+  expect(router.state.location.hash).toBe("");
+  expect(document.activeElement === password).toBe(true);
+});

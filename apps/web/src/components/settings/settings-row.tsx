@@ -1,5 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { SETTINGS, settingAnchor } from "./settings-registry";
@@ -9,26 +9,32 @@ import "./settings.css";
 const ANCHOR_CLASS_NAME =
   "settings-anchor focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
 
+const focusedArrivals = new Map<SettingId, string>();
+
 /**
  * Props for the element a search result jumps to. When the URL hash names the setting,
  * the element takes focus and flashes.
  */
 export function useSettingAnchor<T extends HTMLElement>(setting: SettingId | undefined) {
-  const isTarget = useLocation({
-    select: (location) => setting !== undefined && location.hash === settingAnchor(setting),
+  const arrival = useLocation({
+    select: (location) =>
+      setting !== undefined && location.hash === settingAnchor(setting)
+        ? location.state.__TSR_key
+        : undefined,
   });
-  const focused = useRef(false);
-  useEffect(() => {
-    if (!isTarget) focused.current = false;
-  }, [isTarget]);
   const ref = useCallback(
     (element: T | null) => {
-      if (element && isTarget && !focused.current) {
-        focused.current = true;
+      if (
+        element &&
+        setting !== undefined &&
+        arrival !== undefined &&
+        focusedArrivals.get(setting) !== arrival
+      ) {
+        focusedArrivals.set(setting, arrival);
         element.focus({ preventScroll: true });
       }
     },
-    [isTarget],
+    [arrival, setting],
   );
 
   return setting === undefined
@@ -37,7 +43,7 @@ export function useSettingAnchor<T extends HTMLElement>(setting: SettingId | und
         ref,
         id: settingAnchor(setting),
         tabIndex: -1,
-        "data-target": isTarget || undefined,
+        "data-target": arrival !== undefined || undefined,
         className: ANCHOR_CLASS_NAME,
       };
 }
