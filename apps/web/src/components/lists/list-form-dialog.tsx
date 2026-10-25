@@ -21,128 +21,155 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function ListFormDialog({
   renderTrigger,
-  triggerNativeButton = true,
-  triggerRole,
+  open,
+  onOpenChange,
   title,
   description,
-  initialTitle = "",
-  initialDescription = "",
-  submitLabel,
-  pendingLabel,
-  onSubmit,
+  ...formProps
 }: {
-  readonly renderTrigger: ReactElement;
-  readonly triggerNativeButton?: boolean;
-  readonly triggerRole?: "menuitem";
+  readonly renderTrigger?: ReactElement;
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
   readonly title: string;
   readonly description: string;
-  readonly initialTitle?: string;
-  readonly initialDescription?: string;
-  readonly submitLabel: string;
-  readonly pendingLabel: string;
-  readonly onSubmit: (input: ListInput) => Promise<void>;
-}): React.JSX.Element {
-  const titleInputId = useId();
-  const descriptionInputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
-  const form = useForm({
-    defaultValues: { title: initialTitle, description: initialDescription },
-    validators: { onSubmit: listInputSchema },
-    onSubmitInvalid: () => inputRef.current?.focus(),
-    onSubmit: async ({ value }) => {
-      await onSubmit({ title: value.title.trim(), description: value.description.trim() });
-      setOpen(false);
-    },
-  });
+} & ListFormProps): React.JSX.Element {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const actualOpen = open ?? internalOpen;
 
-  const handleOpenChange = (nextOpen: boolean): void => {
-    if (form.state.isSubmitting && !nextOpen) return;
-    if (nextOpen) {
-      form.reset({ title: initialTitle, description: initialDescription });
-    }
-    setOpen(nextOpen);
+  const setOpen = (nextOpen: boolean): void => {
+    if (open === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={renderTrigger} nativeButton={triggerNativeButton} role={triggerRole} />
-      {open ? (
+    <Dialog
+      open={actualOpen}
+      onOpenChange={(nextOpen) => {
+        if (isSubmitting && !nextOpen) return;
+        setOpen(nextOpen);
+      }}
+    >
+      {renderTrigger ? <DialogTrigger render={renderTrigger} /> : null}
+      {actualOpen ? (
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              event.stopPropagation();
+          <ListForm
+            {...formProps}
+            onSubmit={async (input) => {
+              setIsSubmitting(true);
               try {
-                await form.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
+                await formProps.onSubmit(input);
+                setOpen(false);
+              } finally {
+                setIsSubmitting(false);
               }
             }}
-          >
-            <FieldGroup>
-              <form.Field name="title">
-                {(field) => {
-                  const isInvalid = !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid ? true : undefined}>
-                      <FieldLabel htmlFor={titleInputId}>Title</FieldLabel>
-                      <Input
-                        ref={inputRef}
-                        id={titleInputId}
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        aria-invalid={isInvalid ? true : undefined}
-                        aria-describedby={isInvalid ? `${titleInputId}-error` : undefined}
-                        autoFocus
-                      />
-                      <FieldError id={`${titleInputId}-error`} errors={field.state.meta.errors} />
-                    </Field>
-                  );
-                }}
-              </form.Field>
-              <form.Field name="description">
-                {(field) => (
-                  <Field>
-                    <FieldLabel htmlFor={descriptionInputId}>Description (optional)</FieldLabel>
-                    <Textarea
-                      id={descriptionInputId}
-                      name={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      placeholder="Optional"
-                      rows={3}
-                    />
-                  </Field>
-                )}
-              </form.Field>
-            </FieldGroup>
-            <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
-              {([canSubmit, isSubmitting]) => (
-                <DialogFooter className="mt-4">
-                  <DialogClose
-                    render={<Button type="button" variant="outline" />}
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </DialogClose>
-                  <Button type="submit" disabled={!canSubmit || isSubmitting}>
-                    {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-                    {isSubmitting ? pendingLabel : submitLabel}
-                  </Button>
-                </DialogFooter>
-              )}
-            </form.Subscribe>
-          </form>
+          />
         </DialogContent>
       ) : null}
     </Dialog>
+  );
+}
+
+type ListFormProps = {
+  readonly initialTitle?: string;
+  readonly initialDescription?: string;
+  readonly submitLabel: string;
+  readonly pendingLabel: string;
+  readonly onSubmit: (input: ListInput) => Promise<void>;
+};
+
+// Mounted per open, so each open starts from the List's current title and description.
+function ListForm({
+  initialTitle = "",
+  initialDescription = "",
+  submitLabel,
+  pendingLabel,
+  onSubmit,
+}: ListFormProps): React.JSX.Element {
+  const titleInputId = useId();
+  const descriptionInputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const form = useForm({
+    defaultValues: { title: initialTitle, description: initialDescription },
+    validators: { onSubmit: listInputSchema },
+    onSubmitInvalid: () => inputRef.current?.focus(),
+    onSubmit: ({ value }) =>
+      onSubmit({ title: value.title.trim(), description: value.description.trim() }),
+  });
+
+  return (
+    <form
+      onSubmit={async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await form.handleSubmit();
+        } catch {
+          // The mutation reports the error and the dialog stays open.
+        }
+      }}
+    >
+      <FieldGroup>
+        <form.Field name="title">
+          {(field) => {
+            const isInvalid = !field.state.meta.isValid;
+            return (
+              <Field data-invalid={isInvalid ? true : undefined}>
+                <FieldLabel htmlFor={titleInputId}>Title</FieldLabel>
+                <Input
+                  ref={inputRef}
+                  id={titleInputId}
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  aria-invalid={isInvalid ? true : undefined}
+                  aria-describedby={isInvalid ? `${titleInputId}-error` : undefined}
+                  autoFocus
+                />
+                <FieldError id={`${titleInputId}-error`} errors={field.state.meta.errors} />
+              </Field>
+            );
+          }}
+        </form.Field>
+        <form.Field name="description">
+          {(field) => (
+            <Field>
+              <FieldLabel htmlFor={descriptionInputId}>Description (optional)</FieldLabel>
+              <Textarea
+                id={descriptionInputId}
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                placeholder="Optional"
+                rows={3}
+              />
+            </Field>
+          )}
+        </form.Field>
+      </FieldGroup>
+      <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
+        {([canSubmit, isSubmitting]) => (
+          <DialogFooter className="mt-4">
+            <DialogClose
+              render={<Button type="button" variant="outline" />}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </DialogClose>
+            <Button type="submit" disabled={!canSubmit || isSubmitting}>
+              {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
+              {isSubmitting ? pendingLabel : submitLabel}
+            </Button>
+          </DialogFooter>
+        )}
+      </form.Subscribe>
+    </form>
   );
 }
