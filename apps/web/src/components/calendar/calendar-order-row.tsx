@@ -4,9 +4,11 @@ import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { ROW_LINK_CLASS_NAME } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ThemedBadge } from "@/components/reui/badge";
 import { getStatusVariant } from "@/lib/orders";
+import { cn } from "@/lib/utils";
 import type { CalendarOrder } from "@/queries/calendar";
 
 interface CalendarOrderRowProps {
@@ -20,7 +22,10 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
     <Link
       to="/orders/$id"
       params={{ id: order.orderId }}
-      className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden rounded-md p-1.5 hover:bg-muted/50"
+      className={cn(
+        "grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden rounded-md p-1.5",
+        ROW_LINK_CLASS_NAME,
+      )}
     >
       <ImageThumbnail
         images={order.images}

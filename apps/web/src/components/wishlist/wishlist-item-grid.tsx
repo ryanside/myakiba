@@ -266,7 +266,7 @@ function SortableWishlistItem({
         />
         <ItemControls
           key={viewMode}
-          variant={viewMode === "grid" ? "media" : "surface"}
+          variant={viewMode === "grid" ? "media" : "row"}
           active={releaseStatus !== "all" || viewMode === "list" || isDragging || removing}
           className={viewMode === "list" ? "mr-1" : undefined}
         >

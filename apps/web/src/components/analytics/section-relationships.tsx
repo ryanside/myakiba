@@ -1,6 +1,5 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import { ANALYTICS_SECTIONS } from "@myakiba/contracts/shared/constants";
@@ -12,12 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { sectionLabel } from "@/components/analytics/section-utils";
+import { MediaGalleryLink, MediaGalleryTile } from "@/components/media-tile";
 import type {
   AnalyticsSectionRelationshipPreviewItem,
   AnalyticsSectionRelationshipValue,
   AnalyticsSectionRelationshipsData,
 } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
+import { itemDestination } from "@/lib/item-destination";
 
 const RELATIONSHIP_PAGE_SIZE = 5;
 const RELATIONSHIP_SKELETONS = [0, 1, 2, 3, 4] as const;
@@ -192,9 +193,9 @@ function RelationshipsSkeleton(): ReactNode {
             <Skeleton className="h-3 w-16" />
           </div>
           <div className="flex gap-1">
-            <Skeleton className="size-10" />
-            <Skeleton className="size-10" />
-            <Skeleton className="size-10" />
+            <Skeleton className="size-10 rounded-lg" />
+            <Skeleton className="size-10 rounded-lg" />
+            <Skeleton className="size-10 rounded-lg" />
           </div>
         </div>
       ))}
@@ -232,27 +233,23 @@ function RelationshipPreviews({
   return (
     <div className="flex shrink-0 gap-1" aria-label="Shared item previews">
       {items.map((item) => (
-        <Link
-          key={item.id}
-          {...(item.externalId === null
-            ? ({ to: "/item/custom/$id", params: { id: item.id } } as const)
-            : ({
-                to: "/item/$externalId",
-                params: { externalId: item.externalId },
-              } as const))}
-          title={item.title}
-          aria-label={`View ${item.title}`}
-          className="relative size-10 overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-        >
-          <img
-            src={item.image}
-            alt=""
-            width={40}
-            height={40}
-            className="size-full object-cover object-top"
-            loading="lazy"
-          />
-        </Link>
+        <MediaGalleryTile key={item.id} className="size-10">
+          <MediaGalleryLink
+            destination={itemDestination(item.id, item.externalId)}
+            title={item.title}
+            tooltip
+            aria-label={`View ${item.title}`}
+          >
+            <img
+              src={item.image}
+              alt=""
+              width={40}
+              height={40}
+              className="size-full object-cover object-top"
+              loading="lazy"
+            />
+          </MediaGalleryLink>
+        </MediaGalleryTile>
       ))}
     </div>
   );

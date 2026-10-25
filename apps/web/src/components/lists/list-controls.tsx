@@ -47,6 +47,7 @@ export function ListControls({
   return (
     <ItemControls
       key={viewMode}
+      variant={viewMode === "grid" ? "card" : "row"}
       active={viewMode === "list" || selected || active || menuOpen}
       className={cn(
         viewMode === "grid"

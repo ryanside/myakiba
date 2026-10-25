@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Column, Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -162,7 +163,8 @@ function TableBody<TData extends RowData>({
               }
               tabIndex={isInteractive ? 0 : undefined}
               className={cn(
-                "animate-data-in border-b border-border/50 hover:bg-muted/50",
+                "animate-data-in border-b border-border/50",
+                ROW_HOVER_CLASS_NAME,
                 isInteractive &&
                   "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
                 getRowClassName?.(row),

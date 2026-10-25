@@ -92,6 +92,14 @@
   --control: oklch(1 0 0 / 0.62);
   --control-edge: oklch(0.25 0 0 / 0.12);
   --control-pressed: color-mix(in oklab, var(--foreground) 14%, var(--control));
+
+  --tile-edge: oklch(0 0 0 / 0.06);
+  --tile-edge-hover: oklch(0 0 0 / 0.08);
+  --tile-lift: 0 1px 2px -1px oklch(0 0 0 / 0.06), 0 2px 4px oklch(0 0 0 / 0.04);
+  --tile-shadow: 0 0 0 1px var(--tile-edge), var(--tile-lift);
+  --image-edge: oklch(0 0 0 / 0.1);
+  --image-edge-hover: oklch(0 0 0 / 0.3);
+  --row-hover: color-mix(in oklab, var(--muted) 50%, transparent);
 }
 
 .dark {
@@ -169,6 +177,14 @@
   --control: color-mix(in oklab, var(--input) 55%, transparent);
   --control-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
   --control-pressed: color-mix(in oklab, var(--foreground) 22%, var(--control));
+
+  --tile-edge: oklch(1 0 0 / 0.08);
+  --tile-edge-hover: oklch(1 0 0 / 0.13);
+  --tile-lift: 0 0 #0000;
+  --tile-shadow: 0 0 0 1px var(--tile-edge);
+  --image-edge: oklch(1 0 0 / 0.1);
+  --image-edge-hover: oklch(1 0 0 / 0.45);
+  --row-hover: color-mix(in oklab, var(--muted) 50%, transparent);
 }
 
 @theme inline {

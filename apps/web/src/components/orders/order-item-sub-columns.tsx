@@ -37,8 +37,9 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { getCategoryColor } from "@/lib/category-colors";
+import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { itemDestination } from "@/lib/item-destination";
 
 interface OrderItemSubColumnsParams {
   orderId: string;
@@ -103,16 +104,7 @@ function OrderItemActionsCell({
           {menuOpen ? (
             <DropdownMenuContent align="end">
               <DropdownMenuLinkItem
-                render={
-                  <Link
-                    {...(item.itemExternalId === null
-                      ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                      : ({
-                          to: "/item/$externalId",
-                          params: { externalId: item.itemExternalId },
-                        } as const))}
-                  />
-                }
+                render={<Link {...itemDestination(item.itemId, item.itemExternalId)} />}
               >
                 <HugeiconsIcon icon={ViewIcon} />
                 View details
@@ -226,12 +218,7 @@ export function createOrderItemSubColumns({
         return (
           <div className="flex items-center gap-3">
             <Link
-              {...(item.itemExternalId === null
-                ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                : ({
-                    to: "/item/$externalId",
-                    params: { externalId: item.itemExternalId },
-                  } as const))}
+              {...itemDestination(item.itemId, item.itemExternalId)}
               aria-label={`View ${item.itemTitle}`}
             >
               <ImageThumbnail
@@ -244,16 +231,11 @@ export function createOrderItemSubColumns({
             <div className="min-w-0 space-y-px">
               <Link
                 className="font-medium text-foreground truncate"
-                {...(item.itemExternalId === null
-                  ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                  : ({
-                      to: "/item/$externalId",
-                      params: { externalId: item.itemExternalId },
-                    } as const))}
+                {...itemDestination(item.itemId, item.itemExternalId)}
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-1 font-normal">
+              <div className="flex items-center gap-2 font-normal">
                 {item.itemExternalId ? (
                   <a
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
@@ -266,11 +248,7 @@ export function createOrderItemSubColumns({
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>
                 )}
-                {item.itemCategory ? (
-                  <p className="text-xs" style={{ color: getCategoryColor(item.itemCategory) }}>
-                    <span className="text-muted-foreground">•</span> {item.itemCategory}
-                  </p>
-                ) : null}
+                {item.itemCategory ? <CategoryLabel category={item.itemCategory} /> : null}
               </div>
             </div>
           </div>

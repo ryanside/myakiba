@@ -90,6 +90,7 @@ const MENUS: readonly (readonly [string, () => ReactNode])[] = [
         {...handlers}
         item={item}
         itemSize={300}
+        variant="card"
         isPending={false}
         isSelected={false}
         onToggleSelection={() => {}}

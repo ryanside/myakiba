@@ -5,6 +5,7 @@ import { flexRender } from "@tanstack/react-table";
 import type { Cell, Column, Header, HeaderGroup, Row } from "@tanstack/react-table";
 import { cva } from "class-variance-authority";
 
+import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -210,7 +211,6 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
   return (
     <tr
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted/50",
         props.onRowClick && "cursor-pointer",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
@@ -294,7 +294,8 @@ function DataGridTableBodyRow<TData>({
       }
       tabIndex={isInteractive ? 0 : undefined}
       className={cn(
-        "animate-data-in group/row hover:bg-muted/50 data-[state=selected]:bg-muted/50",
+        "animate-data-in group/row data-[state=selected]:bg-muted/50",
+        ROW_HOVER_CLASS_NAME,
         isInteractive &&
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         !props.tableLayout?.stripped &&

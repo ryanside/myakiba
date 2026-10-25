@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
-import { Link } from "@tanstack/react-router";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
+import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -9,6 +9,7 @@ import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema"
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
+import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionGalleryGridProps {
   readonly items: readonly CollectionItem[];
@@ -83,7 +84,7 @@ export function CollectionGalleryGrid({
         style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }}
       >
         {Array.from({ length: 16 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-square w-full rounded-lg" />
+          <MediaGallerySkeleton key={i} />
         ))}
       </div>
     );
@@ -102,17 +103,15 @@ export function CollectionGalleryGrid({
     const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
 
     return (
-      <div
+      <MediaGalleryTile
         key={item.id}
-        className={cn(
-          "animate-data-in group/item group/tile relative overflow-hidden rounded-lg",
-          galleryLayout === "masonry" && "mb-2 break-inside-avoid",
-          isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-        )}
+        selected={isSelected}
+        className={cn("animate-data-in", galleryLayout === "masonry" && "mb-2 break-inside-avoid")}
       >
         <CollectionItemControls
           item={item}
           itemSize={tileSize}
+          variant="media"
           isPending={isPending}
           isSelected={isSelected}
           onEditCollectionItem={onEditCollectionItem}
@@ -124,37 +123,30 @@ export function CollectionGalleryGrid({
           dateFormat={dateFormat}
         />
 
-        <Link
-          {...(item.itemExternalId === null
-            ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-            : ({
-                to: "/item/$externalId",
-                params: { externalId: item.itemExternalId },
-              } as const))}
-          className="block"
+        <MediaGalleryLink
+          destination={itemDestination(item.itemId, item.itemExternalId)}
+          title={item.itemTitle}
+          imageClassName={cn(galleryLayout === "masonry" && "aspect-auto")}
         >
           {item.itemImage ? (
             <img
               src={item.itemImage}
               alt={item.itemTitle}
-              className={cn(
-                "w-full object-cover",
-                galleryLayout === "square" && "aspect-square object-top",
-              )}
+              className="size-full object-cover object-top"
               loading="lazy"
             />
           ) : (
             <div
               className={cn(
-                "flex w-full items-center justify-center bg-muted",
-                galleryLayout === "square" ? "aspect-square" : "aspect-3/4",
+                "flex size-full items-center justify-center",
+                galleryLayout === "masonry" && "aspect-3/4",
               )}
             >
               <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
             </div>
           )}
-        </Link>
-      </div>
+        </MediaGalleryLink>
+      </MediaGalleryTile>
     );
   });
 

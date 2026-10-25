@@ -1,8 +1,8 @@
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { OrderControls } from "@/components/orders/order-controls";
 import { cn } from "@/lib/utils";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -68,7 +68,7 @@ export function OrdersGalleryGrid({
         style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileSize}px, 1fr))` }}
       >
         {Array.from({ length: 12 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-square w-full rounded-lg" />
+          <MediaGallerySkeleton key={i} />
         ))}
       </div>
     );
@@ -88,17 +88,15 @@ export function OrdersGalleryGrid({
     const imageCount = order.images.length;
 
     return (
-      <div
+      <MediaGalleryTile
         key={order.orderId}
-        className={cn(
-          "animate-data-in group/item group/tile relative overflow-hidden rounded-lg",
-          galleryLayout === "masonry" && "mb-2 break-inside-avoid",
-          isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-        )}
+        selected={isSelected}
+        className={cn("animate-data-in", galleryLayout === "masonry" && "mb-2 break-inside-avoid")}
       >
         <OrderControls
           order={order}
           itemSize={tileSize}
+          variant="media"
           isPending={isPending}
           isSelected={isSelected}
           onEditOrder={onEditOrder}
@@ -113,19 +111,23 @@ export function OrdersGalleryGrid({
           </div>
         ) : null}
 
-        <Link to="/orders/$id" params={{ id: order.orderId }} className="block">
+        <MediaGalleryLink
+          destination={{ to: "/orders/$id", params: { id: order.orderId } }}
+          title={order.title}
+          imageClassName={cn(galleryLayout === "masonry" && "aspect-auto")}
+        >
           <ImageThumbnail
             images={order.images}
             title={order.title}
             fallbackIcon={
               <HugeiconsIcon icon={PackageIcon} className="size-10 text-muted-foreground/40" />
             }
-            className={cn("w-full", galleryLayout === "square" && "aspect-square")}
+            className="size-full"
             layout={galleryLayout === "masonry" ? "masonry" : "fixed"}
             loading="lazy"
           />
-        </Link>
-      </div>
+        </MediaGalleryLink>
+      </MediaGalleryTile>
     );
   });
 

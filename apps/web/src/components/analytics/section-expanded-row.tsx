@@ -7,9 +7,11 @@ import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SectionRelationships } from "@/components/analytics/section-relationships";
+import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { Button } from "@/components/ui/button";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
+import { itemDestination } from "@/lib/item-destination";
 
 const SECTION_ITEM_PAGE_SIZE = 6;
 
@@ -87,10 +89,7 @@ function ExpandedRowItems({
     return (
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {Array.from({ length: SECTION_ITEM_PAGE_SIZE }, (_, idx) => (
-          <div
-            key={idx}
-            className="aspect-square rounded-md border border-border/50 bg-muted animate-pulse"
-          />
+          <MediaGallerySkeleton key={idx} />
         ))}
       </div>
     );
@@ -128,31 +127,27 @@ function ExpandedRowItems({
         )}
       >
         {data.items.map((item, idx) => (
-          <Link
-            key={`${item.id}-${offset + idx}`}
-            {...(item.externalId === null
-              ? ({ to: "/item/custom/$id", params: { id: item.id } } as const)
-              : ({
-                  to: "/item/$externalId",
-                  params: { externalId: item.externalId },
-                } as const))}
-            title={item.title}
-            aria-label={item.title}
-            className="animate-data-in aspect-square rounded-md overflow-hidden bg-background"
-          >
-            {item.image ? (
-              <img
-                src={item.image}
-                alt={item.title}
-                className="w-full h-full object-cover object-top"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-muted text-[10px] text-muted-foreground">
-                No image
-              </div>
-            )}
-          </Link>
+          <MediaGalleryTile key={`${item.id}-${offset + idx}`} className="animate-data-in">
+            <MediaGalleryLink
+              destination={itemDestination(item.id, item.externalId)}
+              title={item.title}
+              tooltip
+              aria-label={item.title}
+            >
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt={item.title}
+                  className="size-full object-cover object-top"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+                  No image
+                </div>
+              )}
+            </MediaGalleryLink>
+          </MediaGalleryTile>
         ))}
       </div>
 

@@ -1,16 +1,20 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
-import { Link } from "@tanstack/react-router";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getCategoryColor } from "@/lib/category-colors";
+import {
+  CategoryLabel,
+  MediaCard,
+  MediaCardBody,
+  MediaCardImage,
+  MediaCardSkeleton,
+  MediaCardTitle,
+} from "@/components/media-tile";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { cn } from "@/lib/utils";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
+import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionCardGridProps {
   readonly items: readonly CollectionItem[];
@@ -73,31 +77,9 @@ export function CollectionCardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={gridStyle}>
+      <div className="grid gap-3" style={gridStyle} aria-hidden="true">
         {Array.from({ length: 12 }).map((_, i) => (
-          <Card
-            key={i}
-            size="sm"
-            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
-          >
-            <Skeleton className="aspect-4/5 w-full rounded-[10px]" />
-            <div
-              className={cn(
-                "flex flex-col gap-2 px-3 pt-3 pb-2.5",
-                isCompact && "px-2 pt-2.5 pb-2",
-              )}
-            >
-              <Skeleton className="h-2.5 w-1/2" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-3.5 w-full" />
-                <Skeleton className="h-3.5 w-3/4" />
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-3 w-12" />
-              </div>
-            </div>
-          </Card>
+          <MediaCardSkeleton key={i} imageClassName="aspect-4/5" />
         ))}
       </div>
     );
@@ -116,21 +98,14 @@ export function CollectionCardGrid({
       {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
+        const itemLink = itemDestination(item.itemId, item.itemExternalId);
 
         return (
-          <Card
-            key={item.id}
-            size="sm"
-            className={cn(
-              "group/item relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
-              isSelected
-                ? "ring-2 ring-primary"
-                : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-            )}
-          >
+          <MediaCard key={item.id} selected={isSelected} className="animate-data-in">
             <CollectionItemControls
               item={item}
               itemSize={cardWidth}
+              variant="card"
               isPending={isPending}
               isSelected={isSelected}
               onEditCollectionItem={onEditCollectionItem}
@@ -142,91 +117,46 @@ export function CollectionCardGrid({
               dateFormat={dateFormat}
             />
 
-            <Link
-              {...(item.itemExternalId === null
-                ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                : ({
-                    to: "/item/$externalId",
-                    params: { externalId: item.itemExternalId },
-                  } as const))}
-              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title={item.itemTitle}
-            >
-              <div className="animate-data-in relative aspect-4/5 w-full overflow-hidden bg-muted">
-                {item.itemImage ? (
-                  <img
-                    src={item.itemImage}
-                    alt={item.itemTitle}
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
-                  </div>
-                )}
-              </div>
-            </Link>
-
-            <div
-              className={cn(
-                "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
-                isCompact && "px-2 pt-2.5 pb-2",
+            <MediaCardImage destination={itemLink} title={item.itemTitle} className="aspect-4/5">
+              {item.itemImage ? (
+                <img
+                  src={item.itemImage}
+                  alt={item.itemTitle}
+                  className="size-full object-cover object-top"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  <HugeiconsIcon icon={PackageIcon} className="size-8 text-muted-foreground/40" />
+                </div>
               )}
-            >
-              <div className="flex min-w-0 items-center gap-2 text-[11px] leading-none">
-                {item.itemCategory ? (
-                  <span className="truncate" style={{ color: getCategoryColor(item.itemCategory) }}>
-                    {item.itemCategory}
-                  </span>
-                ) : null}
+            </MediaCardImage>
+
+            <MediaCardBody>
+              <span className="flex min-w-0 items-center justify-between gap-2">
+                <CategoryLabel category={item.itemCategory} />
                 {item.itemScale ? (
-                  <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">
+                  <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>
                 ) : null}
-              </div>
-
-              <h3
-                className={cn(
-                  "mt-2 text-sm leading-snug font-medium text-balance",
-                  isCompact && "mt-1.5 text-xs",
-                )}
-              >
-                <Link
-                  {...(item.itemExternalId === null
-                    ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                    : ({
-                        to: "/item/$externalId",
-                        params: { externalId: item.itemExternalId },
-                      } as const))}
-                  className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  title={item.itemTitle}
-                >
-                  {item.itemTitle}
-                </Link>
-              </h3>
-
-              <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
-                <span
-                  className={cn(
-                    "shrink-0 text-base leading-none font-medium tracking-tight tabular-nums",
-                    isCompact && "text-sm",
-                  )}
-                >
+              </span>
+              <MediaCardTitle as="h3" title={item.itemTitle} destination={itemLink} />
+              <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
+                <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
                   {formatCurrencyFromMinorUnits(item.price, currency, locale)}
                 </span>
                 {item.shop && !isCompact ? (
                   <span
-                    className="min-w-0 truncate text-[11px] leading-none text-muted-foreground"
+                    className="min-w-0 truncate text-xs leading-4 text-muted-foreground"
                     title={item.shop}
                   >
                     {item.shop}
                   </span>
                 ) : null}
-              </div>
-            </div>
-          </Card>
+              </span>
+            </MediaCardBody>
+          </MediaCard>
         );
       })}
     </div>

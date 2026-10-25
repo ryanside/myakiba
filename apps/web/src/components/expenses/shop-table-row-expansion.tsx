@@ -12,9 +12,11 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { ExpenseOrderRow, ExpenseOrderRowSkeleton } from "@/components/expenses/order-row";
+import { MediaGalleryLink, MediaGalleryTile } from "@/components/media-tile";
 import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { itemDestination } from "@/lib/item-destination";
 
 type OrdersExpansion = Extract<ShopExpansionResponse, { scope: "orders" }>;
 type ShippingExpansion = Extract<ShopExpansionResponse, { scope: "shipping" }>;
@@ -117,9 +119,9 @@ function ShopExpansionSkeleton({ scope }: { readonly scope: ExpenseShopRow["scop
       <div className="flex flex-col gap-3">
         <ExpansionHeader label="Recent Owned items" />
         <div className="flex flex-wrap gap-2">
-          <Skeleton className="size-14 rounded-md" />
-          <Skeleton className="size-14 rounded-md" />
-          <Skeleton className="size-14 rounded-md" />
+          <Skeleton className="size-14 rounded-lg" />
+          <Skeleton className="size-14 rounded-lg" />
+          <Skeleton className="size-14 rounded-lg" />
         </div>
       </div>
     );
@@ -194,31 +196,28 @@ function CollectionExpansionPanel({
       ) : (
         <div className="flex flex-wrap gap-2">
           {data.items.map((item) => {
-            const linkProps =
-              item.externalId === null
-                ? { to: "/item/custom/$id" as const, params: { id: item.itemId } }
-                : { to: "/item/$externalId" as const, params: { externalId: item.externalId } };
             return (
-              <Link
-                key={item.collectionId}
-                {...linkProps}
-                title={item.title}
-                aria-label={item.title}
-                className="animate-data-in size-14 overflow-hidden rounded-md bg-background ring-1 ring-border/40"
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="size-full object-cover object-top"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
-                    No image
-                  </div>
-                )}
-              </Link>
+              <MediaGalleryTile key={item.collectionId} className="animate-data-in size-14">
+                <MediaGalleryLink
+                  destination={itemDestination(item.itemId, item.externalId)}
+                  title={item.title}
+                  tooltip
+                  aria-label={item.title}
+                >
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="size-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                </MediaGalleryLink>
+              </MediaGalleryTile>
             );
           })}
         </div>

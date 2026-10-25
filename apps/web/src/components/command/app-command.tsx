@@ -35,6 +35,7 @@ import type {
   SyncLauncherOption,
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_OPTION_META } from "@/lib/sync";
+import { itemDestination } from "@/lib/item-destination";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -226,17 +227,7 @@ export function AppCommand(): React.JSX.Element {
     readonly itemExternalId: number | null;
   }): void => {
     closeCommand();
-    if (item.itemExternalId !== null) {
-      void navigate({
-        to: "/item/$externalId",
-        params: { externalId: item.itemExternalId },
-      });
-      return;
-    }
-    void navigate({
-      to: "/item/custom/$id",
-      params: { id: item.itemId },
-    });
+    void navigate(itemDestination(item.itemId, item.itemExternalId));
   };
 
   const handleViewAllOrders = (): void => {
