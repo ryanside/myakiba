@@ -1,5 +1,5 @@
 import { useLocation } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { SETTINGS, settingAnchor } from "./settings-registry";
@@ -17,11 +17,12 @@ export function useSettingAnchor<T extends HTMLElement>(setting: SettingId | und
   const isTarget = useLocation({
     select: (location) => setting !== undefined && location.hash === settingAnchor(setting),
   });
-  const ref = useRef<T>(null);
-
-  useEffect(() => {
-    if (isTarget) ref.current?.focus({ preventScroll: true });
-  }, [isTarget]);
+  const ref = useCallback(
+    (element: T | null) => {
+      if (isTarget) element?.focus({ preventScroll: true });
+    },
+    [isTarget],
+  );
 
   return setting === undefined
     ? {}

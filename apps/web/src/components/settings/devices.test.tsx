@@ -1,5 +1,5 @@
 import { afterAll, afterEach, expect, mock, test } from "bun:test";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -52,6 +52,7 @@ type Server = {
 };
 
 let server: Server;
+let pendingDevices: Promise<void> | undefined;
 
 function resetServer(checkAfterChange: Server["checkAfterChange"]) {
   server = {
@@ -80,7 +81,10 @@ globalThis.fetch = Object.assign(
         },
       ]);
     }
-    if (pathname.endsWith("/list-sessions")) return Response.json(server.sessions);
+    if (pathname.endsWith("/list-sessions")) {
+      await pendingDevices;
+      return Response.json(server.sessions);
+    }
     if (pathname.endsWith("/get-session")) {
       if (server.changed && server.checkAfterChange === "unavailable") {
         return new Response(null, { status: 503 });
@@ -104,12 +108,15 @@ globalThis.fetch = Object.assign(
 const { Account } = await import("./account");
 const { Toaster } = await import("@/components/ui/toast");
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  pendingDevices = undefined;
+});
 afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
-function openAccount() {
+function openAccount(location = "/settings") {
   const root = createRootRoute();
   const app = createRoute({ getParentRoute: () => root, id: "(app)" });
   const settings = createRoute({
@@ -120,7 +127,7 @@ function openAccount() {
   });
   const router = createRouter({
     routeTree: root.addChildren([app.addChildren([settings])]),
-    history: createMemoryHistory({ initialEntries: ["/settings"] }),
+    history: createMemoryHistory({ initialEntries: [location] }),
   });
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -168,4 +175,32 @@ test("when the session can't be checked after a password change, no device offer
 
   expect(await screen.findByRole("button", { name: "Try again" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Sign out of / })).toBeNull();
+});
+
+test("a link to devices focuses the list when the pending devices finish loading", async () => {
+  resetServer("ok");
+  const pending = Promise.withResolvers<undefined>();
+  pendingDevices = pending.promise;
+  openAccount("/settings#setting-devices");
+  await screen.findByLabelText("Loading devices");
+
+  await act(async () => pending.resolve());
+  await screen.findByText("This device");
+  const devices = document.querySelector("#setting-devices");
+  expect(devices).not.toBeNull();
+  await waitFor(() => expect(document.activeElement).toBe(devices));
+});
+
+test("a link to sign out others focuses its row when the pending devices finish loading", async () => {
+  resetServer("ok");
+  const pending = Promise.withResolvers<undefined>();
+  pendingDevices = pending.promise;
+  openAccount("/settings#setting-sign-out-others");
+  await screen.findByLabelText("Loading devices");
+
+  await act(async () => pending.resolve());
+  await screen.findByText("This device");
+  const row = document.querySelector("#setting-sign-out-others");
+  expect(row).not.toBeNull();
+  await waitFor(() => expect(document.activeElement).toBe(row));
 });
