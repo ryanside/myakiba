@@ -635,6 +635,14 @@
         "choosing Assign order in a collection card's actions menu closes the menu behind its dialog",
         "choosing Assign order in a collection table row's actions menu closes the menu behind its dialog"
       ]
+    },
+    {
+      "fix": "a1a03661",
+      "bug": "in a grid, ArrowLeft on the second tile while reordering with the keyboard moved it a row down instead of one slot left",
+      "test": "apps/web/src/hooks/use-sortable-items.test.tsx",
+      "fixed": [
+        "moving a grid tile with the keyboard > ArrowLeft moves the second tile one slot left"
+      ]
     }
   ],
   "lint": [
