@@ -668,6 +668,19 @@
       "bug": "the Expenses Shops table briefly showed a vertical scrollbar on load, shifting the table left while its rows faded in",
       "test": "apps/web/src/components/expenses/shop-table.test.tsx",
       "fixed": ["the Shops table's sideways scroller never scrolls down while its rows fade in"]
+    },
+    {
+      "fix": "d7b77a4d",
+      "bug": "the drag drop indicator sat off the middle of the gap: 11 px on the Lists folder grid at @3xl and 1 px on the card grids",
+      "test": "apps/web/src/components/sortable-drop-indicator.test.tsx",
+      "fixed": [
+        "Lists grid drop indicator > sits centred in the gap before the tile it marks",
+        "Lists grid drop indicator > sits centred in the gap after the tile it marks",
+        "Wishlist grid drop indicator > sits centred in the gap before the tile it marks",
+        "Wishlist grid drop indicator > sits centred in the gap after the tile it marks",
+        "List detail grid drop indicator > sits centred in the gap before the tile it marks",
+        "List detail grid drop indicator > sits centred in the gap after the tile it marks"
+      ]
     }
   ],
   "lint": [
