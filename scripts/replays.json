@@ -721,6 +721,15 @@
         "chart brush > jumps to a new range under the device's reduced-motion setting",
         "chart brush > jumps to a new range under the app's Reduce motion switch"
       ]
+    },
+    {
+      "fix": "a2ecc403",
+      "bug": "the chart loading shimmers kept looping when reduced motion turned on after they mounted",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "chart loading shimmer > stops when the device's reduced-motion setting turns on after the charts mount",
+        "chart loading shimmer > stops when the app's Reduce motion switch turns on after the charts mount"
+      ]
     }
   ],
   "lint": [
