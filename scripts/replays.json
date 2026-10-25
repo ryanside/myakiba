@@ -616,6 +616,25 @@
         "a focused month keeps the tab stop and the Enter target while the pointer highlights another month",
         "a focused month keeps keyboard focus when the order counts refresh"
       ]
+    },
+    {
+      "fix": "2b3dcb21",
+      "bug": "choosing Edit or Delete in a List's actions menu left the menu open behind its dialog, so the trigger closed it instead of reopening Edit",
+      "test": "apps/web/src/components/lists/list-controls.test.tsx",
+      "fixed": [
+        "choosing Edit in a List's actions menu closes the menu behind its dialog",
+        "choosing Delete in a List's actions menu closes the menu behind its dialog",
+        "editing a List again after cancelling starts from its saved title"
+      ]
+    },
+    {
+      "fix": "2b3dcb21",
+      "bug": "choosing Assign order in a collection card's or table row's actions menu left the menu open behind its dialog",
+      "test": "apps/web/src/components/collection/collection-item-menus.test.tsx",
+      "fixed": [
+        "choosing Assign order in a collection card's actions menu closes the menu behind its dialog",
+        "choosing Assign order in a collection table row's actions menu closes the menu behind its dialog"
+      ]
     }
   ],
   "lint": [
