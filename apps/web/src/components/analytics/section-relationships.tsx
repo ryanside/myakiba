@@ -238,7 +238,6 @@ function RelationshipPreviews({
             destination={itemDestination(item.id, item.externalId)}
             title={item.title}
             tooltip
-            aria-label={`View ${item.title}`}
           >
             <img
               src={item.image}

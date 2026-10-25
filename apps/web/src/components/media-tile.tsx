@@ -199,26 +199,20 @@ export function MediaGalleryLink({
   title,
   tooltip = false,
   imageClassName,
-  "aria-label": ariaLabel,
   children,
 }: {
   readonly destination: MediaDestination;
   readonly title: string;
   readonly tooltip?: boolean;
   readonly imageClassName?: string;
-  readonly "aria-label"?: string;
   readonly children: ReactNode;
 }): React.JSX.Element {
   return (
-    <Link
-      {...destination}
-      title={tooltip ? title : undefined}
-      aria-label={ariaLabel}
-      className="block outline-none"
-    >
+    <Link {...destination} title={tooltip ? title : undefined} className="block outline-none">
       <MediaImage className={cn(GALLERY_IMAGE_CLASS_NAME, IMAGE_HOVER_CLASS_NAME, imageClassName)}>
         {children}
       </MediaImage>
+      <span className="sr-only">{title}</span>
     </Link>
   );
 }

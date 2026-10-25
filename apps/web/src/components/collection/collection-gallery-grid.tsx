@@ -131,7 +131,7 @@ export function CollectionGalleryGrid({
           {item.itemImage ? (
             <img
               src={item.itemImage}
-              alt={item.itemTitle}
+              alt=""
               className="size-full object-cover object-top"
               loading="lazy"
             />

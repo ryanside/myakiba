@@ -124,6 +124,7 @@ export function OrdersGalleryGrid({
             }
             className="size-full"
             layout={galleryLayout === "masonry" ? "masonry" : "fixed"}
+            decorative
             loading="lazy"
           />
         </MediaGalleryLink>

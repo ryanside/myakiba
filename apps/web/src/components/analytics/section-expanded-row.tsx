@@ -132,17 +132,19 @@ function ExpandedRowItems({
               destination={itemDestination(item.id, item.externalId)}
               title={item.title}
               tooltip
-              aria-label={item.title}
             >
               {item.image ? (
                 <img
                   src={item.image}
-                  alt={item.title}
+                  alt=""
                   className="size-full object-cover object-top"
                   loading="lazy"
                 />
               ) : (
-                <div className="flex size-full items-center justify-center text-[10px] text-muted-foreground">
+                <div
+                  aria-hidden="true"
+                  className="flex size-full items-center justify-center text-[10px] text-muted-foreground"
+                >
                   No image
                 </div>
               )}
