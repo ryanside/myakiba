@@ -24,13 +24,17 @@ const backgrounds: ReadonlyMap<string, string> = new Map([
   ["settings", settings],
 ]);
 
+const plainDetailSections: ReadonlySet<string> = new Set(["orders"]);
+
 const decodeCap = 50;
 // Keeps one downloaded image per background for the page's lifetime, so the
 // browser holds its bytes in memory cache and a page change's decode skips disk.
 const downloads = new Map<string, HTMLImageElement>();
 
 export function getPageBackground(pathname: string) {
-  return backgrounds.get(pathname.split("/")[1] ?? "");
+  const [, section = "", detail] = pathname.split("/");
+  if (detail && plainDetailSections.has(section)) return;
+  return backgrounds.get(section);
 }
 
 export async function preparePageBackground(pathname: string) {
