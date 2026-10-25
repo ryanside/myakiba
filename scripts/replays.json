@@ -739,6 +739,15 @@
         "reduced motion switches loop text without waiting for a fade",
         "enabling reduced motion during a fade keeps loop text visible"
       ]
+    },
+    {
+      "fix": "ed092193",
+      "bug": "reduced motion emptied chart skeleton masks instead of keeping the loading skeletons visible",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "chart loading shimmer > keeps both skeletons visible and still when reduced motion is on at mount",
+        "chart loading shimmer > keeps both skeletons visible and still when reduced motion turns on live"
+      ]
     }
   ],
   "lint": [
