@@ -783,6 +783,15 @@
       "bug": "a devices hash target present before loading never received focus when its list mounted",
       "test": "apps/web/src/components/settings/devices.test.tsx",
       "fixed": ["a link to devices focuses the list when the pending devices finish loading"]
+    },
+    {
+      "fix": "f8c4deef",
+      "bug": "router invalidation replaced the location object for the same URL and discarded pending Settings search edits",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "invalidating the current URL preserves a pending first search",
+        "invalidating the current URL preserves edits to an existing search"
+      ]
     }
   ],
   "lint": [
