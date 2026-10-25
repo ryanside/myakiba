@@ -768,6 +768,16 @@
       "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
       "test": "apps/web/src/components/settings/preferences.test.tsx",
       "fixed": ["after Save the form keeps the saved formats while the session catches up"]
+    },
+    {
+      "fix": "36894e3b",
+      "bug": "a pending Settings search replaced a section opened before the first debounce settled",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "opening a section before the first search settles cancels the pending text",
+        "a setting link cancels pending text even when it opens the current section",
+        "opening the same section again cancels pending search text"
+      ]
     }
   ],
   "lint": [
