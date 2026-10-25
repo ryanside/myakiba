@@ -48,6 +48,7 @@ export function Preferences({ user }: { user: User }) {
         event.stopPropagation();
         if (saving || !dirty) return;
         if (await save(changes)) {
+          setSaved((current) => ({ ...current, ...changes }));
           setEdits({});
         }
       }}

@@ -10,7 +10,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { addDays, format } from "date-fns";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { User } from "@/lib/auth-client";
 
 const user = {
@@ -82,8 +82,14 @@ afterAll(() => {
   globalThis.fetch = realFetch;
 });
 
+let renderAgain = () => {};
+
 /** Settings as the route shows it, with a session that still holds the formats it loaded with. */
 function SettingsScreen() {
+  const [, setRenders] = useState(0);
+  useEffect(() => {
+    renderAgain = () => setRenders((renders) => renders + 1);
+  }, []);
   const current = useSyncExternalStore(
     (listener) => {
       sessionListeners.add(listener);
@@ -151,6 +157,24 @@ test("Save preferences sends both changed formats in one update", async () => {
   await waitFor(() =>
     expect(savedChanges).toEqual([{ currency: "EUR", dateFormat: "YYYY/MM/DD" }]),
   );
+});
+
+test("after Save the form keeps the saved formats while the session catches up", async () => {
+  renderPreferences();
+  await screen.findByRole("button", { name: "YYYY/MM/DD" });
+
+  fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  await waitFor(() => expect(savedChanges).toHaveLength(1));
+  await screen.findByRole("button", { name: "Save preferences" });
+  act(() => renderAgain());
+
+  expect(screen.getByRole("button", { name: "YYYY/MM/DD" }).getAttribute("aria-pressed")).toBe(
+    "true",
+  );
+  expect(
+    screen.getByRole("button", { name: "Save preferences" }).hasAttribute("disabled"),
+  ).toBeTrue();
 });
 
 test("a format saved elsewhere replaces the one shown, and Save sends only what changed here", async () => {
