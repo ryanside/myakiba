@@ -9,7 +9,10 @@ import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { command, fail, ok, paginate, query } from "@/domain/kernel";
 import type { OrderUpdateType, OrdersQuery } from "./model";
 
-const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
+const orderTotal =
+  sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.mapWith(
+    Number,
+  );
 const itemCount = sql<number>`COUNT(${collection.id})::integer`;
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
 

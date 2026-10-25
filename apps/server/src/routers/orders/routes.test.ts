@@ -45,13 +45,29 @@ beforeEach(async () => {
   ]);
   await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
   await db.insert(order).values([
-    { id: "order-1", userId, title: "AmiAmi preorder" },
+    {
+      id: "order-1",
+      userId,
+      title: "AmiAmi preorder",
+      shippingFee: 5000,
+      taxes: 400,
+      duties: 100,
+      tariffs: 150,
+      miscFees: 50,
+    },
     { id: "order-2", userId, title: "HLJ preorder" },
     { id: "order-3", userId: "user-2", title: "Other user's order" },
   ]);
   await db.insert(collection).values([
-    { id: "c-owned", userId, itemId: "item-1", orderId: "order-1", status: "Owned" },
-    { id: "c-ordered", userId, itemId: "item-1", orderId: "order-1", status: "Ordered" },
+    { id: "c-owned", userId, itemId: "item-1", orderId: "order-1", status: "Owned", price: 12_000 },
+    {
+      id: "c-ordered",
+      userId,
+      itemId: "item-1",
+      orderId: "order-1",
+      status: "Ordered",
+      price: 8000,
+    },
     { id: "c-2", userId, itemId: "item-1", orderId: "order-2", status: "Ordered" },
     { id: "c-other", userId: "user-2", itemId: "item-1", orderId: "order-3", status: "Ordered" },
   ]);
@@ -235,18 +251,29 @@ describe("each orders route answers as before", () => {
     expect(status).toBe(200);
     expect(body).toMatchObject({
       items: [
-        { orderId: "order-1", itemCount: 2 },
-        { orderId: "order-2", itemCount: 1 },
+        { orderId: "order-1", itemCount: 2, total: 25_700 },
+        { orderId: "order-2", itemCount: 1, total: 0 },
       ],
       totalCount: 2,
       activeOrders: 2,
+    });
+
+    expect(
+      await call("GET", "/?totalMin=25000&totalMax=26000&sort=total&order=desc"),
+    ).toMatchObject({
+      status: 200,
+      body: {
+        items: [{ orderId: "order-1", itemCount: 2, total: 25_700 }],
+        totalCount: 1,
+        unpaidCosts: 25_700,
+      },
     });
   });
 
   test("get", async () => {
     expect(await call("GET", "/order-1")).toMatchObject({
       status: 200,
-      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: 2 },
+      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: 2, total: 25_700 },
     });
   });
 
