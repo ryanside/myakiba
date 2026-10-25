@@ -30,10 +30,12 @@ import {
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { itemDestination } from "@/lib/item-destination";
 
 export function CollectionItemControls({
   item,
   itemSize,
+  variant,
   isPending,
   isSelected,
   onEditCollectionItem,
@@ -46,6 +48,7 @@ export function CollectionItemControls({
 }: {
   readonly item: CollectionItem;
   readonly itemSize: number;
+  readonly variant: "card" | "media";
   readonly isPending: boolean;
   readonly isSelected: boolean;
   readonly onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
@@ -79,7 +82,7 @@ export function CollectionItemControls({
 
   return (
     <>
-      <ItemControls variant="media" size={controlsSize} active={isSelected || menuOpen}>
+      <ItemControls variant={variant} size={controlsSize} active={isSelected || menuOpen}>
         <ItemControlsSelection
           checked={isSelected}
           onCheckedChange={onToggleSelection}
@@ -113,16 +116,7 @@ export function CollectionItemControls({
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLinkItem
-                  render={
-                    <Link
-                      {...(item.itemExternalId === null
-                        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                        : ({
-                            to: "/item/$externalId",
-                            params: { externalId: item.itemExternalId },
-                          } as const))}
-                    />
-                  }
+                  render={<Link {...itemDestination(item.itemId, item.itemExternalId)} />}
                 >
                   <HugeiconsIcon icon={ViewIcon} />
                   View details

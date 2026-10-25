@@ -4,7 +4,7 @@ import { PackageIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
-import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
+import { Frame, FrameHeader, FrameTitle } from "@/components/reui/frame";
 import {
   Kanban,
   KanbanBoard,
@@ -30,6 +30,7 @@ import {
 import type { OrderDateField } from "@/queries/orders";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { TILE_HOVER_CLASS_NAME, TILE_SURFACE_CLASS_NAME } from "@/components/media-tile";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -286,91 +287,91 @@ function OrderCard({
   const locale = getCurrencyLocale(currency);
 
   const content = (
-    <Frame
-      variant="ghost"
-      spacing="sm"
-      className="bg-background animate-data-in group/card relative p-0"
+    <div
+      className={cn(
+        "animate-data-in relative rounded-xl p-3",
+        TILE_SURFACE_CLASS_NAME,
+        TILE_HOVER_CLASS_NAME,
+      )}
     >
-      <FramePanel className="p-3 border-none hover:ring-1 hover:ring-foreground/10">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <ImageThumbnail
-              images={order.itemImages.slice(0, 4)}
-              title={order.title}
-              fallbackIcon={
-                <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
-              }
-              className="size-12 shrink-0 rounded-md [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
-            />
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <Link
-                to="/orders/$id"
-                params={{ id: order.orderId }}
-                className="line-clamp-1 text-sm leading-tight font-medium hover:underline"
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                {order.title}
-              </Link>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {order.shop ? <span className="truncate">{order.shop}</span> : null}
-                <span className="ml-auto shrink-0 font-medium tabular-nums text-foreground">
-                  {formatCurrencyFromMinorUnits(order.total, currency, locale)}
-                </span>
-              </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2.5">
+          <ImageThumbnail
+            images={order.itemImages.slice(0, 4)}
+            title={order.title}
+            fallbackIcon={
+              <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
+            }
+            className="size-12 shrink-0 rounded-md [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <Link
+              to="/orders/$id"
+              params={{ id: order.orderId }}
+              className="line-clamp-1 text-sm leading-tight font-medium hover:underline"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {order.title}
+            </Link>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {order.shop ? <span className="truncate">{order.shop}</span> : null}
+              <span className="ml-auto shrink-0 font-medium tabular-nums text-foreground">
+                {formatCurrencyFromMinorUnits(order.total, currency, locale)}
+              </span>
             </div>
           </div>
-
-          <div className="-mx-1.5 flex flex-col">
-            {DATE_FIELDS.map(({ field, label }) => {
-              const dateValue = order[field] ?? null;
-              const triggerButton = (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
-                >
-                  <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                    {label}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs tabular-nums",
-                      dateValue ? "text-foreground" : "text-muted-foreground/60",
-                    )}
-                  >
-                    {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
-                  </span>
-                </Button>
-              );
-
-              const DateCell =
-                field === "releaseDate" ? (
-                  <PopoverReleaseDateCell
-                    value={dateValue}
-                    dateFormat={dateFormat}
-                    orderId={order.orderId}
-                    onSubmit={async (date) => onDateChange(order.orderId, field, date)}
-                    trigger={triggerButton}
-                  />
-                ) : (
-                  <PopoverDatePickerCell
-                    value={dateValue}
-                    dateFormat={dateFormat}
-                    onSubmit={async (date) => onDateChange(order.orderId, field, date)}
-                    trigger={triggerButton}
-                  />
-                );
-
-              return (
-                <div key={field} onPointerDown={(e) => e.stopPropagation()}>
-                  {DateCell}
-                </div>
-              );
-            })}
-          </div>
         </div>
-      </FramePanel>
-    </Frame>
+
+        <div className="-mx-1.5 flex flex-col">
+          {DATE_FIELDS.map(({ field, label }) => {
+            const dateValue = order[field] ?? null;
+            const triggerButton = (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
+              >
+                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                  {label}
+                </span>
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    dateValue ? "text-foreground" : "text-muted-foreground/60",
+                  )}
+                >
+                  {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
+                </span>
+              </Button>
+            );
+
+            const DateCell =
+              field === "releaseDate" ? (
+                <PopoverReleaseDateCell
+                  value={dateValue}
+                  dateFormat={dateFormat}
+                  orderId={order.orderId}
+                  onSubmit={async (date) => onDateChange(order.orderId, field, date)}
+                  trigger={triggerButton}
+                />
+              ) : (
+                <PopoverDatePickerCell
+                  value={dateValue}
+                  dateFormat={dateFormat}
+                  onSubmit={async (date) => onDateChange(order.orderId, field, date)}
+                  trigger={triggerButton}
+                />
+              );
+
+            return (
+              <div key={field} onPointerDown={(e) => e.stopPropagation()}>
+                {DateCell}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 
   return (

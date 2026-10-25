@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { ROW_LINK_CLASS_NAME } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { ExpenseOrder } from "@myakiba/contracts/expenses/schema";
@@ -31,7 +32,11 @@ export function ExpenseOrderRow({
     <Link
       to="/orders/$id"
       params={{ id: order.orderId }}
-      className={cn("grid gap-1 py-3 hover:bg-muted/50 sm:grid-cols-[1fr_auto]", className)}
+      className={cn(
+        "-mx-2 grid gap-1 rounded-md px-2 py-3 sm:grid-cols-[1fr_auto]",
+        ROW_LINK_CLASS_NAME,
+        className,
+      )}
       style={style}
     >
       <div className="flex min-w-0 items-center gap-3">

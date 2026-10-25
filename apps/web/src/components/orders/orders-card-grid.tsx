@@ -1,9 +1,14 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
-import { Link } from "@tanstack/react-router";
-import { Skeleton } from "@/components/ui/skeleton";
 import { OrderControls } from "@/components/orders/order-controls";
-import { Card } from "@/components/ui/card";
+import {
+  MediaCard,
+  MediaCardBody,
+  MediaCardImage,
+  MediaCardSkeleton,
+  MediaCardTitle,
+} from "@/components/media-tile";
+import { ThemedBadge } from "@/components/reui/badge";
 import { getStatusVariant } from "@/lib/orders";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
@@ -11,7 +16,6 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { ThemedBadge } from "../reui/badge";
 
 interface OrdersCardGridProps {
   readonly orders: readonly Order[];
@@ -58,35 +62,9 @@ export function OrdersCardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={gridStyle}>
+      <div className="grid gap-3" style={gridStyle} aria-hidden="true">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card
-            key={i}
-            size="sm"
-            className="gap-0 rounded-2xl bg-white p-1.5! ring-0 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
-          >
-            <Skeleton className="aspect-8/5 w-full rounded-[10px]" />
-            <div
-              className={cn(
-                "flex flex-col gap-2 px-3 pt-3 pb-2.5",
-                isCompact && "px-2 pt-2.5 pb-2",
-              )}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-12" />
-                <Skeleton className="h-3 w-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-3.5 w-full" />
-                <Skeleton className="h-3.5 w-2/3" />
-              </div>
-              <Skeleton className="h-3 w-1/2" />
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-3 w-12" />
-              </div>
-            </div>
-          </Card>
+          <MediaCardSkeleton key={i} imageClassName="aspect-8/5" />
         ))}
       </div>
     );
@@ -106,21 +84,14 @@ export function OrdersCardGrid({
         const isSelected = !!rowSelection[order.orderId];
         const isPending = isOrderPending(order.orderId);
         const displayImages = order.images.slice(0, 4);
+        const destination = { to: "/orders/$id", params: { id: order.orderId } } as const;
 
         return (
-          <Card
-            key={order.orderId}
-            size="sm"
-            className={cn(
-              "group/item relative gap-0 rounded-2xl bg-white p-1.5! ring-0 ring-offset-2 ring-offset-background shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_-1px_oklch(0_0_0/0.06),0_2px_4px_oklch(0_0_0/0.04)] transition-[box-shadow] duration-200 ease-out hover:shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_4px_-1px_oklch(0_0_0/0.08),0_10px_24px_-8px_oklch(0_0_0/0.14)] motion-reduce:transition-none dark:bg-card dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)] dark:hover:shadow-[0_0_0_1px_oklch(1_0_0/0.13)]",
-              isSelected
-                ? "ring-2 ring-primary"
-                : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-            )}
-          >
+          <MediaCard key={order.orderId} selected={isSelected} className="animate-data-in">
             <OrderControls
               order={order}
               itemSize={cardWidth}
+              variant="card"
               isPending={isPending}
               isSelected={isSelected}
               onEditOrder={onEditOrder}
@@ -129,115 +100,82 @@ export function OrdersCardGrid({
               currency={currency}
             />
 
-            <Link
-              to="/orders/$id"
-              params={{ id: order.orderId }}
-              className="block overflow-hidden rounded-[10px] bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title={order.title}
-            >
-              <div className="animate-data-in relative aspect-8/5 w-full overflow-hidden bg-muted">
-                {(() => {
-                  if (displayImages.length === 0) {
-                    return (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <HugeiconsIcon
-                          icon={PackageIcon}
-                          className="size-10 text-muted-foreground/40"
-                        />
-                      </div>
-                    );
-                  }
-                  if (displayImages.length === 1) {
-                    return (
-                      <img
-                        src={displayImages[0]}
-                        alt={order.title}
-                        className="h-full w-full object-cover object-top"
-                        loading="lazy"
-                      />
-                    );
-                  }
+            <MediaCardImage destination={destination} title={order.title} className="aspect-8/5">
+              {(() => {
+                if (displayImages.length === 0) {
                   return (
-                    <div
-                      className={cn(
-                        "grid h-full w-full gap-px",
-                        displayImages.length === 2 && "grid-cols-2",
-                        displayImages.length === 3 && "grid-cols-3",
-                        displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
-                      )}
-                    >
-                      {displayImages.map((src, idx) => (
-                        <img
-                          key={`${src}-${idx}`}
-                          src={src}
-                          alt={`${order.title} item ${idx + 1}`}
-                          className="h-full w-full object-cover object-top"
-                          loading="lazy"
-                        />
-                      ))}
+                    <div className="flex size-full items-center justify-center">
+                      <HugeiconsIcon
+                        icon={PackageIcon}
+                        className="size-10 text-muted-foreground/40"
+                      />
                     </div>
                   );
-                })()}
-              </div>
-            </Link>
+                }
+                if (displayImages.length === 1) {
+                  return (
+                    <img
+                      src={displayImages[0]}
+                      alt={order.title}
+                      className="size-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  );
+                }
+                return (
+                  <div
+                    className={cn(
+                      "grid size-full gap-px",
+                      displayImages.length === 2 && "grid-cols-2",
+                      displayImages.length === 3 && "grid-cols-3",
+                      displayImages.length >= 4 && "grid-cols-2 grid-rows-2",
+                    )}
+                  >
+                    {displayImages.map((src, idx) => (
+                      <img
+                        key={`${src}-${idx}`}
+                        src={src}
+                        alt={`${order.title} item ${idx + 1}`}
+                        className="size-full object-cover object-top"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
+            </MediaCardImage>
 
-            <div
-              className={cn(
-                "animate-data-in flex min-h-0 flex-1 flex-col px-3 pt-3 pb-2.5",
-                isCompact && "px-2 pt-2.5 pb-2",
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
+            <MediaCardBody>
+              <span className="flex min-w-0 items-center justify-between gap-2">
                 <ThemedBadge
                   variant={getStatusVariant(order.status)}
                   size={isCompact ? "xs" : "sm"}
                 >
                   {order.status}
                 </ThemedBadge>
-                <span className="shrink-0 text-[11px] leading-none text-muted-foreground tabular-nums">
+                <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                   {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                 </span>
-              </div>
-
-              <h3
-                className={cn(
-                  "mt-2.5 text-sm leading-snug font-medium text-balance",
-                  isCompact && "mt-2 text-xs",
-                )}
-              >
-                <Link
-                  to="/orders/$id"
-                  params={{ id: order.orderId }}
-                  className="line-clamp-2 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  title={order.title}
-                >
-                  {order.title}
-                </Link>
-              </h3>
+              </span>
+              <MediaCardTitle as="h3" title={order.title} destination={destination} />
               <p
-                className="mt-1 truncate text-xs leading-normal text-muted-foreground"
+                className="truncate text-xs leading-4 text-muted-foreground"
                 title={order.shop || undefined}
               >
                 {order.shop || "—"}
               </p>
-
-              <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
-                <span
-                  className={cn(
-                    "shrink-0 text-base leading-none font-medium tracking-tight tabular-nums",
-                    isCompact && "text-sm",
-                  )}
-                >
+              <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
+                <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
                   {formatCurrencyFromMinorUnits(order.total, currency, locale)}
                 </span>
                 {order.shippingMethod !== "n/a" && !isCompact ? (
-                  <span className="min-w-0 truncate text-[11px] leading-none text-muted-foreground">
+                  <span className="min-w-0 truncate text-xs leading-4 text-muted-foreground">
                     {order.shippingMethod}
                   </span>
                 ) : null}
-              </div>
-            </div>
-          </Card>
+              </span>
+            </MediaCardBody>
+          </MediaCard>
         );
       })}
     </div>

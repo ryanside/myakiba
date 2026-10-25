@@ -35,6 +35,7 @@ export function ListMemberControls({
   return (
     <ItemControls
       key={viewMode}
+      variant={viewMode === "grid" ? "card" : "row"}
       active={viewMode === "list" || selected || active || isRemoving}
       className={cn(
         viewMode === "grid"
