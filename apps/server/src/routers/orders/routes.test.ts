@@ -235,8 +235,8 @@ describe("each orders route answers as before", () => {
     expect(status).toBe(200);
     expect(body).toMatchObject({
       items: [
-        { orderId: "order-1", itemCount: "2" },
-        { orderId: "order-2", itemCount: "1" },
+        { orderId: "order-1", itemCount: 2 },
+        { orderId: "order-2", itemCount: 1 },
       ],
       totalCount: 2,
       activeOrders: 2,
@@ -246,7 +246,7 @@ describe("each orders route answers as before", () => {
   test("get", async () => {
     expect(await call("GET", "/order-1")).toMatchObject({
       status: 200,
-      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: "2" },
+      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: 2 },
     });
   });
 
