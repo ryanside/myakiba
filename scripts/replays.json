@@ -792,6 +792,12 @@
         "invalidating the current URL preserves a pending first search",
         "invalidating the current URL preserves edits to an existing search"
       ]
+    },
+    {
+      "fix": "52f6a066",
+      "bug": "recovering a targeted devices list refocused its remounted element and stole focus from another control",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": ["refreshing targeted devices through unavailable does not steal focus"]
     }
   ],
   "lint": [
