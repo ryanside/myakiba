@@ -23,7 +23,6 @@ const clearEmptySelection = (): void => undefined;
 
 function SortableWishlistItem({
   wishlistItem,
-  releaseStatus,
   viewMode,
   currency,
   dateFormat,
@@ -36,7 +35,6 @@ function SortableWishlistItem({
   onEntranceAnimationEnd,
 }: {
   readonly wishlistItem: WishlistItem;
-  readonly releaseStatus: WishlistReleaseStatus;
   readonly viewMode: MediaViewMode;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
@@ -66,7 +64,7 @@ function SortableWishlistItem({
         dropIndicator={dropIndicator}
         className={cn(entranceAnimationActive && "animate-data-in")}
         onAnimationEnd={onEntranceAnimationEnd}
-        controlsActive={releaseStatus !== "all" || isDragging || removing}
+        controlsActive={isDragging || removing}
         controls={
           <>
             <DragHandle
@@ -166,7 +164,6 @@ export function WishlistItemGrid({
           <SortableWishlistItem
             key={wishlistItem.id}
             wishlistItem={wishlistItem}
-            releaseStatus={releaseStatus}
             viewMode={viewMode}
             currency={currency}
             dateFormat={dateFormat}
