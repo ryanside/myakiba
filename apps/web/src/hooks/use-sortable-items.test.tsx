@@ -8,6 +8,7 @@ import { frame } from "../../test/kanban-drag";
 import { useSortableItems } from "./use-sortable-items";
 
 const IDS = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9"];
+const LONG_TITLE = "AnUnbrokenTitle".repeat(20);
 const ITEMS = IDS.map((id) => ({ id, title: id }));
 const NO_SELECTION: ReadonlySet<string> = new Set();
 const COLUMNS = 5;
@@ -35,20 +36,21 @@ function stubGridLayout(): void {
     }
     const box = this.parentElement;
     if (this.dataset.overlayLabel !== undefined && box) {
+      const labelWidth = this.textContent === LONG_TITLE ? TILE.width * 3 : LABEL.width;
       const [, x = "0", y = "0"] =
         /translate3d\((-?[\d.]+)px, (-?[\d.]+)px/.exec(box.style.transform) ?? [];
       return DOMRect.fromRect({
         x: snapToLayoutUnit(
           Number.parseFloat(box.style.left) +
             Number(x) +
-            (Number.parseFloat(box.style.width) - LABEL.width) / 2,
+            (Number.parseFloat(box.style.width) - labelWidth) / 2,
         ),
         y: snapToLayoutUnit(
           Number.parseFloat(box.style.top) +
             Number(y) +
             (Number.parseFloat(box.style.height) - LABEL.height) / 2,
         ),
-        width: LABEL.width,
+        width: labelWidth,
         height: LABEL.height,
       });
     }
@@ -70,8 +72,10 @@ function Tile({ id }: { readonly id: string }): React.JSX.Element {
 // Mirrors the grid view of Lists, List detail and Wishlist: the overlay is a small label.
 function Grid({
   onMove,
+  items = ITEMS,
 }: {
   readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly items?: typeof ITEMS;
 }): React.JSX.Element {
   const {
     itemIds,
@@ -83,7 +87,7 @@ function Grid({
     handleDragEnd,
     handleDragCancel,
   } = useSortableItems({
-    items: ITEMS,
+    items,
     totalCount: ITEMS.length,
     selectedIds: NO_SELECTION,
     selectedLabel: "selected Lists",
@@ -121,9 +125,13 @@ function Grid({
   );
 }
 
-async function moveWithKeyboard(id: string, arrow: string): Promise<readonly unknown[]> {
+async function moveWithKeyboard(
+  id: string,
+  arrow: string,
+  items = ITEMS,
+): Promise<readonly unknown[]> {
   const onMove = mock(async (_intent: PositionOrderInput) => {});
-  render(<Grid onMove={onMove} />);
+  render(<Grid onMove={onMove} items={items} />);
   const handle = screen.getByRole("button", { name: `Reorder ${id}` });
   await act(async () => {
     handle.focus();
@@ -180,3 +188,21 @@ describe("moving a grid tile with the keyboard", () => {
     DRAG_TIMEOUT_MS,
   );
 });
+
+test(
+  "a label wider than two columns moves one slot left and right",
+  async () => {
+    const items = ITEMS.map((item) => ({
+      ...item,
+      title: item.id === "L1" ? LONG_TITLE : item.title,
+    }));
+    expect(await moveWithKeyboard("L1", "ArrowLeft", items)).toEqual([
+      { movedIds: ["L1"], anchorId: "L0", placement: "before" },
+    ]);
+    cleanup();
+    expect(await moveWithKeyboard("L1", "ArrowRight", items)).toEqual([
+      { movedIds: ["L1"], anchorId: "L2", placement: "after" },
+    ]);
+  },
+  DRAG_TIMEOUT_MS,
+);

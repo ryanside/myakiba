@@ -13,11 +13,8 @@ import { toast } from "@/components/ui/toast";
 
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
 
-// The drag overlay is a small label, so the collision rect is the label, not the tile.
-// sortableKeyboardCoordinates expects a tile-sized rect and jumps to the wrong tile in a grid,
-// so move the label's center to the nearest tile center past the label's edge instead. The
-// edge, not the center, rules out the tile under the label, whose center can sit a subpixel
-// to either side of the label's.
+// The overlay can be wider than a tile. Compare centers with a 1 px tolerance so
+// Chrome's subpixel centering cannot select the tile already under the label.
 const centerKeyboardCoordinates: KeyboardCoordinateGetter = (
   event,
   { context: { collisionRect, droppableRects, droppableContainers } },
@@ -35,10 +32,10 @@ const centerKeyboardCoordinates: KeyboardCoordinateGetter = (
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
     const ahead =
-      (event.code === "ArrowLeft" && x < collisionRect.left) ||
-      (event.code === "ArrowRight" && x > collisionRect.right) ||
-      (event.code === "ArrowUp" && y < collisionRect.top) ||
-      (event.code === "ArrowDown" && y > collisionRect.bottom);
+      (event.code === "ArrowLeft" && x < fromX - 1) ||
+      (event.code === "ArrowRight" && x > fromX + 1) ||
+      (event.code === "ArrowUp" && y < fromY - 1) ||
+      (event.code === "ArrowDown" && y > fromY + 1);
     const distance = Math.hypot(x - fromX, y - fromY);
     if (ahead && (!closest || distance < closest.distance)) closest = { x, y, distance };
   }
