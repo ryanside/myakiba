@@ -1,6 +1,15 @@
 {
   "test": [
     {
+      "fix": "9976e960",
+      "bug": "order item counts were strings, so an order with one item displayed 1 items",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "each orders route answers as before > list",
+        "each orders route answers as before > get"
+      ]
+    },
+    {
       "fix": "2d8c17ce",
       "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
