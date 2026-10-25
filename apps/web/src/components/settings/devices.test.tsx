@@ -201,7 +201,7 @@ test("a link to devices focuses the list when the pending devices finish loading
   await screen.findByText("This device");
   const devices = document.querySelector("#setting-devices");
   expect(devices).not.toBeNull();
-  await waitFor(() => expect(document.activeElement).toBe(devices));
+  await waitFor(() => expect(document.activeElement === devices).toBe(true));
 });
 
 test("a link to sign out others focuses its row when the pending devices finish loading", async () => {
@@ -215,7 +215,7 @@ test("a link to sign out others focuses its row when the pending devices finish 
   await screen.findByText("This device");
   const row = document.querySelector("#setting-sign-out-others");
   expect(row).not.toBeNull();
-  await waitFor(() => expect(document.activeElement).toBe(row));
+  await waitFor(() => expect(document.activeElement === row).toBe(true));
 });
 
 test.each(["needs-fresh-sign-in", "unavailable"] as const)(
@@ -224,7 +224,7 @@ test.each(["needs-fresh-sign-in", "unavailable"] as const)(
     resetServer("ok");
     const { client } = openAccount("/settings#setting-devices");
     await screen.findByText("This device");
-    expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
+    expect(document.activeElement === document.querySelector("#setting-devices")).toBe(true);
 
     const password = screen.getByRole("button", { name: "Change password" });
     password.focus();
@@ -248,10 +248,10 @@ test("a devices anchor focuses again after its hash is deactivated and reactivat
   resetServer("ok");
   const { router } = openAccount("/settings#setting-devices");
   await screen.findByText("This device");
-  expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
+  expect(document.activeElement === document.querySelector("#setting-devices")).toBe(true);
 
   await act(() => router.navigate({ to: "/settings" }));
   screen.getByRole("button", { name: "Change password" }).focus();
   await act(() => router.navigate({ to: "/settings", hash: "setting-devices" }));
-  expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
+  expect(document.activeElement === document.querySelector("#setting-devices")).toBe(true);
 });
