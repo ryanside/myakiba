@@ -268,6 +268,16 @@ describe("each orders route answers as before", () => {
         unpaidCosts: 25_700,
       },
     });
+
+    expect(await call("GET", "/?sort=total&order=asc")).toMatchObject({
+      status: 200,
+      body: {
+        items: [
+          { orderId: "order-2", total: 0 },
+          { orderId: "order-1", total: 25_700 },
+        ],
+      },
+    });
   });
 
   test("get", async () => {
