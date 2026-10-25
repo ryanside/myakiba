@@ -681,6 +681,17 @@
         "List detail grid drop indicator > sits centred in the gap before the tile it marks",
         "List detail grid drop indicator > sits centred in the gap after the tile it marks"
       ]
+    },
+    {
+      "fix": "515c5e5d",
+      "bug": "filtered Wishlist grid and gallery controls stayed visible without hover or keyboard focus",
+      "test": "apps/web/src/components/wishlist/wishlist-controls.test.tsx",
+      "fixed": [
+        "Wishlist upcoming controls > grid controls only pin for an active operation or list view",
+        "Wishlist upcoming controls > gallery controls only pin for an active operation or list view",
+        "Wishlist available controls > grid controls only pin for an active operation or list view",
+        "Wishlist available controls > gallery controls only pin for an active operation or list view"
+      ]
     }
   ],
   "lint": [
