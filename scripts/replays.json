@@ -704,6 +704,12 @@
       "bug": "a lone carriage return offered description expansion even though pre-wrap renders it as a space",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
       "fixed": ["a lone carriage return needs no expansion toggle"]
+    },
+    {
+      "fix": "794f243a",
+      "bug": "order detail pages showed the Orders list background, unlike item pages",
+      "test": "apps/web/src/components/page-background.test.tsx",
+      "fixed": ["page background > an order detail page shows no background"]
     }
   ],
   "lint": [
