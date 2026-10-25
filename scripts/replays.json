@@ -748,6 +748,14 @@
         "chart loading shimmer > keeps both skeletons visible and still when reduced motion is on at mount",
         "chart loading shimmer > keeps both skeletons visible and still when reduced motion turns on live"
       ]
+    },
+    {
+      "fix": "20587cd5",
+      "bug": "a Settings link to a section that does not exist, such as an old Shortcuts link, threw the route into its error screen",
+      "test": "apps/web/src/components/settings/settings-section-param.test.ts",
+      "fixed": [
+        "a link to a section that no longer exists, or never did, opens Settings without one"
+      ]
     }
   ],
   "lint": [
