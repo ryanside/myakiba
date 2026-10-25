@@ -1,32 +1,83 @@
 import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
-import { rectSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
+import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
+import type { ComponentProps } from "react";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { frame } from "../../test/kanban-drag";
+import { ListMemberGrid } from "@/components/lists/list-member-grid";
 import { useSortableItems } from "./use-sortable-items";
 
-const IDS = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9"];
+afterEach(cleanup);
+
+function renderSortable() {
+  return renderHook(() =>
+    useSortableItems({
+      items: [
+        { id: "first", title: "First" },
+        { id: "second", title: "Second" },
+      ],
+      totalCount: 2,
+      selectedIds: new Set<string>(),
+      selectedLabel: "items",
+      fallbackLabel: "item",
+      screenReaderInstruction: "Press space to reorder.",
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      onLoadMore: async () => ({ isFetchNextPageError: false }),
+      onMove: async () => {},
+      onClearSelection: () => {},
+    }),
+  );
+}
+
+test("normal motion keeps entrance until animation completion", () => {
+  const { result } = renderSortable();
+  expect(result.current.entranceAnimationActive).toBe(true);
+  act(() => result.current.finishEntranceAnimation());
+  expect(result.current.entranceAnimationActive).toBe(false);
+});
+
 const LONG_TITLE = "AnUnbrokenTitle".repeat(20);
-const ITEMS = IDS.map((id) => ({ id, title: id }));
-const NO_SELECTION: ReadonlySet<string> = new Set();
+const IDS = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9"];
+const MEMBERS = IDS.map((id, position) => ({
+  id,
+  position,
+  type: "item" as const,
+  targetId: `item-${id}`,
+  title: id,
+  image: null,
+  itemExternalId: position + 1,
+})) satisfies ComponentProps<typeof ListMemberGrid>["members"];
 const COLUMNS = 5;
 const GRID = { left: 236, top: 136 };
 const TILE = { width: 195.203125, height: 160, gap: 12 };
 const LABEL = { width: 36.90625, height: 32 };
 const DRAG_TIMEOUT_MS = 20_000;
+const REORDER = "Reorder ";
 
 // A browser lays boxes out in 1/64 px units, so a centered label can sit a hair off center.
 const snapToLayoutUnit = (value: number) => Math.round(value * 64) / 64;
+
+function tileIndex(element: HTMLElement): number {
+  const tile = element.closest(".group\\/item") ?? element.querySelector(":scope > .group\\/item");
+  const handle = tile?.querySelector(`[aria-label^="${REORDER}"]`);
+  const title = handle?.getAttribute("aria-label")?.slice(REORDER.length);
+  return IDS.indexOf(title === LONG_TITLE ? "L1" : (title ?? ""));
+}
 
 // Lays the tiles out in a five-column grid with the column widths Chrome gives the Lists grid
 // at 1440 px, and centers the overlay's label inside the overlay box as its flex classes do.
 function stubGridLayout(): void {
   HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect(this: HTMLElement) {
-    const tile = this.closest<HTMLElement>("[data-tile]");
-    if (tile) {
-      const index = IDS.indexOf(tile.dataset.tile ?? "");
+    const index = tileIndex(this);
+    if (index !== -1) {
       return DOMRect.fromRect({
         x: GRID.left + (index % COLUMNS) * (TILE.width + TILE.gap),
         y: GRID.top + Math.floor(index / COLUMNS) * (TILE.height + TILE.gap),
@@ -34,8 +85,9 @@ function stubGridLayout(): void {
         height: TILE.height,
       });
     }
+    // dnd-kit fixes the drag overlay box, and the grid puts nothing else inside a fixed element.
     const box = this.parentElement;
-    if (this.dataset.overlayLabel !== undefined && box) {
+    if (box?.style.position === "fixed") {
       const labelWidth = this.textContent === LONG_TITLE ? TILE.width * 3 : LABEL.width;
       const [, x = "0", y = "0"] =
         /translate3d\((-?[\d.]+)px, (-?[\d.]+)px/.exec(box.style.transform) ?? [];
@@ -58,81 +110,52 @@ function stubGridLayout(): void {
   };
 }
 
-function Tile({ id }: { readonly id: string }): React.JSX.Element {
-  const { attributes, listeners, setActivatorNodeRef, setNodeRef } = useSortable({ id });
-  return (
-    <div ref={setNodeRef} data-tile={id}>
-      <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners}>
-        {`Reorder ${id}`}
-      </button>
-    </div>
-  );
-}
-
-// Mirrors the grid view of Lists, List detail and Wishlist: the overlay is a small label.
-function Grid({
-  onMove,
-  items = ITEMS,
-}: {
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
-  readonly items?: typeof ITEMS;
-}): React.JSX.Element {
-  const {
-    itemIds,
-    activeId,
-    overlayLabel,
-    sensors,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    handleDragCancel,
-  } = useSortableItems({
-    items,
-    totalCount: ITEMS.length,
-    selectedIds: NO_SELECTION,
-    selectedLabel: "selected Lists",
-    fallbackLabel: "List",
-    screenReaderInstruction: "Press Space to move a List.",
-    hasNextPage: false,
-    isFetchingNextPage: false,
-    onLoadMore: async () => ({ isFetchNextPageError: false }),
-    onMove,
-    onClearSelection: () => {},
+// List detail's grid, whose drag overlay is a small label like the Lists and Wishlist grids'.
+async function renderGrid(
+  onMove: (intent: PositionOrderInput) => Promise<void>,
+  members = MEMBERS,
+): Promise<void> {
+  const root = createRootRoute({ component: Outlet });
+  const home = createRoute({
+    getParentRoute: () => root,
+    path: "/",
+    component: () => (
+      <ListMemberGrid
+        members={members}
+        viewMode="grid"
+        totalCount={MEMBERS.length}
+        isSaving={false}
+        sortingDisabled={false}
+        removingMemberIds={undefined}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        selectedIds={new Set()}
+        onLoadMore={async () => ({ isFetchNextPageError: false })}
+        onRemove={async () => {}}
+        onMove={onMove}
+        onClearSelection={() => {}}
+        onToggleSelection={() => {}}
+      />
+    ),
   });
-  return (
-    <DndContext
-      collisionDetection={closestCenter}
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <SortableContext items={itemIds} strategy={rectSortingStrategy}>
-        {itemIds.map((id) => (
-          <Tile key={id} id={id} />
-        ))}
-      </SortableContext>
-      <DragOverlay
-        className="pointer-events-none flex items-center justify-center"
-        dropAnimation={null}
-        modifiers={[snapCenterToCursor]}
-        zIndex={50}
-      >
-        {activeId ? <div data-overlay-label="">{overlayLabel}</div> : null}
-      </DragOverlay>
-    </DndContext>
-  );
+  const router = createRouter({
+    routeTree: root.addChildren([home]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  render(<RouterProvider router={router} />);
 }
 
 async function moveWithKeyboard(
   id: string,
   arrow: string,
-  items = ITEMS,
+  members = MEMBERS,
 ): Promise<readonly unknown[]> {
   const onMove = mock(async (_intent: PositionOrderInput) => {});
-  render(<Grid onMove={onMove} items={items} />);
-  const handle = screen.getByRole("button", { name: `Reorder ${id}` });
+  await renderGrid(onMove, members);
+  const handle = screen.getByRole("button", {
+    name: `${REORDER}${members.find((member) => member.id === id)?.title}`,
+  });
   await act(async () => {
     handle.focus();
   });
@@ -142,8 +165,6 @@ async function moveWithKeyboard(
   }
   return onMove.mock.calls.map(([intent]) => intent);
 }
-
-afterEach(cleanup);
 
 beforeAll(stubGridLayout);
 
@@ -192,15 +213,15 @@ describe("moving a grid tile with the keyboard", () => {
 test(
   "a label wider than two columns moves one slot left and right",
   async () => {
-    const items = ITEMS.map((item) => ({
-      ...item,
-      title: item.id === "L1" ? LONG_TITLE : item.title,
+    const members = MEMBERS.map((member) => ({
+      ...member,
+      title: member.id === "L1" ? LONG_TITLE : member.title,
     }));
-    expect(await moveWithKeyboard("L1", "ArrowLeft", items)).toEqual([
+    expect(await moveWithKeyboard("L1", "ArrowLeft", members)).toEqual([
       { movedIds: ["L1"], anchorId: "L0", placement: "before" },
     ]);
     cleanup();
-    expect(await moveWithKeyboard("L1", "ArrowRight", items)).toEqual([
+    expect(await moveWithKeyboard("L1", "ArrowRight", members)).toEqual([
       { movedIds: ["L1"], anchorId: "L2", placement: "after" },
     ]);
   },

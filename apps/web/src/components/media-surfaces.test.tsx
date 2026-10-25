@@ -14,7 +14,8 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseOrder, ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import type { ReactNode } from "react";
+import { itemDatabaseSearchSchema } from "@myakiba/contracts/search/schema";
+import type { ComponentProps, ReactNode } from "react";
 import { ExpandedRowContent } from "./analytics/section-expanded-row";
 import { SectionRelationships } from "./analytics/section-relationships";
 import { CalendarItemRow } from "./calendar/calendar-item-row";
@@ -26,16 +27,22 @@ import { ReleaseCalendar } from "./dashboard/release-calendar";
 import { DataTable } from "./data-table/data-table";
 import { ExpenseOrderRow } from "./expenses/order-row";
 import { ShopTableRowExpansion } from "./expenses/shop-table-row-expansion";
+import { ItemDatabase } from "./item-database/item-database";
+import { ListMemberGrid } from "./lists/list-member-grid";
 import { OrdersCardGrid } from "./orders/orders-card-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
 import { DataGrid } from "./reui/data-grid/data-grid";
 import { DataGridTable } from "./reui/data-grid/data-grid-table";
+import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
 import { analytics } from "@/data/resources/analytics";
 import { calendar } from "@/data/resources/calendar";
 import { expenses } from "@/data/resources/expenses";
+import { searches } from "@/data/resources/search";
+import type { MediaViewMode } from "@/components/ui/view-toggle";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import type { CalendarItem, CalendarOrder } from "@/queries/calendar";
 import type { DashboardKanbanOrder, ReleaseItem } from "@/queries/dashboard";
+import { Route as ListsRoute } from "@/routes/(app)/lists";
 
 afterEach(() => {
   cleanup();
@@ -43,6 +50,38 @@ afterEach(() => {
 });
 
 const image = "https://example.com/miku.jpg";
+
+const wishlistItem = {
+  id: "wishlist-1",
+  itemId: "item-1",
+  itemExternalId: 123,
+  title: "Hatsune Miku",
+  image,
+  category: "Prepainted",
+  position: 0,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  latestRelease: { date: "2026-01-02", price: 12_000, priceCurrency: "JPY" },
+} satisfies ComponentProps<typeof WishlistItemGrid>["items"][number];
+
+const members = [
+  {
+    id: "member-item",
+    position: 0,
+    type: "item",
+    targetId: "item-1",
+    title: "Hatsune Miku",
+    image,
+    itemExternalId: 123,
+  },
+  {
+    id: "member-order",
+    position: 1,
+    type: "order",
+    targetId: "order-1",
+    title: "Miku order",
+    images: [image, image],
+  },
+] satisfies ComponentProps<typeof ListMemberGrid>["members"];
 
 const collectionItem = {
   id: "collection-1",
@@ -176,6 +215,7 @@ const expenseShop = {
 } satisfies ExpenseShopRow;
 
 const noop = async () => {};
+const ListsScreen = ListsRoute.options.component;
 
 const tableRows = [{ id: "row-1", title: "Hatsune Miku" }];
 
@@ -198,6 +238,49 @@ function GridRow(): ReactNode {
     <DataGrid table={table} recordCount={tableRows.length}>
       <DataGridTable />
     </DataGrid>
+  );
+}
+
+function wishlist(viewMode: MediaViewMode): ReactNode {
+  return (
+    <WishlistItemGrid
+      items={[wishlistItem]}
+      releaseStatus="all"
+      viewMode={viewMode}
+      currency="JPY"
+      dateFormat="MM/DD/YYYY"
+      totalCount={1}
+      isPending={false}
+      isSaving={false}
+      sortingDisabled={false}
+      removingItemId={undefined}
+      hasNextPage={false}
+      isFetchingNextPage={false}
+      onLoadMore={async () => ({ isFetchNextPageError: false })}
+      onRemove={noop}
+      onMove={noop}
+    />
+  );
+}
+
+function listDetail(viewMode: MediaViewMode): ReactNode {
+  return (
+    <ListMemberGrid
+      members={members}
+      viewMode={viewMode}
+      totalCount={members.length}
+      isSaving={false}
+      sortingDisabled={false}
+      removingMemberIds={undefined}
+      hasNextPage={false}
+      isFetchingNextPage={false}
+      selectedIds={new Set()}
+      onLoadMore={async () => ({ isFetchNextPageError: false })}
+      onRemove={noop}
+      onMove={noop}
+      onClearSelection={() => {}}
+      onToggleSelection={() => {}}
+    />
   );
 }
 
@@ -231,6 +314,29 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   for (const [key, value] of Object.entries(storage))
     localStorage.setItem(key, JSON.stringify(value));
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
+  const search = itemDatabaseSearchSchema.parse({});
+  client.setQueryData(searches.itemDatabase.key(search), {
+    items: [
+      {
+        itemId: wishlistItem.itemId,
+        externalId: 123,
+        title: wishlistItem.title,
+        image,
+        category: wishlistItem.category,
+        latestRelease: wishlistItem.latestRelease,
+      },
+    ],
+    totalCount: 1,
+  });
+  client.setQueryData(["lists", "overview"], {
+    pages: [
+      {
+        items: [{ id: "list-1", title: "Miku", description: null, position: 0, images: [image] }],
+        totalCount: 1,
+      },
+    ],
+    pageParams: [0],
+  });
   client.setQueryData(calendar.releases.key({ month: 1, year: 2026 }), {
     releaseCalendar: { releases: [releaseItem] },
   });
@@ -274,6 +380,7 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   const route = createRoute({
     getParentRoute: () => app,
     path: "/items",
+    validateSearch: itemDatabaseSearchSchema,
     component: () => ui,
   });
   const router = createRouter({
@@ -312,6 +419,14 @@ const SCREENS: readonly {
   readonly storage?: Readonly<Record<string, string>>;
   readonly select?: string;
 }[] = [
+  { name: "Wishlist grid", surface: "card", ui: () => wishlist("grid") },
+  {
+    name: "Item Database grid",
+    surface: "card",
+    ui: () => <ItemDatabase />,
+    storage: { "item-database:viewMode": "grid" },
+  },
+  { name: "List detail grid", surface: "card", ui: () => listDetail("grid") },
   {
     name: "Collection cards",
     surface: "card",
@@ -336,6 +451,14 @@ const SCREENS: readonly {
     ),
     select: '[data-slot="kanban-item-handle"] > *',
   },
+  { name: "Wishlist gallery", surface: "gallery", ui: () => wishlist("gallery") },
+  {
+    name: "Item Database gallery",
+    surface: "gallery",
+    ui: () => <ItemDatabase />,
+    storage: { "item-database:viewMode": "gallery" },
+  },
+  { name: "List detail gallery", surface: "gallery", ui: () => listDetail("gallery") },
   ...(["square", "masonry"] as const).flatMap((galleryLayout) => [
     {
       name: `Collection ${galleryLayout} gallery`,
@@ -374,6 +497,20 @@ const SCREENS: readonly {
         dateFormat="MM/DD/YYYY"
       />
     ),
+  },
+  { name: "Wishlist list", surface: "row", ui: () => wishlist("list") },
+  {
+    name: "Item Database list",
+    surface: "row",
+    ui: () => <ItemDatabase />,
+    storage: { "item-database:viewMode": "list" },
+  },
+  { name: "List detail list", surface: "row", ui: () => listDetail("list") },
+  {
+    name: "Lists list",
+    surface: "row",
+    ui: () => (ListsScreen ? <ListsScreen /> : null),
+    storage: { "lists:viewMode": "list" },
   },
   {
     name: "Calendar item row",
@@ -602,5 +739,17 @@ test("a row hovers to a translucent tint and nothing else, in both themes", asyn
   }
   for (const theme of Object.values(THEMES)) {
     expect(isTranslucent(theme.get("--row-hover"))).toBe(true);
+  }
+});
+
+test("a Lists folder card takes no hover of its own, so its peek is its hover", async () => {
+  const { container } = await renderScreen(ListsScreen ? <ListsScreen /> : null, {
+    "lists:viewMode": "grid",
+  });
+  const folders = [...container.querySelectorAll("[data-folder-host]")];
+  expect(folders.length).toBeGreaterThan(0);
+  for (const folder of folders) {
+    expect(hoverClasses(folder)).toEqual([]);
+    expect(motionClasses(folder)).toEqual([]);
   }
 });
