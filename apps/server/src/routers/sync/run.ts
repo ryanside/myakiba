@@ -68,7 +68,7 @@ type RunSession = Awaited<ReturnType<typeof lockSession>>;
 
 type Run = {
   session: NonNullable<RunSession>;
-  readonly payload: JobData | null;
+  readonly payload: Result<JobData, StoredSyncPayloadInvalid> | null;
   orderLocked: boolean;
 };
 
@@ -97,7 +97,14 @@ async function lockRun(
     .from(syncSession)
     .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
   if (!peek) return null;
-  const payload = peek.requestPayload;
+  let retainedPayload: Run["payload"] = null;
+  if (peek.requestPayload !== null) {
+    const parsed = jobDataSchema.safeParse(peek.requestPayload);
+    retainedPayload = parsed.success
+      ? Result.ok(parsed.data)
+      : Result.err(new StoredSyncPayloadInvalid({ sessionId, cause: parsed.error }));
+  }
+  const payload = retainedPayload?.unwrapOr(null);
   let orderLocked = false;
   if (lockOrder && (payload?.type === "order" || payload?.type === "order-item")) {
     const locked = await tx
@@ -127,7 +134,7 @@ async function lockRun(
   }
   const session = await lockSession(tx, sessionId);
   if (!session) return null;
-  return { session, payload, orderLocked };
+  return { session, payload: retainedPayload, orderLocked };
 }
 
 async function failOpenItems(
@@ -145,7 +152,8 @@ async function failOpenItems(
 }
 
 async function recentItems(tx: Tx, run: Run): Promise<SyncJobRecentItem[]> {
-  const fetched = new Set(run.payload ? idsToFetch(run.payload) : []);
+  const payload = run.payload?.unwrapOr(null);
+  const fetched = new Set(payload ? idsToFetch(payload) : []);
   if (fetched.size === 0) return [];
   const distinct = tx
     .selectDistinctOn([syncSessionItem.itemExternalId], {
@@ -333,7 +341,7 @@ async function withRun<T, E = never>(
 }
 
 function missingOrder(run: Run): SyncOrderAbsent | null {
-  const payload = run.payload;
+  const payload = run.payload?.unwrapOr(null);
   if (run.orderLocked || (payload?.type !== "order" && payload?.type !== "order-item")) return null;
   if (payload.type === "order-item" || run.session.successCount > 0) {
     return new SyncOrderAbsent({
@@ -522,11 +530,13 @@ export async function completeSyncItem(
             `MFC item ${mfcItemId} was not in the item database after its ingest in sync session ${sessionId}`,
           );
         }
-        if (!run.payload)
-          panic(`Sync session ${sessionId} has no stored request to import item ${mfcItemId} into`);
-        yield* Result.await(
-          writeItemRows(tx, run, run.payload, fetchedItemRows(run.payload, imported)),
-        );
+        const payload = run.payload?.unwrapOr(null);
+        if (!payload)
+          panic(
+            `Sync session ${sessionId} has no valid stored request to import item ${mfcItemId} into`,
+            run.payload?.isErr() ? run.payload.error : undefined,
+          );
+        yield* Result.await(writeItemRows(tx, run, payload, fetchedItemRows(payload, imported)));
         await markImported(tx, sessionId, [mfcItemId]);
         return Result.ok({
           result: { outcome: "imported", reason: null },
@@ -639,16 +649,15 @@ export async function retrySyncRun(
       if (session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS <= Date.now()) {
         return Result.ok({ result: { outcome: "expired" }, change: null });
       }
-      const parsed = jobDataSchema.safeParse(run.payload);
-      if (!parsed.success)
+      if (run.payload.isErr())
         return Result.ok({
           result: {
             outcome: "invalid_payload",
-            failure: new StoredSyncPayloadInvalid({ sessionId, cause: parsed.error }),
+            failure: run.payload.error,
           },
           change: null,
         });
-      const payload = parsed.data;
+      const payload = run.payload.value;
       if (missingOrder(run)) return unavailable;
 
       const failed = await tx
