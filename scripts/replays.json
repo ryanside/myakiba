@@ -782,7 +782,11 @@
       "fix": "87b56cb4",
       "bug": "a devices hash target present before loading never received focus when its list mounted",
       "test": "apps/web/src/components/settings/devices.test.tsx",
-      "fixed": ["a link to devices focuses the list when the pending devices finish loading"]
+      "fixed": [
+        "a link to devices focuses the list when the pending devices finish loading",
+        "refreshing targeted devices through needs-fresh-sign-in does not steal focus",
+        "a devices anchor focuses again after its hash is deactivated and reactivated"
+      ]
     },
     {
       "fix": "f8c4deef",
