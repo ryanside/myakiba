@@ -730,6 +730,15 @@
         "chart loading shimmer > stops when the device's reduced-motion setting turns on after the charts mount",
         "chart loading shimmer > stops when the app's Reduce motion switch turns on after the charts mount"
       ]
+    },
+    {
+      "fix": "b0a3f124",
+      "bug": "reduced motion hid rotating homepage text while waiting for a removed fade",
+      "test": "apps/web/src/components/homepage/text-loop.test.tsx",
+      "fixed": [
+        "reduced motion switches loop text without waiting for a fade",
+        "enabling reduced motion during a fade keeps loop text visible"
+      ]
     }
   ],
   "lint": [
