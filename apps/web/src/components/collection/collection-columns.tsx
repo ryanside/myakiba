@@ -87,6 +87,7 @@ function CollectionActionsCell({
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [addToListsOpen, setAddToListsOpen] = useState(false);
+  const [assignOrderOpen, setAssignOrderOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const selectedItems = {
     collectionIds: new Set([item.id]),
@@ -175,19 +176,15 @@ function CollectionActionsCell({
                   <HugeiconsIcon icon={FolderAddIcon} />
                   Add to List
                 </DropdownMenuItem>
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false}>
-                      <HugeiconsIcon icon={MoveIcon} />
-                      Assign order
-                    </DropdownMenuItem>
-                  }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  currency={currency}
-                  intent="add"
-                />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAssignOrderOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={MoveIcon} />
+                  Assign order
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -206,6 +203,15 @@ function CollectionActionsCell({
           ) : null}
         </DropdownMenu>
       </div>
+      <UnifiedItemMoveForm
+        open={assignOrderOpen}
+        onOpenChange={setAssignOrderOpen}
+        selectedItems={selectedItems}
+        onMoveToExisting={onAddCollectionItemsToOrder}
+        onMoveToNew={onAddCollectionItemsToNewOrder}
+        currency={currency}
+        intent="add"
+      />
       <AddToListsDialog
         open={addToListsOpen}
         onOpenChange={setAddToListsOpen}

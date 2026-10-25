@@ -50,7 +50,9 @@ import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 
 type UnifiedItemMoveFormProps = {
-  readonly renderTrigger: React.ReactElement;
+  readonly renderTrigger?: React.ReactElement;
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
   readonly selectedItems: {
     readonly collectionIds: ReadonlySet<string>;
     readonly orderIds: ReadonlySet<string>;
@@ -72,15 +74,23 @@ type UnifiedItemMoveFormProps = {
 
 export default function UnifiedItemMoveForm({
   renderTrigger,
+  open,
+  onOpenChange,
   intent = "move",
   ...props
 }: UnifiedItemMoveFormProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const actualOpen = open ?? internalOpen;
+
+  const setOpen = (nextOpen: boolean): void => {
+    if (open === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={renderTrigger} />
-      {open ? (
+    <Dialog open={actualOpen} onOpenChange={setOpen}>
+      {renderTrigger ? <DialogTrigger render={renderTrigger} /> : null}
+      {actualOpen ? (
         <UnifiedItemMoveFormContent {...props} intent={intent} close={() => setOpen(false)} />
       ) : null}
     </Dialog>
@@ -95,7 +105,7 @@ function UnifiedItemMoveFormContent({
   currency,
   intent = "move",
   close,
-}: Omit<UnifiedItemMoveFormProps, "renderTrigger"> & {
+}: Omit<UnifiedItemMoveFormProps, "renderTrigger" | "open" | "onOpenChange"> & {
   readonly close: () => void;
 }) {
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");

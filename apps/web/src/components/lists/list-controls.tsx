@@ -41,6 +41,8 @@ export function ListControls({
   readonly children: ReactNode;
 }): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <ItemControls
@@ -68,42 +70,49 @@ export function ListControls({
         />
         <DropdownMenuContent align="end">
           <DropdownMenuGroup>
-            <ListFormDialog
-              triggerNativeButton={false}
-              triggerRole="menuitem"
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false}>
-                  <HugeiconsIcon icon={Edit03Icon} />
-                  Edit
-                </DropdownMenuItem>
-              }
-              title="Edit List"
-              description="Change this List's title or description."
-              initialTitle={list.title}
-              initialDescription={list.description}
-              submitLabel="Save"
-              pendingLabel="Saving..."
-              onSubmit={(input) => onUpdate(list.id, input)}
-            />
+            <DropdownMenuItem
+              onClick={() => {
+                setMenuOpen(false);
+                setEditOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Edit03Icon} />
+              Edit
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <ConfirmDialog
-              triggerNativeButton={false}
-              triggerRole="menuitem"
-              renderTrigger={
-                <DropdownMenuItem closeOnClick={false} variant="destructive">
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  Delete
-                </DropdownMenuItem>
-              }
-              title="Delete List?"
-              description="This removes the List. Its Items, Collection Items, and Orders will not be deleted."
-              onConfirm={() => onDelete(list.id)}
-            />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                setMenuOpen(false);
+                setDeleteOpen(true);
+              }}
+            >
+              <HugeiconsIcon icon={Delete02Icon} />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ListFormDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title="Edit List"
+        description="Change this List's title or description."
+        initialTitle={list.title}
+        initialDescription={list.description}
+        submitLabel="Save"
+        pendingLabel="Saving..."
+        onSubmit={(input) => onUpdate(list.id, input)}
+      />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete List?"
+        description="This removes the List. Its Items, Collection Items, and Orders will not be deleted."
+        onConfirm={() => onDelete(list.id)}
+      />
     </ItemControls>
   );
 }
