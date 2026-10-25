@@ -237,6 +237,22 @@ async function shimmerMovesOver(ms: number) {
   return before.map((position, index) => position !== after[index]);
 }
 
+function expectVisibleSkeletonMasks() {
+  const patterns = document.querySelectorAll(
+    'pattern[id$="-loading-mask-pattern"], pattern[id$="-loading-pattern"]',
+  );
+  expect(patterns).toHaveLength(2);
+  for (const pattern of patterns) {
+    const rect = pattern.querySelector("rect");
+    expect(rect).not.toBeNull();
+    const x = Number(rect?.getAttribute("x"));
+    expect(x).toBeLessThanOrEqual(0);
+    expect(x + Number(rect?.getAttribute("width"))).toBeGreaterThanOrEqual(1);
+    expect(Number(rect?.getAttribute("height"))).toBeGreaterThanOrEqual(1);
+    expect(rect?.getAttribute("fill")).toBe("white");
+  }
+}
+
 describe("chart loading shimmer", () => {
   let chartSize: Mock<() => DOMRect>;
   beforeEach(() => {
@@ -245,6 +261,24 @@ describe("chart loading shimmer", () => {
     );
   });
   afterEach(() => chartSize.mockRestore());
+
+  test("keeps both skeletons visible and still when reduced motion is on at mount", async () => {
+    setPrefersReducedMotion(true);
+    await renderInApp(LoadingCharts);
+    expectVisibleSkeletonMasks();
+    expect(await shimmerMovesOver(500)).toEqual([false, false]);
+    expectVisibleSkeletonMasks();
+  });
+
+  test("keeps both skeletons visible and still when reduced motion turns on live", async () => {
+    await renderInApp(LoadingCharts);
+    await frame(200);
+    setPrefersReducedMotion(true);
+    await frame(16);
+    expectVisibleSkeletonMasks();
+    expect(await shimmerMovesOver(500)).toEqual([false, false]);
+    expectVisibleSkeletonMasks();
+  });
 
   test("sweeps across both charts when motion is on", async () => {
     await renderInApp(LoadingCharts);

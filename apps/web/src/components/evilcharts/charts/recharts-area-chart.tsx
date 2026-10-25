@@ -946,7 +946,9 @@ const LoadingPattern = ({
         x="0"
         y="0"
       >
-        {shouldReduceMotion ? null : (
+        {shouldReduceMotion ? (
+          <rect x={startX} width={patternWidth} height="1" fill="white" />
+        ) : (
           <motion.rect
             y="0"
             width="1"
