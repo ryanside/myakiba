@@ -603,7 +603,8 @@ describe("best-effort cooldown failures", () => {
       body: { status: "idle", cooldownExpiresAt: null, saved: "refreshed" },
     });
     expect(cooldownCalls).toEqual(["get", "ttl", "get", "ttl"]);
-    expect((await itemRows()).item?.title).toBe(RETITLED);
+    const rows = await itemRows();
+    expect(rows.item?.title).toBe(RETITLED);
     expect(await cooldownLogged.promise).toMatchObject({
       level: "warn",
       failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),

@@ -566,7 +566,8 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "a resync that fails part way leaves no cooldown and no refresh > a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes"
-      ]
+      ],
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
     },
     {
       "fix": "25fd8793bf4949b0645a15b6f66811e7d93586dc",
@@ -576,7 +577,8 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 33.335 percent rounds as Postgres after import",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 0.0000001 percent rounds as Postgres after import"
-      ]
+      ],
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
     },
     {
       "fix": "95e0582eb92797fdfcdce8d1ce734286a8b1d48b",
@@ -729,7 +731,8 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 1.005 percent rounds as Postgres after import",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a stored 1.00 share changes when the page shows 1.005 percent"
-      ]
+      ],
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
     },
     {
       "fix": "147ab01837422f1bda92441994791a6ef242cfc0",
@@ -1227,7 +1230,8 @@
       "fixed": [
         "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
         "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
-      ]
+      ],
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
     },
     {
       "fix": "f75b692b5f6069590b333da9cd93718a14840a7d",
@@ -1420,6 +1424,51 @@
       "test": "apps/web/src/hooks/sync-submit-failure.test.tsx",
       "fixed": [
         "a sync whose answer breaks its success handling shows the safe text, never the defect's message"
+      ]
+    },
+    {
+      "fix": "8b75fff1bc69442851f30a3a1d549cee37d0c0bf",
+      "testAt": "a835ad684a0a86a9c3d4c0f5797fd8892ab0d120",
+      "bug": "worker boot failures were logged and flushed twice through the fatal handler",
+      "test": "apps/worker/boot-failure.test.ts",
+      "fixed": ["a worker boot failure logs one boot error, flushes once and exits 1"]
+    },
+    {
+      "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",
+      "testAt": "1fe79c998962b8848b719ff1d6a72c475afbb75b",
+      "bug": "fail-open job status polls queued Redis reads while disconnected and logged cache outages at error",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "an unanswered status cache read uses the DB row and logs JobStatusCacheUnavailable",
+        "job status skips Redis while wait and warns with the unchanged DB fallback",
+        "job status skips Redis while connecting and warns with the unchanged DB fallback",
+        "job status skips Redis while connect and warns with the unchanged DB fallback",
+        "job status skips Redis while reconnecting and warns with the unchanged DB fallback",
+        "job status skips Redis while close and warns with the unchanged DB fallback",
+        "job status skips Redis while end and warns with the unchanged DB fallback"
+      ]
+    },
+    {
+      "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",
+      "testAt": "1fe79c998962b8848b719ff1d6a72c475afbb75b",
+      "bug": "fail-open cooldown status reads and writes queued disconnected Redis commands and logged outages at error",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "best-effort cooldown failures > status skips a disconnected Redis cache and warns while reporting idle",
+        "best-effort cooldown failures > Redis disconnected after the cooldown guard commits the refresh without queueing a write",
+        "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
+        "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
+      ]
+    },
+    {
+      "fix": "116c4b148e4d9e3af119ba791f2e5b2356d6e265",
+      "testAt": "f109598caf2f33559aba72430640b5c61514f993",
+      "bug": "malformed retained order and CSV payloads were read for Order locks before validation and retry returned 500",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "a malformed retained order payload refuses retry before reading Order lock fields",
+        "a malformed retained order-item payload refuses retry before reading Order lock fields",
+        "a malformed retained csv payload refuses retry before reading Order lock fields"
       ]
     }
   ],
