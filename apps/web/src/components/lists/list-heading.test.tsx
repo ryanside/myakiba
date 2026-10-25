@@ -38,3 +38,10 @@ test("a short single-line description needs no expansion toggle", async () => {
   });
   expect(screen.queryByRole("button")).toBeNull();
 });
+
+test("a lone carriage return needs no expansion toggle", async () => {
+  await act(async () => {
+    render(<ListHeading title="Shopping" description={"Buy first\rBuy later"} count="2 items" />);
+  });
+  expect(screen.queryByRole("button", { name: "more" })).toBeNull();
+});

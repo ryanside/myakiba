@@ -37,7 +37,7 @@ export function ListHeading({
   }, [expanded]);
 
   const toggle =
-    truncated || expanded || /[\r\n]/.test(description) ? (
+    truncated || expanded || /\n/.test(description) ? (
       <button
         type="button"
         aria-expanded={expanded}
