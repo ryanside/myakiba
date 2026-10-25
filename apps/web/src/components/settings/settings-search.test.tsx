@@ -5,6 +5,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Link,
   RouterProvider,
 } from "@tanstack/react-router";
 import * as z from "zod";
@@ -24,7 +25,9 @@ function openSearch(query: string) {
         <>
           <SettingsSearchField query={q} />
           <nav>
-            <a href="/settings?section=preferences">Preferences</a>
+            <Link to="/settings" search={{ section: "preferences" }}>
+              Preferences
+            </Link>
           </nav>
           <SettingsSearchResults query={q} />
         </>
@@ -110,4 +113,58 @@ test("a result for a setting with no row of its own opens its section, with no d
   const result = await screen.findByRole("link", { name: /^Export/ });
 
   expect(result.getAttribute("href")).toBe("/settings?section=data-transfer");
+});
+
+test("opening a section before the first search settles cancels the pending text", async () => {
+  const router = openSearch("");
+  const field = await typeQuickly("theme");
+  fireEvent.click(screen.getByRole("link", { name: "Preferences" }));
+  await waitPastDebounce();
+
+  expect(router.state.location.search).toEqual({ section: "preferences" });
+  expect(field.value).toBe("");
+});
+
+test("a setting link cancels pending text even when it opens the current section", async () => {
+  const router = openSearch("");
+  await screen.findByRole("searchbox", { name: "Search settings" });
+  await act(() => router.navigate({ to: "/settings", search: { section: "appearance" } }));
+  const field = await typeQuickly("theme");
+  await act(() =>
+    router.navigate({
+      to: "/settings",
+      search: { section: "appearance" },
+      hash: "setting-theme",
+    }),
+  );
+  await waitPastDebounce();
+
+  expect(router.state.location.search).toEqual({ section: "appearance" });
+  expect(router.state.location.hash).toBe("setting-theme");
+  expect(field.value).toBe("");
+});
+
+test("typing keeps the draft when its own debounced search reaches the URL", async () => {
+  const router = openSearch("");
+  const field = await typeQuickly("theme");
+  await waitPastDebounce();
+  expect(router.state.location.search).toEqual({ q: "theme" });
+  expect(field.value).toBe("theme");
+
+  fireEvent.change(field, { target: { value: "theme dark" } });
+  await waitPastDebounce();
+  expect(router.state.location.search).toEqual({ q: "theme dark" });
+  expect(field.value).toBe("theme dark");
+});
+
+test("opening the same section again cancels pending search text", async () => {
+  const router = openSearch("");
+  await screen.findByRole("searchbox", { name: "Search settings" });
+  await act(() => router.navigate({ to: "/settings", search: { section: "preferences" } }));
+  const field = await typeQuickly("theme");
+  fireEvent.click(screen.getByRole("link", { name: "Preferences" }));
+  await waitPastDebounce();
+
+  expect(router.state.location.search).toEqual({ section: "preferences" });
+  expect(field.value).toBe("");
 });

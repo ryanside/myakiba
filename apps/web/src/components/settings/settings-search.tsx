@@ -1,6 +1,6 @@
 import { ArrowRight01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -47,13 +47,18 @@ type SearchDraft = { readonly text: string; readonly typed: boolean };
 export function SettingsSearchField({ query }: { readonly query: string }) {
   const navigate = useNavigate({ from: "/settings" });
   const [draft, setDraft] = useState<SearchDraft>({ text: query, typed: false });
-  const [seenQuery, setSeenQuery] = useState(query);
+  const location = useLocation();
+  const [seenNavigation, setSeenNavigation] = useState({ location, query });
   const settled = useDebouncedValue(draft.text, SEARCH_DEBOUNCE_MS);
 
-  // A query this field did not write, such as Back or a nav link, replaces the text.
-  if (query !== seenQuery) {
-    setSeenQuery(query);
-    if (query !== queryOf(settled)) setDraft({ text: query, typed: false });
+  // A section link can leave the query unchanged while typing is still pending.
+  if (location !== seenNavigation.location || query !== seenNavigation.query) {
+    setSeenNavigation({ location, query });
+    const queryChanged = query !== seenNavigation.query;
+    // The router can publish the next location before this route's query updates.
+    if (queryChanged ? query !== queryOf(settled) : (location.search.q ?? "") === query) {
+      setDraft({ text: query, typed: false });
+    }
   }
 
   useEffect(() => {
