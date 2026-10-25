@@ -48,12 +48,12 @@ export function SettingsSearchField({ query }: { readonly query: string }) {
   const navigate = useNavigate({ from: "/settings" });
   const [draft, setDraft] = useState<SearchDraft>({ text: query, typed: false });
   const location = useLocation();
-  const [seenNavigation, setSeenNavigation] = useState({ location, query });
+  const [seenNavigation, setSeenNavigation] = useState({ href: location.href, query });
   const settled = useDebouncedValue(draft.text, SEARCH_DEBOUNCE_MS);
 
   // A section link can leave the query unchanged while typing is still pending.
-  if (location !== seenNavigation.location || query !== seenNavigation.query) {
-    setSeenNavigation({ location, query });
+  if (location.href !== seenNavigation.href || query !== seenNavigation.query) {
+    setSeenNavigation({ href: location.href, query });
     const queryChanged = query !== seenNavigation.query;
     // The router can publish the next location before this route's query updates.
     if (queryChanged ? query !== queryOf(settled) : (location.search.q ?? "") === query) {

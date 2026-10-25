@@ -157,14 +157,26 @@ test("typing keeps the draft when its own debounced search reaches the URL", asy
   expect(field.value).toBe("theme dark");
 });
 
-test("opening the same section again cancels pending search text", async () => {
+test("invalidating the current URL preserves a pending first search", async () => {
   const router = openSearch("");
-  await screen.findByRole("searchbox", { name: "Search settings" });
-  await act(() => router.navigate({ to: "/settings", search: { section: "preferences" } }));
   const field = await typeQuickly("theme");
-  fireEvent.click(screen.getByRole("link", { name: "Preferences" }));
+
+  await act(() => router.invalidate());
+  expect(field.value).toBe("theme");
   await waitPastDebounce();
 
-  expect(router.state.location.search).toEqual({ section: "preferences" });
-  expect(field.value).toBe("");
+  expect(router.state.location.search).toEqual({ q: "theme" });
+  expect(field.value).toBe("theme");
+});
+
+test("invalidating the current URL preserves edits to an existing search", async () => {
+  const router = openSearch("theme");
+  const field = await typeQuickly("theme dark");
+
+  await act(() => router.invalidate());
+  expect(field.value).toBe("theme dark");
+  await waitPastDebounce();
+
+  expect(router.state.location.search).toEqual({ q: "theme dark" });
+  expect(field.value).toBe("theme dark");
 });
