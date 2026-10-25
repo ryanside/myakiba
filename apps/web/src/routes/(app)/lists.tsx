@@ -53,8 +53,8 @@ const FOLDER_GRID_CLASS_NAME =
   "grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-8 @3xl:gap-y-6";
 
 const FOLDER_DROP = {
-  before: "inset-y-2 -left-1.5 w-0.5",
-  after: "inset-y-2 -right-1.5 w-0.5",
+  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[17px]",
+  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[17px]",
 };
 
 function SortableList({

@@ -39,7 +39,8 @@ const TILE_FOCUS_CLASS_NAME =
 
 type DropGeometry = { readonly before: string; readonly after: string };
 
-const CARD_DROP = { before: "inset-y-2 -left-1.5 w-0.5", after: "inset-y-2 -right-1.5 w-0.5" };
+// A 2 px line centred in the gap, so its offset is half the gap plus 1 px.
+const CARD_DROP = { before: "inset-y-2 -left-[7px] w-0.5", after: "inset-y-2 -right-[7px] w-0.5" };
 const ROW_DROP = {
   before: "inset-x-2 top-0 h-0.5 -translate-y-1/2",
   after: "inset-x-2 bottom-0 h-0.5 translate-y-1/2",
