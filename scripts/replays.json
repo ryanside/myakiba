@@ -698,6 +698,12 @@
       "bug": "short multiline List descriptions hid saved line breaks without offering expansion",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
       "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+    },
+    {
+      "fix": "df1c043f",
+      "bug": "a lone carriage return offered description expansion even though pre-wrap renders it as a space",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a lone carriage return needs no expansion toggle"]
     }
   ],
   "lint": [
