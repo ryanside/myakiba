@@ -756,6 +756,12 @@
       "fixed": [
         "a link to a section that no longer exists, or never did, opens Settings without one"
       ]
+    },
+    {
+      "fix": "5e31bc97",
+      "bug": "opening the default Settings section from the phone's list left focus on the hidden nav link",
+      "test": "apps/web/src/components/settings/settings-content.test.tsx",
+      "fixed": ["opening the default section from the phone's list moves focus to its heading"]
     }
   ],
   "lint": [
