@@ -158,6 +158,9 @@ async function renderTiles(ui: ReactNode, viewMode: MediaViewMode) {
   );
 }
 
+// JPY formats in ja-JP, whose yen sign is "¥" in some ICU builds and the full-width "￥" in others.
+const PRICE = /^[¥￥]120$/;
+
 function expectTitleLink(title: string, href: string, viewMode: MediaViewMode) {
   const titleLink = screen
     .getAllByRole<HTMLAnchorElement>("link", { name: title })
@@ -176,7 +179,7 @@ describe.each(["grid", "list"] as const)("%s tile links", (viewMode) => {
   ])("Wishlist $kind metadata is selectable outside image and title links", async ({ custom }) => {
     await renderTiles(wishlist(viewMode, custom), viewMode);
     expectTitleLink(item.title, custom ? "/item/custom/item-1" : "/item/123", viewMode);
-    for (const text of ["Prepainted", "Figures", "¥120", "01/02/2026"]) {
+    for (const text of ["Prepainted", "Figures", PRICE, "01/02/2026"]) {
       for (const metadata of screen.getAllByText(text)) expect(metadata.closest("a")).toBeNull();
     }
     expect(
@@ -187,7 +190,7 @@ describe.each(["grid", "list"] as const)("%s tile links", (viewMode) => {
   test("Item Database metadata is selectable outside image and title links", async () => {
     await renderTiles(<ItemDatabase />, viewMode);
     expectTitleLink(item.title, "/item/123", viewMode);
-    for (const text of ["Prepainted", "Figures", "¥120", "01/02/2026"]) {
+    for (const text of ["Prepainted", "Figures", PRICE, "01/02/2026"]) {
       for (const metadata of screen.getAllByText(text)) expect(metadata.closest("a")).toBeNull();
     }
   });
