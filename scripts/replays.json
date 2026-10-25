@@ -778,6 +778,12 @@
         "a setting link cancels pending text even when it opens the current section",
         "opening the same section again cancels pending search text"
       ]
+    },
+    {
+      "fix": "87b56cb4",
+      "bug": "a devices hash target present before loading never received focus when its list mounted",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": ["a link to devices focuses the list when the pending devices finish loading"]
     }
   ],
   "lint": [
