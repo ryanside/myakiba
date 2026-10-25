@@ -184,6 +184,19 @@ test("tabbing out of the order chart returns the highlight to the current month"
   expect(monthLink(container, "October").getAttribute("tabindex")).toBe("0");
 });
 
+test("under the app's Reduce motion switch the order bars appear at full height", async () => {
+  localStorage.setItem("appearance:reduceMotion", "true");
+  try {
+    const { container, rerender } = render(<OrdersBarChart data={[]} isLoading />);
+    await frame(32);
+    rerender(<OrdersBarChart data={data} isLoading={false} />);
+    await frame(32);
+    expect(Number(bar(container, 0).getAttribute("height"))).toBeCloseTo(160, 0);
+  } finally {
+    localStorage.removeItem("appearance:reduceMotion");
+  }
+});
+
 test("with reduced motion the order reference line jumps to the highlighted month", async () => {
   setPrefersReducedMotion(true);
   try {

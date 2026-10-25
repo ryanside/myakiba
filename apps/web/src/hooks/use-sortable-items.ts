@@ -10,6 +10,7 @@ import type {
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { AnimationEvent } from "react";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import { toast } from "@/components/ui/toast";
 
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
@@ -77,7 +78,9 @@ export function useSortableItems<T extends SortableRecord>({
   readonly onMove: (intent: PositionOrderInput) => Promise<void>;
   readonly onClearSelection: () => void;
 }) {
-  const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
+  const reducedMotion = useMotionPreference().reduce;
+  const [entranceAnimationActive, setEntranceAnimationActive] = useState(!reducedMotion);
+  if (reducedMotion && entranceAnimationActive) setEntranceAnimationActive(false);
   const [dndEpoch, setDndEpoch] = useState(0);
   const [activeId, setActiveId] = useState<string>();
   const [overId, setOverId] = useState<string>();

@@ -1,7 +1,9 @@
 import { ThemeProvider } from "next-themes";
+import { useLayoutEffect } from "react";
 import { Toaster } from "@/components/ui/toast";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import "../index.css";
 import type { SessionCheck } from "@/lib/session";
 
@@ -14,6 +16,14 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
+  const { reduce } = useMotionPreference();
+
+  // A layout effect, so the attribute every reduced-motion CSS rule and motion-reduce: utility keys
+  // on is set before first paint.
+  useLayoutEffect(() => {
+    document.documentElement.toggleAttribute("data-reduce-motion", reduce);
+  }, [reduce]);
+
   return (
     <>
       <HeadContent />
