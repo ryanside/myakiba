@@ -802,6 +802,16 @@
       "bug": "recovering a targeted devices list refocused its remounted element and stole focus from another control",
       "test": "apps/web/src/components/settings/devices.test.tsx",
       "fixed": ["refreshing targeted devices through unavailable does not steal focus"]
+    },
+    {
+      "fix": "07b6bf0c",
+      "bug": "a targeted sign-out-others row lost its focus memory when a devices error or stale sign-in unmounted it",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": [
+        "refreshing targeted sign out others through needs-fresh-sign-in does not steal focus",
+        "refreshing targeted sign out others through unavailable does not steal focus",
+        "returning to an already focused devices history entry preserves focus"
+      ]
     }
   ],
   "lint": [
