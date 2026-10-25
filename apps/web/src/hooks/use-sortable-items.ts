@@ -4,12 +4,50 @@ import type {
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
+  KeyboardCoordinateGetter,
   ScreenReaderInstructions,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
+
+const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
+
+// The drag overlay is a small label, so the collision rect is the label, not the tile.
+// sortableKeyboardCoordinates expects a tile-sized rect and jumps to the wrong tile in a grid,
+// so move the label's center to the nearest tile center past the label's edge instead. The
+// edge, not the center, rules out the tile under the label, whose center can sit a subpixel
+// to either side of the label's.
+const centerKeyboardCoordinates: KeyboardCoordinateGetter = (
+  event,
+  { context: { collisionRect, droppableRects, droppableContainers } },
+) => {
+  if (!ARROW_KEYS.has(event.code)) return;
+  event.preventDefault();
+  if (!collisionRect) return;
+
+  const fromX = collisionRect.left + collisionRect.width / 2;
+  const fromY = collisionRect.top + collisionRect.height / 2;
+  let closest: { readonly x: number; readonly y: number; readonly distance: number } | undefined;
+  for (const container of droppableContainers.getEnabled()) {
+    const rect = droppableRects.get(container.id);
+    if (!rect) continue;
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const ahead =
+      (event.code === "ArrowLeft" && x < collisionRect.left) ||
+      (event.code === "ArrowRight" && x > collisionRect.right) ||
+      (event.code === "ArrowUp" && y < collisionRect.top) ||
+      (event.code === "ArrowDown" && y > collisionRect.bottom);
+    const distance = Math.hypot(x - fromX, y - fromY);
+    if (ahead && (!closest || distance < closest.distance)) closest = { x, y, distance };
+  }
+  if (!closest) return;
+  return {
+    x: closest.x - collisionRect.width / 2,
+    y: closest.y - collisionRect.height / 2,
+  };
+};
 
 interface SortableRecord {
   readonly id: string;
@@ -49,7 +87,7 @@ export function useSortableItems<T extends SortableRecord>({
   const loadingNextPage = useRef(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: centerKeyboardCoordinates }),
   );
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
   const titleById = useMemo(() => new Map(items.map((item) => [item.id, item.title])), [items]);
