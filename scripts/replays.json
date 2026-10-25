@@ -692,6 +692,12 @@
         "Wishlist available controls > grid controls only pin for an active operation or list view",
         "Wishlist available controls > gallery controls only pin for an active operation or list view"
       ]
+    },
+    {
+      "fix": "c05a2273",
+      "bug": "short multiline List descriptions hid saved line breaks without offering expansion",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
     }
   ],
   "lint": [
