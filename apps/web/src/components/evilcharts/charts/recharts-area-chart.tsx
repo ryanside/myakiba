@@ -35,7 +35,8 @@ import { ChartLegend, ChartLegendContent } from "@/components/evilcharts/ui/rech
 import type { ChartLegendVariant } from "@/components/evilcharts/ui/recharts-legend";
 import { ChartDot } from "@/components/evilcharts/ui/recharts-dot";
 import type { DotVariant } from "@/components/evilcharts/ui/recharts-dot";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import * as z from "zod";
 
 const STROKE_WIDTH = 0.8; // default series stroke — <Area strokeWidth> overrides it
@@ -270,7 +271,7 @@ function Area({
     selectDataKey,
   } = useAreaChart();
   const id = useId();
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useMotionPreference().reduce;
 
   if (isLoading) return null;
 
@@ -918,6 +919,7 @@ const LoadingPattern = ({
   chartId: string;
   onShimmerExit: () => void;
 }) => {
+  const shouldReduceMotion = useMotionPreference().reduce;
   const gradientStops = generateEasedGradientStops();
 
   // 1 (left buffer) + 1 (visible) + 1 (right buffer)
@@ -944,32 +946,34 @@ const LoadingPattern = ({
         x="0"
         y="0"
       >
-        <motion.rect
-          y="0"
-          width="1"
-          height="1"
-          fill={`url(#${chartId}-loading-gradient)`}
-          initial={{ x: startX }}
-          animate={{ x: endX }}
-          transition={{
-            duration: LOADING_ANIMATION_DURATION / 1000,
-            ease: "linear",
-            repeat: Infinity,
-            repeatType: "loop",
-          }}
-          onUpdate={(latest) => {
-            const latestX = z.number().safeParse(latest.x);
-            const xValue = latestX.success ? latestX.data : startX;
-            const lastX = lastXRef.current;
+        {shouldReduceMotion ? null : (
+          <motion.rect
+            y="0"
+            width="1"
+            height="1"
+            fill={`url(#${chartId}-loading-gradient)`}
+            initial={{ x: startX }}
+            animate={{ x: endX }}
+            transition={{
+              duration: LOADING_ANIMATION_DURATION / 1000,
+              ease: "linear",
+              repeat: Infinity,
+              repeatType: "loop",
+            }}
+            onUpdate={(latest) => {
+              const latestX = z.number().safeParse(latest.x);
+              const xValue = latestX.success ? latestX.data : startX;
+              const lastX = lastXRef.current;
 
-            // Fire once per loop, when the shimmer fully exits the visible area
-            if (xValue >= 1 && lastX < 1) {
-              onShimmerExit();
-            }
+              // Fire once per loop, when the shimmer fully exits the visible area
+              if (xValue >= 1 && lastX < 1) {
+                onShimmerExit();
+              }
 
-            lastXRef.current = xValue;
-          }}
-        />
+              lastXRef.current = xValue;
+            }}
+          />
+        )}
       </pattern>
       <mask id={`${chartId}-loading-mask`} maskUnits="userSpaceOnUse">
         <rect width="100%" height="100%" fill={`url(#${chartId}-loading-pattern)`} />

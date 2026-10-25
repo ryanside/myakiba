@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+import type { Mock } from "bun:test";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -46,6 +47,8 @@ await mock.module("@/hooks/use-user-preferences", () => ({
 const { Route: AppRoot } = await import("@/routes/__root");
 const { SectionTable } = await import("@/components/analytics/section-table");
 const { EvilBrush } = await import("@/components/evilcharts/ui/recharts-brush");
+const { EvilBarChart } = await import("@/components/evilcharts/charts/recharts-bar-chart");
+const { EvilAreaChart } = await import("@/components/evilcharts/charts/recharts-area-chart");
 const { animate, motionValue } = await import("motion/react");
 
 let prefersReducedMotion = false;
@@ -198,6 +201,73 @@ describe("chart brush", () => {
     localStorage.setItem("appearance:reduceMotion", "true");
     await renderInApp(ControlledBrush);
     expect(await hiddenLeftWidthAfterZoom(32)).toBe(50);
+  });
+});
+
+const loadingConfig = { value: { label: "Value" } };
+
+function LoadingCharts() {
+  return (
+    <div data-testid="page">
+      <EvilBarChart data={[]} config={loadingConfig} xDataKey="bucket" isLoading>
+        <EvilBarChart.Bar dataKey="value" />
+      </EvilBarChart>
+      <EvilAreaChart data={[]} config={loadingConfig} xDataKey="bucket" isLoading>
+        <EvilAreaChart.Area dataKey="value" />
+      </EvilAreaChart>
+    </div>
+  );
+}
+
+function shimmerPositions() {
+  const patterns = document.querySelectorAll(
+    'pattern[id$="-loading-mask-pattern"], pattern[id$="-loading-pattern"]',
+  );
+  expect(patterns).toHaveLength(2);
+  return [...patterns].map((pattern) => {
+    const rect = pattern.querySelector<SVGElement>("rect");
+    return rect?.getAttribute("transform") ?? rect?.style.transform ?? "no shimmer";
+  });
+}
+
+async function shimmerMovesOver(ms: number) {
+  const before = shimmerPositions();
+  await frame(ms);
+  const after = shimmerPositions();
+  return before.map((position, index) => position !== after[index]);
+}
+
+describe("chart loading shimmer", () => {
+  let chartSize: Mock<() => DOMRect>;
+  beforeEach(() => {
+    chartSize = spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(0, 0, 700, 200),
+    );
+  });
+  afterEach(() => chartSize.mockRestore());
+
+  test("sweeps across both charts when motion is on", async () => {
+    await renderInApp(LoadingCharts);
+    expect(await shimmerMovesOver(200)).toEqual([true, true]);
+  });
+
+  test("stops when the device's reduced-motion setting turns on after the charts mount", async () => {
+    await renderInApp(LoadingCharts);
+    await frame(200);
+    setPrefersReducedMotion(true);
+    await frame(16);
+    expect(await shimmerMovesOver(500)).toEqual([false, false]);
+  });
+
+  test("stops when the app's Reduce motion switch turns on after the charts mount", async () => {
+    await renderInApp(LoadingCharts);
+    await frame(200);
+    act(() => {
+      localStorage.setItem("appearance:reduceMotion", "true");
+      window.dispatchEvent(new StorageEvent("storage", { key: "appearance:reduceMotion" }));
+    });
+    await frame(16);
+    expect(await shimmerMovesOver(500)).toEqual([false, false]);
   });
 });
 
