@@ -1,117 +1,153 @@
+import { Alert02Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
-import { authClient } from "@/lib/auth-client";
-import { toast } from "@/components/ui/toast";
-import { useForm } from "@tanstack/react-form";
-import { Button } from "@/components/ui/button";
-import { FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { useRouter } from "@tanstack/react-router";
-import * as z from "zod";
+import { useId, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
+import { useRead } from "@/data/client";
+import { settings } from "@/data/resources/settings";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { authClient, callAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
 import { SettingsRow } from "./settings-row";
 
+type UsernameCheck =
+  | { readonly kind: "unchanged" }
+  | { readonly kind: "invalid"; readonly message: string }
+  | { readonly kind: "checking" }
+  | { readonly kind: "available" }
+  | { readonly kind: "taken" }
+  | { readonly kind: "failed"; readonly message: string };
+
+// The server lowercases usernames and allows 3 to 30 of these characters.
+function usernameProblem(username: string): string | null {
+  if (username.length < 3) return "Use at least 3 characters";
+  if (username.length > 30) return "Use 30 characters or fewer";
+  if (!/^[a-z0-9_.]+$/.test(username)) return "Use only letters, numbers, dots and underscores";
+  return null;
+}
+
+function useUsernameCheck(draft: string, saved: string): UsernameCheck {
+  const settled = useDebouncedValue(draft, 400);
+  const problem = usernameProblem(draft);
+  const isChanged = draft !== saved;
+  const availability = useRead(settings.usernameAvailability, draft, {
+    enabled: isChanged && problem === null && settled === draft,
+  });
+
+  if (!isChanged) return { kind: "unchanged" };
+  if (problem) return { kind: "invalid", message: problem };
+  if (settled !== draft || availability.isPending) return { kind: "checking" };
+  if (availability.isError) return { kind: "failed", message: availability.error.message };
+  return availability.data ? { kind: "available" } : { kind: "taken" };
+}
+
+const CHECK_TEXT = {
+  checking: { icon: Loading03Icon, text: "Checking…", tone: "text-muted-foreground" },
+  available: { icon: Tick02Icon, text: "Available", tone: "text-success-foreground" },
+  taken: { icon: Alert02Icon, text: "Taken", tone: "text-destructive" },
+} as const;
+
+function CheckMessage({ check }: { readonly check: UsernameCheck }) {
+  if (check.kind === "unchanged") return null;
+  if (check.kind === "invalid" || check.kind === "failed") {
+    return <span className="text-muted-foreground">{check.message}</span>;
+  }
+  const { icon, text, tone } = CHECK_TEXT[check.kind];
+  return (
+    <span className={cn("inline-flex items-center gap-1", tone)}>
+      <HugeiconsIcon
+        icon={icon}
+        className={cn(
+          "size-3.5",
+          check.kind === "checking" && "animate-spin motion-reduce:animate-none",
+        )}
+        strokeWidth={2}
+        aria-hidden="true"
+      />
+      {text}
+    </span>
+  );
+}
+
 export function Profile({ user }: { user: User }) {
   const router = useRouter();
-  const form = useForm({
-    defaultValues: {
-      username: user.username || "",
-    },
-    onSubmit: async ({ value }) => {
-      const { error } = await authClient.updateUser({
-        username: value.username,
-      });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
+  const messageId = useId();
+  const [saved, setSaved] = useState(user.username ?? "");
+  const [draft, setDraft] = useState(saved);
+  const [isSaving, setIsSaving] = useState(false);
+  const check = useUsernameCheck(draft, saved);
 
-      if (error) {
-        toast.add({ type: "error", title: error.message || "Failed to update profile" });
-        return;
-      }
+  const save = async () => {
+    if (check.kind !== "available") {
+      inputRef.current?.focus();
+      return;
+    }
+    setIsSaving(true);
+    const { error } = await callAuth(() => authClient.updateUser({ username: draft }));
+    setIsSaving(false);
+    if (error) {
+      toast.add({ type: "error", title: error.message || "Failed to update profile" });
+      return;
+    }
+    setSaved(draft);
+    await router.invalidate();
+    toast.add({ type: "success", title: "Profile updated successfully" });
+  };
 
-      form.reset(value);
-      await router.invalidate();
-      toast.add({ type: "success", title: "Profile updated successfully" });
-    },
-    validators: {
-      onSubmit: z.object({
-        username: z
-          .string()
-          .min(3, "Username must be at least 3 characters")
-          .max(30, "Username must be less than 30 characters"),
-      }),
-    },
-  });
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        form.handleSubmit();
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        return save();
       }}
     >
-      <SettingsGroup>
-        <form.Field
-          name="username"
-          asyncDebounceMs={1000}
-          validators={{
-            onChangeAsync: async ({ value }) => {
-              if (value.length < 3 || value.length > 30) return;
-              if (value === user.username) return;
-              const { data, error } = await authClient.isUsernameAvailable({
-                username: value,
-              });
-              if (data?.available === false) return "Username is already taken";
-              if (error) return error.message;
-            },
-            onBlur: z
-              .string()
-              .min(3, "Username must be at least 3 characters")
-              .max(30, "Username must be less than 30 characters"),
-          }}
+      <SettingsGroup title="Name">
+        <SettingsRow
+          setting="username"
+          htmlFor={inputId}
+          status={
+            <span id={messageId} aria-live="polite" className="text-xs">
+              <CheckMessage check={check} />
+            </span>
+          }
         >
-          {(field) => (
-            <SettingsRow
-              title="Username"
-              description="Your display name across myakiba."
-              htmlFor={field.name}
-            >
-              <Input
-                id={field.name}
-                name={field.name}
-                value={field.state.value}
-                type="text"
-                onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Enter your username"
-                className="sm:w-64"
-              />
-              <FieldError errors={field.state.meta.errors} />
-            </SettingsRow>
-          )}
-        </form.Field>
-
+          <Input
+            ref={inputRef}
+            id={inputId}
+            name="username"
+            value={draft}
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            maxLength={40}
+            aria-describedby={messageId}
+            aria-invalid={check.kind === "invalid" || check.kind === "taken" || undefined}
+            onChange={(event) => setDraft(event.target.value.toLowerCase())}
+            className="sm:w-64"
+          />
+        </SettingsRow>
         <SettingsGroupFooter>
-          <form.Subscribe>
-            {(state) => (
-              <Button
-                type="submit"
-                disabled={!state.isDirty || !state.canSubmit || state.isSubmitting}
-              >
-                {state.isSubmitting ? (
-                  <>
-                    <HugeiconsIcon
-                      icon={Loading03Icon}
-                      data-icon="inline-start"
-                      className="animate-spin motion-reduce:animate-none"
-                    />
-                    Saving…
-                  </>
-                ) : (
-                  "Save changes"
-                )}
-              </Button>
+          <Button type="submit" disabled={check.kind === "unchanged" || isSaving}>
+            {isSaving ? (
+              <>
+                <HugeiconsIcon
+                  icon={Loading03Icon}
+                  data-icon="inline-start"
+                  className="animate-spin motion-reduce:animate-none"
+                />
+                Saving…
+              </>
+            ) : (
+              "Save changes"
             )}
-          </form.Subscribe>
+          </Button>
         </SettingsGroupFooter>
       </SettingsGroup>
     </form>

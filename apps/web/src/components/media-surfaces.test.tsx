@@ -29,6 +29,7 @@ import { ExpenseOrderRow } from "./expenses/order-row";
 import { ShopTableRowExpansion } from "./expenses/shop-table-row-expansion";
 import { ItemDatabase } from "./item-database/item-database";
 import { ListMemberGrid } from "./lists/list-member-grid";
+import { Appearance } from "./settings/appearance";
 import { OrdersCardGrid } from "./orders/orders-card-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
 import { DataGrid } from "./reui/data-grid/data-grid";
@@ -632,7 +633,7 @@ function isTranslucent(color: string | undefined): boolean {
   return /\btransparent\b/.test(color) || (alpha !== undefined && Number(alpha) < 1);
 }
 
-const THEMES = { light: themeTokens(":root"), dark: themeTokens(".dark") };
+const THEMES = { light: themeTokens(":root,\n.light"), dark: themeTokens(".dark") };
 
 async function surfaces(screen: (typeof SCREENS)[number]): Promise<Element[]> {
   const { container } = await renderScreen(screen.ui(), screen.storage);
@@ -726,6 +727,24 @@ test.each(SCREENS_WITH_BARS)("$name control bars take no backdrop filter", async
     for (const element of [bar, ...bar.querySelectorAll("*")]) {
       expect([...element.classList].filter((name) => name.includes("backdrop-"))).toEqual([]);
     }
+  }
+});
+
+test("Settings theme cards take a card's hover, apart from their selected ring", async () => {
+  const wishlistGrid = SCREENS.find((screen) => screen.name === "Wishlist grid");
+  if (!wishlistGrid) throw new Error("no Wishlist grid screen");
+  const [card] = await surfaces(wishlistGrid);
+  if (!card) throw new Error("no Wishlist card");
+  const cardHover = hoverClasses(card);
+  cleanup();
+
+  const { container } = await renderScreen(<Appearance />);
+  const themes = [...container.querySelectorAll('[role="radio"]')];
+  expect(themes).toHaveLength(3);
+  for (const theme of themes) {
+    expect(hoverClasses(theme)).toEqual(cardHover);
+    expect(motionClasses(theme)).toEqual([]);
+    expect(theme.classList).toContain("data-checked:ring-2");
   }
 });
 

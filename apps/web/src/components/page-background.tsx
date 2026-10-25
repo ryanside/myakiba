@@ -1,4 +1,5 @@
 import { useMatches } from "@tanstack/react-router";
+import { usePageBackgrounds } from "@/hooks/use-appearance";
 import { getPageBackground } from "@/lib/page-background";
 import "./page-background.css";
 
@@ -11,8 +12,9 @@ export function PageBackground({ preset = "panorama" }: { preset?: BackgroundPre
       return match?.status === "success" ? match.pathname : "";
     },
   });
+  const [showBackgrounds] = usePageBackgrounds();
   const image = getPageBackground(pathname);
-  if (!image) return null;
+  if (!image || !showBackgrounds) return null;
 
   return (
     <div className="page-background" data-preset={preset} aria-hidden="true">

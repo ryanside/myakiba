@@ -12,7 +12,7 @@ const MEDIA_VIEW_MODES = ["grid", "list", "gallery"] as const satisfies readonly
 const DATA_VIEW_MODE = z.enum(DATA_VIEW_MODES);
 const MEDIA_VIEW_MODE = z.enum(MEDIA_VIEW_MODES);
 
-/** Where each page keeps the view it opens in. */
+/** Where each page keeps the view it opens in. Settings writes the same keys the pages read. */
 export const VIEW_PREFERENCES = {
   collection: {
     key: "collection:viewMode",
@@ -58,3 +58,25 @@ export function useViewPreference<M extends string>({
 }) {
   return useLocalStorage(key, fallback, schema);
 }
+
+/** Where each table keeps the columns the user hid, moved, resized or pinned. */
+export const TABLE_LAYOUTS = {
+  collection: {
+    visibility: "collection:columnVisibility",
+    order: "collection:columnOrder:v1",
+    sizing: "collection:columnSizing:v1",
+    pinning: "collection:columnPinning:v1",
+  },
+  orders: {
+    visibility: "orders:columnVisibility",
+    order: "orders:columnOrder:v1",
+    sizing: "orders:columnSizing:v1",
+    pinning: "orders:columnPinning:v1",
+  },
+  orderItems: {
+    visibility: "orderItems:columnVisibility:v1",
+    order: "orderItems:columnOrder:v1",
+    sizing: "orderItems:columnSizing:v1",
+    pinning: "orderItems:columnPinning:v1",
+  },
+} as const;

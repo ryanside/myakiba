@@ -1,10 +1,19 @@
 import { useSyncExternalStore } from "react";
 import * as z from "zod";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { readLocalStorage, useLocalStorage } from "@/hooks/use-local-storage";
 
+const PAGE_BACKGROUNDS_KEY = "appearance:pageBackgrounds";
 const REDUCE_MOTION_KEY = "appearance:reduceMotion";
 const DEVICE_REDUCES_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const flag = z.boolean();
+
+export function usePageBackgrounds() {
+  return useLocalStorage(PAGE_BACKGROUNDS_KEY, true, flag);
+}
+
+export function pageBackgroundsEnabled(): boolean {
+  return readLocalStorage(PAGE_BACKGROUNDS_KEY, true, flag);
+}
 
 function subscribeToDeviceMotion(onStoreChange: () => void): () => void {
   const mediaQuery = window.matchMedia(DEVICE_REDUCES_MOTION_QUERY);

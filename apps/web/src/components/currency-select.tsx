@@ -21,6 +21,7 @@ type CurrencySelectProps = {
   readonly onValueChange: (value: Currency) => void;
   readonly onBlur?: () => void;
   readonly invalid?: boolean;
+  readonly disabled?: boolean;
 };
 
 export function CurrencySelect({
@@ -29,6 +30,7 @@ export function CurrencySelect({
   onValueChange,
   onBlur,
   invalid = false,
+  disabled = false,
 }: CurrencySelectProps) {
   const [open, setOpen] = useState(false);
   const listId = useId();
@@ -43,6 +45,7 @@ export function CurrencySelect({
             aria-controls={listId}
             aria-expanded={open}
             aria-invalid={invalid || undefined}
+            disabled={disabled}
             onBlur={onBlur}
             className="justify-between"
           >

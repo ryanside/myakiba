@@ -31,6 +31,20 @@ function parseStoredValue<T>(item: string | null, initialValue: T, schema?: z.Zo
   }
 }
 
+function notify(key: string) {
+  storageChanges.dispatchEvent(new Event(key));
+}
+
+function writeStoredValue(key: string, serialized: string) {
+  try {
+    globalThis.localStorage.setItem(key, serialized);
+    unpersistedValues.delete(key);
+  } catch {
+    unpersistedValues.set(key, serialized);
+  }
+  notify(key);
+}
+
 function useLocalStorage<T>(
   key: string,
   initialValue: T,
@@ -64,14 +78,7 @@ function useLocalStorage<T>(
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       const previous = parseStoredValue(readStoredValue(key), defaultValue, schema);
-      const serialized = JSON.stringify(functionalUpdate(value, previous));
-      try {
-        globalThis.localStorage.setItem(key, serialized);
-        unpersistedValues.delete(key);
-      } catch {
-        unpersistedValues.set(key, serialized);
-      }
-      storageChanges.dispatchEvent(new Event(key));
+      writeStoredValue(key, JSON.stringify(functionalUpdate(value, previous)));
     },
     [key, defaultValue, schema],
   );
@@ -79,4 +86,52 @@ function useLocalStorage<T>(
   return [storedValue, setValue] as const;
 }
 
-export { useLocalStorage };
+/** Removes stored values so their readers fall back to defaults. Returns a function that restores them. */
+function removeLocalStorage(keys: readonly string[]): () => void {
+  const previous = keys.flatMap((key) => {
+    const value = readStoredValue(key);
+    return value === null ? [] : [[key, value] as const];
+  });
+  for (const key of keys) {
+    unpersistedValues.delete(key);
+    try {
+      globalThis.localStorage.removeItem(key);
+    } catch {
+      // Unavailable storage holds nothing to remove.
+    }
+    notify(key);
+  }
+  return () => {
+    for (const [key, value] of previous) writeStoredValue(key, value);
+  };
+}
+
+/** Whether any of these keys holds a stored value. `keys` must keep its identity across renders. */
+function useHasLocalStorage(keys: readonly string[]): boolean {
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      const onStorageChange = (event: StorageEvent) => {
+        if (event.key === null || keys.includes(event.key)) onStoreChange();
+      };
+      for (const key of keys) storageChanges.addEventListener(key, onStoreChange);
+      globalThis.addEventListener("storage", onStorageChange);
+      return () => {
+        for (const key of keys) storageChanges.removeEventListener(key, onStoreChange);
+        globalThis.removeEventListener("storage", onStorageChange);
+      };
+    },
+    [keys],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => keys.some((key) => readStoredValue(key) !== null),
+    () => false,
+  );
+}
+
+/** Reads a stored value outside React, such as in a route loader. */
+function readLocalStorage<T>(key: string, initialValue: T, schema?: z.ZodType<T>): T {
+  return parseStoredValue(readStoredValue(key), initialValue, schema);
+}
+
+export { readLocalStorage, removeLocalStorage, useHasLocalStorage, useLocalStorage };

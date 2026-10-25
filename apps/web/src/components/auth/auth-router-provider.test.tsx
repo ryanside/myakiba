@@ -78,9 +78,19 @@ globalThis.fetch = Object.assign(
     const url = input instanceof Request ? input.url : String(input);
     if (url.endsWith("/account-type"))
       return Response.json({ hasCredentialAccount: endFailure === "password" });
+    if (new URL(url).pathname.endsWith("/orders")) {
+      return Response.json({
+        items: [],
+        totalCount: 0,
+        totalSpent: 0,
+        activeOrders: 0,
+        unpaidCosts: 0,
+      });
+    }
     if (url.endsWith("/update-user")) {
       const changes = z
         .object({ currency: z.string(), dateFormat: z.string() })
+        .partial()
         .parse(await new Request(input, init).json());
       account = { ...account, user: { ...account.user, ...changes } };
       return Response.json({ status: true });
@@ -609,7 +619,7 @@ test.each([
     await endCurrentSession();
     const messages = {
       password: "Invalid password",
-      expired: "Session expired. Re-authenticate to perform this action.",
+      expired: "Sign in again to delete your account",
       server: "Please try again",
       network: deleteAccount
         ? "Couldn't delete account. Try again."

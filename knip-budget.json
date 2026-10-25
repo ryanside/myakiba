@@ -31,7 +31,6 @@
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSpacer",
     "apps/web/src/components/reui/frame.tsx FrameDescription",
     "apps/web/src/components/reui/frame.tsx FrameFooter",
-    "apps/web/src/components/reui/frame.tsx frameVariants",
     "apps/web/src/components/reui/kanban.tsx KanbanColumnHandle",
     "apps/web/src/components/reui/stepper.tsx StepperDescription",
     "apps/web/src/components/reui/stepper.tsx StepperSeparator",
@@ -159,7 +158,6 @@
     "packages/contracts/src/sync/schema.ts syncTerminalStateSchema"
   ],
   "files": [
-    "apps/web/src/components/mode-toggle.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-column-filter.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-column-visibility.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-table-dnd-rows.tsx",

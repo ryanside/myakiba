@@ -9,6 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -62,25 +63,6 @@ function matchesQuery(label: string, keywords: readonly string[], query: string)
   return queryTerms.every((queryTerm) =>
     haystackTerms.some((haystackTerm) => haystackTerm.startsWith(queryTerm)),
   );
-}
-
-function useDebouncedValue(value: string, delayMs: number): string {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(
-      () => {
-        setDebouncedValue(value);
-      },
-      value.length === 0 ? 0 : delayMs,
-    );
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [delayMs, value]);
-
-  return debouncedValue;
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
