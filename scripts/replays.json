@@ -1,6 +1,15 @@
 {
   "test": [
     {
+      "fix": "667c8154",
+      "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
+      "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
+      "fixed": [
+        "the phone sidebar closes after a link opens another page",
+        "the phone sidebar closes after a link to the current page"
+      ]
+    },
+    {
       "fix": "2d8c17ce",
       "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
