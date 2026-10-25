@@ -643,6 +643,12 @@
       "fixed": [
         "moving a grid tile with the keyboard > ArrowLeft moves the second tile one slot left"
       ]
+    },
+    {
+      "fix": "c49dacd6",
+      "bug": "a drag label wider than two columns excluded neighboring tile centers from keyboard moves",
+      "test": "apps/web/src/hooks/use-sortable-items.test.tsx",
+      "fixed": ["a label wider than two columns moves one slot left and right"]
     }
   ],
   "lint": [
