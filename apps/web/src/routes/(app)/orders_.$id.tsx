@@ -98,17 +98,6 @@ function RouteComponent(): ReactNode {
         dateFormat={dateFormat}
       />
 
-      {order?.notes ? (
-        <section className="animate-data-in flex flex-col gap-3">
-          <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
-          <div className="rounded-xl bg-card ring-1 ring-foreground/10 px-5 py-4">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed max-w-prose">
-              {order.notes}
-            </p>
-          </div>
-        </section>
-      ) : null}
-
       <OrderDetailItems
         orderId={id}
         order={order}
@@ -120,33 +109,44 @@ function RouteComponent(): ReactNode {
         isCollectionItemPending={isCollectionItemPending}
       />
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60 pb-2">
-        {isPending ? (
-          <>
-            <span className="flex items-center gap-1">
-              Created <Skeleton className="h-3 w-24" />
-            </span>
-            <span className="flex items-center gap-1">
-              Updated <Skeleton className="h-3 w-24" />
-            </span>
-          </>
+      <div className="flex flex-col gap-4 pb-2">
+        {order?.notes ? (
+          <section className="animate-data-in flex flex-col gap-1.5">
+            <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
+            <p className="max-w-prose text-sm leading-relaxed text-pretty wrap-break-word whitespace-pre-wrap text-muted-foreground">
+              {order.notes}
+            </p>
+          </section>
         ) : null}
-        {!isPending && order ? (
-          <>
-            <span>
-              Created{" "}
-              <span className="animate-data-in inline-block">
-                {formatTimestampForDisplay(order.createdAt, dateFormat)}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
+          {isPending ? (
+            <>
+              <span className="flex items-center gap-1">
+                Created <Skeleton className="h-3 w-24" />
               </span>
-            </span>
-            <span>
-              Updated{" "}
-              <span className="animate-data-in inline-block">
-                {formatTimestampForDisplay(order.updatedAt, dateFormat)}
+              <span className="flex items-center gap-1">
+                Updated <Skeleton className="h-3 w-24" />
               </span>
-            </span>
-          </>
-        ) : null}
+            </>
+          ) : null}
+          {!isPending && order ? (
+            <>
+              <span>
+                Created{" "}
+                <span className="animate-data-in inline-block">
+                  {formatTimestampForDisplay(order.createdAt, dateFormat)}
+                </span>
+              </span>
+              <span>
+                Updated{" "}
+                <span className="animate-data-in inline-block">
+                  {formatTimestampForDisplay(order.updatedAt, dateFormat)}
+                </span>
+              </span>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <OrderItemsActionBar
