@@ -1,4 +1,5 @@
 import { ThemeProvider } from "next-themes";
+import { MotionGlobalConfig } from "motion/react";
 import { useLayoutEffect } from "react";
 import { Toaster } from "@/components/ui/toast";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
@@ -20,8 +21,15 @@ function RootComponent() {
 
   // A layout effect, so the attribute every reduced-motion CSS rule and motion-reduce: utility keys
   // on is set before first paint.
+  // CSS cannot stop Motion, and Motion's own reducedMotion still runs opacity and filter animations.
+  // The flag reaches only animations that start after it is set, so loops stop themselves.
   useLayoutEffect(() => {
     document.documentElement.toggleAttribute("data-reduce-motion", reduce);
+    const previous = MotionGlobalConfig.skipAnimations;
+    MotionGlobalConfig.skipAnimations = reduce;
+    return () => {
+      MotionGlobalConfig.skipAnimations = previous;
+    };
   }, [reduce]);
 
   return (
