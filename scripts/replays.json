@@ -762,6 +762,12 @@
       "bug": "opening the default Settings section from the phone's list left focus on the hidden nav link",
       "test": "apps/web/src/components/settings/settings-content.test.tsx",
       "fixed": ["opening the default section from the phone's list moves focus to its heading"]
+    },
+    {
+      "fix": "74572e82",
+      "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
+      "test": "apps/web/src/components/settings/preferences.test.tsx",
+      "fixed": ["after Save the form keeps the saved formats while the session catches up"]
     }
   ],
   "lint": [
