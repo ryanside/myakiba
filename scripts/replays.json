@@ -1,6 +1,15 @@
 {
   "test": [
     {
+      "fix": "5b8d80a4",
+      "bug": "order totals were strings instead of numbers in list and detail responses",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "each orders route answers as before > list",
+        "each orders route answers as before > get"
+      ]
+    },
+    {
       "fix": "9976e960",
       "bug": "order item counts were strings, so an order with one item displayed 1 items",
       "test": "apps/server/src/routers/orders/routes.test.ts",
