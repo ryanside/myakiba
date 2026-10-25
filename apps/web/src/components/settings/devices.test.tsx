@@ -46,6 +46,7 @@ const session = (id: string, userAgent: string) => ({
 type Server = {
   sessions: ReturnType<typeof session>[];
   current: string;
+  devices: "listed" | "needs-fresh-sign-in" | "unavailable";
   /** What the session check answers once the password has changed. */
   checkAfterChange: "ok" | "unavailable";
   changed: boolean;
@@ -58,6 +59,7 @@ function resetServer(checkAfterChange: Server["checkAfterChange"]) {
   server = {
     sessions: [session("old-session", MAC_FIREFOX), session("phone-session", IPHONE)],
     current: "old-session",
+    devices: "listed",
     checkAfterChange,
     changed: false,
   };
@@ -83,6 +85,15 @@ globalThis.fetch = Object.assign(
     }
     if (pathname.endsWith("/list-sessions")) {
       await pendingDevices;
+      if (server.devices !== "listed") {
+        return Response.json(
+          {
+            code: server.devices === "needs-fresh-sign-in" ? "SESSION_NOT_FRESH" : "UNKNOWN_ERROR",
+            message: "Couldn't load your devices",
+          },
+          { status: 403 },
+        );
+      }
       return Response.json(server.sessions);
     }
     if (pathname.endsWith("/get-session")) {
@@ -117,6 +128,7 @@ afterAll(() => {
 });
 
 function openAccount(location = "/settings") {
+  const client = new QueryClient();
   const root = createRootRoute();
   const app = createRoute({ getParentRoute: () => root, id: "(app)" });
   const settings = createRoute({
@@ -130,12 +142,13 @@ function openAccount(location = "/settings") {
     history: createMemoryHistory({ initialEntries: [location] }),
   });
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <Toaster>
         <RouterProvider router={router} />
       </Toaster>
     </QueryClientProvider>,
   );
+  return { client, router };
 }
 
 async function changePassword() {
@@ -203,4 +216,42 @@ test("a link to sign out others focuses its row when the pending devices finish 
   const row = document.querySelector("#setting-sign-out-others");
   expect(row).not.toBeNull();
   await waitFor(() => expect(document.activeElement).toBe(row));
+});
+
+test.each(["needs-fresh-sign-in", "unavailable"] as const)(
+  "refreshing targeted devices through %s does not steal focus",
+  async (state) => {
+    resetServer("ok");
+    const { client } = openAccount("/settings#setting-devices");
+    await screen.findByText("This device");
+    expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
+
+    const password = screen.getByRole("button", { name: "Change password" });
+    password.focus();
+    server.devices = state;
+    await act(() => client.invalidateQueries({ queryKey: ["devices"] }));
+    if (state === "needs-fresh-sign-in") {
+      await screen.findByText("Sign in again to see your devices");
+    } else {
+      await screen.findByRole("button", { name: "Try again" });
+    }
+    expect(document.activeElement === password).toBe(true);
+
+    server.devices = "listed";
+    await act(() => client.invalidateQueries({ queryKey: ["devices"] }));
+    await screen.findByText("This device");
+    expect(document.activeElement === password).toBe(true);
+  },
+);
+
+test("a devices anchor focuses again after its hash is deactivated and reactivated", async () => {
+  resetServer("ok");
+  const { router } = openAccount("/settings#setting-devices");
+  await screen.findByText("This device");
+  expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
+
+  await act(() => router.navigate({ to: "/settings" }));
+  screen.getByRole("button", { name: "Change password" }).focus();
+  await act(() => router.navigate({ to: "/settings", hash: "setting-devices" }));
+  expect(document.activeElement).toBe(document.querySelector("#setting-devices"));
 });
