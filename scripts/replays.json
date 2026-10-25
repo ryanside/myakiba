@@ -662,6 +662,12 @@
         "Analytics section items > names each image link by its title alone",
         "Analytics shared item previews > names each image link by its title alone"
       ]
+    },
+    {
+      "fix": "93ed9f38",
+      "bug": "the Expenses Shops table briefly showed a vertical scrollbar on load, shifting the table left while its rows faded in",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table's sideways scroller never scrolls down while its rows fade in"]
     }
   ],
   "lint": [
