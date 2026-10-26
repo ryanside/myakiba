@@ -1,11 +1,13 @@
 {
   "name": "extension",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "wxt build && wxt build -b firefox --mv3",
+    "build": "wxt build && wxt build -b firefox",
+    "zip": "wxt zip && wxt zip -b firefox",
     "icons": "bun scripts/icons.ts",
+    "verify-sources": "bash scripts/verify-sources.sh",
     "check-types": "tsc --noEmit",
     "test": "bun test lib/",
     "e2e": "bun test e2e/"
