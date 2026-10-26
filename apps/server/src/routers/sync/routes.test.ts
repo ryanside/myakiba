@@ -2134,49 +2134,6 @@ describe("extension release gate", () => {
   }
 });
 
-test("legacy scraped results read as imported in detail, filtering, counts and retry", async () => {
-  const run = await start("item", { items: [X, Y] });
-  await complete(run, X);
-  await db.execute(
-    sql`update sync_session_item set status = 'scraped' where sync_session_id = ${run.syncSessionId} and item_external_id = ${X}`,
-  );
-  expect(
-    detailSchema.parse((await get(`/sessions/${run.syncSessionId}`)).body).session.items,
-  ).toContainEqual({ itemExternalId: X, status: "imported", errorReason: null });
-  const filtered = detailSchema.parse(
-    (await get(`/sessions/${run.syncSessionId}?status=imported`)).body,
-  );
-  expect(filtered.session.items.map((row) => row.itemExternalId)).toEqual([X]);
-  expect(await complete(run, X)).toEqual({
-    status: 200,
-    body: { outcome: "already_imported", reason: null },
-  });
-  await fail(run, Y);
-  expect(await session(run.syncSessionId)).toMatchObject({
-    successCount: 1,
-    failCount: 1,
-    status: "partial",
-  });
-  await retry(run.syncSessionId);
-  expect(await session(run.syncSessionId)).toMatchObject({ successCount: 1, failCount: 0 });
-});
-
-describe("retained main payloads", () => {
-  for (const entry of cases.filter((entry) =>
-    ["collection", "order", "order-item"].includes(entry.type),
-  )) {
-    test(`retries legacy ${entry.type} itemsToScrape`, async () => {
-      const run = await start(entry.type, await entry.body());
-      await interrupt(run);
-      await db.execute(
-        sql`update sync_session set request_payload = replace(request_payload::text, 'itemsToFetch', 'itemsToScrape')::jsonb where id = ${run.syncSessionId}`,
-      );
-      const retried = await retry(run.syncSessionId);
-      expect(retried.missingMfcItemIds).toEqual([X, Y, Z]);
-    });
-  }
-});
-
 describe("committed sync publication", () => {
   test("a reconnecting cache skips publication and answers the committed start", async () => {
     const events: unknown[] = [];

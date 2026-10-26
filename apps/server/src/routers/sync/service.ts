@@ -1,4 +1,4 @@
-import { storedItemStatus, storedJobDataSchema } from "./retained-data";
+import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
@@ -370,7 +370,7 @@ class SyncService {
 
     if (!row) return Result.err(new SyncJobNotFound());
     const session = viewSession(row, Date.now());
-    const payload = storedJobDataSchema.safeParse(row.requestPayload);
+    const payload = jobDataSchema.safeParse(row.requestPayload);
     const warnings = importWarnings(payload.success ? payload.data : null);
     const terminalState = sessionStatusToTerminalState(session.status);
 
@@ -580,8 +580,8 @@ class SyncService {
       session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS > Date.now();
 
     const viewedItemStatus = interrupted
-      ? sql<SyncSessionItemStatus>`CASE WHEN ${syncSessionItem.status} = 'pending' THEN 'failed' ELSE ${storedItemStatus} END`
-      : storedItemStatus;
+      ? sql<SyncSessionItemStatus>`CASE WHEN ${syncSessionItem.status} = 'pending' THEN 'failed' ELSE ${syncSessionItem.status} END`
+      : sql<SyncSessionItemStatus>`${syncSessionItem.status}`;
     const itemConditions = [eq(syncSessionItem.syncSessionId, sessionId)];
     if (statusFilter && statusFilter.length > 0) {
       itemConditions.push(inArray(viewedItemStatus, statusFilter));
@@ -592,7 +592,7 @@ class SyncService {
       id: syncSessionItem.id,
       syncSessionId: syncSessionItem.syncSessionId,
       itemExternalId: syncSessionItem.itemExternalId,
-      status: storedItemStatus,
+      status: syncSessionItem.status,
       errorReason: syncSessionItem.errorReason,
       errorCode: syncSessionItem.errorCode,
       createdAt: syncSessionItem.createdAt,

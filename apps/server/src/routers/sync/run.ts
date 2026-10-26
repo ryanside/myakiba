@@ -1,4 +1,4 @@
-import { storedItemStatus, storedJobDataSchema } from "./retained-data";
+import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result, panic } from "better-result";
 import type { AnyTaggedError } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
@@ -96,7 +96,7 @@ async function lockRun(
   if (!peek) return null;
   let retainedPayload: Run["payload"] = null;
   if (peek.requestPayload !== null) {
-    const parsed = storedJobDataSchema.safeParse(peek.requestPayload);
+    const parsed = jobDataSchema.safeParse(peek.requestPayload);
     retainedPayload = parsed.success
       ? Result.ok(parsed.data)
       : Result.err(new StoredSyncPayloadInvalid({ sessionId, cause: parsed.error }));
@@ -155,7 +155,7 @@ async function recentItems(tx: Tx, run: Run): Promise<SyncJobRecentItem[]> {
   const distinct = tx
     .selectDistinctOn([syncSessionItem.itemExternalId], {
       externalId: syncSessionItem.itemExternalId,
-      status: storedItemStatus.as("status"),
+      status: syncSessionItem.status,
       errorReason: syncSessionItem.errorReason,
       updatedAt: syncSessionItem.updatedAt,
       title: itemTable.title,
@@ -202,10 +202,10 @@ async function saveRun(
 ): Promise<ServerSyncJobStatus> {
   const { session } = run;
   const rows = await tx
-    .select({ status: storedItemStatus, total: count() })
+    .select({ status: syncSessionItem.status, total: count() })
     .from(syncSessionItem)
     .where(eq(syncSessionItem.syncSessionId, session.id))
-    .groupBy(storedItemStatus);
+    .groupBy(syncSessionItem.status);
   const counted = (status: SyncSessionItemStatus) =>
     rows.find((row) => row.status === status)?.total ?? 0;
   const successCount = counted("imported");
@@ -715,7 +715,7 @@ export async function syncItemStatus(
   mfcItemId: number,
 ) {
   return tx
-    .select({ status: storedItemStatus })
+    .select({ status: syncSessionItem.status })
     .from(syncSessionItem)
     .innerJoin(syncSession, eq(syncSession.id, syncSessionItem.syncSessionId))
     .where(and(ofItem(sessionId, mfcItemId), eq(syncSession.userId, userId)));
