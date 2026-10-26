@@ -461,7 +461,7 @@ export function createFetcher(deps: FetcherDeps) {
     return answered.map(() => answer);
   }
 
-  /** Stops at a booking it cannot write, before it answers the item, so the next drain fetches it again. */
+  /** An answer whose booking cannot be written fails its item with that failure, so the run still ends. */
   async function drain(): Promise<Result<void, SessionStorageUnavailable>> {
     for (;;) {
       dispatch({ type: "started" });
@@ -473,8 +473,10 @@ export function createFetcher(deps: FetcherDeps) {
       current = null;
       if (answer === null || controller.signal.aborted) continue;
       const booking = await booked(answer);
-      if (booking.isErr()) return Result.err(booking.error);
-      dispatch({ type: "answered", job, answer: booking.value });
+      booking.tapError((failure) => {
+        console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
+      });
+      dispatch({ type: "answered", job, answer: Result.flatten(booking) });
     }
     return Result.gen(async function* () {
       yield* Result.await(mfcTabs.release());
@@ -483,7 +485,7 @@ export function createFetcher(deps: FetcherDeps) {
     });
   }
 
-  /** Where the queue's failures end: a booking it could not write, or a defect. Either is logged, and pending work restarts it. */
+  /** Where the queue's failures end: a tab it could not release, or a defect. Either is logged, and pending work restarts it. */
   function kick(): void {
     const stopped = (cause: unknown) => {
       console.error("the MFC fetch queue stopped", cause);
