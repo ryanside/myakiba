@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
 import * as z from "zod";
 import { EXPENSE_SCOPES, expenseFiltersSchema } from "@myakiba/contracts/expenses/schema";
@@ -144,7 +144,7 @@ function RouteComponent(): ReactNode {
         {activeQuery.error ? (
           <div className="flex h-64 items-center justify-center">
             <p className="animate-data-in text-lg font-medium text-destructive">
-              Error: {activeQuery.error.message}
+              Error: {failureText(activeQuery.error)}
             </p>
           </div>
         ) : (

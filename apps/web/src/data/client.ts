@@ -24,7 +24,7 @@ export type ReadFailure<Failure> = Failure | Panic;
 /**
  * Runs a load or a write for react-query, which reads a failure only from a throw. A failed
  * Result is thrown as its own error. Anything the load throws is a defect, a Panic that keeps
- * the thrown message, so a screen that shows `error.message` shows what it showed before.
+ * the thrown message for the log. A screen shows either through `failureText`.
  */
 export async function settle<Value, Failure>(
   load: () => Promise<Result<Value, Failure>>,
@@ -307,12 +307,16 @@ export function invalidateFamilies(
 
 type Rollback = () => void;
 
-/** What a failure toast says under its title for a defect, whose own message is never shown. */
+/** What a screen shows for a defect, whose own message is never shown. */
 const DEFECT_DESCRIPTION = "Something went wrong. Reload the page and try again";
 
-/** The text under a failure toast that a screen words itself: the declared failure's message, or the safe text for a defect. */
-export function failureText(failure: ReadFailure<Error>): string {
-  return Panic.is(failure) ? DEFECT_DESCRIPTION : failure.message;
+/**
+ * The text a screen shows for a read's or a write's failure: a declared failure's message, or
+ * the safe text for a defect. Only a tagged error other than a Panic is declared, so anything
+ * else react-query caught is a defect too.
+ */
+export function failureText(failure: Error): string {
+  return Panic.is(failure) || !isTaggedError(failure) ? DEFECT_DESCRIPTION : failure.message;
 }
 
 type FailureToast = { readonly title: string; readonly description?: string };

@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { Label } from "../ui/label";
 import {
@@ -388,7 +388,7 @@ function CollectionItemFormContent({
                         )}
                         {releasesError && (
                           <div className="p-3 text-sm text-destructive">
-                            {releasesError.message}
+                            {failureText(releasesError)}
                           </div>
                         )}
                         {releasesData?.releases.map((release) => (

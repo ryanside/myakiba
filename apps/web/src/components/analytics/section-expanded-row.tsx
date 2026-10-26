@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
@@ -96,7 +96,11 @@ function ExpandedRowItems({
   }
 
   if (isError) {
-    return <p className="text-xs text-destructive">Failed to load items: {error?.message}</p>;
+    return (
+      <p className="text-xs text-destructive">
+        Failed to load items: {error && failureText(error)}
+      </p>
+    );
   }
 
   if (!data || data.items.length === 0) {

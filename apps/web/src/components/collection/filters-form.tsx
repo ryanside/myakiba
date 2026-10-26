@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { useRootedInfiniteRead } from "@/data/client";
+import { failureText, useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import {
@@ -441,7 +441,7 @@ function FiltersDraft({
                             )}
                             {entrySearch.length > 0 && isEntriesError && (
                               <CommandEmpty>
-                                Could not load entries. {entriesError.message}
+                                Could not load entries. {failureText(entriesError)}
                               </CommandEmpty>
                             )}
                             {entrySearch.length > 0 && isEntriesPending && !isEntriesError && (

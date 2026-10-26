@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import type { OrderItemRelease } from "@/queries/orders";
@@ -82,7 +82,7 @@ function ReleaseSelect({
   if (isError) {
     return (
       <div className="border-b p-2">
-        <p className="text-destructive flex h-7 items-center text-xs">{error.message}</p>
+        <p className="text-destructive flex h-7 items-center text-xs">{failureText(error)}</p>
       </div>
     );
   }

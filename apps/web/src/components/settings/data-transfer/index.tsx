@@ -5,7 +5,7 @@ import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/sch
 import { Button } from "@/components/ui/button";
 import { useDataTransferImportStatusQuery } from "@/hooks/use-data-transfer-import-status-query";
 import { downloadDataTransferArchive, readDataTransferFile } from "@/lib/data-transfer";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import {
   dataTransfer,
   useDeleteImport,
@@ -112,25 +112,25 @@ export function DataTransfer() {
   let exportState: ActionState = { kind: "idle" };
   if (exportMutation.isPending) exportState = { kind: "pending" };
   else if (exportMutation.error) {
-    exportState = { kind: "error", message: exportMutation.error.message };
+    exportState = { kind: "error", message: failureText(exportMutation.error) };
   }
 
   let startState: ActionState = { kind: "idle" };
   if (startMutation.isPending) startState = { kind: "pending" };
   else if (startMutation.error) {
-    startState = { kind: "error", message: startMutation.error.message };
+    startState = { kind: "error", message: failureText(startMutation.error) };
   }
 
   let retryState: ActionState = { kind: "idle" };
   if (retryMutation.isPending) retryState = { kind: "pending" };
   else if (retryMutation.error) {
-    retryState = { kind: "error", message: retryMutation.error.message };
+    retryState = { kind: "error", message: failureText(retryMutation.error) };
   }
 
   let deleteState: ActionState = { kind: "idle" };
   if (deleteMutation.isPending) deleteState = { kind: "pending" };
   else if (deleteMutation.error) {
-    deleteState = { kind: "error", message: deleteMutation.error.message };
+    deleteState = { kind: "error", message: failureText(deleteMutation.error) };
   }
 
   let currentView: CurrentImportViewState = { kind: "none" };
@@ -155,7 +155,7 @@ export function DataTransfer() {
   else if (currentImportQuery.isError) {
     currentState = {
       kind: "error",
-      message: currentImportQuery.error.message,
+      message: failureText(currentImportQuery.error),
       current: currentImport === null ? null : currentView,
       retrying: currentImportQuery.isFetching,
     };

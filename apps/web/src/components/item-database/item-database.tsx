@@ -1,4 +1,4 @@
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { InformationCircleIcon, PackageSearchIcon } from "@hugeicons/core-free-icons";
@@ -42,7 +42,7 @@ export function ItemDatabase(): React.JSX.Element {
   if (isPending) {
     results = <MediaViewSkeletons viewMode={viewMode} count={viewMode === "list" ? 8 : 15} />;
   } else if (isError) {
-    results = <LoadError title="Couldn't load the Item Database" message={error.message} />;
+    results = <LoadError title="Couldn't load the Item Database" message={failureText(error)} />;
   } else if (items.length === 0) {
     const isLaterPage = search.page > 1;
 

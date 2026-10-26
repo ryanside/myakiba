@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { analytics as analyticsResource } from "@/data/resources/analytics";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
@@ -66,7 +66,7 @@ function RouteComponent(): ReactNode {
           </div>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {failureText(error)}</div>
         </div>
       </div>
     );

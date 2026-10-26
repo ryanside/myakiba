@@ -7,7 +7,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { PaginationState } from "@tanstack/react-table";
 import type { EnrichedSyncSessionItemRow } from "@myakiba/contracts/sync/types";
 import { SYNC_SESSION_SUBGRID_PAGE_SIZE } from "@myakiba/contracts/sync/constants";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { sync } from "@/data/resources/sync";
 import { createSyncSessionItemSubColumns } from "./sync-session-item-sub-columns";
 
@@ -51,7 +51,7 @@ export function SyncSessionItemSubDataGrid({ sessionId }: SyncSessionItemSubData
     return (
       <div className="bg-muted/30 p-4">
         <p className="py-3 text-center text-sm text-destructive">
-          Failed to load session items: {detailError.message}
+          Failed to load session items: {failureText(detailError)}
         </p>
       </div>
     );

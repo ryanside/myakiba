@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -63,7 +63,9 @@ export function ShopTableRowExpansion({
   if (isError) {
     return (
       <div className="w-full border-t border-border/30 bg-muted/30 p-4">
-        <p className="animate-data-in text-sm text-destructive">Failed to load: {error.message}</p>
+        <p className="animate-data-in text-sm text-destructive">
+          Failed to load: {failureText(error)}
+        </p>
       </div>
     );
   }

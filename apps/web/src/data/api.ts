@@ -1,4 +1,4 @@
-import { Result } from "better-result";
+import { Panic, Result } from "better-result";
 import * as z from "zod";
 import { ApiInvalid } from "@/lib/errors/api-invalid";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
@@ -145,7 +145,8 @@ function decode(
 
 /**
  * The one reader of Eden's `{ data, error }`. It turns one call into a Result whose failure's
- * `message` is the text the call shows users. A body Eden could not read shows what broke.
+ * `message` is the text the call shows users. A body Eden could not read shows the call's
+ * fallback, and a Panic stays a Panic, so a defect never reads as an answer.
  */
 export function call<Answer extends EdenAnswer>(
   request: PromiseLike<Answer>,
@@ -159,10 +160,12 @@ export async function call(
   request: PromiseLike<EdenAnswer>,
   wording: Wording,
 ): Promise<Result<unknown, ApiFailure>> {
-  const answer = await Result.tryPromise({
-    try: async () => request,
-    catch: (cause) =>
-      new ApiUnreadable({ cause, message: cause instanceof Error ? cause.message : String(cause) }),
-  });
-  return answer.andThen((answered) => decode(answered, wording));
+  let answered: EdenAnswer;
+  try {
+    answered = await request;
+  } catch (error) {
+    if (Panic.is(error)) throw error;
+    return Result.err(new ApiUnreadable({ cause: error, message: wording.fallback }));
+  }
+  return decode(answered, wording);
 }

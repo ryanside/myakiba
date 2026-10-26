@@ -23,7 +23,7 @@ import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { OrderItemSyncSheet } from "./order-item-sync-sheet";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
@@ -184,7 +184,7 @@ export function OrderItemSubDataGrid({
   const grid =
     isError && !isLoading ? (
       <p className="animate-data-in py-3 text-center text-sm text-destructive">
-        Failed to load order items: {error.message}
+        Failed to load order items: {failureText(error)}
       </p>
     ) : (
       <DataGrid

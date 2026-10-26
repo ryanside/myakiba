@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 import { createFileRoute, notFound, stripSearchParams } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import {
@@ -117,7 +117,7 @@ function RouteComponent(): ReactNode {
 
       {isError ? (
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {failureText(error)}</div>
         </div>
       ) : (
         <>

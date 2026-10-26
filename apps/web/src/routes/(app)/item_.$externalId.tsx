@@ -9,7 +9,7 @@ import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
-import { useRead, useResourceMutation } from "@/data/client";
+import { failureText, useRead, useResourceMutation } from "@/data/client";
 import { items, refreshItemCommand } from "@/data/resources/item";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
@@ -71,7 +71,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col items-center justify-center gap-y-4">
         <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          Error: {itemError.message}
+          Error: {failureText(itemError)}
         </div>
       </div>
     );

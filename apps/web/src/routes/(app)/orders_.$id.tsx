@@ -7,7 +7,7 @@ import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
@@ -68,7 +68,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-3">
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          {orderError.message}
+          {failureText(orderError)}
         </div>
       </div>
     );

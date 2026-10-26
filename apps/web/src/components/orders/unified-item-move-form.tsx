@@ -39,7 +39,7 @@ import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useRootedInfiniteRead } from "@/data/client";
+import { failureText, useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -304,7 +304,7 @@ function UnifiedItemMoveFormContent({
                               )}
                               {orderSearchError && (
                                 <CommandEmpty>
-                                  Could not load orders. {orderSearchError.message}
+                                  Could not load orders. {failureText(orderSearchError)}
                                 </CommandEmpty>
                               )}
                               {orderSearch.title.length > 0 &&

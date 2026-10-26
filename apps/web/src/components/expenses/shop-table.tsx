@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useRead } from "@/data/client";
+import { failureText, useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AddSquareIcon, MinusSignSquareIcon, Search01Icon } from "@hugeicons/core-free-icons";
@@ -108,7 +108,7 @@ export function ShopTable({
     <ExpensePanel title="Shops" headerAction={shopSearchInput} className="min-w-0">
       {query.isError ? (
         <div className="flex h-64 items-center justify-center">
-          <p className="text-sm text-destructive">Error: {query.error.message}</p>
+          <p className="text-sm text-destructive">Error: {failureText(query.error)}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4" aria-busy={query.isPending}>
