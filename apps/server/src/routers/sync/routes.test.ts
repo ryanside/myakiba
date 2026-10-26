@@ -2000,7 +2000,7 @@ test("a corrupt retained sync payload refuses retry explicitly and logs its sche
   const { serve } = await import("@/domain/kernel");
   const { Viewer } = await import("@/domain/viewer");
   const { SyncRuns } = await import("./module");
-  initLogger({ enabled: false });
+  initLogger({ silent: true, drain: () => {} });
   const log = createRequestLogger();
   try {
     await serve({ viewer: Viewer.fromSession({ user: { id: userId } }), log }, SyncRuns.retry, {
