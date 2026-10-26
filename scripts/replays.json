@@ -1941,6 +1941,39 @@
         "the settings import says importing is unavailable",
         "the FAQ answers how to get the extension with the review notice"
       ]
+    },
+    {
+      "fix": "9600a085a9b473b076cf80f7595e222765568e58",
+      "bug": "a body Eden could not parse showed the parser's error, and a Panic read through call() became an unreadable answer carrying its message",
+      "test": "apps/web/src/data/api.test.ts",
+      "fixed": [
+        "a JSON content type whose body is not JSON > a safe read shows the server's 4xx text or its fallback",
+        "a JSON content type whose body is not JSON > a write shows safe server text or its own fallback",
+        "a JSON content type whose body is not JSON > the version read shows a body's message",
+        "a JSON content type whose body is not JSON > the job status stream shows one fixed text",
+        "an error status whose JSON body is not JSON > a safe read shows the server's 4xx text or its fallback",
+        "an error status whose JSON body is not JSON > a write shows safe server text or its own fallback",
+        "an error status whose JSON body is not JSON > the version read shows a body's message",
+        "an error status whose JSON body is not JSON > the job status stream shows one fixed text",
+        "a defect while the answer is read stays a defect"
+      ]
+    },
+    {
+      "fix": "9600a085a9b473b076cf80f7595e222765568e58",
+      "bug": "a defect read through call() showed its raw message under the write's failure toast",
+      "test": "apps/web/src/data/command-failure-toasts.test.tsx",
+      "fixed": [
+        "a defect while a write's answer is read shows the safe text under its title, never its message"
+      ]
+    },
+    {
+      "fix": "9600a085a9b473b076cf80f7595e222765568e58",
+      "bug": "the data-transfer screen showed a defect's message beside the export button and the parser's error for an unreadable current import",
+      "test": "apps/web/src/components/settings/data-transfer/data-transfer-writes.test.tsx",
+      "fixed": [
+        "a defect while the export downloads shows the safe text beside the button, never its message",
+        "a current import the page cannot read shows its own text, not the parser's"
+      ]
     }
   ],
   "lint": [
