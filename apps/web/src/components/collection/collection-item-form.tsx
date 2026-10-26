@@ -35,10 +35,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
-import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
+import { Field, FieldContent, FieldError, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import {
   COLLECTION_STATUSES,
@@ -95,7 +96,7 @@ function CollectionItemFormContent({
     onSubmit: async ({ value }) => {
       const transformedValue: CollectionItemFormValues = {
         ...value,
-        price: parseMoneyToMinorUnits(value.price),
+        price: acceptedMoneyToMinorUnits(value.price),
       };
       const saved = await run(() => callbackFn(transformedValue), closesOnSuccess);
       // A failed edit already rolled back and said why, so the form stays open to retry.
@@ -124,7 +125,9 @@ function CollectionItemFormContent({
               <div className="grid grid-cols-2 gap-3">
                 <form.Field
                   name="price"
-                  validators={{ onChange: z.string().nonempty("Price is required") }}
+                  validators={{
+                    onChange: z.string().nonempty("Price is required").pipe(moneyInput),
+                  }}
                   children={(field) => (
                     <div className="grid gap-1.5">
                       <Label htmlFor={field.name}>Price</Label>
@@ -134,6 +137,7 @@ function CollectionItemFormContent({
                         mask="currency"
                         currency={currency}
                         locale={userLocale}
+                        invalid={!field.state.meta.isValid}
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onValueChange={(_maskedValue, unmaskedValue) =>
@@ -141,11 +145,7 @@ function CollectionItemFormContent({
                         }
                         placeholder="0.00"
                       />
-                      {!field.state.meta.isValid && (
-                        <p role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
+                      <FieldError className="text-xs" errors={field.state.meta.errors} />
                     </div>
                   )}
                 />

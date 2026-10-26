@@ -1,4 +1,6 @@
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { FieldError } from "@/components/ui/field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -37,7 +39,6 @@ import { FormSection } from "@/components/ui/form-section";
 import type { SyncFormOrderItem, SyncOrderItems } from "@myakiba/contracts/sync/types";
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -88,7 +89,7 @@ export default function SyncOrderItemForm({
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
-          price: parseMoneyToMinorUnits(item.price),
+          price: acceptedMoneyToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
           shippingDate: item.shippingDate || null,
@@ -199,7 +200,10 @@ export default function SyncOrderItemForm({
                                 <orderItemForm.Field
                                   name={`items[${index}].price`}
                                   validators={{
-                                    onChange: z.string().nonempty("Price is required"),
+                                    onChange: z
+                                      .string()
+                                      .nonempty("Price is required")
+                                      .pipe(moneyInput),
                                   }}
                                 >
                                   {(priceField) => (
@@ -211,6 +215,7 @@ export default function SyncOrderItemForm({
                                         mask="currency"
                                         currency={currency}
                                         locale={userLocale}
+                                        invalid={!priceField.state.meta.isValid}
                                         value={priceField.state.value}
                                         onBlur={priceField.handleBlur}
                                         onValueChange={(_maskedValue, unmaskedValue) =>
@@ -218,11 +223,10 @@ export default function SyncOrderItemForm({
                                         }
                                         placeholder="0.00"
                                       />
-                                      {!priceField.state.meta.isValid && (
-                                        <p role="alert" className="text-xs text-destructive">
-                                          {priceField.state.meta.errors.join(", ")}
-                                        </p>
-                                      )}
+                                      <FieldError
+                                        className="text-xs"
+                                        errors={priceField.state.meta.errors}
+                                      />
                                     </div>
                                   )}
                                 </orderItemForm.Field>

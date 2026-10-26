@@ -1,4 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { FieldError } from "@/components/ui/field";
 import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
@@ -36,7 +38,6 @@ import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema"
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
@@ -202,11 +203,11 @@ function UnifiedItemMoveFormContent({
         collectionDate: value.collectionDate || null,
         status: value.status,
         shippingMethod: value.shippingMethod,
-        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-        taxes: parseMoneyToMinorUnits(value.taxes),
-        duties: parseMoneyToMinorUnits(value.duties),
-        tariffs: parseMoneyToMinorUnits(value.tariffs),
-        miscFees: parseMoneyToMinorUnits(value.miscFees),
+        shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+        taxes: acceptedMoneyToMinorUnits(value.taxes),
+        duties: acceptedMoneyToMinorUnits(value.duties),
+        tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+        miscFees: acceptedMoneyToMinorUnits(value.miscFees),
         notes: value.notes,
       };
       const moved = await run(
@@ -604,6 +605,7 @@ function UnifiedItemMoveFormContent({
                   <div className="grid grid-cols-2 gap-3">
                     <newOrderForm.Field
                       name="shippingFee"
+                      validators={{ onChange: moneyInput }}
                       children={(field) => (
                         <div className="grid gap-1.5">
                           <Label htmlFor={field.name}>Shipping</Label>
@@ -613,6 +615,7 @@ function UnifiedItemMoveFormContent({
                             mask="currency"
                             currency={currency}
                             locale={userLocale}
+                            invalid={!field.state.meta.isValid}
                             value={field.state.value}
                             onBlur={field.handleBlur}
                             onValueChange={(_maskedValue, unmaskedValue) =>
@@ -620,12 +623,14 @@ function UnifiedItemMoveFormContent({
                             }
                             placeholder="0.00"
                           />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
                         </div>
                       )}
                     />
 
                     <newOrderForm.Field
                       name="taxes"
+                      validators={{ onChange: moneyInput }}
                       children={(field) => (
                         <div className="grid gap-1.5">
                           <Label htmlFor={field.name}>Taxes</Label>
@@ -635,6 +640,7 @@ function UnifiedItemMoveFormContent({
                             mask="currency"
                             currency={currency}
                             locale={userLocale}
+                            invalid={!field.state.meta.isValid}
                             value={field.state.value}
                             onBlur={field.handleBlur}
                             onValueChange={(_maskedValue, unmaskedValue) =>
@@ -642,6 +648,7 @@ function UnifiedItemMoveFormContent({
                             }
                             placeholder="0.00"
                           />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
                         </div>
                       )}
                     />
@@ -650,6 +657,7 @@ function UnifiedItemMoveFormContent({
                   <div className="grid grid-cols-2 gap-3">
                     <newOrderForm.Field
                       name="duties"
+                      validators={{ onChange: moneyInput }}
                       children={(field) => (
                         <div className="grid gap-1.5">
                           <Label htmlFor={field.name}>Duties</Label>
@@ -659,6 +667,7 @@ function UnifiedItemMoveFormContent({
                             mask="currency"
                             currency={currency}
                             locale={userLocale}
+                            invalid={!field.state.meta.isValid}
                             value={field.state.value}
                             onBlur={field.handleBlur}
                             onValueChange={(_maskedValue, unmaskedValue) =>
@@ -666,12 +675,14 @@ function UnifiedItemMoveFormContent({
                             }
                             placeholder="0.00"
                           />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
                         </div>
                       )}
                     />
 
                     <newOrderForm.Field
                       name="tariffs"
+                      validators={{ onChange: moneyInput }}
                       children={(field) => (
                         <div className="grid gap-1.5">
                           <Label htmlFor={field.name}>Tariffs</Label>
@@ -681,6 +692,7 @@ function UnifiedItemMoveFormContent({
                             mask="currency"
                             currency={currency}
                             locale={userLocale}
+                            invalid={!field.state.meta.isValid}
                             value={field.state.value}
                             onBlur={field.handleBlur}
                             onValueChange={(_maskedValue, unmaskedValue) =>
@@ -688,6 +700,7 @@ function UnifiedItemMoveFormContent({
                             }
                             placeholder="0.00"
                           />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
                         </div>
                       )}
                     />
@@ -695,6 +708,7 @@ function UnifiedItemMoveFormContent({
 
                   <newOrderForm.Field
                     name="miscFees"
+                    validators={{ onChange: moneyInput }}
                     children={(field) => (
                       <div className="grid gap-1.5">
                         <Label htmlFor={field.name}>Miscellaneous</Label>
@@ -704,6 +718,7 @@ function UnifiedItemMoveFormContent({
                           mask="currency"
                           currency={currency}
                           locale={userLocale}
+                          invalid={!field.state.meta.isValid}
                           value={field.state.value}
                           onBlur={field.handleBlur}
                           onValueChange={(_maskedValue, unmaskedValue) =>
@@ -711,6 +726,7 @@ function UnifiedItemMoveFormContent({
                           }
                           placeholder="0.00"
                         />
+                        <FieldError className="text-xs" errors={field.state.meta.errors} />
                       </div>
                     )}
                   />

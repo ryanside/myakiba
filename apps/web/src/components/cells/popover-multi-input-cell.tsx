@@ -11,11 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useMemo, useRef, useState } from "react";
-import {
-  formatCurrencyFromMinorUnits,
-  minorUnitsToMajorString,
-  parseMoneyToMinorUnits,
-} from "@myakiba/utils/currency";
+import { formatCurrencyFromMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
 
@@ -130,7 +128,7 @@ function PopoverMultiInputCellContent({
     onSubmit: async ({ value }) => {
       close();
       const converted = Object.fromEntries(
-        Object.entries(value).map(([key, amount]) => [key, parseMoneyToMinorUnits(amount)]),
+        Object.entries(value).map(([key, amount]) => [key, acceptedMoneyToMinorUnits(amount)]),
       );
       await onSubmit(converted);
     },
@@ -146,9 +144,9 @@ function PopoverMultiInputCellContent({
 
         <div className="flex flex-col gap-2 px-3 pb-3">
           {inputs.map((input, index) => (
-            <form.Field key={input.name} name={input.name}>
+            <form.Field key={input.name} name={input.name} validators={{ onChange: moneyInput }}>
               {(field) => (
-                <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+                <div className="grid grid-cols-[5.5rem_1fr] items-center gap-x-2 gap-y-1">
                   <Label htmlFor={input.name} className="truncate text-xs text-muted-foreground">
                     {input.title}
                   </Label>
@@ -160,8 +158,13 @@ function PopoverMultiInputCellContent({
                     currency={currency}
                     locale={locale}
                     value={field.state.value}
+                    invalid={!field.state.meta.isValid}
                     onValueChange={(_, unmasked) => field.handleChange(unmasked)}
                     className="h-7 text-xs"
+                  />
+                  <FieldError
+                    className="col-start-2 text-[11px]"
+                    errors={field.state.meta.errors}
                   />
                 </div>
               )}

@@ -1,4 +1,6 @@
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { FieldError } from "@/components/ui/field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -41,7 +43,6 @@ import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { SyncFormOrder, SyncFormOrderItem, SyncOrder } from "@myakiba/contracts/sync/types";
 import { Textarea } from "../ui/textarea";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
@@ -131,7 +132,7 @@ export default function SyncOrderForm({
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(updatedItem.itemExternalId),
-          price: parseMoneyToMinorUnits(updatedItem.price),
+          price: acceptedMoneyToMinorUnits(updatedItem.price),
           orderDate: updatedItem.orderDate || null,
           paymentDate: updatedItem.paymentDate || null,
           shippingDate: updatedItem.shippingDate || null,
@@ -146,11 +147,11 @@ export default function SyncOrderForm({
         paymentDate: value.paymentDate || null,
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
-        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-        taxes: parseMoneyToMinorUnits(value.taxes),
-        duties: parseMoneyToMinorUnits(value.duties),
-        tariffs: parseMoneyToMinorUnits(value.tariffs),
-        miscFees: parseMoneyToMinorUnits(value.miscFees),
+        shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+        taxes: acceptedMoneyToMinorUnits(value.taxes),
+        duties: acceptedMoneyToMinorUnits(value.duties),
+        tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+        miscFees: acceptedMoneyToMinorUnits(value.miscFees),
         items: updatedItems,
       };
 
@@ -371,6 +372,7 @@ export default function SyncOrderForm({
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <orderForm.Field
               name="shippingFee"
+              validators={{ onChange: moneyInput }}
               children={(field) => (
                 <div className="grid gap-1.5">
                   <Label htmlFor={field.name}>Shipping</Label>
@@ -380,6 +382,7 @@ export default function SyncOrderForm({
                     mask="currency"
                     currency={currency}
                     locale={userLocale}
+                    invalid={!field.state.meta.isValid}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onValueChange={(_maskedValue, unmaskedValue) =>
@@ -387,11 +390,13 @@ export default function SyncOrderForm({
                     }
                     placeholder="0.00"
                   />
+                  <FieldError className="text-xs" errors={field.state.meta.errors} />
                 </div>
               )}
             />
             <orderForm.Field
               name="taxes"
+              validators={{ onChange: moneyInput }}
               children={(field) => (
                 <div className="grid gap-1.5">
                   <Label htmlFor={field.name}>Taxes</Label>
@@ -401,6 +406,7 @@ export default function SyncOrderForm({
                     mask="currency"
                     currency={currency}
                     locale={userLocale}
+                    invalid={!field.state.meta.isValid}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onValueChange={(_maskedValue, unmaskedValue) =>
@@ -408,11 +414,13 @@ export default function SyncOrderForm({
                     }
                     placeholder="0.00"
                   />
+                  <FieldError className="text-xs" errors={field.state.meta.errors} />
                 </div>
               )}
             />
             <orderForm.Field
               name="duties"
+              validators={{ onChange: moneyInput }}
               children={(field) => (
                 <div className="grid gap-1.5">
                   <Label htmlFor={field.name}>Duties</Label>
@@ -422,6 +430,7 @@ export default function SyncOrderForm({
                     mask="currency"
                     currency={currency}
                     locale={userLocale}
+                    invalid={!field.state.meta.isValid}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onValueChange={(_maskedValue, unmaskedValue) =>
@@ -429,11 +438,13 @@ export default function SyncOrderForm({
                     }
                     placeholder="0.00"
                   />
+                  <FieldError className="text-xs" errors={field.state.meta.errors} />
                 </div>
               )}
             />
             <orderForm.Field
               name="tariffs"
+              validators={{ onChange: moneyInput }}
               children={(field) => (
                 <div className="grid gap-1.5">
                   <Label htmlFor={field.name}>Tariffs</Label>
@@ -443,6 +454,7 @@ export default function SyncOrderForm({
                     mask="currency"
                     currency={currency}
                     locale={userLocale}
+                    invalid={!field.state.meta.isValid}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onValueChange={(_maskedValue, unmaskedValue) =>
@@ -450,11 +462,13 @@ export default function SyncOrderForm({
                     }
                     placeholder="0.00"
                   />
+                  <FieldError className="text-xs" errors={field.state.meta.errors} />
                 </div>
               )}
             />
             <orderForm.Field
               name="miscFees"
+              validators={{ onChange: moneyInput }}
               children={(field) => (
                 <div className="grid gap-1.5">
                   <Label htmlFor={field.name}>Miscellaneous</Label>
@@ -464,6 +478,7 @@ export default function SyncOrderForm({
                     mask="currency"
                     currency={currency}
                     locale={userLocale}
+                    invalid={!field.state.meta.isValid}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onValueChange={(_maskedValue, unmaskedValue) =>
@@ -471,6 +486,7 @@ export default function SyncOrderForm({
                     }
                     placeholder="0.00"
                   />
+                  <FieldError className="text-xs" errors={field.state.meta.errors} />
                 </div>
               )}
             />
@@ -631,7 +647,10 @@ export default function SyncOrderForm({
                                   <orderForm.Field
                                     name={`items[${i}].price`}
                                     validators={{
-                                      onChange: z.string().nonempty("Price is required"),
+                                      onChange: z
+                                        .string()
+                                        .nonempty("Price is required")
+                                        .pipe(moneyInput),
                                     }}
                                     children={(priceField) => (
                                       <div className="grid gap-1.5">
@@ -642,6 +661,7 @@ export default function SyncOrderForm({
                                           mask="currency"
                                           currency={currency}
                                           locale={userLocale}
+                                          invalid={!priceField.state.meta.isValid}
                                           value={priceField.state.value}
                                           onBlur={priceField.handleBlur}
                                           onValueChange={(_maskedValue, unmaskedValue) =>
@@ -649,11 +669,10 @@ export default function SyncOrderForm({
                                           }
                                           placeholder="0.00"
                                         />
-                                        {!priceField.state.meta.isValid && (
-                                          <p role="alert" className="text-xs text-destructive">
-                                            {priceField.state.meta.errors.join(", ")}
-                                          </p>
-                                        )}
+                                        <FieldError
+                                          className="text-xs"
+                                          errors={priceField.state.meta.errors}
+                                        />
                                       </div>
                                     )}
                                   />

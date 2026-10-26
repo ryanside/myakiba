@@ -1,4 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { FieldError } from "@/components/ui/field";
 import { Add01Icon, Cancel01Icon, Edit03Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { useForm } from "@tanstack/react-form";
@@ -24,7 +26,6 @@ import * as z from "zod";
 import { Rating } from "../ui/rating";
 import { Textarea } from "../ui/textarea";
 import { FormSection } from "@/components/ui/form-section";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
@@ -76,7 +77,7 @@ export default function SyncCollectionForm({
         return {
           ...rest,
           itemExternalId: mfcItemIdSchema.parse(item.itemExternalId),
-          price: parseMoneyToMinorUnits(item.price),
+          price: acceptedMoneyToMinorUnits(item.price),
           orderDate: item.orderDate || null,
           paymentDate: item.paymentDate || null,
           shippingDate: item.shippingDate || null,
@@ -204,7 +205,10 @@ export default function SyncCollectionForm({
                                   <collectionForm.Field
                                     name={`items[${i}].price`}
                                     validators={{
-                                      onChange: z.string().nonempty("Price is required"),
+                                      onChange: z
+                                        .string()
+                                        .nonempty("Price is required")
+                                        .pipe(moneyInput),
                                     }}
                                     children={(priceField) => (
                                       <div className="grid gap-1.5">
@@ -215,6 +219,7 @@ export default function SyncCollectionForm({
                                           mask="currency"
                                           currency={currency}
                                           locale={userLocale}
+                                          invalid={!priceField.state.meta.isValid}
                                           value={priceField.state.value}
                                           onBlur={priceField.handleBlur}
                                           onValueChange={(_maskedValue, unmaskedValue) =>
@@ -222,11 +227,10 @@ export default function SyncCollectionForm({
                                           }
                                           placeholder="0.00"
                                         />
-                                        {!priceField.state.meta.isValid && (
-                                          <p role="alert" className="text-xs text-destructive">
-                                            {priceField.state.meta.errors.join(", ")}
-                                          </p>
-                                        )}
+                                        <FieldError
+                                          className="text-xs"
+                                          errors={priceField.state.meta.errors}
+                                        />
                                       </div>
                                     )}
                                   />

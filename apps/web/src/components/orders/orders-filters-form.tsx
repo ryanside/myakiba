@@ -1,4 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
 import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
-import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
+import { Field, FieldContent, FieldError, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -143,30 +144,38 @@ function OrdersFiltersDraft({
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
         status: value.status && value.status.length > 0 ? value.status : undefined,
-        totalMin: value.totalMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.totalMin),
-        totalMax: value.totalMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.totalMax),
+        totalMin:
+          value.totalMin.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.totalMin),
+        totalMax:
+          value.totalMax.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.totalMax),
         shippingFeeMin:
           value.shippingFeeMin.trim() === ""
             ? undefined
-            : parseMoneyToMinorUnits(value.shippingFeeMin),
+            : acceptedMoneyToMinorUnits(value.shippingFeeMin),
         shippingFeeMax:
           value.shippingFeeMax.trim() === ""
             ? undefined
-            : parseMoneyToMinorUnits(value.shippingFeeMax),
-        taxesMin: value.taxesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.taxesMin),
-        taxesMax: value.taxesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.taxesMax),
+            : acceptedMoneyToMinorUnits(value.shippingFeeMax),
+        taxesMin:
+          value.taxesMin.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.taxesMin),
+        taxesMax:
+          value.taxesMax.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.taxesMax),
         dutiesMin:
-          value.dutiesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.dutiesMin),
+          value.dutiesMin.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.dutiesMin),
         dutiesMax:
-          value.dutiesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.dutiesMax),
+          value.dutiesMax.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.dutiesMax),
         tariffsMin:
-          value.tariffsMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.tariffsMin),
+          value.tariffsMin.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.tariffsMin),
         tariffsMax:
-          value.tariffsMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.tariffsMax),
+          value.tariffsMax.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.tariffsMax),
         miscFeesMin:
-          value.miscFeesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.miscFeesMin),
+          value.miscFeesMin.trim() === ""
+            ? undefined
+            : acceptedMoneyToMinorUnits(value.miscFeesMin),
         miscFeesMax:
-          value.miscFeesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.miscFeesMax),
+          value.miscFeesMax.trim() === ""
+            ? undefined
+            : acceptedMoneyToMinorUnits(value.miscFeesMax),
       };
 
       onApplyFilters(filters);
@@ -460,28 +469,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="totalMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="totalMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>
@@ -493,28 +512,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="shippingFeeMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="shippingFeeMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>
@@ -526,28 +555,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="taxesMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="taxesMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>
@@ -559,28 +598,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="dutiesMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="dutiesMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>
@@ -592,28 +641,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="tariffsMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="tariffsMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>
@@ -625,28 +684,38 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <form.Field
             name="miscFeesMin"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Min"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
           <form.Field
             name="miscFeesMax"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
+              <div className="grid gap-1">
+                <MaskInput
+                  mask="currency"
+                  currency={currency}
+                  locale={userLocale}
+                  placeholder="Max"
+                  invalid={!field.state.meta.isValid}
+                  value={field.state.value || ""}
+                  onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
+                />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
+              </div>
             )}
           />
         </div>

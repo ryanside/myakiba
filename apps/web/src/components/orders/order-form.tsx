@@ -1,4 +1,6 @@
 import { Result } from "better-result";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { FieldError } from "@/components/ui/field";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +48,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { getCurrencyLocale } from "@/lib/locale";
@@ -194,11 +196,11 @@ function OrderFormContent(
           collectionDate: value.collectionDate || null,
           status: value.status,
           shippingMethod: value.shippingMethod || "n/a",
-          shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-          taxes: parseMoneyToMinorUnits(value.taxes),
-          duties: parseMoneyToMinorUnits(value.duties),
-          tariffs: parseMoneyToMinorUnits(value.tariffs),
-          miscFees: parseMoneyToMinorUnits(value.miscFees),
+          shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+          taxes: acceptedMoneyToMinorUnits(value.taxes),
+          duties: acceptedMoneyToMinorUnits(value.duties),
+          tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+          miscFees: acceptedMoneyToMinorUnits(value.miscFees),
           notes: value.notes,
         };
 
@@ -453,6 +455,7 @@ function OrderFormContent(
         <div className="grid grid-cols-2 gap-3">
           <form.Field
             name="shippingFee"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Shipping</Label>
@@ -462,17 +465,20 @@ function OrderFormContent(
                   mask="currency"
                   currency={currency}
                   locale={userLocale}
+                  invalid={!field.state.meta.isValid}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
                   placeholder="0.00"
                 />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
               </div>
             )}
           />
 
           <form.Field
             name="taxes"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Taxes</Label>
@@ -482,11 +488,13 @@ function OrderFormContent(
                   mask="currency"
                   currency={currency}
                   locale={userLocale}
+                  invalid={!field.state.meta.isValid}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
                   placeholder="0.00"
                 />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
               </div>
             )}
           />
@@ -495,6 +503,7 @@ function OrderFormContent(
         <div className="grid grid-cols-2 gap-3">
           <form.Field
             name="duties"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Duties</Label>
@@ -504,17 +513,20 @@ function OrderFormContent(
                   mask="currency"
                   currency={currency}
                   locale={userLocale}
+                  invalid={!field.state.meta.isValid}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
                   placeholder="0.00"
                 />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
               </div>
             )}
           />
 
           <form.Field
             name="tariffs"
+            validators={{ onChange: moneyInput }}
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Tariffs</Label>
@@ -524,11 +536,13 @@ function OrderFormContent(
                   mask="currency"
                   currency={currency}
                   locale={userLocale}
+                  invalid={!field.state.meta.isValid}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
                   placeholder="0.00"
                 />
+                <FieldError className="text-xs" errors={field.state.meta.errors} />
               </div>
             )}
           />
@@ -536,6 +550,7 @@ function OrderFormContent(
 
         <form.Field
           name="miscFees"
+          validators={{ onChange: moneyInput }}
           children={(field) => (
             <div className="grid gap-1.5">
               <Label htmlFor={field.name}>Miscellaneous</Label>
@@ -545,11 +560,13 @@ function OrderFormContent(
                 mask="currency"
                 currency={currency}
                 locale={userLocale}
+                invalid={!field.state.meta.isValid}
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
                 placeholder="0.00"
               />
+              <FieldError className="text-xs" errors={field.state.meta.errors} />
             </div>
           )}
         />

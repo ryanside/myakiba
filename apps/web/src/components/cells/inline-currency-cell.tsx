@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { MaskInput } from "@/components/ui/mask-input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   formatCurrencyFromMinorUnits,
   minorUnitsToMajorString,
-  parseMoneyToMinorUnits,
+  parseMoneyInputToMinorUnits,
 } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
+import { MONEY_INPUT_HINT } from "@/lib/money-input";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
 import { runSubmit } from "@/lib/form-submit";
@@ -27,10 +29,13 @@ export function InlineCurrencyCell({
 }: InlineCurrencyCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingValue, setEditingValue] = useState("");
+  const [invalid, setInvalid] = useState(false);
   const [displayValue, submit] = usePendingValue(value, onSubmit);
+  const hintId = useId();
 
   const handleEdit = useCallback(() => {
     setEditingValue(minorUnitsToMajorString(displayValue));
+    setInvalid(false);
     setIsEditing(true);
   }, [displayValue]);
 
@@ -39,10 +44,17 @@ export function InlineCurrencyCell({
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    if (editingValue === "") {
+      setIsEditing(false);
+      return;
+    }
+    const amount = parseMoneyInputToMinorUnits(editingValue);
+    if (amount.isErr()) {
+      setInvalid(true);
+      return;
+    }
     setIsEditing(false);
-    if (editingValue === "") return;
-    const nextValue = parseMoneyToMinorUnits(editingValue);
-    await submit(nextValue);
+    await submit(amount.value);
   }, [editingValue, submit]);
 
   const handleInputRef = useCallback((node: HTMLInputElement | null) => {
@@ -51,25 +63,37 @@ export function InlineCurrencyCell({
 
   if (isEditing) {
     return (
-      <MaskInput
-        ref={handleInputRef}
-        mask="currency"
-        currency={currency}
-        locale={locale}
-        value={editingValue}
-        onValueChange={(_, unmaskedValue) => {
-          setEditingValue(unmaskedValue);
-        }}
-        onBlur={handleCancel}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            void runSubmit(handleSubmit);
-          } else if (e.key === "Escape") {
-            handleCancel();
+      <Tooltip open={invalid}>
+        <TooltipTrigger
+          render={
+            <MaskInput
+              ref={handleInputRef}
+              mask="currency"
+              currency={currency}
+              locale={locale}
+              value={editingValue}
+              invalid={invalid}
+              aria-describedby={invalid ? hintId : undefined}
+              onValueChange={(_, unmaskedValue) => {
+                setEditingValue(unmaskedValue);
+                setInvalid(false);
+              }}
+              onBlur={handleCancel}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  void runSubmit(handleSubmit);
+                } else if (e.key === "Escape") {
+                  handleCancel();
+                }
+              }}
+              className="h-8 w-full text-foreground pl-0"
+            />
           }
-        }}
-        className="h-8 w-full text-foreground pl-0"
-      />
+        />
+        <TooltipContent id={hintId} side="bottom">
+          {MONEY_INPUT_HINT}
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
