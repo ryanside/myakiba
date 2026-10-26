@@ -1905,6 +1905,42 @@
       "bug": "an import's detail panel never listed the CSV rows saved without a price they could not read",
       "test": "apps/web/src/components/sync/sync-session-status-panel.test.tsx",
       "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"]
+    },
+    {
+      "fix": "52146aec9c72e7f807306ba4c29f65735bfc041e",
+      "bug": "imports could start and install prompts showed while the extension was not installable during store review",
+      "test": "apps/web/src/components/extension/extension-review.test.tsx",
+      "fixed": [
+        "the sync launcher's Collection option > shows the review notice and starts nothing, even with the extension ready",
+        "the sync launcher's Order option > shows the review notice and starts nothing, even with the extension ready",
+        "the sync launcher's MyFigureCollection CSV option > shows the review notice and starts nothing, even with the extension ready",
+        "the sync launcher's Item Database option > shows the review notice and starts nothing, even with the extension ready",
+        "the command palette's Collection action > shows the review notice and starts nothing, even with the extension ready",
+        "the command palette's Order action > shows the review notice and starts nothing, even with the extension ready",
+        "the command palette's MyFigureCollection CSV action > shows the review notice and starts nothing, even with the extension ready",
+        "the command palette's Item Database action > shows the review notice and starts nothing, even with the extension ready",
+        "the item sheet button > shows the review notice and starts nothing, even with the extension ready",
+        "the collection sheet button > shows the review notice and starts nothing, even with the extension ready",
+        "onboarding's Add to collection choice > shows the review notice and starts nothing, even with the extension ready",
+        "onboarding's Create order choice > shows the review notice and starts nothing, even with the extension ready",
+        "onboarding's Import MyFigureCollection CSV choice > shows the review notice and starts nothing, even with the extension ready",
+        "the order page's add items > shows the review notice and starts nothing, even with the extension ready",
+        "the item page's Add to collection > shows the review notice and starts nothing, even with the extension ready",
+        "the item page's Create order > shows the review notice and starts nothing, even with the extension ready",
+        "the item page's Add to item database > shows the review notice and starts nothing, even with the extension ready",
+        "the item page's resync button > shows the review notice and starts nothing, even with the extension ready",
+        "the import's retry > shows the review notice and starts nothing, even with the extension ready",
+        "the settings import > shows the review notice and starts nothing, even with the extension ready",
+        "the settings import's retry > shows the review notice and starts nothing, even with the extension ready",
+        "the Add to item database form > a submit sends nothing and shows the review notice, even with the extension ready",
+        "the Add to collection form > a submit sends nothing and shows the review notice, even with the extension ready",
+        "the Create order form > a submit sends nothing and shows the review notice, even with the extension ready",
+        "the CSV form > a submit sends nothing and shows the review notice, even with the extension ready",
+        "onboarding's extension step shows the review notice instead of install steps",
+        "onboarding's sync step says importing is unavailable",
+        "the settings import says importing is unavailable",
+        "the FAQ answers how to get the extension with the review notice"
+      ]
     }
   ],
   "lint": [
