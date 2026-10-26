@@ -1,6 +1,5 @@
 import { Result } from "better-result";
 import { inArray } from "drizzle-orm";
-import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { JobData, UpdatedSyncOrder } from "@myakiba/contracts/sync/schema";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, order } from "@myakiba/db/schema/figure";
@@ -49,7 +48,7 @@ export function fetchedItemRows(payload: JobData, item: ExistingItemWithLatestRe
       status: row.status,
       count: row.count,
       score: row.score.trim() === "" ? "0.0" : row.score,
-      price: parseMoneyInputToMinorUnits(row.price).unwrapOr(0),
+      price: row.priceMinorUnits,
       shop: row.shop,
       orderDate: row.orderDate,
       paymentDate: row.payment_date,

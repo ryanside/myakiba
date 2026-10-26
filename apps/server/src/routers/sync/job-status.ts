@@ -1,13 +1,9 @@
 import type { JobData, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { publishImportStatus } from "@/lib/publish-import-status";
 
-import { csvPriceWarnings } from "./csv";
-
 export function importWarnings(payload: JobData | null): Pick<SyncJobStatus, "warnings"> {
   if (payload?.type !== "csv") return {};
-  return payload.warnings?.length
-    ? { warnings: payload.warnings }
-    : csvPriceWarnings(payload.items);
+  return payload.warnings.length > 0 ? { warnings: payload.warnings } : {};
 }
 
 export type ServerSyncJobStatus = SyncJobStatus & { readonly revision: number };

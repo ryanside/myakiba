@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import type { JobData, NormalizedInternalCsvItem } from "@myakiba/contracts/sync/schema";
+import type { JobData, PricedCsvItem } from "@myakiba/contracts/sync/schema";
 import { fetchedItemRows } from "./item-rows";
 import { prepareCsvItems } from "./csv";
 import { buildRetryJobData } from "./retry";
 
 const item = { id: "item-1", externalId: 1, title: "", releaseId: null, releaseDate: null };
-const row: NormalizedInternalCsvItem = {
+const row: PricedCsvItem = {
   collectionId: "collection-1",
   itemExternalId: 1,
   orderId: "order-1",
@@ -16,13 +16,15 @@ const row: NormalizedInternalCsvItem = {
   shipping_date: null,
   collecting_date: null,
   price: "10.00",
+  priceMinorUnits: 1000,
   shop: "Shop",
   shipping_method: "n/a",
   note: "CSV",
   orderDate: null,
 };
-const payload = (csvRow: NormalizedInternalCsvItem): JobData => ({
+const payload = (csvRow: PricedCsvItem): JobData => ({
   type: "csv",
+  warnings: [],
   payloadVersion: 3,
   userId: "user-1",
   syncSessionId: "session-1",
@@ -59,12 +61,13 @@ test("CSV retry of an existing Item keeps the in-request Order mapping", () => {
 
 test("in-request CSV imports an invalid price as zero", () => {
   expect(
-    prepareCsvItems([{ ...row, price: "12,50" }], [item], "user-1").collectionItems,
+    prepareCsvItems([{ ...row, price: "12,50", priceMinorUnits: 0 }], [item], "user-1")
+      .collectionItems,
   ).toMatchObject([{ price: 0 }]);
 });
 
 test("fetched CSV imports an invalid price as zero", () => {
-  expect(fetchedItemRows(payload({ ...row, price: "1.2.3" }), item).collectionItems).toMatchObject([
-    { price: 0 },
-  ]);
+  expect(
+    fetchedItemRows(payload({ ...row, price: "1.2.3", priceMinorUnits: 0 }), item).collectionItems,
+  ).toMatchObject([{ price: 0 }]);
 });

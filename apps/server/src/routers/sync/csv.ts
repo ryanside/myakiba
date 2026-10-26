@@ -3,30 +3,30 @@ import type {
   QueuedCollectionItem,
   UpdatedSyncOrder,
   SyncJobStatus,
+  PricedCsvItem,
 } from "@myakiba/contracts/sync/schema";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { ExistingItemWithLatestRelease } from "./model";
 
-export function csvPriceWarnings(
-  items: readonly Pick<NormalizedInternalCsvItem, "itemExternalId" | "price">[],
-): Pick<SyncJobStatus, "warnings"> {
-  const warnings = items.flatMap((item) =>
-    parseMoneyInputToMinorUnits(item.price).isErr()
-      ? [{ mfcItemId: item.itemExternalId, input: item.price }]
-      : [],
-  );
-  return warnings.length > 0 ? { warnings } : {};
+export function normalizeCsvPrices(items: readonly NormalizedInternalCsvItem[]) {
+  const warnings: NonNullable<SyncJobStatus["warnings"]>[number][] = [];
+  const priced: PricedCsvItem[] = items.map((item) => {
+    const price = parseMoneyInputToMinorUnits(item.price);
+    if (price.isErr()) warnings.push({ mfcItemId: item.itemExternalId, input: item.price });
+    return { ...item, priceMinorUnits: price.unwrapOr(0) };
+  });
+  return { items: priced, warnings };
 }
 
 export function prepareCsvItems(
-  items: readonly NormalizedInternalCsvItem[],
+  items: readonly PricedCsvItem[],
   existingItems: readonly ExistingItemWithLatestRelease[],
   userId: string,
 ) {
   const existingItemsByExternalId = new Map(existingItems.map((item) => [item.externalId, item]));
   const collectionItems: QueuedCollectionItem[] = [];
   const orderItems: UpdatedSyncOrder[] = [];
-  const csvItemsToFetch: NormalizedInternalCsvItem[] = [];
+  const csvItemsToFetch: PricedCsvItem[] = [];
   const existingItemExternalIds: number[] = [];
 
   for (const item of items) {
@@ -46,7 +46,7 @@ export function prepareCsvItems(
       status: item.status,
       count: item.count,
       score: item.score.trim() === "" ? "0.0" : item.score,
-      price: parseMoneyInputToMinorUnits(item.price).unwrapOr(0),
+      price: item.priceMinorUnits,
       shop: item.shop,
       orderDate: item.orderDate,
       paymentDate: item.payment_date,
@@ -86,6 +86,5 @@ export function prepareCsvItems(
     orderItems,
     csvItemsToFetch,
     existingItemExternalIds,
-    ...csvPriceWarnings(items),
   };
 }

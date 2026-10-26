@@ -42,7 +42,7 @@ import type {
 } from "./model";
 import SyncService from "./service";
 import type { SyncSessionCreation } from "./service";
-import { prepareCsvItems } from "./csv";
+import { normalizeCsvPrices, prepareCsvItems } from "./csv";
 import { collectionRows, orderCollectionRows, plannedSync, splitItems } from "./plan";
 import type { PlannedSync } from "./plan";
 
@@ -194,11 +194,13 @@ export const Sync = {
         items: { requested: body.length },
       });
 
-      const items = body.map((item) => ({
-        ...item,
-        collectionId: createId(),
-        orderId: item.status === "Ordered" ? createId() : item.orderId,
-      }));
+      const { items, warnings } = normalizeCsvPrices(
+        body.map((item) => ({
+          ...item,
+          collectionId: createId(),
+          orderId: item.status === "Ordered" ? createId() : item.orderId,
+        })),
+      );
 
       const itemExternalIds = items.map((item) => item.itemExternalId);
       const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
@@ -218,7 +220,7 @@ export const Sync = {
       const syncSessionId = createId();
       const jobData = {
         type: "csv",
-        ...(result.warnings && { warnings: [...result.warnings] }),
+        warnings,
         payloadVersion: 3,
         userId: scope.viewer.userId,
         syncSessionId,

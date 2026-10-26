@@ -141,7 +141,7 @@ const syncJobErrorSchema = z.object({
   message: z.string(),
 });
 
-const syncPriceWarningSchema = z.object({
+export const syncPriceWarningSchema = z.object({
   mfcItemId: z.number().int().positive(),
   input: z.string(),
 });
@@ -314,6 +314,12 @@ const queuedCollectionItemSchema = z.object({
   notes: z.string(),
 });
 
+const pricedCsvItemSchema = internalCsvItemSchema.extend({
+  priceMinorUnits: z.number().int(),
+});
+
+export type PricedCsvItem = z.infer<typeof pricedCsvItemSchema>;
+
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("item"),
@@ -324,11 +330,11 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("csv"),
-    warnings: z.array(syncPriceWarningSchema).optional(),
+    warnings: z.array(syncPriceWarningSchema),
     payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),
-    items: z.array(internalCsvItemSchema),
+    items: z.array(pricedCsvItemSchema),
     itemsToInsert: z.array(queuedCollectionItemSchema),
     ordersToInsert: z.array(syncOrderSchema),
   }),
