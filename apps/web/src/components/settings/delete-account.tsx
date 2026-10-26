@@ -8,7 +8,7 @@ import { isStaleSignIn, settings } from "@/data/resources/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { FieldError } from "@/components/ui/field";
 import {
   Dialog,
@@ -175,8 +175,8 @@ export function DeleteAccount() {
                     <StatusButton
                       type="submit"
                       variant="destructive"
-                      status={status}
-                      disabled={!state.canSubmit || state.isSubmitting}
+                      status={formSubmitStatus(status, state.isSubmitting)}
+                      disabled={!state.canSubmit}
                     >
                       Delete Account Permanently
                     </StatusButton>

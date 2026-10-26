@@ -6,7 +6,7 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -162,8 +162,8 @@ function RouteComponent() {
               <StatusButton
                 type="submit"
                 className="w-full"
-                status={status}
-                disabled={!state.canSubmit || state.isSubmitting}
+                status={formSubmitStatus(status, state.isSubmitting)}
+                disabled={!state.canSubmit}
               >
                 Send Reset Link
               </StatusButton>

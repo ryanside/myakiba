@@ -5,7 +5,7 @@ import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
@@ -193,8 +193,8 @@ function RouteComponent() {
               <StatusButton
                 type="submit"
                 className="w-full"
-                status={status}
-                disabled={!state.canSubmit || state.isSubmitting}
+                status={formSubmitStatus(status, state.isSubmitting)}
+                disabled={!state.canSubmit}
               >
                 Reset Password
               </StatusButton>

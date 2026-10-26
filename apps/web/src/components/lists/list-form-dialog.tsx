@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Textarea } from "@/components/ui/textarea";
 
 export function ListFormDialog({
@@ -162,7 +162,11 @@ function ListForm({
             >
               Cancel
             </DialogClose>
-            <StatusButton type="submit" status={status} disabled={!canSubmit || isSubmitting}>
+            <StatusButton
+              type="submit"
+              status={formSubmitStatus(status, isSubmitting)}
+              disabled={!canSubmit}
+            >
               {submitLabel}
             </StatusButton>
           </DialogFooter>

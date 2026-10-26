@@ -2,7 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import {
   Dialog,
   DialogClose,
@@ -389,12 +389,12 @@ function UnifiedItemMoveFormContent({
                 )}
               />
               <existingOrderForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => [state.canSubmit, state.isSubmitting] as const}
                 children={([canSubmit, isSubmitting]) => (
                   <StatusButton
                     type="submit"
-                    status={buttonStatus}
-                    disabled={!canSubmit || isSubmitting}
+                    status={formSubmitStatus(buttonStatus, isSubmitting)}
+                    disabled={!canSubmit}
                     variant="default"
                   >
                     {existingSubmitLabel}
@@ -769,12 +769,12 @@ function UnifiedItemMoveFormContent({
                 )}
               />
               <newOrderForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => [state.canSubmit, state.isSubmitting] as const}
                 children={([canSubmit, isSubmitting]) => (
                   <StatusButton
                     type="submit"
-                    status={buttonStatus}
-                    disabled={!canSubmit || isSubmitting}
+                    status={formSubmitStatus(buttonStatus, isSubmitting)}
+                    disabled={!canSubmit}
                     variant="default"
                   >
                     {newSubmitLabel}

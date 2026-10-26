@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "../ui/button";
-import { StatusButton, useButtonStatus } from "../ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
@@ -628,12 +628,12 @@ function CollectionItemFormContent({
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
               <StatusButton
                 type="submit"
-                status={buttonStatus}
-                disabled={!canSubmit || isSubmitting}
+                status={formSubmitStatus(buttonStatus, isSubmitting)}
+                disabled={!canSubmit}
                 className="w-full flex-1"
               >
                 Update

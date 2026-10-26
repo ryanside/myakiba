@@ -45,6 +45,15 @@ export function useButtonStatus({
   return { status, run } as const;
 }
 
+/**
+ * The status for a TanStack Form submit button. TanStack sets `isSubmitting` before `run` starts
+ * and clears it after `run` settles, so the button shows loading across both gaps instead of
+ * needing `disabled`, which would drop focus.
+ */
+export function formSubmitStatus(status: ButtonStatus, isSubmitting: boolean): ButtonStatus {
+  return isSubmitting && status === "idle" ? "loading" : status;
+}
+
 const swapVariants: Variants = {
   initial: { opacity: 0, y: 8, filter: "blur(4px)" },
   animate: { opacity: 1, y: 0, filter: "blur(0px)" },

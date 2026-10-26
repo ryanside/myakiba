@@ -4,7 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
-import { StatusButton, useButtonStatus } from "../ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { FieldError } from "../ui/field";
@@ -252,8 +252,8 @@ export default function SignUpForm() {
             <StatusButton
               type="submit"
               className="w-full"
-              status={status}
-              disabled={!state.canSubmit || state.isSubmitting}
+              status={formSubmitStatus(status, state.isSubmitting)}
+              disabled={!state.canSubmit}
             >
               Register
             </StatusButton>

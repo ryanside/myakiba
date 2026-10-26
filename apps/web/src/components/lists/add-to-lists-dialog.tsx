@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import {
   useAddTargetsToListsMutation,
   useListOptionsForTargetsQuery,
@@ -118,9 +118,9 @@ function CreateListForm({
                           variant="ghost"
                           data-size="xs"
                           className={inputGroupButtonVariants({ size: "xs" })}
-                          status={status}
+                          status={formSubmitStatus(status, isSubmitting)}
                           successLabel="Created"
-                          disabled={isSubmitting || disabled}
+                          disabled={disabled}
                         >
                           Create
                         </StatusButton>
@@ -375,8 +375,8 @@ function AddToListsForm({
                 </DialogClose>
                 <StatusButton
                   type="submit"
-                  status={status}
-                  disabled={isSubmitting || selectedListIds.length === 0}
+                  status={formSubmitStatus(status, isSubmitting)}
+                  disabled={selectedListIds.length === 0}
                 >
                   Save
                 </StatusButton>
