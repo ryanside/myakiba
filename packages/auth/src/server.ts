@@ -10,8 +10,9 @@ import { createId } from "@paralleldrive/cuid2";
 import { redis } from "@myakiba/redis/client";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
+import { z } from "zod";
+import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 
-import { parseUserPreference } from "./user-preference";
 import { accessSessionStore } from "./session-store";
 import { sendAuthEmail } from "./send-auth-email";
 
@@ -138,13 +139,13 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         defaultValue: "USD",
-        transform: { input: (value) => parseUserPreference("currency", value) },
+        validator: { input: z.enum(CURRENCIES) },
       },
       dateFormat: {
         type: "string",
         required: true,
         defaultValue: "MM/DD/YYYY",
-        transform: { input: (value) => parseUserPreference("dateFormat", value) },
+        validator: { input: z.enum(DATE_FORMATS) },
       },
     },
   },
