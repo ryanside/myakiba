@@ -320,6 +320,17 @@ const pricedCsvItemSchema = internalCsvItemSchema.extend({
 
 export type PricedCsvItem = z.infer<typeof pricedCsvItemSchema>;
 
+export const csvJobDataSchema = z.object({
+  type: z.literal("csv"),
+  warnings: z.array(syncPriceWarningSchema).default([]),
+  payloadVersion: z.literal(3),
+  userId: z.string(),
+  syncSessionId: z.string(),
+  items: z.array(pricedCsvItemSchema),
+  itemsToInsert: z.array(queuedCollectionItemSchema),
+  ordersToInsert: z.array(syncOrderSchema),
+});
+
 export const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("item"),
@@ -328,16 +339,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
     syncSessionId: z.string(),
     itemExternalIds: z.array(z.number().int().positive()).min(1).max(MAX_ITEM_SYNC_ITEMS),
   }),
-  z.object({
-    type: z.literal("csv"),
-    warnings: z.array(syncPriceWarningSchema).default([]),
-    payloadVersion: z.literal(3),
-    userId: z.string(),
-    syncSessionId: z.string(),
-    items: z.array(pricedCsvItemSchema),
-    itemsToInsert: z.array(queuedCollectionItemSchema),
-    ordersToInsert: z.array(syncOrderSchema),
-  }),
+  csvJobDataSchema,
   z.object({
     type: z.literal("order"),
     payloadVersion: z.literal(3),

@@ -2231,43 +2231,73 @@ describe("sync detail price warnings", () => {
 test("main scraped results read as imported in detail, filters, counts and retry", async () => {
   const run = await start("item", { items: [PRESENT, X, Y] });
   expect(await complete(run, X)).toEqual(imported);
-  await db.execute(sql`update sync_session_item set status = 'scraped' where sync_session_id = ${run.syncSessionId} and status = 'imported'`);
+  await db.execute(
+    sql`update sync_session_item set status = 'scraped' where sync_session_id = ${run.syncSessionId} and status = 'imported'`,
+  );
   const detailReply = await get(`/sessions/${run.syncSessionId}`);
   const detail = detailSchema.parse(detailReply.body);
-  expect(detail.session.items.filter((row) => row.status === "imported").map((row) => row.itemExternalId).sort()).toEqual([PRESENT, X].sort());
+  expect(
+    detail.session.items
+      .filter((row) => row.status === "imported")
+      .map((row) => row.itemExternalId)
+      .toSorted(),
+  ).toEqual([PRESENT, X].toSorted());
   const filteredReply = await get(`/sessions/${run.syncSessionId}?status=imported`);
   expect(detailSchema.parse(filteredReply.body).session.items).toHaveLength(2);
-  expect(await complete(run, X)).toEqual({ status: 200, body: { outcome: "already_imported", reason: null } });
+  expect(await complete(run, X)).toEqual({
+    status: 200,
+    body: { outcome: "already_imported", reason: null },
+  });
   await fail(run, Y);
-  expect(await session(run.syncSessionId)).toMatchObject({ successCount: 2, failCount: 1, status: "partial" });
+  expect(await session(run.syncSessionId)).toMatchObject({
+    successCount: 2,
+    failCount: 1,
+    status: "partial",
+  });
   expect(await storedJobStatus(run.jobId)).toMatchObject({
     progress: { succeeded: 2, failed: 1 },
-    recentItems: expect.arrayContaining([expect.objectContaining({ externalId: X, outcome: "succeeded" })]),
+    recentItems: expect.arrayContaining([
+      expect.objectContaining({ externalId: X, outcome: "succeeded" }),
+    ]),
   });
   await retry(run.syncSessionId);
   expect(await session(run.syncSessionId)).toMatchObject({ successCount: 2, failCount: 0 });
 });
 
 async function seedMainPayload(run: Run) {
-  const [saved] = await db.select({ payload: syncSession.requestPayload }).from(syncSession).where(eq(syncSession.id, run.syncSessionId));
+  const [saved] = await db
+    .select({ payload: syncSession.requestPayload })
+    .from(syncSession)
+    .where(eq(syncSession.id, run.syncSessionId));
   if (!saved?.payload) throw new Error("seeded session has no payload");
   const payload = saved.payload;
-  let legacy: unknown;
-  if (payload.type === "collection") {
-    const { itemsToFetch, ...rest } = payload.collection;
-    legacy = { ...payload, collection: { ...rest, itemsToScrape: itemsToFetch } };
-  } else if (payload.type === "order" || payload.type === "order-item") {
-    const { itemsToFetch, ...rest } = payload.order;
-    legacy = { ...payload, order: { ...rest, itemsToScrape: itemsToFetch } };
-  } else if (payload.type === "csv") {
-    const { warnings: _warnings, ...rest } = payload;
-    legacy = { ...rest, items: payload.items.map(({ priceMinorUnits: _priceMinorUnits, ...row }) => row) };
-  } else throw new Error("this fixture expects a collection, order or CSV payload");
-  await db.execute(sql`update sync_session set request_payload = ${JSON.stringify(legacy)}::text::jsonb where id = ${run.syncSessionId}`);
+  const legacy = (() => {
+    if (payload.type === "collection") {
+      const { itemsToFetch, ...rest } = payload.collection;
+      return { ...payload, collection: { ...rest, itemsToScrape: itemsToFetch } };
+    }
+    if (payload.type === "order" || payload.type === "order-item") {
+      const { itemsToFetch, ...rest } = payload.order;
+      return { ...payload, order: { ...rest, itemsToScrape: itemsToFetch } };
+    }
+    if (payload.type === "csv") {
+      const { warnings: _warnings, ...rest } = payload;
+      return {
+        ...rest,
+        items: payload.items.map(({ priceMinorUnits: _priceMinorUnits, ...row }) => row),
+      };
+    }
+    throw new Error("this fixture expects a collection, order or CSV payload");
+  })();
+  await db.execute(
+    sql`update sync_session set request_payload = ${JSON.stringify(legacy)}::text::jsonb where id = ${run.syncSessionId}`,
+  );
 }
 
 describe("main retained payloads", () => {
-  for (const entry of cases.filter((entry) => ["collection", "order", "order-item"].includes(entry.type))) {
+  for (const entry of cases.filter((candidate) =>
+    ["collection", "order", "order-item"].includes(candidate.type),
+  )) {
     test(`retries main ${entry.type} itemsToScrape`, async () => {
       const run = await start(entry.type, await entry.body());
       await interrupt(run);
@@ -2283,15 +2313,23 @@ describe("main retained payloads", () => {
     redisValues.clear();
     const warnings = [{ mfcItemId: Y, input: "12,50" }];
     expect(await storedJobStatus(run.jobId)).toMatchObject({ warnings });
-    expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({ status: 200, body: { session: { warnings } } });
+    expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({
+      status: 200,
+      body: { session: { warnings } },
+    });
     const retried = await retry(run.syncSessionId);
     expect(retried.missingMfcItemIds).toEqual([X, Y]);
     expect(await complete(retried, X)).toEqual(imported);
     expect(await complete(retried, Y)).toEqual(imported);
-    expect(await userRows()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ mfcItemId: X, price: 1250 }),
-      expect.objectContaining({ mfcItemId: Y, price: 0 }),
-    ]));
-    expect(await storedJobStatus(retried.jobId)).toMatchObject({ warnings, terminalState: "success" });
+    expect(await userRows()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ mfcItemId: X, price: 1250 }),
+        expect.objectContaining({ mfcItemId: Y, price: 0 }),
+      ]),
+    );
+    expect(await storedJobStatus(retried.jobId)).toMatchObject({
+      warnings,
+      terminalState: "success",
+    });
   });
 });
