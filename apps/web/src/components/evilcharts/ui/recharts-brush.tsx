@@ -1,6 +1,12 @@
 "use client";
 
-import { motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "motion/react";
+import {
+  motion,
+  useFollowValue,
+  useMotionValue,
+  useMotionValueEvent,
+  useTransform,
+} from "motion/react";
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar } from "recharts";
 import { getColorsCount } from "@/components/evilcharts/ui/recharts-chart";
 import type {
@@ -11,6 +17,7 @@ import type {
 import { useCallback, useEffect } from "react";
 import type { ComponentProps, FC } from "react";
 import type { MotionValue } from "motion/react";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
@@ -50,7 +57,8 @@ interface EvilBrushProps {
   curveType?: CurveType;
 }
 
-const SPRING_CONFIG = { stiffness: 300, damping: 35, mass: 0.8 };
+const SPRING = { type: "spring", stiffness: 300, damping: 35, mass: 0.8 } as const;
+const INSTANT = { type: "tween", duration: 0 } as const;
 const MIN_SPAN = 2;
 
 type DragType = "left" | "right" | "middle";
@@ -274,8 +282,9 @@ function EvilBrush({
     rightTarget.set(rightPct);
   }, [leftPct, leftTarget, rightPct, rightTarget]);
 
-  const leftSpring = useSpring(leftTarget, SPRING_CONFIG);
-  const rightSpring = useSpring(rightTarget, SPRING_CONFIG);
+  const follow = useMotionPreference().reduce ? INSTANT : SPRING;
+  const leftSpring = useFollowValue(leftTarget, follow);
+  const rightSpring = useFollowValue(rightTarget, follow);
   const leftPosition = useTransform(leftSpring, (v) => `${v}%`);
   const rightPosition = useTransform(rightSpring, (v) => `${v}%`);
   const leftOverlayWidth = useTransform(leftSpring, (v) => `${v}%`);

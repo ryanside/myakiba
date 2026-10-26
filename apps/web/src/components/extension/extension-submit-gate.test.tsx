@@ -23,6 +23,8 @@ await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
   useNavigate: () => async () => {},
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
+  // Settings rows read the URL hash for search results; these screens render without a router.
+  useLocation: () => {},
 }));
 
 const sent: string[] = [];

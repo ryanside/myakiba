@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.0-debian
+FROM oven/bun:1.4.4-debian
 ARG VITE_SERVER_URL
 ARG VITE_TURNSTILE_SITE_KEY
 WORKDIR /app

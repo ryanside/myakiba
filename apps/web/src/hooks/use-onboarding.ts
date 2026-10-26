@@ -1,74 +1,30 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import * as z from "zod";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
 const STORAGE_KEY = "myakiba:onboarding-v2";
 
+// Earlier versions also kept the step and completion here. The account stores whether the user
+// has seen onboarding now, so only the extension step's flag is read.
 const storedOnboardingStateSchema = z.object({
-  step: z.number().finite().optional(),
-  hasSeen: z.boolean().optional(),
-  completed: z.boolean().optional(),
   extensionStepOpen: z.boolean().optional(),
 });
 
 type StoredOnboardingState = z.infer<typeof storedOnboardingStateSchema>;
 
-type OnboardingState = {
-  readonly step: number;
-  readonly hasSeen: boolean;
-  readonly completed: boolean;
-  readonly extensionStepOpen: boolean;
-};
-
-const INITIAL_STATE: StoredOnboardingState = {
-  step: 0,
-  hasSeen: false,
-  completed: false,
-};
-
-function normalize(raw: StoredOnboardingState, totalSteps: number): OnboardingState {
-  const lastStepIndex = Math.max(totalSteps - 1, 0);
-  const rawStep = Math.trunc(raw.step ?? 0);
-  const step = Math.min(Math.max(rawStep, 0), lastStepIndex);
-  // Migration: earlier versions encoded completion as `step > lastStepIndex`
-  // (past-the-end sentinel) without a dedicated flag.
-  const completed = raw.completed ?? rawStep > lastStepIndex;
-  return {
-    step,
-    hasSeen: raw.hasSeen ?? false,
-    completed,
-    extensionStepOpen: raw.extensionStepOpen ?? false,
-  };
-}
-
-type UseOnboardingOptions = {
-  readonly totalSteps: number;
-};
+const INITIAL_STATE: StoredOnboardingState = {};
 
 type UseOnboardingReturn = {
-  readonly step: number;
-  readonly hasSeen: boolean;
-  readonly isCompleted: boolean;
+  /** Onboarding showed the extension step when the page went away, so it reopens there. */
   readonly reopenAtExtensionStep: boolean;
-  readonly setStep: (step: number) => void;
   readonly setExtensionStepOpen: (open: boolean) => void;
-  readonly complete: () => void;
-  readonly dismiss: () => void;
 };
 
-function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingReturn {
-  const [rawState, setState] = useLocalStorage(
+function useOnboarding(): UseOnboardingReturn {
+  const [state, setState] = useLocalStorage(
     STORAGE_KEY,
     INITIAL_STATE,
     storedOnboardingStateSchema,
-  );
-  const state = useMemo(() => normalize(rawState, totalSteps), [rawState, totalSteps]);
-
-  const setStep = useCallback(
-    (step: number) => {
-      setState((previous) => ({ ...previous, step, hasSeen: true }));
-    },
-    [setState],
   );
 
   const setExtensionStepOpen = useCallback(
@@ -82,28 +38,9 @@ function useOnboarding({ totalSteps }: UseOnboardingOptions): UseOnboardingRetur
     [setState],
   );
 
-  const complete = useCallback(() => {
-    setState((previous) => ({
-      ...previous,
-      hasSeen: true,
-      completed: true,
-      extensionStepOpen: false,
-    }));
-  }, [setState]);
-
-  const dismiss = useCallback(() => {
-    setState((previous) => ({ ...previous, hasSeen: true }));
-  }, [setState]);
-
   return {
-    step: state.step,
-    hasSeen: state.hasSeen,
-    isCompleted: state.completed,
-    reopenAtExtensionStep: state.extensionStepOpen && !state.completed,
-    setStep,
+    reopenAtExtensionStep: state.extensionStepOpen ?? false,
     setExtensionStepOpen,
-    complete,
-    dismiss,
   } as const;
 }
 

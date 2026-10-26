@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { useMotionPreference } from "@/hooks/use-appearance";
 import "@/lib/typer/typer.css";
 import { Typer } from "@/lib/typer/typer";
 import type { TyperOptions } from "@/lib/typer/typer";
@@ -24,23 +25,22 @@ export function TyperHeadline({
   "aria-hidden": ariaHidden,
 }: TyperHeadlineProps) {
   const ref = useRef<HTMLSpanElement>(null);
+  const reduceMotion = useMotionPreference().reduce;
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.textContent = text;
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     const typer = new Typer(el, {
       fps,
       cycles,
       cycleLength,
       variations,
-      initVisible: initVisible ?? prefersReducedMotion,
+      initVisible: initVisible ?? reduceMotion,
     });
 
-    if (prefersReducedMotion) return () => typer.destroy();
+    if (reduceMotion) return () => typer.destroy();
 
     const timer = window.setTimeout(() => typer.in(), delayMs);
 
@@ -48,7 +48,7 @@ export function TyperHeadline({
       window.clearTimeout(timer);
       typer.destroy();
     };
-  }, [text, fps, cycles, cycleLength, variations, initVisible, delayMs]);
+  }, [text, fps, cycles, cycleLength, variations, initVisible, delayMs, reduceMotion]);
 
   return (
     <span ref={ref} data-typer className={cn(className)} aria-hidden={ariaHidden}>

@@ -96,7 +96,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
 const FIRST_STEP = 1;
 const LAST_STEP = STEPS.length;
 const EXTENSION_STEP = STEPS.find((meta) => meta.id === "extension")?.step ?? FIRST_STEP;
-const FIRST_OPEN_DELAY_MS = 400;
+const SAVE_FAILED = "Couldn't save onboarding.";
 const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
 const PANEL_MIN_HEIGHT = "min-h-[440px]";
@@ -107,30 +107,23 @@ const appRouteApi = getRouteApi("/(app)");
 
 type OnboardingDialogProps = {
   readonly renderTrigger: React.ReactElement;
+  /** Only one mounted dialog may open on its own, for a new account or at the extension step after a reload, or two would stack. */
+  readonly opensForNewAccount?: boolean;
 };
 
-function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
-  const {
-    step: savedStep,
-    hasSeen,
-    isCompleted,
-    reopenAtExtensionStep,
-    setStep,
-    setExtensionStepOpen,
-    complete,
-    dismiss,
-  } = useOnboarding({ totalSteps: STEPS.length });
-  const [open, setOpen] = useState(reopenAtExtensionStep);
+function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: OnboardingDialogProps) {
+  const { session } = appRouteApi.useRouteContext();
+  // Sessions from before the column existed have no key and count as onboarded.
+  const isNewAccount = session.user.hasSeenOnboarding === false;
+  const { reopenAtExtensionStep, setExtensionStepOpen } = useOnboarding();
+  const reopensAtExtensionStep = opensForNewAccount && reopenAtExtensionStep;
+  const [open, setOpen] = useState(opensForNewAccount && (isNewAccount || reopenAtExtensionStep));
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
-  const resumeStep = isCompleted
-    ? FIRST_STEP
-    : Math.min(Math.max(savedStep + 1, FIRST_STEP), LAST_STEP);
   const [currentStep, setCurrentStep] = useState(
-    reopenAtExtensionStep ? EXTENSION_STEP : resumeStep,
+    reopensAtExtensionStep ? EXTENSION_STEP : FIRST_STEP,
   );
 
   const router = useRouter();
-  const { session } = appRouteApi.useRouteContext();
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
   const sessionDateFormat = session.user.dateFormat as DateFormat;
@@ -147,15 +140,9 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
     setExtensionStepOpen(atExtensionStep);
   }, [atExtensionStep, setExtensionStepOpen]);
 
-  const goToStep = useCallback(
-    (next: number) => {
-      const clamped = Math.min(Math.max(next, FIRST_STEP), LAST_STEP);
-      const animationStep = clamped - 1;
-      setCurrentStep(clamped);
-      setStep(animationStep);
-    },
-    [setStep],
-  );
+  const goToStep = useCallback((next: number) => {
+    setCurrentStep(Math.min(Math.max(next, FIRST_STEP), LAST_STEP));
+  }, []);
 
   const advance = useCallback(() => {
     goToStep(currentStep + 1);
@@ -208,35 +195,25 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
     },
   });
 
-  useEffect(() => {
-    if (!open) return;
-    form.reset({
-      username: sessionUsername,
-      currency: sessionCurrency,
-      dateFormat: sessionDateFormat,
-    });
-  }, [open, sessionUsername, sessionCurrency, sessionDateFormat, form]);
-
-  useEffect(() => {
-    if (hasSeen) return;
-    const timeoutId = window.setTimeout(() => {
-      setOpen(true);
-      // Persist that the user has seen the dialog at first auto-open, so a
-      // tab close or refresh before any interaction doesn't re-trigger it.
-      dismiss();
-    }, FIRST_OPEN_DELAY_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [hasSeen, dismiss]);
+  const close = useCallback(async () => {
+    setOpen(false);
+    setCurrentStep(FIRST_STEP);
+    if (!isNewAccount) return;
+    const saved = await decodeAuth(() => authClient.updateUser({ hasSeenOnboarding: true }));
+    if (saved.isErr()) toast.add({ type: "error", title: saved.error.message || SAVE_FAILED });
+  }, [isNewAccount]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
-      setOpen(next);
-      if (!next) {
-        dismiss();
-        setCurrentStep(FIRST_STEP);
-      }
+      if (!next) return close();
+      form.reset({
+        username: sessionUsername,
+        currency: sessionCurrency,
+        dateFormat: sessionDateFormat,
+      });
+      setOpen(true);
     },
-    [dismiss],
+    [close, form, sessionUsername, sessionCurrency, sessionDateFormat],
   );
 
   const handleBack = useCallback(() => {
@@ -253,23 +230,15 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
       advance();
       return;
     }
-    complete();
-    setOpen(false);
-    setCurrentStep(FIRST_STEP);
-  }, [currentMeta.id, isLast, form, advance, complete]);
-
-  const handleSkip = useCallback(() => {
-    handleOpenChange(false);
-  }, [handleOpenChange]);
+    await close();
+  }, [currentMeta.id, isLast, form, advance, close]);
 
   const handleSelectSync = useCallback(
     (type: LaunchableSyncType) => {
-      complete();
-      setOpen(false);
-      setCurrentStep(FIRST_STEP);
       setSyncSheetType(type);
+      return close();
     },
-    [complete],
+    [close],
   );
 
   return (
@@ -423,7 +392,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
                   canContinue={currentMeta.id !== "preferences" || canSubmit}
                   onBack={handleBack}
                   onContinue={handleContinue}
-                  onSkip={handleSkip}
+                  onSkip={close}
                 />
               )}
             </form.Subscribe>

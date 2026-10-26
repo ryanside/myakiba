@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import * as z from "zod";
-import { useLocalStorage } from "./use-local-storage";
+import { removeLocalStorage, useHasLocalStorage, useLocalStorage } from "./use-local-storage";
 
 const KEY = "use-local-storage-test";
 const schema = z.object({ step: z.number() });
@@ -95,4 +95,28 @@ test("keeps a value storage refuses for the rest of the session", () => {
     expect(stored.current[0]).toEqual({ step: 3 });
     expect(renderStored("refused-key").current[0]).toEqual({ step: 3 });
   });
+});
+
+const KEYS = ["table:order", "table:sizing"] as const;
+
+test("removing stored values sends their readers back to defaults, and the restore puts them back", () => {
+  const { result } = renderHook(() => ({
+    order: useLocalStorage<string[]>("table:order", ["name", "price"]),
+    customized: useHasLocalStorage(KEYS),
+  }));
+  expect(result.current.customized).toBe(false);
+
+  act(() => result.current.order[1](["price", "name"]));
+  expect(result.current.customized).toBe(true);
+
+  let restore = () => {};
+  act(() => {
+    restore = removeLocalStorage(KEYS);
+  });
+  expect(result.current.order[0]).toEqual(["name", "price"]);
+  expect(result.current.customized).toBe(false);
+
+  act(() => restore());
+  expect(result.current.order[0]).toEqual(["price", "name"]);
+  expect(result.current.customized).toBe(true);
 });

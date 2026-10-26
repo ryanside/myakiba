@@ -9,6 +9,7 @@ import items from "@/assets/backgrounds/72-autumn-crossing-bitgrain.webp";
 import calendar from "@/assets/backgrounds/83-train-station-display-bitgrain.webp";
 import sync from "@/assets/backgrounds/87-tokyo-power-lines-bitgrain.webp";
 import settings from "@/assets/backgrounds/10-settings-desk-bitgrain.webp";
+import { pageBackgroundsEnabled } from "@/hooks/use-appearance";
 
 const backgrounds: ReadonlyMap<string, string> = new Map([
   ["dashboard", dashboard],
@@ -24,18 +25,22 @@ const backgrounds: ReadonlyMap<string, string> = new Map([
   ["settings", settings],
 ]);
 
+const plainDetailSections: ReadonlySet<string> = new Set(["orders"]);
+
 const decodeCap = 50;
 // Keeps one downloaded image per background for the page's lifetime, so the
 // browser holds its bytes in memory cache and a page change's decode skips disk.
 const downloads = new Map<string, HTMLImageElement>();
 
 export function getPageBackground(pathname: string) {
-  return backgrounds.get(pathname.split("/")[1] ?? "");
+  const [, section = "", detail] = pathname.split("/");
+  if (detail && plainDetailSections.has(section)) return;
+  return backgrounds.get(section);
 }
 
 export async function preparePageBackground(pathname: string) {
   const source = getPageBackground(pathname);
-  if (!source) return;
+  if (!source || !pageBackgroundsEnabled()) return;
   const image = new Image();
   image.src = source;
   let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -55,7 +60,7 @@ export async function preparePageBackground(pathname: string) {
 
 export function downloadPageBackground(pathname: string) {
   const source = getPageBackground(pathname);
-  if (!source) return;
+  if (!source || !pageBackgroundsEnabled()) return;
   const image = new Image();
   image.src = source;
   downloads.set(source, image);

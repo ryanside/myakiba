@@ -41,10 +41,11 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { getCategoryColor } from "@/lib/category-colors";
+import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import type { Saving } from "@/data/client";
+import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionColumnsParams {
   onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
@@ -89,6 +90,7 @@ function CollectionActionsCell({
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [addToListsOpen, setAddToListsOpen] = useState(false);
+  const [assignOrderOpen, setAssignOrderOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const selectedItems = {
     collectionIds: new Set([item.id]),
@@ -131,16 +133,7 @@ function CollectionActionsCell({
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLinkItem
-                  render={
-                    <Link
-                      {...(item.itemExternalId === null
-                        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                        : ({
-                            to: "/item/$externalId",
-                            params: { externalId: item.itemExternalId },
-                          } as const))}
-                    />
-                  }
+                  render={<Link {...itemDestination(item.itemId, item.itemExternalId)} />}
                 >
                   <HugeiconsIcon icon={ViewIcon} />
                   View details
@@ -176,19 +169,15 @@ function CollectionActionsCell({
                   <HugeiconsIcon icon={FolderAddIcon} />
                   Add to List
                 </DropdownMenuItem>
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false}>
-                      <HugeiconsIcon icon={MoveIcon} />
-                      Assign order
-                    </DropdownMenuItem>
-                  }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  currency={currency}
-                  intent="add"
-                />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAssignOrderOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={MoveIcon} />
+                  Assign order
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -207,6 +196,15 @@ function CollectionActionsCell({
           ) : null}
         </DropdownMenu>
       </div>
+      <UnifiedItemMoveForm
+        open={assignOrderOpen}
+        onOpenChange={setAssignOrderOpen}
+        selectedItems={selectedItems}
+        onMoveToExisting={onAddCollectionItemsToOrder}
+        onMoveToNew={onAddCollectionItemsToNewOrder}
+        currency={currency}
+        intent="add"
+      />
       <AddToListsDialog
         open={addToListsOpen}
         onOpenChange={setAddToListsOpen}
@@ -282,12 +280,7 @@ export function createCollectionColumns({
         return (
           <div className="flex items-center gap-3">
             <Link
-              {...(item.itemExternalId === null
-                ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                : ({
-                    to: "/item/$externalId",
-                    params: { externalId: item.itemExternalId },
-                  } as const))}
+              {...itemDestination(item.itemId, item.itemExternalId)}
               aria-label={`View ${item.itemTitle}`}
             >
               <ImageThumbnail
@@ -299,17 +292,12 @@ export function createCollectionColumns({
             </Link>
             <div className="min-w-0 space-y-px">
               <Link
-                {...(item.itemExternalId === null
-                  ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                  : ({
-                      to: "/item/$externalId",
-                      params: { externalId: item.itemExternalId },
-                    } as const))}
+                {...itemDestination(item.itemId, item.itemExternalId)}
                 className="font-medium text-foreground truncate"
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-1 font-normal">
+              <div className="flex items-center gap-2 font-normal">
                 {item.itemExternalId ? (
                   <a
                     href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
@@ -322,9 +310,7 @@ export function createCollectionColumns({
                 ) : (
                   <span className="text-xs text-muted-foreground">Custom</span>
                 )}
-                <p className="text-xs" style={{ color: getCategoryColor(item.itemCategory) }}>
-                  <span className="text-muted-foreground">•</span> {item.itemCategory}
-                </p>
+                <CategoryLabel category={item.itemCategory} />
               </div>
             </div>
           </div>

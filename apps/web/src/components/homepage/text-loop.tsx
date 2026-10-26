@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useMotionPreference } from "@/hooks/use-appearance";
+
 interface TextLoopProps {
   readonly preText: string;
   readonly texts: readonly string[];
@@ -7,6 +9,7 @@ interface TextLoopProps {
 }
 
 export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
+  const reducedMotion = useMotionPreference().reduce;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
 
@@ -17,6 +20,10 @@ export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
     let switchTimer: number | undefined;
 
     const timer = window.setInterval(() => {
+      if (reducedMotion) {
+        setCurrentIndex((prev) => (prev + 1) % texts.length);
+        return;
+      }
       setIsFading(true);
       switchTimer = window.setTimeout(() => {
         setCurrentIndex((prev) => (prev + 1) % texts.length);
@@ -27,8 +34,9 @@ export function TextLoop({ preText, texts, interval = 3000 }: TextLoopProps) {
     return () => {
       window.clearInterval(timer);
       if (switchTimer !== undefined) window.clearTimeout(switchTimer);
+      setIsFading(false);
     };
-  }, [texts.length, interval]);
+  }, [texts.length, interval, reducedMotion]);
 
   return (
     <span className="inline-flex items-center gap-1">

@@ -1518,6 +1518,297 @@
       "bug": "ten web submits, including the inline count cell's, let a rejected submit go unhandled instead of reporting it as a defect",
       "test": "apps/web/src/components/cells/inline-count-cell.test.tsx",
       "fixed": ["a count submit that rejects is reported as a defect"]
+    },
+    {
+      "fix": "667c8154",
+      "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
+      "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
+      "fixed": [
+        "the phone sidebar closes after a link opens another page",
+        "the phone sidebar closes after a link to the current page"
+      ]
+    },
+    {
+      "fix": "2d8c17ce",
+      "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "a new account that opens Getting Started right away saves that it has seen onboarding",
+        "a new account sees the welcome as soon as the dashboard renders"
+      ]
+    },
+    {
+      "fix": "92b71fdb",
+      "bug": "Getting Started resumed a step saved in this browser instead of opening at the welcome step",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"]
+    },
+    {
+      "fix": "f8da3c4a",
+      "bug": "an account signed in before the deploy saw the welcome dialog because its cached session had no onboarding key",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": ["an account signed in before the deploy keeps the welcome dialog closed"]
+    },
+    {
+      "fix": "5cb016f3",
+      "bug": "an onboarded account saw the welcome dialog again on a new browser",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "an onboarded account on a new browser keeps the welcome dialog closed",
+        "a new account sees the welcome dialog and saves that it has seen onboarding",
+        "a new account that opens Getting Started right away saves that it has seen onboarding",
+        "a new account that dismisses the welcome with Escape saves that it has seen onboarding"
+      ]
+    },
+    {
+      "fix": "0d3f95ce",
+      "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "a bar pressed while the hover highlight moves to it stays mounted and navigates on release"
+      ]
+    },
+    {
+      "fix": "c6ab608d",
+      "bug": "the dashboard order chart bars had no names and no keyboard path, and the chart's focus ring was hidden",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "each order bar is a link named for its month and count, and only the highlighted month is a tab stop",
+        "arrow keys move the order chart highlight between months and Enter opens the focused month",
+        "tabbing out of the order chart returns the highlight to the current month"
+      ]
+    },
+    {
+      "fix": "1b9f9b52",
+      "bug": "hovering the dashboard order chart moved its tab stop off the focused month, a value refresh dropped keyboard focus, and the reference line ignored the OS reduced-motion setting",
+      "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "fixed": [
+        "with reduced motion the order reference line jumps to the highlighted month",
+        "a focused month keeps the tab stop and the Enter target while the pointer highlights another month",
+        "a focused month keeps keyboard focus when the order counts refresh"
+      ]
+    },
+    {
+      "fix": "2b3dcb21",
+      "bug": "choosing Edit or Delete in a List's actions menu left the menu open behind its dialog, so the trigger closed it instead of reopening Edit",
+      "test": "apps/web/src/components/lists/list-controls.test.tsx",
+      "fixed": [
+        "choosing Edit in a List's actions menu closes the menu behind its dialog",
+        "choosing Delete in a List's actions menu closes the menu behind its dialog",
+        "editing a List again after cancelling starts from its saved title"
+      ]
+    },
+    {
+      "fix": "2b3dcb21",
+      "bug": "choosing Assign order in a collection card's or table row's actions menu left the menu open behind its dialog",
+      "test": "apps/web/src/components/collection/collection-item-menus.test.tsx",
+      "fixed": [
+        "choosing Assign order in a collection card's actions menu closes the menu behind its dialog",
+        "choosing Assign order in a collection table row's actions menu closes the menu behind its dialog"
+      ]
+    },
+    {
+      "fix": "a1a03661",
+      "bug": "in a grid, ArrowLeft on the second tile while reordering with the keyboard moved it a row down instead of one slot left",
+      "test": "apps/web/src/hooks/use-sortable-items.test.tsx",
+      "fixed": [
+        "moving a grid tile with the keyboard > ArrowLeft moves the second tile one slot left"
+      ]
+    },
+    {
+      "fix": "c49dacd6",
+      "bug": "a drag label wider than two columns excluded neighboring tile centers from keyboard moves",
+      "test": "apps/web/src/hooks/use-sortable-items.test.tsx",
+      "fixed": ["a label wider than two columns moves one slot left and right"]
+    },
+    {
+      "fix": "04b7cfe1",
+      "bug": "gallery image links in Collection, Orders and Analytics had no accessible name, or a name that was not the title, when a picture was missing or several were shown",
+      "test": "apps/web/src/components/gallery-links.test.tsx",
+      "fixed": [
+        "Collection square gallery > names each image link by its title alone",
+        "Orders square gallery > names each image link by its title alone",
+        "Collection masonry gallery > names each image link by its title alone",
+        "Orders masonry gallery > names each image link by its title alone",
+        "Analytics section items > names each image link by its title alone",
+        "Analytics shared item previews > names each image link by its title alone"
+      ]
+    },
+    {
+      "fix": "93ed9f38",
+      "bug": "the Expenses Shops table briefly showed a vertical scrollbar on load, shifting the table left while its rows faded in",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table's sideways scroller never scrolls down while its rows fade in"]
+    },
+    {
+      "fix": "d7b77a4d",
+      "bug": "the drag drop indicator sat off the middle of the gap: 11 px on the Lists folder grid at @3xl and 1 px on the card grids",
+      "test": "apps/web/src/components/sortable-drop-indicator.test.tsx",
+      "fixed": [
+        "Lists grid drop indicator > sits centred in the gap before the tile it marks",
+        "Lists grid drop indicator > sits centred in the gap after the tile it marks",
+        "Wishlist grid drop indicator > sits centred in the gap before the tile it marks",
+        "Wishlist grid drop indicator > sits centred in the gap after the tile it marks",
+        "List detail grid drop indicator > sits centred in the gap before the tile it marks",
+        "List detail grid drop indicator > sits centred in the gap after the tile it marks"
+      ]
+    },
+    {
+      "fix": "515c5e5d",
+      "bug": "filtered Wishlist grid and gallery controls stayed visible without hover or keyboard focus",
+      "test": "apps/web/src/components/wishlist/wishlist-controls.test.tsx",
+      "fixed": [
+        "Wishlist upcoming controls > grid controls only pin for an active operation or list view",
+        "Wishlist upcoming controls > gallery controls only pin for an active operation or list view",
+        "Wishlist available controls > grid controls only pin for an active operation or list view",
+        "Wishlist available controls > gallery controls only pin for an active operation or list view"
+      ]
+    },
+    {
+      "fix": "c05a2273",
+      "bug": "short multiline List descriptions hid saved line breaks without offering expansion",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+    },
+    {
+      "fix": "df1c043f",
+      "bug": "a lone carriage return offered description expansion even though pre-wrap renders it as a space",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a lone carriage return needs no expansion toggle"]
+    },
+    {
+      "fix": "794f243a",
+      "bug": "order detail pages showed the Orders list background, unlike item pages",
+      "test": "apps/web/src/components/page-background.test.tsx",
+      "fixed": ["page background > an order detail page shows no background"]
+    },
+    {
+      "fix": "50674ee8",
+      "bug": "analytics sort icons still faded and blurred, and the chart brush still sprang, under the device's reduced-motion setting and the app's Reduce motion switch",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "analytics sort icons > swap at once under the device's reduced-motion setting",
+        "analytics sort icons > swap at once under the app's Reduce motion switch",
+        "chart brush > jumps to a new range under the device's reduced-motion setting",
+        "chart brush > jumps to a new range under the app's Reduce motion switch"
+      ]
+    },
+    {
+      "fix": "a2ecc403",
+      "bug": "the chart loading shimmers kept looping when reduced motion turned on after they mounted",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "chart loading shimmer > stops when the device's reduced-motion setting turns on after the charts mount",
+        "chart loading shimmer > stops when the app's Reduce motion switch turns on after the charts mount"
+      ]
+    },
+    {
+      "fix": "b0a3f124",
+      "bug": "reduced motion hid rotating homepage text while waiting for a removed fade",
+      "test": "apps/web/src/components/homepage/text-loop.test.tsx",
+      "fixed": [
+        "reduced motion switches loop text without waiting for a fade",
+        "enabling reduced motion during a fade keeps loop text visible"
+      ]
+    },
+    {
+      "fix": "ed092193",
+      "bug": "reduced motion emptied chart skeleton masks instead of keeping the loading skeletons visible",
+      "test": "apps/web/src/components/reduced-motion.test.tsx",
+      "fixed": [
+        "chart loading shimmer > keeps both skeletons visible and still when reduced motion is on at mount",
+        "chart loading shimmer > keeps both skeletons visible and still when reduced motion turns on live"
+      ]
+    },
+    {
+      "fix": "20587cd5",
+      "bug": "a Settings link to a section that does not exist, such as an old Shortcuts link, threw the route into its error screen",
+      "test": "apps/web/src/components/settings/settings-section-param.test.ts",
+      "fixed": [
+        "a link to a section that no longer exists, or never did, opens Settings without one"
+      ]
+    },
+    {
+      "fix": "5e31bc97",
+      "bug": "opening the default Settings section from the phone's list left focus on the hidden nav link",
+      "test": "apps/web/src/components/settings/settings-content.test.tsx",
+      "fixed": ["opening the default section from the phone's list moves focus to its heading"]
+    },
+    {
+      "fix": "74572e82",
+      "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
+      "test": "apps/web/src/components/settings/preferences.test.tsx",
+      "fixed": ["after Save the form keeps the saved formats while the session catches up"]
+    },
+    {
+      "fix": "36894e3b",
+      "bug": "a pending Settings search replaced a section opened before the first debounce settled",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "opening a section before the first search settles cancels the pending text",
+        "a setting link cancels pending text even when it opens the current section"
+      ]
+    },
+    {
+      "fix": "87b56cb4",
+      "bug": "a devices hash target present before loading never received focus when its list mounted",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": [
+        "a link to devices focuses the list when the pending devices finish loading",
+        "refreshing targeted devices through needs-fresh-sign-in does not steal focus",
+        "a devices anchor focuses again after its hash is deactivated and reactivated"
+      ]
+    },
+    {
+      "fix": "f8c4deef",
+      "bug": "router invalidation replaced the location object for the same URL and discarded pending Settings search edits",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "invalidating the current URL preserves a pending first search",
+        "invalidating the current URL preserves edits to an existing search"
+      ]
+    },
+    {
+      "fix": "52f6a066",
+      "bug": "recovering a targeted devices list refocused its remounted element and stole focus from another control",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": ["refreshing targeted devices through unavailable does not steal focus"]
+    },
+    {
+      "fix": "07b6bf0c",
+      "bug": "a targeted sign-out-others row lost its focus memory when a devices error or stale sign-in unmounted it, and Back to an already focused devices entry focused it again",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": [
+        "refreshing targeted sign out others through needs-fresh-sign-in does not steal focus",
+        "refreshing targeted sign out others through unavailable does not steal focus",
+        "returning to an already focused devices history entry preserves focus"
+      ]
+    },
+    {
+      "fix": "a9b96f58",
+      "bug": "a confirm dialog reopened within 1.5 s of a confirm showed a check and ignored clicks",
+      "test": "apps/web/src/components/ui/confirm-dialog.test.tsx",
+      "fixed": ["reopened right after a confirm, the confirm button is idle and confirms again"]
+    },
+    {
+      "fix": "0a1c8851",
+      "bug": "a TanStack Form submit button was natively disabled while idle on both sides of a submit, so the browser dropped its focus",
+      "test": "apps/web/src/components/lists/list-form-dialog.test.tsx",
+      "fixed": [
+        "the submit button is never disabled through a submit that fails, so it keeps focus"
+      ]
+    },
+    {
+      "fix": "eb976f10",
+      "bug": "a status button ignored every click until its success state timed out",
+      "test": "apps/web/src/components/ui/status-button.test.tsx",
+      "fixed": ["a click during success starts another run"]
+    },
+    {
+      "fix": "eb965ba0",
+      "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
+      "test": "apps/web/src/components/settings/account.test.tsx",
+      "fixed": ["Change password reopened right after a change starts idle"]
     }
   ],
   "lint": [

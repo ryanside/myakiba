@@ -52,6 +52,7 @@ import {
 import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
+import { getCategoryColor } from "@/lib/category-colors";
 import { formSubmitHandler } from "@/lib/form-submit";
 
 interface FiltersFormProps {
@@ -306,7 +307,7 @@ function FiltersDraft({
                           }}
                           onSelect={(e) => e.preventDefault()}
                         >
-                          {category}
+                          <span style={{ color: getCategoryColor(category) }}>{category}</span>
                         </DropdownMenuCheckboxItem>
                       ))}
                     </ScrollArea>

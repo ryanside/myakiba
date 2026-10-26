@@ -1,8 +1,12 @@
 import { Result } from "better-result";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import {
   Dialog,
   DialogClose,
@@ -146,6 +150,7 @@ function OrderFormContent(
   const orderData =
     type === "edit-order" ? (props as DeferredEditOrderFormProps).orderData : undefined;
 
+  const { status: buttonStatus, run } = useButtonStatus();
   const form = useForm({
     defaultValues: orderData
       ? {
@@ -177,45 +182,47 @@ function OrderFormContent(
           miscFees: "0.00",
           notes: "",
         },
-    onSubmit: async ({ value }) => {
-      const base = {
-        title: value.title,
-        shop: value.shop,
-        orderDate: value.orderDate || null,
-        releaseDate: value.releaseDate || null,
-        paymentDate: value.paymentDate || null,
-        shippingDate: value.shippingDate || null,
-        collectionDate: value.collectionDate || null,
-        status: value.status,
-        shippingMethod: value.shippingMethod || "n/a",
-        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-        taxes: parseMoneyToMinorUnits(value.taxes),
-        duties: parseMoneyToMinorUnits(value.duties),
-        tariffs: parseMoneyToMinorUnits(value.tariffs),
-        miscFees: parseMoneyToMinorUnits(value.miscFees),
-        notes: value.notes,
-      };
+    onSubmit: ({ value }) =>
+      run(async (): Saving => {
+        const base = {
+          title: value.title,
+          shop: value.shop,
+          orderDate: value.orderDate || null,
+          releaseDate: value.releaseDate || null,
+          paymentDate: value.paymentDate || null,
+          shippingDate: value.shippingDate || null,
+          collectionDate: value.collectionDate || null,
+          status: value.status,
+          shippingMethod: value.shippingMethod || "n/a",
+          shippingFee: parseMoneyToMinorUnits(value.shippingFee),
+          taxes: parseMoneyToMinorUnits(value.taxes),
+          duties: parseMoneyToMinorUnits(value.duties),
+          tariffs: parseMoneyToMinorUnits(value.tariffs),
+          miscFees: parseMoneyToMinorUnits(value.miscFees),
+          notes: value.notes,
+        };
 
-      if (type === "edit-order") {
-        const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
-        const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
-        const saved = await callbackFn(transformedValue, cascadeOptions);
-        // A failed write already rolled back and said why, so the form stays open to retry.
-        if (saved.isErr()) return;
-      } else if (type === "split") {
-        const { callbackFn, collectionIds, orderIds, clearSelections } =
-          props as DeferredSplitOrderFormProps;
-        const saved = await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
-        if (saved.isErr()) return;
-        clearSelections?.();
-      } else {
-        const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
-        const saved = await callbackFn(base as NewOrder, cascadeOptions, orderIds);
-        if (saved.isErr()) return;
-        clearSelections?.();
-      }
-      close();
-    },
+        if (type === "edit-order") {
+          const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
+          const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
+          const saved = await callbackFn(transformedValue, cascadeOptions);
+          // A failed write already rolled back and said why, so the form stays open to retry.
+          if (saved.isErr()) return saved;
+        } else if (type === "split") {
+          const { callbackFn, collectionIds, orderIds, clearSelections } =
+            props as DeferredSplitOrderFormProps;
+          const saved = await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
+          if (saved.isErr()) return saved;
+          clearSelections?.();
+        } else {
+          const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
+          const saved = await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+          if (saved.isErr()) return saved;
+          clearSelections?.();
+        }
+        close();
+        return Result.ok();
+      }, closesOnSuccess),
   });
 
   const formFields = (
@@ -612,20 +619,17 @@ function OrderFormContent(
               )}
             />
             <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              selector={(state) => [state.canSubmit, state.isSubmitting] as const}
               children={([canSubmit, isSubmitting]) => (
-                <Button
+                <StatusButton
                   type="submit"
-                  disabled={!canSubmit || isSubmitting}
+                  status={formSubmitStatus(buttonStatus, isSubmitting)}
+                  disabled={!canSubmit}
                   variant="default"
                   className="w-full flex-1"
                 >
-                  {isSubmitting ? (
-                    <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-                  ) : (
-                    "Update"
-                  )}
-                </Button>
+                  Update
+                </StatusButton>
               )}
             />
           </SheetFooter>
@@ -662,16 +666,16 @@ function OrderFormContent(
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                {(() => {
-                  if (isSubmitting) {
-                    return <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />;
-                  }
-                  return type === "merge" ? "Merge" : "Split";
-                })()}
-              </Button>
+              <StatusButton
+                type="submit"
+                status={formSubmitStatus(buttonStatus, isSubmitting)}
+                disabled={!canSubmit}
+                variant="default"
+              >
+                {type === "merge" ? "Merge" : "Split"}
+              </StatusButton>
             )}
           />
         </DialogFooter>

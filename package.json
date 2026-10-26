@@ -70,7 +70,9 @@
   },
   "overrides": {
     "@better-auth/core": "1.6.23",
-    "toml": "4.2.0"
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -80,5 +82,5 @@
       "bun x oxfmt --write"
     ]
   },
-  "packageManager": "bun@1.4.0"
+  "packageManager": "bun@1.4.4"
 }

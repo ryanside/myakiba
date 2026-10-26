@@ -1,12 +1,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
-import { Button } from "@/components/ui/button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -25,6 +25,7 @@ function RouteComponent() {
   const [emailSent, setEmailSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       email: "",
@@ -42,11 +43,15 @@ function RouteComponent() {
   });
 
   const handleForgotPassword = async (email: string, turnstileToken: string) => {
-    const requested = await decodeAuth(() =>
-      authClient.requestPasswordReset(
-        { email, redirectTo: getAuthRedirectUrl("/reset-password") },
-        { headers: { "x-captcha-response": turnstileToken } },
-      ),
+    const requested = await run(
+      () =>
+        decodeAuth(() =>
+          authClient.requestPasswordReset(
+            { email, redirectTo: getAuthRedirectUrl("/reset-password") },
+            { headers: { "x-captcha-response": turnstileToken } },
+          ),
+        ),
+      (result) => result.isOk(),
     );
     if (requested.isErr()) {
       toast.add({
@@ -142,17 +147,14 @@ function RouteComponent() {
 
           <form.Subscribe>
             {(state) => (
-              <Button
+              <StatusButton
                 type="submit"
                 className="w-full"
-                disabled={!state.canSubmit || state.isSubmitting}
+                status={formSubmitStatus(status, state.isSubmitting)}
+                disabled={!state.canSubmit}
               >
-                {state.isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                ) : (
-                  "Send Reset Link"
-                )}
-              </Button>
+                Send Reset Link
+              </StatusButton>
             )}
           </form.Subscribe>
         </form>

@@ -6,7 +6,23 @@ import {
   DATA_TRANSFER_MAX_BYTES,
   DATA_TRANSFER_VERSION,
 } from "@myakiba/contracts/data-transfer/schema";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { DataTransfer } from "./index";
+
+/** The settings rows read the URL, so the screen renders inside a router. */
+function inRouter(screenUi: ReactNode) {
+  const router = createRouter({
+    routeTree: createRootRoute({ component: () => screenUi }),
+    history: createMemoryHistory({ initialEntries: ["/settings"] }),
+  });
+  return <RouterProvider router={router} />;
+}
 
 const realFetch = globalThis.fetch;
 
@@ -56,9 +72,7 @@ async function chooseExport(file: File) {
   });
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const { container } = render(
-    <QueryClientProvider client={queryClient}>
-      <DataTransfer />
-    </QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>{inRouter(<DataTransfer />)}</QueryClientProvider>,
   );
   await screen.findByText("Choose export");
   const input = container.querySelector<HTMLInputElement>('input[type="file"]');

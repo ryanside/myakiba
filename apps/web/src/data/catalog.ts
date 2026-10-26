@@ -37,6 +37,9 @@ const catalog = {
   },
   wishlist: { kind: "persisted", roots: [], collectionWrites: false },
   accountType: { kind: "account", roots: ["account-type"] },
+  devices: { kind: "account", roots: ["devices"] },
+  linkedAccounts: { kind: "account", roots: ["linked-accounts"] },
+  usernameAvailability: { kind: "live", roots: ["username-availability"] },
   currentImport: { kind: "live", roots: ["dataTransferImport"] },
   importStatus: { kind: "live", roots: ["dataTransferImportStatus"] },
   syncJobStatus: { kind: "live", roots: ["syncJobStatus"] },
@@ -47,6 +50,11 @@ export type Family = keyof typeof catalog;
 export type RootOf<F extends Family> = (typeof catalog)[F]["roots"][number];
 export type PersistedFamily = {
   [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" ? F : never;
+}[Family];
+
+/** Families a write can change: the synced data and the signed-in account's own lists. */
+export type WritableFamily = {
+  [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" | "account" ? F : never;
 }[Family];
 
 const isPersisted = (family: Family): family is PersistedFamily =>

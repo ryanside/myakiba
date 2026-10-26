@@ -1,0 +1,13 @@
+@keyframes settings-target {
+  from {
+    background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
+  }
+}
+
+.settings-anchor[data-target] {
+  animation: settings-target 1.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+:root[data-reduce-motion] .settings-anchor[data-target] {
+  background-color: color-mix(in oklab, var(--foreground) 6%, transparent);
+}

@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
@@ -7,6 +5,7 @@ import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
@@ -22,6 +21,7 @@ function RouteComponent() {
   const token = new URLSearchParams(window.location.search).get("token");
   const navigate = useNavigate();
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       password: "",
@@ -48,8 +48,9 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    const reset = await decodeAuth(() =>
-      authClient.resetPassword({ newPassword: password, token }),
+    const reset = await run(
+      () => decodeAuth(() => authClient.resetPassword({ newPassword: password, token })),
+      (result) => result.isOk(),
     );
     if (reset.isErr()) {
       toast.add({ type: "error", title: reset.error.message || "Failed to reset password" });
@@ -171,17 +172,14 @@ function RouteComponent() {
 
           <form.Subscribe>
             {(state) => (
-              <Button
+              <StatusButton
                 type="submit"
                 className="w-full"
-                disabled={!state.canSubmit || state.isSubmitting}
+                status={formSubmitStatus(status, state.isSubmitting)}
+                disabled={!state.canSubmit}
               >
-                {state.isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                ) : (
-                  "Reset Password"
-                )}
-              </Button>
+                Reset Password
+              </StatusButton>
             )}
           </form.Subscribe>
         </form>

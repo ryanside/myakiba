@@ -3,6 +3,12 @@ import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
+import {
   Dialog,
   DialogClose,
   DialogContent,
@@ -52,7 +58,9 @@ import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
 
 type UnifiedItemMoveFormProps = {
-  readonly renderTrigger: React.ReactElement;
+  readonly renderTrigger?: React.ReactElement;
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
   readonly selectedItems: {
     readonly collectionIds: ReadonlySet<string>;
     readonly orderIds: ReadonlySet<string>;
@@ -74,15 +82,23 @@ type UnifiedItemMoveFormProps = {
 
 export default function UnifiedItemMoveForm({
   renderTrigger,
+  open,
+  onOpenChange,
   intent = "move",
   ...props
 }: UnifiedItemMoveFormProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const actualOpen = open ?? internalOpen;
+
+  const setOpen = (nextOpen: boolean): void => {
+    if (open === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={renderTrigger} />
-      {open ? (
+    <Dialog open={actualOpen} onOpenChange={setOpen}>
+      {renderTrigger ? <DialogTrigger render={renderTrigger} /> : null}
+      {actualOpen ? (
         <UnifiedItemMoveFormContent {...props} intent={intent} close={() => setOpen(false)} />
       ) : null}
     </Dialog>
@@ -97,7 +113,7 @@ function UnifiedItemMoveFormContent({
   currency,
   intent = "move",
   close,
-}: Omit<UnifiedItemMoveFormProps, "renderTrigger"> & {
+}: Omit<UnifiedItemMoveFormProps, "renderTrigger" | "open" | "onOpenChange"> & {
   readonly close: () => void;
 }) {
   const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
@@ -106,7 +122,6 @@ function UnifiedItemMoveFormContent({
   const selectedCount = selectedItems.collectionIds.size;
   const actionLabel = intent === "add" ? "Assign" : "Move";
   const dialogTitle = intent === "add" ? "Assign Order" : "Move Items";
-  const pendingActionLabel = intent === "add" ? "Assigning..." : "Moving...";
   const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
   const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
 
@@ -140,15 +155,16 @@ function UnifiedItemMoveFormContent({
 
   const orderResults = orderPages?.pages.flatMap((page) => page.orderIdsAndTitles) ?? [];
 
+  const { status: buttonStatus, run } = useButtonStatus();
+
   const existingOrderForm = useForm({
     defaultValues: {
       targetOrderId: "",
     },
     onSubmit: async ({ value }) => {
-      const moved = await onMoveToExisting(
-        value.targetOrderId,
-        selectedItems.collectionIds,
-        sourceOrderIds,
+      const moved = await run(
+        () => onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds),
+        closesOnSuccess,
       );
       // A failed move already rolled back and said why, so the dialog stays open to retry.
       if (moved.isErr()) return;
@@ -193,10 +209,9 @@ function UnifiedItemMoveFormContent({
         miscFees: parseMoneyToMinorUnits(value.miscFees),
         notes: value.notes,
       };
-      const moved = await onMoveToNew(
-        transformedValue,
-        cascadeOptions,
-        selectedItems.collectionIds,
+      const moved = await run(
+        () => onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds),
+        closesOnSuccess,
       );
       if (moved.isErr()) return;
       clearSelections?.();
@@ -378,11 +393,16 @@ function UnifiedItemMoveFormContent({
                 )}
               />
               <existingOrderForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => [state.canSubmit, state.isSubmitting] as const}
                 children={([canSubmit, isSubmitting]) => (
-                  <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                    {isSubmitting ? pendingActionLabel : existingSubmitLabel}
-                  </Button>
+                  <StatusButton
+                    type="submit"
+                    status={formSubmitStatus(buttonStatus, isSubmitting)}
+                    disabled={!canSubmit}
+                    variant="default"
+                  >
+                    {existingSubmitLabel}
+                  </StatusButton>
                 )}
               />
             </DialogFooter>
@@ -743,15 +763,16 @@ function UnifiedItemMoveFormContent({
                 )}
               />
               <newOrderForm.Subscribe
-                selector={(state) => [state.canSubmit, state.isSubmitting]}
+                selector={(state) => [state.canSubmit, state.isSubmitting] as const}
                 children={([canSubmit, isSubmitting]) => (
-                  <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                    {isSubmitting ? (
-                      <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-                    ) : (
-                      newSubmitLabel
-                    )}
-                  </Button>
+                  <StatusButton
+                    type="submit"
+                    status={formSubmitStatus(buttonStatus, isSubmitting)}
+                    disabled={!canSubmit}
+                    variant="default"
+                  >
+                    {newSubmitLabel}
+                  </StatusButton>
                 )}
               />
             </DialogFooter>

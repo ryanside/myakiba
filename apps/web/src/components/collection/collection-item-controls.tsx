@@ -32,10 +32,12 @@ import { toast } from "@/components/ui/toast";
 import { writeClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import type { Saving } from "@/data/client";
+import { itemDestination } from "@/lib/item-destination";
 
 export function CollectionItemControls({
   item,
   itemSize,
+  variant,
   isPending,
   isSelected,
   onEditCollectionItem,
@@ -48,6 +50,7 @@ export function CollectionItemControls({
 }: {
   readonly item: CollectionItem;
   readonly itemSize: number;
+  readonly variant: "card" | "media";
   readonly isPending: boolean;
   readonly isSelected: boolean;
   readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
@@ -68,6 +71,7 @@ export function CollectionItemControls({
 }): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const [addToListsOpen, setAddToListsOpen] = useState(false);
+  const [assignOrderOpen, setAssignOrderOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const selectedItems = {
     collectionIds: new Set([item.id]),
@@ -80,7 +84,7 @@ export function CollectionItemControls({
 
   return (
     <>
-      <ItemControls variant="media" size={controlsSize} active={isSelected || menuOpen}>
+      <ItemControls variant={variant} size={controlsSize} active={isSelected || menuOpen}>
         <ItemControlsSelection
           checked={isSelected}
           onCheckedChange={onToggleSelection}
@@ -114,16 +118,7 @@ export function CollectionItemControls({
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
                 <DropdownMenuLinkItem
-                  render={
-                    <Link
-                      {...(item.itemExternalId === null
-                        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-                        : ({
-                            to: "/item/$externalId",
-                            params: { externalId: item.itemExternalId },
-                          } as const))}
-                    />
-                  }
+                  render={<Link {...itemDestination(item.itemId, item.itemExternalId)} />}
                 >
                   <HugeiconsIcon icon={ViewIcon} />
                   View details
@@ -159,19 +154,15 @@ export function CollectionItemControls({
                   <HugeiconsIcon icon={FolderAddIcon} />
                   Add to List
                 </DropdownMenuItem>
-                <UnifiedItemMoveForm
-                  renderTrigger={
-                    <DropdownMenuItem closeOnClick={false}>
-                      <HugeiconsIcon icon={MoveIcon} />
-                      Assign order
-                    </DropdownMenuItem>
-                  }
-                  selectedItems={selectedItems}
-                  onMoveToExisting={onAddCollectionItemsToOrder}
-                  onMoveToNew={onAddCollectionItemsToNewOrder}
-                  currency={currency}
-                  intent="add"
-                />
+                <DropdownMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setAssignOrderOpen(true);
+                  }}
+                >
+                  <HugeiconsIcon icon={MoveIcon} />
+                  Assign order
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -190,6 +181,15 @@ export function CollectionItemControls({
           ) : null}
         </DropdownMenu>
       </ItemControls>
+      <UnifiedItemMoveForm
+        open={assignOrderOpen}
+        onOpenChange={setAssignOrderOpen}
+        selectedItems={selectedItems}
+        onMoveToExisting={onAddCollectionItemsToOrder}
+        onMoveToNew={onAddCollectionItemsToNewOrder}
+        currency={currency}
+        intent="add"
+      />
       <AddToListsDialog
         open={addToListsOpen}
         onOpenChange={setAddToListsOpen}

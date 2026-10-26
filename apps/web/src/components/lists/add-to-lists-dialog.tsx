@@ -33,12 +33,17 @@ import {
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
+  inputGroupButtonVariants,
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import {
   useAddTargetsToListsMutation,
   useListOptionsForTargetsQuery,
@@ -65,12 +70,16 @@ function CreateListForm({
   const inputRef = useRef<HTMLInputElement>(null);
   const [submitError, setSubmitError] = useState(false);
   const { createList } = useListMutations({ showCreateErrorToast: false });
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: { title: "", description: "" },
     validators: { onSubmit: listInputSchema },
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: async ({ value }) => {
-      const created = await createList({ title: value.title.trim(), description: "" });
+      const created = await run(
+        () => createList({ title: value.title.trim(), description: "" }),
+        (result) => result.isOk(),
+      );
       if (created.isErr()) {
         setSubmitError(true);
         return;
@@ -117,10 +126,17 @@ function CreateListForm({
                         disabled={isSubmitting || disabled}
                       />
                       <InputGroupAddon align="inline-end">
-                        <InputGroupButton type="submit" disabled={isSubmitting || disabled}>
-                          {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-                          {isSubmitting ? "Creating..." : "Create"}
-                        </InputGroupButton>
+                        <StatusButton
+                          type="submit"
+                          variant="ghost"
+                          data-size="xs"
+                          className={inputGroupButtonVariants({ size: "xs" })}
+                          status={formSubmitStatus(status, isSubmitting)}
+                          successLabel="Created"
+                          disabled={disabled}
+                        >
+                          Create
+                        </StatusButton>
                       </InputGroupAddon>
                     </>
                   )}
@@ -272,10 +288,11 @@ function AddToListsForm({
   } else if (targets.every((target) => target.type === "order")) {
     targetNoun = "Order";
   }
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: { selectedListIds: [] as string[] },
     onSubmit: async ({ value }) => {
-      const added = await addToLists(value.selectedListIds);
+      const added = await run(() => addToLists(value.selectedListIds), closesOnSuccess);
       // A failed add shows its inline error, and the dialog stays open to retry.
       if (added.isErr()) return;
       close();
@@ -358,10 +375,13 @@ function AddToListsForm({
                 >
                   Close
                 </DialogClose>
-                <Button type="submit" disabled={isSubmitting || selectedListIds.length === 0}>
-                  {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-                  {isSubmitting ? "Saving..." : "Save"}
-                </Button>
+                <StatusButton
+                  type="submit"
+                  status={formSubmitStatus(status, isSubmitting)}
+                  disabled={selectedListIds.length === 0}
+                >
+                  Save
+                </StatusButton>
               </DialogFooter>
             </>
           )}

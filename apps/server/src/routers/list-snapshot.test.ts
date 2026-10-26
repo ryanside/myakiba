@@ -88,7 +88,7 @@ test("a delete committed while a page is read leaves its rows and totals in agre
     }).toEqual({ ids: ["c-1"], totalCount: 1 });
   } finally {
     await controller`select pg_advisory_unlock_all()`;
-    for (const connection of held) connection.release();
+    await Promise.all(held.map((connection) => connection.release()));
     await controller.close();
   }
 }, 15_000);

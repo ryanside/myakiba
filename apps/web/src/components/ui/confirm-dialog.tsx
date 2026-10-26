@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { Result } from "better-result";
+import { StatusButton, closesOnSuccess, useButtonStatus } from "@/components/ui/status-button";
 import { asPanic } from "@/lib/as-panic";
 import { cn } from "@/lib/utils";
 
@@ -21,14 +22,11 @@ type AccentTone = { readonly bg: string; readonly fg: string };
 
 interface ConfirmDialogProps {
   readonly renderTrigger?: React.ReactElement;
-  readonly triggerNativeButton?: boolean;
-  readonly triggerRole?: "menuitem";
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
   readonly title: string;
   readonly description?: React.ReactNode;
   readonly confirmLabel?: string;
-  readonly loadingLabel?: string;
   readonly cancelLabel?: string;
   readonly variant?: ButtonVariant;
   readonly icon?: IconSvgElement;
@@ -48,14 +46,11 @@ const ACCENT_BY_VARIANT = {
 
 export function ConfirmDialog({
   renderTrigger,
-  triggerNativeButton = true,
-  triggerRole,
   open,
   onOpenChange,
   title,
   description,
   confirmLabel = "Delete",
-  loadingLabel = "Deleting...",
   cancelLabel = "Cancel",
   variant = "destructive",
   icon = AlertCircleIcon,
@@ -63,7 +58,8 @@ export function ConfirmDialog({
   disabled = false,
 }: ConfirmDialogProps): React.ReactElement {
   const [internalOpen, setInternalOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { status, run } = useButtonStatus();
+  const isSubmitting = status === "loading";
 
   const isControlled = open !== undefined;
   const actualOpen = isControlled ? open : internalOpen;
@@ -81,27 +77,18 @@ export function ConfirmDialog({
   };
 
   const handleConfirm = async (): Promise<void> => {
-    setIsSubmitting(true);
     try {
-      const confirmed = await onConfirm();
+      const confirmed = await run(onConfirm, closesOnSuccess);
       if (confirmed.isOk()) closeDialog();
     } catch (error) {
       // onConfirm never rejects, so a rejection is a defect. Keep this dialog open for another attempt.
       console.error(asPanic(error));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={actualOpen} onOpenChange={handleOpenChange}>
-      {renderTrigger ? (
-        <DialogTrigger
-          render={renderTrigger}
-          nativeButton={triggerNativeButton}
-          role={triggerRole}
-        />
-      ) : null}
+      {renderTrigger ? <DialogTrigger render={renderTrigger} /> : null}
       {actualOpen ? (
         <DialogContent className="sm:max-w-sm" showCloseButton={false}>
           <div className="flex items-start gap-3 py-1">
@@ -126,15 +113,16 @@ export function ConfirmDialog({
             <DialogClose render={<Button variant="outline" />} disabled={isSubmitting}>
               {cancelLabel}
             </DialogClose>
-            <Button
+            <StatusButton
               variant={variant}
-              disabled={disabled || isSubmitting}
+              status={status}
+              disabled={disabled}
               onClick={() => {
                 void handleConfirm();
               }}
             >
-              {isSubmitting ? loadingLabel : confirmLabel}
-            </Button>
+              {confirmLabel}
+            </StatusButton>
           </DialogFooter>
         </DialogContent>
       ) : null}

@@ -199,7 +199,7 @@ function ShopsTable({
       empty={<DataTableEmpty title="No shops found" />}
       variant="sized"
       className={cn(
-        "overflow-x-auto transition-opacity duration-200",
+        "overflow-x-auto overflow-y-hidden transition-opacity duration-200",
         isFetching && !isPending && "opacity-60",
       )}
       tableClassName={scope === "orders" ? "min-w-210" : "min-w-150"}

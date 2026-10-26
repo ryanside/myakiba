@@ -213,7 +213,6 @@ export function ImportSection({
                   </span>
                 }
                 confirmLabel="Import data"
-                loadingLabel="Starting import…"
                 disabled={importControlsDisabled}
                 renderTrigger={
                   <Button

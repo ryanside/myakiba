@@ -20,7 +20,6 @@ import { authClient, endSession } from "@/lib/auth-client";
 import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useTheme } from "next-themes";
-import { setThemeWithTransition } from "@/lib/theme-transition";
 import type { Session } from "@/lib/session";
 import { toast } from "@/components/ui/toast";
 import { Button } from "../ui/button";
@@ -59,10 +58,7 @@ export default function UserMenu({ session }: { session: Session }) {
           <span className="text-foreground text-sm font-medium">{session.user.username}</span>
         </div>
         <div className="py-2.5">
-          <Tabs
-            value={theme ?? "system"}
-            onValueChange={(v) => setThemeWithTransition(v, setTheme)}
-          >
+          <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full">
               <TabsTrigger value="light" className="h-6 flex-1">
                 <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />

@@ -1,7 +1,23 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { DataTransfer } from "./index";
+
+/** The settings rows read the URL, so the screen renders inside a router. */
+function inRouter(screenUi: ReactNode) {
+  const router = createRouter({
+    routeTree: createRootRoute({ component: () => screenUi }),
+    history: createMemoryHistory({ initialEntries: ["/settings"] }),
+  });
+  return <RouterProvider router={router} />;
+}
 
 const realFetch = globalThis.fetch;
 
@@ -39,9 +55,7 @@ async function openDataTransfer(answer: Answer) {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
-    <QueryClientProvider client={queryClient}>
-      <DataTransfer />
-    </QueryClientProvider>,
+    <QueryClientProvider client={queryClient}>{inRouter(<DataTransfer />)}</QueryClientProvider>,
   );
   await screen.findByText("myakiba-export.json");
 }

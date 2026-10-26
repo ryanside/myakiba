@@ -43,6 +43,16 @@ function renderOnboarding() {
   );
 }
 
+/** Getting Started always opens at the welcome step, so the test walks to the extension step. */
+async function openExtensionStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+}
+
 function reloadWith(options: Parameters<typeof fakeExtension>[0]) {
   cleanup();
   loadExtension(options);
@@ -102,13 +112,12 @@ test("an update keeps reading as update needed until the page reloads", async ()
 });
 
 test("a new install shows after the reload, and onboarding reopens at the extension step", async () => {
-  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 2, hasSeen: true }));
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
   const reload = spyOn(window.location, "reload").mockImplementation(() => {});
   loadExtension({ installed: false });
   const user = userEvent.setup();
   renderOnboarding();
-  await user.click(screen.getByRole("button", { name: "Getting Started" }));
-  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+  await openExtensionStep(user);
   expect(await screen.findByText("Not installed")).toBeDefined();
 
   await user.click(screen.getByRole("button", { name: "Reload page" }));
@@ -121,12 +130,11 @@ test("a new install shows after the reload, and onboarding reopens at the extens
 });
 
 test("onboarding closed at the extension step stays closed after a reload", async () => {
-  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 2, hasSeen: true }));
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
   loadExtension({ installed: false });
   const user = userEvent.setup();
   renderOnboarding();
-  await user.click(screen.getByRole("button", { name: "Getting Started" }));
-  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+  await openExtensionStep(user);
 
   await user.click(screen.getByRole("button", { name: "Close" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -139,12 +147,11 @@ test("onboarding closed at the extension step stays closed after a reload", asyn
 });
 
 test("onboarding moved past the extension step does not reopen there after a reload", async () => {
-  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 2, hasSeen: true }));
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
   loadExtension({ installed: false });
   const user = userEvent.setup();
   renderOnboarding();
-  await user.click(screen.getByRole("button", { name: "Getting Started" }));
-  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+  await openExtensionStep(user);
 
   await user.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Bring in your items." });

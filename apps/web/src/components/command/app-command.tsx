@@ -9,6 +9,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -37,6 +38,7 @@ import type {
   SyncLauncherOption,
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_OPTION_META } from "@/lib/sync";
+import { itemDestination } from "@/lib/item-destination";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -63,25 +65,6 @@ function matchesQuery(label: string, keywords: readonly string[], query: string)
   return queryTerms.every((queryTerm) =>
     haystackTerms.some((haystackTerm) => haystackTerm.startsWith(queryTerm)),
   );
-}
-
-function useDebouncedValue(value: string, delayMs: number): string {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(
-      () => {
-        setDebouncedValue(value);
-      },
-      value.length === 0 ? 0 : delayMs,
-    );
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [delayMs, value]);
-
-  return debouncedValue;
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -251,17 +234,7 @@ export function AppCommand(): React.JSX.Element {
     readonly itemExternalId: number | null;
   }): void => {
     closeCommand();
-    if (item.itemExternalId !== null) {
-      void navigate({
-        to: "/item/$externalId",
-        params: { externalId: item.itemExternalId },
-      });
-      return;
-    }
-    void navigate({
-      to: "/item/custom/$id",
-      params: { id: item.itemId },
-    });
+    void navigate(itemDestination(item.itemId, item.itemExternalId));
   };
 
   const handleViewAllOrders = (): void => {

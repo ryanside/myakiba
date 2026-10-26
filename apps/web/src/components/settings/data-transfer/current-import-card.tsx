@@ -274,7 +274,6 @@ function DeleteImportSessionDialog({
         </span>
       }
       confirmLabel="Delete session"
-      loadingLabel="Deleting session…"
       disabled={disabled || pending}
       renderTrigger={
         <Button type="button" size="sm" variant="outline" disabled={disabled || pending}>

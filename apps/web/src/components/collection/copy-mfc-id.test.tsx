@@ -61,6 +61,7 @@ async function copyMfcId(item: CollectionItem, write: (text: string) => Promise<
         <CollectionItemControls
           item={item}
           itemSize={300}
+          variant="card"
           isPending={false}
           isSelected={false}
           onEditCollectionItem={saved}

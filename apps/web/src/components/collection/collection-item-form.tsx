@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import {
   Sheet,
@@ -12,6 +12,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "../ui/button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "../ui/status-button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
@@ -42,6 +48,7 @@ import {
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
@@ -78,6 +85,7 @@ function CollectionItemFormContent({
 }) {
   const userLocale = getCurrencyLocale(currency);
   const requiresOrderBeforeStatusChange = itemData.orderId === null;
+  const { status: buttonStatus, run } = useButtonStatus();
 
   const form = useForm({
     defaultValues: {
@@ -89,7 +97,7 @@ function CollectionItemFormContent({
         ...value,
         price: parseMoneyToMinorUnits(value.price),
       };
-      const saved = await callbackFn(transformedValue);
+      const saved = await run(() => callbackFn(transformedValue), closesOnSuccess);
       // A failed edit already rolled back and said why, so the form stays open to retry.
       if (saved.isErr()) return;
       close();
@@ -186,11 +194,28 @@ function CollectionItemFormContent({
                         }
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select status">
+                            {field.state.value && (
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
+                                />
+                                {field.state.value}
+                              </span>
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {COLLECTION_STATUSES.map((status) => {
                             const disabled = requiresOrderBeforeStatusChange && status !== "Owned";
+                            const label = (
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
+                                />
+                                {status}
+                              </span>
+                            );
 
                             return (
                               <SelectItem
@@ -201,14 +226,14 @@ function CollectionItemFormContent({
                               >
                                 {disabled ? (
                                   <Tooltip>
-                                    <TooltipTrigger render={<span>{status}</span>} />
+                                    <TooltipTrigger render={label} />
                                     <TooltipContent side="right">
                                       Assign this item to an order before changing it to Ordered,
                                       Paid, or Shipped.
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : (
-                                  status
+                                  label
                                 )}
                               </SelectItem>
                             );
@@ -605,15 +630,16 @@ function CollectionItemFormContent({
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={!canSubmit || isSubmitting} className="w-full flex-1">
-                {isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-                ) : (
-                  "Update"
-                )}
-              </Button>
+              <StatusButton
+                type="submit"
+                status={formSubmitStatus(buttonStatus, isSubmitting)}
+                disabled={!canSubmit}
+                className="w-full flex-1"
+              >
+                Update
+              </StatusButton>
             )}
           />
         </SheetFooter>

@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.0-debian AS base
+FROM oven/bun:1.4.4-debian AS base
 
 FROM base AS prune
 RUN bun add -g turbo@2.10.11

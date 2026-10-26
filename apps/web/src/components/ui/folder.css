@@ -1,0 +1,208 @@
+.folder {
+  --folder-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --folder-ease-spring: linear(
+    0,
+    0.061,
+    0.198,
+    0.361,
+    0.519,
+    0.657,
+    0.77,
+    0.856,
+    0.918,
+    0.96,
+    0.988,
+    1.004,
+    1.012,
+    1.015,
+    1.015,
+    1.013,
+    1.011,
+    1.008,
+    1.006,
+    1.004,
+    1
+  );
+  --folder-ease-pop: linear(
+    0,
+    0.061,
+    0.202,
+    0.375,
+    0.548,
+    0.702,
+    0.827,
+    0.921,
+    0.985,
+    1.026,
+    1.047,
+    1.054,
+    1.052,
+    1.046,
+    1.036,
+    1.027,
+    1.018,
+    1.011,
+    1.005,
+    1.002,
+    0.999,
+    0.998,
+    0.997,
+    0.997,
+    1
+  );
+  --peek: 0;
+  --paper-span: 34;
+  --paper-top: 2cqw;
+  --lift: 9;
+
+  position: relative;
+  aspect-ratio: 200 / 160;
+  container: folder / inline-size;
+}
+
+/* Firefox styles a folder once before laying it out, with cqw sized to the viewport and every
+   container query false. Transitions animate from that pass, so the compact size is an attribute
+   the caller sets, and no transitioning value depends on cqw. */
+.folder[data-compact] {
+  --paper-span: 30;
+  --paper-top: 10cqw;
+  --lift: 5;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  [data-folder-host]:hover .folder {
+    --peek: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-folder-host]:has(a:focus-visible) .folder {
+    --peek: 1;
+  }
+}
+
+.folder-back {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.folder-back path {
+  fill: var(--muted);
+  stroke: var(--border);
+  vector-effect: non-scaling-stroke;
+}
+
+.folder-papers {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.folder-paper {
+  position: absolute;
+  top: var(--paper-top);
+  left: 50%;
+  --paper-w: calc(var(--paper-span) * 1cqw);
+  width: var(--paper-w);
+  aspect-ratio: 3 / 4;
+  /* Offsets are in cqw but written as percentages of the paper, so the computed value never
+     depends on layout. Firefox's first style pass resolves cqw against the viewport, and the
+     translate transition then flew every paper in from the screen edge. */
+  translate: calc((var(--x) * (1 + var(--peek) * 0.2) / var(--paper-span) - 0.5) * 100%)
+    calc((var(--y) - var(--peek) * (var(--lift) + var(--arc))) / var(--paper-span) * 75%);
+  rotate: calc(var(--r) * (1 + var(--peek) * 0.55) * 1deg);
+  padding: calc(var(--paper-w) * 0.045);
+  border-radius: calc(var(--paper-w) * 0.07);
+  background: var(--card);
+  box-shadow: var(--tile-shadow);
+  transition:
+    translate 640ms var(--folder-ease-pop) var(--delay),
+    rotate 640ms var(--folder-ease-pop) var(--delay);
+}
+
+.folder-paper img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--paper-w) * 0.035);
+  outline: 1px solid var(--image-edge);
+  outline-offset: -1px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.folder-paper-blank {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--paper-w) * 0.08);
+  padding: calc(var(--paper-w) * 0.14) calc(var(--paper-w) * 0.12);
+}
+
+.folder-paper-blank i {
+  display: block;
+  height: calc(var(--paper-w) * 0.045);
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.folder-paper-blank i:first-child {
+  width: 58%;
+  height: calc(var(--paper-w) * 0.07);
+  margin-bottom: calc(var(--paper-w) * 0.04);
+}
+
+.folder-paper-blank i:nth-child(3) {
+  width: 84%;
+}
+
+.folder-paper-blank i:last-child {
+  width: 62%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .folder[data-enter] .folder-paper {
+    animation: folder-paper-fan 240ms var(--folder-ease-out) var(--delay) backwards;
+  }
+}
+
+@keyframes folder-paper-fan {
+  from {
+    translate: -50% calc((var(--y) + 5) / var(--paper-span) * 75%);
+    rotate: calc(var(--r) * 0.2deg);
+  }
+}
+
+.folder-front {
+  position: absolute;
+  z-index: 2;
+  inset-inline: 0;
+  top: 44%;
+  bottom: 0;
+  overflow: hidden;
+  border-radius: 6cqw;
+  background: var(--card);
+  box-shadow: var(--tile-shadow);
+  transform-origin: 50% 100%;
+  scale: 1 calc(1 + var(--peek) * 0.05);
+  transition: scale 520ms var(--folder-ease-spring);
+}
+
+.folder-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: max(0.625rem, 5.5cqw);
+  text-align: start;
+}
+
+@container folder (width < 14rem) {
+  .folder-description {
+    display: none;
+  }
+}

@@ -1,16 +1,53 @@
-import { KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import type {
   Announcements,
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
+  KeyboardCoordinateGetter,
   ScreenReaderInstructions,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
+import type { AnimationEvent } from "react";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import { toast } from "@/components/ui/toast";
 import type { Saving } from "@/data/client";
+
+const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
+
+// The overlay can be wider than a tile. Compare centers with a 1 px tolerance so
+// Chrome's subpixel centering cannot select the tile already under the label.
+const centerKeyboardCoordinates: KeyboardCoordinateGetter = (
+  event,
+  { context: { collisionRect, droppableRects, droppableContainers } },
+) => {
+  if (!ARROW_KEYS.has(event.code)) return;
+  event.preventDefault();
+  if (!collisionRect) return;
+
+  const fromX = collisionRect.left + collisionRect.width / 2;
+  const fromY = collisionRect.top + collisionRect.height / 2;
+  let closest: { readonly x: number; readonly y: number; readonly distance: number } | undefined;
+  for (const container of droppableContainers.getEnabled()) {
+    const rect = droppableRects.get(container.id);
+    if (!rect) continue;
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const ahead =
+      (event.code === "ArrowLeft" && x < fromX - 1) ||
+      (event.code === "ArrowRight" && x > fromX + 1) ||
+      (event.code === "ArrowUp" && y < fromY - 1) ||
+      (event.code === "ArrowDown" && y > fromY + 1);
+    const distance = Math.hypot(x - fromX, y - fromY);
+    if (ahead && (!closest || distance < closest.distance)) closest = { x, y, distance };
+  }
+  if (!closest) return;
+  return {
+    x: closest.x - collisionRect.width / 2,
+    y: closest.y - collisionRect.height / 2,
+  };
+};
 
 interface SortableRecord {
   readonly id: string;
@@ -42,7 +79,9 @@ export function useSortableItems<T extends SortableRecord>({
   readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly onClearSelection: () => void;
 }) {
-  const [entranceAnimationActive, setEntranceAnimationActive] = useState(true);
+  const reducedMotion = useMotionPreference().reduce;
+  const [entranceAnimationActive, setEntranceAnimationActive] = useState(!reducedMotion);
+  if (reducedMotion && entranceAnimationActive) setEntranceAnimationActive(false);
   const [dndEpoch, setDndEpoch] = useState(0);
   const [activeId, setActiveId] = useState<string>();
   const [overId, setOverId] = useState<string>();
@@ -50,7 +89,7 @@ export function useSortableItems<T extends SortableRecord>({
   const loadingNextPage = useRef(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: centerKeyboardCoordinates }),
   );
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
   const titleById = useMemo(() => new Map(items.map((item) => [item.id, item.title])), [items]);
@@ -183,21 +222,34 @@ export function useSortableItems<T extends SortableRecord>({
     setOverId(undefined);
   }, []);
   const finishEntranceAnimation = useCallback(() => setEntranceAnimationActive(false), []);
+  // Every tile enters together, so the last one's animation ending finishes the entrance.
+  const finishEntranceOnLastTile = useCallback((event: AnimationEvent<HTMLElement>): void => {
+    if (event.target === event.currentTarget && event.animationName === "data-in") {
+      setEntranceAnimationActive(false);
+    }
+  }, []);
+  const lastItemId = itemIds.at(-1);
 
   return {
     itemIds,
     entranceAnimationActive,
     finishEntranceAnimation,
+    entranceAnimationEnd: (id: string) =>
+      id === lastItemId ? finishEntranceOnLastTile : undefined,
     dndEpoch,
+    dndContextProps: {
+      accessibility: { announcements, screenReaderInstructions },
+      collisionDetection: closestCenter,
+      sensors,
+      onDragStart: handleDragStart,
+      onDragOver: handleDragOver,
+      onDragEnd: handleDragEnd,
+      onDragCancel: handleDragCancel,
+    },
     activeId,
-    dropIndicator,
+    dropPlacement: (id: string) => (id === dropIndicator?.id ? dropIndicator.placement : undefined),
     overlayLabel: activeId ? getDragLabel(activeId) : null,
-    sensors,
-    announcements,
-    screenReaderInstructions,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    handleDragCancel,
   } as const;
 }
+
+export type SortableItems = ReturnType<typeof useSortableItems>;

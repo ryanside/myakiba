@@ -40,7 +40,7 @@ function serve(answer: (request: AuthRequest) => Response) {
 }
 
 async function openPreferencesStep() {
-  localStorage.setItem("myakiba:onboarding-v2", JSON.stringify({ step: 1, hasSeen: true }));
+  localStorage.setItem("myakiba:onboarding-v2", JSON.stringify({ hasSeen: true }));
   render(
     <QueryClientProvider client={new QueryClient()}>
       <Toaster>
@@ -49,6 +49,9 @@ async function openPreferencesStep() {
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  // Getting Started opens at the welcome step.
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: PREFERENCES_STEP_TITLE });
 }
 

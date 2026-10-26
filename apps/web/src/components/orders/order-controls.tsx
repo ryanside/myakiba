@@ -31,6 +31,7 @@ import type { Saving } from "@/data/client";
 export function OrderControls({
   order,
   itemSize,
+  variant,
   isPending,
   isSelected,
   onEditOrder,
@@ -40,6 +41,7 @@ export function OrderControls({
 }: {
   readonly order: Order;
   readonly itemSize: number;
+  readonly variant: "card" | "media";
   readonly isPending: boolean;
   readonly isSelected: boolean;
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
@@ -57,7 +59,7 @@ export function OrderControls({
 
   return (
     <>
-      <ItemControls variant="media" size={controlsSize} active={isSelected || menuOpen}>
+      <ItemControls variant={variant} size={controlsSize} active={isSelected || menuOpen}>
         <ItemControlsSelection
           checked={isSelected}
           onCheckedChange={onToggleSelection}

@@ -34,6 +34,8 @@ await mock.module("@tanstack/react-router", () => ({
   useNavigate: () => async () => {},
   useRouter: () => ({ invalidate: async () => {} }),
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
+  // Settings rows read the URL hash for search results; these screens render without a router.
+  useLocation: () => {},
 }));
 
 const retriedSessions: string[] = [];
@@ -103,8 +105,22 @@ const SYNC_STEP_TITLE = "Bring in your items.";
 const collectionChoice = new RegExp(`^${SYNC_OPTION_META.collection.title}`, "u");
 
 function onboardingAtSyncStep() {
-  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 3, hasSeen: true }));
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
   return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
+}
+
+/** Getting Started opens at the welcome step, so this walks to the sync step. */
+async function openSyncStep(user: User) {
+  await click("Getting Started")(user);
+  for (const title of [
+    "Welcome to myakiba.",
+    "Set your username, currency, and date format.",
+    "Install the myakiba extension.",
+  ]) {
+    await screen.findByRole("dialog", { name: title });
+    await click("Continue")(user);
+  }
+  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
 }
 
 const ENTRY_POINTS: readonly EntryPoint[] = [
@@ -140,8 +156,7 @@ const ENTRY_POINTS: readonly EntryPoint[] = [
     name: `onboarding's ${SYNC_OPTION_META[syncType].title} choice`,
     render: onboardingAtSyncStep,
     start: async (user) => {
-      await click("Getting Started")(user);
-      await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+      await openSyncStep(user);
       await user.click(
         screen.getByRole("button", {
           name: new RegExp(`^${SYNC_OPTION_META[syncType].title}`, "u"),
@@ -380,8 +395,7 @@ test("a blocked onboarding choice keeps onboarding open and unfinished, so the u
     start: async () => {},
     proceeded: () => false,
   });
-  await click("Getting Started")(user);
-  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+  await openSyncStep(user);
 
   await user.click(screen.getByRole("button", { name: collectionChoice }));
   await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
@@ -391,7 +405,6 @@ test("a blocked onboarding choice keeps onboarding open and unfinished, so the u
   );
 
   expect(screen.getByRole("dialog", { name: SYNC_STEP_TITLE })).toBeDefined();
-  expect(localStorage.getItem(ONBOARDING_KEY)).not.toContain('"completed":true');
   await click("Back")(user);
   expect(
     await screen.findByRole("dialog", { name: "Install the myakiba extension." }),
@@ -407,14 +420,12 @@ test("onboarding completes once the extension answers ready", async () => {
     start: async () => {},
     proceeded: () => false,
   });
-  await click("Getting Started")(user);
-  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+  await openSyncStep(user);
 
   await user.click(screen.getByRole("button", { name: collectionChoice }));
 
   await screen.findByRole("dialog", { name: SYNC_OPTION_META.collection.title });
   expect(screen.queryByRole("dialog", { name: SYNC_STEP_TITLE })).toBeNull();
-  expect(localStorage.getItem(ONBOARDING_KEY)).toContain('"completed":true');
 });
 
 test("closing the dialog keeps its copy while it closes and returns focus to the button", async () => {

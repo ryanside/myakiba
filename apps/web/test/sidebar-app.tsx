@@ -30,6 +30,7 @@ const session = {
     emailVerified: true,
     currency: "USD",
     dateFormat: "MM/DD/YYYY",
+    hasSeenOnboarding: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     banned: false,
@@ -89,7 +90,6 @@ afterEach(() => {
   decodedImages.length = 0;
   stalled.clear();
   frames.clear();
-  localStorage.removeItem("myakiba:onboarding-v2");
   globalThis.requestAnimationFrame = realRequestAnimationFrame;
   globalThis.cancelAnimationFrame = realCancelAnimationFrame;
   Image.prototype.decode = realDecode;
@@ -112,7 +112,6 @@ export function flushFrame() {
 
 /** Renders the sidebar under the real app route at /dashboard. Orders' code loads once `ordersCode` settles. */
 export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resolve()) {
-  localStorage.setItem("myakiba:onboarding-v2", JSON.stringify({ hasSeen: true }));
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const root = createRootRouteWithContext<RouterAppContext>()({ component: Outlet });
   const app = createRoute({

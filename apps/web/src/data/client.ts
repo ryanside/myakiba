@@ -16,7 +16,7 @@ import { WriteFailed } from "@/lib/errors/write-failed";
 import { call } from "./api";
 import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
-import type { Family, PersistedFamily, RootOf } from "./catalog";
+import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
 
 /** What a read's `error` can be: the failures its load declares, or a defect. */
 export type ReadFailure<Failure> = Failure | Panic;
@@ -278,7 +278,8 @@ export function useInvalidateRead<F extends Family, Input, Data, Failure>(
 ) {
   const queryClient = useQueryClient();
   return useCallback(
-    (input: Input) => queryClient.invalidateQueries({ queryKey: read.key(input) }),
+    (...[input]: undefined extends Input ? [input?: Input] : [input: Input]) =>
+      queryClient.invalidateQueries({ queryKey: read.key(input as Input) }),
     [queryClient, read],
   );
 }
@@ -323,7 +324,7 @@ function failureToast<Input, Failure>(
     declaredFailureTitle,
     failureDescription,
   }: Pick<
-    CommandSpec<Input, unknown, Failure, PersistedFamily>,
+    CommandSpec<Input, unknown, Failure, WritableFamily>,
     "declaredFailureTitle" | "failureDescription"
   >,
   input: Input,
@@ -337,7 +338,7 @@ function failureToast<Input, Failure>(
   };
 }
 
-type RefetchKey<F extends PersistedFamily> = {
+type RefetchKey<F extends WritableFamily> = {
   readonly queryKey: readonly [RootOf<F>, ...unknown[]];
   readonly exact?: true;
 };
@@ -353,7 +354,7 @@ type RefetchTiming =
       readonly refetchAfterFailure?: never;
     };
 
-type CommandSpec<Input, Output, Failure, F extends PersistedFamily> = RefetchTiming & {
+type CommandSpec<Input, Output, Failure, F extends WritableFamily> = RefetchTiming & {
   /** Families this write can change. `run` resolves after they refetch. */
   readonly invalidates: readonly [F, ...F[]];
   /** Narrows the refetch to these keys of the invalidated families. */
@@ -366,6 +367,7 @@ type CommandSpec<Input, Output, Failure, F extends PersistedFamily> = RefetchTim
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
+  readonly successDescription?: (input: Input) => string;
   /** A failure toast's title. It never sees the failure, so a defect shows it too. A command without one shows no failure toast. */
   readonly failureTitle?: (input: Input) => string;
   /** The title for a declared failure, in place of `failureTitle` unless it returns undefined. */
@@ -380,13 +382,13 @@ const commandSpec = Symbol("commandSpec");
 
 /** Screens cannot reach `persist`, so every write goes through `useResourceMutation`. */
 type Command<Input, Output, Failure> = {
-  readonly [commandSpec]: CommandSpec<Input, Output, Failure, PersistedFamily>;
+  readonly [commandSpec]: CommandSpec<Input, Output, Failure, WritableFamily>;
 };
 
-export function defineCommand<Input, Output, Failure, const F extends PersistedFamily>(
+export function defineCommand<Input, Output, Failure, const F extends WritableFamily>(
   spec: CommandSpec<Input, Output, Failure, F>,
 ): Command<Input, Output, Failure> {
-  return { [commandSpec]: spec as CommandSpec<Input, Output, Failure, PersistedFamily> };
+  return { [commandSpec]: spec as CommandSpec<Input, Output, Failure, WritableFamily> };
 }
 
 /** What every write resolves with. A write never rejects. */
@@ -413,9 +415,11 @@ export function useWrite<Input, Output, Failure>(
   mutation: UseMutationResult<Output, ReadFailure<Failure>, Input, unknown>,
 ) {
   const { mutateAsync } = mutation;
-  const run = (input: Input): Saving<Output> =>
+  const run = (
+    ...[input]: undefined extends Input ? [input?: Input] : [input: Input]
+  ): Saving<Output> =>
     Result.tryPromise({
-      try: () => mutateAsync(input),
+      try: () => mutateAsync(input as Input),
       catch: (thrown) => {
         const cause = !Panic.is(thrown) && isTaggedError(thrown) ? thrown : asPanic(thrown);
         if (Panic.is(cause)) console.error(cause);
@@ -446,7 +450,7 @@ export function useResourceMutation<Input, Output, Failure>(
   const { optimistic, refetchAfterFailure, refetchBy } = spec;
   const queryClient = useQueryClient();
   const refetchFamilies = () => invalidateFamilies(queryClient, spec.invalidates);
-  const invalidateKeys = (keys: readonly RefetchKey<PersistedFamily>[]) =>
+  const invalidateKeys = (keys: readonly RefetchKey<WritableFamily>[]) =>
     Promise.all(keys.map((filter) => queryClient.invalidateQueries(filter)));
   const refetch = async (input: Input) => {
     const keys = spec.refetchKeys?.(input);
@@ -459,7 +463,12 @@ export function useResourceMutation<Input, Output, Failure>(
     onSuccess: (output, input) =>
       guard(async () => {
         const successTitle = spec.successTitle?.(input, output);
-        if (successTitle !== undefined) toast.add({ type: "success", title: successTitle });
+        if (successTitle !== undefined)
+          toast.add({
+            type: "success",
+            title: successTitle,
+            ...(spec.successDescription && { description: spec.successDescription(input) }),
+          });
         onSaved?.(input, output);
         await spec.saved?.(queryClient, input, output);
         if (!refetchAfterFailure && !refetchBy) await refetch(input);

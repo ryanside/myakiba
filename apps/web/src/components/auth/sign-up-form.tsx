@@ -1,11 +1,10 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { FieldError } from "../ui/field";
@@ -53,6 +52,7 @@ export default function SignUpForm() {
     }
   };
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       username: "",
@@ -61,17 +61,21 @@ export default function SignUpForm() {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      const signedUp = await decodeAuth(() =>
-        authClient.signUp.email(
-          {
-            email: value.email,
-            password: value.password,
-            name: value.username,
-            username: value.username,
-            callbackURL: getAuthRedirectUrl("/dashboard"),
-          },
-          { headers: { "x-captcha-response": value.turnstileToken } },
-        ),
+      const signedUp = await run(
+        () =>
+          decodeAuth(() =>
+            authClient.signUp.email(
+              {
+                email: value.email,
+                password: value.password,
+                name: value.username,
+                username: value.username,
+                callbackURL: getAuthRedirectUrl("/dashboard"),
+              },
+              { headers: { "x-captcha-response": value.turnstileToken } },
+            ),
+          ),
+        (result) => result.isOk(),
       );
       if (signedUp.isErr()) {
         toast.add({ type: "error", title: signedUp.error.message || signedUp.error.statusText });
@@ -228,17 +232,14 @@ export default function SignUpForm() {
 
         <form.Subscribe>
           {(state) => (
-            <Button
+            <StatusButton
               type="submit"
               className="w-full"
-              disabled={!state.canSubmit || state.isSubmitting}
+              status={formSubmitStatus(status, state.isSubmitting)}
+              disabled={!state.canSubmit}
             >
-              {state.isSubmitting ? (
-                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-              ) : (
-                "Register"
-              )}
-            </Button>
+              Register
+            </StatusButton>
           )}
         </form.Subscribe>
       </form>

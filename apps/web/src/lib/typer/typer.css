@@ -104,11 +104,9 @@
   border-radius: 0 var(--typer-radius) var(--typer-radius) 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-typer][data-typer-type="initial"] {
-    opacity: 1;
-  }
-  [data-typer] .word .char.charInit {
-    color: var(--typer-fg);
-  }
+:root[data-reduce-motion] [data-typer][data-typer-type="initial"] {
+  opacity: 1;
+}
+:root[data-reduce-motion] [data-typer] .word .char.charInit {
+  color: var(--typer-fg);
 }

@@ -1,18 +1,15 @@
 import { useMemo, useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, Image01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { useInvalidateRead, useRead } from "@/data/client";
 import { calendar } from "@/data/resources/calendar";
-import { Link } from "@tanstack/react-router";
-import { getCategoryColor } from "@/lib/category-colors";
-import { formatReleasePrice } from "@/lib/locale";
+import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
 
@@ -220,7 +217,7 @@ function DateGroup({
       </div>
       <div className="px-(--frame-panel-p)">
         {items.map((item) => (
-          <ReleaseCard key={item.releaseId} item={item} currency={currency} />
+          <CalendarItemRow key={item.releaseId} item={item} currency={currency} />
         ))}
       </div>
     </div>
@@ -241,51 +238,6 @@ function ReleaseCalendarError({
         Retry
       </Button>
     </div>
-  );
-}
-
-function ReleaseCard({
-  item,
-  currency,
-}: {
-  readonly item: ReleaseItem;
-  readonly currency: Currency;
-}): React.ReactNode {
-  const categoryColor = getCategoryColor(item.category);
-
-  return (
-    <Link
-      {...(item.itemExternalId === null
-        ? ({ to: "/item/custom/$id", params: { id: item.itemId } } as const)
-        : ({
-            to: "/item/$externalId",
-            params: { externalId: item.itemExternalId },
-          } as const))}
-      className="flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5 hover:bg-muted/50"
-    >
-      <ImageThumbnail
-        images={item.image ? [item.image] : []}
-        title={item.title}
-        fallbackIcon={<HugeiconsIcon icon={Image01Icon} className="size-4 text-muted-foreground" />}
-        className="size-9 shrink-0 rounded-md"
-      />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
-        <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-          {item.category != null && (
-            <span className="truncate" style={{ color: categoryColor }}>
-              {item.category}
-            </span>
-          )}
-          {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (
-            <span className="shrink-0">
-              {formatReleasePrice(item.price, item.priceCurrency, currency)}
-            </span>
-          )}
-        </div>
-      </div>
-    </Link>
   );
 }
 
