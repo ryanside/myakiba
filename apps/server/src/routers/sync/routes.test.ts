@@ -2186,3 +2186,25 @@ describe("committed sync publication", () => {
     }
   });
 });
+
+describe("sync detail price warnings", () => {
+  test.each(["12,50", "12.50"])("detail returns persisted CSV warnings for %s", async (price) => {
+    const run = await start("csv", [csvRow(X, "Owned", price)]);
+    const expected = price === "12,50" ? [{ mfcItemId: X, input: price }] : [];
+    const reply = await get(`/sessions/${run.syncSessionId}`);
+    expect(reply).toMatchObject({ status: 200, body: { session: { warnings: expected } } });
+    const { default: service } = await import("./service");
+    const detail = await service.getSyncSessionDetail(run.syncSessionId, userId, undefined, undefined, undefined, db);
+    expect(detail).toMatchObject({ session: { warnings: expected } });
+    await complete(run, X);
+    expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({
+      status: 200, body: { session: { warnings: expected } },
+    });
+  });
+  test("non-CSV detail returns an explicit empty warning list", async () => {
+    const run = await start("item", { items: [X] });
+    expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({
+      status: 200, body: { session: { warnings: [] } },
+    });
+  });
+});
