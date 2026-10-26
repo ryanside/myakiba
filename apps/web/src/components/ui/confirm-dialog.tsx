@@ -75,7 +75,12 @@ export function ConfirmDialog({
 
   const handleConfirm = async (): Promise<void> => {
     try {
-      await run(async () => onConfirm());
+      // The dialog closes on success, and this hook outlives its content, so success would
+      // only carry over to the next open.
+      await run(
+        async () => onConfirm(),
+        () => false,
+      );
       closeDialog();
     } catch {
       // The calling mutation reports the failure. Keep this dialog open for another attempt.
