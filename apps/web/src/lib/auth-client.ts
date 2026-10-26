@@ -89,12 +89,7 @@ export async function decodeAuth<Answer extends AuthAnswer<unknown>>(
 export async function endSession(
   operation: () => Promise<AuthAnswer<unknown>>,
 ): Promise<Result<void, AuthRequestFailed>> {
-  const answered = await Result.tryPromise({
-    try: operation,
-    catch: (cause) =>
-      new AuthRequestFailed({ code: null, status: null, statusText: "", cause, message: "" }),
-  });
-  const ended = answered.andThen(decodeAuthAnswer);
+  const ended = await decodeAuth(operation);
   if (ended.isErr()) return Result.err(ended.error);
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.
