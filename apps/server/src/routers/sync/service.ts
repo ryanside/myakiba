@@ -15,7 +15,7 @@ import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
-import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
+import type { SyncSessionRow, SyncSessionDetail } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
 import type {
@@ -539,7 +539,7 @@ class SyncService {
     statusFilter: readonly SyncSessionItemStatus[] | undefined,
     db: ReadTx,
   ): Promise<{
-    session: SyncSessionRow;
+    session: SyncSessionDetail;
     items: DbEnrichedSyncSessionItemRow[];
     totalItems: number;
   } | null> {
@@ -559,13 +559,16 @@ class SyncService {
         updatedAt: syncSession.updatedAt,
         revision: syncSession.revision,
         completedAt: syncSession.completedAt,
+        requestPayload: syncSession.requestPayload,
         hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
       })
       .from(syncSession)
       .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)));
 
     if (!sessionRecord) return null;
-    const { hasRequestPayload, ...record } = sessionRecord;
+    const { hasRequestPayload, requestPayload, ...record } = sessionRecord;
+    const payload = storedJobDataSchema.safeParse(requestPayload);
+    const warnings = importWarnings(payload.success ? payload.data : null).warnings ?? [];
     const { interrupted, revision: _revision, ...session } = viewSession(record, Date.now());
     const targetOrderIsAvailable =
       !(
@@ -646,6 +649,7 @@ class SyncService {
     return {
       session: {
         ...session,
+        warnings,
         retrySupported: hasRequestPayload,
         canRetry,
         isRetrying:

@@ -2194,17 +2194,26 @@ describe("sync detail price warnings", () => {
     const reply = await get(`/sessions/${run.syncSessionId}`);
     expect(reply).toMatchObject({ status: 200, body: { session: { warnings: expected } } });
     const { default: service } = await import("./service");
-    const detail = await service.getSyncSessionDetail(run.syncSessionId, userId, undefined, undefined, undefined, db);
+    const detail = await service.getSyncSessionDetail(
+      run.syncSessionId,
+      userId,
+      undefined,
+      undefined,
+      undefined,
+      db,
+    );
     expect(detail).toMatchObject({ session: { warnings: expected } });
     await complete(run, X);
     expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({
-      status: 200, body: { session: { warnings: expected } },
+      status: 200,
+      body: { session: { warnings: expected } },
     });
   });
   test("non-CSV detail returns an explicit empty warning list", async () => {
     const run = await start("item", { items: [X] });
     expect(await get(`/sessions/${run.syncSessionId}`)).toMatchObject({
-      status: 200, body: { session: { warnings: [] } },
+      status: 200,
+      body: { session: { warnings: [] } },
     });
   });
 });

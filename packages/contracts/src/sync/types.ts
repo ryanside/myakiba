@@ -6,7 +6,7 @@ import type {
   SyncSessionStatus,
   SyncType,
 } from "../shared/types";
-import type { InternalCsvItem } from "./schema";
+import type { InternalCsvItem, SyncJobStatus } from "./schema";
 
 export type SyncSessionRow = {
   readonly id: string;
@@ -25,6 +25,10 @@ export type SyncSessionRow = {
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly completedAt: Date | null;
+};
+
+export type SyncSessionDetail = SyncSessionRow & {
+  readonly warnings: NonNullable<SyncJobStatus["warnings"]>;
 };
 
 type SyncSessionItemRow = {
