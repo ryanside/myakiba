@@ -1,7 +1,7 @@
 import type { Cheerio, CheerioAPI } from "cheerio";
 import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
 
 export type EntryMention = {
@@ -143,7 +143,11 @@ const readReleases: FieldReader = (field, $, fields) => {
     fields.releases.push({
       rawDate: dateLink.text().trim(),
       type: types.join(" "),
-      price: price?.[1] ? parseMoneyToMinorUnits(price[1]) : 0,
+      price: price?.[1]
+        ? parseMoneyInputToMinorUnits(price[1]).unwrap(
+            `MFC release price matched the price pattern but is not valid safe money while parsing release fields: ${JSON.stringify(price[1])}`,
+          )
+        : 0,
       priceCurrency: price?.[2] ?? "JPY",
       barcode: PATTERNS.barcode.exec(text)?.[1] ?? "",
     });
