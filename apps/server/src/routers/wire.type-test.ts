@@ -1,3 +1,5 @@
+import type { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
+type ReleaseGate = S<409, ExtensionImportUnavailable["message"]>;
 /**
  * The wire of every operation a route serves: each failure's status and literal
  * message, the 500, and each string answer's literal. Written against the kernel
@@ -171,20 +173,22 @@ void (true satisfies Equal<
       | S<404, "No inactive import session was found.">
       | S<500, "Failed to delete the import session.">;
     start:
+      | ReleaseGate
       | S<409, "Another data import is already active.">
       | S<413, "The import archive exceeds the 50 MiB limit.">
       | S<500, "Failed to start import.">;
     retry:
+      | ReleaseGate
       | S<409, "The import does not exist or cannot be retried in its current state.">
       | S<500, "Failed to retry import.">;
-    failure: S<500, "Failed to record the item failure.">;
-    interrupt: S<500, "Failed to interrupt the import.">;
-    heartbeat: S<500, "Failed to extend the import.">;
+    failure: ReleaseGate | S<500, "Failed to record the item failure.">;
+    interrupt: ReleaseGate | S<500, "Failed to interrupt the import.">;
+    heartbeat: ReleaseGate | S<500, "Failed to extend the import.">;
   }
 >);
 // The 400 is one of the MFC page messages, typed as string before better-result. The
 // migration may narrow it to their literals, the one Eden type it may change; the wire stays.
-void (true satisfies Equal<Codes<Failures<typeof dataTransferComplete>>, 400 | 500>);
+void (true satisfies Equal<Codes<Failures<typeof dataTransferComplete>>, 400 | 409 | 500>);
 void (true satisfies Equal<
   Bodies<Failures<typeof dataTransferComplete>, 500>,
   "Failed to import the item."
@@ -254,6 +258,7 @@ void (true satisfies Equal<
     relatedCollection: S<500, "Failed to get item related collections">;
     resyncStatus: S<404, "Item not found"> | S<500, "Failed to check item refresh status">;
     resync:
+      | ReleaseGate
       | S<
           400,
           | "MyFigureCollection did not show this item"
@@ -335,6 +340,7 @@ void (true satisfies Equal<
   },
   {
     ingest:
+      | ReleaseGate
       | S<
           400,
           | "MyFigureCollection did not show this item"
@@ -493,18 +499,21 @@ void (true satisfies Equal<
   },
   {
     planItem:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
         >
       | S<500, "Failed to check for existing items">;
     planCsv:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
         >
       | S<500, "Failed to check for existing items">;
     planOrder:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
@@ -512,6 +521,7 @@ void (true satisfies Equal<
       | S<500, "Failed to check for existing items">;
     planOrderItem: S<500, "Failed to check for existing items">;
     planCollection:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
@@ -534,6 +544,7 @@ void (true satisfies Equal<
       | S<404, "Import not found">
       | S<500, "Failed to load import details">;
     order:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
@@ -561,17 +572,22 @@ void (true satisfies Equal<
     retry: Failures<typeof syncRunsRetry>;
   },
   {
-    complete: S<404, "This item is not part of the import"> | S<500, "Failed to import item">;
+    complete:
+      | ReleaseGate
+      | S<404, "This item is not part of the import">
+      | S<500, "Failed to import item">;
     failure:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
         >
       | S<404, "Import not found">
       | S<500, "Failed to save the item result">;
-    heartbeat: S<404, "Import not found"> | S<500, "Failed to renew the import">;
-    interrupt: S<404, "Import not found"> | S<500, "Failed to stop the import">;
+    heartbeat: ReleaseGate | S<404, "Import not found"> | S<500, "Failed to renew the import">;
+    interrupt: ReleaseGate | S<404, "Import not found"> | S<500, "Failed to stop the import">;
     itemStatus:
+      | ReleaseGate
       | S<
           403,
           "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
@@ -579,6 +595,7 @@ void (true satisfies Equal<
       | S<404, "This item is not part of the import">
       | S<500, "Failed to import item">;
     retry:
+      | ReleaseGate
       | S<409, "The 20-day window to retry failed item results has expired">
       | S<409, "This import can't be retried">
       | S<409, "These failed item results cannot be retried">

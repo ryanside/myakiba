@@ -1,3 +1,5 @@
+import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
+import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   collection,
@@ -536,6 +538,7 @@ export const Items = {
       // answers the logged 500 after the rollback has dropped the refresh.
       operational: [ResyncCooldownUnavailable, StoreItemPictureFailed],
       before: async (scope, input: { readonly id: number } & ItemRefresh) => {
+        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, input.id);
         if (!found) return Result.err(new ItemNotFound());

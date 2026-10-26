@@ -615,11 +615,11 @@ const DataTransferService = {
       userId,
       now,
       async (tx, current) => {
+        if (!current) return { value: Result.ok(current), changed: false };
         if (ready.kind === "parsed") {
           const ensured = await ensureMfcItem(tx, ready.page, ready.stored);
           if (ensured.isErr()) return { value: Result.err(ensured.error), changed: false };
         }
-        if (!current) return { value: Result.ok(current), changed: false };
         if (current.row.jobId === upload.jobId) {
           await tx
             .update(dataTransferImport)

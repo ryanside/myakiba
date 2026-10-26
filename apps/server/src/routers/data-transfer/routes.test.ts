@@ -36,7 +36,6 @@ async function setExtensionRelease(value: "released" | "in_review") {
 }
 await setExtensionRelease("released");
 
-
 await mock.module("@myakiba/auth/server", () => ({
   auth: {
     handler: () => new Response(null, { status: 404 }),
@@ -846,7 +845,7 @@ test("an S3 preparation timeout records a retryable import item failure", async 
     ).toEqual([{ status: "failed" }]);
   } finally {
     failS3 = false;
-  picturePuts = 0;
+    picturePuts = 0;
   }
   const retried = await post("/imports/current/retry");
   const retry = dataTransferImportSchema
@@ -1288,13 +1287,18 @@ describe("extension release gate", () => {
       const before = await db.select().from(dataTransferImport);
       const beforeItems = await db.select().from(dataTransferImportItem);
       await setExtensionRelease("in_review");
-      const reply = !run ? await start(archive)
-        : operation === "complete" ? await complete(run.id, 98778)
-        : operation === "retry" ? await post("/imports/current/retry")
-        : operation === "failure" ? await fail(run.id, 98778)
-        : await post(`/imports/current/${operation}`, { jobId: run.id });
+      const reply = !run
+        ? await start(archive)
+        : operation === "complete"
+          ? await complete(run.id, 98778)
+          : operation === "retry"
+            ? await post("/imports/current/retry")
+            : operation === "failure"
+              ? await fail(run.id, 98778)
+              : await post(`/imports/current/${operation}`, { jobId: run.id });
       expect(reply).toEqual({
-        status: 409, body: "Importing is unavailable until the browser extension is released.",
+        status: 409,
+        body: "Importing is unavailable until the browser extension is released.",
       });
       expect(await db.select().from(dataTransferImport)).toEqual(before);
       expect(await db.select().from(dataTransferImportItem)).toEqual(beforeItems);

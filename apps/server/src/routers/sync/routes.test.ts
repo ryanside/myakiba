@@ -39,7 +39,6 @@ async function setExtensionRelease(value: "released" | "in_review") {
 }
 await setExtensionRelease("released");
 
-
 type Listener = (channel: string, message: string) => void;
 
 const redisValues = new Map<string, string>();
@@ -2089,7 +2088,8 @@ describe("extension release gate", () => {
       const before = await db.select().from(order);
       await setExtensionRelease("in_review");
       expect(await post(`/${entry.type}`, body)).toEqual({
-        status: 409, body: "Importing is unavailable until the browser extension is released.",
+        status: 409,
+        body: "Importing is unavailable until the browser extension is released.",
       });
       expect(await db.select().from(syncSession)).toEqual([]);
       expect(await db.select().from(syncSessionItem)).toEqual([]);
@@ -2104,12 +2104,19 @@ describe("extension release gate", () => {
       const before = await db.select().from(syncSession);
       const beforeItems = await db.select().from(syncSessionItem);
       await setExtensionRelease("in_review");
-      const reply = operation === "complete" ? await complete(run, X)
-        : operation === "retry" ? await post(`/sessions/${run.syncSessionId}/retry`)
-        : operation === "failure" ? await fail(run, X)
-        : operation === "heartbeat" ? await heartbeat(run) : await interrupt(run);
+      const reply =
+        operation === "complete"
+          ? await complete(run, X)
+          : operation === "retry"
+            ? await post(`/sessions/${run.syncSessionId}/retry`)
+            : operation === "failure"
+              ? await fail(run, X)
+              : operation === "heartbeat"
+                ? await heartbeat(run)
+                : await interrupt(run);
       expect(reply).toEqual({
-        status: 409, body: "Importing is unavailable until the browser extension is released.",
+        status: 409,
+        body: "Importing is unavailable until the browser extension is released.",
       });
       expect(await db.select().from(syncSession)).toEqual(before);
       expect(await db.select().from(syncSessionItem)).toEqual(beforeItems);

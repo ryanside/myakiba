@@ -1,3 +1,5 @@
+import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
+import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import {
   completeSyncItem,
@@ -118,6 +120,7 @@ export const Sync = {
       scope,
       input: { readonly body: { readonly items: number[] }; readonly emailVerified: boolean },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       scope.log.set({ sync: { type: "item" } });
       if (!input.emailVerified) {
         scope.log.set({ sync: { reason: "email_not_verified" } });
@@ -176,6 +179,7 @@ export const Sync = {
         readonly emailVerified: boolean;
       },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const { body } = input;
       const { log } = scope;
       if (!input.emailVerified) {
@@ -244,6 +248,7 @@ export const Sync = {
   planOrder: query(
     { action: "sync.order", failure: "Failed to check for existing items" },
     async (scope, input: { readonly body: OrderSyncType; readonly emailVerified: boolean }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const { body } = input;
       const { log } = scope;
       if (!input.emailVerified) {
@@ -337,6 +342,7 @@ export const Sync = {
       scope,
       input: { readonly body: SyncOrderItemsInput; readonly emailVerified: boolean },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const { body } = input;
       const { log } = scope;
       if (!input.emailVerified) {
@@ -454,6 +460,7 @@ export const Sync = {
         readonly emailVerified: boolean;
       },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const { body } = input;
       const { log } = scope;
       if (!input.emailVerified) {
@@ -708,6 +715,7 @@ export const SyncRuns = {
       scope,
       input: { readonly id: string; readonly mfcItemId: number; readonly emailVerified: boolean },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       if (!input.emailVerified) return Result.err(new EmailNotVerified());
       const rows = await syncItemStatus(scope.tx, input.id, scope.viewer.userId, input.mfcItemId);
       if (rows.length === 0) return Result.err(new ItemNotInImport());
@@ -724,8 +732,10 @@ export const SyncRuns = {
     {
       action: "sync.completeItem",
       failure: "Failed to import item",
-      before: async (scope, input: { readonly id: string; readonly upload: SyncItemUpload }) =>
-        scope.proceed({ ...input, prepared: await prepareMfcItem(scope.tx, input.upload) }),
+      before: async (scope, input: { readonly id: string; readonly upload: SyncItemUpload }) => {
+        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
+        return scope.proceed({ ...input, prepared: await prepareMfcItem(scope.tx, input.upload) });
+      },
     },
     async (scope, input) =>
       Result.gen(async function* () {
@@ -774,6 +784,7 @@ export const SyncRuns = {
         readonly emailVerified: boolean;
       },
     ) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       if (!input.emailVerified) return Result.err(new EmailNotVerified());
       const answered = await failSyncItem(scope, input.id, scope.viewer.userId, input.failure);
       const result = answered.unwrap();
@@ -785,6 +796,7 @@ export const SyncRuns = {
   heartbeat: command(
     { action: "sync.heartbeat", failure: "Failed to renew the import" },
     async (scope, input: { readonly id: string; readonly jobId: string }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const answered = await heartbeatSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
       const result = answered.unwrap();
       if (result === null) return Result.err(new ImportNotFound());
@@ -795,6 +807,7 @@ export const SyncRuns = {
   interrupt: command(
     { action: "sync.interrupt", failure: "Failed to stop the import" },
     async (scope, input: { readonly id: string; readonly jobId: string }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const answered = await interruptSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
       const result = answered.unwrap();
       if (result === null) return Result.err(new ImportNotFound());
@@ -805,6 +818,7 @@ export const SyncRuns = {
   retry: command(
     { action: "sync.retry", failure: "Failed to retry failed item results" },
     async (scope, input: { readonly id: string; readonly emailVerified: boolean }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       if (!input.emailVerified) return Result.err(new EmailNotVerified());
       const result = await retrySyncRun(scope, input.id, scope.viewer.userId);
       if (result.outcome === "not_found") return Result.err(new ImportNotFound());

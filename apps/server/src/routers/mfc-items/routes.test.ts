@@ -584,7 +584,8 @@ test("in review refuses ingest without writing and leaves missing lookup open", 
   await setExtensionRelease("in_review");
   expect(await lookup([98777])).toEqual({ status: 200, body: { missing: [98777] } });
   expect(await upload({ mfcItemId: 98777, page: page98777, picture: JPEG })).toEqual({
-    status: 409, body: "Importing is unavailable until the browser extension is released.",
+    status: 409,
+    body: "Importing is unavailable until the browser extension is released.",
   });
   expect(await db.select().from(item)).toEqual([]);
   expect(await db.select().from(entry)).toEqual([]);

@@ -798,7 +798,8 @@ test("in review refuses refresh without writing and leaves refresh status open",
   const releases = await db.select().from(item_release);
   await setExtensionRelease("in_review");
   expect(await resync(page98777, JPEG)).toEqual({
-    status: 409, body: "Importing is unavailable until the browser extension is released.",
+    status: 409,
+    body: "Importing is unavailable until the browser extension is released.",
   });
   expect(await db.select().from(item)).toEqual(before);
   expect(await db.select().from(item_release)).toEqual(releases);

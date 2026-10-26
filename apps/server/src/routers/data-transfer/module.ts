@@ -1,3 +1,6 @@
+import { ImportNotRetryable } from "./errors/import-not-retryable";
+import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
+import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
 import { Buffer } from "node:buffer";
 import type { RequestLogger } from "evlog";
 import type {
@@ -20,6 +23,7 @@ import { InactiveImportNotFound } from "./errors/inactive-import-not-found";
 const recordFailure = command(
   { action: "dataTransfer.failItem", failure: "Failed to record the item failure." },
   async (scope, input: DataTransferImportItemFailure) => {
+    if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
     scope.log.set({
       dataTransfer: {
         importId: input.jobId,
@@ -118,6 +122,7 @@ export const DataTransfer = {
         scope,
         input: { readonly fileName: string; readonly archive: DataTransferArchiveV1 },
       ) => {
+        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
         scope.log.set({
           dataTransfer: {
             exportId: input.archive.exportId,
@@ -146,6 +151,7 @@ export const DataTransfer = {
   retry: command(
     { action: "dataTransfer.retryImport", failure: "Failed to retry import." },
     async (scope, _input: Record<never, never>) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       const retried = await DataTransferService.retryImport(scope, scope.viewer.userId);
       return retried.tapBoth({
         ok: (run) => logRun(scope, run),
@@ -158,6 +164,9 @@ export const DataTransfer = {
       action: "dataTransfer.completeItem",
       failure: "Failed to import the item.",
       before: async (scope, input: DataTransferImportItemUpload) => {
+        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
+        const current = await DataTransferService.getCurrentImport(scope.viewer.userId, scope.tx);
+        if (!current) return Result.err(new ImportNotRetryable());
         scope.log.set({ dataTransfer: { importId: input.jobId, mfcItemId: input.mfcItemId } });
         return scope.proceed({ upload: input, prepared: await prepareMfcItem(scope.tx, input) });
       },
@@ -217,6 +226,7 @@ export const DataTransfer = {
   interrupt: command(
     { action: "dataTransfer.interruptImport", failure: "Failed to interrupt the import." },
     async (scope, input: { readonly jobId: string }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       scope.log.set({ dataTransfer: { importId: input.jobId } });
       const currentImport = await DataTransferService.interruptImport(
         scope,
@@ -230,6 +240,7 @@ export const DataTransfer = {
   heartbeat: command(
     { action: "dataTransfer.heartbeat", failure: "Failed to extend the import." },
     async (scope, input: { readonly jobId: string }) => {
+      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
       scope.log.set({ dataTransfer: { importId: input.jobId } });
       const running = await DataTransferService.heartbeat(scope, scope.viewer.userId, input.jobId);
       scope.log.set({ outcome: running ? "success" : "rejected" });

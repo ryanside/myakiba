@@ -1,3 +1,5 @@
+import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
+import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
 import { and, eq, inArray } from "drizzle-orm";
 import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
 import { item } from "@myakiba/db/schema/figure";
@@ -39,6 +41,7 @@ export const MfcItems = {
       // Neither failure has a fallback, so each answers the logged 500.
       operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {
+        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
         const prepared = await prepareMfcItem(scope.tx, input);
         if (prepared.isErr()) {
           return prepared.error.match({
