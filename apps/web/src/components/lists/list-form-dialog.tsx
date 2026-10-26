@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { Textarea } from "@/components/ui/textarea";
 
 export function ListFormDialog({
@@ -79,7 +79,6 @@ type ListFormProps = {
   readonly initialTitle?: string;
   readonly initialDescription?: string;
   readonly submitLabel: string;
-  readonly pendingLabel: string;
   readonly onSubmit: (input: ListInput) => Promise<void>;
 };
 
@@ -88,18 +87,18 @@ function ListForm({
   initialTitle = "",
   initialDescription = "",
   submitLabel,
-  pendingLabel,
   onSubmit,
 }: ListFormProps): React.JSX.Element {
   const titleInputId = useId();
   const descriptionInputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: { title: initialTitle, description: initialDescription },
     validators: { onSubmit: listInputSchema },
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: ({ value }) =>
-      onSubmit({ title: value.title.trim(), description: value.description.trim() }),
+      run(() => onSubmit({ title: value.title.trim(), description: value.description.trim() })),
   });
 
   return (
@@ -163,10 +162,9 @@ function ListForm({
             >
               Cancel
             </DialogClose>
-            <Button type="submit" disabled={!canSubmit || isSubmitting}>
-              {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-              {isSubmitting ? pendingLabel : submitLabel}
-            </Button>
+            <StatusButton type="submit" status={status} disabled={!canSubmit || isSubmitting}>
+              {submitLabel}
+            </StatusButton>
           </DialogFooter>
         )}
       </form.Subscribe>

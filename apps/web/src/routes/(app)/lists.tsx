@@ -319,7 +319,6 @@ function RouteComponent(): React.JSX.Element {
               title="Create List"
               description="Give your new List a title and an optional description."
               submitLabel="Create"
-              pendingLabel="Creating..."
               onSubmit={async (input) => {
                 await createList(input);
               }}

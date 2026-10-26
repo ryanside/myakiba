@@ -153,7 +153,6 @@ function RouteComponent(): React.JSX.Element {
                     initialTitle={data.title}
                     initialDescription={data.description}
                     submitLabel="Save"
-                    pendingLabel="Saving..."
                     onSubmit={async (input) => {
                       await updateList({ listId, ...input });
                     }}
