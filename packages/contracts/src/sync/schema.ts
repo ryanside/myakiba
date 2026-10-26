@@ -141,7 +141,7 @@ const syncJobErrorSchema = z.object({
   message: z.string(),
 });
 
-export const syncPriceWarningSchema = z.object({
+const syncPriceWarningSchema = z.object({
   mfcItemId: z.number().int().positive(),
   input: z.string(),
 });

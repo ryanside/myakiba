@@ -1,4 +1,3 @@
-import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result, panic } from "better-result";
 import type { AnyTaggedError } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
@@ -16,7 +15,11 @@ import {
   SYNC_SESSION_RETRY_WINDOW_MS,
 } from "@myakiba/contracts/sync/constants";
 import { ITEM_FETCH_ERROR_MESSAGE, SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
+import {
+  jobDataSchema,
+  sessionStatusToPhase,
+  sessionStatusToTerminalState,
+} from "@myakiba/contracts/sync/schema";
 import type { JobData, SyncJobRecentItem } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";

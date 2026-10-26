@@ -1,4 +1,3 @@
-import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
@@ -14,7 +13,11 @@ import {
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
+import {
+  jobDataSchema,
+  sessionStatusToPhase,
+  sessionStatusToTerminalState,
+} from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow, SyncSessionDetail } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
