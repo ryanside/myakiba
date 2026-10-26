@@ -77,7 +77,7 @@ export function parseMoneyInputToMinorUnits(input: string): Result<number, Money
   const text = input.trim();
   if (text === "") return Result.ok(0);
   if (text.startsWith("-")) return Result.err(new MoneyInputInvalid(input, "negative"));
-  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text)) {
+  if (!/^(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?|\.\d+)$/.test(text)) {
     return Result.err(new MoneyInputInvalid(input, "format"));
   }
   const [whole = "", fraction = ""] = text.split(".");
