@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL } from "@myakiba/mfc/bridge";
+import { Panic } from "better-result";
 import type { BridgeEventMessage, PortEvent, PortRequest } from "@myakiba/mfc/bridge";
 import { ORIGINS } from "../test/fake-browser";
 import { KEEPALIVE_MS, startPageBridge } from "./page-bridge";
@@ -8,6 +9,12 @@ import type { BridgePort, PageWindow } from "./page-bridge";
 const REQUEST_ID = "6f1c1f43-1e5b-4c39-9df5-5b0c2a3e8b11";
 const OTHER_REQUEST_ID = "0b6c1d0e-55aa-4a4e-9a51-0c2b8b1c7e02";
 const INVALIDATED = "Extension context invalidated.";
+
+const consoleWarn = spyOn(console, "warn").mockImplementation(() => {});
+
+afterEach(() => {
+  consoleWarn.mockClear();
+});
 
 type PageRequest = { readonly [key: string]: string | readonly number[] };
 type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
@@ -40,6 +47,7 @@ function fakePage() {
 
 function fakeRuntime() {
   let invalidated = false;
+  let portDefect: Error | null = null;
   const sent: PortRequest[] = [];
   const disconnects: (() => void)[] = [];
   const receivers: ((message: PortEvent) => void)[] = [];
@@ -53,6 +61,7 @@ function fakeRuntime() {
       return {
         postMessage: (message) => {
           guard();
+          if (portDefect) throw portDefect;
           sent.push(message);
         },
         onMessage: { addListener: (listener) => receivers.push(listener) },
@@ -78,6 +87,9 @@ function fakeRuntime() {
     },
     invalidate: () => {
       invalidated = true;
+    },
+    breakPort: (defect: Error | null) => {
+      portDefect = defect;
     },
     receive: (message: Json) => {
       for (const receiver of receivers) receiver(message as PortEvent);
@@ -158,6 +170,45 @@ describe("the page bridge", () => {
 
     expect(bridge.posted.slice(1)).toEqual([interrupted(REQUEST_ID)]);
     expect(bridge.extension.ticks).toEqual([]);
+  });
+
+  test("a reloaded extension's error is logged once as the reason the bridge detached", () => {
+    const bridge = start();
+    bridge.send({ type: "fetch-items", mfcItemIds: [1] });
+
+    bridge.extension.invalidate();
+    bridge.extension.ticks[0]?.();
+    bridge.send({ type: "fetch-items", mfcItemIds: [2] }, OTHER_REQUEST_ID);
+
+    expect(consoleWarn).toHaveBeenCalledTimes(1);
+    expect(String(consoleWarn.mock.calls[0]?.[0])).toStartWith(
+      `ExtensionContextInvalidated: The extension's runtime threw ${INVALIDATED}`,
+    );
+  });
+
+  test("any other error from the port is a defect that panics and leaves the bridge attached", () => {
+    const bridge = start();
+    const defect = new TypeError("Cannot read properties of undefined (reading 'requestId')");
+    bridge.extension.breakPort(defect);
+
+    let thrown: unknown;
+    try {
+      bridge.send({ type: "fetch-items", mfcItemIds: [1] });
+    } catch (error) {
+      thrown = error;
+    }
+    let cause = thrown;
+    while (Panic.is(cause) && Panic.is(cause.cause)) cause = cause.cause;
+    expect(Panic.is(cause) && cause.cause).toBe(defect);
+
+    bridge.extension.breakPort(null);
+    bridge.send({ type: "hello" }, OTHER_REQUEST_ID);
+    bridge.extension.ticks[0]?.();
+
+    expect(bridge.posted).not.toContainEqual(interrupted(REQUEST_ID));
+    expect(announced(bridge.posted, OTHER_REQUEST_ID)).toBe(true);
+    expect(bridge.extension.sent.map((request) => request.type)).toEqual(["keepalive"]);
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   test("a restarted worker interrupts open runs and the next run reconnects", () => {
