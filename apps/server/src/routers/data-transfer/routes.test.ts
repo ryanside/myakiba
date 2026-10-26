@@ -29,6 +29,11 @@ import { createTestDatabase } from "../../../test/database";
 initLogger({ enabled: false });
 
 const userId = "user-1";
+let extensionRelease = "released";
+await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+  get EXTENSION_RELEASE() { return extensionRelease; },
+}));
+
 
 await mock.module("@myakiba/auth/server", () => ({
   auth: {
@@ -44,11 +49,13 @@ await mock.module("@myakiba/auth/server", () => ({
 }));
 
 let failS3 = false;
+let picturePuts = 0;
 await mock.module("@/lib/item-images", () => ({
   createItemImages,
   itemImages: createItemImages({
     client: {
       send: async () => {
+        picturePuts += 1;
         if (failS3) throw new Error("S3 request timed out");
         return { $metadata: { httpStatusCode: 200 } };
       },
@@ -325,6 +332,7 @@ async function expireLease() {
 }
 
 beforeEach(async () => {
+  extensionRelease = "released";
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -836,6 +844,7 @@ test("an S3 preparation timeout records a retryable import item failure", async 
     ).toEqual([{ status: "failed" }]);
   } finally {
     failS3 = false;
+  picturePuts = 0;
   }
   const retried = await post("/imports/current/retry");
   const retry = dataTransferImportSchema
@@ -1267,4 +1276,35 @@ describe("answers a retry or delete cannot proceed with", () => {
       body: "Failed to retry import.",
     });
   });
+});
+
+describe("extension release gate", () => {
+  for (const operation of ["start", "complete", "retry", "failure", "heartbeat", "interrupt"]) {
+    test(`in review refuses ${operation} without writing`, async () => {
+      const archive = archiveOf([], [collectionRecord("row", 98778)]);
+      const run = operation === "start" ? null : await startRun(archive);
+      const before = await db.select().from(dataTransferImport);
+      const beforeItems = await db.select().from(dataTransferImportItem);
+      extensionRelease = "in_review";
+      const reply = !run ? await start(archive)
+        : operation === "complete" ? await complete(run.id, 98778)
+        : operation === "retry" ? await post("/imports/current/retry")
+        : operation === "failure" ? await fail(run.id, 98778)
+        : await post(`/imports/current/${operation}`, { jobId: run.id });
+      expect(reply).toEqual({
+        status: 409, body: "Importing is unavailable until the browser extension is released.",
+      });
+      expect(await db.select().from(dataTransferImport)).toEqual(before);
+      expect(await db.select().from(dataTransferImportItem)).toEqual(beforeItems);
+      expect(await db.select().from(item)).toEqual([]);
+      expect(await db.select().from(collection)).toEqual([]);
+      expect(picturePuts).toBe(0);
+      expect((await current()).status).toBe(200);
+    });
+  }
+});
+test("an upload without a current import stores no picture or catalog item", async () => {
+  expect((await complete("unknown", 98778)).status).toBe(409);
+  expect(picturePuts).toBe(0);
+  expect(await db.select().from(item)).toEqual([]);
 });

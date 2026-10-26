@@ -31,6 +31,11 @@ initLogger({
 });
 
 const userId = "user-1";
+let extensionRelease = "released";
+await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+  get EXTENSION_RELEASE() { return extensionRelease; },
+}));
+
 const redisKeys = new Map<string, { readonly value: string; readonly expiresAt: number }>();
 const liveKey = (key: string) => {
   const stored = redisKeys.get(key);
@@ -239,6 +244,7 @@ function memoryStore() {
 let store = memoryStore();
 
 beforeEach(async () => {
+  extensionRelease = "released";
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -783,3 +789,17 @@ test.each(["write", "status", "guard"] as const)(
     }
   },
 );
+
+test("in review refuses refresh without writing and leaves refresh status open", async () => {
+  await upload(page98777);
+  const before = await db.select().from(item);
+  const releases = await db.select().from(item_release);
+  extensionRelease = "in_review";
+  expect(await resync(page98777, JPEG)).toEqual({
+    status: 409, body: "Importing is unavailable until the browser extension is released.",
+  });
+  expect(await db.select().from(item)).toEqual(before);
+  expect(await db.select().from(item_release)).toEqual(releases);
+  expect(store.objects.size).toBe(0);
+  expect((await resyncStatus()).status).toBe(200);
+});

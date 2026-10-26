@@ -32,12 +32,18 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
+let extensionRelease = "released";
+await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+  get EXTENSION_RELEASE() { return extensionRelease; },
+}));
+
 
 type Listener = (channel: string, message: string) => void;
 
 const redisValues = new Map<string, string>();
 const subscribers = new Set<Listener>();
 let failS3 = false;
+let picturePuts = 0;
 const rateKeys: string[] = [];
 let failureRequests = 1;
 let statusReadFailures = 0;
@@ -141,6 +147,7 @@ await mock.module("@/lib/item-images", () => ({
   itemImages: createItemImages({
     client: {
       send: async () => {
+        picturePuts += 1;
         if (failS3) throw new Error("S3 request timed out");
         return { $metadata: { httpStatusCode: 200 } };
       },
@@ -188,9 +195,11 @@ function never(): never {
 const importItem = (id: number) => db.transaction((tx) => ensureMfcItem(tx, parsedPage(id), null));
 
 beforeEach(async () => {
+  extensionRelease = "released";
   await db.execute(sql`TRUNCATE "user", item, entry CASCADE`);
   redisValues.clear();
   failS3 = false;
+  picturePuts = 0;
   rateKeys.length = 0;
   failureRequests = 1;
   statusReadFailures = 0;
@@ -2069,4 +2078,42 @@ test("CSV price warnings survive fetched completion, retry and the DB status fal
     { price: 0 },
     { price: 0 },
   ]);
+});
+
+describe("extension release gate", () => {
+  for (const entry of cases) {
+    test(`in review refuses ${entry.type} start without writing`, async () => {
+      const body = await entry.body();
+      const before = await db.select().from(order);
+      extensionRelease = "in_review";
+      expect(await post(`/${entry.type}`, body)).toEqual({
+        status: 409, body: "Importing is unavailable until the browser extension is released.",
+      });
+      expect(await db.select().from(syncSession)).toEqual([]);
+      expect(await db.select().from(syncSessionItem)).toEqual([]);
+      expect(await db.select().from(collection)).toEqual([]);
+      expect(await db.select().from(order)).toEqual(before);
+      expect(picturePuts).toBe(0);
+    });
+  }
+  for (const operation of ["complete", "retry", "failure", "heartbeat", "interrupt"]) {
+    test(`in review refuses ${operation} without writing`, async () => {
+      const run = await start("item", { items: [X] });
+      const before = await db.select().from(syncSession);
+      const beforeItems = await db.select().from(syncSessionItem);
+      extensionRelease = "in_review";
+      const reply = operation === "complete" ? await complete(run, X)
+        : operation === "retry" ? await post(`/sessions/${run.syncSessionId}/retry`)
+        : operation === "failure" ? await fail(run, X)
+        : operation === "heartbeat" ? await heartbeat(run) : await interrupt(run);
+      expect(reply).toEqual({
+        status: 409, body: "Importing is unavailable until the browser extension is released.",
+      });
+      expect(await db.select().from(syncSession)).toEqual(before);
+      expect(await db.select().from(syncSessionItem)).toEqual(beforeItems);
+      expect(await db.select().from(collection)).toEqual([]);
+      expect(picturePuts).toBe(0);
+      expect((await get(`/sessions/${run.syncSessionId}`)).status).toBe(200);
+    });
+  }
 });

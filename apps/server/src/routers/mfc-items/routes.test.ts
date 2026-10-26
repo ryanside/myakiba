@@ -17,6 +17,11 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
+let extensionRelease = "released";
+await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+  get EXTENSION_RELEASE() { return extensionRelease; },
+}));
+
 const rateLimitKeys: string[] = [];
 let rateLimitCount = 1;
 
@@ -127,6 +132,7 @@ function memoryStore() {
 let store = memoryStore();
 
 beforeEach(async () => {
+  extensionRelease = "released";
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -570,4 +576,15 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
     }
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });
+});
+
+test("in review refuses ingest without writing and leaves missing lookup open", async () => {
+  extensionRelease = "in_review";
+  expect(await lookup([98777])).toEqual({ status: 200, body: { missing: [98777] } });
+  expect(await upload({ mfcItemId: 98777, page: page98777, picture: JPEG })).toEqual({
+    status: 409, body: "Importing is unavailable until the browser extension is released.",
+  });
+  expect(await db.select().from(item)).toEqual([]);
+  expect(await db.select().from(entry)).toEqual([]);
+  expect(store.objects.size).toBe(0);
 });
