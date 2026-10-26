@@ -1,5 +1,6 @@
 import { Delete02Icon, Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Result } from "better-result";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { ThemedBadge } from "@/components/reui/badge";
@@ -286,7 +287,10 @@ function DeleteImportSessionDialog({
           {pending ? "Deleting session…" : "Delete session"}
         </Button>
       }
-      onConfirm={onDelete}
+      onConfirm={async () => {
+        await onDelete();
+        return Result.ok();
+      }}
     />
   );
 }

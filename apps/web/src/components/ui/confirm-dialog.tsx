@@ -12,6 +12,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import type { Result } from "better-result";
+import { asPanic } from "@/lib/as-panic";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = React.ComponentProps<typeof Button>["variant"];
@@ -30,7 +32,8 @@ interface ConfirmDialogProps {
   readonly cancelLabel?: string;
   readonly variant?: ButtonVariant;
   readonly icon?: IconSvgElement;
-  readonly onConfirm: () => void | Promise<void>;
+  /** Resolves Ok to close the dialog, or Err to keep it open once it has said why. It never rejects. */
+  readonly onConfirm: () => Promise<Result<unknown, unknown>>;
   readonly disabled?: boolean;
 }
 
@@ -80,10 +83,11 @@ export function ConfirmDialog({
   const handleConfirm = async (): Promise<void> => {
     setIsSubmitting(true);
     try {
-      await onConfirm();
-      closeDialog();
-    } catch {
-      // The calling mutation reports the failure. Keep this dialog open for another attempt.
+      const confirmed = await onConfirm();
+      if (confirmed.isOk()) closeDialog();
+    } catch (error) {
+      // onConfirm never rejects, so a rejection is a defect. Keep this dialog open for another attempt.
+      console.error(asPanic(error));
     } finally {
       setIsSubmitting(false);
     }

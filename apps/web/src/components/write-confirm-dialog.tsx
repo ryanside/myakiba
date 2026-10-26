@@ -8,14 +8,5 @@ type WriteConfirmDialogProps = Omit<ComponentProps<typeof ConfirmDialog>, "onCon
 
 /** A ConfirmDialog for a write: it closes when the write saves and stays open when it fails. */
 export function WriteConfirmDialog({ onConfirm, ...props }: WriteConfirmDialogProps): ReactElement {
-  return (
-    <ConfirmDialog
-      {...props}
-      onConfirm={async () => {
-        const saved = await onConfirm();
-        // ConfirmDialog stays open only when onConfirm rejects. The write already said why.
-        if (saved.isErr()) throw saved.error;
-      }}
-    />
-  );
+  return <ConfirmDialog {...props} onConfirm={onConfirm} />;
 }

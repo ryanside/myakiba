@@ -1,6 +1,7 @@
 import { FileImportIcon, Loading03Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
+import { Result } from "better-result";
 import { DATA_TRANSFER_MAX_BYTES } from "@myakiba/contracts/data-transfer/schema";
 import { Dropzone } from "@/components/kibo-ui/dropzone";
 import { Button } from "@/components/ui/button";
@@ -238,6 +239,7 @@ export function ImportSection({
                 }
                 onConfirm={async () => {
                   if (await requireExtension()) await actions.handleConfirmImport();
+                  return Result.ok();
                 }}
               />
             </div>

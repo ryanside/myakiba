@@ -18,6 +18,8 @@ const SKIPPED =
 const SETTLED_EITHER_WAY = new Set([
   // A cell drops its draft once its edit settles. A failed edit already rolled back.
   "apps/web/src/hooks/use-pending-value.ts onSubmit",
+  // A failed delete shows its error beside the import controls, so the dialog closes either way.
+  "apps/web/src/components/settings/data-transfer/current-import-card.tsx onDelete",
 ]);
 
 function calleeName({ callee }: CallExpression): string | undefined {
