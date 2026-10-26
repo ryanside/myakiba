@@ -1,11 +1,10 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
+import { StatusButton, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { FieldError } from "../ui/field";
@@ -57,6 +56,7 @@ export default function SignUpForm() {
     );
   };
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       username: "",
@@ -65,31 +65,35 @@ export default function SignUpForm() {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signUp.email(
-        {
-          email: value.email,
-          password: value.password,
-          name: value.username,
-          username: value.username,
-          callbackURL: getAuthRedirectUrl("/dashboard"),
-        },
-        {
-          headers: {
-            "x-captcha-response": value.turnstileToken,
-          },
-          onSuccess: () => {
-            navigate({
-              to: "/login",
-              search: { view: "verify-email", email: value.email },
-            });
-          },
-          onError: (error) => {
-            toast.add({
-              type: "error",
-              title: error.error.message || error.error.statusText,
-            });
-          },
-        },
+      await run(
+        () =>
+          authClient.signUp.email(
+            {
+              email: value.email,
+              password: value.password,
+              name: value.username,
+              username: value.username,
+              callbackURL: getAuthRedirectUrl("/dashboard"),
+            },
+            {
+              headers: {
+                "x-captcha-response": value.turnstileToken,
+              },
+              onSuccess: () => {
+                navigate({
+                  to: "/login",
+                  search: { view: "verify-email", email: value.email },
+                });
+              },
+              onError: (error) => {
+                toast.add({
+                  type: "error",
+                  title: error.error.message || error.error.statusText,
+                });
+              },
+            },
+          ),
+        (result) => !result.error,
       );
     },
     validators: {
@@ -245,17 +249,14 @@ export default function SignUpForm() {
 
         <form.Subscribe>
           {(state) => (
-            <Button
+            <StatusButton
               type="submit"
               className="w-full"
+              status={status}
               disabled={!state.canSubmit || state.isSubmitting}
             >
-              {state.isSubmitting ? (
-                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-              ) : (
-                "Register"
-              )}
-            </Button>
+              Register
+            </StatusButton>
           )}
         </form.Subscribe>
       </form>

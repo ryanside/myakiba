@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
@@ -7,6 +5,7 @@ import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
@@ -21,6 +20,7 @@ function RouteComponent() {
   const token = new URLSearchParams(window.location.search).get("token");
   const navigate = useNavigate();
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       password: "",
@@ -47,25 +47,29 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    await authClient.resetPassword(
-      {
-        newPassword: password,
-        token,
-      },
-      {
-        onSuccess: () => {
-          toast.add({ type: "success", title: "Password reset successfully" });
-          navigate({
-            to: "/login",
-          });
-        },
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || "Failed to reset password",
-          });
-        },
-      },
+    await run(
+      () =>
+        authClient.resetPassword(
+          {
+            newPassword: password,
+            token,
+          },
+          {
+            onSuccess: () => {
+              toast.add({ type: "success", title: "Password reset successfully" });
+              navigate({
+                to: "/login",
+              });
+            },
+            onError: (error) => {
+              toast.add({
+                type: "error",
+                title: error.error.message || "Failed to reset password",
+              });
+            },
+          },
+        ),
+      (result) => !result.error,
     );
   };
 
@@ -186,17 +190,14 @@ function RouteComponent() {
 
           <form.Subscribe>
             {(state) => (
-              <Button
+              <StatusButton
                 type="submit"
                 className="w-full"
+                status={status}
                 disabled={!state.canSubmit || state.isSubmitting}
               >
-                {state.isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-                ) : (
-                  "Reset Password"
-                )}
-              </Button>
+                Reset Password
+              </StatusButton>
             )}
           </form.Subscribe>
         </form>
