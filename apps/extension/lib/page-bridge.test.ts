@@ -60,8 +60,8 @@ function fakeRuntime() {
       guard();
       return {
         postMessage: (message) => {
-          guard();
           if (portDefect) throw portDefect;
+          guard();
           sent.push(message);
         },
         onMessage: { addListener: (listener) => receivers.push(listener) },
@@ -209,6 +209,19 @@ describe("the page bridge", () => {
     expect(announced(bridge.posted, OTHER_REQUEST_ID)).toBe(true);
     expect(bridge.extension.sent.map((request) => request.type)).toEqual(["keepalive"]);
     expect(consoleWarn).not.toHaveBeenCalled();
+  });
+
+  test("any error once the runtime reports itself gone detaches the bridge", () => {
+    const bridge = start();
+    bridge.send({ type: "fetch-items", mfcItemIds: [1] });
+
+    bridge.extension.invalidate();
+    bridge.extension.breakPort(new TypeError("Cannot read properties of undefined (reading 'id')"));
+    bridge.extension.ticks[0]?.();
+
+    expect(bridge.posted.slice(1)).toEqual([interrupted(REQUEST_ID)]);
+    expect(bridge.extension.ticks).toEqual([]);
+    expect(consoleWarn).toHaveBeenCalledTimes(1);
   });
 
   test("a restarted worker interrupts open runs and the next run reconnects", () => {

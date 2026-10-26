@@ -7,8 +7,9 @@ import {
   portItemCodec,
 } from "@myakiba/mfc/bridge";
 import type { BridgeEventMessage, PortEvent, PortRequest } from "@myakiba/mfc/bridge";
-import { Result } from "better-result";
+import { Result, panic } from "better-result";
 import { ExtensionContextInvalidated } from "./errors/extension-context-invalidated";
+import { summarize } from "./errors/summary";
 
 /** Chrome stops an idle service worker after 30 s, and a challenge waits up to 120 s. */
 export const KEEPALIVE_MS = 20_000;
@@ -37,8 +38,8 @@ export type BridgeRuntime = {
   readonly alive: () => boolean;
 };
 
-/** How a runtime call fails: the runtime throws once the extension reloads under the page. */
-const invalidated = (cause: unknown) => new ExtensionContextInvalidated({ cause });
+/** What Chrome's runtime throws from each call once the extension reloads or is removed under the page. */
+const CONTEXT_INVALIDATED = "Extension context invalidated.";
 
 /** Relays the page's requests to the background and the background's events to the page. */
 export function startPageBridge(deps: {
@@ -81,6 +82,27 @@ export function startPageBridge(deps: {
     interruptAll();
   }
 
+  /**
+   * How a runtime call fails once the extension left the page: Chrome throws its context-loss error, or the runtime
+   * reports itself gone. Any other throw is a defect, so it panics and the bridge stays attached.
+   */
+  function invalidated(call: string, cause: unknown): ExtensionContextInvalidated {
+    if ((cause instanceof Error && cause.message === CONTEXT_INVALIDATED) || !runtime.alive()) {
+      return new ExtensionContextInvalidated({ cause });
+    }
+    const { name, message } = summarize(cause);
+    return panic(
+      `The page bridge expects the runtime to throw only "${CONTEXT_INVALIDATED}", but ${call} threw ${name}: ${message} while the extension was alive.`,
+      cause,
+    );
+  }
+
+  /** The extension left the page, so the bridge says why in the page's console and detaches. */
+  function lose(invalidation: ExtensionContextInvalidated): void {
+    console.warn(`${invalidation._tag}: ${invalidation.message}`);
+    detach();
+  }
+
   function relay({ requestId, event }: PortEvent): void {
     if (event.type === "done") {
       openRuns.delete(requestId);
@@ -119,15 +141,18 @@ export function startPageBridge(deps: {
         port ??= connect();
         port.postMessage(request);
       },
-      catch: invalidated,
+      catch: (cause) => invalidated("sending a request to the background", cause),
     });
-    if (sent.isErr()) detach();
+    if (sent.isErr()) lose(sent.error);
   }
 
   function announce(requestId: string | null): void {
-    const extensionVersion = Result.try({ try: () => runtime.version(), catch: invalidated });
+    const extensionVersion = Result.try({
+      try: () => runtime.version(),
+      catch: (cause) => invalidated("reading the extension's version", cause),
+    });
     if (extensionVersion.isErr()) {
-      detach();
+      lose(extensionVersion.error);
       return;
     }
     post({
