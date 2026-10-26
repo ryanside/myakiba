@@ -105,7 +105,7 @@ test("a value that did not succeed returns to idle without showing success", asy
   expect(screen.queryByText("Saved", { selector: "[role=status]" })).toBeNull();
 });
 
-test("clicks while busy are ignored and cancelled", async () => {
+test("clicks while loading are ignored and cancelled", async () => {
   const work = Promise.withResolvers<null>();
   let runs = 0;
   render(
@@ -126,14 +126,35 @@ test("clicks while busy are ignored and cancelled", async () => {
   });
   expect(click.defaultPrevented).toBe(true);
   expect(button().getAttribute("aria-disabled")).toBe("true");
-
-  await act(async () => work.resolve(null));
-  expect(button().dataset.status).toBe("success");
-  await user.click(button());
   expect(runs).toBe(1);
 });
 
-test("the caller's disabled is not applied during success, and is applied once idle", async () => {
+test("a click during success starts another run", async () => {
+  const works: PromiseWithResolvers<null>[] = [];
+  render(
+    <SaveButton
+      work={() => {
+        const work = Promise.withResolvers<null>();
+        works.push(work);
+        return work.promise;
+      }}
+      onSettled={() => {}}
+    />,
+  );
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await act(async () => works[0]?.resolve(null));
+  expect(button().dataset.status).toBe("success");
+  expect(button().getAttribute("aria-disabled")).toBeNull();
+
+  await user.click(button());
+  expect(works).toHaveLength(2);
+  expect(button().dataset.status).toBe("loading");
+});
+
+test("during success, the caller's disabled cancels clicks without fading the button, and applies once idle", async () => {
+  let runs = 0;
   function SaveOnce() {
     const { status, run } = useButtonStatus({ successDuration: SUCCESS_DURATION });
     const [saved, setSaved] = useState(false);
@@ -143,6 +164,7 @@ test("the caller's disabled is not applied during success, and is applied once i
         successLabel="Saved"
         disabled={saved}
         onClick={() => {
+          runs += 1;
           run(async () => setSaved(true)).catch(() => {});
         }}
       >
@@ -156,6 +178,13 @@ test("the caller's disabled is not applied during success, and is applied once i
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(button().dataset.status).toBe("success"));
   expect(button().hasAttribute("disabled")).toBe(false);
+  expect(button().getAttribute("aria-disabled")).toBe("true");
+  const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+  act(() => {
+    button().dispatchEvent(click);
+  });
+  expect(click.defaultPrevented).toBe(true);
+  expect(runs).toBe(1);
 
   await waitFor(() => expect(button().dataset.status).toBe("idle"), {
     timeout: SUCCESS_DURATION * 5,

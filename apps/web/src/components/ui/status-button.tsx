@@ -99,6 +99,8 @@ export function StatusButton({
   ...props
 }: StatusButtonProps) {
   const isBusy = status !== "idle";
+  // Success blocks a second press only when the caller disables the button.
+  const ignoresClicks = status === "loading" || (status === "success" && Boolean(disabled));
 
   const successContent = (
     <>
@@ -115,10 +117,10 @@ export function StatusButton({
       // Not `disabled`: busy keeps focus and the normal look, and the click
       // handler ignores presses meanwhile. Cancelling the click also stops a
       // form's implicit submission on Enter.
-      aria-disabled={isBusy || undefined}
+      aria-disabled={ignoresClicks || undefined}
       disabled={isBusy ? false : disabled}
       onClick={(event) => {
-        if (isBusy) {
+        if (ignoresClicks) {
           event.preventDefault();
           return;
         }
