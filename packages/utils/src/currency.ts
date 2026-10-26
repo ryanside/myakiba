@@ -30,48 +30,6 @@ export function formatCurrencyFromMinorUnits(
   }).format(amountMajorUnits);
 }
 
-/**
- * Parses a user-entered money string into integer minor units.
- *
- * Input:
- * - `input`: a string that may contain digits, a leading minus sign, a decimal point,
- *   commas, spaces, or currency symbols
- *
- * Output:
- * - an integer amount in minor units, where `12345` means `123.45`
- *
- * Notes:
- * - empty input returns `0`
- * - extra formatting characters like `$`, `,`, and spaces are ignored
- * - values are truncated to 2 decimal places
- *
- * Examples:
- * - `parseMoneyToMinorUnits("123.45")` -> `12345`
- * - `parseMoneyToMinorUnits("$1,234.50")` -> `123450`
- * - `parseMoneyToMinorUnits("-9.99")` -> `-999`
- * - `parseMoneyToMinorUnits("")` -> `0`
- */
-export function parseMoneyToMinorUnits(input: string): number {
-  const trimmed = input.trim();
-  if (trimmed.length === 0) return 0;
-
-  const normalized = trimmed.replaceAll(/[^\d.-]/g, "");
-  const isNegative = normalized.startsWith("-");
-  const withoutSign = isNegative ? normalized.slice(1) : normalized;
-
-  const [rawWhole = "0", rawFraction = ""] = withoutSign.split(".", 2);
-  const whole = rawWhole.replaceAll(/\D/g, "");
-  const fraction = rawFraction.replaceAll(/\D/g, "");
-
-  const safeWhole = whole.length === 0 ? "0" : whole;
-
-  const paddedFraction = fraction.padEnd(2, "0").slice(0, 2);
-  const minorUnitsString = `${safeWhole}${paddedFraction}`;
-  const minorUnits = Number(minorUnitsString.length === 0 ? "0" : minorUnitsString);
-
-  return isNegative ? -minorUnits : minorUnits;
-}
-
 /** Parses nonnegative decimal money with optional comma thousands groups into safe minor units. */
 export function parseMoneyInputToMinorUnits(input: string): Result<number, MoneyInputInvalid> {
   const text = input.trim();

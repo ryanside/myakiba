@@ -25,7 +25,7 @@ import {
   parseJobStatusPayload,
   writeJobStatusSnapshotAndPublish,
 } from "@myakiba/redis/job-status";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
@@ -573,7 +573,7 @@ const cases: SyncCase[] = [
               mfcItemId: row.itemExternalId,
               releaseId,
               status: row.status,
-              price: parseMoneyToMinorUnits(row.price),
+              price: parseMoneyInputToMinorUnits(row.price).unwrap(),
               count: 1,
               orderTitle: ordered ? parsedPage(row.itemExternalId).title : null,
               orderReleaseDate: ordered ? date : null,
