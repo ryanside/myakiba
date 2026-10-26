@@ -127,6 +127,20 @@ function asked(
   return events.some((event) => event.type === "status" && event.state === state);
 }
 
+/** Storage refuses the first write that records a pause, as a full quota would. */
+function refusingFirstPause(fail: () => Result<void, SessionStorageUnavailable>) {
+  const stored = memoryValue(OPEN_THROTTLE);
+  let refused = false;
+  return {
+    load: stored.load,
+    save: async (next: typeof OPEN_THROTTLE) => {
+      if (refused || next.pausedUntil === 0) return stored.save(next);
+      refused = true;
+      return fail();
+    },
+  };
+}
+
 describe("the queue", () => {
   test("fetches an id once for every run that asked, 2.5 s plus jitter apart", async () => {
     const extension = fakeExtension({ pages: itemPages() });
@@ -250,23 +264,19 @@ describe("the throttle's books", () => {
     const unavailable = (op: "get" | "set", message: string) =>
       new SessionStorageUnavailable({ key: "throttle", op, cause: new Error(message) });
 
-    /** Fails the `nth` read or write of the books once item 1's page has answered. */
-    function failingBooks(op: "load" | "save", nth: number) {
+    /** Fails the `nth` write of the books once the arming item's page has answered. */
+    function failingBooks(nth: number) {
       const stored = memoryValue(OPEN_THROTTLE);
       let armed = false;
       let count = 0;
-      const failsNow = () => armed && ++count === nth;
       return {
         arm: () => {
           armed = true;
         },
         throttleState: {
-          load: async () =>
-            op === "load" && failsNow()
-              ? Result.err(unavailable("get", "storage is gone"))
-              : stored.load(),
+          load: stored.load,
           save: async (next: typeof OPEN_THROTTLE) =>
-            op === "save" && failsNow()
+            armed && ++count === nth
               ? Result.err(unavailable("set", "QuotaExceededError"))
               : stored.save(next),
         },
@@ -281,7 +291,7 @@ describe("the throttle's books", () => {
     }
 
     test("a load whose end cannot be booked is logged, and the queue goes on", async () => {
-      const books = failingBooks("save", 1);
+      const books = failingBooks(1);
       const extension = fakeExtension({
         throttleState: books.throttleState,
         pages: armedOn(books),
@@ -297,7 +307,7 @@ describe("the throttle's books", () => {
     });
 
     test("an answer that cannot be booked fails its item, and the queue goes on", async () => {
-      const books = failingBooks("save", 2);
+      const books = failingBooks(2);
       const extension = fakeExtension({
         throttleState: books.throttleState,
         pages: armedOn(books),
@@ -322,7 +332,7 @@ describe("the throttle's books", () => {
     ] as const)(
       "an answer that cannot be booked for %s ends the run and closes the MFC tab",
       async (_name, ids, last) => {
-        const books = failingBooks("save", 2);
+        const books = failingBooks(2);
         const extension = fakeExtension({
           throttleState: books.throttleState,
           pages: armedOn(books, last),
@@ -337,21 +347,23 @@ describe("the throttle's books", () => {
       },
     );
 
-    test("a turn whose books cannot be read fails only its item", async () => {
-      const books = failingBooks("load", 3);
+    test("books storage will not read leave the queue on an open throttle, and are logged once", async () => {
       const extension = fakeExtension({
-        throttleState: books.throttleState,
-        pages: armedOn(books),
+        throttleState: {
+          load: async () => Result.err(unavailable("get", "storage is gone")),
+          save: async () => Result.ok(),
+        },
+        pages: itemPages(),
       });
       const run = extension.run([1, 2, 3]);
       await extension.clock.runUntil(run.done);
 
-      expect(run.results().map((result) => result.ok || result.error)).toEqual([
-        true,
-        "unexpected_page",
-        true,
+      expect(run.results().map((result) => result.ok)).toEqual([true, true, true]);
+      expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+        expect.stringContaining(
+          "SessionStorageUnavailable: storage.session would not get throttle",
+        ),
       ]);
-      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(3)]);
     });
   });
 });
@@ -1301,27 +1313,27 @@ describe("the MFC tab", () => {
     expect(extension.tabs.has(101)).toBe(true);
   });
 
-  test("a focus that comes while the extension reads whose tab it is keeps the tab open and where it was, at every read", async () => {
+  test("a focus that comes while the browser answers the extension keeps the tab open and where it was, at every answer", async () => {
     const outcomes: string[] = [];
-    for (let focusAt = 1, reads = Infinity; focusAt <= reads; focusAt++) {
-      reads = 0;
+    for (let focusAt = 1, tabAnswers = Infinity; focusAt <= tabAnswers; focusAt++) {
+      tabAnswers = 0;
       const focuses: { readonly tabId: number; readonly logged: number }[] = [];
-      const watched = (stored: ReturnType<typeof memoryValue<OwnedTab>>) => ({
-        load: () => {
-          reads += 1;
-          const tabId = stored.peek()?.tabId;
-          if (reads === focusAt && tabId !== undefined && extension.tabs.has(tabId)) {
+      const ownedTab = memoryValue<OwnedTab>(null);
+      const ownedPictureTab = memoryValue<OwnedTab>(null);
+      const extension: FakeExtension = fakeExtension({
+        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "public")),
+        ownedTab,
+        ownedPictureTab,
+        onTabsAnswer: () => {
+          tabAnswers += 1;
+          if (tabAnswers !== focusAt) return;
+          for (const stored of [ownedTab, ownedPictureTab]) {
+            const tabId = stored.peek()?.tabId;
+            if (tabId === undefined || !extension.tabs.has(tabId)) continue;
             focuses.push({ tabId, logged: extension.tabs.log.length });
             extension.tabs.activate(tabId);
           }
-          return stored.load();
         },
-        save: stored.save,
-      });
-      const extension: FakeExtension = fakeExtension({
-        pages: ({ mfcItemId }) => page(itemPage(mfcItemId, "public")),
-        ownedTab: watched(memoryValue<OwnedTab>(null)),
-        ownedPictureTab: watched(memoryValue<OwnedTab>(null)),
       });
       const run = extension.run([1, 2]);
       await extension.clock.runUntil(run.done);
@@ -1332,7 +1344,7 @@ describe("the MFC tab", () => {
           .slice(logged)
           .filter((entry) => entry.startsWith(`update ${tabId} `) || entry === `remove ${tabId}`);
         const state = extension.tabs.has(tabId) ? "open" : "closed";
-        outcomes.push([`read ${focusAt}: ${state}`, ...touched].join(", "));
+        outcomes.push([`answer ${focusAt}: ${state}`, ...touched].join(", "));
       }
     }
 
@@ -1846,22 +1858,16 @@ describe("an attempt that breaks", () => {
   });
 
   test("a throttle write that fails while it records a challenge's pause fails only its item", async () => {
-    const stored = memoryValue(OPEN_THROTTLE);
-    const throttleState = {
-      load: stored.load,
-      save: async (next: typeof OPEN_THROTTLE) =>
-        next.pausedUntil > 0
-          ? Result.err(
-              new SessionStorageUnavailable({
-                key: "throttle",
-                op: "set",
-                cause: new Error("QuotaExceededError"),
-              }),
-            )
-          : stored.save(next),
-    };
     const extension = fakeExtension({
-      throttleState,
+      throttleState: refusingFirstPause(() =>
+        Result.err(
+          new SessionStorageUnavailable({
+            key: "throttle",
+            op: "set",
+            cause: new Error("QuotaExceededError"),
+          }),
+        ),
+      ),
       pages: (request) =>
         request.mfcItemId === 7
           ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
@@ -2106,12 +2112,13 @@ describe("a collector run that the turn stopped", () => {
 
 describe("a tab focus", () => {
   test("that cannot be recorded answers SessionStorageUnavailable", async () => {
+    const stored = memoryValue<OwnedTab>({ state: "landed", tabId: 5 });
     const extension = fakeExtension({
       pages: itemPages(),
       ownedTab: {
-        load: async () =>
-          Result.err(new SessionStorageUnavailable({ key: "ownedTab", op: "get", cause: null })),
-        save: async () => Result.ok(),
+        load: stored.load,
+        save: async () =>
+          Result.err(new SessionStorageUnavailable({ key: "ownedTab", op: "set", cause: null })),
       },
     });
     const noted = await extension.fetcher.noteTabActivated(5);
@@ -2313,15 +2320,10 @@ describe("the developer log", () => {
   });
 
   test("names a challenge's pause that cannot be booked, and fails only its item", async () => {
-    const stored = memoryValue(OPEN_THROTTLE);
     const extension = fakeExtension({
-      throttleState: {
-        load: stored.load,
-        save: async (next) =>
-          next.pausedUntil > 0
-            ? Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null }))
-            : stored.save(next),
-      },
+      throttleState: refusingFirstPause(() =>
+        Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null })),
+      ),
       pages: (request) =>
         request.mfcItemId === 7
           ? page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" })
@@ -2388,15 +2390,10 @@ describe("the developer log", () => {
   });
 
   test("reports a defect inside the attempt as an error with its Panic", async () => {
-    const stored = memoryValue(OPEN_THROTTLE);
     const extension = fakeExtension({
-      throttleState: {
-        load: stored.load,
-        save: async (next) => {
-          if (next.pausedUntil > 0) throw new Error("QuotaExceededError");
-          return stored.save(next);
-        },
-      },
+      throttleState: refusingFirstPause(() => {
+        throw new Error("QuotaExceededError");
+      }),
       pages: () => page(CHALLENGE_PAGE, { status: 503, cfMitigated: "challenge", retryAfter: "5" }),
     });
     const run = extension.run([7]);

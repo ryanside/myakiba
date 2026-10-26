@@ -158,7 +158,7 @@ describe("a throttle turn", () => {
     expect(answer).toMatchObject({ status: "error", error: { _tag: "MfcLoadTimedOut" } });
   });
 
-  test("whose books cannot be read answers SessionStorageUnavailable without running its work", async () => {
+  test("whose books storage will not read runs on an open throttle and logs why", async () => {
     const { clock } = turns();
     const unavailable = new SessionStorageUnavailable({ key: "throttle", op: "get", cause: null });
     const throttle = createThrottle({
@@ -166,14 +166,87 @@ describe("a throttle turn", () => {
       random: () => 0.5,
       state: { load: async () => Result.err(unavailable), save: async () => Result.ok() },
     });
-    let ran = false;
-    const turn = await throttle.load(new AbortController().signal, async () => {
-      ran = true;
-      return Result.ok(null);
-    });
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const turn = await throttle.load(
+        new AbortController().signal,
+        async () => Result.ok(7),
+        1000,
+      );
 
-    expect(turn.isErr() && turn.error).toBe(unavailable);
-    expect(ran).toBe(false);
+      expect(turn.isOk() && turn.value).toBe(7);
+      expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+        `SessionStorageUnavailable: ${unavailable.message}`,
+      ]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("reads its books from storage once, however many turns it runs", async () => {
+    const { clock } = turns();
+    const stored = memoryValue(OPEN_THROTTLE);
+    let reads = 0;
+    const throttle = createThrottle({
+      clock,
+      random: () => 0.5,
+      state: {
+        load: () => {
+          reads += 1;
+          return stored.load();
+        },
+        save: stored.save,
+      },
+    });
+    let done = false;
+    void Promise.all(
+      [1, 2, 3].map((value) =>
+        throttle.load(new AbortController().signal, async () => Result.ok(value), 1000),
+      ),
+    ).then(() => {
+      done = true;
+    });
+    await clock.runUntil(() => done);
+
+    expect(reads).toBe(1);
+  });
+
+  test("whose booking storage will not write still keeps the next turn a gap after it, and logs why", async () => {
+    const { clock } = turns();
+    const throttle = createThrottle({
+      clock,
+      random: () => 0.5,
+      state: {
+        load: async () => Result.ok(OPEN_THROTTLE),
+        save: async () =>
+          Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null })),
+      },
+    });
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const startedAt: number[] = [];
+      let done = false;
+      void Promise.all(
+        [1, 2].map((value) =>
+          throttle.load(new AbortController().signal, async () => {
+            startedAt.push(clock.now());
+            return Result.ok(value);
+          }),
+        ),
+      ).then(() => {
+        done = true;
+      });
+      await clock.runUntil(() => done);
+
+      expect((startedAt[1] ?? 0) - (startedAt[0] ?? 0)).toBe(
+        THROTTLE.minGapMs + THROTTLE.jitterMs / 2,
+      );
+      expect(error.mock.calls.map((call) => String(call[0]))).toContain(
+        "could not book the end of an MFC page load",
+      );
+    } finally {
+      error.mockRestore();
+    }
   });
 
   test("whose reservation panics lets the next load run", async () => {

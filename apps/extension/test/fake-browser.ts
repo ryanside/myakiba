@@ -526,6 +526,8 @@ export function fakeExtension(options: {
   readonly gatedPicture?: (url: string, signal: AbortSignal) => Promise<PictureAnswer>;
   /** The collector's fetch in the picture tab. Aborting its signal stops it, as the stop injection does. */
   readonly publicPicture?: (url: URL, signal: AbortSignal) => Promise<PictureAnswer>;
+  /** Runs once the browser has answered a tabs or windows call, before the worker reads the answer. */
+  readonly onTabsAnswer?: () => void;
 }) {
   const clock = options.clock ?? fakeClock();
   const throttleState = options.throttleState ?? memoryValue(OPEN_THROTTLE);
@@ -625,15 +627,22 @@ export function fakeExtension(options: {
   function startWorker(): Worker {
     let alive = true;
     const wrap = mortal(() => alive);
+    const browserCall =
+      <Args extends unknown[], R>(call: (...args: Args) => Promise<R>) =>
+      async (...args: Args): Promise<R> => {
+        const answer = await call(...args);
+        options.onTabsAnswer?.();
+        return answer;
+      };
     const fetcher = createFetcher({
       tabs: {
-        get: wrap(tabs.api.get),
-        query: wrap(tabs.api.query),
-        create: wrap(tabs.api.create),
-        update: wrap(tabs.api.update),
-        remove: wrap(tabs.api.remove),
+        get: wrap(browserCall(tabs.api.get)),
+        query: wrap(browserCall(tabs.api.query)),
+        create: wrap(browserCall(tabs.api.create)),
+        update: wrap(browserCall(tabs.api.update)),
+        remove: wrap(browserCall(tabs.api.remove)),
       },
-      windows: { update: wrap(tabs.windows.update) },
+      windows: { update: wrap(browserCall(tabs.windows.update)) },
       clock: { now: clock.now, sleep: wrap(clock.sleep) },
       random: () => 0.5,
       origins: ORIGINS,
