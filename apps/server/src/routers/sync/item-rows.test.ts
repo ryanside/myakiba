@@ -56,3 +56,15 @@ test("CSV retry of an existing Item keeps the in-request Order mapping", () => {
   ]);
   expect(owned.type === "csv" && owned.ordersToInsert).toEqual([]);
 });
+
+test("in-request CSV imports an invalid price as zero", () => {
+  expect(
+    prepareCsvItems([{ ...row, price: "12,50" }], [item], "user-1").collectionItems,
+  ).toMatchObject([{ price: 0 }]);
+});
+
+test("fetched CSV imports an invalid price as zero", () => {
+  expect(fetchedItemRows(payload({ ...row, price: "1.2.3" }), item).collectionItems).toMatchObject([
+    { price: 0 },
+  ]);
+});

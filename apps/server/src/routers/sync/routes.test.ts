@@ -2033,3 +2033,40 @@ test.each(["order", "order-item", "csv"])(
     expect(await db.select({ id: item.id }).from(item).where(eq(item.externalId, X))).toEqual([]);
   },
 );
+
+test("CSV imports a rejected price as zero and warns in its immediate result", async () => {
+  const reply = await post("/csv", [csvRow(PRESENT, "Owned", "12,50")]);
+  expect(reply).toMatchObject({
+    status: 200,
+    body: { isFinished: true, warnings: [{ mfcItemId: PRESENT, input: "12,50" }] },
+  });
+  expect(await db.select({ price: collection.price }).from(collection)).toEqual([{ price: 0 }]);
+});
+
+test("CSV price warnings survive fetched completion, retry and the DB status fallback", async () => {
+  const reply = await post("/csv", [
+    csvRow(PRESENT, "Owned", "12,50"),
+    csvRow(X, "Owned", "1.2.3"),
+  ]);
+  const warnings = [
+    { mfcItemId: PRESENT, input: "12,50" },
+    { mfcItemId: X, input: "1.2.3" },
+  ];
+  expect(reply).toMatchObject({ status: 200, body: { warnings } });
+  const run = startedSchema.parse(reply.body);
+  expect(await storedJobStatus(run.jobId)).toMatchObject({ warnings });
+  await fail(run, X);
+  const retried = await retry(run.syncSessionId);
+  expect(await storedJobStatus(retried.jobId)).toMatchObject({ warnings });
+  expect(await complete(retried, X)).toEqual(imported);
+  expect(snapshot(retried.jobId)).toMatchObject({ warnings });
+  redisValues.delete(getJobStatusSnapshotKey(retried.jobId));
+  expect(await storedJobStatus(retried.jobId)).toMatchObject({
+    terminalState: "success",
+    warnings,
+  });
+  expect(await db.select({ price: collection.price }).from(collection)).toEqual([
+    { price: 0 },
+    { price: 0 },
+  ]);
+});
