@@ -47,7 +47,6 @@ export function ListMembersActionBar({
           title={`Remove ${selectedCount} from List?`}
           description="This removes the selection from this List. The Items, Collection Items, and Orders will not be deleted."
           confirmLabel="Remove"
-          loadingLabel="Removing..."
           onConfirm={async () => {
             await onRemoveMembers(selectedMemberIds);
             onClearSelection();

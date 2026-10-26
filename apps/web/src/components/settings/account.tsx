@@ -1,4 +1,4 @@
-import { GoogleIcon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { useForm } from "@tanstack/react-form";
@@ -18,6 +18,12 @@ import {
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
@@ -205,6 +211,7 @@ const PASSWORD_FIELDS = [
 
 function ChangePasswordDialog() {
   const [open, setOpen] = useState(false);
+  const { status, run } = useButtonStatus();
   const changePassword = useResourceMutation(settings.changePassword, {
     onSaved: () => {
       setOpen(false);
@@ -226,7 +233,7 @@ function ChangePasswordDialog() {
         }),
     },
     onSubmit: async ({ value, formApi }) => {
-      const result = await changePassword.run(value);
+      const result = await run(() => changePassword.run(value), closesOnSuccess);
       if (result.kind === "failed" && result.error instanceof Error) {
         const { message } = result.error;
         formApi.setFieldMeta("currentPassword", (meta) => ({
@@ -285,16 +292,9 @@ function ChangePasswordDialog() {
           <DialogFooter>
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <HugeiconsIcon
-                      icon={Loading03Icon}
-                      data-icon="inline-start"
-                      className="animate-spin motion-reduce:animate-none"
-                    />
-                  ) : null}
-                  {isSubmitting ? "Changing…" : "Change password"}
-                </Button>
+                <StatusButton type="submit" status={formSubmitStatus(status, isSubmitting)}>
+                  Change password
+                </StatusButton>
               )}
             </form.Subscribe>
           </DialogFooter>

@@ -2,8 +2,8 @@ import { Alert02Icon, Loading03Icon, Tick02Icon } from "@hugeicons/core-free-ico
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter } from "@tanstack/react-router";
 import { useId, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead } from "@/data/client";
 import { settings } from "@/data/resources/settings";
@@ -81,6 +81,7 @@ export function Profile({ user }: { user: User }) {
   const [saved, setSaved] = useState(user.username ?? "");
   const [draft, setDraft] = useState(saved);
   const [isSaving, setIsSaving] = useState(false);
+  const { status, run } = useButtonStatus();
   const check = useUsernameCheck(draft, saved);
 
   const save = async () => {
@@ -89,7 +90,10 @@ export function Profile({ user }: { user: User }) {
       return;
     }
     setIsSaving(true);
-    const { error } = await callAuth(() => authClient.updateUser({ username: draft }));
+    const { error } = await run(
+      () => callAuth(() => authClient.updateUser({ username: draft })),
+      (result) => !result.error,
+    );
     setIsSaving(false);
     if (error) {
       toast.add({ type: "error", title: error.message || "Failed to update profile" });
@@ -134,20 +138,14 @@ export function Profile({ user }: { user: User }) {
           />
         </SettingsRow>
         <SettingsGroupFooter>
-          <Button type="submit" disabled={check.kind === "unchanged" || isSaving}>
-            {isSaving ? (
-              <>
-                <HugeiconsIcon
-                  icon={Loading03Icon}
-                  data-icon="inline-start"
-                  className="animate-spin motion-reduce:animate-none"
-                />
-                Saving…
-              </>
-            ) : (
-              "Save changes"
-            )}
-          </Button>
+          <StatusButton
+            type="submit"
+            status={status}
+            successLabel="Saved"
+            disabled={check.kind === "unchanged" || isSaving}
+          >
+            Save changes
+          </StatusButton>
         </SettingsGroupFooter>
       </SettingsGroup>
     </form>

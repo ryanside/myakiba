@@ -1,5 +1,6 @@
-import { afterAll, afterEach, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, expect, mock, spyOn, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -78,6 +79,7 @@ globalThis.fetch = Object.assign(
       return Response.json([thisSession, otherSession]);
     }
     if (pathname.endsWith("/get-session")) return Response.json({ session: thisSession, user });
+    if (pathname.endsWith("/change-password")) return Response.json({ token: null, user });
     throw new Error(`Unexpected ${pathname}`);
   },
   { preconnect: realFetch.preconnect },
@@ -154,3 +156,44 @@ test.each([
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
   },
 );
+
+test("Change password reopened right after a change starts idle", async () => {
+  const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+  Object.defineProperty(media, "matches", { value: true });
+  const matchMedia = spyOn(window, "matchMedia").mockReturnValue(media);
+  const getAnimations = spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
+  try {
+    await changeAndReopen();
+  } finally {
+    matchMedia.mockRestore();
+    getAnimations.mockRestore();
+  }
+});
+
+async function changeAndReopen() {
+  openAccount();
+  const pointer = userEvent.setup();
+  const trigger = await waitFor(() => {
+    const button = screen.getByRole("button", { name: "Change password" });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    return button;
+  });
+  await pointer.click(trigger);
+  await screen.findByRole("dialog");
+  await pointer.type(screen.getByLabelText("Current password"), "old-password");
+  await pointer.type(screen.getByLabelText("New password"), "new-password-123");
+  await pointer.type(screen.getByLabelText("Confirm new password"), "new-password-123{Enter}");
+
+  expect(await screen.findByText("Password changed")).toBeTruthy();
+  await waitFor(() => expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull());
+
+  await pointer.click(trigger);
+  const submit = await waitFor(() => {
+    const button = document.querySelector<HTMLElement>(
+      '[data-slot="dialog-content"] button[type="submit"]',
+    );
+    expect(button).not.toBeNull();
+    return button;
+  });
+  expect(submit?.dataset.status).toBe("idle");
+}

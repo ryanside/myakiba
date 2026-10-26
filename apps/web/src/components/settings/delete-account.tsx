@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Delete02Icon } from "@hugeicons/core-free-icons";
 import { authClient, endSession } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
@@ -8,6 +8,7 @@ import { isStaleSignIn, settings } from "@/data/resources/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { FieldError } from "@/components/ui/field";
 import {
   Dialog,
@@ -30,6 +31,7 @@ export function DeleteAccount() {
   const hasCredentialAccount = data?.hasCredentialAccount ?? false;
   const isTriggerDisabled = isPending || isError;
   const [needsFreshSignIn, setNeedsFreshSignIn] = useState(false);
+  const { status, run } = useButtonStatus();
 
   const form = useForm({
     defaultValues: {
@@ -37,8 +39,12 @@ export function DeleteAccount() {
       confirmationPhrase: "",
     },
     onSubmit: async ({ value }) => {
-      const { error } = await endSession(() =>
-        authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
+      const { error } = await run(
+        () =>
+          endSession(() =>
+            authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
+          ),
+        (result) => !result.error,
       );
       if (isStaleSignIn(error)) {
         setNeedsFreshSignIn(true);
@@ -166,24 +172,14 @@ export function DeleteAccount() {
               <DialogFooter>
                 <form.Subscribe>
                   {(state) => (
-                    <Button
+                    <StatusButton
                       type="submit"
                       variant="destructive"
-                      disabled={!state.canSubmit || state.isSubmitting}
+                      status={formSubmitStatus(status, state.isSubmitting)}
+                      disabled={!state.canSubmit}
                     >
-                      {state.isSubmitting ? (
-                        <>
-                          <HugeiconsIcon
-                            icon={Loading03Icon}
-                            data-icon="inline-start"
-                            className="animate-spin motion-reduce:animate-none"
-                          />
-                          Deleting…
-                        </>
-                      ) : (
-                        "Delete Account Permanently"
-                      )}
-                    </Button>
+                      Delete Account Permanently
+                    </StatusButton>
                   )}
                 </form.Subscribe>
               </DialogFooter>

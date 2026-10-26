@@ -48,7 +48,6 @@ export function ListMemberControls({
         title="Remove from List?"
         description={`This will remove ${member.title} from this List.`}
         confirmLabel="Remove"
-        loadingLabel="Removing..."
         onConfirm={() => onRemove(member.id)}
       />
     </>

@@ -1,11 +1,10 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { authClient } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
 import { z } from "zod";
 import { Button } from "../ui/button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -54,6 +53,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
     );
   };
 
+  const { status, run } = useButtonStatus();
   const form = useForm({
     defaultValues: {
       email: "",
@@ -61,33 +61,37 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
       turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      await authClient.signIn.email(
-        {
-          email: value.email,
-          password: value.password,
-        },
-        {
-          headers: {
-            "x-captcha-response": value.turnstileToken,
-          },
-          onSuccess: () => {
-            window.location.assign(getAuthRedirectUrl(redirectTo));
-          },
-          onError: (error) => {
-            if (error.error.status === 403) {
-              toast.add({
-                type: "error",
-                title:
-                  "Please verify your email address. Check your inbox for a verification email.",
-              });
-              return;
-            }
-            toast.add({
-              type: "error",
-              title: error.error.message || error.error.statusText,
-            });
-          },
-        },
+      await run(
+        () =>
+          authClient.signIn.email(
+            {
+              email: value.email,
+              password: value.password,
+            },
+            {
+              headers: {
+                "x-captcha-response": value.turnstileToken,
+              },
+              onSuccess: () => {
+                window.location.assign(getAuthRedirectUrl(redirectTo));
+              },
+              onError: (error) => {
+                if (error.error.status === 403) {
+                  toast.add({
+                    type: "error",
+                    title:
+                      "Please verify your email address. Check your inbox for a verification email.",
+                  });
+                  return;
+                }
+                toast.add({
+                  type: "error",
+                  title: error.error.message || error.error.statusText,
+                });
+              },
+            },
+          ),
+        (result) => !result.error,
       );
     },
     validators: {
@@ -188,17 +192,14 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
 
         <form.Subscribe>
           {(state) => (
-            <Button
+            <StatusButton
               type="submit"
               className="w-full"
-              disabled={!state.canSubmit || state.isSubmitting}
+              status={formSubmitStatus(status, state.isSubmitting)}
+              disabled={!state.canSubmit}
             >
-              {state.isSubmitting ? (
-                <HugeiconsIcon icon={Loading03Icon} className="animate-spin" />
-              ) : (
-                "Login"
-              )}
-            </Button>
+              Login
+            </StatusButton>
           )}
         </form.Subscribe>
       </form>

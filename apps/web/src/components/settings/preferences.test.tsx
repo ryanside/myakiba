@@ -12,6 +12,7 @@ import {
 import { addDays, format } from "date-fns";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { User } from "@/lib/auth-client";
+import { DEFAULT_SUCCESS_DURATION } from "@/components/ui/status-button";
 
 const user = {
   id: "collector",
@@ -146,6 +147,13 @@ test("the preview shows an example order in the chosen formats before they are s
   expect(savedChanges).toEqual([]);
 });
 
+const saveSettles = () =>
+  screen.findByRole(
+    "button",
+    { name: "Save preferences" },
+    { timeout: DEFAULT_SUCCESS_DURATION * 2 },
+  );
+
 test("Save preferences sends both changed formats in one update", async () => {
   renderPreferences();
   await screen.findByRole("button", { name: "YYYY/MM/DD" });
@@ -166,7 +174,7 @@ test("after Save the form keeps the saved formats while the session catches up",
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
   fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
   await waitFor(() => expect(savedChanges).toHaveLength(1));
-  await screen.findByRole("button", { name: "Save preferences" });
+  await saveSettles();
   act(() => renderAgain());
 
   expect(screen.getByRole("button", { name: "YYYY/MM/DD" }).getAttribute("aria-pressed")).toBe(
@@ -216,7 +224,7 @@ test("the formats refuse edits while a save is in flight", async () => {
   holdNextSave = true;
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
   fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
-  await screen.findByRole("button", { name: "Saving…" });
+  await screen.findByRole("button", { busy: true });
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
   expect(pressed("DD/MM/YYYY")).toBeTrue();
@@ -225,7 +233,7 @@ test("the formats refuse edits while a save is in flight", async () => {
   ).toBeTrue();
 
   act(() => releaseHeldSave());
-  await screen.findByRole("button", { name: "Save preferences" });
+  await saveSettles();
   sessionCatchesUp();
 
   expect(pressed("DD/MM/YYYY")).toBeTrue();
@@ -242,7 +250,7 @@ test("a save still in flight after leaving Settings and coming back blocks a sec
   holdNextSave = true;
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
   fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
-  await screen.findByRole("button", { name: "Saving…" });
+  await screen.findByRole("button", { busy: true });
 
   await act(() => router.navigate({ to: "/dashboard" }));
   await screen.findByText("Dashboard");
@@ -250,10 +258,10 @@ test("a save still in flight after leaving Settings and coming back blocks a sec
   await screen.findByRole("button", { name: "YYYY/MM/DD" });
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
-  fireEvent.click(screen.getByRole("button", { name: /^Sav/ }));
+  fireEvent.click(screen.getByRole("button", { busy: true }));
 
   act(() => releaseHeldSave());
-  await screen.findByRole("button", { name: "Save preferences" });
+  await saveSettles();
   sessionCatchesUp();
   expect(pressed("DD/MM/YYYY")).toBeTrue();
 

@@ -102,7 +102,6 @@ export function ListControls({
         initialTitle={list.title}
         initialDescription={list.description}
         submitLabel="Save"
-        pendingLabel="Saving..."
         onSubmit={(input) => onUpdate(list.id, input)}
       />
       <ConfirmDialog

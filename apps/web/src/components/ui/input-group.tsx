@@ -3,7 +3,6 @@ import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -77,27 +76,6 @@ const inputGroupButtonVariants = cva("flex items-center gap-2 text-sm shadow-non
   },
 });
 
-function InputGroupButton({
-  className,
-  type = "button",
-  variant = "ghost",
-  size = "xs",
-  ...props
-}: Omit<React.ComponentProps<typeof Button>, "size" | "type"> &
-  VariantProps<typeof inputGroupButtonVariants> & {
-    type?: "button" | "submit" | "reset";
-  }) {
-  return (
-    <Button
-      type={type}
-      data-size={size}
-      variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
-      {...props}
-    />
-  );
-}
-
 function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
@@ -139,7 +117,7 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<"texta
 export {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
+  inputGroupButtonVariants,
   InputGroupText,
   InputGroupInput,
   InputGroupTextarea,

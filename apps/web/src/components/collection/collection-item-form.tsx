@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import {
   Sheet,
@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "../ui/button";
+import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
@@ -77,20 +78,22 @@ function CollectionItemFormContent({
 }) {
   const userLocale = getCurrencyLocale(currency);
   const requiresOrderBeforeStatusChange = itemData.orderId === null;
+  const { status: buttonStatus, run } = useButtonStatus();
 
   const form = useForm({
     defaultValues: {
       ...itemData,
       price: minorUnitsToMajorString(itemData.price ?? 0),
     },
-    onSubmit: async ({ value }) => {
-      const transformedValue: CollectionItemFormValues = {
-        ...value,
-        price: parseMoneyToMinorUnits(value.price),
-      };
-      await callbackFn(transformedValue);
-      close();
-    },
+    onSubmit: ({ value }) =>
+      run(async () => {
+        const transformedValue: CollectionItemFormValues = {
+          ...value,
+          price: parseMoneyToMinorUnits(value.price),
+        };
+        await callbackFn(transformedValue);
+        close();
+      }),
   });
 
   const {
@@ -625,15 +628,16 @@ function CollectionItemFormContent({
             )}
           />
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={!canSubmit || isSubmitting} className="w-full flex-1">
-                {isSubmitting ? (
-                  <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-                ) : (
-                  "Update"
-                )}
-              </Button>
+              <StatusButton
+                type="submit"
+                status={formSubmitStatus(buttonStatus, isSubmitting)}
+                disabled={!canSubmit}
+                className="w-full flex-1"
+              >
+                Update
+              </StatusButton>
             )}
           />
         </SheetFooter>

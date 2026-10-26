@@ -812,6 +812,32 @@
         "refreshing targeted sign out others through unavailable does not steal focus",
         "returning to an already focused devices history entry preserves focus"
       ]
+    },
+    {
+      "fix": "a9b96f58",
+      "bug": "a confirm dialog reopened within 1.5 s of a confirm showed a check and ignored clicks",
+      "test": "apps/web/src/components/ui/confirm-dialog.test.tsx",
+      "fixed": ["reopened right after a confirm, the confirm button is idle and confirms again"]
+    },
+    {
+      "fix": "0a1c8851",
+      "bug": "a TanStack Form submit button was natively disabled while idle on both sides of a submit, so the browser dropped its focus",
+      "test": "apps/web/src/components/lists/list-form-dialog.test.tsx",
+      "fixed": [
+        "the submit button is never disabled through a submit that fails, so it keeps focus"
+      ]
+    },
+    {
+      "fix": "eb976f10",
+      "bug": "a status button ignored every click until its success state timed out",
+      "test": "apps/web/src/components/ui/status-button.test.tsx",
+      "fixed": ["a click during success starts another run"]
+    },
+    {
+      "fix": "eb965ba0",
+      "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
+      "test": "apps/web/src/components/settings/account.test.tsx",
+      "fixed": ["Change password reopened right after a change starts idle"]
     }
   ],
   "lint": [

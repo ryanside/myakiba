@@ -1,4 +1,4 @@
-import { Loading03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -7,7 +7,7 @@ import { parseDateOnly } from "@myakiba/utils/date-only";
 import { addDays } from "date-fns";
 import { useState } from "react";
 import { CurrencySelect } from "@/components/currency-select";
-import { Button } from "@/components/ui/button";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePreferencesSave } from "@/data/resources/settings";
 import type { Formats } from "@/data/resources/settings";
@@ -24,7 +24,8 @@ export function Preferences({ user }: { user: User }) {
     currency: user.currency as Currency,
     dateFormat: user.dateFormat as DateFormat,
   };
-  const { save, saving } = usePreferencesSave();
+  const { save, saving: anySaveInFlight } = usePreferencesSave();
+  const { status, run } = useButtonStatus();
   const [saved, setSaved] = useState(session);
   const [edits, setEdits] = useState<Partial<Formats>>({});
   const [seenSession, setSeenSession] = useState(session);
@@ -46,8 +47,13 @@ export function Preferences({ user }: { user: User }) {
       onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (saving || !dirty) return;
-        if (await save(changes)) {
+        if (anySaveInFlight || !dirty) return;
+        if (
+          await run(
+            () => save(changes),
+            (ok) => ok,
+          )
+        ) {
           setSaved((current) => ({ ...current, ...changes }));
           setEdits({});
         }
@@ -59,7 +65,7 @@ export function Preferences({ user }: { user: User }) {
             id="currency"
             value={draft.currency}
             onValueChange={(currency) => edit({ currency })}
-            disabled={saving}
+            disabled={anySaveInFlight}
           />
         </SettingsRow>
 
@@ -73,7 +79,7 @@ export function Preferences({ user }: { user: User }) {
               const dateFormat = DATE_FORMATS.find((format) => format === next[0]);
               if (dateFormat) edit({ dateFormat });
             }}
-            disabled={saving}
+            disabled={anySaveInFlight}
             className="w-full flex-wrap justify-start sm:w-auto sm:justify-end"
           >
             {DATE_FORMATS.map((format) => (
@@ -87,20 +93,14 @@ export function Preferences({ user }: { user: User }) {
         <FormatPreview currency={draft.currency} dateFormat={draft.dateFormat} />
 
         <SettingsGroupFooter>
-          <Button type="submit" disabled={saving || !dirty}>
-            {saving ? (
-              <>
-                <HugeiconsIcon
-                  icon={Loading03Icon}
-                  data-icon="inline-start"
-                  className="animate-spin motion-reduce:animate-none"
-                />
-                Saving…
-              </>
-            ) : (
-              "Save preferences"
-            )}
-          </Button>
+          <StatusButton
+            type="submit"
+            status={anySaveInFlight ? "loading" : status}
+            successLabel="Saved"
+            disabled={anySaveInFlight || !dirty}
+          >
+            Save preferences
+          </StatusButton>
         </SettingsGroupFooter>
       </SettingsGroup>
     </form>
