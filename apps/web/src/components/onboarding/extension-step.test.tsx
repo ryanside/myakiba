@@ -8,6 +8,9 @@ configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
 let extension = fakeExtension();
+// The extension step shows install steps once the extension is released. A revision from before the
+// release state ignores this mock.
+await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 let bridge = createExtensionBridge(extension.window);
 await mock.module("@/lib/extension-bridge", () => ({
