@@ -2,6 +2,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import {
   Dialog,
   DialogClose,
@@ -114,7 +115,6 @@ function UnifiedItemMoveFormContent({
   const selectedCount = selectedItems.collectionIds.size;
   const actionLabel = intent === "add" ? "Assign" : "Move";
   const dialogTitle = intent === "add" ? "Assign Order" : "Move Items";
-  const pendingActionLabel = intent === "add" ? "Assigning..." : "Moving...";
   const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
   const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
 
@@ -148,15 +148,18 @@ function UnifiedItemMoveFormContent({
 
   const orderResults = orderPages?.pages.flatMap((page) => page.orderIdsAndTitles) ?? [];
 
+  const { status: buttonStatus, run } = useButtonStatus();
+
   const existingOrderForm = useForm({
     defaultValues: {
       targetOrderId: "",
     },
-    onSubmit: async ({ value }) => {
-      await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
-      clearSelections?.();
-      close();
-    },
+    onSubmit: ({ value }) =>
+      run(async () => {
+        await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
+        clearSelections?.();
+        close();
+      }),
   });
 
   const newOrderForm = useForm({
@@ -177,28 +180,29 @@ function UnifiedItemMoveFormContent({
       miscFees: "0.00",
       notes: "",
     },
-    onSubmit: async ({ value }) => {
-      const transformedValue: NewOrder = {
-        title: value.title,
-        shop: value.shop,
-        orderDate: value.orderDate || null,
-        releaseDate: value.releaseDate || null,
-        paymentDate: value.paymentDate || null,
-        shippingDate: value.shippingDate || null,
-        collectionDate: value.collectionDate || null,
-        status: value.status,
-        shippingMethod: value.shippingMethod,
-        shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-        taxes: parseMoneyToMinorUnits(value.taxes),
-        duties: parseMoneyToMinorUnits(value.duties),
-        tariffs: parseMoneyToMinorUnits(value.tariffs),
-        miscFees: parseMoneyToMinorUnits(value.miscFees),
-        notes: value.notes,
-      };
-      await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
-      clearSelections?.();
-      close();
-    },
+    onSubmit: ({ value }) =>
+      run(async () => {
+        const transformedValue: NewOrder = {
+          title: value.title,
+          shop: value.shop,
+          orderDate: value.orderDate || null,
+          releaseDate: value.releaseDate || null,
+          paymentDate: value.paymentDate || null,
+          shippingDate: value.shippingDate || null,
+          collectionDate: value.collectionDate || null,
+          status: value.status,
+          shippingMethod: value.shippingMethod,
+          shippingFee: parseMoneyToMinorUnits(value.shippingFee),
+          taxes: parseMoneyToMinorUnits(value.taxes),
+          duties: parseMoneyToMinorUnits(value.duties),
+          tariffs: parseMoneyToMinorUnits(value.tariffs),
+          miscFees: parseMoneyToMinorUnits(value.miscFees),
+          notes: value.notes,
+        };
+        await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
+        clearSelections?.();
+        close();
+      }),
   });
 
   return (
@@ -387,9 +391,14 @@ function UnifiedItemMoveFormContent({
               <existingOrderForm.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
                 children={([canSubmit, isSubmitting]) => (
-                  <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                    {isSubmitting ? pendingActionLabel : existingSubmitLabel}
-                  </Button>
+                  <StatusButton
+                    type="submit"
+                    status={buttonStatus}
+                    disabled={!canSubmit || isSubmitting}
+                    variant="default"
+                  >
+                    {existingSubmitLabel}
+                  </StatusButton>
                 )}
               />
             </DialogFooter>
@@ -762,13 +771,14 @@ function UnifiedItemMoveFormContent({
               <newOrderForm.Subscribe
                 selector={(state) => [state.canSubmit, state.isSubmitting]}
                 children={([canSubmit, isSubmitting]) => (
-                  <Button type="submit" disabled={!canSubmit || isSubmitting} variant="default">
-                    {isSubmitting ? (
-                      <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-                    ) : (
-                      newSubmitLabel
-                    )}
-                  </Button>
+                  <StatusButton
+                    type="submit"
+                    status={buttonStatus}
+                    disabled={!canSubmit || isSubmitting}
+                    variant="default"
+                  >
+                    {newSubmitLabel}
+                  </StatusButton>
                 )}
               />
             </DialogFooter>
