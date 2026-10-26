@@ -23,6 +23,8 @@ import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
 import { PublishJobStatusFailed } from "@myakiba/redis/errors/publish-job-status-failed";
 
 const RECENT_ITEMS_LIMIT = 5;
+const LEGACY_IMPORT_ERROR =
+  "This import started before the browser extension release. Start the import again.";
 const EMPTY_IMPORT_ERROR = "No orders or collection items could be imported.";
 const IMPORTING_ITEMS_MESSAGE = "Importing items from MyFigureCollection…";
 
@@ -95,6 +97,14 @@ function viewImport(row: ImportRow, waiting: WaitingItems, now: Date): ImportVie
     failedRows: row.failedCollectionItems,
     report: row.report,
   };
+  // Remove once no row from before this release remains (30-day retention).
+  // Main queued imports without item rows or totals; they cannot resume in the extension.
+  if (
+    (isActive(row.status) && row.totalCollectionItems === 0) ||
+    row.error === LEGACY_IMPORT_ERROR
+  ) {
+    return { ...stored, status: "failed", phase: "failed", error: LEGACY_IMPORT_ERROR };
+  }
   const failureReasons = [...waiting.failureReasons];
   let { failedRows, pendingRows } = waiting;
   if (lapsed && pendingRows > 0) {

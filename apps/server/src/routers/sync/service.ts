@@ -1,3 +1,4 @@
+import { storedItemStatus, storedJobDataSchema } from "./retained-data";
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
@@ -13,11 +14,7 @@ import {
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
-import {
-  jobDataSchema,
-  sessionStatusToPhase,
-  sessionStatusToTerminalState,
-} from "@myakiba/contracts/sync/schema";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
@@ -373,7 +370,7 @@ class SyncService {
 
     if (!row) return Result.err(new SyncJobNotFound());
     const session = viewSession(row, Date.now());
-    const payload = jobDataSchema.safeParse(row.requestPayload);
+    const payload = storedJobDataSchema.safeParse(row.requestPayload);
     const warnings = importWarnings(payload.success ? payload.data : null);
     const terminalState = sessionStatusToTerminalState(session.status);
 
@@ -583,8 +580,8 @@ class SyncService {
       session.createdAt.getTime() + SYNC_SESSION_RETRY_WINDOW_MS > Date.now();
 
     const viewedItemStatus = interrupted
-      ? sql<SyncSessionItemStatus>`CASE WHEN ${syncSessionItem.status} = 'pending' THEN 'failed' ELSE ${syncSessionItem.status} END`
-      : sql<SyncSessionItemStatus>`${syncSessionItem.status}`;
+      ? sql<SyncSessionItemStatus>`CASE WHEN ${syncSessionItem.status} = 'pending' THEN 'failed' ELSE ${storedItemStatus} END`
+      : storedItemStatus;
     const itemConditions = [eq(syncSessionItem.syncSessionId, sessionId)];
     if (statusFilter && statusFilter.length > 0) {
       itemConditions.push(inArray(viewedItemStatus, statusFilter));
@@ -595,7 +592,7 @@ class SyncService {
       id: syncSessionItem.id,
       syncSessionId: syncSessionItem.syncSessionId,
       itemExternalId: syncSessionItem.itemExternalId,
-      status: syncSessionItem.status,
+      status: storedItemStatus,
       errorReason: syncSessionItem.errorReason,
       errorCode: syncSessionItem.errorCode,
       createdAt: syncSessionItem.createdAt,

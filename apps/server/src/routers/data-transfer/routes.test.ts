@@ -1320,14 +1320,23 @@ describe("retained main imports", () => {
   for (const status of ["queued", "running"] as const) {
     test(`a legacy ${status} import reads failed with a restart message`, async () => {
       await db.insert(dataTransferImport).values({
-        userId, importId: "old-import", jobId: "old-job", fileName: "old.json", status,
-        phase: "queued", archive: archiveOf([], [collectionRecord("legacy", 98777)]),
+        userId,
+        importId: "old-import",
+        jobId: "old-job",
+        fileName: "old.json",
+        status,
+        phase: "queued",
+        archive: archiveOf([], [collectionRecord("legacy", 98777)]),
       });
       expect((await current()).body).toMatchObject({
-        status: "failed", error: "This import started before the browser extension release. Start the import again.",
+        status: "failed",
+        error: "This import started before the browser extension release. Start the import again.",
       });
       const { default: service } = await import("./service");
-      expect(await service.getImportJobStatus(userId, db)).toMatchObject({ phase: "failed", terminalState: "error" });
+      expect(await service.getImportJobStatus(userId, db)).toMatchObject({
+        phase: "failed",
+        terminalState: "error",
+      });
     });
   }
 });

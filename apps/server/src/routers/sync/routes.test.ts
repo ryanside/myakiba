@@ -1655,7 +1655,7 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
     if (reads === failAt) throw new Error("original sync read error");
     return original(...args);
   });
-  initLogger({ enabled: true });
+  initLogger({ enabled: false });
   try {
     const response = await app.handle(
       new Request(`http://localhost/api/sync/job-status?jobId=${run.jobId}`, {
@@ -1761,7 +1761,7 @@ test.each([true, false])(
       logged = useLogger();
       return original(...args);
     });
-    initLogger({ enabled: true });
+    initLogger({ enabled: false });
     try {
       expect(await post("/csv", [csvRow(missing ? X : PRESENT, "Owned", "10.00")])).toMatchObject({
         status: 200,
@@ -1790,7 +1790,7 @@ test("an item upload's wide event names its session, job, item and outcome", asy
       return original(...args);
     },
   );
-  initLogger({ enabled: true });
+  initLogger({ enabled: false });
   try {
     expect(await complete(run, X)).toEqual(imported);
     expect(logged?.getContext()).toMatchObject({
@@ -1993,7 +1993,7 @@ test("a corrupt retained sync payload refuses retry explicitly and logs its sche
   const { serve } = await import("@/domain/kernel");
   const { Viewer } = await import("@/domain/viewer");
   const { SyncRuns } = await import("./module");
-  initLogger({ enabled: true });
+  initLogger({ enabled: false });
   const log = createRequestLogger();
   try {
     await serve({ viewer: Viewer.fromSession({ user: { id: userId } }), log }, SyncRuns.retry, {
@@ -2130,24 +2130,40 @@ describe("extension release gate", () => {
 test("legacy scraped results read as imported in detail, filtering, counts and retry", async () => {
   const run = await start("item", { items: [X, Y] });
   await complete(run, X);
-  await db.execute(sql`update sync_session_item set status = 'scraped' where sync_session_id = ${run.syncSessionId} and item_external_id = ${X}`);
-  expect(detailSchema.parse((await get(`/sessions/${run.syncSessionId}`)).body).session.items)
-    .toContainEqual({ itemExternalId: X, status: "imported", errorReason: null });
-  const filtered = detailSchema.parse((await get(`/sessions/${run.syncSessionId}?status=imported`)).body);
+  await db.execute(
+    sql`update sync_session_item set status = 'scraped' where sync_session_id = ${run.syncSessionId} and item_external_id = ${X}`,
+  );
+  expect(
+    detailSchema.parse((await get(`/sessions/${run.syncSessionId}`)).body).session.items,
+  ).toContainEqual({ itemExternalId: X, status: "imported", errorReason: null });
+  const filtered = detailSchema.parse(
+    (await get(`/sessions/${run.syncSessionId}?status=imported`)).body,
+  );
   expect(filtered.session.items.map((row) => row.itemExternalId)).toEqual([X]);
-  expect(await complete(run, X)).toEqual({ status: 200, body: { outcome: "already_imported", reason: null } });
+  expect(await complete(run, X)).toEqual({
+    status: 200,
+    body: { outcome: "already_imported", reason: null },
+  });
   await fail(run, Y);
-  expect(await session(run.syncSessionId)).toMatchObject({ successCount: 1, failCount: 1, status: "partial" });
+  expect(await session(run.syncSessionId)).toMatchObject({
+    successCount: 1,
+    failCount: 1,
+    status: "partial",
+  });
   await retry(run.syncSessionId);
   expect(await session(run.syncSessionId)).toMatchObject({ successCount: 1, failCount: 0 });
 });
 
 describe("retained main payloads", () => {
-  for (const entry of cases.filter((entry) => ["collection", "order", "order-item"].includes(entry.type))) {
+  for (const entry of cases.filter((entry) =>
+    ["collection", "order", "order-item"].includes(entry.type),
+  )) {
     test(`retries legacy ${entry.type} itemsToScrape`, async () => {
       const run = await start(entry.type, await entry.body());
       await interrupt(run);
-      await db.execute(sql`update sync_session set request_payload = replace(request_payload::text, 'itemsToFetch', 'itemsToScrape')::jsonb where id = ${run.syncSessionId}`);
+      await db.execute(
+        sql`update sync_session set request_payload = replace(request_payload::text, 'itemsToFetch', 'itemsToScrape')::jsonb where id = ${run.syncSessionId}`,
+      );
       const retried = await retry(run.syncSessionId);
       expect(retried.missingMfcItemIds).toEqual([X, Y, Z]);
     });
