@@ -13,7 +13,11 @@ import {
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
-import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
+import {
+  jobDataSchema,
+  sessionStatusToPhase,
+  sessionStatusToTerminalState,
+} from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
@@ -37,7 +41,7 @@ import { SyncJobNotFound } from "./errors/sync-job-not-found";
 import { JobStatusSnapshotCorrupt } from "./errors/job-status-snapshot-corrupt";
 import { JobStatusCacheUnavailable } from "./errors/job-status-cache-unavailable";
 import type { ItemRows } from "./item-rows";
-import { publishJobStatus, queuedJobStatus } from "./job-status";
+import { importWarnings, publishJobStatus, queuedJobStatus } from "./job-status";
 import { persistenceFailure, settleRun, viewSession, viewedStatusSql } from "./run-state";
 
 type SyncSessionUpdatePayload = Partial<
@@ -293,7 +297,13 @@ class SyncService {
       })
       .where(eq(syncSession.id, session.id));
     afterCommit(() =>
-      publishJobStatus(queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1), session.id),
+      publishJobStatus(
+        {
+          ...queuedJobStatus(session.id, SYNC_STATUS_MESSAGES.queued, 1),
+          ...importWarnings(requestPayload),
+        },
+        session.id,
+      ),
     );
     return Result.ok();
   }
@@ -356,12 +366,15 @@ class SyncService {
         updatedAt: syncSession.updatedAt,
         endCause: syncSession.endCause,
         revision: syncSession.revision,
+        requestPayload: syncSession.requestPayload,
       })
       .from(syncSession)
       .where(and(eq(syncSession.jobId, jobId), eq(syncSession.userId, userId)));
 
     if (!row) return Result.err(new SyncJobNotFound());
     const session = viewSession(row, Date.now());
+    const payload = jobDataSchema.safeParse(row.requestPayload);
+    const warnings = importWarnings(payload.success ? payload.data : null);
     const terminalState = sessionStatusToTerminalState(session.status);
 
     const read =
@@ -391,7 +404,7 @@ class SyncService {
           parsedStatus.terminalState !== terminalState ||
           (parsedStatus.revision ?? 0) !== session.revision);
       if (parsedStatus && !sessionOverridesSnapshot) {
-        return Result.ok(parsedStatus);
+        return Result.ok({ ...parsedStatus, ...warnings });
       }
 
       if (parsed.isErr()) {
@@ -421,6 +434,7 @@ class SyncService {
     const end = session.interrupted ? "interrupted" : (session.endCause ?? "finished");
     const error = terminalState === null ? null : settleRun(session, end).error;
     return Result.ok({
+      ...warnings,
       revision: session.revision,
       jobId,
       phase: sessionStatusToPhase(session.status),

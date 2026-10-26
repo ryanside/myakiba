@@ -29,7 +29,7 @@ import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import type { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { fetchedItemRows, idsToFetch, insertItemRows, retryRows } from "./item-rows";
 import type { ItemRows } from "./item-rows";
-import { publishJobStatus, queuedJobStatus } from "./job-status";
+import { importWarnings, publishJobStatus, queuedJobStatus } from "./job-status";
 import type { ServerSyncJobStatus } from "./job-status";
 import type { SyncItemFailure, SyncItemUpload } from "./model";
 import { buildRetryJobData } from "./retry";
@@ -335,7 +335,10 @@ async function withRun<T, E = never>(
   if (stepped.isErr()) return Result.err(stepped.error);
   const { result, change } = stepped.value;
   if (change !== null) snapshot = await saveRun(tx, run, change);
-  const committed = snapshot;
+  const committed = snapshot && {
+    ...snapshot,
+    ...importWarnings(run.payload?.unwrapOr(null) ?? null),
+  };
   if (committed) scope.afterCommit(() => publishJobStatus(committed, sessionId));
   return Result.ok(result);
 }

@@ -3,10 +3,9 @@ import { Result } from "better-result";
 import * as currency from "./currency";
 
 // Replay the same input assertions against the legacy parser before the strict API existed.
-const parse = (input: string) =>
-  "parseMoneyInputToMinorUnits" in currency
-    ? currency.parseMoneyInputToMinorUnits(input)
-    : Result.ok(currency.parseMoneyToMinorUnits(input));
+const parse =
+  currency.parseMoneyInputToMinorUnits ??
+  ((input: string) => Result.ok(currency.parseMoneyToMinorUnits(input)));
 
 describe("strict money input", () => {
   test.each([
@@ -14,12 +13,12 @@ describe("strict money input", () => {
     ["  ", 0],
     ["0", 0],
     ["  12.50 \n", 1250],
-    ["1234", 123400],
-    ["1,234.5", 123450],
-    ["1,234,567", 123456700],
+    ["1234", 123_400],
+    ["1,234.5", 123_450],
+    ["1,234,567", 123_456_700],
     ["12.01", 1201],
     ["0001.05", 105],
-    ["90,071,992,547,409.91", 9007199254740991],
+    ["90,071,992,547,409.91", 9_007_199_254_740_991],
   ] as const)("accepts %j as %i minor units", (input, expected) => {
     expect(parse(input)).toMatchObject({ status: "ok", value: expected });
   });

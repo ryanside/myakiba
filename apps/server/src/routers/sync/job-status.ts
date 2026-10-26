@@ -1,7 +1,16 @@
 import { createLogger } from "evlog";
-import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import type { JobData, SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { redis } from "@myakiba/redis/client";
 import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
+
+import { csvPriceWarnings } from "./csv";
+
+export function importWarnings(payload: JobData | null): Pick<SyncJobStatus, "warnings"> {
+  if (payload?.type !== "csv") return {};
+  return payload.warnings?.length
+    ? { warnings: payload.warnings }
+    : csvPriceWarnings(payload.items);
+}
 
 export type ServerSyncJobStatus = SyncJobStatus & { readonly revision: number };
 

@@ -2,9 +2,21 @@ import type {
   NormalizedInternalCsvItem,
   QueuedCollectionItem,
   UpdatedSyncOrder,
+  SyncJobStatus,
 } from "@myakiba/contracts/sync/schema";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { ExistingItemWithLatestRelease } from "./model";
+
+export function csvPriceWarnings(
+  items: readonly Pick<NormalizedInternalCsvItem, "itemExternalId" | "price">[],
+): Pick<SyncJobStatus, "warnings"> {
+  const warnings = items.flatMap((item) =>
+    parseMoneyInputToMinorUnits(item.price).isErr()
+      ? [{ mfcItemId: item.itemExternalId, input: item.price }]
+      : [],
+  );
+  return warnings.length > 0 ? { warnings } : {};
+}
 
 export function prepareCsvItems(
   items: readonly NormalizedInternalCsvItem[],
@@ -34,7 +46,7 @@ export function prepareCsvItems(
       status: item.status,
       count: item.count,
       score: item.score.trim() === "" ? "0.0" : item.score,
-      price: parseMoneyToMinorUnits(item.price),
+      price: parseMoneyInputToMinorUnits(item.price).unwrapOr(0),
       shop: item.shop,
       orderDate: item.orderDate,
       paymentDate: item.payment_date,
@@ -69,5 +81,11 @@ export function prepareCsvItems(
     }
   }
 
-  return { collectionItems, orderItems, csvItemsToFetch, existingItemExternalIds };
+  return {
+    collectionItems,
+    orderItems,
+    csvItemsToFetch,
+    existingItemExternalIds,
+    ...csvPriceWarnings(items),
+  };
 }

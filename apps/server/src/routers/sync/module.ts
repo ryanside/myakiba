@@ -214,6 +214,7 @@ export const Sync = {
       const syncSessionId = createId();
       const jobData = {
         type: "csv",
+        ...(result.warnings && { warnings: [...result.warnings] }),
         payloadVersion: 3,
         userId: scope.viewer.userId,
         syncSessionId,

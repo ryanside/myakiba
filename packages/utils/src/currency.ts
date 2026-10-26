@@ -1,3 +1,6 @@
+import { Result } from "better-result";
+import { MoneyInputInvalid } from "./errors/money-input-invalid";
+
 /**
  * Formats an integer minor-unit amount as a localized currency string.
  *
@@ -67,6 +70,22 @@ export function parseMoneyToMinorUnits(input: string): number {
   const minorUnits = Number(minorUnitsString.length === 0 ? "0" : minorUnitsString);
 
   return isNegative ? -minorUnits : minorUnits;
+}
+
+/** Parses nonnegative decimal money with optional comma thousands groups into safe minor units. */
+export function parseMoneyInputToMinorUnits(input: string): Result<number, MoneyInputInvalid> {
+  const text = input.trim();
+  if (text === "") return Result.ok(0);
+  if (text.startsWith("-")) return Result.err(new MoneyInputInvalid(input, "negative"));
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text)) {
+    return Result.err(new MoneyInputInvalid(input, "format"));
+  }
+  const [whole = "", fraction = ""] = text.split(".");
+  if (fraction.length > 2) return Result.err(new MoneyInputInvalid(input, "precision"));
+  const minorUnits = Number(`${whole.replaceAll(",", "")}${fraction.padEnd(2, "0")}`);
+  return Number.isSafeInteger(minorUnits)
+    ? Result.ok(minorUnits)
+    : Result.err(new MoneyInputInvalid(input, "unsafe_integer"));
 }
 
 /**

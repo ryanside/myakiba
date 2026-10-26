@@ -137,12 +137,18 @@ const syncJobErrorSchema = z.object({
   message: z.string(),
 });
 
+const syncPriceWarningSchema = z.object({
+  mfcItemId: z.number().int().positive(),
+  input: z.string(),
+});
+
 export const syncJobStatusSchema = z.object({
   revision: z.number().int().nonnegative().optional(),
   jobId: z.string(),
   phase: syncJobPhaseSchema,
   statusMessage: z.string(),
   progress: syncJobProgressSchema.nullable(),
+  warnings: z.array(syncPriceWarningSchema).readonly().optional(),
   recentItems: z.array(syncJobRecentItemSchema).max(5).readonly(),
   error: syncJobErrorSchema.nullable(),
   startedAt: z.iso.datetime(),
@@ -314,6 +320,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("csv"),
+    warnings: z.array(syncPriceWarningSchema).optional(),
     payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),

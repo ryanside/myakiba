@@ -6,6 +6,8 @@ import type { SyncSessionCreation } from "./service";
 import type { ItemRows } from "./item-rows";
 import { idsToFetch } from "./item-rows";
 
+import { importWarnings } from "./job-status";
+
 export type PlannedSync = {
   readonly session: SyncSessionCreation;
   readonly requestPayload: JobData;
@@ -53,6 +55,7 @@ export function plannedSync({
       requestPayload,
     },
     response: {
+      ...importWarnings(requestPayload),
       status,
       isFinished: !jobId,
       existingItemsToInsert: rows.collectionItems.length,
