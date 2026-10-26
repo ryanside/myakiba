@@ -1,44 +1,61 @@
-import { Add01Icon, DragDropVerticalIcon, Folder01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
-import {
-  rectSortingStrategy,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import type { ListInput } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback } from "react";
+import type { AnimationEvent, ComponentProps } from "react";
 import type { getLists } from "@/queries/lists";
 import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import { ListControls } from "@/components/lists/list-controls";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { ListsActionBar } from "@/components/lists/lists-action-bar";
+import {
+  DropIndicator,
+  MediaRow,
+  MediaRowTitle,
+  MediaViewCollection,
+  MediaViewSkeletons,
+} from "@/components/media-tile";
+import { PageHeader, formatCount } from "@/components/page-header";
+import { DragHandle, SortableMediaCollection } from "@/components/sortable-media-collection";
+import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { ItemControl } from "@/components/ui/item-controls";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Folder, FolderLabel } from "@/components/ui/folder";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import { useListMutations, useListsQuery, useMoveListsMutation } from "@/hooks/use-lists";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 
 type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
-const VIEW_MODE_KEY = "lists:viewMode";
 export const Route = createFileRoute("/(app)/lists")({
   component: RouteComponent,
   head: () => ({
     meta: [{ name: "description", content: "your Lists" }, { title: "Lists - myakiba" }],
   }),
 });
+
+// Firefox applies the @3xl gaps one style pass late, and the reduced-motion rule would animate the jump.
+const FOLDER_GRID_CLASS_NAME =
+  "grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-8 @3xl:gap-y-6";
+
+const FOLDER_DROP = {
+  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[17px]",
+  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[17px]",
+};
 
 function SortableList({
   list,
@@ -61,114 +78,121 @@ function SortableList({
   readonly onToggleSelection: () => void;
   readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
   readonly onDelete: (listId: string) => Promise<void>;
-  readonly onEntranceAnimationEnd?: () => void;
+  readonly onEntranceAnimationEnd?: (event: AnimationEvent<HTMLDivElement>) => void;
 }): React.JSX.Element {
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
     id: list.id,
     disabled: sortingDisabled,
   });
-  const previewClassName =
-    viewMode === "grid"
-      ? "size-16 shrink-0 rounded-lg"
-      : "size-16 shrink-0 overflow-hidden rounded-md";
-  const preview =
-    list.images.length > 0 ? (
-      <ImageThumbnail
-        images={list.images}
-        title={list.title}
-        fallbackIcon={null}
-        decorative
-        loading="lazy"
-        className={`${previewClassName} ring-1 ring-black/10 dark:ring-white/10`}
-        showRemainingCount
+
+  const controls = (
+    <ListControls
+      list={list}
+      viewMode={viewMode}
+      selected={selected}
+      active={isDragging}
+      onToggleSelection={onToggleSelection}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+    >
+      <DragHandle
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        label={`Reorder ${list.title}`}
+        disabled={sortingDisabled}
       />
-    ) : (
-      <div className={`flex shrink-0 items-center justify-center ${previewClassName}`}>
-        <HugeiconsIcon icon={Folder01Icon} className="size-10 text-muted-foreground" />
+    </ListControls>
+  );
+
+  if (viewMode === "list") {
+    return (
+      <div ref={setNodeRef} className="relative">
+        <MediaRow
+          selected={selected}
+          dropIndicator={dropIndicator}
+          data-folder-host
+          className={cn(entranceAnimationActive && "animate-data-in")}
+          onAnimationEnd={onEntranceAnimationEnd}
+          controls={controls}
+        >
+          <span className="flex size-16 shrink-0 items-center">
+            <Folder images={list.images} compact className="w-full" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-0.5">
+            <MediaRowTitle
+              title={list.title}
+              destination={{ to: "/lists/$listId", params: { listId: list.id } }}
+            />
+            {list.description ? (
+              <span
+                className="truncate text-xs leading-4 text-muted-foreground"
+                title={list.description}
+              >
+                {list.description}
+              </span>
+            ) : null}
+          </span>
+        </MediaRow>
       </div>
     );
+  }
 
   return (
     <div ref={setNodeRef} className="relative">
-      {dropIndicator ? (
-        <div
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none absolute z-30 rounded-full bg-primary",
-            viewMode === "grid" ? "inset-y-2 w-0.5" : "inset-x-2 h-0.5",
-            viewMode === "grid" && dropIndicator === "before" && "-left-1.5",
-            viewMode === "grid" && dropIndicator === "after" && "-right-1.5",
-            viewMode === "list" && dropIndicator === "before" && "top-0 -translate-y-1/2",
-            viewMode === "list" && dropIndicator === "after" && "bottom-0 translate-y-1/2",
-          )}
-        />
-      ) : null}
+      <DropIndicator placement={dropIndicator} geometry={FOLDER_DROP} />
       <div
+        data-folder-host
         className={cn(
-          "group/item relative overflow-hidden",
-          viewMode === "grid"
-            ? "group/card rounded-xl bg-card ring-1 ring-foreground/10 transition-[box-shadow] duration-150 hover:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
-            : "group/row flex min-w-0 items-center rounded-md hover:bg-muted/50",
-          selected && "ring-2 ring-primary",
+          "group/item relative rounded-[1.75rem] px-1.5 pt-[15%] pb-1.5 outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
+          selected && "bg-foreground/[0.045] ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}
-        onAnimationEnd={(event) => {
-          if (event.target === event.currentTarget && event.animationName === "data-in") {
-            onEntranceAnimationEnd?.();
-          }
-        }}
+        onAnimationEnd={onEntranceAnimationEnd}
       >
         <Link
           to="/lists/$listId"
           params={{ listId: list.id }}
-          className={cn(
-            "flex items-center gap-3 focus-visible:outline-none",
-            viewMode === "grid"
-              ? "min-h-40 flex-col justify-center p-5 text-center"
-              : "min-w-0 flex-1 p-2 focus-visible:ring-2 focus-visible:ring-ring",
-          )}
+          className="block rounded-[inherit] outline-none"
         >
-          {preview}
-          {viewMode === "grid" ? (
-            <span className="line-clamp-2 w-full min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
-              {list.title}
-            </span>
-          ) : (
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-0.5">
-              <p className="truncate text-sm font-medium leading-tight" title={list.title}>
-                {list.title}
-              </p>
-              {list.description ? (
-                <p className="truncate text-xs leading-4 text-muted-foreground">
-                  {list.description}
-                </p>
-              ) : null}
-            </div>
-          )}
+          <Folder images={list.images}>
+            <FolderLabel title={list.title} description={list.description} />
+          </Folder>
         </Link>
-        <ListControls
-          list={list}
-          viewMode={viewMode}
-          selected={selected}
-          active={isDragging}
-          onToggleSelection={onToggleSelection}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-        >
-          <ItemControl
-            ref={setActivatorNodeRef}
-            type="button"
-            className="touch-none cursor-grab active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-            aria-label={`Reorder ${list.title}`}
-            title="Drag to reorder"
-            disabled={sortingDisabled}
-          >
-            <HugeiconsIcon icon={DragDropVerticalIcon} aria-hidden="true" />
-          </ItemControl>
-        </ListControls>
+        {controls}
       </div>
+    </div>
+  );
+}
+
+function FolderSkeletons(): React.JSX.Element {
+  return (
+    <div className="@container" aria-hidden="true">
+      <div className={FOLDER_GRID_CLASS_NAME}>
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className="px-1.5 pt-[15%] pb-1.5">
+            <div className="relative aspect-[200/160]">
+              <Skeleton className="absolute top-0 left-[8%] h-[10%] w-[40%] rounded-t-xl rounded-b-none" />
+              <Skeleton className="absolute inset-x-0 top-[9.4%] bottom-0 rounded-[6%/7.5%]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ListsLayout({
+  viewMode,
+  className,
+  ...props
+}: ComponentProps<"div"> & { readonly viewMode: GridListViewMode }): React.JSX.Element {
+  if (viewMode === "list") {
+    return <MediaViewCollection viewMode="list" className={className} {...props} />;
+  }
+  return (
+    <div className="@container">
+      <div className={cn(FOLDER_GRID_CLASS_NAME, className)} {...props} />
     </div>
   );
 }
@@ -204,22 +228,7 @@ function SortableLists({
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
 }): React.JSX.Element {
-  const {
-    itemIds: listIds,
-    entranceAnimationActive,
-    finishEntranceAnimation,
-    dndEpoch,
-    activeId: activeListId,
-    dropIndicator,
-    overlayLabel,
-    sensors,
-    announcements,
-    screenReaderInstructions,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    handleDragCancel,
-  } = useSortableItems({
+  const sortable = useSortableItems({
     items: lists,
     totalCount,
     selectedIds,
@@ -235,64 +244,29 @@ function SortableLists({
   });
 
   return (
-    <DndContext
-      key={dndEpoch}
-      accessibility={{ announcements, screenReaderInstructions }}
-      collisionDetection={closestCenter}
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <SortableContext
-        items={listIds}
-        strategy={viewMode === "grid" ? rectSortingStrategy : verticalListSortingStrategy}
+    <SortableMediaCollection sortable={sortable} vertical={viewMode === "list"}>
+      <ListsLayout
+        viewMode={viewMode}
+        className={cn(sortable.activeId && "pointer-events-none")}
+        aria-busy={isSaving}
       >
-        <div
-          className={cn(
-            viewMode === "grid"
-              ? "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3"
-              : "flex flex-col gap-2",
-            activeListId && "pointer-events-none",
-          )}
-          aria-busy={isSaving}
-        >
-          {lists.map((list, index) => (
-            <SortableList
-              key={list.id}
-              list={list}
-              viewMode={viewMode}
-              entranceAnimationActive={entranceAnimationActive}
-              sortingDisabled={sortingDisabled || isSaving || lists.length < 2}
-              selected={selectedIds.has(list.id)}
-              dropIndicator={list.id === dropIndicator?.id ? dropIndicator.placement : undefined}
-              onToggleSelection={() => onToggleSelection(list.id, !selectedIds.has(list.id))}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              onEntranceAnimationEnd={
-                index === lists.length - 1 ? finishEntranceAnimation : undefined
-              }
-            />
-          ))}
-        </div>
-      </SortableContext>
-      <DragOverlay
-        className="pointer-events-none flex items-center justify-center"
-        dropAnimation={null}
-        modifiers={[snapCenterToCursor]}
-        zIndex={50}
-      >
-        {activeListId ? (
-          <div
-            aria-hidden="true"
-            className="rounded-lg bg-popover px-2.5 py-1.5 text-sm font-medium text-popover-foreground shadow-md ring-1 ring-foreground/10"
-          >
-            {overlayLabel}
-          </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        {lists.map((list) => (
+          <SortableList
+            key={list.id}
+            list={list}
+            viewMode={viewMode}
+            entranceAnimationActive={sortable.entranceAnimationActive}
+            sortingDisabled={sortingDisabled || isSaving || lists.length < 2}
+            selected={selectedIds.has(list.id)}
+            dropIndicator={sortable.dropPlacement(list.id)}
+            onToggleSelection={() => onToggleSelection(list.id, !selectedIds.has(list.id))}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onEntranceAnimationEnd={sortable.entranceAnimationEnd(list.id)}
+          />
+        ))}
+      </ListsLayout>
+    </SortableMediaCollection>
   );
 }
 
@@ -312,7 +286,9 @@ function RouteComponent(): React.JSX.Element {
   const { createList, updateList, deleteList, deleteLists, isDeleting } = useListMutations();
   const moveMutation = useMoveListsMutation();
   const handleMove = moveMutation.move;
-  const [viewMode, setViewMode] = useLocalStorage<GridListViewMode>(VIEW_MODE_KEY, "grid");
+  // List detail shares this key and may store "gallery", which the index shows as its grid.
+  const [storedViewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.lists);
+  const viewMode: GridListViewMode = storedViewMode === "list" ? "list" : "grid";
   const { selectedIds, setSelection } = useSelection();
   const handleDeleteList = useCallback(
     async (listId: string): Promise<void> => {
@@ -327,27 +303,30 @@ function RouteComponent(): React.JSX.Element {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-medium tracking-tight">Lists</h1>
-        <div className="flex items-center gap-2">
-          <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
-          <ListFormDialog
-            renderTrigger={
-              <Button variant="default">
-                <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                New List
-              </Button>
-            }
-            title="Create List"
-            description="Give your new List a title and an optional description."
-            submitLabel="Create"
-            pendingLabel="Creating..."
-            onSubmit={async (input) => {
-              await createList(input);
-            }}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title="Lists"
+        meta={isPending || (isError && !data) ? null : formatCount(totalCount, "List", "Lists")}
+        actions={
+          <>
+            <ViewToggle modes={["grid", "list"]} value={viewMode} onValueChange={setViewMode} />
+            <ListFormDialog
+              renderTrigger={
+                <Button variant="default">
+                  <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
+                  New List
+                </Button>
+              }
+              title="Create List"
+              description="Give your new List a title and an optional description."
+              submitLabel="Create"
+              pendingLabel="Creating..."
+              onSubmit={async (input) => {
+                await createList(input);
+              }}
+            />
+          </>
+        }
+      />
 
       <ListsActionBar
         selectedListIds={selectedIds}
@@ -356,41 +335,20 @@ function RouteComponent(): React.JSX.Element {
         onDeleteLists={deleteLists}
       />
 
-      {isPending && viewMode === "grid" ? (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-40 rounded-xl" />
-          ))}
-        </div>
-      ) : null}
+      {isPending && viewMode === "grid" ? <FolderSkeletons /> : null}
 
-      {isPending && viewMode === "list" ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="flex items-center gap-3 p-2">
-              <Skeleton className="size-16 shrink-0 rounded-md" />
-              <div className="flex h-16 flex-1 flex-col justify-center gap-1.5 py-0.5">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-3 w-36" />
-              </div>
-              <div className="mr-1 flex shrink-0 gap-1 p-0.5">
-                <Skeleton className="size-8 rounded-md" />
-                <Skeleton className="size-8 rounded-md" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {isPending && viewMode === "list" ? <MediaViewSkeletons viewMode="list" count={4} /> : null}
 
       {isError && !data ? (
-        <div className="flex h-64 items-center justify-center text-lg font-medium text-destructive">
-          Error: {error.message}
-        </div>
+        <LoadError title="Couldn't load your Lists" message={error.message} />
       ) : null}
 
       {!isPending && data && lists.length === 0 ? (
-        <Empty className="py-16">
+        <Empty className={STATE_PANEL_CLASS_NAME}>
           <EmptyHeader>
+            <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
+              <HugeiconsIcon icon={Folder01Icon} className="size-5" aria-hidden="true" />
+            </EmptyMedia>
             <EmptyTitle>No Lists yet</EmptyTitle>
             <EmptyDescription>Create a List to start organizing.</EmptyDescription>
           </EmptyHeader>

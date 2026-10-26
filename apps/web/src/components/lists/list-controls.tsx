@@ -16,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
-import { cn } from "@/lib/utils";
 
 type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
 type ListRecord = ListsPage["items"][number];
@@ -46,14 +45,13 @@ export function ListControls({
 
   return (
     <ItemControls
-      key={viewMode}
       variant={viewMode === "grid" ? "card" : "row"}
-      active={viewMode === "list" || selected || active || menuOpen}
-      className={cn(
+      active={selected || active || menuOpen}
+      className={
         viewMode === "grid"
-          ? "absolute top-2 right-2 bg-background/90 shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_8px_oklch(0_0_0/0.12)] backdrop-blur-md dark:shadow-[0_0_0_1px_oklch(1_0_0/0.12),0_2px_8px_oklch(0_0_0/0.24)]"
-          : "mr-1",
-      )}
+          ? "pointer-coarse:static pointer-coarse:mt-2 pointer-coarse:ml-auto pointer-coarse:w-fit"
+          : undefined
+      }
     >
       <ItemControlsSelection
         checked={selected}

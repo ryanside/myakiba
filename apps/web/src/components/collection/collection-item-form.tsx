@@ -42,6 +42,7 @@ import {
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -188,11 +189,28 @@ function CollectionItemFormContent({
                         }
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select status">
+                            {field.state.value && (
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[field.state.value]}`}
+                                />
+                                {field.state.value}
+                              </span>
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {COLLECTION_STATUSES.map((status) => {
                             const disabled = requiresOrderBeforeStatusChange && status !== "Owned";
+                            const label = (
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`size-1.5 shrink-0 rounded-full ${ORDER_STATUS_COLORS[status]}`}
+                                />
+                                {status}
+                              </span>
+                            );
 
                             return (
                               <SelectItem
@@ -203,14 +221,14 @@ function CollectionItemFormContent({
                               >
                                 {disabled ? (
                                   <Tooltip>
-                                    <TooltipTrigger render={<span>{status}</span>} />
+                                    <TooltipTrigger render={label} />
                                     <TooltipContent side="right">
                                       Assign this item to an order before changing it to Ordered,
                                       Paid, or Shipped.
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : (
-                                  status
+                                  label
                                 )}
                               </SelectItem>
                             );

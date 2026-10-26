@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
+import { PackageIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { ItemSyncActions } from "@/components/item/item-sync-actions";
+import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import {
   Empty,
   EmptyContent,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
   EmptyDescription,
 } from "@/components/ui/empty";
@@ -63,16 +67,18 @@ export function ItemCollection({
 
       <div className="mt-4">
         {isError && (
-          <Empty className="py-12">
-            <p className="text-lg font-medium text-destructive">
-              Error: {errorMessage ?? "Failed to load collection"}
-            </p>
-          </Empty>
+          <LoadError
+            title="Couldn't load your Collection"
+            message={errorMessage ?? "Failed to load collection"}
+          />
         )}
 
         {!isPending && !isError && collectionItems.length === 0 && (
-          <Empty className="py-12">
+          <Empty className={STATE_PANEL_CLASS_NAME}>
             <EmptyHeader>
+              <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
+                <HugeiconsIcon icon={PackageIcon} className="size-5" aria-hidden="true" />
+              </EmptyMedia>
               <EmptyTitle>Not in your collection</EmptyTitle>
               <EmptyDescription>Add this item to your collection or a new order.</EmptyDescription>
             </EmptyHeader>

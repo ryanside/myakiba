@@ -24,16 +24,15 @@ import { OrdersGalleryGrid } from "./orders-gallery-grid";
 import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
-import type { DataViewMode } from "@/components/ui/view-toggle";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-const VIEW_MODE_KEY = "orders:viewMode";
 const COLUMN_VISIBILITY_KEY = "orders:columnVisibility";
 const DEFAULT_VISIBILITY: VisibilityState = {
   orderDate: false,
@@ -69,7 +68,7 @@ const DEFAULT_COLUMN_ORDER = [
 ];
 
 export default function OrdersDataGrid() {
-  const [viewMode, setViewMode] = useLocalStorage<DataViewMode>(VIEW_MODE_KEY, "compact");
+  const [viewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.orders);
   const [cardWidth, setCardWidth] = useLocalStorage<number>("orders:cardWidth", 280);
   const [galleryLayout, setGalleryLayout] = useLocalStorage<GalleryLayout>(
     "orders:galleryLayout",
@@ -251,7 +250,7 @@ export default function OrdersDataGrid() {
           {isTableView ? <DataGridColumnCombobox table={table} /> : null}
         </div>
         <ViewToggle
-          modes={["compact", "table", "grid", "gallery"]}
+          modes={VIEW_PREFERENCES.orders.modes}
           value={viewMode}
           onValueChange={setViewMode}
         />

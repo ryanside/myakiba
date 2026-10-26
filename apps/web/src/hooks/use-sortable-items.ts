@@ -1,4 +1,4 @@
-import { KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import type {
   Announcements,
   DragEndEvent,
@@ -9,6 +9,7 @@ import type {
 } from "@dnd-kit/core";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useCallback, useMemo, useRef, useState } from "react";
+import type { AnimationEvent } from "react";
 import { toast } from "@/components/ui/toast";
 
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
@@ -220,21 +221,34 @@ export function useSortableItems<T extends SortableRecord>({
     setOverId(undefined);
   }, []);
   const finishEntranceAnimation = useCallback(() => setEntranceAnimationActive(false), []);
+  // Every tile enters together, so the last one's animation ending finishes the entrance.
+  const finishEntranceOnLastTile = useCallback((event: AnimationEvent<HTMLElement>): void => {
+    if (event.target === event.currentTarget && event.animationName === "data-in") {
+      setEntranceAnimationActive(false);
+    }
+  }, []);
+  const lastItemId = itemIds.at(-1);
 
   return {
     itemIds,
     entranceAnimationActive,
     finishEntranceAnimation,
+    entranceAnimationEnd: (id: string) =>
+      id === lastItemId ? finishEntranceOnLastTile : undefined,
     dndEpoch,
+    dndContextProps: {
+      accessibility: { announcements, screenReaderInstructions },
+      collisionDetection: closestCenter,
+      sensors,
+      onDragStart: handleDragStart,
+      onDragOver: handleDragOver,
+      onDragEnd: handleDragEnd,
+      onDragCancel: handleDragCancel,
+    },
     activeId,
-    dropIndicator,
+    dropPlacement: (id: string) => (id === dropIndicator?.id ? dropIndicator.placement : undefined),
     overlayLabel: activeId ? getDragLabel(activeId) : null,
-    sensors,
-    announcements,
-    screenReaderInstructions,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    handleDragCancel,
   } as const;
 }
+
+export type SortableItems = ReturnType<typeof useSortableItems>;

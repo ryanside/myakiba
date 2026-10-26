@@ -12,12 +12,14 @@ import {
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { ExpandedRowContent } from "./analytics/section-expanded-row";
 import { SectionRelationships } from "./analytics/section-relationships";
 import { CollectionGalleryGrid } from "./collection/collection-gallery-grid";
 import { ShopTableRowExpansion } from "./expenses/shop-table-row-expansion";
+import { ListMemberGrid } from "./lists/list-member-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
+import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
 import { analytics } from "@/data/resources/analytics";
 import { expenses } from "@/data/resources/expenses";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
@@ -142,6 +144,28 @@ const expenseShop = {
   averageItemCost: 12_000,
 } satisfies ExpenseShopRow;
 
+const wishlistItems = ITEMS.map((item, index) => ({
+  id: `wishlist-${index}`,
+  itemId: item.id,
+  itemExternalId: item.externalId,
+  title: item.title,
+  image: item.image,
+  category: "Prepainted",
+  position: index,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  latestRelease: null,
+})) satisfies ComponentProps<typeof WishlistItemGrid>["items"];
+
+const members = ITEMS.map((item, index) => ({
+  id: `member-${index}`,
+  position: index,
+  type: "item" as const,
+  targetId: item.id,
+  title: item.title,
+  image: item.image,
+  itemExternalId: item.externalId,
+})) satisfies ComponentProps<typeof ListMemberGrid>["members"];
+
 async function renderGallery(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
   client.setQueryData(
@@ -239,6 +263,51 @@ describe.each([
         currency="JPY"
         locale="en-US"
         dateFormat="MM/DD/YYYY"
+      />
+    ),
+  },
+  {
+    name: "Wishlist gallery",
+    titles: TITLES,
+    ui: () => (
+      <WishlistItemGrid
+        items={wishlistItems}
+        releaseStatus="all"
+        viewMode="gallery"
+        currency="JPY"
+        dateFormat="MM/DD/YYYY"
+        totalCount={wishlistItems.length}
+        isPending={false}
+        isSaving={false}
+        sortingDisabled={false}
+        removingItemId={undefined}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        onLoadMore={async () => ({ isFetchNextPageError: false })}
+        onRemove={noop}
+        onMove={noop}
+      />
+    ),
+  },
+  {
+    name: "List detail gallery",
+    titles: TITLES,
+    ui: () => (
+      <ListMemberGrid
+        members={members}
+        viewMode="gallery"
+        totalCount={members.length}
+        isSaving={false}
+        sortingDisabled={false}
+        removingMemberIds={undefined}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        selectedIds={new Set()}
+        onLoadMore={async () => ({ isFetchNextPageError: false })}
+        onRemove={noop}
+        onMove={noop}
+        onClearSelection={() => {}}
+        onToggleSelection={() => {}}
       />
     ),
   },

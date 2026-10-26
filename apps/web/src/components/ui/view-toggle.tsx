@@ -9,6 +9,7 @@ import {
 
 export type DataViewMode = "compact" | "table" | "grid" | "gallery";
 export type GridListViewMode = "grid" | "list";
+export type MediaViewMode = GridListViewMode | "gallery";
 type ViewMode = DataViewMode | GridListViewMode;
 
 const VIEW_OPTIONS = {
