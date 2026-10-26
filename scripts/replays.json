@@ -1974,6 +1974,17 @@
         "a defect while the export downloads shows the safe text beside the button, never its message",
         "a current import the page cannot read shows its own text, not the parser's"
       ]
+    },
+    {
+      "fix": "4e67125d2ff373f491717d1fac7ee58b4ef5cd5f",
+      "testAt": "4e67125d2ff373f491717d1fac7ee58b4ef5cd5f",
+      "bug": "an MFC run whose only or last item could not book its answer never ended, and an earlier item was fetched twice",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the throttle's books > when storage fails > an answer that cannot be booked fails its item, and the queue goes on",
+        "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run ends the run and closes the MFC tab",
+        "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run ends the run and closes the MFC tab"
+      ]
     }
   ],
   "lint": [
