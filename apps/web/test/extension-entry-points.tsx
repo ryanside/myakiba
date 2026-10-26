@@ -29,9 +29,9 @@ await mock.module("@tanstack/react-router", () => ({
   useLocation: () => {},
 }));
 
-/** The syncs the server was sent, by type, and the imports it was asked to retry. */
+/** The syncs the server was sent, by type. */
 export const sent: string[] = [];
-export const retriedSessions: string[] = [];
+const retriedSessions: string[] = [];
 const accepted = {
   syncSessionId: "ss-1",
   status: "Import queued",
