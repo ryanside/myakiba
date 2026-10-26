@@ -18,7 +18,12 @@ import {
 import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
@@ -228,12 +233,7 @@ function ChangePasswordDialog() {
         }),
     },
     onSubmit: async ({ value, formApi }) => {
-      // A change closes the dialog, and this hook outlives its content, so success would only
-      // carry over to the next open.
-      const result = await run(
-        () => changePassword.run(value),
-        () => false,
-      );
+      const result = await run(() => changePassword.run(value), closesOnSuccess);
       if (result.kind === "failed" && result.error instanceof Error) {
         const { message } = result.error;
         formApi.setFieldMeta("currentPassword", (meta) => ({

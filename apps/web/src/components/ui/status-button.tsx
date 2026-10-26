@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 export type ButtonStatus = "idle" | "loading" | "success";
 
-const DEFAULT_SUCCESS_DURATION = 1500;
+export const DEFAULT_SUCCESS_DURATION = 1500;
 
 /**
  * Tracks the status of a button's async work. `run` only observes `work`: it returns what `work`
@@ -45,6 +45,9 @@ export function useButtonStatus({
   return { status, run } as const;
 }
 
+/** A `succeeded` for a button whose dialog closes on success, so the check never shows. */
+export const closesOnSuccess = (): boolean => false;
+
 /**
  * The status for a TanStack Form submit button. TanStack sets `isSubmitting` before `run` starts
  * and clears it after `run` settles, so the button shows loading across both gaps instead of
@@ -60,16 +63,14 @@ const swapVariants: Variants = {
   exit: { opacity: 0, y: -8, filter: "blur(4px)" },
 };
 
-// A spring keeps its velocity when the status changes mid-swap; a cubic-bezier
-// would restart from zero.
 const swapTransition: Transition = {
   type: "spring",
   duration: 0.3,
   bounce: 0,
 };
 
-// Bounce only on the entrance, and only on movement: opacity and blur would
-// overshoot.
+const noOvershoot = { opacity: swapTransition, filter: swapTransition };
+
 const successVariants: Variants = {
   ...swapVariants,
   animate: {
@@ -78,8 +79,7 @@ const successVariants: Variants = {
       type: "spring",
       duration: 0.45,
       bounce: 0.35,
-      opacity: swapTransition,
-      filter: swapTransition,
+      ...noOvershoot,
     },
   },
 };
@@ -99,7 +99,6 @@ export function StatusButton({
   ...props
 }: StatusButtonProps) {
   const isBusy = status !== "idle";
-  // Success blocks a second press only when the caller disables the button.
   const ignoresClicks = status === "loading" || (status === "success" && Boolean(disabled));
 
   const successContent = (
@@ -128,13 +127,8 @@ export function StatusButton({
       }}
     >
       <span className="inline-grid justify-items-center gap-[inherit] *:col-start-1 *:row-start-1 *:flex *:items-center *:gap-[inherit]">
-        {/* Invisible copies of the widest states keep the button's width fixed. */}
-        <span aria-hidden className="invisible">
-          {children}
-        </span>
-        <span aria-hidden className="invisible">
-          {successContent}
-        </span>
+        <ReservedWidth>{children}</ReservedWidth>
+        <ReservedWidth>{successContent}</ReservedWidth>
 
         <AnimatePresence initial={false}>
           {status === "idle" && (
@@ -179,5 +173,13 @@ export function StatusButton({
         </AnimatePresence>
       </span>
     </Button>
+  );
+}
+
+function ReservedWidth({ children }: { children: ReactNode }) {
+  return (
+    <span aria-hidden className="invisible">
+      {children}
+    </span>
   );
 }

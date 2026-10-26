@@ -24,7 +24,7 @@ export function Preferences({ user }: { user: User }) {
     currency: user.currency as Currency,
     dateFormat: user.dateFormat as DateFormat,
   };
-  const { save, saving } = usePreferencesSave();
+  const { save, saving: anySaveInFlight } = usePreferencesSave();
   const { status, run } = useButtonStatus();
   const [saved, setSaved] = useState(session);
   const [edits, setEdits] = useState<Partial<Formats>>({});
@@ -47,7 +47,7 @@ export function Preferences({ user }: { user: User }) {
       onSubmit={async (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (saving || !dirty) return;
+        if (anySaveInFlight || !dirty) return;
         if (
           await run(
             () => save(changes),
@@ -65,7 +65,7 @@ export function Preferences({ user }: { user: User }) {
             id="currency"
             value={draft.currency}
             onValueChange={(currency) => edit({ currency })}
-            disabled={saving}
+            disabled={anySaveInFlight}
           />
         </SettingsRow>
 
@@ -79,7 +79,7 @@ export function Preferences({ user }: { user: User }) {
               const dateFormat = DATE_FORMATS.find((format) => format === next[0]);
               if (dateFormat) edit({ dateFormat });
             }}
-            disabled={saving}
+            disabled={anySaveInFlight}
             className="w-full flex-wrap justify-start sm:w-auto sm:justify-end"
           >
             {DATE_FORMATS.map((format) => (
@@ -95,10 +95,9 @@ export function Preferences({ user }: { user: User }) {
         <SettingsGroupFooter>
           <StatusButton
             type="submit"
-            // A save started before this form mounted, like before leaving Settings, is in flight too.
-            status={saving ? "loading" : status}
+            status={anySaveInFlight ? "loading" : status}
             successLabel="Saved"
-            disabled={saving || !dirty}
+            disabled={anySaveInFlight || !dirty}
           >
             Save preferences
           </StatusButton>

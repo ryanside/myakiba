@@ -12,6 +12,7 @@ import {
 import { addDays, format } from "date-fns";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { User } from "@/lib/auth-client";
+import { DEFAULT_SUCCESS_DURATION } from "@/components/ui/status-button";
 
 const user = {
   id: "collector",
@@ -146,9 +147,12 @@ test("the preview shows an example order in the chosen formats before they are s
   expect(savedChanges).toEqual([]);
 });
 
-// After a save the button shows its success state for 1.5 s before the label returns.
 const saveSettles = () =>
-  screen.findByRole("button", { name: "Save preferences" }, { timeout: 3000 });
+  screen.findByRole(
+    "button",
+    { name: "Save preferences" },
+    { timeout: DEFAULT_SUCCESS_DURATION * 2 },
+  );
 
 test("Save preferences sends both changed formats in one update", async () => {
   renderPreferences();

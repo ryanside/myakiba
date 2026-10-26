@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { StatusButton, closesOnSuccess, useButtonStatus } from "@/components/ui/status-button";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = React.ComponentProps<typeof Button>["variant"];
@@ -75,12 +75,7 @@ export function ConfirmDialog({
 
   const handleConfirm = async (): Promise<void> => {
     try {
-      // The dialog closes on success, and this hook outlives its content, so success would
-      // only carry over to the next open.
-      await run(
-        async () => onConfirm(),
-        () => false,
-      );
+      await run(async () => onConfirm(), closesOnSuccess);
       closeDialog();
     } catch {
       // The calling mutation reports the failure. Keep this dialog open for another attempt.
