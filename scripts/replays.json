@@ -832,6 +832,12 @@
       "bug": "a status button ignored every click until its success state timed out",
       "test": "apps/web/src/components/ui/status-button.test.tsx",
       "fixed": ["a click during success starts another run"]
+    },
+    {
+      "fix": "eb965ba0",
+      "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
+      "test": "apps/web/src/components/settings/account.test.tsx",
+      "fixed": ["Change password reopened right after a change starts idle"]
     }
   ],
   "lint": [
