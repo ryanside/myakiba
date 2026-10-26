@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
+import { Panic } from "better-result";
 import { failureOf } from "../../test/request-answers";
 
 let sessionRechecks = 0;
@@ -16,6 +17,7 @@ const { getOrder, moveItem } = await import("@/queries/orders");
 const { retrySyncSession } = await import("@/queries/sync");
 const { getVersion } = await import("@/queries/version");
 const { sync } = await import("@/data/resources/sync");
+const { call } = await import("@/data/api");
 
 const realFetch = globalThis.fetch;
 
@@ -39,7 +41,6 @@ const ORDER_FALLBACK = "Couldn't load this order. Check your connection and try 
 const RETRY_FALLBACK = "Failed to retry failed item results";
 const VERSION_FALLBACK = "Failed to get version";
 const STREAM_FALLBACK = "Failed to connect to job status stream";
-const PARSER_TEXT = "JSON Parse error: Unrecognized token '<'";
 
 const validation = JSON.stringify({ type: "validation", message: "Expected string" });
 const gatewayPage = "<html><body><h1>502 Bad Gateway</h1></body></html>";
@@ -130,14 +131,14 @@ const cases = {
   "a JSON content type whose body is not JSON": {
     tag: "ApiUnreadable",
     answer: body(200, "<html>", "application/json"),
-    safe: PARSER_TEXT,
-    version: PARSER_TEXT,
+    safe: ORDER_FALLBACK,
+    version: VERSION_FALLBACK,
   },
   "an error status whose JSON body is not JSON": {
     tag: "ApiUnreadable",
     answer: body(500, "<html>", "application/json"),
-    safe: PARSER_TEXT,
-    version: PARSER_TEXT,
+    safe: ORDER_FALLBACK,
+    version: VERSION_FALLBACK,
   },
 } satisfies Record<string, Case>;
 
@@ -163,9 +164,8 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
   test("the job status stream shows one fixed text", async () => {
     answerWith(answer);
     const watch = sync.jobStatus.options({ jobId: "job-1", onEnd: () => {} });
-    const expected = version === PARSER_TEXT ? PARSER_TEXT : STREAM_FALLBACK;
     expect(await failureOf(new QueryClient().fetchQuery(watch))).toMatchObject({
-      message: expected,
+      message: STREAM_FALLBACK,
     });
   });
 });
@@ -241,6 +241,16 @@ describe("a move whose target is gone", () => {
       message: "Failed to move items",
     });
   });
+});
+
+test("a defect while the answer is read stays a defect", async () => {
+  const defect = new Panic({ message: "the answer reader lost its schema" });
+
+  const failure = await failureOf(
+    call(Promise.reject(defect), { fallback: "Couldn't load this order." }),
+  );
+
+  expect(failure).toBe(defect);
 });
 
 test("a 401 rechecks the session before the failure is decoded", async () => {

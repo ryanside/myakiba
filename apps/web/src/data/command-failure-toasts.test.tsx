@@ -1,7 +1,7 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Result } from "better-result";
+import { Panic, Result } from "better-result";
 import type { ReactNode } from "react";
 import { ApiRejected } from "@/lib/errors/api-rejected";
 
@@ -23,6 +23,7 @@ await mock.module("@/queries/orders", () => ({
 
 const { toast } = await import("@/components/ui/toast");
 const { defineCommand, useResourceMutation } = await import("./client");
+const { call } = await import("./api");
 const { refreshItemCommand } = await import("./resources/item");
 const { retrySyncSessionCommand } = await import("./resources/sync");
 const { updateKanbanOrderStatusCommand } = await import("./resources/dashboard");
@@ -139,6 +140,31 @@ test.each([
     error.mockRestore();
   },
 );
+
+test("a defect while a write's answer is read shows the safe text under its title, never its message", async () => {
+  const command = defineCommand({
+    invalidates: ["syncHistory"],
+    persist: (_input: null) =>
+      call(Promise.reject(new Panic({ message: "the answer reader lost its schema" })), {
+        fallback: "Failed to save",
+      }),
+    failureTitle: () => "Failed to save",
+    failureDescription: (_input, error) => error.message,
+  });
+  const error = spyOn(console, "error").mockImplementation(() => {});
+  const queryClient = new QueryClient();
+  const { result } = renderHook(() => useResourceMutation(command), {
+    wrapper: wrapperFor(queryClient),
+  });
+
+  expect(await lastToastAfter(() => result.current.run(null))).toEqual({
+    type: "error",
+    title: "Failed to save",
+    description: "Something went wrong. Reload the page and try again",
+  });
+  expect(error).toHaveBeenCalledTimes(1);
+  error.mockRestore();
+});
 
 test("a defect in a Kanban status write shows retry advice and the safe text, never its message", async () => {
   const error = spyOn(console, "error").mockImplementation(() => {});
