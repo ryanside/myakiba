@@ -1,4 +1,4 @@
-import { Loading03Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -7,7 +7,7 @@ import { parseDateOnly } from "@myakiba/utils/date-only";
 import { addDays } from "date-fns";
 import { useState } from "react";
 import { CurrencySelect } from "@/components/currency-select";
-import { Button } from "@/components/ui/button";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePreferencesSave } from "@/data/resources/settings";
 import type { Formats } from "@/data/resources/settings";
@@ -25,6 +25,7 @@ export function Preferences({ user }: { user: User }) {
     dateFormat: user.dateFormat as DateFormat,
   };
   const { save, saving } = usePreferencesSave();
+  const { status, run } = useButtonStatus();
   const [saved, setSaved] = useState(session);
   const [edits, setEdits] = useState<Partial<Formats>>({});
   const [seenSession, setSeenSession] = useState(session);
@@ -47,7 +48,12 @@ export function Preferences({ user }: { user: User }) {
         event.preventDefault();
         event.stopPropagation();
         if (saving || !dirty) return;
-        if (await save(changes)) {
+        if (
+          await run(
+            () => save(changes),
+            (ok) => ok,
+          )
+        ) {
           setSaved((current) => ({ ...current, ...changes }));
           setEdits({});
         }
@@ -87,20 +93,15 @@ export function Preferences({ user }: { user: User }) {
         <FormatPreview currency={draft.currency} dateFormat={draft.dateFormat} />
 
         <SettingsGroupFooter>
-          <Button type="submit" disabled={saving || !dirty}>
-            {saving ? (
-              <>
-                <HugeiconsIcon
-                  icon={Loading03Icon}
-                  data-icon="inline-start"
-                  className="animate-spin motion-reduce:animate-none"
-                />
-                Saving…
-              </>
-            ) : (
-              "Save preferences"
-            )}
-          </Button>
+          <StatusButton
+            type="submit"
+            // A save started before this form mounted, like before leaving Settings, is in flight too.
+            status={saving ? "loading" : status}
+            successLabel="Saved"
+            disabled={saving || !dirty}
+          >
+            Save preferences
+          </StatusButton>
         </SettingsGroupFooter>
       </SettingsGroup>
     </form>
