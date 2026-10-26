@@ -1814,8 +1814,8 @@
       "fixed": ["Change password reopened right after a change starts idle"]
     },
     {
-      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
-      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
+      "testAt": "1efc55df40731143af9f3bd86de7b06349424db0",
       "bug": "money input silently discarded invalid characters, malformed separators, extra decimals and unsafe integer precision",
       "test": "packages/utils/src/currency.test.ts",
       "fixed": [
@@ -1842,8 +1842,8 @@
       ]
     },
     {
-      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
-      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
+      "testAt": "1efc55df40731143af9f3bd86de7b06349424db0",
       "bug": "CSV row mapping silently imported malformed prices as misread numbers",
       "test": "apps/server/src/routers/sync/item-rows.test.ts",
       "fixed": [
@@ -1852,13 +1852,25 @@
       ]
     },
     {
-      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
-      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
+      "testAt": "1efc55df40731143af9f3bd86de7b06349424db0",
       "bug": "CSV imports silently saved misread prices and provided no warnings in immediate or streamed results",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
         "CSV imports a rejected price as zero and warns in its immediate result",
         "CSV price warnings survive fetched completion, retry and the DB status fallback"
+      ]
+    },
+    {
+      "fix": "33e20786069d6ecda8962d55e9ea450625428b42",
+      "testAt": "33e20786069d6ecda8962d55e9ea450625428b42",
+      "bug": "strict money input rejected leading and trailing decimal points despite a valid amount",
+      "test": "packages/utils/src/currency.test.ts",
+      "fixed": [
+        "strict money input > accepts \".50\" as 50 minor units",
+        "strict money input > accepts \".5\" as 50 minor units",
+        "strict money input > accepts \"12.\" as 1200 minor units",
+        "strict money input > accepts \"1,234.\" as 123400 minor units"
       ]
     }
   ],
