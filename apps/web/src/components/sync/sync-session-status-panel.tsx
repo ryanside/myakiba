@@ -1,13 +1,19 @@
+import { useId } from "react";
 import type { ReactNode } from "react";
-import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
+import { Link } from "@tanstack/react-router";
+import type { EnrichedSyncSessionItemRow, SyncSessionRow } from "@myakiba/contracts/sync/types";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
+import { useRead } from "@/data/client";
+import { sync } from "@/data/resources/sync";
 import { resolveSyncMessage } from "@/lib/sync";
+import type { PriceWarning } from "@/lib/sync";
 import { cn } from "@/lib/utils";
 
 export function SyncSessionStatusPanel({
   session,
+  items,
   isActive,
   isLoading,
 }: {
@@ -17,6 +23,8 @@ export function SyncSessionStatusPanel({
         "id" | "jobId" | "syncType" | "statusMessage" | "totalItems" | "successCount" | "failCount"
       >
     | undefined;
+  /** The session's loaded items, which name the items its price warnings point at. */
+  readonly items: readonly Pick<EnrichedSyncSessionItemRow, "itemExternalId" | "itemTitle">[];
   readonly isActive: boolean;
   readonly isLoading: boolean;
 }): ReactNode {
@@ -25,6 +33,10 @@ export function SyncSessionStatusPanel({
     session?.id ?? null,
     session?.syncType ?? null,
   );
+  const csvJobId = session?.syncType === "csv" ? session.jobId : null;
+  const { data: priceWarnings = [] } = useRead(sync.priceWarnings, csvJobId ?? "", {
+    enabled: csvJobId !== null,
+  });
 
   if (isLoading) {
     return (
@@ -56,7 +68,10 @@ export function SyncSessionStatusPanel({
   const isStreamError = isLive && (isJobError || !jobStatus);
   const message = resolveSyncMessage(session, isLive ? (jobStatus ?? null) : null, isStreamError);
 
-  if (!message) return null;
+  const warningsList =
+    priceWarnings.length > 0 ? <PriceWarnings warnings={priceWarnings} items={items} /> : null;
+
+  if (!message) return warningsList;
 
   // `progress.processed` counts succeeded + failed, so the DB fallback must too
   // — otherwise the bar jumps forward on stream disconnect.
@@ -66,42 +81,95 @@ export function SyncSessionStatusPanel({
   const percent = displayedTotal > 0 ? Math.round((displayedProcessed / displayedTotal) * 100) : 0;
 
   return (
-    <output className="block space-y-2" aria-live={isLive ? "polite" : "off"}>
-      <div className="flex items-start gap-2">
-        {isLive ? (
-          <span
-            aria-hidden="true"
-            className="relative mt-1.5 size-2 shrink-0 rounded-full bg-foreground"
-          >
-            <span className="absolute inset-0 rounded-full bg-foreground motion-safe:animate-ping" />
-          </span>
-        ) : (
-          <span
-            aria-hidden
-            className="mt-1.5 size-2 shrink-0 rounded-full bg-muted-foreground/50"
+    <>
+      <output className="block space-y-2" aria-live={isLive ? "polite" : "off"}>
+        <div className="flex items-start gap-2">
+          {isLive ? (
+            <span
+              aria-hidden="true"
+              className="relative mt-1.5 size-2 shrink-0 rounded-full bg-foreground"
+            >
+              <span className="absolute inset-0 rounded-full bg-foreground motion-safe:animate-ping" />
+            </span>
+          ) : (
+            <span
+              aria-hidden
+              className="mt-1.5 size-2 shrink-0 rounded-full bg-muted-foreground/50"
+            />
+          )}
+          <p className={cn("min-w-0 text-sm", isStreamError && "text-destructive")}>
+            Status: <span className="animate-data-in">{message}</span>
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <Progress
+            value={displayedProcessed}
+            max={displayedTotal || 1}
+            className="animate-data-in h-1"
           />
-        )}
-        <p className={cn("min-w-0 text-sm", isStreamError && "text-destructive")}>
-          Status: <span className="animate-data-in">{message}</span>
+          <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
+            <span>
+              <span className="animate-data-in inline-block">{displayedProcessed}</span> of{" "}
+              <span className="animate-data-in inline-block">{displayedTotal}</span>
+            </span>
+            <span>
+              <span className="animate-data-in inline-block">{percent}</span>%
+            </span>
+          </div>
+        </div>
+      </output>
+      {warningsList}
+    </>
+  );
+}
+
+function PriceWarnings({
+  warnings,
+  items,
+}: {
+  readonly warnings: readonly PriceWarning[];
+  readonly items: readonly Pick<EnrichedSyncSessionItemRow, "itemExternalId" | "itemTitle">[];
+}): ReactNode {
+  const headingId = useId();
+  const titles = new Map(
+    items.flatMap((item) => (item.itemTitle ? [[item.itemExternalId, item.itemTitle]] : [])),
+  );
+  return (
+    <section aria-labelledby={headingId} className="space-y-2 rounded-lg border p-3">
+      <div className="space-y-0.5">
+        <h2 id={headingId} className="text-sm font-medium">
+          Prices we couldn&rsquo;t read
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          These items were saved without a price. Open each one to enter it.
         </p>
       </div>
-
-      <div className="space-y-1">
-        <Progress
-          value={displayedProcessed}
-          max={displayedTotal || 1}
-          className="animate-data-in h-1"
-        />
-        <div className="flex items-center justify-between text-xs text-muted-foreground tabular-nums">
-          <span>
-            <span className="animate-data-in inline-block">{displayedProcessed}</span> of{" "}
-            <span className="animate-data-in inline-block">{displayedTotal}</span>
-          </span>
-          <span>
-            <span className="animate-data-in inline-block">{percent}</span>%
-          </span>
-        </div>
-      </div>
-    </output>
+      <ul className="space-y-1.5 text-sm">
+        {warnings.map(({ mfcItemId, input }, index) => {
+          const title = titles.get(mfcItemId);
+          return (
+            <li
+              key={`${mfcItemId}-${index}`}
+              className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+            >
+              <Link
+                to="/item/$externalId"
+                params={{ externalId: mfcItemId }}
+                className="font-medium text-foreground hover:underline"
+              >
+                {title ?? `MFC #${mfcItemId}`}
+              </Link>
+              {title ? (
+                <span className="text-xs text-muted-foreground">MFC #{mfcItemId}</span>
+              ) : null}
+              <span className="text-xs text-muted-foreground">
+                Price in the CSV: <code className="font-mono text-foreground">{input}</code>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { SyncCollectionItem, SyncOrder, SyncOrderItems } from "@myakiba/contracts/sync/types";
-import { SYNC_OPTION_META, transformCSVData } from "@/lib/sync";
+import { SYNC_OPTION_META, transformCSVData, unreadPricesText } from "@/lib/sync";
 import { syncSends, useSyncSubmit } from "@/data/resources/sync";
 import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
@@ -63,7 +63,9 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
 
       if (data.isFinished) {
         title = meta.completedTitle;
-        description = `Added ${itemCount} item${itemCount === 1 ? "" : "s"}`;
+        const added = `Added ${itemCount} item${itemCount === 1 ? "" : "s"}`;
+        const unread = unreadPricesText(data.warnings);
+        description = unread === null ? added : `${added}. ${unread}`;
       }
 
       if (syncType === "item" && data.isFinished) {

@@ -132,6 +132,7 @@ function RouteComponent(): ReactNode {
 
           <SyncSessionStatusPanel
             session={session}
+            items={items}
             isLoading={isPending}
             isActive={session ? ACTIVE_SYNC_SESSION_STATUS_SET.has(session.status) : false}
           />

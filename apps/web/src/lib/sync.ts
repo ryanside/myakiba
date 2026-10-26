@@ -64,6 +64,17 @@ export function resolveSyncMessage(
   return jobStatus?.statusMessage ?? session.statusMessage;
 }
 
+export type PriceWarning = NonNullable<SyncJobStatus["warnings"]>[number];
+
+/** The sentence a CSV import's end toast adds for the rows it saved at price 0, or null for none. */
+export function unreadPricesText(warnings: readonly PriceWarning[] | undefined): string | null {
+  const count = warnings?.length ?? 0;
+  if (count === 0) return null;
+  return count === 1
+    ? "1 item had a price we couldn't read and was saved without one."
+    : `${count} items had prices we couldn't read and were saved without one.`;
+}
+
 export const ITEM_STATUS_CONFIG = {
   pending: { label: "Pending", variant: "secondary" },
   imported: { label: "Imported", variant: "success" },

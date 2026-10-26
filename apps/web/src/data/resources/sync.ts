@@ -12,8 +12,7 @@ import {
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { app } from "@/lib/treaty-client";
-import { panic } from "better-result";
-import type { Result } from "better-result";
+import { panic, Result } from "better-result";
 import type { ApiFailure } from "../api";
 import { call } from "../api";
 import {
@@ -27,6 +26,8 @@ import {
   sendOrderItems,
 } from "@/queries/sync";
 import type { SyncResponse } from "@/queries/sync";
+import { ApiUnreadable } from "@/lib/errors/api-unreadable";
+import type { PriceWarning } from "@/lib/sync";
 import { syncResultFamilies } from "../catalog";
 import {
   defineCommand,
@@ -102,6 +103,41 @@ export const sync = {
       fetchSyncSessionDetail(sessionId, { page, limit: SYNC_SESSION_SUBGRID_PAGE_SIZE }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+  }),
+  /** The CSV prices a job saved at 0, which the first status on its job-status stream carries. */
+  priceWarnings: rootedRead("syncPriceWarnings", {
+    key: (jobId: string) => ["syncPriceWarnings", jobId] as const,
+    load: async (jobId): Promise<Result<readonly PriceWarning[], ApiFailure>> => {
+      const controller = new AbortController();
+      try {
+        const opened = await call(
+          app.api.sync["job-status"].get({
+            query: { jobId },
+            fetch: { signal: controller.signal },
+          }),
+          {
+            fallback: "Failed to load the prices this import could not read",
+            empty: "No data received from job status stream",
+            policy: "fixed",
+          },
+        );
+        if (opened.isErr()) return Result.err(opened.error);
+        return await Result.tryPromise({
+          try: async () => {
+            const first = await opened.value[Symbol.asyncIterator]().next();
+            return first.done === true ? [] : (first.value.data.warnings ?? []);
+          },
+          catch: (cause) =>
+            new ApiUnreadable({
+              cause,
+              message: "Failed to load the prices this import could not read",
+            }),
+        });
+      } finally {
+        controller.abort();
+      }
+    },
+    staleTime: Number.POSITIVE_INFINITY,
   }),
   jobStatus: streamedRead("syncJobStatus", {
     key: ({ jobId }: JobWatch) => ["syncJobStatus", jobId] as const,

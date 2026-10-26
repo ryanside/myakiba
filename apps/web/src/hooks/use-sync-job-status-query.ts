@@ -3,7 +3,7 @@ import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { useRead } from "@/data/client";
 import { sync } from "@/data/resources/sync";
-import { resolveSyncMessage, SYNC_OPTION_META } from "@/lib/sync";
+import { resolveSyncMessage, SYNC_OPTION_META, unreadPricesText } from "@/lib/sync";
 import { toast } from "@/components/ui/toast";
 
 export function useSyncJobStatusQuery(
@@ -38,7 +38,9 @@ export function useSyncJobStatusQuery(
     const toastId = toast.add({
       type: toastType,
       title: toastTitle,
-      description: description === undefined ? message : `${message}. ${description}`,
+      description: [message, description, unreadPricesText(status.warnings)]
+        .filter((part) => part !== undefined && part !== null)
+        .join(". "),
       actionProps: {
         children: sessionId === null ? "View import history" : "View details",
         onClick() {
