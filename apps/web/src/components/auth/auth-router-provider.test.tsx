@@ -612,9 +612,7 @@ test.each([
       password: "Invalid password",
       expired: "Session expired. Re-authenticate to perform this action.",
       server: "Please try again",
-      network: deleteAccount
-        ? "Couldn't delete account. Try again."
-        : "Couldn't sign out. Try again.",
+      network: "Couldn't connect. Check your connection and try again.",
       "no-message": deleteAccount
         ? "Couldn't delete account. Try again."
         : "Couldn't sign out. Try again.",
