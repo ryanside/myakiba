@@ -339,6 +339,7 @@ beforeEach(async () => {
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
   snapshots.clear();
+  picturePuts = 0;
 });
 
 describe("starting an import", () => {
@@ -1313,4 +1314,20 @@ test("an upload without a current import stores no picture or catalog item", asy
   expect((await complete("unknown", 98778)).status).toBe(409);
   expect(picturePuts).toBe(0);
   expect(await db.select().from(item)).toEqual([]);
+});
+
+describe("retained main imports", () => {
+  for (const status of ["queued", "running"] as const) {
+    test(`a legacy ${status} import reads failed with a restart message`, async () => {
+      await db.insert(dataTransferImport).values({
+        userId, importId: "old-import", jobId: "old-job", fileName: "old.json", status,
+        phase: "queued", archive: archiveOf([], [collectionRecord("legacy", 98777)]),
+      });
+      expect((await current()).body).toMatchObject({
+        status: "failed", error: "This import started before the browser extension release. Start the import again.",
+      });
+      const { default: service } = await import("./service");
+      expect(await service.getImportJobStatus(userId, db)).toMatchObject({ phase: "failed", terminalState: "error" });
+    });
+  }
 });
