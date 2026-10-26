@@ -25,6 +25,7 @@ import {
   parseJobStatusPayload,
   writeJobStatusSnapshotAndPublish,
 } from "@myakiba/redis/job-status";
+import { withDeadline } from "@myakiba/utils/with-deadline";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
@@ -49,6 +50,8 @@ const rateKeys: string[] = [];
 let failureRequests = 1;
 let statusReadFailures = 0;
 let redisStatus = "ready";
+let hangPublication = false;
+let publicationCalls = 0;
 let hungStatusRead: ReturnType<typeof Promise.withResolvers<never>> | null = null;
 const statusReads = new Map<string, number>();
 
@@ -87,6 +90,8 @@ await mock.module("@myakiba/redis/client", () => ({
         rateKeys.push(key);
         return [key.startsWith("rl:sync-failure:") ? failureRequests : 1, 3600];
       }
+      publicationCalls += 1;
+      if (hangPublication) return new Promise<never>(() => {});
       const [channel, raw] = args;
       const decoded = z.tuple([z.string(), z.string()]).parse([channel, raw]);
       const [snapshotChannel, serialized] = decoded;
@@ -205,6 +210,8 @@ beforeEach(async () => {
   failureRequests = 1;
   statusReadFailures = 0;
   redisStatus = "ready";
+  hangPublication = false;
+  publicationCalls = 0;
   statusReads.clear();
   await db
     .insert(authSchema.user)
@@ -2168,4 +2175,19 @@ describe("retained main payloads", () => {
       expect(retried.missingMfcItemIds).toEqual([X, Y, Z]);
     });
   }
+});
+
+describe("committed sync publication", () => {
+  test("a reconnecting cache skips publication and answers the committed start", async () => {
+    redisStatus = "reconnecting";
+    const run = await start("item", { items: [X] });
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "processing" });
+    expect(publicationCalls).toBe(0);
+  });
+  test("a cache that never settles cannot hang the committed start", async () => {
+    hangPublication = true;
+    const run = await withDeadline(() => start("item", { items: [X] }), 1800);
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "processing" });
+    expect(publicationCalls).toBe(1);
+  });
 });

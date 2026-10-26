@@ -1,3 +1,4 @@
+import { withDeadline } from "@myakiba/utils/with-deadline";
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
@@ -65,6 +66,8 @@ await mock.module("@/lib/item-images", () => ({
     publicUrl: "https://pictures.example.test",
   }),
 }));
+let hangPublication = false;
+let publicationCalls = 0;
 const snapshots = new Map<string, string>();
 const rateKeys: string[] = [];
 
@@ -80,6 +83,7 @@ const fakeRedis = {
     return [1, 1800];
   },
   multi() {
+    publicationCalls += 1;
     const writes: (() => void)[] = [];
     const chain = {
       set: (key: string, value: string) => {
@@ -97,11 +101,13 @@ const fakeRedis = {
         );
         return chain;
       },
-      exec: async () =>
-        writes.map((write) => {
+      exec: async () => {
+        if (hangPublication) return new Promise<never>(() => {});
+        return writes.map((write) => {
           write();
           return [null, "OK"];
-        }),
+        });
+      },
     };
     return chain;
   },
@@ -339,6 +345,9 @@ beforeEach(async () => {
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
   snapshots.clear();
+  fakeRedis.status = "ready";
+  hangPublication = false;
+  publicationCalls = 0;
   picturePuts = 0;
 });
 
@@ -1339,4 +1348,19 @@ describe("retained main imports", () => {
       });
     });
   }
+});
+
+describe("committed data-transfer publication", () => {
+  test("a reconnecting cache skips publication and answers the committed start", async () => {
+    fakeRedis.status = "reconnecting";
+    const run = await startRun(archiveOf([], [collectionRecord("row", 98777)]));
+    expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+    expect(publicationCalls).toBe(0);
+  });
+  test("a cache that never settles cannot hang the committed start", async () => {
+    hangPublication = true;
+    const run = await withDeadline(() => startRun(archiveOf([], [collectionRecord("row", 98777)])), 1800);
+    expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+    expect(publicationCalls).toBe(1);
+  });
 });
