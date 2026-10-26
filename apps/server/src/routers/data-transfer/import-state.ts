@@ -1,7 +1,6 @@
-import { Result, panic } from "better-result";
+import { panic } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
-import { createLogger } from "evlog";
 import {
   dataTransferImport,
   dataTransferImportItem,
@@ -18,9 +17,7 @@ import type {
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobRecentItem, SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { redis } from "@myakiba/redis/client";
-import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
-import { PublishJobStatusFailed } from "@myakiba/redis/errors/publish-job-status-failed";
+import { publishImportStatus } from "@/lib/publish-import-status";
 
 const RECENT_ITEMS_LIMIT = 5;
 const LEGACY_IMPORT_ERROR =
@@ -402,23 +399,9 @@ export async function readJobStatus(db: ReadTx, userId: string): Promise<SyncJob
 }
 
 async function publishStatus(db: ReadTx, userId: string): Promise<void> {
-  const unpublished = (cause: unknown) => new PublishJobStatusFailed({ jobId: null, cause });
-  const published = await Result.gen(async function* () {
-    if (redis.status !== "ready") return Result.err(unpublished("Redis is unavailable"));
-    const status = yield* Result.await(
-      Result.tryPromise({ try: () => readJobStatus(db, userId), catch: unpublished }),
-    );
-    if (!status) return Result.ok("unread" as const);
-    return writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
-  });
-  if (published.isOk()) return;
-  const { cause } = published.error;
-  const publishLog = createLogger({
+  await publishImportStatus({
+    load: () => readJobStatus(db, userId),
     action: "dataTransfer.publishStatus",
-    outcome: "warn",
-    user: { id: userId },
-    message: "Failed to publish the import status; the database keeps it",
+    userId,
   });
-  publishLog.error(cause instanceof Error ? cause : String(cause));
-  publishLog.emit();
 }

@@ -1,7 +1,5 @@
-import { createLogger } from "evlog";
 import type { JobData, SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { redis } from "@myakiba/redis/client";
-import { writeJobStatusSnapshotAndPublish } from "@myakiba/redis/job-status";
+import { publishImportStatus } from "@/lib/publish-import-status";
 
 import { csvPriceWarnings } from "./csv";
 
@@ -38,16 +36,10 @@ export async function publishJobStatus(
   status: ServerSyncJobStatus,
   syncSessionId: string,
 ): Promise<void> {
-  const published = await writeJobStatusSnapshotAndPublish(redis, status.jobId, status);
-  if (published.isOk()) return;
-  const { cause } = published.error;
-  const cacheLog = createLogger({
+  await publishImportStatus({
+    load: async () => status,
     action: "sync.jobStatusCache",
-    outcome: "warn",
     jobId: status.jobId,
     syncSessionId,
-    message: "Failed to publish job status; the saved session is still available",
   });
-  cacheLog.error(cause instanceof Error ? cause : String(cause));
-  cacheLog.emit();
 }

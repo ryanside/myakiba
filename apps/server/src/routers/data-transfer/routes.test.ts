@@ -1353,30 +1353,55 @@ describe("retained main imports", () => {
 describe("committed data-transfer publication", () => {
   test("a reconnecting cache skips publication and answers the committed start", async () => {
     const events: unknown[] = [];
-    initLogger({ silent: true, drain: ({ event }) => { events.push(event); } });
+    initLogger({
+      silent: true,
+      drain: ({ event }) => {
+        events.push(event);
+      },
+    });
     try {
-    fakeRedis.status = "reconnecting";
-    const run = await startRun(archiveOf([], [collectionRecord("row", 98777)]));
-    expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
-    expect(publicationCalls).toBe(0);
-      expect(events).toContainEqual(expect.objectContaining({
-        action: "dataTransfer.publishStatus", level: "warn", outcome: "warn",
-        failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
-      }));
-    } finally { initLogger({ enabled: false }); }
+      fakeRedis.status = "reconnecting";
+      const run = await startRun(archiveOf([], [collectionRecord("row", 98777)]));
+      expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+      expect(publicationCalls).toBe(0);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          action: "dataTransfer.publishStatus",
+          level: "warn",
+          outcome: "warn",
+          failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
+        }),
+      );
+    } finally {
+      initLogger({ enabled: false });
+    }
   });
   test("a cache that never settles cannot hang the committed start", async () => {
     const events: unknown[] = [];
-    initLogger({ silent: true, drain: ({ event }) => { events.push(event); } });
+    initLogger({
+      silent: true,
+      drain: ({ event }) => {
+        events.push(event);
+      },
+    });
     try {
-    hangPublication = true;
-    const run = await withDeadline(() => startRun(archiveOf([], [collectionRecord("row", 98777)])), 1800);
-    expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
-    expect(publicationCalls).toBe(1);
-      expect(events).toContainEqual(expect.objectContaining({
-        action: "dataTransfer.publishStatus", level: "warn", outcome: "warn",
-        failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
-      }));
-    } finally { initLogger({ enabled: false }); }
+      hangPublication = true;
+      const run = await withDeadline(
+        () => startRun(archiveOf([], [collectionRecord("row", 98777)])),
+        1800,
+      );
+      expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+      expect(publicationCalls).toBe(1);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          action: "dataTransfer.publishStatus",
+          level: "warn",
+          outcome: "warn",
+          failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
+        }),
+      );
+    } finally {
+      initLogger({ enabled: false });
+    }
   });
 });
