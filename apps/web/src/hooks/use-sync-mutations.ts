@@ -27,7 +27,8 @@ async function sendWithExtension<Input>(
   send: (input: Input) => Saving<SyncResponse>,
   input: Input,
 ): Promise<SyncSubmit> {
-  if (!(await requireExtension())) return "not_sent";
+  const ready = await requireExtension();
+  if (ready.isErr()) return "not_sent";
   const sent = await send(input);
   if (sent.isErr()) return "not_sent";
   return "sent";

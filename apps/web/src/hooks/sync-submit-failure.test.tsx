@@ -2,6 +2,7 @@ import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { FormApi } from "@tanstack/react-form";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Result } from "better-result";
 import type { ReactNode } from "react";
 import { toast } from "@/components/ui/toast";
 import { SYNC_OPTION_META } from "@/lib/sync";
@@ -14,7 +15,7 @@ await mock.module("@tanstack/react-router", () => ({
 const realGate = await import("@/lib/extension-gate");
 await mock.module("@/lib/extension-gate", () => ({
   ...realGate,
-  requireExtension: async () => true,
+  requireExtension: async () => Result.ok(),
 }));
 const { useSyncMutations } = await import("./use-sync-mutations");
 

@@ -240,7 +240,8 @@ export function ImportSection({
                   </Button>
                 }
                 onConfirm={async () => {
-                  if (await requireExtension()) await actions.handleConfirmImport();
+                  const ready = await requireExtension();
+                  if (ready.isOk()) await actions.handleConfirmImport();
                   return Result.ok();
                 }}
               />

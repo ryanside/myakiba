@@ -1,6 +1,7 @@
 import { afterEach, expect, mock, test } from "bun:test";
 import { act, cleanup, renderHook, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Result } from "better-result";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toast";
 
@@ -59,7 +60,7 @@ await mock.module("@tanstack/react-router", () => ({
 const realGate = await import("@/lib/extension-gate");
 await mock.module("@/lib/extension-gate", () => ({
   ...realGate,
-  requireExtension: async () => true,
+  requireExtension: async () => Result.ok(),
 }));
 
 const { useSyncMutations } = await import("./use-sync-mutations");
