@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Result } from "better-result";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -38,7 +38,7 @@ const ITEM: CollectionItemFormValues = {
   releaseBarcode: null,
 };
 
-async function submitEdit(callbackFn: () => Saving) {
+async function submitEdit(callbackFn: () => Saving, price?: string) {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <CollectionItemForm
@@ -51,6 +51,8 @@ async function submitEdit(callbackFn: () => Saving) {
   );
   act(() => screen.getByRole("button", { name: "Edit" }).click());
   await screen.findByText("Edit Item");
+  if (price !== undefined)
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: price } });
   act(() => screen.getByRole("button", { name: "Update" }).click());
 }
 
@@ -73,4 +75,17 @@ test("an edit that saves closes the sheet", async () => {
   await submitEdit(async () => Result.ok());
 
   await waitFor(() => expect(screen.queryByText("Edit Item")).toBeNull());
+});
+
+test("a price too large to save shows a field error and saves nothing", async () => {
+  let writes = 0;
+  await submitEdit(async () => {
+    writes++;
+    return Result.ok();
+  }, "90071992547409.92");
+
+  expect(await screen.findByText("Enter an amount like 1,234.50")).toBeTruthy();
+  expect(screen.getByLabelText("Price").getAttribute("aria-invalid")).toBe("true");
+  expect(screen.getByText("Edit Item")).toBeTruthy();
+  expect(writes).toBe(0);
 });
