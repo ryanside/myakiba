@@ -2096,6 +2096,19 @@
         "sync detail price warnings > detail returns persisted CSV warnings for 12.50",
         "sync detail price warnings > non-CSV detail returns an explicit empty warning list"
       ]
+    },
+    {
+      "fix": "a61267d9a2d26ce6ee3df3d75814a87c886d4042",
+      "testAt": "a61267d9a2d26ce6ee3df3d75814a87c886d4042",
+      "bug": "main scraped results, itemsToScrape queues and raw CSV prices could not be read or retried",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "main scraped results read as imported in detail, filters, counts and retry",
+        "main retained payloads > retries main collection itemsToScrape",
+        "main retained payloads > retries main order itemsToScrape",
+        "main retained payloads > retries main order-item itemsToScrape",
+        "main retained payloads > raw main CSV prices normalize once for reads, retry and fetched completion"
+      ]
     }
   ],
   "lint": [
