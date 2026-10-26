@@ -43,7 +43,8 @@ import { cn } from "@/lib/utils";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
-import { useExtensionGate } from "@/lib/extension-gate";
+import { extensionReleased, useExtensionGate } from "@/lib/extension-gate";
+import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
 import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -80,9 +81,16 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     id: "extension",
     step: 3,
     eyebrow: "Extension",
-    title: "Install the myakiba extension.",
-    description:
-      "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
+    ...(extensionReleased()
+      ? {
+          title: "Install the myakiba extension.",
+          description:
+            "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
+        }
+      : {
+          title: "The myakiba extension is almost here.",
+          description: "You can finish setup now, and import your items once it's released.",
+        }),
   },
   {
     id: "sync",
@@ -457,6 +465,7 @@ const SYNC_OPTIONS: readonly SyncOption[] = [
 function SyncFields({ onSelect }: SyncFieldsProps) {
   return (
     <div className="flex flex-col gap-2">
+      {extensionReleased() ? null : <ExtensionReviewNotice className="mb-2" />}
       {SYNC_OPTIONS.map((option) => (
         <SyncOptionCard key={option.id} option={option} onSelect={onSelect} />
       ))}

@@ -9,7 +9,9 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useId } from "react";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
+import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
 import { dismissMissingExtension, useMissingExtensionDialog } from "@/lib/extension-gate";
 import type { ExtensionMissing } from "@/lib/errors/extension-missing";
 
@@ -30,7 +32,10 @@ const COPY = {
 
 export function ExtensionRequiredDialog() {
   const dialog = useMissingExtensionDialog();
-  const copy = dialog ? COPY[dialog.missing.kind] : null;
+  const titleId = useId();
+  const bodyId = useId();
+  const refusal = dialog?.refusal.kind ?? null;
+  const copy = refusal === null || refusal === "in_review" ? null : COPY[refusal];
 
   return (
     <Dialog
@@ -39,6 +44,23 @@ export function ExtensionRequiredDialog() {
         if (!open) dismissMissingExtension();
       }}
     >
+      {refusal === "in_review" ? (
+        <DialogContent
+          className="sm:max-w-md"
+          showCloseButton={false}
+          aria-labelledby={titleId}
+          aria-describedby={bodyId}
+        >
+          <ExtensionReviewNotice
+            className="bg-transparent p-1 ring-0"
+            titleId={titleId}
+            bodyId={bodyId}
+          />
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Close</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      ) : null}
       {copy ? (
         <DialogContent className="sm:max-w-sm" showCloseButton={false}>
           <div className="flex items-start gap-3 py-1">

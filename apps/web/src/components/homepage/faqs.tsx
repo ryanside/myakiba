@@ -4,6 +4,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { EXTENSION_REVIEW_NOTICE } from "@/components/extension/extension-review-notice";
+import { extensionReleased } from "@/lib/extension-gate";
 
 const EXTENSION_FAQ_ID = "faq-extension";
 export const EXTENSION_FAQ_HREF = `/#${EXTENSION_FAQ_ID}`;
@@ -22,8 +24,9 @@ const FAQ_ITEMS: readonly {
   {
     id: EXTENSION_FAQ_ID,
     question: "How do I install the myakiba browser extension?",
-    answer:
-      "You need the extension to add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details. It isn't in the Chrome Web Store or Firefox Add-ons yet, so ask on Discord for the current build. Once it's installed, reload myakiba.",
+    answer: extensionReleased()
+      ? "You need the extension to add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details. Install it from the Chrome Web Store or Firefox Add-ons, then reload myakiba."
+      : `${EXTENSION_REVIEW_NOTICE.title}. ${EXTENSION_REVIEW_NOTICE.body}`,
   },
   {
     id: "item-2",

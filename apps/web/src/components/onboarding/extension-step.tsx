@@ -8,7 +8,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
-import { useExtensionStatus } from "@/lib/extension-gate";
+import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
+import { extensionReleased, useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,10 @@ const STATUS_LINE = {
 >;
 
 export function ExtensionStep() {
+  return extensionReleased() ? <InstallStatus /> : <ExtensionReviewNotice />;
+}
+
+function InstallStatus() {
   const status = useExtensionStatus();
   const line = STATUS_LINE[status.kind];
   const spinning = status.kind === "checking";
