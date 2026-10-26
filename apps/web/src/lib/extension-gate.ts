@@ -12,7 +12,7 @@ export type MissingExtensionDialog = {
   readonly refusal: GateRefusal;
 };
 
-/** Whether anyone can install the extension yet. Read at call time, so a test can flip it. */
+/** Whether anyone can install the extension yet. */
 export function extensionReleased(): boolean {
   return EXTENSION_RELEASE === "released";
 }
