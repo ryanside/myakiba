@@ -1872,6 +1872,39 @@
         "strict money input > accepts \"12.\" as 1200 minor units",
         "strict money input > accepts \"1,234.\" as 123400 minor units"
       ]
+    },
+    {
+      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "bug": "the inline currency cell saved an amount past the safe integer range as a rounded number",
+      "test": "apps/web/src/components/cells/inline-currency-cell.test.tsx",
+      "fixed": ["an amount too large to save keeps the cell editing and marked invalid"]
+    },
+    {
+      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "bug": "the fees popover cell saved a fee past the safe integer range as a rounded number",
+      "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
+      "fixed": ["a fee too large to save keeps the popover open, marked invalid"]
+    },
+    {
+      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "bug": "the collection item form saved a price past the safe integer range as a rounded number",
+      "test": "apps/web/src/components/collection/collection-item-form.test.tsx",
+      "fixed": ["a price too large to save shows a field error and saves nothing"]
+    },
+    {
+      "fix": "4cebdf7c4f3a2829e8178e641339b127bc90e785",
+      "bug": "CSV import toasts never counted the rows saved without a price they could not read",
+      "test": "apps/web/src/hooks/csv-price-warnings.test.tsx",
+      "fixed": [
+        "a CSV import that finishes at once counts its unread prices in its toast",
+        "a CSV import run that ends counts its unread prices in its toast"
+      ]
+    },
+    {
+      "fix": "4cebdf7c4f3a2829e8178e641339b127bc90e785",
+      "bug": "an import's detail panel never listed the CSV rows saved without a price they could not read",
+      "test": "apps/web/src/components/sync/sync-session-status-panel.test.tsx",
+      "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"]
     }
   ],
   "lint": [
