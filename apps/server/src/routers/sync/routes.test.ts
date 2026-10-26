@@ -2179,15 +2179,31 @@ describe("retained main payloads", () => {
 
 describe("committed sync publication", () => {
   test("a reconnecting cache skips publication and answers the committed start", async () => {
+    const events: unknown[] = [];
+    initLogger({ silent: true, drain: ({ event }) => { events.push(event); } });
+    try {
     redisStatus = "reconnecting";
     const run = await start("item", { items: [X] });
     expect(await session(run.syncSessionId)).toMatchObject({ status: "processing" });
     expect(publicationCalls).toBe(0);
+      expect(events).toContainEqual(expect.objectContaining({
+        action: "sync.jobStatusCache", level: "warn", outcome: "warn",
+        failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
+      }));
+    } finally { initLogger({ enabled: false }); }
   });
   test("a cache that never settles cannot hang the committed start", async () => {
+    const events: unknown[] = [];
+    initLogger({ silent: true, drain: ({ event }) => { events.push(event); } });
+    try {
     hangPublication = true;
     const run = await withDeadline(() => start("item", { items: [X] }), 1800);
     expect(await session(run.syncSessionId)).toMatchObject({ status: "processing" });
     expect(publicationCalls).toBe(1);
+      expect(events).toContainEqual(expect.objectContaining({
+        action: "sync.jobStatusCache", level: "warn", outcome: "warn",
+        failure: expect.objectContaining({ _tag: "PublishJobStatusFailed" }),
+      }));
+    } finally { initLogger({ enabled: false }); }
   });
 });
