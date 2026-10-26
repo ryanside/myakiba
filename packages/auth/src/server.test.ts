@@ -114,8 +114,16 @@ test.each(["send-verification-email", "request-password-reset"])(
 );
 
 const invalidPreferences = [
-  ["currency", "not-money", "Choose a supported currency."],
-  ["dateFormat", "not-a-date-format", "Choose a supported date format."],
+  [
+    "currency",
+    "not-money",
+    'Invalid option: expected one of "USD"|"JPY"|"KRW"|"CNY"|"EUR"|"GBP"|"CAD"|"AUD"|"NZD"|"BRL"|"HKD"|"TWD"|"PHP"|"RUB"|"SGD"|"THB"|"IDR"|"MYR"|"VND"|"INR"|"MXN"|"PLN"|"CHF"|"SEK"|"NOK"|"DKK"|"CZK"|"HUF"|"RON"|"TRY"|"ZAR"|"AED"|"SAR"|"ILS"|"CLP"|"COP"|"PEN"',
+  ],
+  [
+    "dateFormat",
+    "not-a-date-format",
+    'Invalid option: expected one of "MM/DD/YYYY"|"DD/MM/YYYY"|"YYYY/MM/DD"|"YYYY/DD/MM"',
+  ],
 ] as const;
 test.each(invalidPreferences)("sign-up rejects unsupported %s", async (field, value, message) => {
   sendFails = false;
@@ -132,7 +140,7 @@ test.each(invalidPreferences)("sign-up rejects unsupported %s", async (field, va
     }),
   );
   expect(response.status).toBe(400);
-  expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
+  expect(await response.json()).toEqual({ code: "VALIDATION_ERROR", message });
 });
 test.each(invalidPreferences)(
   "update-user rejects unsupported %s",
@@ -162,7 +170,7 @@ test.each(invalidPreferences)(
       }),
     );
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ code: "INVALID_USER_PREFERENCE", message });
+    expect(await response.json()).toEqual({ code: "VALIDATION_ERROR", message });
     const session = await instance.api.getSession({ headers: new Headers({ cookie }) });
     expect(session?.user).toMatchObject({ currency: "USD", dateFormat: "MM/DD/YYYY" });
   },
