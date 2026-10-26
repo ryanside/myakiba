@@ -1874,25 +1874,25 @@
       ]
     },
     {
-      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the inline currency cell saved an amount past the safe integer range as a rounded number",
       "test": "apps/web/src/components/cells/inline-currency-cell.test.tsx",
       "fixed": ["an amount too large to save keeps the cell editing and marked invalid"]
     },
     {
-      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the fees popover cell saved a fee past the safe integer range as a rounded number",
       "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
       "fixed": ["a fee too large to save keeps the popover open, marked invalid"]
     },
     {
-      "fix": "58faabecc40370f9e644cfb76f51d9f3797510a1",
+      "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the collection item form saved a price past the safe integer range as a rounded number",
       "test": "apps/web/src/components/collection/collection-item-form.test.tsx",
       "fixed": ["a price too large to save shows a field error and saves nothing"]
     },
     {
-      "fix": "4cebdf7c4f3a2829e8178e641339b127bc90e785",
+      "fix": "e6bddc6c89e79f643f959235b6b70a711ebf50f1",
       "bug": "CSV import toasts never counted the rows saved without a price they could not read",
       "test": "apps/web/src/hooks/csv-price-warnings.test.tsx",
       "fixed": [
@@ -1901,13 +1901,13 @@
       ]
     },
     {
-      "fix": "4cebdf7c4f3a2829e8178e641339b127bc90e785",
+      "fix": "e6bddc6c89e79f643f959235b6b70a711ebf50f1",
       "bug": "an import's detail panel never listed the CSV rows saved without a price they could not read",
       "test": "apps/web/src/components/sync/sync-session-status-panel.test.tsx",
       "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"]
     },
     {
-      "fix": "52146aec9c72e7f807306ba4c29f65735bfc041e",
+      "fix": "2be4b1528a190705c721f685e72f18d55406ae96",
       "bug": "imports could start and install prompts showed while the extension was not installable during store review",
       "test": "apps/web/src/components/extension/extension-review.test.tsx",
       "fixed": [
