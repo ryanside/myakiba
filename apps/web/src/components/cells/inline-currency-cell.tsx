@@ -8,6 +8,7 @@ import {
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
+import { runSubmit } from "@/lib/form-submit";
 
 interface InlineCurrencyCellProps {
   value: number;
@@ -62,7 +63,7 @@ export function InlineCurrencyCell({
         onBlur={handleCancel}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            handleSubmit();
+            void runSubmit(handleSubmit);
           } else if (e.key === "Escape") {
             handleCancel();
           }

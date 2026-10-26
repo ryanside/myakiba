@@ -48,6 +48,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type ListOptionsForTargets = NonNullable<
   InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
@@ -82,13 +83,13 @@ function CreateListForm({
 
   return (
     <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (disabled) return;
-        setSubmitError(false);
-        await form.handleSubmit();
-      }}
+      onSubmit={formSubmitHandler({
+        handleSubmit: async () => {
+          if (disabled) return;
+          setSubmitError(false);
+          await form.handleSubmit();
+        },
+      })}
     >
       <form.Field name="title">
         {(field) => {
@@ -302,13 +303,7 @@ function AddToListsForm({
         </Empty>
       ) : null}
 
-      <form
-        onSubmit={async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          await form.handleSubmit();
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <form.Field name="selectedListIds" mode="array">
           {(field) => {
             const selectedListIdSet = new Set(field.state.value);

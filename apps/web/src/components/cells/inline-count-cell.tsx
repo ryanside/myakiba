@@ -3,6 +3,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
+import { runSubmit } from "@/lib/form-submit";
 
 interface InlineCountCellProps {
   value: number;
@@ -40,7 +41,7 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
           onBlur={handleCancel}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              handleSubmit();
+              void runSubmit(handleSubmit);
             } else if (e.key === "Escape") {
               handleCancel();
             }

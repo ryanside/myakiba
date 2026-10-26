@@ -49,6 +49,7 @@ import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/s
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger: React.ReactElement;
@@ -236,13 +237,7 @@ function UnifiedItemMoveFormContent({
         </div>
 
         {moveMode === "existing" ? (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              await existingOrderForm.handleSubmit();
-            }}
-          >
+          <form onSubmit={formSubmitHandler(existingOrderForm)}>
             <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
               <div className="px-4">
                 <existingOrderForm.Field
@@ -393,13 +388,7 @@ function UnifiedItemMoveFormContent({
             </DialogFooter>
           </form>
         ) : (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              await newOrderForm.handleSubmit();
-            }}
-          >
+          <form onSubmit={formSubmitHandler(newOrderForm)}>
             <div className="overflow-y-auto w-full max-h-[60vh] py-2">
               <div className="flex flex-col gap-3 px-4">
                 <FormSection title="Basics">

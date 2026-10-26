@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export function ListFormDialog({
   renderTrigger,
@@ -79,13 +80,7 @@ export function ListFormDialog({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              await form.handleSubmit();
-            }}
-          >
+          <form onSubmit={formSubmitHandler(form)}>
             <FieldGroup>
               <form.Field name="title">
                 {(field) => {

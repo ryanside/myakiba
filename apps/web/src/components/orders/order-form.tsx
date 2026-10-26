@@ -49,6 +49,7 @@ import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -586,13 +587,7 @@ function OrderFormContent(
   if (type === "edit-order") {
     return (
       <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            await form.handleSubmit();
-          }}
-        >
+        <form onSubmit={formSubmitHandler(form)}>
           <SheetHeader>
             <SheetTitle>Edit Order</SheetTitle>
             <SheetDescription>
@@ -641,13 +636,7 @@ function OrderFormContent(
 
   return (
     <DialogContent className="sm:max-w-lg!">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          await form.handleSubmit();
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <DialogHeader>
           <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
           {selectedCount !== undefined && selectedCount > 0 && (

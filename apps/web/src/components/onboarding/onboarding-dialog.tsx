@@ -48,7 +48,7 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
-import { formSubmitHandler } from "@/lib/form-submit";
+import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
 
 type StepId = "welcome" | "preferences" | "extension" | "sync";
 
@@ -246,7 +246,7 @@ function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
 
   const handleContinue = useCallback(async () => {
     if (currentMeta.id === "preferences") {
-      await form.handleSubmit();
+      await runSubmit(() => form.handleSubmit());
       return;
     }
     if (!isLast) {
