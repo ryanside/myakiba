@@ -1,5 +1,4 @@
 import type { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
-type ReleaseGate = S<409, ExtensionImportUnavailable["message"]>;
 /**
  * The wire of every operation a route serves: each failure's status and literal
  * message, the 500, and each string answer's literal. Written against the kernel
@@ -23,6 +22,8 @@ import { Search } from "@/routers/search/module";
 import { Settings } from "@/routers/settings/module";
 import { Sync, SyncRuns } from "@/routers/sync/module";
 import { Wishlist } from "@/routers/wishlist/module";
+
+type ReleaseGate = S<409, ExtensionImportUnavailable["message"]>;
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;

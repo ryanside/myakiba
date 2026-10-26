@@ -330,7 +330,7 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("csv"),
-    warnings: z.array(syncPriceWarningSchema),
+    warnings: z.array(syncPriceWarningSchema).default([]),
     payloadVersion: z.literal(3),
     userId: z.string(),
     syncSessionId: z.string(),

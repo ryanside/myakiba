@@ -582,8 +582,8 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
 
 test("in review refuses ingest without writing and leaves missing lookup open", async () => {
   await setExtensionRelease("in_review");
-  expect(await lookup([98777])).toEqual({ status: 200, body: { missing: [98777] } });
-  expect(await upload({ mfcItemId: 98777, page: page98777, picture: JPEG })).toEqual({
+  expect(await lookup([98_777])).toEqual({ status: 200, body: { missing: [98_777] } });
+  expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
     status: 409,
     body: "Importing is unavailable until the browser extension is released.",
   });

@@ -1289,38 +1289,47 @@ describe("answers a retry or delete cannot proceed with", () => {
   });
 });
 
+async function checkReviewOperation(operation: string) {
+  const archive = archiveOf([], [collectionRecord("row", 98_778)]);
+  const run = operation === "start" ? null : await startRun(archive);
+  const before = await db.select().from(dataTransferImport);
+  const beforeItems = await db.select().from(dataTransferImportItem);
+  await setExtensionRelease("in_review");
+  async function replyForOperation() {
+    if (run === null) return start(archive);
+    switch (operation) {
+      case "complete":
+        return complete(run.id, 98_778);
+      case "retry":
+        return post("/imports/current/retry");
+      case "failure":
+        return fail(run.id, 98_778);
+      default:
+        return post(`/imports/current/${operation}`, { jobId: run.id });
+    }
+  }
+  const reply = await replyForOperation();
+  expect(reply).toEqual({
+    status: 409,
+    body: "Importing is unavailable until the browser extension is released.",
+  });
+  expect(await db.select().from(dataTransferImport)).toEqual(before);
+  expect(await db.select().from(dataTransferImportItem)).toEqual(beforeItems);
+  expect(await db.select().from(item)).toEqual([]);
+  expect(await db.select().from(collection)).toEqual([]);
+  expect(picturePuts).toBe(0);
+  const detail = await current();
+  expect(detail.status).toBe(200);
+}
+
 describe("extension release gate", () => {
   for (const operation of ["start", "complete", "retry", "failure", "heartbeat", "interrupt"]) {
-    test(`in review refuses ${operation} without writing`, async () => {
-      const archive = archiveOf([], [collectionRecord("row", 98778)]);
-      const run = operation === "start" ? null : await startRun(archive);
-      const before = await db.select().from(dataTransferImport);
-      const beforeItems = await db.select().from(dataTransferImportItem);
-      await setExtensionRelease("in_review");
-      const reply = !run
-        ? await start(archive)
-        : operation === "complete"
-          ? await complete(run.id, 98778)
-          : operation === "retry"
-            ? await post("/imports/current/retry")
-            : operation === "failure"
-              ? await fail(run.id, 98778)
-              : await post(`/imports/current/${operation}`, { jobId: run.id });
-      expect(reply).toEqual({
-        status: 409,
-        body: "Importing is unavailable until the browser extension is released.",
-      });
-      expect(await db.select().from(dataTransferImport)).toEqual(before);
-      expect(await db.select().from(dataTransferImportItem)).toEqual(beforeItems);
-      expect(await db.select().from(item)).toEqual([]);
-      expect(await db.select().from(collection)).toEqual([]);
-      expect(picturePuts).toBe(0);
-      expect((await current()).status).toBe(200);
-    });
+    test(`in review refuses ${operation} without writing`, () => checkReviewOperation(operation));
   }
 });
 test("an upload without a current import stores no picture or catalog item", async () => {
-  expect((await complete("unknown", 98778)).status).toBe(409);
+  const reply = await complete("unknown", 98_778);
+  expect(reply.status).toBe(409);
   expect(picturePuts).toBe(0);
   expect(await db.select().from(item)).toEqual([]);
 });
@@ -1336,8 +1345,9 @@ describe("committed data-transfer publication", () => {
     });
     try {
       fakeRedis.status = "reconnecting";
-      const run = await startRun(archiveOf([], [collectionRecord("row", 98777)]));
-      expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+      const run = await startRun(archiveOf([], [collectionRecord("row", 98_777)]));
+      const detail = await current();
+      expect(detail.body).toMatchObject({ id: run.id, status: "running" });
       expect(publicationCalls).toBe(0);
       expect(events).toContainEqual(
         expect.objectContaining({
@@ -1362,10 +1372,11 @@ describe("committed data-transfer publication", () => {
     try {
       hangPublication = true;
       const run = await withDeadline(
-        () => startRun(archiveOf([], [collectionRecord("row", 98777)])),
+        () => startRun(archiveOf([], [collectionRecord("row", 98_777)])),
         1800,
       );
-      expect((await current()).body).toMatchObject({ id: run.id, status: "running" });
+      const detail = await current();
+      expect(detail.body).toMatchObject({ id: run.id, status: "running" });
       expect(publicationCalls).toBe(1);
       expect(events).toContainEqual(
         expect.objectContaining({

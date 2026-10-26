@@ -1,4 +1,4 @@
-import { storedJobDataSchema } from "./stored-payload";
+import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result, panic } from "better-result";
 import type { AnyTaggedError } from "better-result";
 import type { CommandScope } from "@/domain/kernel";
@@ -96,7 +96,7 @@ async function lockRun(
   if (!peek) return null;
   let retainedPayload: Run["payload"] = null;
   if (peek.requestPayload !== null) {
-    const parsed = storedJobDataSchema.safeParse(peek.requestPayload);
+    const parsed = jobDataSchema.safeParse(peek.requestPayload);
     retainedPayload = parsed.success
       ? Result.ok(parsed.data)
       : Result.err(new StoredSyncPayloadInvalid({ sessionId, cause: parsed.error }));

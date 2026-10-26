@@ -1,4 +1,4 @@
-import { storedJobDataSchema } from "./stored-payload";
+import { jobDataSchema } from "@myakiba/contracts/sync/schema";
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
@@ -370,7 +370,7 @@ class SyncService {
 
     if (!row) return Result.err(new SyncJobNotFound());
     const session = viewSession(row, Date.now());
-    const payload = storedJobDataSchema.safeParse(row.requestPayload);
+    const payload = jobDataSchema.safeParse(row.requestPayload);
     const warnings = importWarnings(payload.success ? payload.data : null);
     const terminalState = sessionStatusToTerminalState(session.status);
 
@@ -567,7 +567,7 @@ class SyncService {
 
     if (!sessionRecord) return null;
     const { hasRequestPayload, requestPayload, ...record } = sessionRecord;
-    const payload = storedJobDataSchema.safeParse(requestPayload);
+    const payload = jobDataSchema.safeParse(requestPayload);
     const warnings = importWarnings(payload.success ? payload.data : null).warnings ?? [];
     const { interrupted, revision: _revision, ...session } = viewSession(record, Date.now());
     const targetOrderIsAvailable =

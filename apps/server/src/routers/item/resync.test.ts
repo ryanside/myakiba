@@ -804,5 +804,6 @@ test("in review refuses refresh without writing and leaves refresh status open",
   expect(await db.select().from(item)).toEqual(before);
   expect(await db.select().from(item_release)).toEqual(releases);
   expect(store.objects.size).toBe(0);
-  expect((await resyncStatus()).status).toBe(200);
+  const reply = await resyncStatus();
+  expect(reply.status).toBe(200);
 });
