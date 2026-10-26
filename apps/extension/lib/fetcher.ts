@@ -3,7 +3,7 @@ import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
 import { Panic, Result, UnhandledException } from "better-result";
 import { timeoutSignal, unlessAborted } from "./clock";
-import type { Clock, SessionValue } from "./clock";
+import type { Clock } from "./clock";
 import { NO_STATUS } from "./collect";
 import type {
   CollectedPage,
@@ -26,6 +26,7 @@ import type { ChallengeShowFailure, LeaseFailure, MfcTabLease } from "./mfc-tab"
 import { ownedTab } from "./owned-tab";
 import type { LiveRequester, OwnedTab, TabOpenFailure } from "./owned-tab";
 import { toConfiguredUrl } from "./origins";
+import type { SessionValue } from "./session-value";
 import type { Origins } from "./origins";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { EMPTY_QUEUE, reduceQueue, sameJob, waitersOf } from "./queue";
@@ -131,8 +132,6 @@ const AFTER_PAGE_FAILURE = {
   CollectorAnswerInvalid: { closeOwned: true, retryOwned: true },
   MfcPageFetchFailed: { closeOwned: true, retryOwned: true },
   UnhandledException: { closeOwned: true, retryOwned: true },
-  // Read as an unknown failure before storage answered Results, so it keeps that policy.
-  SessionStorageUnavailable: { closeOwned: true, retryOwned: true },
   MfcLoadTimedOut: { closeOwned: false, retryOwned: true },
   MfcQueueHalted: { closeOwned: false, retryOwned: false },
   AttemptAbandoned: { closeOwned: false, retryOwned: false },
@@ -280,7 +279,10 @@ export function createFetcher(deps: FetcherDeps) {
     }).then(Result.flatten);
   }
 
-  /** The turn's timeout stops the collector, and the throttle reads what it then answers as that timeout. */
+  /**
+   * The turn's timeout stops the collector, and the throttle reads what it then answers as that timeout. The item fails
+   * for its page, so a tab that closed but could not be forgotten in storage is only logged.
+   */
   async function fetchPage(
     lease: MfcTabLease,
     job: Job,
@@ -297,7 +299,9 @@ export function createFetcher(deps: FetcherDeps) {
       !signal.aborted
     ) {
       const closed = await mfcTabs.closeOwned();
-      if (closed.isErr()) return Result.err(closed.error);
+      closed.tapError((failure) => {
+        console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
+      });
     }
     return page;
   }

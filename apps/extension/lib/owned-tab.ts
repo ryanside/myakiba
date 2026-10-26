@@ -1,6 +1,6 @@
 import { Result, panic } from "better-result";
 import * as z from "zod";
-import type { Clock, SessionValue } from "./clock";
+import type { Clock } from "./clock";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcTabUnavailable } from "./errors/mfc-tab-unavailable";
@@ -10,6 +10,8 @@ import type { TabEditRefused } from "./errors/tab-edit-refused";
 import type { TabOpenFailed } from "./errors/tab-open-failed";
 import { sameContext } from "./queue";
 import type { Requester, TabContext } from "./queue";
+import { remembered } from "./session-value";
+import type { SessionValue } from "./session-value";
 import type { Tab, Tabs } from "./tabs";
 import type { HoldTurn, Throttle, TurnFailure } from "./throttle";
 
@@ -84,24 +86,19 @@ export function ownedTab(deps: {
   readonly throttle: Pick<Throttle, "load">;
   readonly turnMs: number;
 }) {
-  const { tabs, clock, origin, record, throttle, turnMs } = deps;
+  const { tabs, clock, origin, throttle, turnMs } = deps;
+  const record = remembered(deps.record, null);
   /**
-   * The record survives a worker restart, but storage answers later, so a close already waiting on it checks this too.
-   * Browsers never reuse a tab id, so a claim is never cleared.
+   * A claim clears the record, but a step that awaited the browser meanwhile checks this before it writes the record or
+   * touches the tab. Browsers never reuse a tab id, so a claim is never cleared.
    */
   const claimed = new Set<number>();
-  let ownership = Promise.resolve(null);
 
-  async function exclusively<T>(work: () => Promise<T>): Promise<T> {
-    const previous = ownership;
-    const { promise: turn, resolve } = Promise.withResolvers<null>();
-    ownership = turn;
-    try {
-      await previous;
-      return await work();
-    } finally {
-      resolve(null);
-    }
+  const ours = (tabId: number) => record.get()?.tabId === tabId && !claimed.has(tabId);
+
+  /** Forgets a tab that is gone, unless the record moved on while the browser answered. */
+  async function forget(tabId: number): Promise<Result<void, SessionStorageUnavailable>> {
+    return record.get()?.tabId === tabId ? record.set(null) : Result.ok();
   }
 
   async function windowOf(tabId: number): Promise<Result<number, TabClosed>> {
@@ -115,33 +112,26 @@ export function ownedTab(deps: {
     );
   }
 
-  function landedTab(): Promise<
+  async function landedTab(): Promise<
     Result<{ readonly tabId: number; readonly tab: Tab } | null, SessionStorageUnavailable>
   > {
-    return Result.gen(async function* () {
-      const own = yield* Result.await(record.load());
-      if (own?.state !== "landed") return Result.ok(null);
-      const tab = await tabs.get(own.tabId);
-      if (tab.isOk()) {
-        return Result.ok(claimed.has(own.tabId) ? null : { tabId: own.tabId, tab: tab.value });
-      }
-      yield* Result.await(record.save(null));
-      return Result.ok(null);
-    });
+    const own = record.get();
+    if (own?.state !== "landed" || !ours(own.tabId)) return Result.ok(null);
+    const tab = await tabs.get(own.tabId);
+    if (tab.isOk()) return Result.ok(ours(own.tabId) ? { tabId: own.tabId, tab: tab.value } : null);
+    const forgotten = await forget(own.tabId);
+    return forgotten.map(() => null);
   }
 
-  function stillOursAfterRemoving(
+  async function stillOursAfterRemoving(
     tabId: number,
   ): Promise<Result<boolean, SessionStorageUnavailable>> {
-    return Result.gen(async function* () {
-      const own = yield* Result.await(record.load());
-      if (own?.tabId !== tabId || claimed.has(tabId)) return Result.ok(false);
-      await tabs.remove(tabId);
-      const left = await tabs.get(tabId);
-      if (left.isOk()) return Result.ok(true);
-      yield* Result.await(record.save(null));
-      return Result.ok(false);
-    });
+    if (!ours(tabId)) return Result.ok(false);
+    await tabs.remove(tabId);
+    const left = await tabs.get(tabId);
+    if (left.isOk()) return Result.ok(true);
+    const forgotten = await forget(tabId);
+    return forgotten.map(() => false);
   }
 
   /**
@@ -150,19 +140,17 @@ export function ownedTab(deps: {
    */
   async function closeUntilGone(tabId: number): Promise<Result<void, SessionStorageUnavailable>> {
     for (;;) {
-      const ours = await exclusively(() => stillOursAfterRemoving(tabId));
-      if (ours.isErr()) return Result.err(ours.error);
-      if (!ours.value) return Result.ok();
+      const left = await stillOursAfterRemoving(tabId);
+      if (left.isErr()) return Result.err(left.error);
+      if (!left.value) return Result.ok();
       await clock.sleep(POLL_MS);
     }
   }
 
-  function release(): Promise<Result<void, SessionStorageUnavailable>> {
-    return Result.gen(async function* () {
-      const own = yield* Result.await(record.load());
-      if (own) yield* Result.await(closeUntilGone(own.tabId));
-      return Result.ok();
-    });
+  async function release(): Promise<Result<void, SessionStorageUnavailable>> {
+    await record.ready();
+    const own = record.get();
+    return own ? closeUntilGone(own.tabId) : Result.ok();
   }
 
   function navigateUnlessShown(
@@ -174,24 +162,18 @@ export function ownedTab(deps: {
     return Result.gen(async function* () {
       const { tabId: requesterTabId, context } = yield* requester();
       const windowId = yield* Result.await(windowOf(requesterTabId));
-      return await exclusively(() =>
-        Result.gen(async function* () {
-          const own = yield* Result.await(landedTab());
-          if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) {
-            return Result.ok(null);
-          }
-          const load = {
-            tabId: own.tabId,
-            urlAtStart: own.tab.url ?? null,
-            startedAt: clock.now(),
-          };
-          if (own.tab.url === url) return Result.ok(load);
-          if (signal.aborted) return Result.err(stopped());
-          yield* Result.await(tabs.update(own.tabId, { url }));
-          yield* Result.await(record.save({ state: "loading", tabId: own.tabId }));
-          return Result.ok(load);
-        }),
-      );
+      const own = yield* Result.await(landedTab());
+      if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) {
+        return Result.ok(null);
+      }
+      const load = { tabId: own.tabId, urlAtStart: own.tab.url ?? null, startedAt: clock.now() };
+      if (own.tab.url === url) return Result.ok(load);
+      if (signal.aborted) return Result.err(stopped());
+      yield* Result.await(tabs.update(own.tabId, { url }));
+      if (!claimed.has(own.tabId)) {
+        yield* Result.await(record.set({ state: "loading", tabId: own.tabId }));
+      }
+      return Result.ok(load);
     });
   }
 
@@ -215,38 +197,31 @@ export function ownedTab(deps: {
         panic(
           `Opening an MFC tab needs the new tab to have an id, but the browser created one in window ${windowId} with no id.`,
         );
-      yield* Result.await(
-        exclusively(async () =>
-          claimed.has(tabId) ? Result.ok() : record.save({ state: "loading", tabId }),
-        ),
-      );
+      if (!claimed.has(tabId)) yield* Result.await(record.set({ state: "loading", tabId }));
       return Result.ok({ tabId, urlAtStart: null, startedAt });
     });
   }
 
-  function landed(
+  async function landed(
     { tabId, urlAtStart }: Load,
     ended: (tab: Tab) => boolean,
   ): Promise<Result<boolean, MfcTabUnavailable | SessionStorageUnavailable>> {
-    return Result.gen(async function* () {
-      const own = yield* Result.await(record.load());
-      if (own?.tabId !== tabId || claimed.has(tabId)) {
-        return Result.err(new MfcTabUnavailable({ tabId, reason: "taken" }));
-      }
-      if (own.state === "landed") return Result.ok(true);
-      const shown = await tabs.get(tabId);
-      if (shown.isErr()) return Result.err(new MfcTabUnavailable({ tabId, reason: "closed" }));
-      const tab = shown.value;
-      if (!ended(tab)) return Result.ok(false);
-      if (!onOrigin(tab.url, origin)) {
-        return Result.err(new MfcTabUnavailable({ tabId, reason: "left_origin" }));
-      }
-      if ((tab.url ?? null) === urlAtStart) {
-        return Result.err(new MfcTabUnavailable({ tabId, reason: "ended_at_start" }));
-      }
-      yield* Result.await(record.save({ state: "landed", tabId }));
-      return Result.ok(true);
-    });
+    const taken = () => Result.err(new MfcTabUnavailable({ tabId, reason: "taken" }));
+    if (!ours(tabId)) return taken();
+    if (record.get()?.state === "landed") return Result.ok(true);
+    const shown = await tabs.get(tabId);
+    if (!ours(tabId)) return taken();
+    if (shown.isErr()) return Result.err(new MfcTabUnavailable({ tabId, reason: "closed" }));
+    const tab = shown.value;
+    if (!ended(tab)) return Result.ok(false);
+    if (!onOrigin(tab.url, origin)) {
+      return Result.err(new MfcTabUnavailable({ tabId, reason: "left_origin" }));
+    }
+    if ((tab.url ?? null) === urlAtStart) {
+      return Result.err(new MfcTabUnavailable({ tabId, reason: "ended_at_start" }));
+    }
+    const saved = await record.set({ state: "landed", tabId });
+    return saved.map(() => true);
   }
 
   async function untilLanded(
@@ -257,7 +232,7 @@ export function ownedTab(deps: {
   ): Promise<Result<number, TabOpenFailure>> {
     for (;;) {
       if (signal.aborted) return Result.err(stopped());
-      const shown = await exclusively(() => landed(load, ended));
+      const shown = await landed(load, ended);
       if (shown.isErr()) return Result.err(shown.error);
       if (shown.value) return Result.ok(load.tabId);
       await clock.sleep(POLL_MS, signal);
@@ -268,17 +243,15 @@ export function ownedTab(deps: {
     { tabId, startedAt }: Load,
     ended: (tab: Tab) => boolean,
     holdUntil: HoldTurn,
-  ): Promise<Result<void, SessionStorageUnavailable>> {
+  ): Promise<void> {
     const until = startedAt + CLAIMED_LOAD_MS;
     const stillLoading = async () => {
       const tab = await tabs.get(tabId);
       return tab.isOk() && !ended(tab.value);
     };
-    if (!(await stillLoading())) return Result.ok();
-    const held = await holdUntil(until);
-    if (held.isErr()) return held;
+    if (!(await stillLoading())) return;
+    await holdUntil(until);
     while (clock.now() < until && (await stillLoading())) await clock.sleep(POLL_MS);
-    return Result.ok();
   }
 
   /** A load that fails is closed and keeps the turn until it ends. A failure to do so replaces the load's own. */
@@ -289,6 +262,7 @@ export function ownedTab(deps: {
     timeout: AbortSignal,
     holdUntil: HoldTurn,
   ): Promise<Result<number, TabOpenFailure>> {
+    await record.ready();
     const signal = AbortSignal.any([cancel, timeout]);
     const stopped: Stopped = () =>
       cancel.aborted ? new AttemptAbandoned() : new MfcLoadTimedOut({ timeoutMs: turnMs });
@@ -303,8 +277,8 @@ export function ownedTab(deps: {
     if (opened.isOk()) return opened;
     const closed = await closeUntilGone(load.tabId);
     if (closed.isErr()) return Result.err(closed.error);
-    const held = await holdTurnUntilLoadEnds(load, ended, holdUntil);
-    return held.isErr() ? Result.err(held.error) : opened;
+    await holdTurnUntilLoadEnds(load, ended, holdUntil);
+    return opened;
   }
 
   return {
@@ -338,7 +312,8 @@ export function ownedTab(deps: {
     },
 
     async landedIn(context: TabContext): Promise<Result<number | null, SessionStorageUnavailable>> {
-      const own = await exclusively(landedTab);
+      await record.ready();
+      const own = await landedTab();
       return own.map((found) =>
         found && inContext(found.tab, context) && onOrigin(found.tab.url, origin)
           ? found.tabId
@@ -348,13 +323,8 @@ export function ownedTab(deps: {
 
     async claim(tabId: number): Promise<Result<void, SessionStorageUnavailable>> {
       claimed.add(tabId);
-      return exclusively(() =>
-        Result.gen(async function* () {
-          const own = yield* Result.await(record.load());
-          if (own?.tabId === tabId) yield* Result.await(record.save(null));
-          return Result.ok();
-        }),
-      );
+      await record.ready();
+      return forget(tabId);
     },
 
     release,

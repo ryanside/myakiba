@@ -2,7 +2,7 @@ import type { ItemFailure, ItemPage, PortPicture, RunEvent } from "@myakiba/mfc/
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Err, Panic, Result } from "better-result";
-import type { Clock, SessionValue } from "../lib/clock";
+import type { Clock } from "../lib/clock";
 import type {
   CollectedPage,
   CollectorFailure,
@@ -23,6 +23,7 @@ import type { OwnedTab } from "../lib/owned-tab";
 import { pictureToRead } from "../lib/picture";
 import type { Tab, TabsApi, WindowsApi } from "../lib/tabs";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
+import type { SessionValue } from "../lib/session-value";
 import { OPEN_THROTTLE } from "../lib/throttle";
 import type { ThrottleState } from "../lib/throttle";
 

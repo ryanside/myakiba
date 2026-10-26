@@ -18,7 +18,7 @@ import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
 import { servePort } from "../lib/port-host";
 import { sessionValue } from "../lib/session-value";
-import { OPEN_THROTTLE, throttleStateSchema } from "../lib/throttle";
+import { throttleStateSchema } from "../lib/throttle";
 
 async function runCollector<Ok extends StandardSchemaV1, Fails extends StandardSchemaV1>(
   tabId: number,
@@ -64,14 +64,9 @@ export default defineBackground(() => {
     clock: systemClock,
     random: Math.random,
     origins: ORIGINS,
-    throttleState: sessionValue(
-      browser.storage.session,
-      "throttle",
-      throttleStateSchema,
-      OPEN_THROTTLE,
-    ),
-    ownedTab: sessionValue(browser.storage.session, "ownedTab", ownedTabSchema, null),
-    ownedPictureTab: sessionValue(browser.storage.session, "ownedPictureTab", ownedTabSchema, null),
+    throttleState: sessionValue(browser.storage.session, "throttle", throttleStateSchema),
+    ownedTab: sessionValue(browser.storage.session, "ownedTab", ownedTabSchema),
+    ownedPictureTab: sessionValue(browser.storage.session, "ownedPictureTab", ownedTabSchema),
     collectPage: (tabId, request, signal) => runCollector(tabId, request, pageAnswerCodec, signal),
     fetchGatedPicture: (tabId, url, signal) =>
       runCollector(tabId, { kind: "gated-picture", url }, pictureAnswerCodec, signal),

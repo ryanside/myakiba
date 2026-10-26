@@ -1,7 +1,6 @@
 import { Result } from "better-result";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
-import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 
 export type Clock = {
   readonly now: () => number;
@@ -27,12 +26,6 @@ export const systemClock: Clock = {
         { once: true },
       );
     }),
-};
-
-/** Survives a service-worker restart, which would otherwise reset the throttle. */
-export type SessionValue<T> = {
-  readonly load: () => Promise<Result<T, SessionStorageUnavailable>>;
-  readonly save: (value: T) => Promise<Result<void, SessionStorageUnavailable>>;
 };
 
 /** Aborts with MfcLoadTimedOut once `ms` pass on `clock`, unless `cancelled` aborts first. */

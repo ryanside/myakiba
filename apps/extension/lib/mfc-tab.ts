@@ -1,6 +1,6 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
-import type { Clock, SessionValue } from "./clock";
+import type { Clock } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
@@ -11,6 +11,7 @@ import { mfcItemUrl } from "./origins";
 import type { Origins } from "./origins";
 import { inContext, ownedTab } from "./owned-tab";
 import type { LiveRequester, OwnedTab, TabOpenFailure } from "./owned-tab";
+import type { SessionValue } from "./session-value";
 import type { Tabs } from "./tabs";
 import type { Throttle } from "./throttle";
 

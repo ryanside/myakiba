@@ -1,12 +1,14 @@
 import { Result } from "better-result";
 import * as z from "zod";
-import type { Clock, SessionValue } from "./clock";
+import type { Clock } from "./clock";
 import { timeoutSignal, unlessAborted } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
 import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
+import { remembered } from "./session-value";
+import type { SessionValue } from "./session-value";
 
 export const THROTTLE = {
   minGapMs: 2500,
@@ -38,14 +40,10 @@ export const OPEN_THROTTLE: ThrottleState = {
  * Keeps a throttle turn going until `at` at the latest, for a load its work can no longer stop. It is booked as well, so
  * a worker that stops meanwhile leaves the next load waiting.
  */
-export type HoldTurn = (at: number) => Promise<Result<void, SessionStorageUnavailable>>;
+export type HoldTurn = (at: number) => Promise<void>;
 
 /** How a throttle turn fails, whatever its work does. */
-export type TurnFailure =
-  | MfcLoadTimedOut
-  | MfcQueueHalted
-  | AttemptAbandoned
-  | SessionStorageUnavailable;
+export type TurnFailure = MfcLoadTimedOut | MfcQueueHalted | AttemptAbandoned;
 
 function pausedOrHalted(current: ThrottleState, until: number, now: number): ThrottleState {
   const haltedUntil = until - now > THROTTLE.maxPauseMs ? until : 0;
@@ -61,63 +59,62 @@ export function createThrottle(deps: {
   readonly random: () => number;
   readonly state: SessionValue<ThrottleState>;
 }) {
-  const { clock, random, state } = deps;
+  const { clock, random } = deps;
+  const books = remembered(deps.state, OPEN_THROTTLE);
   /** Settles once the last load this worker started has ended and is on the books. */
   let lastLoad: Promise<unknown> = Promise.resolve();
-  let books: Promise<unknown> = Promise.resolve();
 
   const gapAfter = (at: number) =>
     at + THROTTLE.minGapMs + Math.floor(random() * THROTTLE.jitterMs);
 
-  /**
-   * Reads and writes the books one change at a time, so no change overwrites another. A change that fails writes
-   * nothing.
-   */
-  async function book<R, E = never>(
-    change: (current: ThrottleState, now: number) => Result<[ThrottleState, R], E>,
-  ): Promise<Result<R, E | SessionStorageUnavailable>> {
-    const previous = books;
-    const turn = Promise.withResolvers<null>();
-    books = turn.promise;
-    try {
-      await previous;
-      return await Result.gen(async function* () {
-        const current = yield* Result.await(state.load());
-        const [next, result] = yield* change(current, clock.now());
-        yield* Result.await(state.save(next));
-        return Result.ok(result);
-      });
-    } finally {
-      turn.resolve(null);
-    }
+  async function book<R>(
+    change: (current: ThrottleState, now: number) => readonly [ThrottleState, R],
+  ): Promise<Result<R, SessionStorageUnavailable>> {
+    await books.ready();
+    const [next, result] = change(books.get(), clock.now());
+    const saved = await books.set(next);
+    return saved.map(() => result);
   }
 
   const write = (change: (current: ThrottleState, now: number) => ThrottleState) =>
-    book((current, now) =>
-      Result.ok<[ThrottleState, undefined]>([change(current, now), undefined]),
-    );
+    book((current, now) => [change(current, now), undefined] as const);
+
+  /**
+   * Books a change to the turns once the books are ready. The worker keeps it in memory, so a write storage refuses is
+   * only logged: it delays nothing but a restarted worker.
+   */
+  async function bookTurn(
+    change: (current: ThrottleState, now: number) => ThrottleState,
+    what: string,
+  ): Promise<void> {
+    const written = await books.set(change(books.get(), clock.now()));
+    written.tapError((failure) => {
+      console.error(`could not book ${what}`, failure);
+    });
+  }
 
   async function reserve(
     signal: AbortSignal,
     timeoutMs: number,
   ): Promise<Result<void, TurnFailure>> {
+    await books.ready();
     for (;;) {
       if (signal.aborted) return Result.err(new AttemptAbandoned());
-      const booked = await book((current, now): Result<[ThrottleState, number], MfcQueueHalted> => {
-        if (now < current.haltedUntil) {
-          return Result.err(new MfcQueueHalted({ until: current.haltedUntil }));
-        }
-        const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
-        if (untilFree > 0) return Result.ok([current, untilFree]);
+      const current = books.get();
+      const now = clock.now();
+      if (now < current.haltedUntil) {
+        return Result.err(new MfcQueueHalted({ until: current.haltedUntil }));
+      }
+      const untilFree = Math.max(current.nextPageAt, current.pausedUntil) - now;
+      if (untilFree <= 0) {
         // Booked to the latest this load can end, so a worker that stops mid-load leaves the next one waiting it out.
-        return Result.ok([
-          { ...current, nextPageAt: gapAfter(now + timeoutMs + THROTTLE.graceMs) },
-          0,
-        ]);
-      });
-      if (booked.isErr()) return Result.err(booked.error);
-      if (booked.value <= 0) return Result.ok();
-      await clock.sleep(booked.value, signal);
+        await bookTurn(
+          (latest, at) => ({ ...latest, nextPageAt: gapAfter(at + timeoutMs + THROTTLE.graceMs) }),
+          "the start of an MFC page load",
+        );
+        return Result.ok();
+      }
+      await clock.sleep(untilFree, signal);
     }
   }
 
@@ -137,10 +134,10 @@ export function createThrottle(deps: {
       if (first === "stopped") break;
     }
     finished.abort();
-    const booked = await write((current, now) => ({ ...current, nextPageAt: gapAfter(now) }));
-    booked.tapError((failure) => {
-      console.error("could not book the end of an MFC page load", failure);
-    });
+    await bookTurn(
+      (current, now) => ({ ...current, nextPageAt: gapAfter(now) }),
+      "the end of an MFC page load",
+    );
   }
 
   /**
@@ -189,10 +186,10 @@ export function createThrottle(deps: {
       let endsBy = clock.now() + timeoutMs + THROTTLE.graceMs;
       const holdUntil: HoldTurn = (at) => {
         endsBy = Math.max(endsBy, at);
-        return write((current) => ({
-          ...current,
-          nextPageAt: Math.max(current.nextPageAt, gapAfter(at)),
-        }));
+        return bookTurn(
+          (current) => ({ ...current, nextPageAt: Math.max(current.nextPageAt, gapAfter(at)) }),
+          "a load the extension can no longer stop",
+        );
       };
       const running: Promise<Result<T, E | AttemptAbandoned>> = signal.aborted
         ? Promise.resolve(Result.err(new AttemptAbandoned()))
@@ -233,10 +230,7 @@ export function createThrottle(deps: {
           haltedUntil: Math.max(current.haltedUntil, haltedUntil ?? 0),
           limitedAt: haltEndsRow ? null : now,
         };
-        return Result.ok<[ThrottleState, { readonly haltedUntil: number | null }]>([
-          next,
-          { haltedUntil },
-        ]);
+        return [next, { haltedUntil }] as const;
       });
     },
 
