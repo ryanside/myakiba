@@ -1736,6 +1736,7 @@
     },
     {
       "fix": "74572e82",
+      "testAt": "12dcb1da",
       "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
       "test": "apps/web/src/components/settings/preferences.test.tsx",
       "fixed": ["after Save the form keeps the saved formats while the session catches up"]
