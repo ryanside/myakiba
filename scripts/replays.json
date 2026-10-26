@@ -1484,6 +1484,40 @@
         "update-user rejects unsupported currency",
         "update-user rejects unsupported dateFormat"
       ]
+    },
+    {
+      "fix": "c12a11799bcc383a8828b2b5bacd4aba733a7c96",
+      "testAt": "728640b14cb8c46984e7610dca36f29fd01595db",
+      "bug": "a sign-out or account deletion that never reached the server showed the caller's fallback text instead of the connection text",
+      "test": "apps/web/src/components/auth/auth-router-provider.test.tsx",
+      "fixed": [
+        "signing out with a network error reports the failure and keeps the session",
+        "deleting an account with a network error reports the failure and keeps the session"
+      ]
+    },
+    {
+      "fix": "caf43f57759863dc77e5f9e28f71f399ccac4d10",
+      "testAt": "b1220fc8f29f51ea3fbcaaf5ad40b0fd371062ab",
+      "bug": "ConfirmDialog swallowed a rejected onConfirm without reporting the defect",
+      "test": "apps/web/src/components/ui/confirm-dialog.test.tsx",
+      "fixed": ["a confirm that rejects is reported as a defect and keeps the dialog open"]
+    },
+    {
+      "fix": "9a118470683dc1bba03662c0b030ea1c9ec59b7c",
+      "testAt": "0e0aeaa95fdf73f396ab6715973edaedad8a08d5",
+      "bug": "the page bridge detached silently on any runtime throw, so a defect looked like a reloaded extension and context loss left no log",
+      "test": "apps/extension/lib/page-bridge.test.ts",
+      "fixed": [
+        "the page bridge > a reloaded extension's error is logged once as the reason the bridge detached",
+        "the page bridge > any other error from the port is a defect that panics and leaves the bridge attached"
+      ]
+    },
+    {
+      "fix": "f44011e68d4a498acf79525c6716343a22f4f428",
+      "testAt": "990ff1eb05a564c28439d73ba00e46e921554b4c",
+      "bug": "ten web submits, including the inline count cell's, let a rejected submit go unhandled instead of reporting it as a defect",
+      "test": "apps/web/src/components/cells/inline-count-cell.test.tsx",
+      "fixed": ["a count submit that rejects is reported as a defect"]
     }
   ],
   "lint": [
