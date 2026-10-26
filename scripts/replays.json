@@ -1812,6 +1812,54 @@
       "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
       "test": "apps/web/src/components/settings/account.test.tsx",
       "fixed": ["Change password reopened right after a change starts idle"]
+    },
+    {
+      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "bug": "money input silently discarded invalid characters, malformed separators, extra decimals and unsafe integer precision",
+      "test": "packages/utils/src/currency.test.ts",
+      "fixed": [
+        "strict money input > rejects \"12,50\" for format",
+        "strict money input > rejects \"1.2.3\" for format",
+        "strict money input > rejects \"1-2\" for format",
+        "strict money input > rejects \"-5\" for negative",
+        "strict money input > rejects \"-0\" for negative",
+        "strict money input > rejects \"1,234.567\" for precision",
+        "strict money input > rejects \"abc\" for format",
+        "strict money input > rejects \"12,34\" for format",
+        "strict money input > rejects \"1234,567\" for format",
+        "strict money input > rejects \"1,,234\" for format",
+        "strict money input > rejects \"1,234,56\" for format",
+        "strict money input > rejects \"$12\" for format",
+        "strict money input > rejects \"+5\" for format",
+        "strict money input > rejects \"1 234\" for format",
+        "strict money input > rejects \"1e3\" for format",
+        "strict money input > rejects \".50\" for format",
+        "strict money input > rejects \"12.\" for format",
+        "strict money input > rejects \"1.234\" for precision",
+        "strict money input > rejects \"90071992547409.92\" for unsafe_integer",
+        "strict money input > rejects \"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\" for unsafe_integer"
+      ]
+    },
+    {
+      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "bug": "CSV row mapping silently imported malformed prices as misread numbers",
+      "test": "apps/server/src/routers/sync/item-rows.test.ts",
+      "fixed": [
+        "in-request CSV imports an invalid price as zero",
+        "fetched CSV imports an invalid price as zero"
+      ]
+    },
+    {
+      "fix": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "testAt": "fe0743c57fb215ab00079dba4a5851abd01c8349",
+      "bug": "CSV imports silently saved misread prices and provided no warnings in immediate or streamed results",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "CSV imports a rejected price as zero and warns in its immediate result",
+        "CSV price warnings survive fetched completion, retry and the DB status fallback"
+      ]
     }
   ],
   "lint": [

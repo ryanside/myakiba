@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Result } from "better-result";
-import * as currency from "./currency";
-
-// Replay the same input assertions against the legacy parser before the strict API existed.
-const parse =
-  currency.parseMoneyInputToMinorUnits ??
-  ((input: string) => Result.ok(currency.parseMoneyToMinorUnits(input)));
+import { parseMoneyInputToMinorUnits as parse } from "./currency";
 
 describe("strict money input", () => {
   test.each([
