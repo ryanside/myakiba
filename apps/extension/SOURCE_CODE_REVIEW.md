@@ -5,7 +5,7 @@ This zip holds the files of the myakiba monorepo that the browser extension's bu
 ## Requirements
 
 - macOS or Linux. The build was checked on macOS 15 on arm64.
-- Bun 1.4.0. To install it, run `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"`.
+- Bun 1.4.4. To install it, run `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.4"`.
 - Node.js 24. WXT, the extension framework, runs on Node. The build was checked with Node 24.14.0.
 - No environment variables and no `.env` file. A release build uses the production origins in `packages/env/src/extension.ts`. If a `WXT_WEB_ORIGIN`, `WXT_MFC_ORIGIN` or `WXT_MFC_STATIC_ORIGIN` variable names another origin, the build stops with an error.
 

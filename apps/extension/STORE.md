@@ -4,7 +4,7 @@ This file holds what the Chrome Web Store and Firefox Add-ons (AMO) ask for when
 
 ## Build the packages
 
-Run these from `apps/extension` with Bun 1.4.0 and Node 24, and with no `WXT_*` variable set:
+Run these from `apps/extension` with Bun 1.4.4 and Node 24, and with no `WXT_*` variable set:
 
 1. `bun run zip` builds both browsers and writes three files to `apps/extension/.output/`:
    - `myakiba-1.0.0-chrome.zip`, which you upload to the Chrome Web Store.
@@ -131,7 +131,7 @@ The extension sends the requested MFC item pages and pictures only to the myakib
 For AMO, add this paragraph:
 
 ```text
-Source code: the add-on is bundled and minified by WXT (Vite). The sources zip contains apps/extension/SOURCE_CODE_REVIEW.md with the build steps: Bun 1.4.0, Node 24, then "bun install --frozen-lockfile" at the root and "bun run zip" in apps/extension. The output is apps/extension/.output/myakiba-1.0.0-firefox.zip. The "Function constructor" linter warnings come from zod 4's eval check, and the Android warning is expected because the add-on is for Firefox desktop only. SOURCE_CODE_REVIEW.md explains both.
+Source code: the add-on is bundled and minified by WXT (Vite). The sources zip contains apps/extension/SOURCE_CODE_REVIEW.md with the build steps: Bun 1.4.4, Node 24, then "bun install --frozen-lockfile" at the root and "bun run zip" in apps/extension. The output is apps/extension/.output/myakiba-1.0.0-firefox.zip. The "Function constructor" linter warnings come from zod 4's eval check, and the Android warning is expected because the add-on is for Firefox desktop only. SOURCE_CODE_REVIEW.md explains both.
 ```
 
 ## Screenshots
