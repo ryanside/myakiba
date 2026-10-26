@@ -228,9 +228,11 @@ function ChangePasswordDialog() {
         }),
     },
     onSubmit: async ({ value, formApi }) => {
+      // A change closes the dialog, and this hook outlives its content, so success would only
+      // carry over to the next open.
       const result = await run(
         () => changePassword.run(value),
-        (outcome) => outcome.kind === "saved",
+        () => false,
       );
       if (result.kind === "failed" && result.error instanceof Error) {
         const { message } = result.error;
