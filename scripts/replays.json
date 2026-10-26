@@ -2018,6 +2018,84 @@
         "the throttle's books > when storage fails > an answer whose booking throws for the only item of a run is reported as a defect, ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer whose booking throws for the last item of a run is reported as a defect, ends the run and closes the MFC tab"
       ]
+    },
+    {
+      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "imports could write while the browser extension was in review",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "extension release gate > in review refuses item start without writing",
+        "extension release gate > in review refuses collection start without writing",
+        "extension release gate > in review refuses order start without writing",
+        "extension release gate > in review refuses order-item start without writing",
+        "extension release gate > in review refuses csv start without writing",
+        "extension release gate > in review refuses complete without writing",
+        "extension release gate > in review refuses retry without writing",
+        "extension release gate > in review refuses failure without writing",
+        "extension release gate > in review refuses heartbeat without writing",
+        "extension release gate > in review refuses interrupt without writing"
+      ]
+    },
+    {
+      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "data-transfer imports could write during review and unsolicited uploads stored pictures",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "extension release gate > in review refuses start without writing",
+        "extension release gate > in review refuses complete without writing",
+        "extension release gate > in review refuses retry without writing",
+        "extension release gate > in review refuses failure without writing",
+        "extension release gate > in review refuses heartbeat without writing",
+        "extension release gate > in review refuses interrupt without writing",
+        "an upload without a current import stores no picture or catalog item"
+      ]
+    },
+    {
+      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "catalog ingest remained live during extension review",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": ["in review refuses ingest without writing and leaves missing lookup open"]
+    },
+    {
+      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "shared catalog refresh remained live during extension review",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": ["in review refuses refresh without writing and leaves refresh status open"]
+    },
+    {
+      "fix": "c4d0430d1cb9f0756ce373afbc43139eb05fa384",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "committed import publication could hang and used error-level diagnostics",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "committed sync publication > a reconnecting cache skips publication and answers the committed start",
+        "committed sync publication > a cache that never settles cannot hang the committed start"
+      ]
+    },
+    {
+      "fix": "c4d0430d1cb9f0756ce373afbc43139eb05fa384",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "committed import publication could hang and used error-level diagnostics",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "committed data-transfer publication > a reconnecting cache skips publication and answers the committed start",
+        "committed data-transfer publication > a cache that never settles cannot hang the committed start"
+      ]
+    },
+    {
+      "fix": "2892d4e4ee9b6df4839e6d8e8902b0a1da630153",
+      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "bug": "sync session detail omitted persisted CSV price warnings",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "sync detail price warnings > detail returns persisted CSV warnings for 12,50",
+        "sync detail price warnings > detail returns persisted CSV warnings for 12.50",
+        "sync detail price warnings > non-CSV detail returns an explicit empty warning list"
+      ]
     }
   ],
   "lint": [
