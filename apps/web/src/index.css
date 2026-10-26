@@ -13,6 +13,8 @@
 }
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant motion-reduce (&:where([data-reduce-motion] *));
+@custom-variant motion-safe (&:where(:root:not([data-reduce-motion]) *));
 
 :root {
   --font-instrument-sans: "Instrument Sans Variable", sans-serif;
@@ -275,15 +277,12 @@ body {
   position: relative;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-  }
+:root[data-reduce-motion] *,
+:root[data-reduce-motion] *::before,
+:root[data-reduce-motion] *::after {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
 }
 
 @layer base {
@@ -319,14 +318,6 @@ body {
   from {
     opacity: 0;
     transform: translateY(3px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  @keyframes data-in {
-    from {
-      opacity: 0;
-    }
   }
 }
 

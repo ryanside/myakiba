@@ -1,7 +1,8 @@
 import { createContext, memo, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { Bar, Rectangle, XAxis, ReferenceLine } from "recharts";
-import { useMotionValueEvent, useReducedMotion, useSpring } from "motion/react";
+import { useMotionValueEvent, useSpring } from "motion/react";
+import { useMotionPreference } from "@/hooks/use-appearance";
 import { useNavigate } from "@tanstack/react-router";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
@@ -190,6 +191,8 @@ function OrderBarsChart({
   onBarClick,
   onChartLeave,
 }: OrderBarsProps): React.ReactNode {
+  // Recharts animates its bars on its own clock, which follows only the device setting.
+  const reduceMotion = useMotionPreference().reduce;
   return (
     <EvilBarChart
       config={chartConfig}
@@ -223,6 +226,7 @@ function OrderBarsChart({
           dataKey="desktop"
           fill="var(--primary)"
           radius={6.25}
+          isAnimationActive={!reduceMotion}
           animationDuration={300}
           animationEasing="ease-in-out"
           {...orderBarRenderer}
@@ -373,7 +377,7 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
 
 function OrderReferenceLine(): React.ReactNode {
   const { value } = use(OrderChartContext).active;
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionPreference().reduce;
   const valueSpring = useSpring(value, { stiffness: 150, damping: 18 });
   const [springyValue, setSpringyValue] = useState(() => valueSpring.get());
 

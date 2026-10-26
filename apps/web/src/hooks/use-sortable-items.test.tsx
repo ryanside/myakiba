@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -14,7 +14,17 @@ import { frame } from "../../test/kanban-drag";
 import { ListMemberGrid } from "@/components/lists/list-member-grid";
 import { useSortableItems } from "./use-sortable-items";
 
-afterEach(cleanup);
+const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+let reducedMotion = false;
+Object.defineProperty(media, "matches", { get: () => reducedMotion });
+const matchMedia = spyOn(window, "matchMedia").mockImplementation(() => media);
+
+afterAll(() => matchMedia.mockRestore());
+
+afterEach(() => {
+  cleanup();
+  reducedMotion = false;
+});
 
 function renderSortable() {
   return renderHook(() =>
@@ -36,6 +46,27 @@ function renderSortable() {
     }),
   );
 }
+
+test("reduced motion finishes sortable entrance without an animation end event", () => {
+  reducedMotion = true;
+  const { result } = renderSortable();
+  expect(result.current.entranceAnimationActive).toBe(false);
+});
+
+test("enabling reduced motion during entrance finishes it permanently", () => {
+  const { result } = renderSortable();
+  expect(result.current.entranceAnimationActive).toBe(true);
+  act(() => {
+    reducedMotion = true;
+    media.dispatchEvent(new Event("change"));
+  });
+  expect(result.current.entranceAnimationActive).toBe(false);
+  act(() => {
+    reducedMotion = false;
+    media.dispatchEvent(new Event("change"));
+  });
+  expect(result.current.entranceAnimationActive).toBe(false);
+});
 
 test("normal motion keeps entrance until animation completion", () => {
   const { result } = renderSortable();
