@@ -28,7 +28,7 @@ export const ROW_LINK_CLASS_NAME = cn(
 const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
 
 // The card's image is inset by the card's padding, so its radius is the card's minus that padding.
-const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-[10px]";
+export const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-[10px]";
 
 const ROW_IMAGE_CLASS_NAME = "size-16 rounded-md";
 

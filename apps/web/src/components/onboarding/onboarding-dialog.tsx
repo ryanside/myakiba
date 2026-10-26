@@ -94,13 +94,15 @@ const appRouteApi = getRouteApi("/(app)");
 
 type OnboardingDialogProps = {
   readonly renderTrigger: React.ReactElement;
+  /** Only one mounted dialog may open on its own for a new account, or two would stack. */
+  readonly opensForNewAccount?: boolean;
 };
 
-function OnboardingDialog({ renderTrigger }: OnboardingDialogProps) {
+function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: OnboardingDialogProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.
   const isNewAccount = session.user.hasSeenOnboarding === false;
-  const [open, setOpen] = useState(isNewAccount);
+  const [open, setOpen] = useState(opensForNewAccount && isNewAccount);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const [currentStep, setCurrentStep] = useState(FIRST_STEP);
 

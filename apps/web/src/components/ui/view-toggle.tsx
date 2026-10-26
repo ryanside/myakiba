@@ -10,14 +10,14 @@ import {
 export type DataViewMode = "compact" | "table" | "grid" | "gallery";
 export type GridListViewMode = "grid" | "list";
 export type MediaViewMode = GridListViewMode | "gallery";
-type ViewMode = DataViewMode | GridListViewMode;
+export type ViewMode = DataViewMode | GridListViewMode;
 
-const VIEW_OPTIONS = {
-  compact: { icon: LeftToRightListDashIcon, label: "Compact table view" },
-  table: { icon: Menu01Icon, label: "Table view" },
-  grid: { icon: GridViewIcon, label: "Grid view" },
-  gallery: { icon: Image01Icon, label: "Gallery view" },
-  list: { icon: LeftToRightListDashIcon, label: "List view" },
+export const VIEW_OPTIONS = {
+  compact: { icon: LeftToRightListDashIcon, label: "Compact table view", name: "Compact" },
+  table: { icon: Menu01Icon, label: "Table view", name: "Table" },
+  grid: { icon: GridViewIcon, label: "Grid view", name: "Grid" },
+  gallery: { icon: Image01Icon, label: "Gallery view", name: "Gallery" },
+  list: { icon: LeftToRightListDashIcon, label: "List view", name: "List" },
 } as const;
 
 interface ViewToggleProps<TModes extends readonly ViewMode[]> {

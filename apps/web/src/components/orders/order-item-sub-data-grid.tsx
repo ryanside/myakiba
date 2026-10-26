@@ -26,6 +26,7 @@ import { OrderItemSyncSheet } from "./order-item-sync-sheet";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
@@ -69,19 +70,19 @@ export function OrderItemSubDataGrid({
     pageSize: ORDER_ITEM_PAGE_SIZE,
   });
   const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
-    "orderItems:columnOrder:v1",
+    TABLE_LAYOUTS.orderItems.order,
     DEFAULT_COLUMN_ORDER,
   );
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
-    "orderItems:columnSizing:v1",
+    TABLE_LAYOUTS.orderItems.sizing,
     {},
   );
   const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
-    "orderItems:columnPinning:v1",
+    TABLE_LAYOUTS.orderItems.pinning,
     {},
   );
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
-    "orderItems:columnVisibility:v1",
+    TABLE_LAYOUTS.orderItems.visibility,
     {},
   );
 

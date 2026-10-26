@@ -38,7 +38,7 @@ afterAll(() => {
 
 type OnboardingStatus = { hasSeenOnboarding?: boolean };
 
-async function openDashboard(hasSeenOnboarding?: boolean) {
+async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = false } = {}) {
   const onboarding: OnboardingStatus = {};
   if (hasSeenOnboarding !== undefined) onboarding.hasSeenOnboarding = hasSeenOnboarding;
   const root = createRootRoute({ component: Outlet });
@@ -59,6 +59,12 @@ async function openDashboard(hasSeenOnboarding?: boolean) {
       <>
         <h1>Dashboard</h1>
         <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />
+        {withAboutCopy ? (
+          <OnboardingDialog
+            opensForNewAccount={false}
+            renderTrigger={<button type="button">Open Getting Started</button>}
+          />
+        ) : null}
       </>
     ),
   });
@@ -122,6 +128,21 @@ test("a new account that dismisses the welcome with Escape saves that it has see
 
   await waitFor(() => expect(updates).toEqual([{ hasSeenOnboarding: true }]));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+test("a new account sees one welcome dialog while Settings also offers Getting Started", async () => {
+  await openDashboard(false, { withAboutCopy: true });
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+  await act(() => Bun.sleep(100));
+
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+});
+
+test("Settings' Getting Started button opens the welcome for an onboarded account", async () => {
+  await openDashboard(true, { withAboutCopy: true });
+  fireEvent.click(screen.getByRole("button", { name: "Open Getting Started" }));
+
+  expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
 
 test("a new account sees the welcome as soon as the dashboard renders", async () => {

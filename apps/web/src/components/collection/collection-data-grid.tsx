@@ -33,11 +33,10 @@ import {
   useCollectionMutations,
 } from "@/hooks/use-collection";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
+import { TABLE_LAYOUTS, VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-const COLUMN_VISIBILITY_KEY = "collection:columnVisibility";
 const DEFAULT_VISIBILITY: VisibilityState = {
   orderDate: false,
   paymentDate: false,
@@ -123,19 +122,19 @@ export const CollectionDataGrid = () => {
 
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
-    COLUMN_VISIBILITY_KEY,
+    TABLE_LAYOUTS.collection.visibility,
     DEFAULT_VISIBILITY,
   );
   const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
-    "collection:columnOrder:v1",
+    TABLE_LAYOUTS.collection.order,
     DEFAULT_COLUMN_ORDER,
   );
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
-    "collection:columnSizing:v1",
+    TABLE_LAYOUTS.collection.sizing,
     {},
   );
   const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
-    "collection:columnPinning:v1",
+    TABLE_LAYOUTS.collection.pinning,
     {},
   );
 

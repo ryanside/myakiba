@@ -11,7 +11,7 @@ import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
 import { getUserErrorMessage } from "@/lib/treaty-client";
 import { inFamilies } from "./catalog";
-import type { Family, PersistedFamily, RootOf } from "./catalog";
+import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
 
 type EdenResult<Data> =
   | { readonly data: Data; readonly error: null }
@@ -208,14 +208,15 @@ export function useRootedInfiniteRead<F extends Family, Input, Page>(
 export function useInvalidateRead<F extends Family, Input, Data>(read: RootedRead<F, Input, Data>) {
   const queryClient = useQueryClient();
   return useCallback(
-    (input: Input) => queryClient.invalidateQueries({ queryKey: read.key(input) }),
+    (...[input]: undefined extends Input ? [input?: Input] : [input: Input]) =>
+      queryClient.invalidateQueries({ queryKey: read.key(input as Input) }),
     [queryClient, read],
   );
 }
 
 type Rollback = () => void;
 
-type RefetchKey<F extends PersistedFamily> = {
+type RefetchKey<F extends WritableFamily> = {
   readonly queryKey: readonly [RootOf<F>, ...unknown[]];
   readonly exact?: true;
 };
@@ -231,7 +232,7 @@ type RefetchTiming =
       readonly refetchAfterFailure?: never;
     };
 
-type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
+type CommandSpec<Input, Output, F extends WritableFamily> = RefetchTiming & {
   /** Families this write can change. `run` resolves after they refetch. */
   readonly invalidates: readonly [F, ...F[]];
   /** Narrows the refetch to these keys of the invalidated families. */
@@ -240,7 +241,8 @@ type CommandSpec<Input, Output, F extends PersistedFamily> = RefetchTiming & {
   /** Patches the cache before the write and returns what puts it back if the write fails. */
   readonly optimistic?: (queryClient: QueryClient, input: Input) => Promise<Rollback | undefined>;
   /** A success toast's title, or no toast when it returns undefined. */
-  readonly successTitle?: (input: Input) => string | undefined;
+  readonly successTitle?: (input: Input, output: Output) => string | undefined;
+  readonly successDescription?: (input: Input) => string;
   /** A failure toast's title. A command without one shows no failure toast. */
   readonly failureTitle?: (input: Input, error: Error) => string;
   readonly failureDescription?: (input: Input, error: Error) => string;
@@ -252,13 +254,13 @@ const commandSpec = Symbol("commandSpec");
 
 /** Screens cannot reach `persist`, so every write goes through `useResourceMutation`. */
 type Command<Input, Output> = {
-  readonly [commandSpec]: CommandSpec<Input, Output, PersistedFamily>;
+  readonly [commandSpec]: CommandSpec<Input, Output, WritableFamily>;
 };
 
-export function defineCommand<Input, Output, const F extends PersistedFamily>(
+export function defineCommand<Input, Output, const F extends WritableFamily>(
   spec: CommandSpec<Input, Output, F>,
 ): Command<Input, Output> {
-  return { [commandSpec]: spec as CommandSpec<Input, Output, PersistedFamily> };
+  return { [commandSpec]: spec as CommandSpec<Input, Output, WritableFamily> };
 }
 
 type SaveResult<Output> =
@@ -291,8 +293,13 @@ export function useResourceMutation<Input, Output>(
     mutationFn: spec.persist,
     onMutate: optimistic && ((input) => optimistic(queryClient, input)),
     onSuccess: async (output, input) => {
-      const successTitle = spec.successTitle?.(input);
-      if (successTitle !== undefined) toast.add({ type: "success", title: successTitle });
+      const successTitle = spec.successTitle?.(input, output);
+      if (successTitle !== undefined)
+        toast.add({
+          type: "success",
+          title: successTitle,
+          ...(spec.successDescription && { description: spec.successDescription(input) }),
+        });
       onSaved?.(input, output);
       await spec.saved?.(queryClient, input, output);
       if (!refetchAfterFailure && !refetchBy) await refetch(input);
@@ -310,9 +317,11 @@ export function useResourceMutation<Input, Output>(
   });
   const { mutateAsync } = mutation;
 
-  const run = async (input: Input): Promise<SaveResult<Output>> => {
+  const run = async (
+    ...[input]: undefined extends Input ? [input?: Input] : [input: Input]
+  ): Promise<SaveResult<Output>> => {
     try {
-      return { kind: "saved", value: await mutateAsync(input) };
+      return { kind: "saved", value: await mutateAsync(input as Input) };
     } catch (error) {
       return { kind: "failed", error };
     }

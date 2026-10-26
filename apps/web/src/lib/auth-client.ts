@@ -35,13 +35,20 @@ export function classifySession({
   return "signed-out";
 }
 
-export async function endSession<T extends { error: unknown }>(operation: () => Promise<T>) {
-  let result: T;
+/**
+ * Better Auth answers a failed request with `{ error }`, but throws when the request never
+ * reaches the server. This answers that case with `{ error }` too, with no message.
+ */
+export async function callAuth<T extends { error: unknown }>(operation: () => Promise<T>) {
   try {
-    result = await operation();
+    return await operation();
   } catch {
-    return { error: { message: undefined } };
+    return { data: null, error: { message: undefined, status: 0, code: undefined } };
   }
+}
+
+export async function endSession<T extends { error: unknown }>(operation: () => Promise<T>) {
+  const result = await callAuth(operation);
   if (result.error) return result;
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.

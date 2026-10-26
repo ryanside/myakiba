@@ -29,11 +29,10 @@ import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
+import { TABLE_LAYOUTS, VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-const COLUMN_VISIBILITY_KEY = "orders:columnVisibility";
 const DEFAULT_VISIBILITY: VisibilityState = {
   orderDate: false,
   paymentDate: false,
@@ -139,19 +138,19 @@ export default function OrdersDataGrid() {
   );
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
-    COLUMN_VISIBILITY_KEY,
+    TABLE_LAYOUTS.orders.visibility,
     DEFAULT_VISIBILITY,
   );
   const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
-    "orders:columnOrder:v1",
+    TABLE_LAYOUTS.orders.order,
     DEFAULT_COLUMN_ORDER,
   );
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
-    "orders:columnSizing:v1",
+    TABLE_LAYOUTS.orders.sizing,
     {},
   );
   const [columnPinning, setColumnPinning] = useLocalStorage<ColumnPinningState>(
-    "orders:columnPinning:v1",
+    TABLE_LAYOUTS.orders.pinning,
     {},
   );
 

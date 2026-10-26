@@ -16,7 +16,8 @@
 @custom-variant motion-reduce (&:where([data-reduce-motion] *));
 @custom-variant motion-safe (&:where(:root:not([data-reduce-motion]) *));
 
-:root {
+:root,
+.light {
   --font-instrument-sans: "Instrument Sans Variable", sans-serif;
 
   --background: oklch(1 0 0);

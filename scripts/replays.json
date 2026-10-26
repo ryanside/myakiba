@@ -748,6 +748,70 @@
         "chart loading shimmer > keeps both skeletons visible and still when reduced motion is on at mount",
         "chart loading shimmer > keeps both skeletons visible and still when reduced motion turns on live"
       ]
+    },
+    {
+      "fix": "20587cd5",
+      "bug": "a Settings link to a section that does not exist, such as an old Shortcuts link, threw the route into its error screen",
+      "test": "apps/web/src/components/settings/settings-section-param.test.ts",
+      "fixed": [
+        "a link to a section that no longer exists, or never did, opens Settings without one"
+      ]
+    },
+    {
+      "fix": "5e31bc97",
+      "bug": "opening the default Settings section from the phone's list left focus on the hidden nav link",
+      "test": "apps/web/src/components/settings/settings-content.test.tsx",
+      "fixed": ["opening the default section from the phone's list moves focus to its heading"]
+    },
+    {
+      "fix": "74572e82",
+      "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
+      "test": "apps/web/src/components/settings/preferences.test.tsx",
+      "fixed": ["after Save the form keeps the saved formats while the session catches up"]
+    },
+    {
+      "fix": "36894e3b",
+      "bug": "a pending Settings search replaced a section opened before the first debounce settled",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "opening a section before the first search settles cancels the pending text",
+        "a setting link cancels pending text even when it opens the current section"
+      ]
+    },
+    {
+      "fix": "87b56cb4",
+      "bug": "a devices hash target present before loading never received focus when its list mounted",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": [
+        "a link to devices focuses the list when the pending devices finish loading",
+        "refreshing targeted devices through needs-fresh-sign-in does not steal focus",
+        "a devices anchor focuses again after its hash is deactivated and reactivated"
+      ]
+    },
+    {
+      "fix": "f8c4deef",
+      "bug": "router invalidation replaced the location object for the same URL and discarded pending Settings search edits",
+      "test": "apps/web/src/components/settings/settings-search.test.tsx",
+      "fixed": [
+        "invalidating the current URL preserves a pending first search",
+        "invalidating the current URL preserves edits to an existing search"
+      ]
+    },
+    {
+      "fix": "52f6a066",
+      "bug": "recovering a targeted devices list refocused its remounted element and stole focus from another control",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": ["refreshing targeted devices through unavailable does not steal focus"]
+    },
+    {
+      "fix": "07b6bf0c",
+      "bug": "a targeted sign-out-others row lost its focus memory when a devices error or stale sign-in unmounted it, and Back to an already focused devices entry focused it again",
+      "test": "apps/web/src/components/settings/devices.test.tsx",
+      "fixed": [
+        "refreshing targeted sign out others through needs-fresh-sign-in does not steal focus",
+        "refreshing targeted sign out others through unavailable does not steal focus",
+        "returning to an already focused devices history entry preserves focus"
+      ]
     }
   ],
   "lint": [

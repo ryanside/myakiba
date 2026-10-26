@@ -4,7 +4,7 @@ import { authClient, endSession } from "@/lib/auth-client";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
-import { settings } from "@/data/resources/settings";
+import { isStaleSignIn, settings } from "@/data/resources/settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +18,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useState } from "react";
 import * as z from "zod";
-import { SettingsGroup } from "./settings-group";
 import { SettingsRow } from "./settings-row";
+import { FreshSignInNotice } from "./sign-in-again";
+
+const CONFIRMATION_PHRASE = "delete my account";
 
 export function DeleteAccount() {
-  const { data, isPending, isError, error } = useRead(settings.accountType);
+  const { data, isPending, isError } = useRead(settings.accountType);
   const hasCredentialAccount = data?.hasCredentialAccount ?? false;
   const isTriggerDisabled = isPending || isError;
+  const [needsFreshSignIn, setNeedsFreshSignIn] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -33,143 +37,160 @@ export function DeleteAccount() {
       confirmationPhrase: "",
     },
     onSubmit: async ({ value }) => {
-      const result = await endSession(() =>
+      const { error } = await endSession(() =>
         authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
       );
-      if (result.error) {
+      if (isStaleSignIn(error)) {
+        setNeedsFreshSignIn(true);
+        return;
+      }
+      if (error) {
         toast.add({
           type: "error",
-          title: result.error.message || "Couldn't delete account. Try again.",
+          title: error.message || "Couldn't delete account. Try again.",
         });
         return;
       }
       toast.add({ type: "success", title: "Account deleted successfully" });
     },
   });
+
   return (
-    <div className="flex flex-col gap-4">
-      {isError ? (
-        <p className="text-pretty text-sm text-destructive">
-          Failed to load account settings: {error?.message}
-        </p>
-      ) : null}
+    <SettingsRow
+      setting="delete-account"
+      status={
+        isError ? (
+          <span className="text-xs text-muted-foreground">Couldn’t check your account</span>
+        ) : null
+      }
+    >
+      <Dialog
+        onOpenChange={(open) => {
+          if (!open) {
+            form.reset();
+            setNeedsFreshSignIn(false);
+          }
+        }}
+      >
+        <DialogTrigger
+          disabled={isTriggerDisabled}
+          render={
+            <Button variant="destructive" disabled={isTriggerDisabled}>
+              <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
+              Delete Account
+            </Button>
+          }
+        />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove all
+              your data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          {needsFreshSignIn ? (
+            <div className="-mx-4 rounded-xl bg-muted/50">
+              <FreshSignInNotice
+                title="Sign in again to delete your account"
+                description="For your security, myakiba deletes an account only within a day of signing in. Nothing was deleted."
+              />
+            </div>
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                return form.handleSubmit();
+              }}
+              className="flex flex-col gap-4"
+            >
+              {hasCredentialAccount ? (
+                <form.Field
+                  name="password"
+                  validators={{
+                    onChange: z.string().min(8, "Password must be at least 8 characters"),
+                  }}
+                >
+                  {(field) => (
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor={field.name}>Password</Label>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type="password"
+                        autoComplete="current-password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="Enter your password"
+                      />
+                      <FieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </form.Field>
+              ) : (
+                <form.Field
+                  name="confirmationPhrase"
+                  validators={{
+                    onChange: z
+                      .string()
+                      .refine(
+                        (phrase) => phrase === CONFIRMATION_PHRASE,
+                        `Please type '${CONFIRMATION_PHRASE}' to confirm`,
+                      ),
+                  }}
+                >
+                  {(field) => (
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor={field.name}>Confirmation</Label>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type="text"
+                        autoComplete="off"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder={`Type '${CONFIRMATION_PHRASE}' to confirm`}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Please type “{CONFIRMATION_PHRASE}” to confirm account deletion.
+                      </p>
+                      <FieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </form.Field>
+              )}
 
-      <SettingsGroup>
-        <SettingsRow
-          title="Delete account"
-          description="Permanently delete your account and all associated data. This cannot be undone."
-        >
-          <Dialog>
-            <DialogTrigger
-              disabled={isTriggerDisabled}
-              render={
-                <Button variant="destructive" disabled={isTriggerDisabled}>
-                  <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
-                  Delete Account
-                </Button>
-              }
-            />
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Are you absolutely sure?</DialogTitle>
-                <DialogDescription>
-                  This action cannot be undone. This will permanently delete your account and remove
-                  all your data from our servers.
-                </DialogDescription>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  form.handleSubmit();
-                }}
-                className="flex flex-col gap-4"
-              >
-                {hasCredentialAccount ? (
-                  <form.Field
-                    name="password"
-                    validators={{
-                      onChange: z.string().min(8, "Password must be at least 8 characters"),
-                    }}
-                  >
-                    {(field) => (
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor={field.name}>Password</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          type="password"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="Enter your password"
-                        />
-                        <FieldError errors={field.state.meta.errors} />
-                      </div>
-                    )}
-                  </form.Field>
-                ) : (
-                  <form.Field
-                    name="confirmationPhrase"
-                    validators={{
-                      onChange: z
-                        .string()
-                        .refine(
-                          (val) => val === "delete my account",
-                          "Please type 'delete my account' to confirm",
-                        ),
-                    }}
-                  >
-                    {(field) => (
-                      <div className="flex flex-col gap-2">
-                        <Label htmlFor={field.name}>Confirmation</Label>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          type="text"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="Type 'delete my account' to confirm"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Please type &quot;delete my account&quot; to confirm account deletion.
-                        </p>
-                        <FieldError errors={field.state.meta.errors} />
-                      </div>
-                    )}
-                  </form.Field>
-                )}
-
-                <DialogFooter>
-                  <form.Subscribe>
-                    {(state) => (
-                      <Button
-                        type="submit"
-                        variant="destructive"
-                        disabled={!state.canSubmit || state.isSubmitting}
-                      >
-                        {state.isSubmitting ? (
-                          <>
-                            <HugeiconsIcon
-                              icon={Loading03Icon}
-                              data-icon="inline-start"
-                              className="animate-spin"
-                            />
-                            Deleting...
-                          </>
-                        ) : (
-                          "Delete Account Permanently"
-                        )}
-                      </Button>
-                    )}
-                  </form.Subscribe>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </SettingsRow>
-      </SettingsGroup>
-    </div>
+              <DialogFooter>
+                <form.Subscribe>
+                  {(state) => (
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      disabled={!state.canSubmit || state.isSubmitting}
+                    >
+                      {state.isSubmitting ? (
+                        <>
+                          <HugeiconsIcon
+                            icon={Loading03Icon}
+                            data-icon="inline-start"
+                            className="animate-spin motion-reduce:animate-none"
+                          />
+                          Deleting…
+                        </>
+                      ) : (
+                        "Delete Account Permanently"
+                      )}
+                    </Button>
+                  )}
+                </form.Subscribe>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </SettingsRow>
   );
 }
