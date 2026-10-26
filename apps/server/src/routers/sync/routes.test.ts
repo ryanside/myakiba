@@ -32,10 +32,12 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-let extensionRelease = "released";
-await mock.module("@myakiba/contracts/shared/extension-release", () => ({
-  get EXTENSION_RELEASE() { return extensionRelease; },
-}));
+async function setExtensionRelease(value: "released" | "in_review") {
+  await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+    EXTENSION_RELEASE: value,
+  }));
+}
+await setExtensionRelease("released");
 
 
 type Listener = (channel: string, message: string) => void;
@@ -195,7 +197,7 @@ function never(): never {
 const importItem = (id: number) => db.transaction((tx) => ensureMfcItem(tx, parsedPage(id), null));
 
 beforeEach(async () => {
-  extensionRelease = "released";
+  await setExtensionRelease("released");
   await db.execute(sql`TRUNCATE "user", item, entry CASCADE`);
   redisValues.clear();
   failS3 = false;
@@ -2085,7 +2087,7 @@ describe("extension release gate", () => {
     test(`in review refuses ${entry.type} start without writing`, async () => {
       const body = await entry.body();
       const before = await db.select().from(order);
-      extensionRelease = "in_review";
+      await setExtensionRelease("in_review");
       expect(await post(`/${entry.type}`, body)).toEqual({
         status: 409, body: "Importing is unavailable until the browser extension is released.",
       });
@@ -2101,7 +2103,7 @@ describe("extension release gate", () => {
       const run = await start("item", { items: [X] });
       const before = await db.select().from(syncSession);
       const beforeItems = await db.select().from(syncSessionItem);
-      extensionRelease = "in_review";
+      await setExtensionRelease("in_review");
       const reply = operation === "complete" ? await complete(run, X)
         : operation === "retry" ? await post(`/sessions/${run.syncSessionId}/retry`)
         : operation === "failure" ? await fail(run, X)

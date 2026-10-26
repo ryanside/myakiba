@@ -29,10 +29,12 @@ import { createTestDatabase } from "../../../test/database";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-let extensionRelease = "released";
-await mock.module("@myakiba/contracts/shared/extension-release", () => ({
-  get EXTENSION_RELEASE() { return extensionRelease; },
-}));
+async function setExtensionRelease(value: "released" | "in_review") {
+  await mock.module("@myakiba/contracts/shared/extension-release", () => ({
+    EXTENSION_RELEASE: value,
+  }));
+}
+await setExtensionRelease("released");
 
 
 await mock.module("@myakiba/auth/server", () => ({
@@ -332,7 +334,7 @@ async function expireLease() {
 }
 
 beforeEach(async () => {
-  extensionRelease = "released";
+  await setExtensionRelease("released");
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -1285,7 +1287,7 @@ describe("extension release gate", () => {
       const run = operation === "start" ? null : await startRun(archive);
       const before = await db.select().from(dataTransferImport);
       const beforeItems = await db.select().from(dataTransferImportItem);
-      extensionRelease = "in_review";
+      await setExtensionRelease("in_review");
       const reply = !run ? await start(archive)
         : operation === "complete" ? await complete(run.id, 98778)
         : operation === "retry" ? await post("/imports/current/retry")
