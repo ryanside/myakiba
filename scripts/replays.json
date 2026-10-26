@@ -1168,6 +1168,7 @@
     },
     {
       "fix": "b53a73fda737e4082e273dacc80323d7617bbf5d",
+      "testAt": "b1bfe8eb368ed73a7719863ab511206bed8006f1",
       "bug": "unsupported user currency and date format values were accepted at sign-up and update",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1235,6 +1236,7 @@
     },
     {
       "fix": "f75b692b5f6069590b333da9cd93718a14840a7d",
+      "testAt": "b1bfe8eb368ed73a7719863ab511206bed8006f1",
       "bug": "email provider failure disclosed account existence and failed sign-up after persistence",
       "test": "packages/auth/src/server.test.ts",
       "fixed": [
@@ -1469,6 +1471,18 @@
         "a malformed retained order payload refuses retry before reading Order lock fields",
         "a malformed retained order-item payload refuses retry before reading Order lock fields",
         "a malformed retained csv payload refuses retry before reading Order lock fields"
+      ]
+    },
+    {
+      "fix": "c6607a0bf8dbb9f1cc08c4b05991fb17e2917095",
+      "testAt": "59f24ae2f5582ae6e8d049cd5c02427cbc9bccc9",
+      "bug": "unsupported user preferences returned a custom error instead of Better Auth field validation responses",
+      "test": "packages/auth/src/server.test.ts",
+      "fixed": [
+        "sign-up rejects unsupported currency",
+        "sign-up rejects unsupported dateFormat",
+        "update-user rejects unsupported currency",
+        "update-user rejects unsupported dateFormat"
       ]
     }
   ],
