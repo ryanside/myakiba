@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
 import { Route as appCalendarRouteImport } from './routes/(app)/calendar'
 import { Route as appCollectionRouteImport } from './routes/(app)/collection'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appAnalyticsRoute = appAnalyticsRouteImport.update({
@@ -174,6 +180,7 @@ const appItemCustomIdRoute = appItemCustomIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/privacy': typeof PrivacyRoute
   '/analytics': typeof appAnalyticsRoute
   '/calendar': typeof appCalendarRoute
   '/collection': typeof appCollectionRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/privacy': typeof PrivacyRoute
   '/analytics': typeof appAnalyticsRoute
   '/calendar': typeof appCalendarRoute
   '/collection': typeof appCollectionRoute
@@ -231,6 +239,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
+  '/privacy': typeof PrivacyRoute
   '/(app)/analytics': typeof appAnalyticsRoute
   '/(app)/calendar': typeof appCalendarRoute
   '/(app)/collection': typeof appCollectionRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/privacy'
     | '/analytics'
     | '/calendar'
     | '/collection'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/privacy'
     | '/analytics'
     | '/calendar'
     | '/collection'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/(app)'
+    | '/privacy'
     | '/(app)/analytics'
     | '/(app)/calendar'
     | '/(app)/collection'
@@ -347,6 +359,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
   authResetPasswordRoute: typeof authResetPasswordRoute
@@ -369,6 +382,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/analytics': {
@@ -609,6 +629,7 @@ const changelogChangelogRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
   authResetPasswordRoute: authResetPasswordRoute,
