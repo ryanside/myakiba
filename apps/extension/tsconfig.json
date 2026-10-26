@@ -4,5 +4,5 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "noEmit": true
   },
-  "include": ["entrypoints", "lib", "test", "e2e", "wxt.config.ts"]
+  "include": ["entrypoints", "lib", "scripts", "test", "e2e", "wxt.config.ts"]
 }

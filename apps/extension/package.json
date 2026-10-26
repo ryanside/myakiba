@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "wxt build && wxt build -b firefox --mv3",
+    "icons": "bun scripts/icons.ts",
     "check-types": "tsc --noEmit",
     "test": "bun test lib/",
     "e2e": "bun test e2e/"
