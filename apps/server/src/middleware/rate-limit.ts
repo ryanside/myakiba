@@ -1,4 +1,3 @@
-import { RateLimited } from "./errors/rate-limited";
 import { Elysia, status } from "elysia";
 import { createHash } from "node:crypto";
 import { redis } from "@myakiba/redis/client";
@@ -159,9 +158,8 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
       set.headers["X-RateLimit-Reset"] = String(result.ttl);
 
       if (result.limited) {
-        const failure = new RateLimited({ retryAfterSeconds: result.ttl });
-        set.headers["Retry-After"] = String(failure.retryAfterSeconds);
-        return status(429, failure.message);
+        set.headers["Retry-After"] = String(result.ttl);
+        return status(429, `Rate limit exceeded, try again in ${result.ttl} seconds`);
       }
     },
   }),
