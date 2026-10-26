@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = React.ComponentProps<typeof Button>["variant"];
@@ -24,7 +25,6 @@ interface ConfirmDialogProps {
   readonly title: string;
   readonly description?: React.ReactNode;
   readonly confirmLabel?: string;
-  readonly loadingLabel?: string;
   readonly cancelLabel?: string;
   readonly variant?: ButtonVariant;
   readonly icon?: IconSvgElement;
@@ -48,7 +48,6 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Delete",
-  loadingLabel = "Deleting...",
   cancelLabel = "Cancel",
   variant = "destructive",
   icon = AlertCircleIcon,
@@ -56,7 +55,8 @@ export function ConfirmDialog({
   disabled = false,
 }: ConfirmDialogProps): React.ReactElement {
   const [internalOpen, setInternalOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const { status, run } = useButtonStatus();
+  const isSubmitting = status === "loading";
 
   const isControlled = open !== undefined;
   const actualOpen = isControlled ? open : internalOpen;
@@ -74,14 +74,11 @@ export function ConfirmDialog({
   };
 
   const handleConfirm = async (): Promise<void> => {
-    setIsSubmitting(true);
     try {
-      await onConfirm();
+      await run(async () => onConfirm());
       closeDialog();
     } catch {
       // The calling mutation reports the failure. Keep this dialog open for another attempt.
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -112,15 +109,16 @@ export function ConfirmDialog({
             <DialogClose render={<Button variant="outline" />} disabled={isSubmitting}>
               {cancelLabel}
             </DialogClose>
-            <Button
+            <StatusButton
               variant={variant}
-              disabled={disabled || isSubmitting}
+              status={status}
+              disabled={disabled}
               onClick={() => {
                 void handleConfirm();
               }}
             >
-              {isSubmitting ? loadingLabel : confirmLabel}
-            </Button>
+              {confirmLabel}
+            </StatusButton>
           </DialogFooter>
         </DialogContent>
       ) : null}

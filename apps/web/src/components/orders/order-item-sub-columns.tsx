@@ -153,7 +153,6 @@ function OrderItemActionsCell({
         title="Remove item?"
         description="This will remove this item from the order."
         confirmLabel="Remove"
-        loadingLabel="Removing..."
         onConfirm={() => onDeleteItem(orderId, item.id)}
       />
     </>
