@@ -1985,6 +1985,18 @@
         "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run ends the run and closes the MFC tab"
       ]
+    },
+    {
+      "fix": "42ba5057d448548d7e6154065ad3ada3e10a8d1b",
+      "testAt": "42ba5057d448548d7e6154065ad3ada3e10a8d1b",
+      "bug": "the extension re-read its MFC session state from storage at every step, so a refused read failed the item that needed it and a refused turn booking failed the item before its load",
+      "test": "apps/extension/lib/throttle.test.ts",
+      "fixed": [
+        "the throttle's books > when storage fails > books storage will not read leave the queue on an open throttle, and are logged once",
+        "a throttle turn > whose books storage will not read runs on an open throttle and logs why",
+        "a throttle turn > reads its books from storage once, however many turns it runs",
+        "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
+      ]
     }
   ],
   "lint": [
