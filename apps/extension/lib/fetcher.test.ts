@@ -273,9 +273,9 @@ describe("the throttle's books", () => {
       };
     }
 
-    function armedOn(books: ReturnType<typeof failingBooks>) {
+    function armedOn(books: ReturnType<typeof failingBooks>, armingId = 1) {
       return ({ mfcItemId }: PageRequest) => {
-        if (mfcItemId === 1) books.arm();
+        if (mfcItemId === armingId) books.arm();
         return page(itemPage(mfcItemId));
       };
     }
@@ -296,7 +296,7 @@ describe("the throttle's books", () => {
       ]);
     });
 
-    test("an answer that cannot be booked stops the queue, which starts again and fetches the item again", async () => {
+    test("an answer that cannot be booked fails its item, and the queue goes on", async () => {
       const books = failingBooks("save", 2);
       const extension = fakeExtension({
         throttleState: books.throttleState,
@@ -305,12 +305,37 @@ describe("the throttle's books", () => {
       const run = extension.run([1, 2]);
       await extension.clock.runUntil(run.done);
 
-      expect(run.results().map((result) => result.ok)).toEqual([true, true]);
-      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(1), itemId(2)]);
-      expect(error.mock.calls.map((call) => String(call[0]))).toEqual([
-        "the MFC fetch queue stopped",
+      expect(run.results().map((result) => result.ok || result.error)).toEqual([
+        "unexpected_page",
+        true,
       ]);
+      expect(fetches(extension.calls)).toEqual([itemId(1), itemId(2)]);
+      expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+        expect.stringContaining("SessionStorageUnavailable for MFC item 1:"),
+      ]);
+      expect(error).not.toHaveBeenCalled();
     });
+
+    test.each([
+      ["the only item of a run", [1], 1],
+      ["the last item of a run", [1, 2, 3], 3],
+    ] as const)(
+      "an answer that cannot be booked for %s ends the run and closes the MFC tab",
+      async (_name, ids, last) => {
+        const books = failingBooks("save", 2);
+        const extension = fakeExtension({
+          throttleState: books.throttleState,
+          pages: armedOn(books, last),
+        });
+        const run = extension.run(ids);
+        await extension.clock.runUntil(run.done);
+        await extension.settle();
+
+        const answered = run.results().map((result) => result.ok || result.error);
+        expect(answered).toEqual([...ids.slice(0, -1).map(() => true as const), "unexpected_page"]);
+        expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+      },
+    );
 
     test("a turn whose books cannot be read fails only its item", async () => {
       const books = failingBooks("load", 3);
