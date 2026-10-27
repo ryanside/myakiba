@@ -170,6 +170,15 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
   });
 });
 
+test("an answer whose JSON body is not JSON keeps the reader's error as its cause", async () => {
+  answerWith(body(200, "<html>", "application/json"));
+  expect(await failureOf(getOrder("od-alpha"))).toMatchObject({
+    _tag: "ApiUnreadable",
+    message: ORDER_FALLBACK,
+    cause: expect.any(SyntaxError),
+  });
+});
+
 describe("a read that names its own 422 text", () => {
   test("shows it for a validation body", async () => {
     answerWith(body(422, validation, "application/json"));
