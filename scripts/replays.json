@@ -2163,6 +2163,42 @@
         "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
       ]
+    },
+    {
+      "fix": "f28d3e1e6648d759c261c13a90a1e24ece7da0cf",
+      "testAt": "f28d3e1e6648d759c261c13a90a1e24ece7da0cf",
+      "bug": "kernel 500 logs lost the underlying Postgres message and diagnostics",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": ["a failing DB write logs the underlying Postgres message and diagnostics"]
+    },
+    {
+      "fix": "7e51f393c8d0f0319a69ff8aa52822447387c420",
+      "testAt": "7e51f393c8d0f0319a69ff8aa52822447387c420",
+      "bug": "a second operation guard silently replaced the release gate",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": ["a second guard panics with the operation name and preserves the first guard"]
+    },
+    {
+      "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",
+      "testAt": "ba67fad0e1e4d913913a55062d4488f9bba8a191",
+      "bug": "problem pages for non-pending import items must answer the upload ownership 409",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "items fetched through the extension > the same item uploaded twice writes once",
+        "items fetched through the extension > a failure from an earlier run is ignored, and a late success is refused",
+        "upload ownership > before preparation refuses finished import",
+        "upload ownership > before preparation refuses wrong job",
+        "upload ownership > before preparation refuses failed item",
+        "upload ownership > before preparation refuses imported item",
+        "upload ownership > before preparation refuses missing item",
+        "upload ownership > after preparation refuses finished import",
+        "upload ownership > after preparation refuses wrong job",
+        "upload ownership > after preparation refuses failed item",
+        "upload ownership > after preparation refuses imported item",
+        "upload ownership > after preparation refuses missing item",
+        "items fetched through the extension > a problem page for an already failed item answers 409 without changing the import",
+        "items fetched through the extension > a problem page for an already imported item answers 409 without changing the import"
+      ]
     }
   ],
   "lint": [
