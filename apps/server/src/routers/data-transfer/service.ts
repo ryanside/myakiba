@@ -56,6 +56,17 @@ import { ExportTooManyRecords } from "./errors/export-too-many-records";
 import { ExportUnsupportedCollectionItem } from "./errors/export-unsupported-collection-item";
 import { ImportAlreadyActive } from "./errors/import-already-active";
 import { ImportNotRetryable } from "./errors/import-not-retryable";
+import { UploadNotInRunningImport } from "./errors/upload-not-in-running-import";
+
+type CompleteItemResult = Result<
+  | { readonly kind: "imported"; readonly import: DataTransferImport | null }
+  | {
+      readonly kind: "problem";
+      readonly problem: MfcPageProblem["kind"];
+      readonly message: string;
+    },
+  StoreItemPictureFailed | MfcItemNotPersisted | UploadNotInRunningImport
+>;
 
 type Applied = Awaited<ReturnType<typeof applyArchive>>;
 
@@ -274,7 +285,34 @@ async function applyItemRows(
     .where(eq(dataTransferImport.userId, run.userId));
 }
 
+async function pendingUpload(
+  db: ReadTx,
+  current: ImportView | undefined,
+  userId: string,
+  upload: DataTransferImportItemUpload,
+) {
+  if (!current || current.row.jobId !== upload.jobId || current.status !== "running") return;
+  const [waiting] = await db
+    .select({ rows: dataTransferImportItem.rows })
+    .from(dataTransferImportItem)
+    .where(
+      and(
+        eq(dataTransferImportItem.userId, userId),
+        eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+        eq(dataTransferImportItem.status, "pending"),
+      ),
+    );
+  return waiting;
+}
+
 const DataTransferService = {
+  async checkUpload(userId: string, upload: DataTransferImportItemUpload, db: ReadTx) {
+    const current = await readView(db, userId, new Date());
+    return (await pendingUpload(db, current, userId, upload))
+      ? Result.ok(undefined)
+      : Result.err(new UploadNotInRunningImport());
+  },
+
   async exportArchive(
     userId: string,
     tx: ReadTx,
@@ -585,84 +623,57 @@ const DataTransferService = {
     userId: string,
     upload: DataTransferImportItemUpload,
     prepared: Awaited<ReturnType<typeof prepareMfcItem>>,
-  ): Promise<
-    Result<
-      | { readonly kind: "imported"; readonly import: DataTransferImport | null }
-      | {
-          readonly kind: "problem";
-          readonly problem: MfcPageProblem["kind"];
-          readonly message: string;
-        },
-      StoreItemPictureFailed | MfcItemNotPersisted
-    >
-  > {
-    if (prepared.isErr()) {
-      if (StoreItemPictureFailed.is(prepared.error)) return Result.err(prepared.error);
-      const problem = prepared.error.problem.kind;
-      const message = PROBLEM_MESSAGE[problem];
-      await DataTransferService.failItem(scope, userId, {
-        jobId: upload.jobId,
-        mfcItemId: upload.mfcItemId,
-        reason: message,
-      });
-      return Result.ok({ kind: "problem", problem, message });
-    }
-    const ready = prepared.value;
-
+  ): Promise<CompleteItemResult> {
     const now = new Date();
-    const mutated = await mutateImport<Result<ImportView | undefined, MfcItemNotPersisted>>(
-      scope,
-      userId,
-      now,
-      async (tx, current) => {
-        if (!current) return { value: Result.ok(current), changed: false };
-        if (ready.kind === "parsed") {
-          const ensured = await ensureMfcItem(tx, ready.page, ready.stored);
-          if (ensured.isErr()) return { value: Result.err(ensured.error), changed: false };
+    return mutateImport<CompleteItemResult>(scope, userId, now, async (tx, current) => {
+      const waiting = await pendingUpload(tx, current, userId, upload);
+      if (!current || !waiting) {
+        return { value: Result.err(new UploadNotInRunningImport()), changed: false };
+      }
+      if (prepared.isErr()) {
+        if (StoreItemPictureFailed.is(prepared.error)) {
+          return { value: Result.err(prepared.error), changed: false };
         }
-        if (current.row.jobId === upload.jobId) {
-          await tx
-            .update(dataTransferImport)
-            .set({ heartbeatAt: now })
-            .where(eq(dataTransferImport.userId, userId));
-        }
-
-        const [waiting] = await tx
-          .select({ status: dataTransferImportItem.status, rows: dataTransferImportItem.rows })
-          .from(dataTransferImportItem)
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        if (!waiting || waiting.status === "imported") {
-          return { value: Result.ok(current), changed: false };
-        }
-
-        const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
-        if (!arrived.has(upload.mfcItemId)) {
-          panic(
-            `MFC item ${upload.mfcItemId} was neither created nor found by its ingest for import ${upload.jobId}`,
-          );
-        }
-        await applyItemRows(tx, current, arrived, waiting.rows);
-        await tx
-          .update(dataTransferImportItem)
-          .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
-            ),
-          );
-        return { value: Result.ok(await settle(tx, userId, now)), changed: true };
-      },
-    );
-    if (mutated.isErr()) return Result.err(mutated.error);
-    const view = mutated.value;
-
-    return Result.ok({ kind: "imported", import: view ? toImport(view) : null });
+        const problem = prepared.error.problem.kind;
+        const message = PROBLEM_MESSAGE[problem];
+        await DataTransferService.failItem(scope, userId, {
+          jobId: upload.jobId,
+          mfcItemId: upload.mfcItemId,
+          reason: message,
+        });
+        return { value: Result.ok({ kind: "problem" as const, problem, message }), changed: false };
+      }
+      const ready = prepared.value;
+      if (ready.kind === "parsed") {
+        const ensured = await ensureMfcItem(tx, ready.page, ready.stored);
+        if (ensured.isErr()) return { value: Result.err(ensured.error), changed: false };
+      }
+      await tx
+        .update(dataTransferImport)
+        .set({ heartbeatAt: now })
+        .where(eq(dataTransferImport.userId, userId));
+      const arrived = await loadImportableItems(tx, [upload.mfcItemId]);
+      if (!arrived.has(upload.mfcItemId)) {
+        panic(
+          `MFC item ${upload.mfcItemId} was neither created nor found by its ingest for import ${upload.jobId}`,
+        );
+      }
+      await applyItemRows(tx, current, arrived, waiting.rows);
+      await tx
+        .update(dataTransferImportItem)
+        .set({ status: "imported", errorReason: null, rows: [], updatedAt: now })
+        .where(
+          and(
+            eq(dataTransferImportItem.userId, userId),
+            eq(dataTransferImportItem.itemExternalId, upload.mfcItemId),
+          ),
+        );
+      const view = await settle(tx, userId, now);
+      return {
+        value: Result.ok({ kind: "imported" as const, import: toImport(view) }),
+        changed: true,
+      };
+    });
   },
 
   async failItem(

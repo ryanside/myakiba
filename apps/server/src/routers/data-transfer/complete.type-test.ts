@@ -1,5 +1,5 @@
 import type { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
-import type { ImportNotRetryable } from "./errors/import-not-retryable";
+import type { UploadNotInRunningImport } from "./errors/upload-not-in-running-import";
 /**
  * dataTransfer.completeItem answers an unreadable page with one of the MFC page messages.
  * Its 400 was typed as string; better-result types it as their literals. The wire is the same.
@@ -29,6 +29,6 @@ void (true satisfies Equal<
   Failures,
   | S<400, (typeof PROBLEM_MESSAGE)[keyof typeof PROBLEM_MESSAGE]>
   | S<409, ExtensionImportUnavailable["message"]>
-  | S<409, ImportNotRetryable["message"]>
+  | S<409, UploadNotInRunningImport["message"]>
   | S<500, "Failed to import the item.">
 >);

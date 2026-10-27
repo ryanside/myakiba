@@ -1,4 +1,3 @@
-import { ImportNotRetryable } from "./errors/import-not-retryable";
 import { gated } from "@/domain/extension-import";
 import { Buffer } from "node:buffer";
 import type { RequestLogger } from "evlog";
@@ -168,8 +167,12 @@ export const DataTransfer = {
         action: "dataTransfer.completeItem",
         failure: "Failed to import the item.",
         before: async (scope, input: DataTransferImportItemUpload) => {
-          const current = await DataTransferService.getCurrentImport(scope.viewer.userId, scope.tx);
-          if (!current) return Result.err(new ImportNotRetryable());
+          const allowed = await DataTransferService.checkUpload(
+            scope.viewer.userId,
+            input,
+            scope.tx,
+          );
+          if (allowed.isErr()) return allowed;
           scope.log.set({ dataTransfer: { importId: input.jobId, mfcItemId: input.mfcItemId } });
           return scope.proceed({ upload: input, prepared: await prepareMfcItem(scope.tx, input) });
         },
