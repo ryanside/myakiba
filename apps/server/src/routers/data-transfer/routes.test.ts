@@ -51,12 +51,14 @@ await mock.module("@myakiba/auth/server", () => ({
 
 let failS3 = false;
 let picturePuts = 0;
+let duringPicturePut: (() => Promise<void>) | undefined;
 await mock.module("@/lib/item-images", () => ({
   createItemImages,
   itemImages: createItemImages({
     client: {
       send: async () => {
         picturePuts += 1;
+        await duringPicturePut?.();
         if (failS3) throw new Error("S3 request timed out");
         return { $metadata: { httpStatusCode: 200 } };
       },
@@ -348,6 +350,7 @@ beforeEach(async () => {
   hangPublication = false;
   publicationCalls = 0;
   picturePuts = 0;
+  duringPicturePut = undefined;
 });
 
 describe("starting an import", () => {
@@ -489,13 +492,16 @@ describe("items fetched through the extension", () => {
     const [first, second] = await Promise.all([complete(jobId, 98_777), complete(jobId, 98_777)]);
     const third = await complete(jobId, 98_777);
 
-    expect([first.status, second.status, third.status]).toEqual([200, 200, 200]);
-    expect(third.body).toMatchObject({ status: "completed", importedCollectionItems: 1 });
+    expect([first.status, second.status].toSorted()).toEqual([200, 409]);
+    expect(third).toEqual({
+      status: 409,
+      body: "This upload does not belong to a running import.",
+    });
     expect(await collectionRows()).toHaveLength(1);
     expect(await db.select({ id: item.id }).from(item)).toHaveLength(1);
   });
 
-  test("a failure from an earlier run is ignored, and a late success still imports", async () => {
+  test("a failure from an earlier run is ignored, and a late success is refused", async () => {
     const started = await startRun(
       archiveOf([], [collectionRecord("c1", 98_777), collectionRecord("c2", 98_778)]),
     );
@@ -512,11 +518,8 @@ describe("items fetched through the extension", () => {
     await fail(retried.id, 98_778);
     const late = await complete(firstRun, 98_778);
 
-    expect(late.body).toMatchObject({
-      status: "partial",
-      importedCollectionItems: 1,
-      failedCollectionItems: 1,
-    });
+    expect(late).toEqual({ status: 409, body: "This upload does not belong to a running import." });
+    expect(await db.select().from(item)).toEqual([]);
   });
 
   test("a page MyFigureCollection would not show fails the item with its reason", async () => {
@@ -855,6 +858,7 @@ test("an S3 preparation timeout records a retryable import item failure", async 
   } finally {
     failS3 = false;
     picturePuts = 0;
+    duringPicturePut = undefined;
   }
   const retried = await post("/imports/current/retry");
   const retry = dataTransferImportSchema
@@ -1390,4 +1394,57 @@ describe("committed data-transfer publication", () => {
       initLogger({ enabled: false });
     }
   });
+});
+
+describe("upload ownership", () => {
+  for (const stage of ["before preparation", "after preparation"]) {
+    for (const state of [
+      "finished import",
+      "wrong job",
+      "failed item",
+      "imported item",
+      "missing item",
+    ]) {
+      test(`${stage} refuses ${state}`, async () => {
+        const run = await startRun(
+          archiveOf([], [collectionRecord("c1", 98_777), collectionRecord("c2", 98_778)]),
+        );
+        const invalidate = async () => {
+          switch (state) {
+            case "finished import":
+              await db
+                .update(dataTransferImport)
+                .set({ status: "completed" })
+                .where(eq(dataTransferImport.userId, userId));
+              break;
+            case "wrong job":
+              await db
+                .update(dataTransferImport)
+                .set({ jobId: "another-job" })
+                .where(eq(dataTransferImport.userId, userId));
+              break;
+            case "missing item":
+              await db
+                .delete(dataTransferImportItem)
+                .where(eq(dataTransferImportItem.itemExternalId, 98_777));
+              break;
+            default:
+              await db
+                .update(dataTransferImportItem)
+                .set({ status: state === "failed item" ? "failed" : "imported" })
+                .where(eq(dataTransferImportItem.itemExternalId, 98_777));
+          }
+        };
+        if (stage === "before preparation") await invalidate();
+        else duringPicturePut = invalidate;
+        expect(await complete(run.id, 98_777)).toEqual({
+          status: 409,
+          body: "This upload does not belong to a running import.",
+        });
+        expect(picturePuts).toBe(stage === "before preparation" ? 0 : 1);
+        expect(await db.select().from(item)).toEqual([]);
+        expect(await db.select().from(collection)).toEqual([]);
+      });
+    }
+  }
 });
