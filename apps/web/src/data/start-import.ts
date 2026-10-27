@@ -1,6 +1,6 @@
 import { Result } from "better-result";
 import { requireExtension } from "@/lib/extension-gate";
-import type { GateRefusal } from "@/lib/extension-gate";
+import type { ExtensionMissing } from "@/lib/extension-gate";
 
 /**
  * The one way a write that starts an import runs. It asks for the extension first, so a refused
@@ -9,7 +9,7 @@ import type { GateRefusal } from "@/lib/extension-gate";
  */
 export async function startImport<Output, Failure>(
   write: () => Promise<Result<Output, Failure>>,
-): Promise<Result<Output, Failure | GateRefusal>> {
+): Promise<Result<Output, Failure | ExtensionMissing>> {
   const ready = await requireExtension();
   if (ready.isErr()) return Result.err(ready.error);
   return write();

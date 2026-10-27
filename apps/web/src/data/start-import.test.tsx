@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Result } from "better-result";
 import type { ReactNode } from "react";
 import type { WriteFailed } from "@/lib/errors/write-failed";
-import type { GateRefusal } from "@/lib/extension-gate";
+import type { ExtensionMissing } from "@/lib/extension-gate";
 
 await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "in_review" }));
 const { ExtensionRequiredDialog } =
@@ -29,7 +29,7 @@ const noFeedback = { onSaved: () => {}, onFailed: () => {} };
 const archive = { orders: [], collectionItems: [] } as never;
 
 type Send = (typeof syncSends)[keyof typeof syncSends];
-type StartsImport = () => () => Promise<Result<object, WriteFailed | GateRefusal>>;
+type StartsImport = () => () => Promise<Result<object, WriteFailed | ExtensionMissing>>;
 
 function sending(send: Send): StartsImport {
   return function useSend() {
@@ -85,7 +85,7 @@ describe.each(Object.entries(writes))("%s", (_name, useStart) => {
     render(<ExtensionRequiredDialog />);
     const { result } = renderHook(useStart, { wrapper });
 
-    let started: Result<object, WriteFailed | GateRefusal> | undefined;
+    let started: Result<object, WriteFailed | ExtensionMissing> | undefined;
     await act(async () => {
       started = await result.current();
     });

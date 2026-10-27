@@ -1,16 +1,18 @@
 import { Result } from "better-result";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ExtensionMissing } from "@/lib/errors/extension-missing";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { EXTENSION_RELEASE } from "@/lib/extension-release";
 
-/** Why an import did not start: the extension is still in store review, or it is missing here. */
-export type GateRefusal = { readonly kind: "in_review" } | ExtensionMissing;
+/** Why an import did not start: the extension is still in store review, or it is missing or too old here. */
+export type ExtensionMissing =
+  | { readonly kind: "in_review"; readonly version: null }
+  | { readonly kind: "absent"; readonly version: null }
+  | { readonly kind: "outdated"; readonly version: string };
 
 export type MissingExtensionDialog = {
   readonly open: boolean;
-  readonly refusal: GateRefusal;
+  readonly refusal: ExtensionMissing;
 };
 
 /** Whether anyone can install the extension yet. */
@@ -31,19 +33,19 @@ function subscribeDialog(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-async function checkExtension(): Promise<Result<void, GateRefusal>> {
-  if (!extensionReleased()) return Result.err({ kind: "in_review" });
+async function checkExtension(): Promise<Result<void, ExtensionMissing>> {
+  if (!extensionReleased()) return Result.err({ kind: "in_review", version: null });
   const status = await extensionBridge.probe();
   if (status.kind === "ready") return Result.ok();
   return Result.err(
     status.kind === "outdated"
-      ? new ExtensionMissing({ kind: "outdated", version: status.extensionVersion })
-      : new ExtensionMissing({ kind: "absent", version: null }),
+      ? { kind: "outdated", version: status.extensionVersion }
+      : { kind: "absent", version: null },
   );
 }
 
 /** Asks for the extension before an import. A refusal opens the notice that says why. */
-export async function requireExtension(): Promise<Result<void, GateRefusal>> {
+export async function requireExtension(): Promise<Result<void, ExtensionMissing>> {
   const checked = await checkExtension();
   if (checked.isErr()) showDialog({ open: true, refusal: checked.error });
   return checked;
@@ -69,7 +71,7 @@ export function useExtensionGate(): ExtensionGate {
     if (asking.current) return;
     asking.current = true;
     setChecking(true);
-    let ready: Result<void, GateRefusal>;
+    let ready: Result<void, ExtensionMissing>;
     try {
       ready = await requireExtension();
     } finally {

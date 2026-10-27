@@ -13,7 +13,7 @@ import { useId } from "react";
 import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
 import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
 import { dismissMissingExtension, useMissingExtensionDialog } from "@/lib/extension-gate";
-import type { ExtensionMissing } from "@/lib/errors/extension-missing";
+import type { ExtensionMissing } from "@/lib/extension-gate";
 
 const COPY = {
   absent: {
@@ -28,7 +28,7 @@ const COPY = {
       "This version of the extension is too old for myakiba. Update it, reload this page, then try again.",
     link: "How to update it",
   },
-} as const satisfies Record<ExtensionMissing["kind"], Record<string, string>>;
+} as const satisfies Record<Exclude<ExtensionMissing["kind"], "in_review">, Record<string, string>>;
 
 export function ExtensionRequiredDialog() {
   const dialog = useMissingExtensionDialog();
