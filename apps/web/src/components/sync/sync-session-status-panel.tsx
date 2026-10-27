@@ -1,12 +1,10 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import type { EnrichedSyncSessionItemRow, SyncSessionRow } from "@myakiba/contracts/sync/types";
+import type { EnrichedSyncSessionItemRow, SyncSessionDetail } from "@myakiba/contracts/sync/types";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSyncJobStatusQuery } from "@/hooks/use-sync-job-status-query";
-import { useRead } from "@/data/client";
-import { sync } from "@/data/resources/sync";
 import { resolveSyncMessage } from "@/lib/sync";
 import type { PriceWarning } from "@/lib/sync";
 import { cn } from "@/lib/utils";
@@ -19,8 +17,15 @@ export function SyncSessionStatusPanel({
 }: {
   readonly session:
     | Pick<
-        SyncSessionRow,
-        "id" | "jobId" | "syncType" | "statusMessage" | "totalItems" | "successCount" | "failCount"
+        SyncSessionDetail,
+        | "id"
+        | "jobId"
+        | "syncType"
+        | "statusMessage"
+        | "totalItems"
+        | "successCount"
+        | "failCount"
+        | "warnings"
       >
     | undefined;
   /** The session's loaded items, which name the items its price warnings point at. */
@@ -33,10 +38,6 @@ export function SyncSessionStatusPanel({
     session?.id ?? null,
     session?.syncType ?? null,
   );
-  const csvJobId = session?.syncType === "csv" ? session.jobId : null;
-  const { data: priceWarnings = [] } = useRead(sync.priceWarnings, csvJobId ?? "", {
-    enabled: csvJobId !== null,
-  });
 
   if (isLoading) {
     return (
@@ -69,7 +70,9 @@ export function SyncSessionStatusPanel({
   const message = resolveSyncMessage(session, isLive ? (jobStatus ?? null) : null, isStreamError);
 
   const warningsList =
-    priceWarnings.length > 0 ? <PriceWarnings warnings={priceWarnings} items={items} /> : null;
+    session.warnings.length > 0 ? (
+      <PriceWarnings warnings={session.warnings} items={items} />
+    ) : null;
 
   if (!message) return warningsList;
 

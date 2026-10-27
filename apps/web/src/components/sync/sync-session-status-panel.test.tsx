@@ -8,6 +8,12 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 
+const warnings = [
+  { mfcItemId: 101, input: "12,50" },
+  { mfcItemId: 202, input: "abc" },
+];
+
+// Revisions before the session detail carried warnings read them from the job-status stream.
 const endedJob = {
   jobId: "job-1",
   phase: "completed",
@@ -18,10 +24,7 @@ const endedJob = {
   startedAt: "2026-10-26T00:00:00.000Z",
   updatedAt: "2026-10-26T00:01:00.000Z",
   terminalState: "success",
-  warnings: [
-    { mfcItemId: 101, input: "12,50" },
-    { mfcItemId: 202, input: "abc" },
-  ],
+  warnings,
 };
 
 async function* stream(...chunks: unknown[]) {
@@ -50,6 +53,7 @@ const session = {
   totalItems: 2,
   successCount: 2,
   failCount: 0,
+  warnings,
 } as const;
 
 async function renderPanel() {

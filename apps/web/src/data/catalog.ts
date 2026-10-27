@@ -43,7 +43,6 @@ const catalog = {
   currentImport: { kind: "live", roots: ["dataTransferImport"] },
   importStatus: { kind: "live", roots: ["dataTransferImportStatus"] },
   syncJobStatus: { kind: "live", roots: ["syncJobStatus"] },
-  syncPriceWarnings: { kind: "static", roots: ["syncPriceWarnings"] },
   version: { kind: "static", roots: ["version"] },
 } as const satisfies Record<string, FamilySpec>;
 
