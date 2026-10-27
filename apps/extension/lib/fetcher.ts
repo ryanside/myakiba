@@ -2,7 +2,7 @@ import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
-import { Panic, Result, UnhandledException, panic } from "better-result";
+import { Result, panic } from "better-result";
 import { timeoutSignal, unlessAborted } from "./clock";
 import type { Clock } from "./clock";
 import { NO_STATUS } from "./collect";
@@ -93,10 +93,7 @@ type PageRejected =
   | MfcWrongItem
   | MfcPageUnrecognized;
 
-/** A collector dep that throws instead of answering a Result still reads as a failed collector run. */
-type CollectFailure = PageCollectFailure | UnhandledException;
-
-type PageFailure = TurnFailure | CollectFailure;
+type PageFailure = TurnFailure | PageCollectFailure;
 
 type ItemFetchFailure = PageFailure | LeaseFailure;
 
@@ -128,7 +125,6 @@ const AFTER_PAGE_FAILURE = {
   CollectorInjectionFailed: { closeOwned: true, retryOwned: true },
   CollectorAnswerInvalid: { closeOwned: true, retryOwned: true },
   MfcPageFetchFailed: { closeOwned: true, retryOwned: true },
-  UnhandledException: { closeOwned: true, retryOwned: true },
   MfcLoadTimedOut: { closeOwned: false, retryOwned: true },
   MfcQueueHalted: { closeOwned: false, retryOwned: false },
 } as const satisfies Record<
@@ -174,7 +170,6 @@ function outcomeOf(failure: AttemptFailure): ItemOutcome {
     TabEditRefused: failed("unexpected_page"),
     TabOpenFailed: failed("unexpected_page"),
     TabQueryFailed: failed("unexpected_page"),
-    UnhandledException: failed("unexpected_page"),
     SessionStorageUnavailable: failed("unexpected_page"),
   });
 }
@@ -286,20 +281,6 @@ export function createFetcher(deps: FetcherDeps) {
     return { html: page.html, picture: logged.unwrapOr(null) };
   }
 
-  function collect(
-    tabId: number,
-    request: PageRequest,
-    signal: AbortSignal,
-  ): Promise<Result<CollectedPage, CollectFailure>> {
-    return Result.tryPromise({
-      try: () => deps.collectPage(tabId, request, signal),
-      catch: (cause) => {
-        if (Panic.is(cause)) throw cause;
-        return new UnhandledException({ cause });
-      },
-    }).then(Result.flatten);
-  }
-
   /**
    * The turn's timeout stops the collector, and the throttle reads what it then answers as that timeout. The item fails
    * for its page, so a tab that closed but could not be forgotten in storage is only logged.
@@ -311,7 +292,7 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<Result<CollectedPage, PageFailure>> {
     const request = { kind: "page", mode: "fetch", mfcItemId: job.mfcItemId } as const;
     const page = await throttle.load(signal, (timeout) =>
-      collect(lease.tabId, request, AbortSignal.any([signal, timeout])),
+      deps.collectPage(lease.tabId, request, AbortSignal.any([signal, timeout])),
     );
     if (
       page.isErr() &&
@@ -357,7 +338,7 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<CollectedPage | null> {
     const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
     for (let tries = 1; !open.aborted; tries++) {
-      const page = await unlessAborted(open, collect(tabId, request, open));
+      const page = await unlessAborted(open, deps.collectPage(tabId, request, open));
       if (page?.isOk() && page.value.status !== NO_STATUS) return page.value;
       if (tries === READ_TRIES) break;
       await clock.sleep(READ_RETRY_MS, open);
@@ -426,9 +407,9 @@ export function createFetcher(deps: FetcherDeps) {
   }
 
   /**
-   * Answers one item, and is where its failures end. An expected failure is logged and answered as it is. A defect is
-   * reported and answered as an unhandled exception, so the queue moves on instead of retrying it forever. Null answers
-   * nothing, because the signal aborted: no run waits for the item any more.
+   * Answers one item, and is where its failures end. An expected failure is logged and answered as it is. A defect,
+   * whatever step throws it, is reported and answered as unexpected_page, so the queue moves on instead of retrying it
+   * forever. Null answers nothing, because the signal aborted: no run waits for the item any more.
    */
   async function attempt(job: Job, signal: AbortSignal): Promise<ItemOutcome | null> {
     const requester = liveRequester(job);
@@ -457,7 +438,7 @@ export function createFetcher(deps: FetcherDeps) {
         `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
         error,
       );
-      return signal.aborted ? null : outcomeOf(new UnhandledException({ cause: error }));
+      return signal.aborted ? null : { kind: "failed", code: "unexpected_page" };
     }
     if (signal.aborted) return null;
     if (answer.isOk()) return { kind: "page", page: answer.value };
