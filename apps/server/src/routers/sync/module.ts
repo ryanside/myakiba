@@ -1,3 +1,5 @@
+import { readStream } from "@/boundary/stream-read";
+import { streamStatus } from "./stream";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import {
   completeSyncItem,
@@ -13,7 +15,7 @@ import {
 import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
 import { Result, panic } from "better-result";
-import { command, query } from "@/domain/kernel";
+import { command, compose, query, stream } from "@/domain/kernel";
 import { EmailNotVerified } from "./errors/email-not-verified";
 import { ImportNotFound } from "./errors/import-not-found";
 import { InvalidLimit } from "./errors/invalid-limit";
@@ -834,6 +836,136 @@ export const SyncRuns = {
         items: { toFetch: result.missingMfcItemIds.length },
       });
       return Result.ok({ jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds });
+    },
+  ),
+};
+
+type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infer I) => void } }
+  ? I
+  : never;
+
+export const SyncRequests = {
+  stream: stream(
+    { action: "sync.jobStatus", failure: "Error fetching job status" },
+    (scope, input: { readonly jobId: string; readonly signal: AbortSignal }) =>
+      streamStatus({
+        log: scope.log,
+        jobId: input.jobId,
+        signal: input.signal,
+        read: () => readStream(scope, Sync.jobStatus, { jobId: input.jobId }),
+      }),
+  ),
+
+  item: compose(
+    {
+      action: "sync.item",
+      failure: "Failed to check for existing items",
+      steps: [Sync.planItem, Sync.start, Sync.createSession, Sync.completeItemSession],
+      before: (scope, input: InputOf<typeof Sync.planItem>) => scope.execute(Sync.planItem, input),
+    },
+    async (scope, plan) => {
+      if (plan.response.jobId) {
+        const started = await scope.execute(Sync.start, plan);
+        if (started.isErr()) return started;
+      } else {
+        const created = await scope.execute(Sync.createSession, plan.session);
+        if (created.isErr()) return created;
+        const completed = await scope.execute(Sync.completeItemSession, {
+          id: plan.session.id,
+          statusMessage: plan.response.status,
+        });
+        if (completed.isErr()) return completed;
+      }
+      return Result.ok(plan.response);
+    },
+  ),
+  csv: compose(
+    {
+      action: "sync.csv",
+      failure: "Failed to check for existing items",
+      steps: [Sync.planCsv, Sync.start, Sync.completeCsv],
+      before: (scope, input: InputOf<typeof Sync.planCsv>) => scope.execute(Sync.planCsv, input),
+    },
+    async (scope, plan) => {
+      const saved = plan.response.jobId
+        ? await scope.execute(Sync.start, plan)
+        : await scope.execute(Sync.completeCsv, plan.complete);
+      if (saved.isErr()) return saved;
+      return Result.ok(plan.response);
+    },
+  ),
+  order: compose(
+    {
+      action: "sync.order",
+      failure: "Failed to check for existing items",
+      steps: [Sync.planOrder, Sync.start, Sync.completeOrder],
+      before: (scope, input: InputOf<typeof Sync.planOrder>) =>
+        scope.execute(Sync.planOrder, input),
+    },
+    async (scope, plan) => {
+      const saved = plan.response.jobId
+        ? await scope.execute(Sync.start, plan)
+        : await scope.execute(Sync.completeOrder, plan.complete);
+      if (saved.isErr()) return saved;
+      return Result.ok(plan.response);
+    },
+  ),
+  orderItem: compose(
+    {
+      action: "sync.orderItem",
+      failure: "Failed to check for existing items",
+      steps: [Sync.order, Sync.planOrderItem, Sync.start, Sync.completeOrderItem],
+      before: async (scope, input: InputOf<typeof Sync.order>) => {
+        const order = await scope.execute(Sync.order, input);
+        if (order.isErr()) return order;
+        return scope.execute(Sync.planOrderItem, { body: input.body, order: order.value });
+      },
+    },
+    async (scope, plan) => {
+      const saved = plan.response.jobId
+        ? await scope.execute(Sync.start, plan)
+        : await scope.execute(Sync.completeOrderItem, plan.complete);
+      if (saved.isErr()) return saved;
+      return Result.ok(plan.response);
+    },
+  ),
+  collection: compose(
+    {
+      action: "sync.collection",
+      failure: "Failed to check for existing items",
+      steps: [Sync.planCollection, Sync.start, Sync.completeCollection],
+      before: (scope, input: InputOf<typeof Sync.planCollection>) =>
+        scope.execute(Sync.planCollection, input),
+    },
+    async (scope, plan) => {
+      const saved = plan.response.jobId
+        ? await scope.execute(Sync.start, plan)
+        : await scope.execute(Sync.completeCollection, plan.complete);
+      if (saved.isErr()) return saved;
+      return Result.ok(plan.response);
+    },
+  ),
+  complete: compose(
+    {
+      action: "sync.completeItem",
+      failure: "Failed to import item",
+      steps: [SyncRuns.itemStatus, SyncRuns.complete],
+      before: async (
+        scope,
+        input: InputOf<typeof SyncRuns.complete> & { readonly emailVerified: boolean },
+      ) => {
+        const existing = await scope.execute(SyncRuns.itemStatus, {
+          id: input.id,
+          mfcItemId: input.upload.mfcItemId,
+          emailVerified: input.emailVerified,
+        });
+        if (existing.isErr()) return existing;
+        return Result.ok({ input, existing: existing.value });
+      },
+    },
+    async (scope, { input, existing }) => {
+      if (existing !== null) return Result.ok(existing);
+      return scope.execute(SyncRuns.complete, input);
     },
   ),
 };

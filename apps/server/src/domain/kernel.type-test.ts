@@ -18,7 +18,7 @@ import { privateApi } from "@/boundary/private-api";
 import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
-import { command, paginate, query, serve } from "./kernel";
+import { command, compose, paginate, query, serve, stream } from "./kernel";
 import { tagged } from "./tagged";
 
 const config = { action: "probe", failure: "Probe failed" };
@@ -404,3 +404,33 @@ query({ ...config, operational: [UnhandledException] }, async () =>
 
 // @ts-expect-error a bare tagged class reads as any to TS, which would list every internal error
 query({ ...config, operational: [Absent] }, async () => Result.ok(1));
+
+const composedStep = query(
+  { action: "types.step", failure: "Step failed" },
+  async (_scope, input: { readonly count: number }) =>
+    input.count > 0 ? Result.ok(input.count) : Result.err(new NoId()),
+);
+const composedWorkflow = compose(
+  {
+    action: "types.composed",
+    failure: "Plan failed",
+    steps: [composedStep],
+    before: async (_scope, input: { readonly count: number }) => Result.ok(input),
+  },
+  (scope, input) => scope.execute(composedStep, input),
+);
+const composedAnswer = () => serve(caller, composedWorkflow, { count: 1 });
+void (true satisfies Equal<
+  Awaited<ReturnType<typeof composedAnswer>>,
+  | number
+  | ElysiaCustomStatusResponse<400, "No id">
+  | ElysiaCustomStatusResponse<500, "Plan failed" | "Step failed">
+>);
+const eventStream = stream(
+  { action: "types.stream", failure: "Stream failed" },
+  async function* (_scope, input: { readonly count: number }) {
+    yield input.count;
+  },
+);
+const servedStream = () => serve(caller, eventStream, { count: 1 });
+void (true satisfies Equal<ReturnType<typeof servedStream>, AsyncGenerator<number, void>>);

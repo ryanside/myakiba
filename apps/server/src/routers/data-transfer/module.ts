@@ -1,3 +1,5 @@
+import { readStream } from "@/boundary/stream-read";
+import { streamStatus } from "./stream";
 import { Buffer } from "node:buffer";
 import type { RequestLogger } from "evlog";
 import type {
@@ -9,7 +11,7 @@ import type {
 import { DATA_TRANSFER_MAX_BYTES } from "@myakiba/contracts/data-transfer/schema";
 import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
 import { Result } from "better-result";
-import { command, query } from "@/domain/kernel";
+import { command, query, stream } from "@/domain/kernel";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import DataTransferService from "./service";
@@ -49,7 +51,23 @@ function logRun<R extends DataTransferImportRun>(
   return run;
 }
 
+const importStatus = query(
+  { action: "dataTransfer.importStatus", failure: "Failed to check import status." },
+  async (scope, _input: Record<never, never>) =>
+    Result.ok(await DataTransferService.getImportJobStatus(scope.viewer.userId, scope.tx)),
+);
+
 export const DataTransfer = {
+  stream: stream(
+    { action: "dataTransfer.importStatus", failure: "Failed to check import status." },
+    (scope, input: { readonly signal: AbortSignal }) =>
+      streamStatus({
+        log: scope.log,
+        signal: input.signal,
+        read: () => readStream(scope, importStatus, {}),
+      }),
+  ),
+
   export: query(
     { action: "dataTransfer.export", failure: "Failed to export data.", snapshot: true },
     async (scope, _input: Record<never, never>) => {
@@ -92,11 +110,7 @@ export const DataTransfer = {
       return Result.ok(currentImport);
     },
   ),
-  status: query(
-    { action: "dataTransfer.importStatus", failure: "Failed to check import status." },
-    async (scope, _input: Record<never, never>) =>
-      Result.ok(await DataTransferService.getImportJobStatus(scope.viewer.userId, scope.tx)),
-  ),
+  status: importStatus,
   remove: command(
     { action: "dataTransfer.deleteCurrentImport", failure: "Failed to delete the import session." },
     async (scope, _input: Record<never, never>) => {

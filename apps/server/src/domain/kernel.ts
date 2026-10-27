@@ -1,6 +1,5 @@
-import { status } from "elysia";
+import { ElysiaCustomStatusResponse, status } from "elysia";
 import * as z from "zod";
-import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
@@ -311,6 +310,23 @@ export function query<
   return op;
 }
 
+type StreamOp<I, T, M extends string> = Op<I, AsyncGenerator<T, void>, never, M> & {
+  readonly "~stream": true;
+};
+const streams = new WeakSet<AnyOp>();
+
+/** An event stream whose route delegates with yield* serve(...), keeping the framework's generator lifecycle. */
+export function stream<I, T, const M extends string>(
+  config: OpConfig<M>,
+  body: (scope: PoolScope, input: I) => AsyncGenerator<T, void>,
+): StreamOp<I, T, M> {
+  const op = { action: config.action, failure: config.failure, "~stream": true as const };
+  bodies.set(op, (async (scope, input) => Result.ok(body(scope as PoolScope, input))) as Body);
+  poolReads.add(op);
+  streams.add(op);
+  return op;
+}
+
 type Before<I, B extends AnyResult> = (scope: BeforeScope, input: I) => Promise<B>;
 
 /** What a `before` hands the body. */
@@ -400,6 +416,70 @@ export function command(
   return op;
 }
 
+type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
+type ValueOf<O> = O extends Op<infer _I, infer T, infer _F, infer _M> ? T : never;
+type ErrorOf<O> = O extends Op<infer _I, infer _T, infer F, infer _M> ? F : never;
+type CompositionScope<Steps extends readonly AnyOp[]> = Pick<ReadScope, "viewer" | "log"> & {
+  readonly execute: <O extends Steps[number]>(
+    op: O,
+    input: NoInfer<InputOf<O>>,
+  ) => Promise<Result<ValueOf<O>, ErrorOf<O>>>;
+};
+
+const compositions = new WeakMap<
+  AnyOp,
+  (scope: CompositionScope<readonly AnyOp[]>, input: never) => Promise<AnyResult>
+>();
+
+/** Plans in before and composes operations without opening an extra transaction. Each command owns its writes, recovery, effects and failure response. */
+export function compose<
+  I,
+  B extends AnyResult,
+  R extends AnyResult,
+  const M extends string,
+  const Steps extends readonly AnyOp[],
+>(
+  config: {
+    readonly action: string;
+    readonly failure: M;
+    readonly steps: Steps;
+    readonly before: (
+      scope: CompositionScope<Steps>,
+      input: I,
+    ) => Promise<B & Handled<InferErr<B>, false, never> & NoPanic<InferErr<B>>>;
+  },
+  body: (
+    scope: CompositionScope<Steps>,
+    input: InferOk<B>,
+  ) => Promise<R & Checked<R, InferErr<R>, false>>,
+): Op<I, InferOk<R>, PublicOf<InferErr<B> | InferErr<R>>, M | Steps[number]["failure"]> {
+  const op = { action: config.action, failure: config.failure };
+  compositions.set(op, async (scope, input) => {
+    const declared = scope as CompositionScope<Steps>;
+    const checked: CompositionScope<Steps> = {
+      viewer: scope.viewer,
+      log: scope.log,
+      execute: async (next, value) => {
+        if (!config.steps.includes(next))
+          panic(`${op.action} tried to execute undeclared step ${next.action}`);
+        return declared.execute(next, value);
+      },
+    };
+    const planning: CompositionScope<Steps> = {
+      ...checked,
+      execute: async (next, value) => {
+        if (!poolReads.has(next) && !snapshots.has(next))
+          panic(`${op.action} tried to execute command ${next.action} in before`);
+        return checked.execute(next, value);
+      },
+    };
+    const plan = await config.before(planning, input);
+    if (plan.isErr()) return plan;
+    return body(checked, plan.value as InferOk<B>);
+  });
+  return op;
+}
+
 type FailureResponse<F> = F extends {
   readonly category: infer C extends Category;
   readonly message: infer M;
@@ -407,12 +487,15 @@ type FailureResponse<F> = F extends {
   ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
   : never;
 
-/** Thrown inside the transaction so that it rolls back, carrying the Err that asked for it. */
-class Rollback {
-  readonly result: Err<unknown, Leftover>;
+type Stopped =
+  | { readonly kind: "rollback"; readonly result: Err<unknown, Leftover> }
+  | { readonly kind: "forward"; readonly settled: Exclude<Settled, { readonly kind: "answer" }> };
 
-  constructor(result: Err<unknown, Leftover>) {
-    this.result = result;
+class Stop {
+  readonly outcome: Stopped;
+
+  constructor(outcome: Stopped) {
+    this.outcome = outcome;
   }
 }
 
@@ -420,11 +503,12 @@ class Rollback {
 type Settled =
   | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
   /** A deliberate `panic` or `unwrap`, possibly wrapped: never retried or recovered. */
-  | { readonly kind: "defect"; readonly panic: Panic }
+  | { readonly kind: "defect"; readonly panic: Panic; readonly operation?: AnyOp }
   /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
-  | { readonly kind: "left"; readonly error: AnyTaggedError };
+  | { readonly kind: "left"; readonly error: AnyTaggedError; readonly operation?: AnyOp };
 
 function classify(cause: unknown): Settled {
+  if (cause instanceof Stop && cause.outcome.kind === "forward") return cause.outcome.settled;
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
   return { kind: "left", error: new UnhandledException({ cause }) };
@@ -546,7 +630,8 @@ async function attempts(
             failAfterCommit: (failure) => Result.err(committed(failure)),
           };
           const answered = await body(scope as never, handoff as never);
-          if (answered.isErr() && !keepsWrites(answered.error)) throw new Rollback(answered);
+          if (answered.isErr() && !keepsWrites(answered.error))
+            throw new Stop({ kind: "rollback", result: answered });
           return answered;
         },
         snapshots.has(op) ? SNAPSHOT : undefined,
@@ -554,7 +639,10 @@ async function attempts(
       await runEffects(op, attemptEffects, viewer, log);
       settled = settle(result);
     } catch (error) {
-      settled = error instanceof Rollback ? settle(error.result) : classify(error);
+      settled =
+        error instanceof Stop && error.outcome.kind === "rollback"
+          ? settle(error.outcome.result)
+          : classify(error);
     }
     if (settled.kind !== "left" || !retry) return settled;
     let again: boolean;
@@ -591,6 +679,65 @@ async function recovered(
   return defect ? { kind: "defect", panic: defect } : settled;
 }
 
+async function evaluate(
+  op: AnyOp,
+  viewer: Viewer,
+  input: never,
+  log: RequestLogger,
+): Promise<Settled> {
+  const composition = compositions.get(op);
+  let settled: Settled;
+  if (composition) {
+    let defect: Exclude<Settled, { readonly kind: "answer" }> | undefined;
+    const scope: CompositionScope<readonly AnyOp[]> = {
+      viewer,
+      log,
+      execute: async (next, value) => {
+        const child = await evaluate(next, viewer, value as never, log);
+        if (child.kind === "defect") defect ??= child;
+        if (child.kind !== "answer") {
+          throw new Stop({ kind: "forward", settled: child });
+        }
+        return child.result as never;
+      },
+    };
+    settled = await guarded(async () => settle(await composition(scope, input)));
+    if (defect) settled = defect;
+  } else if (poolReads.has(op)) {
+    settled = await readPool(op, viewer, input, log);
+  } else {
+    settled = await attempts(op, viewer, input, log);
+    const recover = recoveries.get(op);
+    if (settled.kind === "left" && recover) {
+      settled = await recovered(recover, viewer, input, settled.error, log);
+    }
+  }
+  if (settled.kind === "answer") return settled;
+  if (settled.operation) return settled;
+  if (
+    settled.kind === "left" &&
+    !UnhandledException.is(settled.error) &&
+    !operationals.get(op)?.some((declared) => settled.error instanceof declared)
+  ) {
+    return {
+      kind: "defect",
+      operation: op,
+      panic: new Panic({
+        message: `${op.action} answered an internal error that no recover handled; only a public failure may reach serve`,
+        cause: settled.error,
+      }),
+    };
+  }
+  return { ...settled, operation: op };
+}
+
+function answer(settled: Settled): Result<unknown, AnyFailure> {
+  if (settled.kind === "answer") return settled.result;
+  if (settled.kind === "defect") throw settled.panic;
+  if (UnhandledException.is(settled.error)) throw settled.error.cause;
+  throw settled.error;
+}
+
 /**
  * Runs `op` and returns its Result. Routes call `serve`; tests call this.
  *
@@ -604,26 +751,7 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
   input: NoInfer<I>,
   log: RequestLogger,
 ): Promise<Result<T, F>> {
-  const anyOp = op as AnyOp;
-  let settled: Settled;
-  if (poolReads.has(anyOp)) {
-    settled = await readPool(anyOp, viewer, input as never, log);
-  } else {
-    settled = await attempts(anyOp, viewer, input as never, log);
-    const recover = recoveries.get(anyOp);
-    if (settled.kind === "left" && recover) {
-      settled = await recovered(recover, viewer, input as never, settled.error, log);
-    }
-  }
-  if (settled.kind === "answer") return settled.result as Result<T, F>;
-  if (settled.kind === "defect") throw settled.panic;
-  const left = settled.error;
-  if (UnhandledException.is(left)) throw left.cause;
-  if (operationals.get(anyOp)?.some((declared) => left instanceof declared)) throw left;
-  return panic(
-    `${op.action} answered an internal error that no recover handled; only a public failure may reach serve`,
-    settled.error,
-  );
+  return answer(await evaluate(op as AnyOp, viewer, input as never, log)) as Result<T, F>;
 }
 
 const loggedCauseSchema = z.object({
@@ -656,11 +784,48 @@ function errorCauses(error: Error) {
   return causes;
 }
 
+/** Logs an operation failure, including the driver diagnostics in its cause chain. */
+export function logOperationError(log: RequestLogger, action: string, error: Error): void {
+  log.error(error, { step: action });
+  const causes = errorCauses(error);
+  if (causes.length > 0) log.set({ errorCauses: causes });
+  log.set({ outcome: "error" });
+}
+
 /**
  * Runs `op` for the signed-in caller and answers with its value, its failure's
  * status and message, or a 500. Eden sees one entry per Failure class.
  */
-export async function serve<I, T, F extends AnyFailure, M extends string>(
+type Caller = { readonly viewer: Viewer; readonly log: RequestLogger };
+
+type StreamValue<T> = T extends AsyncGenerator<infer V, void> ? V : never;
+
+export function serve<I, T, M extends string>(
+  caller: Caller,
+  op: StreamOp<I, T, M>,
+  input: NoInfer<I>,
+): AsyncGenerator<T, void>;
+export function serve<I, T, F extends AnyFailure, M extends string>(
+  caller: Caller,
+  op: Op<I, T, F, M>,
+  input: NoInfer<I>,
+): Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>;
+export function serve<I, T, F extends AnyFailure, M extends string>(
+  caller: Caller,
+  op: Op<I, T, F, M>,
+  input: NoInfer<I>,
+):
+  | Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>
+  | AsyncGenerator<StreamValue<T>, void> {
+  if (!streams.has(op as AnyOp)) return serveResult(caller, op, input);
+  return (async function* () {
+    const response = await serveResult(caller, op, input);
+    if (response instanceof ElysiaCustomStatusResponse) return;
+    yield* response as T & AsyncGenerator<StreamValue<T>, void>;
+  })();
+}
+
+async function serveResult<I, T, F extends AnyFailure, M extends string>(
   caller: { readonly viewer: Viewer; readonly log: RequestLogger },
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
@@ -669,8 +834,11 @@ export async function serve<I, T, F extends AnyFailure, M extends string>(
     action: caller.log.getContext().action ?? op.action,
     user: { id: caller.viewer.userId },
   });
+  let failed: OpConfig<string> = op;
   try {
-    const result = await run(caller.viewer, op, input, caller.log);
+    const settled = await evaluate(op as AnyOp, caller.viewer, input as never, caller.log);
+    if (settled.kind !== "answer") failed = settled.operation ?? op;
+    const result = answer(settled) as Result<T, F>;
     if (result.isOk()) {
       // An operation may name its own outcome, such as "imported", in place of "success".
       caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
@@ -682,12 +850,12 @@ export async function serve<I, T, F extends AnyFailure, M extends string>(
       result.error.message,
     ) as FailureResponse<F>;
   } catch (error) {
-    const failure = error instanceof Error ? error : new Error(String(error));
-    caller.log.error(failure, { step: op.action });
-    const causes = errorCauses(failure);
-    if (causes.length > 0) caller.log.set({ errorCauses: causes });
-    caller.log.set({ outcome: "error" });
-    return status(500, op.failure);
+    logOperationError(
+      caller.log,
+      failed.action,
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    return status(500, failed.failure) as ElysiaCustomStatusResponse<500, M>;
   }
 }
 

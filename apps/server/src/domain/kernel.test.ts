@@ -9,7 +9,7 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, prepared, query, run, serve } = await import("./kernel");
+const { command, compose, prepared, query, run, serve } = await import("./kernel");
 const { Failure } = await import("./failure");
 const { tagged } = await import("./tagged");
 const { Viewer } = await import("./viewer");
@@ -849,4 +849,117 @@ test("a Panic in a commit effect logs at error level and keeps the response", as
   expect(await userExists("panic-effect")).toBe(true);
   expect(errors).toHaveBeenCalledTimes(1);
   expect(errors.mock.lastCall?.[0]).toBeInstanceOf(Panic);
+});
+
+describe("composed operations", () => {
+  test("keep each command transaction and the failing step response", async () => {
+    const first = writeThen("ok");
+    const second = writeThen("throw");
+    const operation = compose(
+      {
+        action: "test.composed",
+        failure: "Planning failed",
+        steps: [first, second],
+        before: async (_scope, input: string) => Result.ok(input),
+      },
+      async (scope, id) => {
+        const saved = await scope.execute(first, { id });
+        if (saved.isErr()) return saved;
+        return scope.execute(second, { id: `${id}-second` });
+      },
+    );
+    const caller = { viewer, log: createRequestLogger() };
+    const logged = spyOn(caller.log, "error");
+    const transactions = spyOn(db, "transaction");
+    try {
+      expect(await serve(caller, operation, "composed-first")).toMatchObject({
+        code: 500,
+        response: "Failed to write",
+      });
+      expect(transactions).toHaveBeenCalledTimes(2);
+    } finally {
+      transactions.mockRestore();
+    }
+    expect(logged.mock.lastCall?.[1]).toEqual({ step: "test.write" });
+    expect(await userExists("composed-first")).toBe(true);
+    expect(await userExists("composed-first-second")).toBe(false);
+    await expect(run(viewer, operation, "composed-rethrow", log)).rejects.toThrow(
+      "injected failure after the write",
+    );
+  });
+
+  test("before cannot run a command", async () => {
+    const write = writeThen("ok");
+    const operation = compose(
+      {
+        action: "test.composed",
+        failure: "Planning failed",
+        steps: [write],
+        before: (scope, input: string) => scope.execute(write, { id: input }),
+      },
+      async () => Result.ok(1),
+    );
+    await expect(run(viewer, operation, "write-in-before", log)).rejects.toBeInstanceOf(Panic);
+    expect(await userExists("write-in-before")).toBe(false);
+  });
+
+  test("a structurally compatible but undeclared step is a defect", async () => {
+    const declared = writeThen("ok");
+    const other = writeThen("ok");
+    const operation = compose(
+      {
+        action: "test.composed",
+        failure: "Planning failed",
+        steps: [declared],
+        before: async (_scope, input: string) => Result.ok(input),
+      },
+      (scope, id) => scope.execute(other, { id }),
+    );
+    await expect(run(viewer, operation, "undeclared-write", log)).rejects.toBeInstanceOf(Panic);
+    expect(await userExists("undeclared-write")).toBe(false);
+  });
+
+  test("a before failure never starts its commands", async () => {
+    const write = writeThen("ok");
+    const body = mock(async () => Result.ok(1));
+    const operation = compose(
+      {
+        action: "test.composed",
+        failure: "Planning failed",
+        steps: [write],
+        before: async (_scope, _input: Record<never, never>) => Result.err(new Rejected()),
+      },
+      body,
+    );
+    expect(await serve({ viewer, log }, operation, {})).toMatchObject({
+      code: 400,
+      response: "Rejected",
+    });
+    expect(body).not.toHaveBeenCalled();
+  });
+
+  test("a child defect wins even when its composition catches it", async () => {
+    const broken = command(config, async (_scope, _input: Record<never, never>) =>
+      panic("a composed step broke its invariant"),
+    );
+    const operation = compose(
+      {
+        action: "test.composed",
+        failure: "Planning failed",
+        steps: [broken],
+        before: async () => Result.ok(0),
+      },
+      async (scope) => {
+        try {
+          await scope.execute(broken, {});
+        } catch {
+          return Result.ok(1);
+        }
+        return Result.ok(0);
+      },
+    );
+    await expect(run(viewer, operation, undefined, log)).rejects.toThrow(
+      "a composed step broke its invariant",
+    );
+  });
 });
