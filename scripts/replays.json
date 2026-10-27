@@ -2008,6 +2008,16 @@
         "an attempt that breaks > a collector that throws a defect in a borrowed tab fails its item without a second try",
         "the developer log > reports an unexpected throw from the collector as a defect with its Panic"
       ]
+    },
+    {
+      "fix": "be9a2994ab0226a400f65245d988accd8c2f712b",
+      "testAt": "be9a2994ab0226a400f65245d988accd8c2f712b",
+      "bug": "an MFC run whose only or last item's answer booking threw never ended, and the defect was logged only as the queue stopping",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the throttle's books > when storage fails > an answer whose booking throws for the only item of a run is reported as a defect, ends the run and closes the MFC tab",
+        "the throttle's books > when storage fails > an answer whose booking throws for the last item of a run is reported as a defect, ends the run and closes the MFC tab"
+      ]
     }
   ],
   "lint": [
