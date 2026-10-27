@@ -2220,6 +2220,34 @@
         "a write whose persist fails with an untagged error shows only the safe text and logs it",
         "a write whose persist fails with an UnhandledException shows only the safe text and logs it"
       ]
+    },
+    {
+      "fix": "2d6dc59d",
+      "testAt": "2d6dc59d",
+      "bug": "the kernel unwrapped better-result Panics into recoverable exceptions",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "throwing Result callbacks are defects > generator never reaches retry or recover",
+        "throwing Result callbacks are defects > combinator never reaches retry or recover",
+        "throwing Result callbacks are defects > tagged error match never reaches retry or recover",
+        "throwing Result callbacks are defects > catch handler never reaches retry or recover"
+      ]
+    },
+    {
+      "fix": "2d6dc59d",
+      "testAt": "2d6dc59d",
+      "bug": "a throwing schema ran inside a Result callback and lost its original exception",
+      "test": "packages/utils/src/parse-json.test.ts",
+      "fixed": ["parseJson > a throwing schema propagates its original defect"]
+    },
+    {
+      "fix": "5b18648a69a54fdb2735e6956e5abcbcb7144bf3",
+      "bug": "an existing Item import committed its session before completion and left it behind when completion failed",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "an existing Item import rolls back its session when completion fails",
+        "an existing Item import creates and completes its session in one transaction"
+      ]
     }
   ],
   "lint": [
