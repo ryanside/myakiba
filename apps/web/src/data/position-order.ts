@@ -1,11 +1,12 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { hashKey, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
+import { isTaggedError, Panic } from "better-result";
 import type { Result } from "better-result";
 import { toast } from "@/components/ui/toast";
 import type { ApiFailure } from "./api";
 import { StalePositionOrder } from "@/lib/errors/stale-position-order";
-import { settle, useWrite } from "./client";
+import { failureText, settle, useWrite } from "./client";
 
 // react-query aborts a write only through a throw from onMutate, so a stale cache is thrown there
 // as the move's declared failure.
@@ -101,11 +102,13 @@ export function usePositionOrderMutation({
         ),
       ]);
     },
-    onError: (_error, _intent, context) => {
+    onError: (error, _intent, context) => {
       if (context) queryClient.setQueryData(queryKey, context.previous);
+      const isDefect = Panic.is(error) || !isTaggedError(error);
       toast.add({
         type: "error",
         title: failureTitle,
+        ...(isDefect && { description: failureText(error) }),
       });
     },
     onSettled: () => {

@@ -1,7 +1,7 @@
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { useIsMutating, useMutation } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { Result } from "better-result";
+import { isTaggedError, Panic, Result } from "better-result";
 import { toast } from "@/components/ui/toast";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { AuthRequestFailed } from "@/lib/errors/auth-request-failed";
@@ -170,6 +170,8 @@ export const settings = {
 
 export type Formats = { readonly currency: Currency; readonly dateFormat: DateFormat };
 
+const PREFERENCES_FAILED = "Failed to update preferences";
+
 /** Every Preferences save shares this key, so a form mounted mid-save still sees it in flight. */
 const SAVE_PREFERENCES = ["save-preferences"] as const;
 
@@ -180,13 +182,20 @@ export function usePreferencesSave() {
   const mutation = useMutation({
     mutationKey: SAVE_PREFERENCES,
     mutationFn: (changes: Partial<Formats>) =>
-      settle(() => authWrite(() => authClient.updateUser(changes), "Failed to update preferences")),
+      settle(() => authWrite(() => authClient.updateUser(changes), PREFERENCES_FAILED)),
     onSuccess: () =>
       guard(async () => {
         await router.invalidate();
         toast.add({ type: "success", title: "Preferences updated successfully" });
       }),
-    onError: (failure) => toast.add({ type: "error", title: failureText(failure) }),
+    onError: (failure) => {
+      const isDefect = Panic.is(failure) || !isTaggedError(failure);
+      toast.add({
+        type: "error",
+        title: isDefect ? PREFERENCES_FAILED : failureText(failure),
+        ...(isDefect && { description: failureText(failure) }),
+      });
+    },
   });
   const { run } = useWrite(mutation);
 
