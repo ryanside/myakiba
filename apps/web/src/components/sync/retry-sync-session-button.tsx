@@ -4,10 +4,7 @@ import { RedoIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useExtensionGate } from "@/lib/extension-gate";
-import { useResourceMutation } from "@/data/client";
-import { retrySyncSessionCommand } from "@/data/resources/sync";
-import { importSyncItems } from "@/data/extension-run";
-import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
+import { useRetrySyncSession } from "@/data/resources/sync";
 
 export function RetrySyncSessionButton({
   sessionId,
@@ -22,13 +19,7 @@ export function RetrySyncSessionButton({
   readonly isRetrying: boolean;
   readonly failCount: number;
 }): ReactNode {
-  const mutation = useResourceMutation(retrySyncSessionCommand, {
-    onSaved: (retriedSessionId, { jobId, missingMfcItemIds }) => {
-      toastRunOutcome(
-        importSyncItems({ sessionId: retriedSessionId, jobId, mfcItemIds: missingMfcItemIds }),
-      );
-    },
-  });
+  const mutation = useRetrySyncSession();
   const { checking, gate } = useExtensionGate();
   const retryIsPending = mutation.isPending || isRetrying;
   let unavailableReason: string | null = null;

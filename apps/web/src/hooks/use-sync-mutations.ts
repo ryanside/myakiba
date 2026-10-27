@@ -7,10 +7,7 @@ import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
-import { requireExtension } from "@/lib/extension-gate";
-import { importSyncItems } from "@/data/extension-run";
-import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
-import type { Saving } from "@/data/client";
+import type { Result } from "better-result";
 
 export type SyncSubmit = "sent" | "not_sent";
 
@@ -24,11 +21,9 @@ export type UseSyncMutationsReturn = {
 };
 
 async function sendWithExtension<Input>(
-  send: (input: Input) => Saving<SyncResponse>,
+  send: (input: Input) => Promise<Result<SyncResponse, unknown>>,
   input: Input,
 ): Promise<SyncSubmit> {
-  const ready = await requireExtension();
-  if (ready.isErr()) return "not_sent";
   const sent = await send(input);
   if (sent.isErr()) return "not_sent";
   return "sent";
@@ -40,15 +35,6 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
   const handleSuccess = useCallback(
     (data: SyncResponse, syncType: SyncType): void => {
       onComplete?.();
-      if (data.jobId !== null && data.missingMfcItemIds.length > 0) {
-        toastRunOutcome(
-          importSyncItems({
-            sessionId: data.syncSessionId,
-            jobId: data.jobId,
-            mfcItemIds: data.missingMfcItemIds,
-          }),
-        );
-      }
 
       const itemCount = data.existingItemsToInsert + data.newItems;
       const meta = SYNC_OPTION_META[syncType];

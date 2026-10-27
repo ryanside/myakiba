@@ -6,8 +6,9 @@ import {
   getResyncStatus,
 } from "@/queries/item";
 import { syncResultFamilies } from "../catalog";
-import { defineCommand, rootedRead } from "../client";
+import { defineCommand, rootedRead, useResourceMutation } from "../client";
 import { refreshFailureText, refreshItemWithExtension } from "../extension-run";
+import { startImport } from "../start-import";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -51,3 +52,10 @@ export const refreshItemCommand = defineCommand({
   failureTitle: () => "Failed to request item refresh",
   failureDescription: (_externalId, failure) => refreshFailureText(failure),
 });
+
+/** Refreshes an item through `startImport`, so a refused refresh asks the extension for nothing. */
+export function useRefreshItem() {
+  const refresh = useResourceMutation(refreshItemCommand);
+  const run = (externalId: number) => startImport(() => refresh.run(externalId));
+  return { run, isPending: refresh.isPending } as const;
+}

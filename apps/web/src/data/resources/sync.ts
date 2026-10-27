@@ -37,8 +37,12 @@ import {
   rootedRead,
   settle,
   streamedRead,
+  useResourceMutation,
   useWrite,
 } from "../client";
+import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
+import { importSyncItems } from "../extension-run";
+import { startImport } from "../start-import";
 
 type JobStatusChunk =
   Treaty.Data<(typeof app.api.sync)["job-status"]["get"]> extends AsyncIterable<infer Chunk>
@@ -202,18 +206,25 @@ type SubmitFeedback = {
 };
 
 /**
- * Sends a sync without waiting on a refetch. A sync the server finished at once refetches
- * every family a sync changes, and a queued one refetches the import history.
+ * Sends a sync through `startImport` without waiting on a refetch, and the extension fetches the
+ * items the server lists as missing. A sync the server finished at once refetches every family a
+ * sync changes, and a queued one refetches the import history.
  */
 export function useSyncSubmit<Input>(
-  send: (input: Input) => Promise<Result<SyncResponse, ApiFailure>>,
+  persist: (input: Input) => Promise<Result<SyncResponse, ApiFailure>>,
   { onSaved, onFailed }: SubmitFeedback,
 ) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (input: Input) => settle(() => send(input)),
+    mutationFn: (input: Input) => settle(() => persist(input)),
     onSuccess: (response) =>
       guard(() => {
+        const { syncSessionId, jobId, missingMfcItemIds } = response;
+        if (jobId !== null && missingMfcItemIds.length > 0) {
+          toastRunOutcome(
+            importSyncItems({ sessionId: syncSessionId, jobId, mfcItemIds: missingMfcItemIds }),
+          );
+        }
         onSaved(response);
         if (response.isFinished) {
           void invalidateFamilies(queryClient, syncResultFamilies);
@@ -224,7 +235,8 @@ export function useSyncSubmit<Input>(
     onError: (failure) => onFailed(failureText(failure)),
   });
   const { run, isPending } = useWrite(mutation);
-  return { send: run, isPending } as const;
+  const send = (input: Input) => startImport(() => run(input));
+  return { send, isPending } as const;
 }
 
 export const retrySyncSessionCommand = defineCommand({
@@ -234,3 +246,14 @@ export const retrySyncSessionCommand = defineCommand({
   failureTitle: () => "Failed to retry failed item results",
   failureDescription: (_sessionId, error) => error.message,
 });
+
+/** Retries a session's failed items through `startImport`, and the extension fetches them under the retry's job. */
+export function useRetrySyncSession() {
+  const retry = useResourceMutation(retrySyncSessionCommand, {
+    onSaved: (sessionId, { jobId, missingMfcItemIds }) => {
+      toastRunOutcome(importSyncItems({ sessionId, jobId, mfcItemIds: missingMfcItemIds }));
+    },
+  });
+  const run = (sessionId: string) => startImport(() => retry.run(sessionId));
+  return { run, isPending: retry.isPending } as const;
+}

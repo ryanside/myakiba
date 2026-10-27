@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import type { Treaty } from "@elysiajs/eden";
-import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
+import type {
+  DataTransferArchiveV1,
+  DataTransferImportRequest,
+} from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
 import { ApiServerError } from "@/lib/errors/api-server-error";
 import { ApiUnreachable } from "@/lib/errors/api-unreachable";
@@ -20,6 +23,9 @@ import type { InferOk, Result } from "better-result";
 import { call } from "../api";
 import type { ApiFailure } from "../api";
 import { invalidateFamilies, rootedRead, settle, streamedRead, useWrite } from "../client";
+import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
+import { importDataTransferItems } from "../extension-run";
+import { startImport } from "../start-import";
 
 type ImportStatusChunk =
   Treaty.Data<
@@ -128,26 +134,42 @@ type Started = InferOk<Awaited<ReturnType<typeof startDataTransferImport>>>;
 type Retried = InferOk<Awaited<ReturnType<typeof retryCurrentDataTransferImport>>>;
 type Deleted = InferOk<Awaited<ReturnType<typeof deleteCurrentDataTransferImport>>>;
 
+/** The extension fetches the items a started or retried import is missing. */
+function fetchMissing({ id, missingMfcItemIds }: Started | Retried): void {
+  toastRunOutcome(importDataTransferItems({ importId: id, mfcItemIds: missingMfcItemIds }));
+}
+
+/** Starts an import through `startImport`. */
 export function useStartImport(onSaved: (started: Started) => void) {
-  return useCurrentImportWrite(
+  const write = useCurrentImportWrite(
     startDataTransferImport,
     (queryClient, started) => {
       queryClient.setQueryData(currentImportKey, started);
     },
-    onSaved,
+    (started) => {
+      fetchMissing(started);
+      onSaved(started);
+    },
   );
+  const run = (request: DataTransferImportRequest) => startImport(() => write.run(request));
+  return { ...write, run } as const;
 }
 
-/** A retried import streams its status again from the start. */
+/** Retries an import through `startImport`. A retried import streams its status again from the start. */
 export function useRetryImport(onSaved: (retried: Retried) => void) {
-  return useCurrentImportWrite(
+  const write = useCurrentImportWrite(
     retryCurrentDataTransferImport,
     (queryClient, retried) => {
       queryClient.removeQueries({ queryKey: importStatusKey(retried.id), exact: true });
       queryClient.setQueryData(currentImportKey, retried);
     },
-    onSaved,
+    (retried) => {
+      fetchMissing(retried);
+      onSaved(retried);
+    },
   );
+  const run = () => startImport(() => write.run());
+  return { ...write, run } as const;
 }
 
 export function useDeleteImport(onSaved: (deleted: Deleted) => void) {

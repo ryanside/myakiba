@@ -18,8 +18,6 @@ import type {
   CurrentImportLiveState,
   CurrentImportViewState,
 } from "./current-import-card";
-import { importDataTransferItems } from "@/data/extension-run";
-import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
 import { SettingsGroup } from "../settings-group";
 import { SettingsRow } from "../settings-row";
 import { ImportSection } from "./import-section";
@@ -66,24 +64,12 @@ export function DataTransfer() {
 
   const exportMutation = useExportData(downloadDataTransferArchive);
 
-  const startMutation = useStartImport((startedImport) => {
-    toastRunOutcome(
-      importDataTransferItems({
-        importId: startedImport.id,
-        mfcItemIds: startedImport.missingMfcItemIds,
-      }),
-    );
+  const startMutation = useStartImport(() => {
     setPreparedFile({ kind: "idle" });
   });
   const { reset: resetStartMutation } = startMutation;
 
-  const retryMutation = useRetryImport((retriedImport) => {
-    toastRunOutcome(
-      importDataTransferItems({
-        importId: retriedImport.id,
-        mfcItemIds: retriedImport.missingMfcItemIds,
-      }),
-    );
+  const retryMutation = useRetryImport(() => {
     setPreparedFile({ kind: "idle" });
     resetStartMutation();
   });

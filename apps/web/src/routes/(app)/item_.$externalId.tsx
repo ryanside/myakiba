@@ -9,8 +9,8 @@ import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
-import { failureText, useRead, useResourceMutation } from "@/data/client";
-import { items, refreshItemCommand } from "@/data/resources/item";
+import { failureText, useRead } from "@/data/client";
+import { items, useRefreshItem } from "@/data/resources/item";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -46,7 +46,7 @@ function RouteComponent(): ReactNode {
     enabled: data != null,
   });
 
-  const refresh = useResourceMutation(refreshItemCommand);
+  const refresh = useRefreshItem();
 
   const { data: itemRelatedOrders } = useRead(items.relatedOrders, externalId, {
     enabled: data != null,
