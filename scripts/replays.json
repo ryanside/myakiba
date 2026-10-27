@@ -2145,6 +2145,24 @@
       "test": "apps/server/src/lib/publish-import-status.test.ts",
       "fixed": ["a slow load cannot write after publication has already answered its deadline"],
       "testAt": "3f12228bf0f4ba3f45d24a9b46a652bf260c600d"
+    },
+    {
+      "fix": "ef983fa4f3d073a0485728e45cdc16693f8b9ee8",
+      "bug": "the item page's Collection panel showed a defect's own message, because a defect kept the thrown message",
+      "test": "apps/web/src/components/item/item-page-errors.test.tsx",
+      "fixed": [
+        "a defect in the item page's Collection read shows the safe text, not its own message"
+      ]
+    },
+    {
+      "fix": "9dcbf569c1b5201f191625489d62ff93aa876b50",
+      "bug": "an answer whose booking storage refused failed its fetched page as unexpected_page",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "the throttle's books > when storage fails > an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on",
+        "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
+        "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
+      ]
     }
   ],
   "lint": [
