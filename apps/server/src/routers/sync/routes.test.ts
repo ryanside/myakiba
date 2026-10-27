@@ -1140,6 +1140,43 @@ test("an S3 timeout records the item as a persistence failure", async () => {
   });
 });
 
+test("an existing Item import rolls back its session when completion fails", async () => {
+  await db.execute(`CREATE FUNCTION reject_item_completion() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'completion unavailable'; END $$`);
+  await db.execute(`CREATE TRIGGER reject_item_completion BEFORE UPDATE ON sync_session
+    FOR EACH ROW EXECUTE FUNCTION reject_item_completion()`);
+  try {
+    expect(await post("/item", { items: [PRESENT] })).toEqual({
+      status: 500,
+      body: "Failed to update import record",
+    });
+    expect(await db.$count(syncSession)).toBe(0);
+    expect(await db.$count(syncSessionItem)).toBe(0);
+  } finally {
+    await db.execute(`DROP TRIGGER reject_item_completion ON sync_session`);
+    await db.execute(`DROP FUNCTION reject_item_completion()`);
+  }
+});
+
+test("an existing Item import creates and completes its session in one transaction", async () => {
+  const transactions = spyOn(db, "transaction");
+  try {
+    expect(await post("/item", { items: [PRESENT] })).toMatchObject({
+      status: 200,
+      body: { isFinished: true, jobId: null },
+    });
+    expect(transactions).toHaveBeenCalledTimes(1);
+  } finally {
+    transactions.mockRestore();
+  }
+  expect(await db.select({ status: syncSession.status }).from(syncSession)).toEqual([
+    { status: "completed" },
+  ]);
+  expect(await db.select({ status: syncSessionItem.status }).from(syncSessionItem)).toEqual([
+    { status: "imported" },
+  ]);
+});
+
 test("a database outage during item completion records the item failure after rollback", async () => {
   const run = await start("collection", [collectionEntry(X, 200)]);
   await db.execute(`CREATE FUNCTION reject_item_write() RETURNS trigger LANGUAGE plpgsql AS $$

@@ -647,24 +647,21 @@ export const Sync = {
   completeOrder: completeOperation("Failed to save the order and its items"),
   completeOrderItem: completeOperation("Failed to save order items"),
   completeCollection: completeOperation("Failed to save collection items"),
-  createSession: command(
-    { action: "sync.createSession", failure: "Failed to create import record" },
-    async (scope, input: SyncSessionCreation) => {
-      await SyncService.createSyncSession(input, scope.tx);
-      return Result.ok(null);
-    },
-  ),
   completeItemSession: command(
     { action: "sync.completeItemSession", failure: "Failed to update import record" },
-    async (scope, input: { readonly id: string; readonly statusMessage: string }) => {
+    async (
+      scope,
+      input: { readonly session: SyncSessionCreation; readonly statusMessage: string },
+    ) => {
+      await SyncService.createSyncSession(input.session, scope.tx);
       const updated = await SyncService.updateSyncSession(
-        input.id,
+        input.session.id,
         { status: "completed", statusMessage: input.statusMessage, completedAt: new Date() },
         scope.tx,
       );
       if (!updated)
         panic(
-          `sync.completeItemSession could not update the Item import session ${input.id} that sync.createSession just created`,
+          `sync.completeItemSession could not update the Item import session ${input.session.id} it just created`,
         );
       return Result.ok(null);
     },
@@ -860,7 +857,7 @@ export const SyncRequests = {
     {
       action: "sync.item",
       failure: "Failed to check for existing items",
-      steps: [Sync.planItem, Sync.start, Sync.createSession, Sync.completeItemSession],
+      steps: [Sync.planItem, Sync.start, Sync.completeItemSession],
       before: (scope, input: InputOf<typeof Sync.planItem>) => scope.execute(Sync.planItem, input),
     },
     async (scope, plan) => {
@@ -868,10 +865,8 @@ export const SyncRequests = {
         const started = await scope.execute(Sync.start, plan);
         if (started.isErr()) return started;
       } else {
-        const created = await scope.execute(Sync.createSession, plan.session);
-        if (created.isErr()) return created;
         const completed = await scope.execute(Sync.completeItemSession, {
-          id: plan.session.id,
+          session: plan.session,
           statusMessage: plan.response.status,
         });
         if (completed.isErr()) return completed;

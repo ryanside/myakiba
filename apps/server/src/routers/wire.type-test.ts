@@ -459,7 +459,6 @@ const syncPlanOrder = () => serve(caller, Sync.planOrder, inputOf(Sync.planOrder
 const syncPlanOrderItem = () => serve(caller, Sync.planOrderItem, inputOf(Sync.planOrderItem));
 const syncPlanCollection = () => serve(caller, Sync.planCollection, inputOf(Sync.planCollection));
 const syncStart = () => serve(caller, Sync.start, inputOf(Sync.start));
-const syncCreateSession = () => serve(caller, Sync.createSession, inputOf(Sync.createSession));
 const syncCompleteItemSession = () =>
   serve(caller, Sync.completeItemSession, inputOf(Sync.completeItemSession));
 const syncCompleteCsv = () => serve(caller, Sync.completeCsv, inputOf(Sync.completeCsv));
@@ -480,7 +479,6 @@ void (true satisfies Equal<
     planOrderItem: Failures<typeof syncPlanOrderItem>;
     planCollection: Failures<typeof syncPlanCollection>;
     start: Failures<typeof syncStart>;
-    createSession: Failures<typeof syncCreateSession>;
     completeItemSession: Failures<typeof syncCompleteItemSession>;
     completeCsv: Failures<typeof syncCompleteCsv>;
     completeOrder: Failures<typeof syncCompleteOrder>;
@@ -518,7 +516,6 @@ void (true satisfies Equal<
         >
       | S<500, "Failed to check for existing items">;
     start: S<500, "Failed to create import record">;
-    createSession: S<500, "Failed to create import record">;
     completeItemSession: S<500, "Failed to update import record">;
     completeCsv: S<500, "Failed to save collection items and orders">;
     completeOrder: S<500, "Failed to save the order and its items">;
