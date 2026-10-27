@@ -1,4 +1,5 @@
 import { status } from "elysia";
+import * as z from "zod";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
@@ -677,6 +678,36 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
   );
 }
 
+const loggedCauseSchema = z.object({
+  message: z.string(),
+  code: z.string().optional(),
+  errno: z.string().optional(),
+  detail: z.string().optional(),
+  constraint: z.string().optional(),
+  table: z.string().optional(),
+  cause: z.unknown().optional(),
+});
+
+/** Error properties are often non-enumerable, so JSON logs need explicit cause fields. */
+function errorCauses(error: Error) {
+  const causes: Omit<z.infer<typeof loggedCauseSchema>, "cause" | "errno">[] = [];
+  const seen = new Set<unknown>([error]);
+  let current = error.cause;
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    const parsed = loggedCauseSchema.safeParse(current);
+    if (!parsed.success) {
+      causes.push({ message: String(current) });
+      break;
+    }
+    const { cause, errno, ...fields } = parsed.data;
+    // Bun exposes Postgres SQLSTATE as errno, and its own driver error name as code.
+    causes.push({ ...fields, code: errno ?? fields.code });
+    current = cause;
+  }
+  return causes;
+}
+
 /**
  * Runs `op` for the signed-in caller and answers with its value, its failure's
  * status and message, or a 500. Eden sees one entry per Failure class.
@@ -703,9 +734,10 @@ export async function serve<I, T, F extends AnyFailure, M extends string>(
       result.error.message,
     ) as FailureResponse<F>;
   } catch (error) {
-    caller.log.error(error instanceof Error ? error : new Error(String(error)), {
-      step: op.action,
-    });
+    const failure = error instanceof Error ? error : new Error(String(error));
+    caller.log.error(failure, { step: op.action });
+    const causes = errorCauses(failure);
+    if (causes.length > 0) caller.log.set({ errorCauses: causes });
     caller.log.set({ outcome: "error" });
     return status(500, op.failure);
   }

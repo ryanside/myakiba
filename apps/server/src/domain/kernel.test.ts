@@ -554,6 +554,42 @@ test("several operations in a route keep its first action and log the failing st
   });
 });
 
+test("a failing DB write logs the underlying Postgres message and diagnostics", async () => {
+  await db.execute(sql`CREATE FUNCTION reject_logged_write() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      RAISE EXCEPTION USING MESSAGE = 'trigger rejected the write', ERRCODE = '23514',
+        DETAIL = 'the saved value is forbidden', CONSTRAINT = 'test_write_guard', TABLE = 'user';
+    END;
+  $$`);
+  await db.execute(sql`CREATE TRIGGER reject_logged_write BEFORE INSERT ON "user"
+    FOR EACH ROW EXECUTE FUNCTION reject_logged_write()`);
+  initLogger({ enabled: true });
+  const caller = { viewer, log: createRequestLogger() };
+  initLogger({ enabled: false });
+  try {
+    expect(await serve(caller, writeThen("ok"), { id: "rejected-by-trigger" })).toMatchObject({
+      code: 500,
+      response: "Failed to write",
+    });
+    expect(caller.log.getContext()).toMatchObject({
+      errorCauses: [
+        {
+          message: "trigger rejected the write",
+          code: "23514",
+          detail: "the saved value is forbidden",
+          constraint: "test_write_guard",
+          table: "user",
+        },
+      ],
+    });
+    expect(JSON.stringify(caller.log.getContext())).toContain("trigger rejected the write");
+    expect(await userExists("rejected-by-trigger")).toBe(false);
+  } finally {
+    await db.execute(sql`DROP TRIGGER reject_logged_write ON "user"`);
+    await db.execute(sql`DROP FUNCTION reject_logged_write()`);
+  }
+});
+
 describe("a defect is never retried or recovered", () => {
   const defects = {
     "a panic": async (): Promise<Result<number, never>> => panic("the row must exist"),
