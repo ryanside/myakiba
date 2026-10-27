@@ -1,7 +1,7 @@
 import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schema";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { matchErrorPartial, Result } from "better-result";
+import { matchError, matchErrorPartial, Result } from "better-result";
 import type { InferOk } from "better-result";
 import { ExtensionStopped } from "@/lib/errors/extension-stopped";
 import { InvalidMfcItemId } from "@/lib/errors/invalid-mfc-item-id";
@@ -20,7 +20,8 @@ import { setExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
 import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
-import type { ApiFailure } from "./api";
+import { call } from "./api";
+import type { ApiFailure, EdenAnswer, Wording } from "./api";
 
 const HEARTBEAT_MS = 20_000;
 const FAILURE_FLUSH_MS = 1000;
@@ -49,33 +50,32 @@ type ServerFailure = RunUploadFailed | RunRateLimited | RunClosed;
 
 type ServerAnswer = Result<void, ServerFailure>;
 
-type EdenAnswer<Data> =
-  | { readonly data: Data; readonly error: null; readonly response?: Response }
-  | {
-      readonly data: null;
-      readonly error: { readonly status: number };
-      readonly response?: Response;
-    };
+/** The text `call` keeps for a failed run request. Nobody sees it: the run words its own failures. */
+const RUN_REQUEST: Wording = { fallback: "The extension run's request failed", policy: "fixed" };
 
-const RUN_CLOSED_STATUSES: ReadonlySet<number> = new Set([401, 403, 404]);
+/** What a failed answer means for the run: it ended, it must wait, or its items were not imported. */
+function runFailure(failure: ApiFailure): ServerFailure {
+  return matchError(failure, {
+    ApiNotFound: () => new RunClosed({ status: 404 }),
+    ApiRejected: ({ status, retryAfterMs }) => {
+      if (status === 401 || status === 403) return new RunClosed({ status });
+      if (status === 429) return new RunRateLimited({ retryAfterMs: retryAfterMs ?? null });
+      return new RunUploadFailed({ status, cause: failure });
+    },
+    ApiInvalid: () => new RunUploadFailed({ status: 422, cause: failure }),
+    ApiServerError: ({ status }) => new RunUploadFailed({ status, cause: failure }),
+    ApiUnreachable: () => new RunUploadFailed({ status: 503, cause: failure }),
+    // Eden rejects when the connection drops after the headers, a request that failed like any other.
+    ApiUnreadable: ({ cause }) => new RunUploadFailed({ status: null, cause }),
+  });
+}
 
 async function answerOf<Data>(
-  sending: Promise<EdenAnswer<Data>>,
+  sending: PromiseLike<EdenAnswer<Data>>,
   read: (data: Data) => ServerAnswer = () => Result.ok(),
 ): Promise<ServerAnswer> {
-  let answer: EdenAnswer<Data>;
-  try {
-    answer = await sending;
-  } catch (error) {
-    // Eden rejects when the connection drops after the headers, a request that failed like any other.
-    return Result.err(new RunUploadFailed({ status: null, cause: error }));
-  }
-  if (answer.error === null) return read(answer.data);
-  const { status } = answer.error;
-  if (RUN_CLOSED_STATUSES.has(status)) return Result.err(new RunClosed({ status }));
-  if (status !== 429) return Result.err(new RunUploadFailed({ status, cause: answer.error }));
-  const seconds = Number(answer.response?.headers.get("retry-after") ?? Number.NaN);
-  return Result.err(new RunRateLimited({ retryAfterMs: seconds >= 0 ? seconds * 1000 : null }));
+  const answered = await call(sending, RUN_REQUEST);
+  return answered.mapError(runFailure).andThen(read);
 }
 
 const notSaved = () => Result.err(new RunUploadFailed({ status: null }));

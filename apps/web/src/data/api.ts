@@ -138,8 +138,11 @@ function decode(
     const message = serverErrorText({ status, body }, wording);
     return Result.err(new ApiServerError({ status, body, message }));
   }
+  const message = text.ApiRejected({ status, body }, wording);
+  const seconds = Number(response?.headers.get("retry-after") ?? Number.NaN);
+  const retryAfterMs = seconds >= 0 ? seconds * 1000 : undefined;
   return Result.err(
-    new ApiRejected({ status, body, message: text.ApiRejected({ status, body }, wording) }),
+    new ApiRejected({ status, body, message, ...(retryAfterMs !== undefined && { retryAfterMs }) }),
   );
 }
 
