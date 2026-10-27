@@ -123,7 +123,7 @@ type Retried = InferOk<Awaited<ReturnType<typeof retryCurrentDataTransferImport>
 type Deleted = InferOk<Awaited<ReturnType<typeof deleteCurrentDataTransferImport>>>;
 
 /** A write that shows the current import it returns at once and rereads it once it settles. */
-const currentImportWrite = { invalidates: ["currentImport"], refetchAfterFailure: true } as const;
+const currentImportWrite = { invalidates: ["currentImport"], refetchBy: "settled" } as const;
 
 const startImportCommand = defineCommand({
   ...currentImportWrite,

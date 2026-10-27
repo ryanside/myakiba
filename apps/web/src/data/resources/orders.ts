@@ -76,7 +76,7 @@ type OnList = { readonly list: OrderFilters };
 
 export const editOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     cascadeOptions,
@@ -150,7 +150,7 @@ export const editOrderCommand = defineCommand({
 
 export const deleteOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ orderIds }: { readonly orderIds: Set<string> } & OnList) => deleteOrders(orderIds),
   optimistic: async (queryClient, { orderIds, list }) => {
     if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
@@ -179,7 +179,7 @@ export const deleteOrdersCommand = defineCommand({
 
 export const mergeOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     orderIds,
@@ -211,7 +211,7 @@ export const mergeOrdersCommand = defineCommand({
 
 export const splitOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     collectionIds,
@@ -228,7 +228,7 @@ export const splitOrdersCommand = defineCommand({
 
 export const editOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
   optimistic: async (queryClient, { values, list }) => {
@@ -305,7 +305,7 @@ export const editOrderItemCommand = defineCommand({
 
 export const deleteOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ orderId, itemId }: { readonly orderId: string; readonly itemId: string } & OnList) =>
     deleteOrderItem(orderId, itemId),
   optimistic: async (queryClient, { orderId, itemId, list }) => {
@@ -380,7 +380,7 @@ export const deleteOrderItemCommand = defineCommand({
 
 export const deleteOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ collectionIds }: { readonly collectionIds: Set<string> }) =>
     deleteOrderItems(collectionIds),
   successTitle: ({ collectionIds }) =>
@@ -390,7 +390,7 @@ export const deleteOrderItemsCommand = defineCommand({
 
 export const moveOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     targetOrderId,
     collectionIds,

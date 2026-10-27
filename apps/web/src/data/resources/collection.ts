@@ -53,7 +53,7 @@ type OnList = { readonly list: CollectionFilters };
 
 export const updateCollectionItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
   optimistic: async (queryClient, { values, list }) => {
@@ -108,7 +108,7 @@ export const updateCollectionItemCommand = defineCommand({
 
 export const deleteCollectionItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ ids }: { readonly ids: readonly string[] } & OnList) =>
     deleteCollectionItems([...ids]),
   optimistic: async (queryClient, { ids, list }) => {
@@ -166,7 +166,7 @@ export const deleteCollectionItemsCommand = defineCommand({
 
 export const assignToOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     targetOrderId,
     collectionIds,
@@ -185,7 +185,7 @@ export const assignToOrderCommand = defineCommand({
 
 export const assignToNewOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     collectionIds,

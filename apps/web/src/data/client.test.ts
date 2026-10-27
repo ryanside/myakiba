@@ -84,9 +84,9 @@ test("a write refetches only keys of the families it names, at one time", () => 
 
   defineCommand({
     invalidates: ["orders"],
-    refetchAfterFailure: true,
-    // @ts-expect-error -- a write refetches after a failure or leaves the refetch to its caller, not both.
-    refetchBy: "caller",
+    refetchBy: "settled",
+    // @ts-expect-error -- a write that refetches once it settles refetches every family it names.
+    refetchKeys: () => [{ queryKey: ["orders"] }],
     persist,
   });
 });

@@ -347,19 +347,14 @@ type RefetchTiming<Input, Output, F extends WritableFamily> =
       readonly refetchKeys?: (input: Input, output: Output) => readonly RefetchKey<F>[] | undefined;
       /** `"background"` starts the refetch after a save and lets `run` resolve without it. */
       readonly refetchBy?: "background";
-      readonly refetchAfterFailure?: never;
     }
   | {
-      /** Every invalidated family refetches after a failure too. */
-      readonly refetchAfterFailure: true;
+      /**
+       * `"settled"` refetches every invalidated family once the write settles, saved or failed.
+       * `"caller"` leaves it to the caller's `refetch`, like a queue that settles several writes.
+       */
+      readonly refetchBy: "settled" | "caller";
       readonly refetchKeys?: never;
-      readonly refetchBy?: never;
-    }
-  | {
-      /** The caller refetches once with `refetch`, like a queue that settles several writes. */
-      readonly refetchBy: "caller";
-      readonly refetchKeys?: never;
-      readonly refetchAfterFailure?: never;
     };
 
 type CommandSpec<Input, Output, Failure extends Error, F extends WritableFamily> = RefetchTiming<
@@ -480,7 +475,7 @@ async function runCommand<Input, Output, Failure extends Error>(
     await onSaved?.(input, output);
     await spec.saved?.(queryClient, input, output);
     if (spec.refetchBy === "background") void refetchSaved(output);
-    else if (!spec.refetchAfterFailure && !spec.refetchBy) await refetchSaved(output);
+    else if (spec.refetchBy === undefined) await refetchSaved(output);
     return saved;
   });
 
@@ -498,7 +493,7 @@ async function runCommand<Input, Output, Failure extends Error>(
     }
     await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
   }
-  if (spec.refetchAfterFailure) await refetchFamilies();
+  if (spec.refetchBy === "settled") await refetchFamilies();
   spec.settled?.(queryClient, input);
   return written;
 }
