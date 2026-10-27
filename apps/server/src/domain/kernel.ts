@@ -490,18 +490,6 @@ async function runEffects(
   }
 }
 
-const guards = new WeakMap<AnyOp, () => Result<void, AnyFailure>>();
-
-/** Refuse an operation before its before step or transaction can do any work. */
-export function gate<I, T, F extends AnyFailure, M extends string, G extends AnyFailure>(
-  op: Op<I, T, F, M>,
-  check: () => Result<void, G>,
-): Op<I, T, F | G, M> {
-  if (guards.has(op)) panic(`${op.action} already has a guard; a second guard would replace it`);
-  guards.set(op, check);
-  return op;
-}
-
 /** Runs a query that reads the pool, one autocommit statement at a time. */
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = bodyOf(op);
@@ -618,8 +606,6 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
 ): Promise<Result<T, F>> {
   const anyOp = op as AnyOp;
   let settled: Settled;
-  const allowed = guards.get(anyOp)?.();
-  if (allowed?.isErr()) return allowed as Result<T, F>;
   if (poolReads.has(anyOp)) {
     settled = await readPool(anyOp, viewer, input as never, log);
   } else {

@@ -9,7 +9,7 @@ import { createTestDatabase } from "../../test/database";
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, gate, prepared, query, run, serve } = await import("./kernel");
+const { command, prepared, query, run, serve } = await import("./kernel");
 const { Failure } = await import("./failure");
 const { tagged } = await import("./tagged");
 const { Viewer } = await import("./viewer");
@@ -59,47 +59,6 @@ const userExists = async (id: string) => {
   const found = await db.select({ id: user.id }).from(user).where(eq(user.id, id));
   return found.length === 1;
 };
-
-test("a second guard panics with the operation name and preserves the first guard", async () => {
-  const operation = gate(
-    command(config, async () => Result.ok("written" as const)),
-    () => Result.err(new Rejected()),
-  );
-  expect(() => gate(operation, () => Result.ok())).toThrow("test.write already has a guard");
-  const outcome = await run(viewer, operation, undefined, log);
-  expect(outcome.isErr() && outcome.error).toBeInstanceOf(Rejected);
-});
-
-test("a guard refuses before before runs or a transaction opens, without database work", async () => {
-  let beforeRan = false;
-  let bodyRan = false;
-  const transaction = spyOn(db, "transaction").mockImplementation(() => {
-    throw new Error("the refused operation must not open a transaction");
-  });
-  try {
-    const write = command(
-      {
-        ...config,
-        before: async (scope, input: string) => {
-          beforeRan = true;
-          return scope.proceed(input);
-        },
-      },
-      async (_scope, input) => {
-        bodyRan = true;
-        return Result.ok({ input });
-      },
-    );
-    const operation = gate(write, () => Result.err(new Rejected()));
-    const outcome = await run(viewer, operation, "not-run", log);
-    expect(outcome.isErr() && outcome.error).toBeInstanceOf(Rejected);
-    expect(beforeRan).toBe(false);
-    expect(bodyRan).toBe(false);
-    expect(transaction).not.toHaveBeenCalled();
-  } finally {
-    transaction.mockRestore();
-  }
-});
 
 describe("an operation runs in one transaction", () => {
   test("a command's writes commit when it returns ok", async () => {

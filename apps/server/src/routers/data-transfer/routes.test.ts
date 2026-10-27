@@ -29,12 +29,6 @@ import { createTestDatabase } from "../../../test/database";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-async function setExtensionRelease(value: "released" | "in_review") {
-  await mock.module("@myakiba/contracts/shared/extension-release", () => ({
-    EXTENSION_RELEASE: value,
-  }));
-}
-await setExtensionRelease("released");
 
 await mock.module("@myakiba/auth/server", () => ({
   auth: {
@@ -340,7 +334,6 @@ async function expireLease() {
 }
 
 beforeEach(async () => {
-  await setExtensionRelease("released");
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -1332,44 +1325,6 @@ describe("answers a retry or delete cannot proceed with", () => {
   });
 });
 
-async function checkReviewOperation(operation: string) {
-  const archive = archiveOf([], [collectionRecord("row", 98_778)]);
-  const run = operation === "start" ? null : await startRun(archive);
-  const before = await db.select().from(dataTransferImport);
-  const beforeItems = await db.select().from(dataTransferImportItem);
-  await setExtensionRelease("in_review");
-  async function replyForOperation() {
-    if (run === null) return start(archive);
-    switch (operation) {
-      case "complete":
-        return complete(run.id, 98_778);
-      case "retry":
-        return post("/imports/current/retry");
-      case "failure":
-        return fail(run.id, 98_778);
-      default:
-        return post(`/imports/current/${operation}`, { jobId: run.id });
-    }
-  }
-  const reply = await replyForOperation();
-  expect(reply).toEqual({
-    status: 409,
-    body: "Importing is unavailable until the browser extension is released.",
-  });
-  expect(await db.select().from(dataTransferImport)).toEqual(before);
-  expect(await db.select().from(dataTransferImportItem)).toEqual(beforeItems);
-  expect(await db.select().from(item)).toEqual([]);
-  expect(await db.select().from(collection)).toEqual([]);
-  expect(picturePuts).toBe(0);
-  const detail = await current();
-  expect(detail.status).toBe(200);
-}
-
-describe("extension release gate", () => {
-  for (const operation of ["start", "complete", "retry", "failure", "heartbeat", "interrupt"]) {
-    test(`in review refuses ${operation} without writing`, () => checkReviewOperation(operation));
-  }
-});
 test("an upload without a current import stores no picture or catalog item", async () => {
   const reply = await complete("unknown", 98_778);
   expect(reply.status).toBe(409);

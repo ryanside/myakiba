@@ -17,12 +17,6 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-async function setExtensionRelease(value: "released" | "in_review") {
-  await mock.module("@myakiba/contracts/shared/extension-release", () => ({
-    EXTENSION_RELEASE: value,
-  }));
-}
-await setExtensionRelease("released");
 
 const rateLimitKeys: string[] = [];
 let rateLimitCount = 1;
@@ -134,7 +128,6 @@ function memoryStore() {
 let store = memoryStore();
 
 beforeEach(async () => {
-  await setExtensionRelease("released");
   await db.execute('TRUNCATE "user", item, entry CASCADE');
   await db
     .insert(authSchema.user)
@@ -578,16 +571,4 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
     }
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });
-});
-
-test("in review refuses ingest without writing and leaves missing lookup open", async () => {
-  await setExtensionRelease("in_review");
-  expect(await lookup([98_777])).toEqual({ status: 200, body: { missing: [98_777] } });
-  expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
-    status: 409,
-    body: "Importing is unavailable until the browser extension is released.",
-  });
-  expect(await db.select().from(item)).toEqual([]);
-  expect(await db.select().from(entry)).toEqual([]);
-  expect(store.objects.size).toBe(0);
 });

@@ -1,4 +1,3 @@
-import { gated } from "@/domain/extension-import";
 import { and, eq, inArray } from "drizzle-orm";
 import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
 import { item } from "@myakiba/db/schema/figure";
@@ -33,53 +32,51 @@ export const MfcItems = {
     },
   ),
 
-  ingest: gated(
-    command(
-      {
-        action: "mfc_items.ingest",
-        failure: "Failed to import item",
-        // Neither failure has a fallback, so each answers the logged 500.
-        operational: [StoreItemPictureFailed, MfcItemNotPersisted],
-        before: async (scope, input: ItemUpload) => {
-          const prepared = await prepareMfcItem(scope.tx, input);
-          if (prepared.isErr()) {
-            const failure = prepared.error;
-            if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
-            scope.log.set({ mfc: { itemId: failure.mfcItemId, outcome: failure.problem.kind } });
-            return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
-          }
-          const ready = prepared.value;
-          if (ready.kind === "parsed") return scope.proceed(ready);
-          scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
-          return Result.ok<IngestResult>({
-            saved: "existing",
-            itemId: ready.itemId,
-            mfcItemId: ready.mfcItemId,
-          });
-        },
-      },
-      async (scope, { page, stored }) => {
-        const id = page.mfcItemId;
-        const picture = pictureOutcome(stored);
-        const ensured = await ensureMfcItem(scope.tx, page, stored);
-        if (ensured.isErr()) return ensured;
-        const { itemId, created } = ensured.value;
-
-        scope.log.set({
-          mfc: {
-            itemId: id,
-            contentLabel: page.contentLabel,
-            outcome: created ? "created" : "existing",
-            picture: pictureLog(stored),
-            warnings: page.warnings,
-          },
+  ingest: command(
+    {
+      action: "mfc_items.ingest",
+      failure: "Failed to import item",
+      // Neither failure has a fallback, so each answers the logged 500.
+      operational: [StoreItemPictureFailed, MfcItemNotPersisted],
+      before: async (scope, input: ItemUpload) => {
+        const prepared = await prepareMfcItem(scope.tx, input);
+        if (prepared.isErr()) {
+          const failure = prepared.error;
+          if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
+          scope.log.set({ mfc: { itemId: failure.mfcItemId, outcome: failure.problem.kind } });
+          return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
+        }
+        const ready = prepared.value;
+        if (ready.kind === "parsed") return scope.proceed(ready);
+        scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
+        return Result.ok<IngestResult>({
+          saved: "existing",
+          itemId: ready.itemId,
+          mfcItemId: ready.mfcItemId,
         });
-        return Result.ok<IngestResult>(
-          created
-            ? { saved: "created", itemId, mfcItemId: id, picture }
-            : { saved: "existing", itemId, mfcItemId: id },
-        );
       },
-    ),
+    },
+    async (scope, { page, stored }) => {
+      const id = page.mfcItemId;
+      const picture = pictureOutcome(stored);
+      const ensured = await ensureMfcItem(scope.tx, page, stored);
+      if (ensured.isErr()) return ensured;
+      const { itemId, created } = ensured.value;
+
+      scope.log.set({
+        mfc: {
+          itemId: id,
+          contentLabel: page.contentLabel,
+          outcome: created ? "created" : "existing",
+          picture: pictureLog(stored),
+          warnings: page.warnings,
+        },
+      });
+      return Result.ok<IngestResult>(
+        created
+          ? { saved: "created", itemId, mfcItemId: id, picture }
+          : { saved: "existing", itemId, mfcItemId: id },
+      );
+    },
   ),
 };

@@ -33,12 +33,6 @@ import { createItemImages } from "@/lib/item-images";
 initLogger({ enabled: false });
 
 const userId = "user-1";
-async function setExtensionRelease(value: "released" | "in_review") {
-  await mock.module("@myakiba/contracts/shared/extension-release", () => ({
-    EXTENSION_RELEASE: value,
-  }));
-}
-await setExtensionRelease("released");
 
 type Listener = (channel: string, message: string) => void;
 
@@ -201,7 +195,6 @@ function never(): never {
 const importItem = (id: number) => db.transaction((tx) => ensureMfcItem(tx, parsedPage(id), null));
 
 beforeEach(async () => {
-  await setExtensionRelease("released");
   await db.execute(sql`TRUNCATE "user", item, entry CASCADE`);
   redisValues.clear();
   failS3 = false;
@@ -2106,62 +2099,6 @@ test("CSV price warnings survive fetched completion, retry and the DB status fal
     { price: 0 },
     { price: 0 },
   ]);
-});
-
-async function checkReviewStart(entry: SyncCase) {
-  const body = await entry.body();
-  const before = await db.select().from(order);
-  await setExtensionRelease("in_review");
-  expect(await post(`/${entry.type}`, body)).toEqual({
-    status: 409,
-    body: "Importing is unavailable until the browser extension is released.",
-  });
-  expect(await db.select().from(syncSession)).toEqual([]);
-  expect(await db.select().from(syncSessionItem)).toEqual([]);
-  expect(await db.select().from(collection)).toEqual([]);
-  expect(await db.select().from(order)).toEqual(before);
-  expect(picturePuts).toBe(0);
-}
-
-async function checkReviewOperation(operation: string) {
-  const run = await start("item", { items: [X] });
-  const before = await db.select().from(syncSession);
-  const beforeItems = await db.select().from(syncSessionItem);
-  await setExtensionRelease("in_review");
-  async function replyForOperation() {
-    switch (operation) {
-      case "complete":
-        return complete(run, X);
-      case "retry":
-        return post(`/sessions/${run.syncSessionId}/retry`);
-      case "failure":
-        return fail(run, X);
-      case "heartbeat":
-        return heartbeat(run);
-      default:
-        return interrupt(run);
-    }
-  }
-  const reply = await replyForOperation();
-  expect(reply).toEqual({
-    status: 409,
-    body: "Importing is unavailable until the browser extension is released.",
-  });
-  expect(await db.select().from(syncSession)).toEqual(before);
-  expect(await db.select().from(syncSessionItem)).toEqual(beforeItems);
-  expect(await db.select().from(collection)).toEqual([]);
-  expect(picturePuts).toBe(0);
-  const detail = await get(`/sessions/${run.syncSessionId}`);
-  expect(detail.status).toBe(200);
-}
-
-describe("extension release gate", () => {
-  for (const entry of cases) {
-    test(`in review refuses ${entry.type} start without writing`, () => checkReviewStart(entry));
-  }
-  for (const operation of ["complete", "retry", "failure", "heartbeat", "interrupt"]) {
-    test(`in review refuses ${operation} without writing`, () => checkReviewOperation(operation));
-  }
 });
 
 describe("committed sync publication", () => {
