@@ -1,3 +1,4 @@
+import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
@@ -15,7 +16,7 @@ import type {
 import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
 import { MfcPageUnrecognized } from "./errors/mfc-page-unrecognized";
-import { MfcQueueHalted } from "./errors/mfc-queue-halted";
+import type { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import { MfcRateLimited } from "./errors/mfc-rate-limited";
 import { MfcSignedOut } from "./errors/mfc-signed-out";
 import { MfcWrongItem } from "./errors/mfc-wrong-item";
@@ -29,7 +30,7 @@ import type { SessionValue } from "./session-value";
 import type { Origins } from "./origins";
 import { PICTURE_TIMEOUT_MS } from "./picture";
 import { EMPTY_QUEUE, reduceQueue, sameJob, waitersOf } from "./queue";
-import type { ItemAnswer, ItemPage, Job, QueueAction, Requester, RunKey } from "./queue";
+import type { ItemOutcome, ItemPage, Job, QueueAction, Requester, RunKey } from "./queue";
 import { resultTabs } from "./tabs";
 import type { TabsApi, WindowsApi } from "./tabs";
 import { THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
@@ -109,9 +110,6 @@ type AttemptFailure =
   | MfcChallengeUnsolved
   | SessionStorageUnavailable;
 
-/** Why an attempt that still had a run waiting answered no page. */
-export type ItemFetchError = AttemptFailure;
-
 type ShownItem = { readonly page: CollectedPage; readonly ogImage: MfcOgImage };
 
 type ItemContext = {
@@ -153,6 +151,31 @@ function notShown(
     TabOpenFailed: unsolved,
     WindowFocusRefused: unsolved,
     SessionStorageUnavailable: unsolved,
+  });
+}
+
+/** What each failure means for the runs waiting for its item. */
+function outcomeOf(failure: AttemptFailure): ItemOutcome {
+  const failed = (code: ItemFetchErrorCode) => (): ItemOutcome => ({ kind: "failed", code });
+  return failure.match({
+    MfcChallengeUnsolved: (): ItemOutcome => ({ kind: "challenge_unsolved" }),
+    MfcQueueHalted: ({ until }): ItemOutcome => ({ kind: "halted", until }),
+    MfcRateLimited: ({ pausedUntil }): ItemOutcome => ({ kind: "backing_off", until: pausedUntil }),
+    MfcSignedOut: failed("mfc_signed_out"),
+    MfcItemHiddenOrMissing: failed("hidden_or_missing"),
+    MfcLoadTimedOut: failed("timeout"),
+    MfcWrongItem: failed("unexpected_page"),
+    MfcPageUnrecognized: failed("unexpected_page"),
+    MfcPageFetchFailed: failed("unexpected_page"),
+    CollectorInjectionFailed: failed("unexpected_page"),
+    CollectorAnswerInvalid: failed("unexpected_page"),
+    MfcTabUnavailable: failed("unexpected_page"),
+    TabClosed: failed("unexpected_page"),
+    TabEditRefused: failed("unexpected_page"),
+    TabOpenFailed: failed("unexpected_page"),
+    TabQueryFailed: failed("unexpected_page"),
+    UnhandledException: failed("unexpected_page"),
+    SessionStorageUnavailable: failed("unexpected_page"),
   });
 }
 
@@ -407,7 +430,7 @@ export function createFetcher(deps: FetcherDeps) {
    * reported and answered as an unhandled exception, so the queue moves on instead of retrying it forever. Null answers
    * nothing, because the signal aborted: no run waits for the item any more.
    */
-  async function attempt(job: Job, signal: AbortSignal): Promise<ItemAnswer | null> {
+  async function attempt(job: Job, signal: AbortSignal): Promise<ItemOutcome | null> {
     const requester = liveRequester(job);
     let answer: Result<ItemPage, AttemptFailure>;
     try {
@@ -434,31 +457,30 @@ export function createFetcher(deps: FetcherDeps) {
         `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
         error,
       );
-      return signal.aborted ? null : Result.err(new UnhandledException({ cause: error }));
+      return signal.aborted ? null : outcomeOf(new UnhandledException({ cause: error }));
     }
     if (signal.aborted) return null;
-    if (answer.isOk()) return Result.ok(answer.value);
+    if (answer.isOk()) return { kind: "page", page: answer.value };
     const { error } = answer;
     if (!MfcRateLimited.is(error)) {
       console.warn(`${error._tag} for MFC item ${job.mfcItemId}: ${error.message}`);
     }
-    return Result.err(error);
+    return outcomeOf(error);
   }
 
   /** A rate limit is booked as one, which may halt the queue. A halt was booked when it happened. */
   async function booked(
-    answer: ItemAnswer,
-  ): Promise<Result<ItemAnswer, SessionStorageUnavailable>> {
-    const error = answer.isErr() ? answer.error : null;
-    if (MfcQueueHalted.is(error)) return Result.ok(answer);
-    if (MfcRateLimited.is(error)) {
-      const limited = await throttle.rateLimited(error.pausedUntil);
-      return limited.map(({ haltedUntil }): ItemAnswer =>
-        haltedUntil === null ? answer : Result.err(new MfcQueueHalted({ until: haltedUntil })),
+    outcome: ItemOutcome,
+  ): Promise<Result<ItemOutcome, SessionStorageUnavailable>> {
+    if (outcome.kind === "halted") return Result.ok(outcome);
+    if (outcome.kind === "backing_off") {
+      const limited = await throttle.rateLimited(outcome.until);
+      return limited.map(({ haltedUntil }): ItemOutcome =>
+        haltedUntil === null ? outcome : { kind: "halted", until: haltedUntil },
       );
     }
     const answered = await throttle.answered();
-    return answered.map(() => answer);
+    return answered.map(() => outcome);
   }
 
   /** An answer whose booking cannot be written fails its item with that failure, so the run still ends. */
@@ -469,14 +491,18 @@ export function createFetcher(deps: FetcherDeps) {
       if (!job) break;
       const controller = new AbortController();
       current = { job, controller };
-      const answer = await attempt(job, controller.signal);
+      const outcome = await attempt(job, controller.signal);
       current = null;
-      if (answer === null) continue;
-      const booking = await booked(answer);
-      booking.tapError((failure) => {
-        console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
+      if (outcome === null) continue;
+      const booking = await booked(outcome);
+      const settled = booking.match({
+        ok: (kept) => kept,
+        err: (failure) => {
+          console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
+          return outcomeOf(failure);
+        },
       });
-      dispatch({ type: "answered", job, answer: Result.flatten(booking) });
+      dispatch({ type: "answered", job, outcome: settled });
     }
     return Result.gen(async function* () {
       yield* Result.await(mfcTabs.release());

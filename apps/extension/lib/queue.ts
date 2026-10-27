@@ -7,7 +7,6 @@ import type {
 } from "@myakiba/mfc/bridge";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
-import type { ItemFetchError } from "./fetcher";
 
 export type RunKey = string & { readonly __brand: "RunKey" };
 
@@ -38,8 +37,15 @@ export type QueueState = {
 
 export type ItemPage = FetchedPage<PortPicture>;
 
-/** What one attempt at an item answered: its page, or why there is none. */
-export type ItemAnswer = Result<ItemPage, ItemFetchError>;
+/** What one attempt at an item means for the runs that wait for it. */
+export type ItemOutcome =
+  | { readonly kind: "page"; readonly page: ItemPage }
+  | { readonly kind: "failed"; readonly code: ItemFetchErrorCode }
+  /** MFC limited the item, which is tried again once the pause has passed. */
+  | { readonly kind: "backing_off"; readonly until: number }
+  | { readonly kind: "halted"; readonly until: number }
+  /** Fails the runs open now, so none of them asks the user again. A later run may. */
+  | { readonly kind: "challenge_unsolved" };
 
 export type QueueAction =
   | {
@@ -51,7 +57,7 @@ export type QueueAction =
     }
   | { readonly type: "started" }
   | { readonly type: "needs_user"; readonly untilMs: number }
-  | { readonly type: "answered"; readonly job: Job; readonly answer: ItemAnswer }
+  | { readonly type: "answered"; readonly job: Job; readonly outcome: ItemOutcome }
   | { readonly type: "cancelled"; readonly run: RunKey };
 
 type Emission = { readonly run: RunKey; readonly event: RunEvent<PortPicture> };
@@ -120,41 +126,27 @@ function toActiveWaiters(state: QueueState, event: RunEvent<PortPicture>): Emiss
   return state.active ? waitersOf(state, state.active).map((run) => ({ run: run.key, event })) : [];
 }
 
-function answer(state: QueueState, job: Job, answered: ItemAnswer): QueueStep {
-  if (answered.isOk()) return settle(state, job, Result.ok(answered.value));
-  const failed = (code: ItemFetchErrorCode) => () => settle(state, job, Result.err({ code }));
-  return answered.error.match({
-    // An unsolved challenge fails the runs open now, so none of them asks the user again. A later run may.
-    MfcChallengeUnsolved: () => ({
-      state: EMPTY_QUEUE,
-      emit: failAll(state.runs, "challenge_unsolved"),
-    }),
-    MfcQueueHalted: ({ until }) => halt(state, until),
-    MfcRateLimited: ({ pausedUntil }) => ({
-      state,
-      emit: toActiveWaiters(state, {
-        type: "status",
-        state: "backing_off",
-        mfcItemId: job.mfcItemId,
-        untilMs: pausedUntil,
-      }),
-    }),
-    MfcSignedOut: failed("mfc_signed_out"),
-    MfcItemHiddenOrMissing: failed("hidden_or_missing"),
-    MfcLoadTimedOut: failed("timeout"),
-    MfcWrongItem: failed("unexpected_page"),
-    MfcPageUnrecognized: failed("unexpected_page"),
-    MfcPageFetchFailed: failed("unexpected_page"),
-    CollectorInjectionFailed: failed("unexpected_page"),
-    CollectorAnswerInvalid: failed("unexpected_page"),
-    MfcTabUnavailable: failed("unexpected_page"),
-    TabClosed: failed("unexpected_page"),
-    TabEditRefused: failed("unexpected_page"),
-    TabOpenFailed: failed("unexpected_page"),
-    TabQueryFailed: failed("unexpected_page"),
-    UnhandledException: failed("unexpected_page"),
-    SessionStorageUnavailable: failed("unexpected_page"),
-  });
+function answer(state: QueueState, job: Job, outcome: ItemOutcome): QueueStep {
+  switch (outcome.kind) {
+    case "page":
+      return settle(state, job, Result.ok(outcome.page));
+    case "failed":
+      return settle(state, job, Result.err({ code: outcome.code }));
+    case "backing_off":
+      return {
+        state,
+        emit: toActiveWaiters(state, {
+          type: "status",
+          state: "backing_off",
+          mfcItemId: job.mfcItemId,
+          untilMs: outcome.until,
+        }),
+      };
+    case "halted":
+      return halt(state, outcome.until);
+    case "challenge_unsolved":
+      return { state: EMPTY_QUEUE, emit: failAll(state.runs, "challenge_unsolved") };
+  }
 }
 
 export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
@@ -217,7 +209,7 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueStep {
     }
     case "answered":
       return sameJob(state.active, action.job)
-        ? answer(state, action.job, action.answer)
+        ? answer(state, action.job, action.outcome)
         : { state, emit: [] };
     case "cancelled": {
       if (!state.runs.some((run) => run.key === action.run)) return { state, emit: [] };

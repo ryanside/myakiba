@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Result } from "better-result";
 import { itemId } from "../test/fake-browser";
-import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
-import { MfcQueueHalted } from "./errors/mfc-queue-halted";
-import { MfcRateLimited } from "./errors/mfc-rate-limited";
 import { EMPTY_QUEUE, reduceQueue } from "./queue";
 import type { Job, QueueAction, QueueStep, Requester, RunKey } from "./queue";
 import { THROTTLE } from "./throttle";
@@ -24,19 +20,20 @@ function submitted(run: string, ids: readonly number[], at: number): QueueAction
 }
 
 function limited(id: number, pausedUntil: number): QueueAction {
-  const error = new MfcRateLimited({ mfcItemId: itemId(id), status: 429, pausedUntil });
-  return { type: "answered", job: job(id), answer: Result.err(error) };
+  return { type: "answered", job: job(id), outcome: { kind: "backing_off", until: pausedUntil } };
 }
 
 function halted(id: number, until: number): QueueAction {
-  return { type: "answered", job: job(id), answer: Result.err(new MfcQueueHalted({ until })) };
+  return { type: "answered", job: job(id), outcome: { kind: "halted", until } };
 }
 
 function answered(id: number, ok: boolean): QueueAction {
-  const answer = ok
-    ? Result.ok({ html: `<html>${id}</html>`, picture: null })
-    : Result.err(new MfcChallengeUnsolved({ mfcItemId: itemId(id), reason: "unanswered" }));
-  return { type: "answered", job: job(id), answer };
+  const page = { html: `<html>${id}</html>`, picture: null };
+  return {
+    type: "answered",
+    job: job(id),
+    outcome: ok ? { kind: "page", page } : { kind: "challenge_unsolved" },
+  };
 }
 
 function play(actions: readonly QueueAction[]) {
