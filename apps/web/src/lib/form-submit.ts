@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { asPanic } from "./as-panic";
+import { reportDefect } from "./as-panic";
 
 type Submittable = { readonly handleSubmit: () => Promise<void> };
 
@@ -12,7 +12,7 @@ export async function runSubmit(submit: Submittable["handleSubmit"]): Promise<vo
   try {
     await submit();
   } catch (submitError) {
-    console.error(asPanic(submitError));
+    reportDefect(submitError);
   }
 }
 

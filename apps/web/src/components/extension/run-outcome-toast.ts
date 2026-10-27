@@ -1,6 +1,6 @@
 import { toast } from "@/components/ui/toast";
 import type { RunOutcome } from "@/data/extension-run";
-import { asPanic } from "@/lib/as-panic";
+import { reportDefect } from "@/lib/as-panic";
 
 /** Where an extension run's crash ends: it is reported as a defect, and the user sees one generic toast. */
 async function toastIfStopped(running: Promise<RunOutcome>): Promise<void> {
@@ -8,7 +8,7 @@ async function toastIfStopped(running: Promise<RunOutcome>): Promise<void> {
   try {
     outcome = await running;
   } catch (error) {
-    console.error(asPanic(error));
+    reportDefect(error);
     toast.add({
       type: "error",
       title: "The import stopped unexpectedly",

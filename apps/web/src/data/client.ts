@@ -11,7 +11,7 @@ import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import { isTaggedError, Panic, Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
-import { asPanic } from "@/lib/as-panic";
+import { asFailure, asPanic, DEFECT_TEXT, reportDefect } from "@/lib/as-panic";
 import { WriteFailed } from "@/lib/errors/write-failed";
 import { call } from "./api";
 import type { EdenAnswer } from "./api";
@@ -22,9 +22,9 @@ import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog"
 type ReadFailure<Failure> = Failure | Panic;
 
 /**
- * Runs a load for react-query, which reads a failure only from a throw. A failed
- * Result is thrown as its own error. Anything the load throws is a defect, a Panic that keeps
- * the thrown message for the log. A screen shows either through `failureText`.
+ * Runs a load for react-query, which reads a failure only from a throw. A failed Result is thrown
+ * as its own error when it is declared. Anything else, and anything the load throws, is a defect:
+ * a Panic whose message is the safe text. So a screen shows any read's `error.message`.
  */
 async function settle<Value, Failure>(load: () => Promise<Result<Value, Failure>>): Promise<Value> {
   let result: Result<Value, Failure>;
@@ -33,8 +33,16 @@ async function settle<Value, Failure>(load: () => Promise<Result<Value, Failure>
   } catch (error) {
     throw asPanic(error);
   }
-  if (result.isErr()) throw result.error;
+  if (result.isErr()) throw asFailure(result.error);
   return result.value;
+}
+
+async function* failingAsDeclared<Chunk>(stream: AsyncIterable<Chunk>): AsyncGenerator<Chunk> {
+  try {
+    yield* stream;
+  } catch (error) {
+    throw asFailure(error);
+  }
 }
 
 type PageCursor = { readonly limit: number; readonly offset: number };
@@ -201,7 +209,8 @@ export function streamedRead<F extends Family, Input, Chunk, Data, Failure>(
       queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
         queryKey: key(input),
         queryFn: streamedQuery({
-          streamFn: ({ signal, client }) => settle(() => open(input, { signal, client })),
+          streamFn: async ({ signal, client }) =>
+            failingAsDeclared(await settle(() => open(input, { signal, client }))),
           reducer,
           initialValue: initialValue(input),
           refetchMode,
@@ -311,16 +320,13 @@ export function invalidateFamilies(
 
 type Rollback = () => void;
 
-/** What a screen shows for a defect, whose own message is never shown. */
-const DEFECT_DESCRIPTION = "Something went wrong. Reload the page and try again";
-
 /**
  * The text a screen shows for a read's or a write's failure: a declared failure's message, or
  * the safe text for a defect. Only a tagged error other than a Panic is declared, so anything
  * else react-query caught is a defect too.
  */
 export function failureText(failure: Error): string {
-  return Panic.is(failure) || !isTaggedError(failure) ? DEFECT_DESCRIPTION : failure.message;
+  return Panic.is(failure) || !isTaggedError(failure) ? DEFECT_TEXT : failure.message;
 }
 
 export type FailureToast = { readonly title: string; readonly description?: string };
@@ -494,7 +500,7 @@ async function runCommand<Input, Output, Failure extends Error>(
       const declared = Panic.is(failure) ? null : failure;
       const shown = {
         ...spec.failureToast(input, declared),
-        ...(declared === null && { description: DEFECT_DESCRIPTION }),
+        ...(declared === null && { description: DEFECT_TEXT }),
       };
       if (onFailed) onFailed(input, shown);
       else toast.add({ type: "error", ...shown });
@@ -522,7 +528,7 @@ export function useResourceMutation<Input, Output, Failure extends Error>(
     mutationFn: async (input: Input): Saving<Output> => {
       const settled = await attempt(() => runCommand(spec, queryClient, input, options));
       return settled.mapError((cause) => {
-        if (Panic.is(cause)) console.error(cause);
+        if (Panic.is(cause)) reportDefect(cause);
         return new WriteFailed({ cause, message: cause.message });
       });
     },

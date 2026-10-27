@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import type { Result } from "better-result";
 import { StatusButton, closesOnSuccess, useButtonStatus } from "@/components/ui/status-button";
-import { asPanic } from "@/lib/as-panic";
+import { reportDefect } from "@/lib/as-panic";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant = React.ComponentProps<typeof Button>["variant"];
@@ -82,7 +82,7 @@ export function ConfirmDialog({
       if (confirmed.isOk()) closeDialog();
     } catch (error) {
       // onConfirm never rejects, so a rejection is a defect. Keep this dialog open for another attempt.
-      console.error(asPanic(error));
+      reportDefect(error);
     }
   };
 
