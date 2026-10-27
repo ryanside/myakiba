@@ -1,6 +1,10 @@
 import { panic } from "better-result";
 import * as z from "zod";
-import { itemUploadSchema, MAX_ITEM_FAILURES_PER_REPORT } from "../mfc-items/schema";
+import {
+  itemUploadSchema,
+  MAX_ITEM_FAILURES_PER_REPORT,
+  mfcItemIdField,
+} from "../mfc-items/schema";
 import {
   CONDITIONS,
   MAX_MFC_ITEM_ID,
@@ -49,7 +53,7 @@ export const itemSyncSchema = z.object({
         .union([mfcItemIdSchema, z.number().int().positive()], {
           error: "Please enter a valid MyFigureCollection item link or ID",
         })
-        .pipe(z.number().max(2_147_483_647)),
+        .pipe(z.number().max(MAX_MFC_ITEM_ID)),
     )
     .min(1, "Enter at least one MyFigureCollection item link or ID")
     .transform((ids) => [...new Set(ids)])
@@ -63,7 +67,7 @@ export type ItemSyncInput = z.infer<typeof itemSyncSchema>;
 
 const syncItemFetchErrorSchema = z.enum([...ITEM_FETCH_ERROR_CODES, "unknown"]);
 const syncItemFailureEntrySchema = z.strictObject({
-  mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
+  mfcItemId: mfcItemIdField,
   error: syncItemFetchErrorSchema,
 });
 

@@ -7,7 +7,7 @@ const MAX_MISSING_LOOKUP_IDS = 1000;
 export const MAX_ITEM_PICTURE_BYTES = 10 * 1024 * 1024;
 export const MAX_ITEM_FAILURES_PER_REPORT = 1000;
 
-const mfcItemIdField = z.int().min(1).max(MAX_MFC_ITEM_ID);
+export const mfcItemIdField = z.int().min(1).max(MAX_MFC_ITEM_ID);
 
 export const missingItemsSchema = z.strictObject({
   mfcItemIds: z

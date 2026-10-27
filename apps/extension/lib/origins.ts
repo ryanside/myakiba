@@ -1,3 +1,5 @@
+import { MFC_ORIGIN, MFC_STATIC_ORIGIN } from "@myakiba/mfc/page";
+
 export type Origins = {
   readonly web: string;
   readonly mfc: string;
@@ -5,8 +7,8 @@ export type Origins = {
 };
 
 const CANONICAL_ORIGINS = new Map<string, "mfc" | "mfcStatic">([
-  ["https://myfigurecollection.net", "mfc"],
-  ["https://static.myfigurecollection.net", "mfcStatic"],
+  [MFC_ORIGIN, "mfc"],
+  [MFC_STATIC_ORIGIN, "mfcStatic"],
 ]);
 
 export function toConfiguredUrl(canonical: string, origins: Origins): URL | null {

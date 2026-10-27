@@ -1,10 +1,9 @@
 import * as z from "zod";
-import { itemUploadSchema } from "../mfc-items/schema";
+import { itemUploadSchema, mfcItemIdField } from "../mfc-items/schema";
 import { syncItemFailureBatchSchema } from "../sync/schema";
 import {
   COLLECTION_STATUSES,
   CONDITIONS,
-  MAX_MFC_ITEM_ID,
   ORDER_STATUSES,
   SHIPPING_METHODS,
 } from "../shared/constants";
@@ -203,7 +202,7 @@ export const dataTransferImportItemUploadSchema = itemUploadSchema.extend({
 export const dataTransferImportItemFailureSchema = z.union([
   z.strictObject({
     jobId: portableKeySchema,
-    mfcItemId: z.int().min(1).max(MAX_MFC_ITEM_ID),
+    mfcItemId: mfcItemIdField,
     reason: z.string().trim().min(1).max(500),
   }),
   syncItemFailureBatchSchema,

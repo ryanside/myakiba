@@ -1,4 +1,5 @@
 import type { PortPicture } from "@myakiba/mfc/bridge";
+import { isItemPicturePath } from "@myakiba/mfc/page";
 import { Result } from "better-result";
 import { PictureRejected } from "./errors/picture-rejected";
 import { toConfiguredUrl } from "./origins";
@@ -94,10 +95,10 @@ export async function readPicture(
 
 /**
  * The picture to read in a static-origin tab, only when the tab shows the one asked for, so a redirect or a page the user
- * opened there never passes as the item's picture. Like `@myakiba/mfc/page`, it allows only pictures under `/upload/items/`.
+ * opened there never passes as the item's picture. It allows only item pictures, as `@myakiba/mfc/page` does.
  */
 export function pictureToRead(requested: string, shown: string, origins: Origins): URL | null {
   const url = toConfiguredUrl(requested, origins);
-  if (url?.origin !== origins.mfcStatic || !url.pathname.startsWith("/upload/items/")) return null;
+  if (url?.origin !== origins.mfcStatic || !isItemPicturePath(url.pathname)) return null;
   return URL.parse(shown)?.href === url.href ? url : null;
 }

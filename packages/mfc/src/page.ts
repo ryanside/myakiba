@@ -30,6 +30,20 @@ export type MfcPicture = {
   readonly url: string;
 };
 
+/** MFC's canonical origins, which its pages link to whatever origin served them. */
+export const MFC_ORIGIN = "https://myfigurecollection.net";
+export const MFC_STATIC_ORIGIN = "https://static.myfigurecollection.net";
+
+/** Cloudflare marks the challenge it serves with a `cf-mitigated: challenge` header. */
+export function isCloudflareChallenge(cfMitigated: string | null): boolean {
+  return cfMitigated?.trim().toLowerCase() === "challenge";
+}
+
+/** Only pictures under this path on the static origin are item pictures. */
+export function isItemPicturePath(pathname: string): boolean {
+  return pathname.startsWith("/upload/items/");
+}
+
 const CHALLENGE_TITLE = /^\s*Just a moment/i;
 const NOT_FOUND_SENTENCE = "The page you requested was not found";
 const CANONICAL_ITEM_URL = /^https:\/\/myfigurecollection\.net\/item\/(\d+)$/;
@@ -41,7 +55,7 @@ export function readMfcEnvelope(response: {
 }): MfcEnvelope {
   const { status, cfMitigated, html } = response;
   const page = scanPage(html);
-  if (cfMitigated?.trim().toLowerCase() === "challenge" || CHALLENGE_TITLE.test(page.title)) {
+  if (isCloudflareChallenge(cfMitigated) || CHALLENGE_TITLE.test(page.title)) {
     return { kind: "challenge" };
   }
   const { signedIn } = page;
@@ -113,19 +127,16 @@ function readOgImage(raw: string | null, id: MfcItemId): MfcOgImage {
 function allowPicture(raw: string, id: MfcItemId): MfcPicture | null {
   const url = URL.parse(raw);
   if (!url || url.protocol !== "https:" || url.username || url.password || url.port) return null;
-  if (url.hostname === "myfigurecollection.net" && url.pathname === "/") {
+  if (url.origin === MFC_ORIGIN && url.pathname === "/") {
     const size = gatedPictureSize(url.searchParams, id);
     return size === null
       ? null
       : {
           access: "gated",
-          url: `https://myfigurecollection.net/?_tb=commit&commit=nsp&objectType=item&objectId=${id}&size=${size}`,
+          url: `${MFC_ORIGIN}/?_tb=commit&commit=nsp&objectType=item&objectId=${id}&size=${size}`,
         };
   }
-  if (
-    url.hostname === "static.myfigurecollection.net" &&
-    url.pathname.startsWith("/upload/items/")
-  ) {
+  if (url.origin === MFC_STATIC_ORIGIN && isItemPicturePath(url.pathname)) {
     return { access: "public", url: url.origin + url.pathname };
   }
   return null;

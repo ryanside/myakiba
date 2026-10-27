@@ -1,6 +1,6 @@
 import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
-import { readMfcEnvelope } from "@myakiba/mfc/page";
+import { isCloudflareChallenge, readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
 import { Result, panic } from "better-result";
 import { timeoutSignal, unlessAborted } from "./clock";
@@ -178,7 +178,7 @@ function readPage(page: CollectedPage, job: Job, now: number): Result<Reading, P
   const { mfcItemId } = job;
   const pauseMs = parseRetryAfter(page.retryAfter, now);
   // Cloudflare may serve its challenge with 503 and Retry-After. It still wants a person, after the pause.
-  const challenged = page.cfMitigated?.trim().toLowerCase() === "challenge";
+  const challenged = isCloudflareChallenge(page.cfMitigated);
   if (!challenged && RATE_LIMIT_STATUSES.has(page.status)) {
     const pausedUntil = now + (pauseMs ?? THROTTLE.defaultPauseMs);
     return Result.err(new MfcRateLimited({ mfcItemId, status: page.status, pausedUntil }));
