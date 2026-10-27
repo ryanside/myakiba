@@ -22,7 +22,6 @@ import {
 import type { FakeClock, FakeExtension, PageAnswer, PictureAnswer } from "../test/fake-browser";
 import type { CollectedPage, PageRequest } from "./collect";
 import { PAGE_TIMEOUT_MS } from "./collect";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
 import { CollectorInjectionFailed } from "./errors/collector-injection-failed";
 import { PictureFetchFailed } from "./errors/picture-fetch-failed";
@@ -2091,10 +2090,10 @@ describe("a picture read that hits a defect in the tab", () => {
 describe("a collector run that the turn stopped", () => {
   test("answers its abandoned run as the turn's timeout and keeps its own tab", async () => {
     const extension = fakeExtension({
-      pages: (request, signal) =>
+      pages: (request, signal, tabId) =>
         request.mfcItemId === 1
           ? new Promise((resolve) => {
-              signal.addEventListener("abort", () => resolve(Result.err(new AttemptAbandoned())));
+              signal.addEventListener("abort", () => resolve(injectionFailed(tabId, "stopped")));
             })
           : page(itemPage(request.mfcItemId)),
     });

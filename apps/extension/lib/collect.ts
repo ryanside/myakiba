@@ -2,7 +2,6 @@ import { mfcItemIdSchema, portPictureSchema } from "@myakiba/mfc/bridge";
 import { Panic, Result, ResultDeserializationError, panic } from "better-result";
 import type { ResultCodec, StandardSchemaOutput, StandardSchemaV1 } from "better-result";
 import * as z from "zod";
-import type { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { CollectorAnswerInvalid } from "./errors/collector-answer-invalid";
 import type { CollectorInjectionFailed } from "./errors/collector-injection-failed";
 import { MfcPageFetchFailed } from "./errors/mfc-page-fetch-failed";
@@ -161,8 +160,8 @@ export function reportDefect(cause: unknown): CollectorDefect {
   };
 }
 
-/** How the collector fails to answer any request. An aborted run answers AttemptAbandoned rather than throw. */
-export type CollectorFailure = CollectorInjectionFailed | CollectorAnswerInvalid | AttemptAbandoned;
+/** How the collector fails to answer any request. A run stopped before its script ran answers CollectorInjectionFailed. */
+export type CollectorFailure = CollectorInjectionFailed | CollectorAnswerInvalid;
 
 /** How the collector fails to answer a page request. */
 export type PageCollectFailure = CollectorFailure | MfcPageFetchFailed;

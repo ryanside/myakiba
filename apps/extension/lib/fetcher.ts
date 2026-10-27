@@ -1,7 +1,7 @@
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";
-import { Panic, Result, UnhandledException } from "better-result";
+import { Panic, Result, UnhandledException, panic } from "better-result";
 import { timeoutSignal, unlessAborted } from "./clock";
 import type { Clock } from "./clock";
 import { NO_STATUS } from "./collect";
@@ -12,7 +12,6 @@ import type {
   PageRequest,
   PictureFailure,
 } from "./collect";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
 import { MfcPageUnrecognized } from "./errors/mfc-page-unrecognized";
@@ -111,7 +110,7 @@ type AttemptFailure =
   | SessionStorageUnavailable;
 
 /** Why an attempt that still had a run waiting answered no page. */
-export type ItemFetchError = Exclude<AttemptFailure, AttemptAbandoned>;
+export type ItemFetchError = AttemptFailure;
 
 type ShownItem = { readonly page: CollectedPage; readonly ogImage: MfcOgImage };
 
@@ -134,21 +133,19 @@ const AFTER_PAGE_FAILURE = {
   UnhandledException: { closeOwned: true, retryOwned: true },
   MfcLoadTimedOut: { closeOwned: false, retryOwned: true },
   MfcQueueHalted: { closeOwned: false, retryOwned: false },
-  AttemptAbandoned: { closeOwned: false, retryOwned: false },
 } as const satisfies Record<
   PageFailure["_tag"],
   { readonly closeOwned: boolean; readonly retryOwned: boolean }
 >;
 
-/** Only a halt or an abandoned attempt keeps its meaning when the challenge's tab cannot be shown. */
+/** Only a halt keeps its meaning when the challenge's tab cannot be shown. */
 function notShown(
   error: ChallengeShowFailure,
   mfcItemId: MfcItemId,
-): MfcQueueHalted | AttemptAbandoned | MfcChallengeUnsolved {
+): MfcQueueHalted | MfcChallengeUnsolved {
   const unsolved = () => new MfcChallengeUnsolved({ mfcItemId, reason: "not_shown", cause: error });
   return error.match({
     MfcQueueHalted: (halted) => halted,
-    AttemptAbandoned: (abandoned) => abandoned,
     MfcLoadTimedOut: unsolved,
     MfcTabUnavailable: unsolved,
     TabClosed: unsolved,
@@ -219,12 +216,13 @@ export function createFetcher(deps: FetcherDeps) {
     if (current && !sameJob(state.active, current.job)) current.controller.abort();
   }
 
-  function liveRequester(job: Job, signal: AbortSignal): LiveRequester {
+  function liveRequester(job: Job): LiveRequester {
+    let last =
+      waitersOf(state, job)[0]?.requester ??
+      panic(`MFC item ${job.mfcItemId} started with no run waiting for it.`);
     return () => {
-      const requester = waitersOf(state, job)[0]?.requester;
-      return signal.aborted || !requester
-        ? Result.err(new AttemptAbandoned())
-        : Result.ok(requester);
+      last = waitersOf(state, job)[0]?.requester ?? last;
+      return last;
     };
   }
 
@@ -256,7 +254,7 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<ItemPage> {
     const picture = await pictureOf(ogImage, context);
     const logged = picture.tapError((failure) => {
-      if (!AttemptAbandoned.is(failure)) {
+      if (!context.signal.aborted) {
         console.warn(
           `${failure._tag} for MFC item ${context.mfcItemId}'s picture: ${failure.message}`,
         );
@@ -336,9 +334,8 @@ export function createFetcher(deps: FetcherDeps) {
   ): Promise<CollectedPage | null> {
     const request = { kind: "page", mode: "document", mfcItemId: job.mfcItemId } as const;
     for (let tries = 1; !open.aborted; tries++) {
-      const read = await unlessAborted(open, collect(tabId, request, open));
-      const page = Result.flatten(read);
-      if (page.isOk() && page.value.status !== NO_STATUS) return page.value;
+      const page = await unlessAborted(open, collect(tabId, request, open));
+      if (page?.isOk() && page.value.status !== NO_STATUS) return page.value;
       if (tries === READ_TRIES) break;
       await clock.sleep(READ_RETRY_MS, open);
     }
@@ -397,7 +394,6 @@ export function createFetcher(deps: FetcherDeps) {
       const answer = await afterChallenge(tabId, job, servedWith, deadline, signal);
       // Handing focus back is a courtesy: a run whose tab closed meanwhile still gets its answer.
       await mfcTabs.handBack(requester, signal);
-      if (signal.aborted) return Result.err(new AttemptAbandoned());
       if (answer === null) {
         return Result.err(new MfcChallengeUnsolved({ mfcItemId, reason: "unanswered" }));
       }
@@ -409,10 +405,10 @@ export function createFetcher(deps: FetcherDeps) {
   /**
    * Answers one item, and is where its failures end. An expected failure is logged and answered as it is. A defect is
    * reported and answered as an unhandled exception, so the queue moves on instead of retrying it forever. Null answers
-   * nothing, because no run waits for the item any more.
+   * nothing, because the signal aborted: no run waits for the item any more.
    */
   async function attempt(job: Job, signal: AbortSignal): Promise<ItemAnswer | null> {
-    const requester = liveRequester(job, signal);
+    const requester = liveRequester(job);
     let answer: Result<ItemPage, AttemptFailure>;
     try {
       answer = await Result.gen(async function* () {
@@ -438,11 +434,11 @@ export function createFetcher(deps: FetcherDeps) {
         `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
         error,
       );
-      return Result.err(new UnhandledException({ cause: error }));
+      return signal.aborted ? null : Result.err(new UnhandledException({ cause: error }));
     }
+    if (signal.aborted) return null;
     if (answer.isOk()) return Result.ok(answer.value);
     const { error } = answer;
-    if (AttemptAbandoned.is(error)) return null;
     if (!MfcRateLimited.is(error)) {
       console.warn(`${error._tag} for MFC item ${job.mfcItemId}: ${error.message}`);
     }
@@ -475,7 +471,7 @@ export function createFetcher(deps: FetcherDeps) {
       current = { job, controller };
       const answer = await attempt(job, controller.signal);
       current = null;
-      if (answer === null || controller.signal.aborted) continue;
+      if (answer === null) continue;
       const booking = await booked(answer);
       booking.tapError((failure) => {
         console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);

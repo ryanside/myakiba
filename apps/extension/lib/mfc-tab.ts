@@ -2,7 +2,7 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
 import type { Clock } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
+import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import type { TabEditRefused } from "./errors/tab-edit-refused";
 import type { TabQueryFailed } from "./errors/tab-query-failed";
@@ -61,7 +61,7 @@ export function createMfcTabs(deps: {
       signal: AbortSignal,
     ): Promise<Result<MfcTabLease, LeaseFailure>> {
       return Result.gen(async function* () {
-        const { context } = yield* requester();
+        const { context } = requester();
         const owned = yield* Result.await(own.landedIn(context));
         if (owned !== null) return Result.ok({ kind: "owned", tabId: owned } as const);
         const borrowed = yield* Result.await(borrowable(context));
@@ -80,7 +80,8 @@ export function createMfcTabs(deps: {
         const tabId = yield* Result.await(
           own.load(requester, mfcItemUrl(mfcItemId, origins), signal),
         );
-        if (signal.aborted) return Result.err(new AttemptAbandoned());
+        // A run that stopped waiting while its tab loaded gets nothing shown.
+        if (signal.aborted) return Result.err(new MfcLoadTimedOut({ timeoutMs: PAGE_TIMEOUT_MS }));
         const shown = yield* Result.await(tabs.update(tabId, { active: true }));
         yield* Result.await(own.claim(tabId));
         if (shown?.windowId !== undefined) yield* Result.await(tabs.focusWindow(shown.windowId));
@@ -111,14 +112,14 @@ export function createMfcTabs(deps: {
       }
     },
 
-    /** Fails when the myakiba tab closed during the challenge or its run ended, which leaves focus where it is. */
+    /** Leaves focus where it is once the run ended. Fails when the myakiba tab closed during the challenge. */
     handBack(
       requester: LiveRequester,
       signal: AbortSignal,
-    ): Promise<Result<void, AttemptAbandoned | TabEditRefused | WindowFocusRefused>> {
+    ): Promise<Result<void, TabEditRefused | WindowFocusRefused>> {
       return Result.gen(async function* () {
-        if (signal.aborted) return Result.err(new AttemptAbandoned());
-        const { tabId } = yield* requester();
+        if (signal.aborted) return Result.ok();
+        const { tabId } = requester();
         const tab = yield* Result.await(tabs.update(tabId, { active: true }));
         if (tab?.windowId !== undefined) yield* Result.await(tabs.focusWindow(tab.windowId));
         return Result.ok();

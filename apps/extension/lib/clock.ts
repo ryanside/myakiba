@@ -1,5 +1,3 @@
-import { Result } from "better-result";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 
 export type Clock = {
@@ -38,17 +36,14 @@ export function timeoutSignal(clock: Clock, ms: number, cancelled: AbortSignal):
   return controller.signal;
 }
 
-/** Settles as `work` does, or answers AttemptAbandoned once `signal` aborts, even when `work` ignores it. */
-export async function unlessAborted<T>(
-  signal: AbortSignal,
-  work: Promise<T>,
-): Promise<Result<T, AttemptAbandoned>> {
-  const aborted = Promise.withResolvers<Result<T, AttemptAbandoned>>();
-  const abort = () => aborted.resolve(Result.err(new AttemptAbandoned()));
+/** Settles as `work` does, or answers null once `signal` aborts, even when `work` ignores it. */
+export async function unlessAborted<T>(signal: AbortSignal, work: Promise<T>): Promise<T | null> {
+  const aborted = Promise.withResolvers<null>();
+  const abort = () => aborted.resolve(null);
   if (signal.aborted) abort();
   else signal.addEventListener("abort", abort, { once: true });
   try {
-    return await Promise.race([work.then((value) => Result.ok(value)), aborted.promise]);
+    return await Promise.race([work, aborted.promise]);
   } finally {
     signal.removeEventListener("abort", abort);
   }

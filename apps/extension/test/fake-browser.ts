@@ -10,7 +10,6 @@ import type {
   PageRequest,
   PictureFailure,
 } from "../lib/collect";
-import { AttemptAbandoned } from "../lib/errors/attempt-abandoned";
 import { CollectorAnswerInvalid } from "../lib/errors/collector-answer-invalid";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { MfcPageFetchFailed } from "../lib/errors/mfc-page-fetch-failed";
@@ -590,9 +589,13 @@ export function fakeExtension(options: {
     }
   }
 
+  /** A picture read stopped before its script ran, as the background answers it. */
+  const stoppedPictureRead = (tabId: number) =>
+    Result.err(new CollectorInjectionFailed({ tabId, kind: "public-picture", cause: null }));
+
   /** Stands in for the collector, which reads only the picture asked for. */
   async function readPublicPicture(tabId: number, requested: string, signal: AbortSignal) {
-    if (signal.aborted) return Result.err(new AttemptAbandoned());
+    if (signal.aborted) return stoppedPictureRead(tabId);
     const tab = tabs.get(tabId);
     publicPictureCalls.push({ tabId, signal, tab: tab && { ...tab } });
     const url = new URL(tab?.url ?? "about:blank");
@@ -615,7 +618,7 @@ export function fakeExtension(options: {
   }
 
   async function readGatedPicture(tabId: number, url: string, signal: AbortSignal) {
-    if (signal.aborted) return Result.err(new AttemptAbandoned());
+    if (signal.aborted) return stoppedPictureRead(tabId);
     pictureUrls.push(url);
     const read: Load = { tabId, url, at: clock.now(), byUser: false, endedAt: null };
     return readIn(read, signal, async () =>

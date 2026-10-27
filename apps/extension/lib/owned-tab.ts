@@ -1,7 +1,6 @@
 import { Result, panic } from "better-result";
 import * as z from "zod";
 import type { Clock } from "./clock";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcTabUnavailable } from "./errors/mfc-tab-unavailable";
 import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
@@ -15,8 +14,11 @@ import type { SessionValue } from "./session-value";
 import type { Tab, Tabs } from "./tabs";
 import type { HoldTurn, Throttle, TurnFailure } from "./throttle";
 
-/** The first run still waiting for the job. Read at each tab step, since runs cancel at any time. */
-export type LiveRequester = () => Result<Requester, AttemptAbandoned>;
+/**
+ * The first run still waiting for the job, read at each tab step since runs cancel at any time. Once none waits, the
+ * attempt's signal has aborted, and this answers the last run that waited.
+ */
+export type LiveRequester = () => Requester;
 
 export const ownedTabSchema = z
   .discriminatedUnion("state", [
@@ -51,9 +53,6 @@ export type TabOpenFailure =
   | TabOpenFailed
   | SessionStorageUnavailable
   | TurnFailure;
-
-/** Why a load stopped once its signal aborted: the attempt was abandoned, or the turn ran out. */
-type Stopped = () => AttemptAbandoned | MfcLoadTimedOut;
 
 type Load = {
   readonly tabId: number;
@@ -93,6 +92,9 @@ export function ownedTab(deps: {
    * touches the tab. Browsers never reuse a tab id, so a claim is never cleared.
    */
   const claimed = new Set<number>();
+
+  /** A load stopped by its signal, whether the turn ran out or the attempt was abandoned. */
+  const stopped = () => new MfcLoadTimedOut({ timeoutMs: turnMs });
 
   const ours = (tabId: number) => record.get()?.tabId === tabId && !claimed.has(tabId);
 
@@ -157,10 +159,9 @@ export function ownedTab(deps: {
     requester: LiveRequester,
     url: string,
     signal: AbortSignal,
-    stopped: Stopped,
   ): Promise<Result<Load | null, TabOpenFailure>> {
     return Result.gen(async function* () {
-      const { tabId: requesterTabId, context } = yield* requester();
+      const { tabId: requesterTabId, context } = requester();
       const windowId = yield* Result.await(windowOf(requesterTabId));
       const own = yield* Result.await(landedTab());
       if (!own || !inContext(own.tab, context) || own.tab.windowId !== windowId) {
@@ -181,11 +182,10 @@ export function ownedTab(deps: {
     requester: LiveRequester,
     url: string,
     signal: AbortSignal,
-    stopped: Stopped,
   ): Promise<Result<Load, TabOpenFailure>> {
     return Result.gen(async function* () {
       yield* Result.await(release());
-      const { tabId: requesterTabId, context } = yield* requester();
+      const { tabId: requesterTabId, context } = requester();
       const windowId = yield* Result.await(windowOf(requesterTabId));
       const properties: Parameters<Tabs["create"]>[0] = { url, active: false, windowId };
       if (context.cookieStoreId !== null) properties.cookieStoreId = context.cookieStoreId;
@@ -228,7 +228,6 @@ export function ownedTab(deps: {
     load: Load,
     ended: (tab: Tab) => boolean,
     signal: AbortSignal,
-    stopped: Stopped,
   ): Promise<Result<number, TabOpenFailure>> {
     for (;;) {
       if (signal.aborted) return Result.err(stopped());
@@ -264,16 +263,14 @@ export function ownedTab(deps: {
   ): Promise<Result<number, TabOpenFailure>> {
     await record.ready();
     const signal = AbortSignal.any([cancel, timeout]);
-    const stopped: Stopped = () =>
-      cancel.aborted ? new AttemptAbandoned() : new MfcLoadTimedOut({ timeoutMs: turnMs });
-    const shown = await navigateUnlessShown(requester, url, signal, stopped);
+    const shown = await navigateUnlessShown(requester, url, signal);
     if (shown.isErr()) return Result.err(shown.error);
     const started =
-      shown.value === null ? await create(requester, url, signal, stopped) : Result.ok(shown.value);
+      shown.value === null ? await create(requester, url, signal) : Result.ok(shown.value);
     if (started.isErr()) return Result.err(started.error);
     const load = started.value;
     const ended = endOf(load, clock);
-    const opened = await untilLanded(load, ended, signal, stopped);
+    const opened = await untilLanded(load, ended, signal);
     if (opened.isOk()) return opened;
     const closed = await closeUntilGone(load.tabId);
     if (closed.isErr()) return Result.err(closed.error);

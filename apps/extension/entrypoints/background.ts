@@ -12,7 +12,6 @@ import {
 } from "../lib/collect";
 import type { AnswerCodec, CollectRequest, CollectorFailure } from "../lib/collect";
 import { ORIGINS } from "../lib/config";
-import { AttemptAbandoned } from "../lib/errors/attempt-abandoned";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
@@ -32,12 +31,14 @@ async function runCollector<Ok extends StandardSchemaV1, Fails extends StandardS
       catch: (cause) => new CollectorInjectionFailed({ tabId, kind: request.kind, cause }),
     });
   // Each step that touches the tab first checks the signal, so a stopped load starts no new script.
-  if (signal?.aborted) return Result.err(new AttemptAbandoned());
+  const stopped = () =>
+    Result.err(new CollectorInjectionFailed({ tabId, kind: request.kind, cause: signal?.reason }));
+  if (signal?.aborted) return stopped();
   const armed = await inject(() =>
     browser.scripting.executeScript({ target: { tabId }, func: armCollector, args: [request] }),
   );
   if (armed.isErr()) return Result.err(armed.error);
-  if (signal?.aborted) return Result.err(new AttemptAbandoned());
+  if (signal?.aborted) return stopped();
   const stop = async () => {
     try {
       await browser.scripting.executeScript({ target: { tabId }, func: stopCollector });

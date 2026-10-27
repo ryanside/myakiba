@@ -3,7 +3,6 @@ import * as z from "zod";
 import type { Clock } from "./clock";
 import { timeoutSignal, unlessAborted } from "./clock";
 import { PAGE_TIMEOUT_MS } from "./collect";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcLoadTimedOut } from "./errors/mfc-load-timed-out";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import type { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
@@ -42,8 +41,11 @@ export const OPEN_THROTTLE: ThrottleState = {
  */
 export type HoldTurn = (at: number) => Promise<void>;
 
-/** How a throttle turn fails, whatever its work does. */
-export type TurnFailure = MfcLoadTimedOut | MfcQueueHalted | AttemptAbandoned;
+/**
+ * How a throttle turn fails, whatever its work does. A turn whose signal aborts stops at once with MfcLoadTimedOut, which
+ * the attempt that aborted it never reads: it decides from its signal.
+ */
+export type TurnFailure = MfcLoadTimedOut | MfcQueueHalted;
 
 function pausedOrHalted(current: ThrottleState, until: number, now: number): ThrottleState {
   const haltedUntil = until - now > THROTTLE.maxPauseMs ? until : 0;
@@ -99,7 +101,7 @@ export function createThrottle(deps: {
   ): Promise<Result<void, TurnFailure>> {
     await books.ready();
     for (;;) {
-      if (signal.aborted) return Result.err(new AttemptAbandoned());
+      if (signal.aborted) return Result.err(new MfcLoadTimedOut({ timeoutMs }));
       const current = books.get();
       const now = clock.now();
       if (now < current.haltedUntil) {
@@ -170,8 +172,8 @@ export function createThrottle(deps: {
       lastLoad = Promise.all([previous, ended.promise]);
       let reserved: Result<void, TurnFailure>;
       try {
-        const waited = await unlessAborted(signal, previous);
-        reserved = waited.isOk() ? await reserve(signal, timeoutMs) : waited;
+        await unlessAborted(signal, previous);
+        reserved = await reserve(signal, timeoutMs);
       } catch (error) {
         // A defect while reserving still frees the turn, so it cannot leave every later load waiting.
         ended.resolve(null);
@@ -191,8 +193,9 @@ export function createThrottle(deps: {
           "a load the extension can no longer stop",
         );
       };
-      const running: Promise<Result<T, E | AttemptAbandoned>> = signal.aborted
-        ? Promise.resolve(Result.err(new AttemptAbandoned()))
+      const stopped = new MfcLoadTimedOut({ timeoutMs });
+      const running: Promise<Result<T, E | MfcLoadTimedOut>> = signal.aborted
+        ? Promise.resolve(Result.err(stopped))
         : work(timeout, holdUntil);
       // The next turn waits for this load to end, not for its end to be booked. A defect at the end is reported here,
       // once, so it fails no later load and is never left unhandled.
@@ -208,7 +211,7 @@ export function createThrottle(deps: {
         signal,
         answerOnceStopped(running, settled, timeout, timeoutMs),
       );
-      return Result.flatten(answer);
+      return answer ?? Result.err(stopped);
     },
 
     pauseOrHalt(until: number): Promise<Result<void, SessionStorageUnavailable>> {

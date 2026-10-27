@@ -1,7 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { Panic, Result } from "better-result";
 import { fakeClock, memoryValue } from "../test/fake-browser";
-import { AttemptAbandoned } from "./errors/attempt-abandoned";
 import { MfcQueueHalted } from "./errors/mfc-queue-halted";
 import { SessionStorageUnavailable } from "./errors/session-storage-unavailable";
 import { OPEN_THROTTLE, THROTTLE, createThrottle, parseRetryAfter } from "./throttle";
@@ -106,7 +105,7 @@ describe("a throttle turn", () => {
     expect(state.peek()).toEqual(halted);
   });
 
-  test("whose attempt was abandoned answers AttemptAbandoned without running its work", async () => {
+  test("whose attempt was abandoned fails without running its work", async () => {
     const { throttle } = turns();
     const cancelled = new AbortController();
     cancelled.abort();
@@ -116,7 +115,7 @@ describe("a throttle turn", () => {
       return Result.ok(null);
     });
 
-    expect(turn.isErr() && AttemptAbandoned.is(turn.error)).toBe(true);
+    expect(turn.isErr()).toBe(true);
     expect(ran).toBe(false);
   });
 
