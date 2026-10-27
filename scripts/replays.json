@@ -2109,6 +2109,15 @@
         "main retained payloads > retries main order-item itemsToScrape",
         "main retained payloads > raw main CSV prices normalize once for reads, retry and fetched completion"
       ]
+    },
+    {
+      "fix": "063ef8871182c50e67854d75aeef63de133ebea2",
+      "bug": "a defect in a reorder showed only its title, and a defect in a Preferences save showed the safe text as its title",
+      "test": "apps/web/src/data/write-defect-toasts.test.tsx",
+      "fixed": [
+        "a defect in a List reorder shows the safe text under the reorder's title",
+        "a defect in a Preferences save shows the safe text under the save's title"
+      ]
     }
   ],
   "lint": [
