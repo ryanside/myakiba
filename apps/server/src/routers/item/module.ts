@@ -1,5 +1,4 @@
-import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
-import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
+import { gated } from "@/domain/extension-import";
 import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   collection,
@@ -530,75 +529,76 @@ export const Items = {
     },
   ),
 
-  resync: command(
-    {
-      action: "item.requestResync",
-      failure: "Failed to request item refresh",
-      // Cooldown reads that guard a refresh and picture storage still fail closed: each
-      // answers the logged 500 after the rollback has dropped the refresh.
-      operational: [ResyncCooldownUnavailable, StoreItemPictureFailed],
-      before: async (scope, input: { readonly id: number } & ItemRefresh) => {
-        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-        scope.log.set({ item: { externalId: input.id } });
-        const found = await findResyncItem(scope.tx, input.id);
-        if (!found) return Result.err(new ItemNotFound());
-        const held = await cooldownHeldUntil(scope.tx, found.itemId);
+  resync: gated(
+    command(
+      {
+        action: "item.requestResync",
+        failure: "Failed to request item refresh",
+        // Cooldown reads that guard a refresh and picture storage still fail closed: each
+        // answers the logged 500 after the rollback has dropped the refresh.
+        operational: [ResyncCooldownUnavailable, StoreItemPictureFailed],
+        before: async (scope, input: { readonly id: number } & ItemRefresh) => {
+          scope.log.set({ item: { externalId: input.id } });
+          const found = await findResyncItem(scope.tx, input.id);
+          if (!found) return Result.err(new ItemNotFound());
+          const held = await cooldownHeldUntil(scope.tx, found.itemId);
+          if (held.isErr()) return held;
+          if (held.value) return Result.err(new ResyncCooldownActive());
+          const read = await readMfcItemPage(found.id, input);
+          if (read.isErr()) {
+            return read.error.match({
+              MfcPageUnreadable: ({ problem }) => {
+                scope.log.set({ mfc: { itemId: found.id, outcome: problem.kind } });
+                return Result.err(new MfcPageRejected({ problem: problem.kind }));
+              },
+              StoreItemPictureFailed: (failure) => Result.err(failure),
+            });
+          }
+          const { page, stored } = read.value;
+          return scope.proceed({ itemId: found.itemId, page, stored });
+        },
+      },
+      async (scope, { itemId, page, stored }) => {
+        const locked = await lockItem(scope.tx, itemId);
+        if (!locked) return Result.err(new ItemNotFound());
+        const held = await cooldownHeldUntil(scope.tx, itemId);
         if (held.isErr()) return held;
         if (held.value) return Result.err(new ResyncCooldownActive());
-        const read = await readMfcItemPage(found.id, input);
-        if (read.isErr()) {
-          return read.error.match({
-            MfcPageUnreadable: ({ problem }) => {
-              scope.log.set({ mfc: { itemId: found.id, outcome: problem.kind } });
-              return Result.err(new MfcPageRejected({ problem: problem.kind }));
-            },
-            StoreItemPictureFailed: (failure) => Result.err(failure),
-          });
+        const image = stored?.kind === "stored" ? stored.url : locked.image;
+        const outcome = await refreshItem(scope.tx, locked, page, image);
+        scope.log.set({
+          mfc: {
+            itemId: page.mfcItemId,
+            contentLabel: page.contentLabel,
+            outcome,
+            picture: pictureLog(stored),
+            warnings: page.warnings,
+          },
+        });
+        const cooldown =
+          redis.status === "ready"
+            ? await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx))
+            : Result.err(
+                new ResyncCooldownUnavailable({
+                  itemId,
+                  cause: new Error(`Redis is ${redis.status}`),
+                }),
+              );
+        if (cooldown.isErr()) {
+          scope.log.set({ cooldown: { itemId, operation: "write", outcome: "unavailable" } });
+          scope.log.warn(cooldown.error.message, { failure: cooldown.error });
+          return Result.ok({
+            status: "idle",
+            cooldownExpiresAt: null,
+            saved: outcome === "unchanged" ? "unchanged" : "refreshed",
+          } satisfies ResyncResult);
         }
-        const { page, stored } = read.value;
-        return scope.proceed({ itemId: found.itemId, page, stored });
-      },
-    },
-    async (scope, { itemId, page, stored }) => {
-      const locked = await lockItem(scope.tx, itemId);
-      if (!locked) return Result.err(new ItemNotFound());
-      const held = await cooldownHeldUntil(scope.tx, itemId);
-      if (held.isErr()) return held;
-      if (held.value) return Result.err(new ResyncCooldownActive());
-      const image = stored?.kind === "stored" ? stored.url : locked.image;
-      const outcome = await refreshItem(scope.tx, locked, page, image);
-      scope.log.set({
-        mfc: {
-          itemId: page.mfcItemId,
-          contentLabel: page.contentLabel,
-          outcome,
-          picture: pictureLog(stored),
-          warnings: page.warnings,
-        },
-      });
-      const cooldown =
-        redis.status === "ready"
-          ? await setResyncCooldown(redis, itemId, await currentTransactionId(scope.tx))
-          : Result.err(
-              new ResyncCooldownUnavailable({
-                itemId,
-                cause: new Error(`Redis is ${redis.status}`),
-              }),
-            );
-      if (cooldown.isErr()) {
-        scope.log.set({ cooldown: { itemId, operation: "write", outcome: "unavailable" } });
-        scope.log.warn(cooldown.error.message, { failure: cooldown.error });
-        return Result.ok({
-          status: "idle",
-          cooldownExpiresAt: null,
+        return cooldown.map((cooldownExpiresAt): ResyncResult => ({
+          status: "cooldown",
+          cooldownExpiresAt,
           saved: outcome === "unchanged" ? "unchanged" : "refreshed",
-        } satisfies ResyncResult);
-      }
-      return cooldown.map((cooldownExpiresAt): ResyncResult => ({
-        status: "cooldown",
-        cooldownExpiresAt,
-        saved: outcome === "unchanged" ? "unchanged" : "refreshed",
-      }));
-    },
+        }));
+      },
+    ),
   ),
 };

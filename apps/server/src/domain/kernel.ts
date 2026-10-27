@@ -213,7 +213,7 @@ type Recovering<I, E, C> = Omit<Retrying<E>, "recover"> & {
 };
 
 /** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
-type Op<I, T, F extends AnyFailure, M extends string> = OpConfig<M> & {
+export type Op<I, T, F extends AnyFailure, M extends string> = OpConfig<M> & {
   /** Type-only: carries the operation's types for `serve`. Never set at runtime. */
   readonly "~types"?: {
     readonly input: (input: I) => void;
@@ -528,6 +528,17 @@ async function runEffects(
   }
 }
 
+const guards = new WeakMap<AnyOp, () => Result<void, AnyFailure>>();
+
+/** Refuse an operation before its before step or transaction can do any work. */
+export function gate<I, T, F extends AnyFailure, M extends string, G extends AnyFailure>(
+  op: Op<I, T, F, M>,
+  check: () => Result<void, G>,
+): Op<I, T, F | G, M> {
+  guards.set(op, check);
+  return op;
+}
+
 /** Runs a query that reads the pool, one autocommit statement at a time. */
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = bodyOf(op);
@@ -644,6 +655,8 @@ export async function run<I, T, F extends AnyFailure, M extends string>(
 ): Promise<Result<T, F>> {
   const anyOp = op as AnyOp;
   let settled: Settled;
+  const allowed = guards.get(anyOp)?.();
+  if (allowed?.isErr()) return allowed as Result<T, F>;
   if (poolReads.has(anyOp)) {
     settled = await readPool(anyOp, viewer, input as never, log);
   } else {

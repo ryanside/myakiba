@@ -1,5 +1,4 @@
-import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
-import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
+import { gated } from "@/domain/extension-import";
 import { and, eq, inArray } from "drizzle-orm";
 import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
 import { item } from "@myakiba/db/schema/figure";
@@ -34,55 +33,56 @@ export const MfcItems = {
     },
   ),
 
-  ingest: command(
-    {
-      action: "mfc_items.ingest",
-      failure: "Failed to import item",
-      // Neither failure has a fallback, so each answers the logged 500.
-      operational: [StoreItemPictureFailed, MfcItemNotPersisted],
-      before: async (scope, input: ItemUpload) => {
-        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-        const prepared = await prepareMfcItem(scope.tx, input);
-        if (prepared.isErr()) {
-          return prepared.error.match({
-            MfcPageUnreadable: ({ mfcItemId, problem }) => {
-              scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
-              return Result.err(new MfcPageRejected({ problem: problem.kind }));
-            },
-            StoreItemPictureFailed: (failed) => Result.err(failed),
+  ingest: gated(
+    command(
+      {
+        action: "mfc_items.ingest",
+        failure: "Failed to import item",
+        // Neither failure has a fallback, so each answers the logged 500.
+        operational: [StoreItemPictureFailed, MfcItemNotPersisted],
+        before: async (scope, input: ItemUpload) => {
+          const prepared = await prepareMfcItem(scope.tx, input);
+          if (prepared.isErr()) {
+            return prepared.error.match({
+              MfcPageUnreadable: ({ mfcItemId, problem }) => {
+                scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
+                return Result.err(new MfcPageRejected({ problem: problem.kind }));
+              },
+              StoreItemPictureFailed: (failed) => Result.err(failed),
+            });
+          }
+          const ready = prepared.value;
+          if (ready.kind === "parsed") return scope.proceed(ready);
+          scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
+          return Result.ok<IngestResult>({
+            saved: "existing",
+            itemId: ready.itemId,
+            mfcItemId: ready.mfcItemId,
           });
-        }
-        const ready = prepared.value;
-        if (ready.kind === "parsed") return scope.proceed(ready);
-        scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
-        return Result.ok<IngestResult>({
-          saved: "existing",
-          itemId: ready.itemId,
-          mfcItemId: ready.mfcItemId,
-        });
-      },
-    },
-    async (scope, { page, stored }) => {
-      const id = page.mfcItemId;
-      const picture = pictureOutcome(stored);
-      const ensured = await ensureMfcItem(scope.tx, page, stored);
-      if (ensured.isErr()) return ensured;
-      const { itemId, created } = ensured.value;
-
-      scope.log.set({
-        mfc: {
-          itemId: id,
-          contentLabel: page.contentLabel,
-          outcome: created ? "created" : "existing",
-          picture: pictureLog(stored),
-          warnings: page.warnings,
         },
-      });
-      return Result.ok<IngestResult>(
-        created
-          ? { saved: "created", itemId, mfcItemId: id, picture }
-          : { saved: "existing", itemId, mfcItemId: id },
-      );
-    },
+      },
+      async (scope, { page, stored }) => {
+        const id = page.mfcItemId;
+        const picture = pictureOutcome(stored);
+        const ensured = await ensureMfcItem(scope.tx, page, stored);
+        if (ensured.isErr()) return ensured;
+        const { itemId, created } = ensured.value;
+
+        scope.log.set({
+          mfc: {
+            itemId: id,
+            contentLabel: page.contentLabel,
+            outcome: created ? "created" : "existing",
+            picture: pictureLog(stored),
+            warnings: page.warnings,
+          },
+        });
+        return Result.ok<IngestResult>(
+          created
+            ? { saved: "created", itemId, mfcItemId: id, picture }
+            : { saved: "existing", itemId, mfcItemId: id },
+        );
+      },
+    ),
   ),
 };

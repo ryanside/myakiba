@@ -1,5 +1,4 @@
-import { EXTENSION_RELEASE } from "@myakiba/contracts/shared/extension-release";
-import { ExtensionImportUnavailable } from "@/lib/errors/extension-import-unavailable";
+import { gated } from "@/domain/extension-import";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import {
   completeSyncItem,
@@ -114,281 +113,289 @@ function completeOperation<const M extends string>(failure: M) {
 }
 
 export const Sync = {
-  planItem: query(
-    { action: "sync.item", failure: "Failed to check for existing items" },
-    async (
-      scope,
-      input: { readonly body: { readonly items: number[] }; readonly emailVerified: boolean },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      scope.log.set({ sync: { type: "item" } });
-      if (!input.emailVerified) {
-        scope.log.set({ sync: { reason: "email_not_verified" } });
-        return Result.err(new EmailNotVerified());
-      }
-      const existing = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-        input.body.items,
-        scope.tx,
-      );
-      const ids = new Set(existing.map((row) => row.externalId));
-      const missing = input.body.items.filter((id) => !ids.has(id));
-      const syncSessionId = createId();
-      scope.log.set({
-        sync: { sessionId: syncSessionId },
-        items: { requested: input.body.items.length, existing: ids.size, toFetch: missing.length },
-      });
-      const session = {
-        id: syncSessionId,
-        userId: scope.viewer.userId,
-        syncType: "item",
-        itemExternalIds: input.body.items,
-        existingItemExternalIds: input.body.items.filter((id) => ids.has(id)),
-      } satisfies SyncSessionCreation;
-      const status =
-        missing.length > 0
-          ? SYNC_STATUS_MESSAGES.queued
-          : "These items are already in the item database.";
-      return Result.ok({
-        session,
-        requestPayload: {
-          type: "item",
+  planItem: gated(
+    query(
+      { action: "sync.item", failure: "Failed to check for existing items" },
+      async (
+        scope,
+        input: { readonly body: { readonly items: number[] }; readonly emailVerified: boolean },
+      ) => {
+        scope.log.set({ sync: { type: "item" } });
+        if (!input.emailVerified) {
+          scope.log.set({ sync: { reason: "email_not_verified" } });
+          return Result.err(new EmailNotVerified());
+        }
+        const existing = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+          input.body.items,
+          scope.tx,
+        );
+        const ids = new Set(existing.map((row) => row.externalId));
+        const missing = input.body.items.filter((id) => !ids.has(id));
+        const syncSessionId = createId();
+        scope.log.set({
+          sync: { sessionId: syncSessionId },
+          items: {
+            requested: input.body.items.length,
+            existing: ids.size,
+            toFetch: missing.length,
+          },
+        });
+        const session = {
+          id: syncSessionId,
+          userId: scope.viewer.userId,
+          syncType: "item",
+          itemExternalIds: input.body.items,
+          existingItemExternalIds: input.body.items.filter((id) => ids.has(id)),
+        } satisfies SyncSessionCreation;
+        const status =
+          missing.length > 0
+            ? SYNC_STATUS_MESSAGES.queued
+            : "These items are already in the item database.";
+        return Result.ok({
+          session,
+          requestPayload: {
+            type: "item",
+            payloadVersion: 3,
+            userId: scope.viewer.userId,
+            syncSessionId,
+            itemExternalIds: missing,
+          } satisfies JobData,
+          rows: { collectionItems: [], orders: [] },
+          response: {
+            status,
+            isFinished: missing.length === 0,
+            existingItemsToInsert: ids.size,
+            newItems: missing.length,
+            jobId: missing.length > 0 ? syncSessionId : null,
+            syncSessionId,
+            missingMfcItemIds: missing,
+          },
+        });
+      },
+    ),
+  ),
+  planCsv: gated(
+    query(
+      { action: "sync.csv", failure: "Failed to check for existing items" },
+      async (
+        scope,
+        input: {
+          readonly body: Omit<InternalCsvItem, "collectionId">[];
+          readonly emailVerified: boolean;
+        },
+      ) => {
+        const { body } = input;
+        const { log } = scope;
+        if (!input.emailVerified) {
+          log.set({
+            sync: { type: "csv", reason: "email_not_verified" },
+          });
+          return Result.err(new EmailNotVerified());
+        }
+
+        log.set({
+          sync: { type: "csv" },
+          items: { requested: body.length },
+        });
+
+        const { items, warnings } = normalizeCsvPrices(
+          body.map((item) => ({
+            ...item,
+            collectionId: createId(),
+            orderId: item.status === "Ordered" ? createId() : item.orderId,
+          })),
+        );
+
+        const itemExternalIds = items.map((item) => item.itemExternalId);
+        const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+          itemExternalIds,
+          scope.tx,
+        );
+
+        const result = prepareCsvItems(items, existingItems, scope.viewer.userId);
+        const {
+          collectionItems,
+          orderItems,
+          csvItemsToFetch: itemsToFetch,
+          existingItemExternalIds,
+        } = result;
+
+        const itemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
+        const syncSessionId = createId();
+        const jobData = {
+          type: "csv",
+          warnings,
           payloadVersion: 3,
           userId: scope.viewer.userId,
           syncSessionId,
-          itemExternalIds: missing,
-        } satisfies JobData,
-        rows: { collectionItems: [], orders: [] },
-        response: {
-          status,
-          isFinished: missing.length === 0,
-          existingItemsToInsert: ids.size,
-          newItems: missing.length,
-          jobId: missing.length > 0 ? syncSessionId : null,
-          syncSessionId,
-          missingMfcItemIds: missing,
-        },
-      });
-    },
-  ),
-  planCsv: query(
-    { action: "sync.csv", failure: "Failed to check for existing items" },
-    async (
-      scope,
-      input: {
-        readonly body: Omit<InternalCsvItem, "collectionId">[];
-        readonly emailVerified: boolean;
+          items: itemsToFetch,
+          itemsToInsert: collectionItems,
+          ordersToInsert: orderItems,
+        } satisfies JobData;
+        const session = {
+          id: syncSessionId,
+          userId: scope.viewer.userId,
+          syncType: "csv" as const,
+          itemExternalIds: itemExternalIdsToTrack,
+          existingItemExternalIds,
+        };
+
+        return Result.ok(
+          plannedSync({
+            log,
+            requested: body.length,
+            session,
+            requestPayload: jobData,
+            rows: { collectionItems, orders: orderItems },
+          }),
+        );
       },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const { body } = input;
-      const { log } = scope;
-      if (!input.emailVerified) {
+    ),
+  ),
+  planOrder: gated(
+    query(
+      { action: "sync.order", failure: "Failed to check for existing items" },
+      async (scope, input: { readonly body: OrderSyncType; readonly emailVerified: boolean }) => {
+        const { body } = input;
+        const { log } = scope;
+        if (!input.emailVerified) {
+          log.set({
+            sync: { type: "order", reason: "email_not_verified" },
+          });
+          return Result.err(new EmailNotVerified());
+        }
+
         log.set({
-          sync: { type: "csv", reason: "email_not_verified" },
+          sync: { type: "order" },
+          items: { requested: body.items.length },
         });
-        return Result.err(new EmailNotVerified());
-      }
 
-      log.set({
-        sync: { type: "csv" },
-        items: { requested: body.length },
-      });
+        const orderId = createId();
 
-      const { items, warnings } = normalizeCsvPrices(
-        body.map((item) => ({
+        const normalizedItems = body.items.map((item) => ({
           ...item,
           collectionId: createId(),
-          orderId: item.status === "Ordered" ? createId() : item.orderId,
-        })),
-      );
+          orderId,
+        }));
+        const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
 
-      const itemExternalIds = items.map((item) => item.itemExternalId);
-      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-        itemExternalIds,
-        scope.tx,
-      );
+        const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+          itemExternalIds,
+          scope.tx,
+        );
 
-      const result = prepareCsvItems(items, existingItems, scope.viewer.userId);
-      const {
-        collectionItems,
-        orderItems,
-        csvItemsToFetch: itemsToFetch,
-        existingItemExternalIds,
-      } = result;
-
-      const itemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const syncSessionId = createId();
-      const jobData = {
-        type: "csv",
-        warnings,
-        payloadVersion: 3,
-        userId: scope.viewer.userId,
-        syncSessionId,
-        items: itemsToFetch,
-        itemsToInsert: collectionItems,
-        ordersToInsert: orderItems,
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: scope.viewer.userId,
-        syncType: "csv" as const,
-        itemExternalIds: itemExternalIdsToTrack,
-        existingItemExternalIds,
-      };
-
-      return Result.ok(
-        plannedSync({
-          log,
-          requested: body.length,
-          session,
-          requestPayload: jobData,
-          rows: { collectionItems, orders: orderItems },
-        }),
-      );
-    },
-  ),
-  planOrder: query(
-    { action: "sync.order", failure: "Failed to check for existing items" },
-    async (scope, input: { readonly body: OrderSyncType; readonly emailVerified: boolean }) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const { body } = input;
-      const { log } = scope;
-      if (!input.emailVerified) {
-        log.set({
-          sync: { type: "order", reason: "email_not_verified" },
+        const { itemsToFetch, itemsToInsert, releaseDates } = splitItems({
+          items: normalizedItems,
+          existingItems,
+          userId: scope.viewer.userId,
         });
-        return Result.err(new EmailNotVerified());
-      }
+        if (body.releaseDate) releaseDates.push(body.releaseDate);
 
-      log.set({
-        sync: { type: "order" },
-        items: { requested: body.items.length },
-      });
+        const latestReleaseDate =
+          releaseDates.length > 0
+            ? releaseDates.reduce((latest, current) => (current > latest ? current : latest))
+            : null;
 
-      const orderId = createId();
+        const { items: _items, ...orderData } = body;
+        const order: UpdatedSyncOrder = {
+          ...orderData,
+          userId: scope.viewer.userId,
+          id: orderId,
+          releaseDate: latestReleaseDate,
+        };
 
-      const normalizedItems = body.items.map((item) => ({
-        ...item,
-        collectionId: createId(),
-        orderId,
-      }));
-      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
+        const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
+        const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
+        const collectionItemsToInsert = orderCollectionRows(itemsToInsert, order.shop);
 
-      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-        itemExternalIds,
-        scope.tx,
-      );
-
-      const { itemsToFetch, itemsToInsert, releaseDates } = splitItems({
-        items: normalizedItems,
-        existingItems,
-        userId: scope.viewer.userId,
-      });
-      if (body.releaseDate) releaseDates.push(body.releaseDate);
-
-      const latestReleaseDate =
-        releaseDates.length > 0
-          ? releaseDates.reduce((latest, current) => (current > latest ? current : latest))
-          : null;
-
-      const { items: _items, ...orderData } = body;
-      const order: UpdatedSyncOrder = {
-        ...orderData,
-        userId: scope.viewer.userId,
-        id: orderId,
-        releaseDate: latestReleaseDate,
-      };
-
-      const orderItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const existingOrderItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert = orderCollectionRows(itemsToInsert, order.shop);
-
-      const syncSessionId = createId();
-      const jobData = {
-        type: "order",
-        payloadVersion: 3,
-        userId: scope.viewer.userId,
-        syncSessionId,
-        order: {
-          details: order,
-          itemsToFetch,
-          itemsToInsert: collectionItemsToInsert,
-        },
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: scope.viewer.userId,
-        syncType: "order" as const,
-        itemExternalIds: orderItemExternalIdsToTrack,
-        existingItemExternalIds: existingOrderItemExternalIds,
-      };
-
-      return Result.ok(
-        plannedSync({
-          log,
-          requested: body.items.length,
-          session,
-          requestPayload: jobData,
-          rows: {
-            collectionItems: collectionItemsToInsert,
-            orders: collectionItemsToInsert.length > 0 ? [order] : [],
+        const syncSessionId = createId();
+        const jobData = {
+          type: "order",
+          payloadVersion: 3,
+          userId: scope.viewer.userId,
+          syncSessionId,
+          order: {
+            details: order,
+            itemsToFetch,
+            itemsToInsert: collectionItemsToInsert,
           },
-          completeOrders: [order],
-        }),
-      );
-    },
+        } satisfies JobData;
+        const session = {
+          id: syncSessionId,
+          userId: scope.viewer.userId,
+          syncType: "order" as const,
+          itemExternalIds: orderItemExternalIdsToTrack,
+          existingItemExternalIds: existingOrderItemExternalIds,
+        };
+
+        return Result.ok(
+          plannedSync({
+            log,
+            requested: body.items.length,
+            session,
+            requestPayload: jobData,
+            rows: {
+              collectionItems: collectionItemsToInsert,
+              orders: collectionItemsToInsert.length > 0 ? [order] : [],
+            },
+            completeOrders: [order],
+          }),
+        );
+      },
+    ),
   ),
-  order: query(
-    { action: "sync.orderItem", failure: "Failed to load order" },
-    async (
-      scope,
-      input: { readonly body: SyncOrderItemsInput; readonly emailVerified: boolean },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const { body } = input;
-      const { log } = scope;
-      if (!input.emailVerified) {
+  order: gated(
+    query(
+      { action: "sync.orderItem", failure: "Failed to load order" },
+      async (
+        scope,
+        input: { readonly body: SyncOrderItemsInput; readonly emailVerified: boolean },
+      ) => {
+        const { body } = input;
+        const { log } = scope;
+        if (!input.emailVerified) {
+          log.set({
+            sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
+          });
+          return Result.err(new EmailNotVerified());
+        }
+
         log.set({
-          sync: { type: "order-item", orderId: body.orderId, reason: "email_not_verified" },
+          sync: { type: "order-item", orderId: body.orderId },
+          items: { requested: body.items.length },
         });
-        return Result.err(new EmailNotVerified());
-      }
 
-      log.set({
-        sync: { type: "order-item", orderId: body.orderId },
-        items: { requested: body.items.length },
-      });
+        const existingOrder = await SyncService.getOrderByIdForUser(
+          body.orderId,
+          scope.viewer.userId,
+          scope.tx,
+        );
 
-      const existingOrder = await SyncService.getOrderByIdForUser(
-        body.orderId,
-        scope.viewer.userId,
-        scope.tx,
-      );
+        if (!existingOrder) {
+          return Result.err(new OrderNotFound());
+        }
 
-      if (!existingOrder) {
-        return Result.err(new OrderNotFound());
-      }
-
-      return Result.ok({
-        id: existingOrder.id,
-        userId: existingOrder.userId,
-        status: existingOrder.status,
-        title: existingOrder.title,
-        shop: existingOrder.shop,
-        orderDate: existingOrder.orderDate,
-        releaseDate: existingOrder.releaseDate,
-        paymentDate: existingOrder.paymentDate,
-        shippingDate: existingOrder.shippingDate,
-        collectionDate: existingOrder.collectionDate,
-        shippingMethod: existingOrder.shippingMethod,
-        shippingFee: existingOrder.shippingFee,
-        taxes: existingOrder.taxes,
-        duties: existingOrder.duties,
-        tariffs: existingOrder.tariffs,
-        miscFees: existingOrder.miscFees,
-        notes: existingOrder.notes,
-      } satisfies UpdatedSyncOrder);
-    },
+        return Result.ok({
+          id: existingOrder.id,
+          userId: existingOrder.userId,
+          status: existingOrder.status,
+          title: existingOrder.title,
+          shop: existingOrder.shop,
+          orderDate: existingOrder.orderDate,
+          releaseDate: existingOrder.releaseDate,
+          paymentDate: existingOrder.paymentDate,
+          shippingDate: existingOrder.shippingDate,
+          collectionDate: existingOrder.collectionDate,
+          shippingMethod: existingOrder.shippingMethod,
+          shippingFee: existingOrder.shippingFee,
+          taxes: existingOrder.taxes,
+          duties: existingOrder.duties,
+          tariffs: existingOrder.tariffs,
+          miscFees: existingOrder.miscFees,
+          notes: existingOrder.notes,
+        } satisfies UpdatedSyncOrder);
+      },
+    ),
   ),
   planOrderItem: query(
     { action: "sync.orderItem", failure: "Failed to check for existing items" },
@@ -453,82 +460,83 @@ export const Sync = {
       );
     },
   ),
-  planCollection: query(
-    { action: "sync.collection", failure: "Failed to check for existing items" },
-    async (
-      scope,
-      input: {
-        readonly body: Omit<CollectionSyncType, "collectionId">[];
-        readonly emailVerified: boolean;
-      },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const { body } = input;
-      const { log } = scope;
-      if (!input.emailVerified) {
-        log.set({
-          sync: { type: "collection", reason: "email_not_verified" },
-        });
-        return Result.err(new EmailNotVerified());
-      }
-
-      log.set({
-        sync: { type: "collection" },
-        items: { requested: body.length },
-      });
-
-      const normalizedItems = body.map((item) => ({
-        ...item,
-        collectionId: createId(),
-      }));
-      const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
-
-      const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-        itemExternalIds,
-        scope.tx,
-      );
-
-      const { itemsToFetch, itemsToInsert } = splitItems({
-        items: normalizedItems,
-        existingItems,
-        userId: scope.viewer.userId,
-      });
-
-      const collectionItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
-      const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
-      const collectionItemsToInsert = collectionRows(
-        itemsToInsert.map((item) => ({ ...item, orderId: null, status: "Owned" as const })),
-      );
-
-      const syncSessionId = createId();
-      const jobData = {
-        type: "collection",
-        payloadVersion: 3,
-        userId: scope.viewer.userId,
-        syncSessionId,
-        collection: {
-          itemsToFetch,
-          itemsToInsert: collectionItemsToInsert,
+  planCollection: gated(
+    query(
+      { action: "sync.collection", failure: "Failed to check for existing items" },
+      async (
+        scope,
+        input: {
+          readonly body: Omit<CollectionSyncType, "collectionId">[];
+          readonly emailVerified: boolean;
         },
-      } satisfies JobData;
-      const session = {
-        id: syncSessionId,
-        userId: scope.viewer.userId,
-        syncType: "collection" as const,
-        itemExternalIds: collectionItemExternalIdsToTrack,
-        existingItemExternalIds: existingCollectionItemExternalIds,
-      };
+      ) => {
+        const { body } = input;
+        const { log } = scope;
+        if (!input.emailVerified) {
+          log.set({
+            sync: { type: "collection", reason: "email_not_verified" },
+          });
+          return Result.err(new EmailNotVerified());
+        }
 
-      return Result.ok(
-        plannedSync({
-          log,
-          requested: body.length,
-          session,
-          requestPayload: jobData,
-          rows: { collectionItems: collectionItemsToInsert, orders: [] },
-        }),
-      );
-    },
+        log.set({
+          sync: { type: "collection" },
+          items: { requested: body.length },
+        });
+
+        const normalizedItems = body.map((item) => ({
+          ...item,
+          collectionId: createId(),
+        }));
+        const itemExternalIds = normalizedItems.map((item) => item.itemExternalId);
+
+        const existingItems = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+          itemExternalIds,
+          scope.tx,
+        );
+
+        const { itemsToFetch, itemsToInsert } = splitItems({
+          items: normalizedItems,
+          existingItems,
+          userId: scope.viewer.userId,
+        });
+
+        const collectionItemExternalIdsToTrack = itemsToFetch.map((i) => i.itemExternalId);
+        const existingCollectionItemExternalIds = itemsToInsert.map((i) => i.itemExternalId);
+        const collectionItemsToInsert = collectionRows(
+          itemsToInsert.map((item) => ({ ...item, orderId: null, status: "Owned" as const })),
+        );
+
+        const syncSessionId = createId();
+        const jobData = {
+          type: "collection",
+          payloadVersion: 3,
+          userId: scope.viewer.userId,
+          syncSessionId,
+          collection: {
+            itemsToFetch,
+            itemsToInsert: collectionItemsToInsert,
+          },
+        } satisfies JobData;
+        const session = {
+          id: syncSessionId,
+          userId: scope.viewer.userId,
+          syncType: "collection" as const,
+          itemExternalIds: collectionItemExternalIdsToTrack,
+          existingItemExternalIds: existingCollectionItemExternalIds,
+        };
+
+        return Result.ok(
+          plannedSync({
+            log,
+            requested: body.length,
+            session,
+            requestPayload: jobData,
+            rows: { collectionItems: collectionItemsToInsert, orders: [] },
+          }),
+        );
+      },
+    ),
   ),
   sessions: query(
     { action: "sync.sessions", failure: "Failed to load import history" },
@@ -711,130 +719,139 @@ const runFailure = command(
 );
 
 export const SyncRuns = {
-  itemStatus: query(
-    { action: "sync.completeItem", failure: "Failed to import item" },
-    async (
-      scope,
-      input: { readonly id: string; readonly mfcItemId: number; readonly emailVerified: boolean },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      if (!input.emailVerified) return Result.err(new EmailNotVerified());
-      const rows = await syncItemStatus(scope.tx, input.id, scope.viewer.userId, input.mfcItemId);
-      if (rows.length === 0) return Result.err(new ItemNotInImport());
-      if (!rows.every((row) => row.status === "imported")) return Result.ok(null);
-      scope.log.set({ outcome: "already_imported" });
-      return Result.ok({
-        outcome: "already_imported",
-        reason: null,
-      } satisfies CompleteSyncItemResult);
-    },
+  itemStatus: gated(
+    query(
+      { action: "sync.completeItem", failure: "Failed to import item" },
+      async (
+        scope,
+        input: { readonly id: string; readonly mfcItemId: number; readonly emailVerified: boolean },
+      ) => {
+        if (!input.emailVerified) return Result.err(new EmailNotVerified());
+        const rows = await syncItemStatus(scope.tx, input.id, scope.viewer.userId, input.mfcItemId);
+        if (rows.length === 0) return Result.err(new ItemNotInImport());
+        if (!rows.every((row) => row.status === "imported")) return Result.ok(null);
+        scope.log.set({ outcome: "already_imported" });
+        return Result.ok({
+          outcome: "already_imported",
+          reason: null,
+        } satisfies CompleteSyncItemResult);
+      },
+    ),
   ),
 
-  complete: command(
-    {
-      action: "sync.completeItem",
-      failure: "Failed to import item",
-      before: async (scope, input: { readonly id: string; readonly upload: SyncItemUpload }) => {
-        if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-        return scope.proceed({ ...input, prepared: await prepareMfcItem(scope.tx, input.upload) });
+  complete: gated(
+    command(
+      {
+        action: "sync.completeItem",
+        failure: "Failed to import item",
+        before: async (scope, input: { readonly id: string; readonly upload: SyncItemUpload }) => {
+          return scope.proceed({
+            ...input,
+            prepared: await prepareMfcItem(scope.tx, input.upload),
+          });
+        },
       },
-    },
-    async (scope, input) =>
-      Result.gen(async function* () {
-        const result = yield* Result.await(
-          completeSyncItem(scope, input.id, scope.viewer.userId, input.upload, input.prepared),
-        );
-        if (result === null) return Result.err(new ItemNotInImport());
+      async (scope, input) =>
+        Result.gen(async function* () {
+          const result = yield* Result.await(
+            completeSyncItem(scope, input.id, scope.viewer.userId, input.upload, input.prepared),
+          );
+          if (result === null) return Result.err(new ItemNotInImport());
+          scope.log.set({ outcome: result.outcome });
+          return Result.ok(result);
+        }),
+      {
+        retry: retryOrderLock,
+        recover: async (scope, input, error) => {
+          const { missingOrder, original } = error.match({
+            SyncOrderAbsent: (absent) => ({ missingOrder: true, original: absent }),
+            SyncOrderUnowned: (unowned) => ({ missingOrder: false, original: unowned }),
+            MfcItemNotPersisted: (unsaved) => ({ missingOrder: false, original: unsaved }),
+            StoreItemPictureFailed: ({ cause }) => ({
+              missingOrder: false,
+              original: cause instanceof Error ? cause : new Error(String(cause)),
+            }),
+            UnhandledException: (thrown) => ({
+              missingOrder: false,
+              original:
+                thrown.cause instanceof Error ? thrown.cause : new Error(String(thrown.cause)),
+            }),
+          });
+          try {
+            const recorded = await scope.execute(runFailure, { ...input, missingOrder });
+            if (!missingOrder) scope.log.error(original);
+            return recorded;
+          } catch (recordError) {
+            // A missing Order reports why recording failed; anything else reports the original.
+            throw missingOrder ? recordError : original;
+          }
+        },
+      },
+    ),
+  ),
+  failure: gated(
+    command(
+      { action: "sync.failItem", failure: "Failed to save the item result" },
+      async (
+        scope,
+        input: {
+          readonly id: string;
+          readonly failure: SyncItemFailure;
+          readonly emailVerified: boolean;
+        },
+      ) => {
+        if (!input.emailVerified) return Result.err(new EmailNotVerified());
+        const answered = await failSyncItem(scope, input.id, scope.viewer.userId, input.failure);
+        const result = answered.unwrap();
+        if (result === null) return Result.err(new ImportNotFound());
         scope.log.set({ outcome: result.outcome });
         return Result.ok(result);
-      }),
-    {
-      retry: retryOrderLock,
-      recover: async (scope, input, error) => {
-        const { missingOrder, original } = error.match({
-          SyncOrderAbsent: (absent) => ({ missingOrder: true, original: absent }),
-          SyncOrderUnowned: (unowned) => ({ missingOrder: false, original: unowned }),
-          MfcItemNotPersisted: (unsaved) => ({ missingOrder: false, original: unsaved }),
-          StoreItemPictureFailed: ({ cause }) => ({
-            missingOrder: false,
-            original: cause instanceof Error ? cause : new Error(String(cause)),
-          }),
-          UnhandledException: (thrown) => ({
-            missingOrder: false,
-            original:
-              thrown.cause instanceof Error ? thrown.cause : new Error(String(thrown.cause)),
-          }),
-        });
-        try {
-          const recorded = await scope.execute(runFailure, { ...input, missingOrder });
-          if (!missingOrder) scope.log.error(original);
-          return recorded;
-        } catch (recordError) {
-          // A missing Order reports why recording failed; anything else reports the original.
-          throw missingOrder ? recordError : original;
+      },
+    ),
+  ),
+  heartbeat: gated(
+    command(
+      { action: "sync.heartbeat", failure: "Failed to renew the import" },
+      async (scope, input: { readonly id: string; readonly jobId: string }) => {
+        const answered = await heartbeatSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
+        const result = answered.unwrap();
+        if (result === null) return Result.err(new ImportNotFound());
+        scope.log.set({ outcome: result.active ? "active" : "inactive" });
+        return Result.ok(result);
+      },
+    ),
+  ),
+  interrupt: gated(
+    command(
+      { action: "sync.interrupt", failure: "Failed to stop the import" },
+      async (scope, input: { readonly id: string; readonly jobId: string }) => {
+        const answered = await interruptSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
+        const result = answered.unwrap();
+        if (result === null) return Result.err(new ImportNotFound());
+        scope.log.set({ outcome: result.outcome });
+        return Result.ok(result);
+      },
+    ),
+  ),
+  retry: gated(
+    command(
+      { action: "sync.retry", failure: "Failed to retry failed item results" },
+      async (scope, input: { readonly id: string; readonly emailVerified: boolean }) => {
+        if (!input.emailVerified) return Result.err(new EmailNotVerified());
+        const result = await retrySyncRun(scope, input.id, scope.viewer.userId);
+        if (result.outcome === "not_found") return Result.err(new ImportNotFound());
+        if (result.outcome === "expired") return scope.failAfterCommit(new RetryWindowExpired());
+        if (result.outcome === "unavailable") return scope.failAfterCommit(new RetryUnavailable());
+        if (result.outcome === "invalid_payload") {
+          scope.log.error(result.failure);
+          return scope.failAfterCommit(result.failure);
         }
+        scope.log.set({
+          sync: { jobId: result.jobId },
+          items: { toFetch: result.missingMfcItemIds.length },
+        });
+        return Result.ok({ jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds });
       },
-    },
-  ),
-  failure: command(
-    { action: "sync.failItem", failure: "Failed to save the item result" },
-    async (
-      scope,
-      input: {
-        readonly id: string;
-        readonly failure: SyncItemFailure;
-        readonly emailVerified: boolean;
-      },
-    ) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      if (!input.emailVerified) return Result.err(new EmailNotVerified());
-      const answered = await failSyncItem(scope, input.id, scope.viewer.userId, input.failure);
-      const result = answered.unwrap();
-      if (result === null) return Result.err(new ImportNotFound());
-      scope.log.set({ outcome: result.outcome });
-      return Result.ok(result);
-    },
-  ),
-  heartbeat: command(
-    { action: "sync.heartbeat", failure: "Failed to renew the import" },
-    async (scope, input: { readonly id: string; readonly jobId: string }) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const answered = await heartbeatSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
-      const result = answered.unwrap();
-      if (result === null) return Result.err(new ImportNotFound());
-      scope.log.set({ outcome: result.active ? "active" : "inactive" });
-      return Result.ok(result);
-    },
-  ),
-  interrupt: command(
-    { action: "sync.interrupt", failure: "Failed to stop the import" },
-    async (scope, input: { readonly id: string; readonly jobId: string }) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      const answered = await interruptSyncRun(scope, input.id, scope.viewer.userId, input.jobId);
-      const result = answered.unwrap();
-      if (result === null) return Result.err(new ImportNotFound());
-      scope.log.set({ outcome: result.outcome });
-      return Result.ok(result);
-    },
-  ),
-  retry: command(
-    { action: "sync.retry", failure: "Failed to retry failed item results" },
-    async (scope, input: { readonly id: string; readonly emailVerified: boolean }) => {
-      if (EXTENSION_RELEASE === "in_review") return Result.err(new ExtensionImportUnavailable());
-      if (!input.emailVerified) return Result.err(new EmailNotVerified());
-      const result = await retrySyncRun(scope, input.id, scope.viewer.userId);
-      if (result.outcome === "not_found") return Result.err(new ImportNotFound());
-      if (result.outcome === "expired") return scope.failAfterCommit(new RetryWindowExpired());
-      if (result.outcome === "unavailable") return scope.failAfterCommit(new RetryUnavailable());
-      if (result.outcome === "invalid_payload") {
-        scope.log.error(result.failure);
-        return scope.failAfterCommit(result.failure);
-      }
-      scope.log.set({
-        sync: { jobId: result.jobId },
-        items: { toFetch: result.missingMfcItemIds.length },
-      });
-      return Result.ok({ jobId: result.jobId, missingMfcItemIds: result.missingMfcItemIds });
-    },
+    ),
   ),
 };
