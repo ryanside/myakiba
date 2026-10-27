@@ -1,4 +1,3 @@
-import { withDeadline } from "@myakiba/utils/with-deadline";
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
@@ -1362,6 +1361,7 @@ describe("committed data-transfer publication", () => {
     }
   });
   test("a cache that never settles cannot hang the committed start", async () => {
+    const { withDeadline } = await import("@myakiba/utils/with-deadline");
     const events: unknown[] = [];
     initLogger({
       silent: true,
