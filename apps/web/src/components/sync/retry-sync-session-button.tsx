@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { RedoIcon } from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
+import { GatedButton } from "@/components/extension/gated-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useExtensionGate } from "@/lib/extension-gate";
 import { useRetrySyncSession } from "@/data/resources/sync";
 
 export function RetrySyncSessionButton({
@@ -20,7 +18,6 @@ export function RetrySyncSessionButton({
   readonly failCount: number;
 }): ReactNode {
   const mutation = useRetrySyncSession();
-  const { checking, gate } = useExtensionGate();
   const retryIsPending = mutation.isPending || isRetrying;
   let unavailableReason: string | null = null;
   if (!retrySupported) {
@@ -32,23 +29,19 @@ export function RetrySyncSessionButton({
   }
 
   const button = (
-    <Button
+    <GatedButton
       type="button"
       size="sm"
       className="gap-1"
       disabled={!canRetry || retryIsPending}
-      aria-busy={checking || undefined}
-      onClick={() => gate(() => mutation.run(sessionId))}
+      icon={RedoIcon}
+      pending={retryIsPending}
+      onProceed={() => mutation.run(sessionId)}
     >
-      <HugeiconsIcon
-        icon={RedoIcon}
-        data-icon="inline-start"
-        className={retryIsPending || checking ? "animate-spin" : ""}
-      />
       <span>
         {retryIsPending ? "Retrying failed item results..." : "Retry failed item results"}
       </span>
-    </Button>
+    </GatedButton>
   );
 
   if (!unavailableReason || retryIsPending) return button;

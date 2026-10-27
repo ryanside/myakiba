@@ -8,7 +8,7 @@ import type { BadgeVariant } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
-import { useExtensionGate } from "@/lib/extension-gate";
+import { GatedButton } from "@/components/extension/gated-button";
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -66,7 +66,6 @@ export function CurrentImportCard({
   readonly onDelete: () => Promise<void>;
 }) {
   const { currentImport } = current;
-  const { checking, gate } = useExtensionGate();
   const live = current.kind === "active" ? current.live : null;
   let liveStatus: SyncJobStatus | null = null;
   if (live?.kind === "ready") liveStatus = live.status;
@@ -199,26 +198,17 @@ export function CurrentImportCard({
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button
+            <GatedButton
               type="button"
               size="sm"
               variant="outline"
               disabled={current.retry.kind === "pending" || deleteState.kind === "pending"}
-              aria-busy={checking || undefined}
-              onClick={() => gate(onRetry)}
+              icon={Refresh01Icon}
+              pending={current.retry.kind === "pending"}
+              onProceed={onRetry}
             >
-              <HugeiconsIcon
-                icon={current.retry.kind === "pending" || checking ? Loading03Icon : Refresh01Icon}
-                data-icon="inline-start"
-                className={
-                  current.retry.kind === "pending" || checking
-                    ? "animate-spin motion-reduce:animate-none"
-                    : undefined
-                }
-                aria-hidden="true"
-              />
               {current.retry.kind === "pending" ? retryPendingLabel : retryLabel}
-            </Button>
+            </GatedButton>
             <DeleteImportSessionDialog
               fileName={currentImport.fileName}
               deleteState={deleteState}
