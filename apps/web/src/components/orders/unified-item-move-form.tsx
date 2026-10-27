@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
-import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -53,7 +52,6 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -125,8 +123,6 @@ function UnifiedItemMoveFormContent({
   const dialogTitle = intent === "add" ? "Assign Order" : "Move Items";
   const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
   const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
-
-  const userLocale = getCurrencyLocale(currency);
 
   const {
     cascadeOptions,
@@ -603,132 +599,47 @@ function UnifiedItemMoveFormContent({
 
                 <FormSection title="Fees & Charges">
                   <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="shippingFee"
-                      validators={{ onChange: moneyInput }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Shipping</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            invalid={!field.state.meta.isValid}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Shipping"
                     />
 
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="taxes"
-                      validators={{ onChange: moneyInput }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Taxes</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            invalid={!field.state.meta.isValid}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Taxes"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="duties"
-                      validators={{ onChange: moneyInput }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Duties</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            invalid={!field.state.meta.isValid}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Duties"
                     />
 
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="tariffs"
-                      validators={{ onChange: moneyInput }}
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Tariffs</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            invalid={!field.state.meta.isValid}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Tariffs"
                     />
                   </div>
 
-                  <newOrderForm.Field
+                  <MoneyField
+                    form={newOrderForm}
                     name="miscFees"
-                    validators={{ onChange: moneyInput }}
-                    children={(field) => (
-                      <div className="grid gap-1.5">
-                        <Label htmlFor={field.name}>Miscellaneous</Label>
-                        <MaskInput
-                          id={field.name}
-                          name={field.name}
-                          mask="currency"
-                          currency={currency}
-                          locale={userLocale}
-                          invalid={!field.state.meta.isValid}
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onValueChange={(_maskedValue, unmaskedValue) =>
-                            field.handleChange(unmaskedValue)
-                          }
-                          placeholder="0.00"
-                        />
-                        <FieldError className="text-xs" errors={field.state.meta.errors} />
-                      </div>
-                    )}
+                    currency={currency}
+                    placeholder="0.00"
+                    label="Miscellaneous"
                   />
                 </FormSection>
 

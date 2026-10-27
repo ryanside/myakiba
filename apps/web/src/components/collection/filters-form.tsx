@@ -1,5 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { optionalMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import {
   ArrowDown01Icon,
   ArrowUpDownIcon,
@@ -17,16 +18,9 @@ import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
 import { useId, useState } from "react";
 import type { ReactElement } from "react";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/reui/badge";
@@ -58,7 +52,6 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formSubmitHandler } from "@/lib/form-submit";
 
@@ -107,7 +100,6 @@ function FiltersDraft({
 }): React.JSX.Element {
   const entriesListId = useId();
   const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
-  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -146,8 +138,8 @@ function FiltersDraft({
     },
     onSubmit: async ({ value }) => {
       const filters: CollectionFilters = {
-        paidMin: value.paidMin.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.paidMin),
-        paidMax: value.paidMax.trim() === "" ? undefined : acceptedMoneyToMinorUnits(value.paidMax),
+        paidMin: optionalMinorUnits(value.paidMin),
+        paidMax: optionalMinorUnits(value.paidMax),
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         payDateStart: value.payDateStart || undefined,
         payDateEnd: value.payDateEnd || undefined,
@@ -158,14 +150,8 @@ function FiltersDraft({
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         relDateStart: value.relDateStart || undefined,
         relDateEnd: value.relDateEnd || undefined,
-        relPriceMin:
-          value.relPriceMin.trim() === ""
-            ? undefined
-            : acceptedMoneyToMinorUnits(value.relPriceMin),
-        relPriceMax:
-          value.relPriceMax.trim() === ""
-            ? undefined
-            : acceptedMoneyToMinorUnits(value.relPriceMax),
+        relPriceMin: optionalMinorUnits(value.relPriceMin),
+        relPriceMax: optionalMinorUnits(value.relPriceMax),
         relCurrency:
           value.relCurrency && value.relCurrency.length > 0 ? value.relCurrency : undefined,
         category: value.category && value.category.length > 0 ? value.category : undefined,
@@ -332,42 +318,8 @@ function FiltersDraft({
           <Field>
             <FieldTitle>Paid Price Range</FieldTitle>
             <div className="grid grid-cols-2 gap-2">
-              <form.Field
-                name="paidMin"
-                validators={{ onChange: moneyInput }}
-                children={(field) => (
-                  <div className="grid gap-1">
-                    <MaskInput
-                      mask="currency"
-                      currency={currency}
-                      locale={userLocale}
-                      placeholder="Min"
-                      invalid={!field.state.meta.isValid}
-                      value={field.state.value || ""}
-                      onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                    />
-                    <FieldError className="text-xs" errors={field.state.meta.errors} />
-                  </div>
-                )}
-              />
-              <form.Field
-                name="paidMax"
-                validators={{ onChange: moneyInput }}
-                children={(field) => (
-                  <div className="grid gap-1">
-                    <MaskInput
-                      mask="currency"
-                      currency={currency}
-                      locale={userLocale}
-                      placeholder="Max"
-                      invalid={!field.state.meta.isValid}
-                      value={field.state.value || ""}
-                      onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                    />
-                    <FieldError className="text-xs" errors={field.state.meta.errors} />
-                  </div>
-                )}
-              />
+              <MoneyField form={form} name="paidMin" currency={currency} placeholder="Min" />
+              <MoneyField form={form} name="paidMax" currency={currency} placeholder="Max" />
             </div>
           </Field>
 
@@ -810,42 +762,8 @@ function FiltersDraft({
           <Field>
             <FieldTitle>Release Price Range</FieldTitle>
             <div className="grid grid-cols-2 gap-2">
-              <form.Field
-                name="relPriceMin"
-                validators={{ onChange: moneyInput }}
-                children={(field) => (
-                  <div className="grid gap-1">
-                    <MaskInput
-                      mask="currency"
-                      currency={currency}
-                      locale={userLocale}
-                      placeholder="Min"
-                      invalid={!field.state.meta.isValid}
-                      value={field.state.value || ""}
-                      onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                    />
-                    <FieldError className="text-xs" errors={field.state.meta.errors} />
-                  </div>
-                )}
-              />
-              <form.Field
-                name="relPriceMax"
-                validators={{ onChange: moneyInput }}
-                children={(field) => (
-                  <div className="grid gap-1">
-                    <MaskInput
-                      mask="currency"
-                      currency={currency}
-                      locale={userLocale}
-                      placeholder="Max"
-                      invalid={!field.state.meta.isValid}
-                      value={field.state.value || ""}
-                      onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                    />
-                    <FieldError className="text-xs" errors={field.state.meta.errors} />
-                  </div>
-                )}
-              />
+              <MoneyField form={form} name="relPriceMin" currency={currency} placeholder="Min" />
+              <MoneyField form={form} name="relPriceMax" currency={currency} placeholder="Max" />
             </div>
           </Field>
 

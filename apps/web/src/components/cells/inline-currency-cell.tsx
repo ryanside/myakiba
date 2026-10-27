@@ -1,13 +1,9 @@
 import { useCallback, useId, useState } from "react";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  formatCurrencyFromMinorUnits,
-  minorUnitsToMajorString,
-  parseMoneyInputToMinorUnits,
-} from "@myakiba/utils/currency";
+import { formatCurrencyFromMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
-import { MONEY_INPUT_HINT } from "@/lib/money-input";
+import { MONEY_INPUT_HINT, parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
 import { runSubmit } from "@/lib/form-submit";

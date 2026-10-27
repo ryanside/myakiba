@@ -1,6 +1,6 @@
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
-import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MaskInput } from "@/components/ui/mask-input";
 import {
   Select,
   SelectContent,
@@ -40,7 +39,6 @@ import type { SyncFormOrderItem, SyncOrderItems } from "@myakiba/contracts/sync/
 import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
-import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { SyncNotice } from "@/components/sync/sync-notice";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -60,8 +58,6 @@ export default function SyncOrderItemForm({
   handleSyncOrderItemSubmit,
   currency,
 }: SyncOrderItemFormProps) {
-  const userLocale = getCurrencyLocale(currency);
-
   const defaultValues: SyncOrderItemFormValues = {
     items: [
       {
@@ -197,39 +193,15 @@ export default function SyncOrderItemForm({
                           <div className="flex flex-col gap-3 p-4">
                             <FormSection title="Basics">
                               <div className="grid grid-cols-2 gap-3">
-                                <orderItemForm.Field
+                                <MoneyField
+                                  form={orderItemForm}
                                   name={`items[${index}].price`}
-                                  validators={{
-                                    onChange: z
-                                      .string()
-                                      .nonempty("Price is required")
-                                      .pipe(moneyInput),
-                                  }}
-                                >
-                                  {(priceField) => (
-                                    <div className="grid gap-1.5">
-                                      <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
-                                      <MaskInput
-                                        id={`price-${item.formRowId}`}
-                                        name={priceField.name}
-                                        mask="currency"
-                                        currency={currency}
-                                        locale={userLocale}
-                                        invalid={!priceField.state.meta.isValid}
-                                        value={priceField.state.value}
-                                        onBlur={priceField.handleBlur}
-                                        onValueChange={(_maskedValue, unmaskedValue) =>
-                                          priceField.handleChange(unmaskedValue)
-                                        }
-                                        placeholder="0.00"
-                                      />
-                                      <FieldError
-                                        className="text-xs"
-                                        errors={priceField.state.meta.errors}
-                                      />
-                                    </div>
-                                  )}
-                                </orderItemForm.Field>
+                                  currency={currency}
+                                  placeholder="0.00"
+                                  label="Price"
+                                  id={`price-${item.formRowId}`}
+                                  required="Price is required"
+                                />
                                 <orderItemForm.Field
                                   name={`items[${index}].count`}
                                   validators={{

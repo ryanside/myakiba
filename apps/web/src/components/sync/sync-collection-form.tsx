@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
-import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { Add01Icon, Cancel01Icon, Edit03Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
 import { useForm } from "@tanstack/react-form";
@@ -8,7 +8,6 @@ import { Button } from "../ui/button";
 import type { SyncCollectionItem, SyncFormCollectionItem } from "@myakiba/contracts/sync/types";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { MaskInput } from "../ui/mask-input";
 import {
   Dialog,
   DialogClose,
@@ -29,7 +28,6 @@ import { FormSection } from "@/components/ui/form-section";
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { SyncNotice } from "@/components/sync/sync-notice";
 import { formSubmitHandler } from "@/lib/form-submit";
 
@@ -46,8 +44,6 @@ export default function SyncCollectionForm({
   currency: Currency;
   initialItemExternalId?: string;
 }) {
-  const userLocale = getCurrencyLocale(currency);
-
   const defaultValues: SyncCollectionFormValues = {
     items: [
       {
@@ -202,37 +198,14 @@ export default function SyncCollectionForm({
                             <div className="flex flex-col gap-3 p-4">
                               <FormSection title="Basics">
                                 <div className="grid grid-cols-2 gap-3">
-                                  <collectionForm.Field
+                                  <MoneyField
+                                    form={collectionForm}
                                     name={`items[${i}].price`}
-                                    validators={{
-                                      onChange: z
-                                        .string()
-                                        .nonempty("Price is required")
-                                        .pipe(moneyInput),
-                                    }}
-                                    children={(priceField) => (
-                                      <div className="grid gap-1.5">
-                                        <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
-                                        <MaskInput
-                                          id={`price-${item.formRowId}`}
-                                          name={priceField.name}
-                                          mask="currency"
-                                          currency={currency}
-                                          locale={userLocale}
-                                          invalid={!priceField.state.meta.isValid}
-                                          value={priceField.state.value}
-                                          onBlur={priceField.handleBlur}
-                                          onValueChange={(_maskedValue, unmaskedValue) =>
-                                            priceField.handleChange(unmaskedValue)
-                                          }
-                                          placeholder="0.00"
-                                        />
-                                        <FieldError
-                                          className="text-xs"
-                                          errors={priceField.state.meta.errors}
-                                        />
-                                      </div>
-                                    )}
+                                    currency={currency}
+                                    placeholder="0.00"
+                                    label="Price"
+                                    id={`price-${item.formRowId}`}
+                                    required="Price is required"
                                   />
                                   <collectionForm.Field
                                     name={`items[${i}].count`}

@@ -1,6 +1,6 @@
 import type { SyncSubmit } from "@/hooks/use-sync-mutations";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
-import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -14,7 +14,6 @@ import { useForm } from "@tanstack/react-form";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { MaskInput } from "../ui/mask-input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -47,7 +46,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { mfcItemIdSchema } from "@myakiba/contracts/sync/schema";
 import { SHIPPING_METHODS, ORDER_STATUSES, CONDITIONS } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { SyncNotice } from "@/components/sync/sync-notice";
 import { formSubmitHandler } from "@/lib/form-submit";
 
@@ -60,8 +58,6 @@ export default function SyncOrderForm({
   currency: Currency;
   initialItemExternalId?: string;
 }) {
-  const userLocale = getCurrencyLocale(currency);
-
   const {
     cascadeOptions,
     cascadeOptionsList,
@@ -370,125 +366,40 @@ export default function SyncOrderForm({
 
         <FormSection title="Fees & Charges">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <orderForm.Field
+            <MoneyField
+              form={orderForm}
               name="shippingFee"
-              validators={{ onChange: moneyInput }}
-              children={(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={field.name}>Shipping</Label>
-                  <MaskInput
-                    id={field.name}
-                    name={field.name}
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    invalid={!field.state.meta.isValid}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onValueChange={(_maskedValue, unmaskedValue) =>
-                      field.handleChange(unmaskedValue)
-                    }
-                    placeholder="0.00"
-                  />
-                  <FieldError className="text-xs" errors={field.state.meta.errors} />
-                </div>
-              )}
+              currency={currency}
+              placeholder="0.00"
+              label="Shipping"
             />
-            <orderForm.Field
+            <MoneyField
+              form={orderForm}
               name="taxes"
-              validators={{ onChange: moneyInput }}
-              children={(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={field.name}>Taxes</Label>
-                  <MaskInput
-                    id={field.name}
-                    name={field.name}
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    invalid={!field.state.meta.isValid}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onValueChange={(_maskedValue, unmaskedValue) =>
-                      field.handleChange(unmaskedValue)
-                    }
-                    placeholder="0.00"
-                  />
-                  <FieldError className="text-xs" errors={field.state.meta.errors} />
-                </div>
-              )}
+              currency={currency}
+              placeholder="0.00"
+              label="Taxes"
             />
-            <orderForm.Field
+            <MoneyField
+              form={orderForm}
               name="duties"
-              validators={{ onChange: moneyInput }}
-              children={(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={field.name}>Duties</Label>
-                  <MaskInput
-                    id={field.name}
-                    name={field.name}
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    invalid={!field.state.meta.isValid}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onValueChange={(_maskedValue, unmaskedValue) =>
-                      field.handleChange(unmaskedValue)
-                    }
-                    placeholder="0.00"
-                  />
-                  <FieldError className="text-xs" errors={field.state.meta.errors} />
-                </div>
-              )}
+              currency={currency}
+              placeholder="0.00"
+              label="Duties"
             />
-            <orderForm.Field
+            <MoneyField
+              form={orderForm}
               name="tariffs"
-              validators={{ onChange: moneyInput }}
-              children={(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={field.name}>Tariffs</Label>
-                  <MaskInput
-                    id={field.name}
-                    name={field.name}
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    invalid={!field.state.meta.isValid}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onValueChange={(_maskedValue, unmaskedValue) =>
-                      field.handleChange(unmaskedValue)
-                    }
-                    placeholder="0.00"
-                  />
-                  <FieldError className="text-xs" errors={field.state.meta.errors} />
-                </div>
-              )}
+              currency={currency}
+              placeholder="0.00"
+              label="Tariffs"
             />
-            <orderForm.Field
+            <MoneyField
+              form={orderForm}
               name="miscFees"
-              validators={{ onChange: moneyInput }}
-              children={(field) => (
-                <div className="grid gap-1.5">
-                  <Label htmlFor={field.name}>Miscellaneous</Label>
-                  <MaskInput
-                    id={field.name}
-                    name={field.name}
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    invalid={!field.state.meta.isValid}
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onValueChange={(_maskedValue, unmaskedValue) =>
-                      field.handleChange(unmaskedValue)
-                    }
-                    placeholder="0.00"
-                  />
-                  <FieldError className="text-xs" errors={field.state.meta.errors} />
-                </div>
-              )}
+              currency={currency}
+              placeholder="0.00"
+              label="Miscellaneous"
             />
           </div>
         </FormSection>
@@ -644,37 +555,14 @@ export default function SyncOrderForm({
                             <div className="flex flex-col gap-3 p-4">
                               <FormSection title="Basics">
                                 <div className="grid grid-cols-2 gap-3">
-                                  <orderForm.Field
+                                  <MoneyField
+                                    form={orderForm}
                                     name={`items[${i}].price`}
-                                    validators={{
-                                      onChange: z
-                                        .string()
-                                        .nonempty("Price is required")
-                                        .pipe(moneyInput),
-                                    }}
-                                    children={(priceField) => (
-                                      <div className="grid gap-1.5">
-                                        <Label htmlFor={`price-${item.formRowId}`}>Price</Label>
-                                        <MaskInput
-                                          id={`price-${item.formRowId}`}
-                                          name={priceField.name}
-                                          mask="currency"
-                                          currency={currency}
-                                          locale={userLocale}
-                                          invalid={!priceField.state.meta.isValid}
-                                          value={priceField.state.value}
-                                          onBlur={priceField.handleBlur}
-                                          onValueChange={(_maskedValue, unmaskedValue) =>
-                                            priceField.handleChange(unmaskedValue)
-                                          }
-                                          placeholder="0.00"
-                                        />
-                                        <FieldError
-                                          className="text-xs"
-                                          errors={priceField.state.meta.errors}
-                                        />
-                                      </div>
-                                    )}
+                                    currency={currency}
+                                    placeholder="0.00"
+                                    label="Price"
+                                    id={`price-${item.formRowId}`}
+                                    required="Price is required"
                                   />
                                   <orderForm.Field
                                     name={`items[${i}].count`}

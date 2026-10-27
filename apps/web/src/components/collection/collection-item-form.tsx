@@ -19,7 +19,6 @@ import {
   useButtonStatus,
 } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { failureText, useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
@@ -35,11 +34,12 @@ import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
-import { Field, FieldContent, FieldError, FieldTitle } from "@/components/ui/field";
+import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
-import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import {
   COLLECTION_STATUSES,
@@ -50,7 +50,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -84,7 +84,6 @@ function CollectionItemFormContent({
 }: Omit<CollectionItemFormProps, "renderTrigger"> & {
   readonly close: () => void;
 }) {
-  const userLocale = getCurrencyLocale(currency);
   const requiresOrderBeforeStatusChange = itemData.orderId === null;
   const { status: buttonStatus, run } = useButtonStatus();
 
@@ -123,31 +122,13 @@ function CollectionItemFormContent({
           <div className="flex flex-col gap-3 p-2">
             <FormSection title="Basics">
               <div className="grid grid-cols-2 gap-3">
-                <form.Field
+                <MoneyField
+                  form={form}
                   name="price"
-                  validators={{
-                    onChange: z.string().nonempty("Price is required").pipe(moneyInput),
-                  }}
-                  children={(field) => (
-                    <div className="grid gap-1.5">
-                      <Label htmlFor={field.name}>Price</Label>
-                      <MaskInput
-                        id={field.name}
-                        name={field.name}
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        invalid={!field.state.meta.isValid}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onValueChange={(_maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                        placeholder="0.00"
-                      />
-                      <FieldError className="text-xs" errors={field.state.meta.errors} />
-                    </div>
-                  )}
+                  currency={currency}
+                  placeholder="0.00"
+                  label="Price"
+                  required="Price is required"
                 />
 
                 <form.Field
