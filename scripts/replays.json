@@ -1976,8 +1976,8 @@
       ]
     },
     {
-      "fix": "4e67125d2ff373f491717d1fac7ee58b4ef5cd5f",
-      "testAt": "4e67125d2ff373f491717d1fac7ee58b4ef5cd5f",
+      "fix": "b0b8f82aa37e260f41f76bf178e3ae4f1b932c5f",
+      "testAt": "b0b8f82aa37e260f41f76bf178e3ae4f1b932c5f",
       "bug": "an MFC run whose only or last item could not book its answer never ended, and an earlier item was fetched twice",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -1987,8 +1987,8 @@
       ]
     },
     {
-      "fix": "42ba5057d448548d7e6154065ad3ada3e10a8d1b",
-      "testAt": "42ba5057d448548d7e6154065ad3ada3e10a8d1b",
+      "fix": "4b0e8dffe4c70b7fe71169dd1ebe96948adae631",
+      "testAt": "4b0e8dffe4c70b7fe71169dd1ebe96948adae631",
       "bug": "the extension re-read its MFC session state from storage at every step, so a refused read failed the item that needed it and a refused turn booking failed the item before its load",
       "test": "apps/extension/lib/throttle.test.ts",
       "fixed": [
@@ -1999,8 +1999,8 @@
       ]
     },
     {
-      "fix": "384c9c33804f6f83d059eb0fc78fffb900612b7b",
-      "testAt": "384c9c33804f6f83d059eb0fc78fffb900612b7b",
+      "fix": "06a42973e144d4b8b2de9f67cf62f24474c9e1b4",
+      "testAt": "06a42973e144d4b8b2de9f67cf62f24474c9e1b4",
       "bug": "a collector throw was handled apart from attempt's defect path, so it closed or retried MFC tabs and was logged as an expected failure",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
@@ -2010,8 +2010,8 @@
       ]
     },
     {
-      "fix": "be9a2994ab0226a400f65245d988accd8c2f712b",
-      "testAt": "be9a2994ab0226a400f65245d988accd8c2f712b",
+      "fix": "a5085b92b726fe8a3f39249daa39fd33cea70ba9",
+      "testAt": "a5085b92b726fe8a3f39249daa39fd33cea70ba9",
       "bug": "an MFC run whose only or last item's answer booking threw never ended, and the defect was logged only as the queue stopping",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
