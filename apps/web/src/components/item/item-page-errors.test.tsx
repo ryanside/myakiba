@@ -15,6 +15,7 @@ await mock.module("@tanstack/react-router", () => ({
   }),
   Link: ({ children }: { readonly children: ReactNode }) => <a href="#back">{children}</a>,
 }));
+const thrown = new TypeError("cannot read properties of undefined (reading 'collection')");
 const realItemQueries = await import("@/queries/item");
 await mock.module("@/queries/item", () => ({
   ...realItemQueries,
@@ -38,12 +39,13 @@ await mock.module("@/queries/item", () => ({
   getItemRelatedOrders: async () => Result.ok({ orders: [] }),
   getResyncStatus: async () => Result.ok({ status: "idle", cooldownExpiresAt: null }),
   getItemRelatedCollection: async () => {
-    throw new TypeError("cannot read properties of undefined (reading 'collection')");
+    throw thrown;
   },
 }));
 
 const { Route } = await import("@/routes/(app)/item_.$externalId");
 const ItemPage = Route.options.component as () => ReactNode;
+const { createQueryClient } = await import("@/data/client");
 
 afterEach(cleanup);
 
@@ -60,4 +62,21 @@ test("a defect in the item page's Collection read shows the safe text, not its o
   expect(screen.getByText("Something went wrong. Reload the page and try again")).toBeTruthy();
   expect(screen.queryByText(/cannot read properties/)).toBeNull();
   logged.mockRestore();
+});
+
+test("a defect in the item page's Collection read is logged once with what was thrown", async () => {
+  const logged = spyOn(console, "error").mockImplementation(() => {});
+  const queryClient = createQueryClient();
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ItemPage />
+    </QueryClientProvider>,
+  );
+
+  expect(await screen.findByText("Couldn't load your Collection")).toBeTruthy();
+  expect(screen.getByText("Something went wrong. Reload the page and try again")).toBeTruthy();
+  expect(screen.queryByText(/cannot read properties/)).toBeNull();
+  const reported = logged.mock.calls.filter((call) => call.includes(thrown));
+  logged.mockRestore();
+  expect(reported).toHaveLength(1);
 });
