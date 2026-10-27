@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { withFallback } from "@/data/resources/settings";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { SettingsSectionId } from "./settings-registry";
 
@@ -14,7 +15,10 @@ export const RETURN_TO_ACCOUNT: `/settings?section=${SettingsSectionId}` =
 export async function signInAgain(): Promise<void> {
   const signedOut = await decodeAuth(() => authClient.signOut());
   if (signedOut.isErr()) {
-    toast.add({ type: "error", title: signedOut.error.message || "Couldn't sign out. Try again." });
+    toast.add({
+      type: "error",
+      title: withFallback(signedOut.error, "Couldn't sign out. Try again.").message,
+    });
     return;
   }
   window.location.assign(`/login?redirect=${encodeURIComponent(RETURN_TO_ACCOUNT)}`);

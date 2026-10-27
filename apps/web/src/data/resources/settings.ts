@@ -18,7 +18,7 @@ export function isStaleSignIn(failure: AuthRequestFailed): boolean {
 }
 
 /** The same refusal, saying `fallback` when Better Auth gave no text. */
-function withFallback(failure: AuthRequestFailed, fallback: string): AuthRequestFailed {
+export function withFallback(failure: AuthRequestFailed, fallback: string): AuthRequestFailed {
   if (failure.message) return failure;
   const { code, status, statusText, cause } = failure;
   return new AuthRequestFailed({ code, status, statusText, cause, message: fallback });

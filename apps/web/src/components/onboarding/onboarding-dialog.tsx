@@ -12,7 +12,6 @@ import {
   PackageIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -36,6 +35,8 @@ import {
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
+import { useResourceMutation } from "@/data/client";
+import { settings } from "@/data/resources/settings";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
@@ -132,6 +133,7 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
   );
 
   const router = useRouter();
+  const { run: updateUser } = useResourceMutation(settings.updateUser);
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
   const sessionDateFormat = session.user.dateFormat as DateFormat;
@@ -174,20 +176,15 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
         return;
       }
 
-      const updated = await decodeAuth(() =>
-        authClient.updateUser({
+      const updated = await updateUser({
+        changes: {
           username: trimmedUsername,
           currency: value.currency,
           dateFormat: value.dateFormat,
-        }),
-      );
-      if (updated.isErr()) {
-        toast.add({
-          type: "error",
-          title: updated.error.message || "Couldn't save preferences.",
-        });
-        return;
-      }
+        },
+        fallback: "Couldn't save preferences.",
+      });
+      if (updated.isErr()) return;
       await router.invalidate();
       advance();
     },
@@ -207,9 +204,8 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
     setOpen(false);
     setCurrentStep(FIRST_STEP);
     if (!isNewAccount) return;
-    const saved = await decodeAuth(() => authClient.updateUser({ hasSeenOnboarding: true }));
-    if (saved.isErr()) toast.add({ type: "error", title: saved.error.message || SAVE_FAILED });
-  }, [isNewAccount]);
+    await updateUser({ changes: { hasSeenOnboarding: true }, fallback: SAVE_FAILED });
+  }, [isNewAccount, updateUser]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {

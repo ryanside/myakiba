@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { failureText, useRead, useResourceMutation } from "@/data/client";
-import { settings } from "@/data/resources/settings";
+import { settings, withFallback } from "@/data/resources/settings";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
@@ -150,7 +150,7 @@ function EmailRow({ email, isVerified }: { readonly email: string; readonly isVe
                 title:
                   sent.error.status === 429
                     ? "You just asked for one. Try again in a minute."
-                    : sent.error.message || "Couldn't send the email. Try again.",
+                    : withFallback(sent.error, "Couldn't send the email. Try again.").message,
               });
               return;
             }
@@ -340,7 +340,10 @@ function GoogleRow() {
     );
     if (linked.isErr()) {
       setIsConnecting(false);
-      toast.add({ type: "error", title: linked.error.message || "Couldn't connect Google" });
+      toast.add({
+        type: "error",
+        title: withFallback(linked.error, "Couldn't connect Google").message,
+      });
     }
   };
 

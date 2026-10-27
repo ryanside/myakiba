@@ -5,10 +5,9 @@ import { useId, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
-import { failureText, useRead } from "@/data/client";
+import { failureText, useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { SettingsGroup, SettingsGroupFooter } from "./settings-group";
@@ -83,6 +82,7 @@ export function Profile({ user }: { user: User }) {
   const [isSaving, setIsSaving] = useState(false);
   const { status, run } = useButtonStatus();
   const check = useUsernameCheck(draft, saved);
+  const updateUser = useResourceMutation(settings.updateUser);
 
   const save = async () => {
     if (check.kind !== "available") {
@@ -91,14 +91,11 @@ export function Profile({ user }: { user: User }) {
     }
     setIsSaving(true);
     const updated = await run(
-      () => decodeAuth(() => authClient.updateUser({ username: draft })),
+      () => updateUser.run({ changes: { username: draft }, fallback: "Failed to update profile" }),
       (result) => result.isOk(),
     );
     setIsSaving(false);
-    if (updated.isErr()) {
-      toast.add({ type: "error", title: updated.error.message || "Failed to update profile" });
-      return;
-    }
+    if (updated.isErr()) return;
     setSaved(draft);
     await router.invalidate();
     toast.add({ type: "success", title: "Profile updated successfully" });
