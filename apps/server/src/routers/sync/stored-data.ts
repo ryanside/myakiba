@@ -14,6 +14,10 @@ export const storedItemStatus = sql<SyncSessionItemStatus>`case when ${syncSessi
 
 const queued = z.looseObject({ itemsToScrape: z.unknown().optional() });
 const retained = z.looseObject({ order: queued.optional(), collection: queued.optional() });
+const csvPrices = z.object({
+  type: z.literal("csv"),
+  items: z.array(z.object({ priceMinorUnits: z.number().optional() })),
+});
 const rawCsv = csvJobDataSchema.extend({
   items: z.array(internalCsvItemSchema.extend({ priceMinorUnits: z.never().optional() })),
 });
@@ -23,6 +27,13 @@ export const storedJobDataSchema = z.preprocess((input) => {
   const parsed = retained.safeParse(input);
   if (!parsed.success) return input;
   const value = parsed.data;
+  const legacyQueue =
+    (value.order && "itemsToScrape" in value.order) ||
+    (value.collection && "itemsToScrape" in value.collection);
+  const prices = csvPrices.safeParse(input);
+  const legacyCsv =
+    prices.success && prices.data.items.some((item) => item.priceMinorUnits === undefined);
+  if (!legacyQueue && !legacyCsv) return input;
   const normalize = (items: z.infer<typeof queued>) => ({
     ...items,
     itemsToFetch: items.itemsToFetch ?? items.itemsToScrape,
@@ -32,10 +43,9 @@ export const storedJobDataSchema = z.preprocess((input) => {
     ...(value.order && { order: normalize(value.order) }),
     ...(value.collection && { collection: normalize(value.collection) }),
   };
-  const current = jobDataSchema.safeParse(renamed);
-  if (current.success) return current.data;
+  if (!legacyCsv) return renamed;
   const csv = rawCsv.safeParse(renamed);
   if (!csv.success) return renamed;
-  const prices = normalizeCsvPrices(csv.data.items);
-  return { ...csv.data, ...prices };
+  const normalized = normalizeCsvPrices(csv.data.items);
+  return { ...csv.data, ...normalized };
 }, jobDataSchema);
