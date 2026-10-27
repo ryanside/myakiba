@@ -2118,6 +2118,33 @@
         "a defect in a List reorder shows the safe text under the reorder's title",
         "a defect in a Preferences save shows the safe text under the save's title"
       ]
+    },
+    {
+      "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",
+      "bug": "data-transfer item uploads stored pictures and Items without matching a running job and pending item",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": [
+        "items fetched through the extension > the same item uploaded twice writes once",
+        "items fetched through the extension > a failure from an earlier run is ignored, and a late success is refused",
+        "upload ownership > before preparation refuses finished import",
+        "upload ownership > before preparation refuses wrong job",
+        "upload ownership > before preparation refuses failed item",
+        "upload ownership > before preparation refuses imported item",
+        "upload ownership > before preparation refuses missing item",
+        "upload ownership > after preparation refuses finished import",
+        "upload ownership > after preparation refuses wrong job",
+        "upload ownership > after preparation refuses failed item",
+        "upload ownership > after preparation refuses imported item",
+        "upload ownership > after preparation refuses missing item"
+      ],
+      "testAt": "07e0499babfa7bf49d88e0a5f9ae28c9ce1948d0"
+    },
+    {
+      "fix": "312b66b966b8b1e2ec85e8bba80a538bfc4bf9b6",
+      "bug": "a slow status load outlived the publication deadline and started a Redis write after the caller had answered",
+      "test": "apps/server/src/lib/publish-import-status.test.ts",
+      "fixed": ["a slow load cannot write after publication has already answered its deadline"],
+      "testAt": "3f12228bf0f4ba3f45d24a9b46a652bf260c600d"
     }
   ],
   "lint": [
