@@ -1833,27 +1833,46 @@ describe("item results", () => {
 });
 
 describe("an attempt that breaks", () => {
-  test("a collector that throws a defect fails only its item, and the queue moves on", async () => {
-    const extension = fakeExtension({
-      pages: (request) => {
-        if (request.mfcItemId === 1) throw new TypeError("page.html is not a function");
-        return page(itemPage(request.mfcItemId));
-      },
-    });
-    const run = extension.run([1, 2]);
-    await extension.clock.runUntil(run.done);
-    await extension.settle();
+  test("a collector that throws a defect fails only its item, and the queue moves on in the same tab", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const extension = fakeExtension({
+        pages: (request) => {
+          if (request.mfcItemId === 1) throw new TypeError("page.html is not a function");
+          return page(itemPage(request.mfcItemId));
+        },
+      });
+      const run = extension.run([1, 2]);
+      await extension.clock.runUntil(run.done);
+      await extension.settle();
 
-    expect(run.results()).toEqual([
-      { ok: false, error: "unexpected_page" },
-      { ok: true, html: itemPage(2), picture: null },
-    ]);
-    expect(extension.tabs.log).toEqual([
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 101",
-      `create inactive ${ORIGINS.mfc}/`,
-      "remove 102",
-    ]);
+      expect(run.results()).toEqual([
+        { ok: false, error: "unexpected_page" },
+        { ok: true, html: itemPage(2), picture: null },
+      ]);
+      expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  test("a collector that throws a defect in a borrowed tab fails its item without a second try", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const extension = fakeExtension({
+        pages: () => {
+          throw new TypeError("page.html is not a function");
+        },
+      });
+      const borrowed = extension.tabs.open(`${ORIGINS.mfc}/`);
+      const run = extension.run([1]);
+      await extension.clock.runUntil(run.done);
+
+      expect(extension.calls.map((call) => call.tabId)).toEqual([borrowed]);
+      expect(run.results()).toEqual([{ ok: false, error: "unexpected_page" }]);
+    } finally {
+      error.mockRestore();
+    }
   });
 
   test("a throttle write that fails while it records a challenge's pause fails only its item", async () => {
@@ -1893,12 +1912,6 @@ const COLLECTOR_FAILURES: readonly (readonly [
   [
     "its fetch fails in the tab",
     (request) => pageFetchFailed(request.mfcItemId, "TypeError", "Failed to fetch"),
-  ],
-  [
-    "it throws a defect",
-    () => {
-      throw new TypeError("page.html is not a function");
-    },
   ],
 ];
 
@@ -2372,7 +2385,7 @@ describe("the developer log", () => {
     ]);
   });
 
-  test("names an unexpected throw from the collector as an unhandled exception", async () => {
+  test("reports an unexpected throw from the collector as a defect with its Panic", async () => {
     const extension = fakeExtension({
       pages: () => {
         throw new TypeError("page.html is not a function");
@@ -2381,11 +2394,11 @@ describe("the developer log", () => {
     const run = extension.run([3]);
     await extension.clock.runUntil(run.done);
 
-    expect(warned()).toEqual([
-      expect.stringContaining(
-        "UnhandledException for MFC item 3: Unhandled exception: page.html is not a function",
-      ),
-    ]);
+    expect(warn).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledTimes(1);
+    const [message, defect] = error.mock.calls[0] ?? [];
+    expect(String(message)).toContain("MFC item 3");
+    expect(Panic.is(defect)).toBe(true);
   });
 
   test("reports a defect inside the attempt as an error with its Panic", async () => {
