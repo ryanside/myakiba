@@ -237,8 +237,10 @@ export function createThrottle(deps: {
       });
     },
 
-    answered(): Promise<Result<void, SessionStorageUnavailable>> {
-      return write((current) => ({ ...current, limitedAt: null }));
+    /** Books an answer that was not a rate limit, which ends a row of them. `what` names the answer for the log. */
+    async answered(what: string): Promise<void> {
+      await books.ready();
+      await bookTurn((current) => ({ ...current, limitedAt: null }), what);
     },
 
     /** Books a page load the extension did not start, such as the reload after a solved challenge. */

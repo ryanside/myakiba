@@ -53,8 +53,43 @@ describe("MFC's answers on the books", () => {
     const throttle = start();
 
     await haltOf(throttle, at(0) + 5000);
-    await throttle.answered();
+    await throttle.answered("the answer for MFC item 1");
     expect(await haltOf(throttle, at(MINUTE) + 5000)).toBeNull();
+  });
+
+  test("an answer storage refuses still ends the row, and the refusal is logged", async () => {
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    let now = START;
+    const stored = memoryValue(OPEN_THROTTLE);
+    let refuse = false;
+    const throttle = createThrottle({
+      clock: { now: () => now, sleep: async () => {} },
+      random: () => 0.5,
+      state: {
+        load: stored.load,
+        save: async (next) =>
+          refuse
+            ? Result.err(new SessionStorageUnavailable({ key: "throttle", op: "set", cause: null }))
+            : stored.save(next),
+      },
+    });
+    try {
+      await haltOf(throttle, now + 5000);
+      refuse = true;
+      await throttle.answered("the answer for MFC item 7");
+      refuse = false;
+      now += MINUTE;
+
+      expect(await haltOf(throttle, now + 5000)).toBeNull();
+      expect(error.mock.calls.map(([message, failure]) => [String(message), failure])).toEqual([
+        [
+          "could not book the answer for MFC item 7",
+          expect.objectContaining({ _tag: "SessionStorageUnavailable" }),
+        ],
+      ]);
+    } finally {
+      error.mockRestore();
+    }
   });
 
   test("a pause over five minutes halts at once, and the first limit after a halt only pauses", async () => {
@@ -326,7 +361,6 @@ describe("a throttle turn", () => {
   test.each([
     ["pauseOrHalt", (throttle: Throttle) => throttle.pauseOrHalt(START + 5000)],
     ["rateLimited", (throttle: Throttle) => throttle.rateLimited(START + 5000)],
-    ["answered", (throttle: Throttle) => throttle.answered()],
     ["noteLoad", (throttle: Throttle) => throttle.noteLoad()],
   ] as const)(
     "%s answers a write it could not make as SessionStorageUnavailable",

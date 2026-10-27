@@ -457,12 +457,11 @@ export function createFetcher(deps: FetcherDeps) {
 
   /**
    * A rate limit is booked as one, which may halt the queue. A halt was booked when it happened. Any other answer is
-   * kept even when storage refuses its booking: the worker keeps the booking in memory, so the refusal is only logged,
-   * as a turn's is.
+   * kept even when storage refuses its booking, which the throttle only logs, as it does a turn's.
    */
   async function booking(
-    job: Job,
     outcome: ItemOutcome,
+    mfcItemId: number,
   ): Promise<Result<ItemOutcome, SessionStorageUnavailable>> {
     if (outcome.kind === "halted") return Result.ok(outcome);
     if (outcome.kind === "backing_off") {
@@ -471,10 +470,7 @@ export function createFetcher(deps: FetcherDeps) {
         haltedUntil === null ? outcome : { kind: "halted", until: haltedUntil },
       );
     }
-    const answered = await throttle.answered();
-    answered.tapError((failure) => {
-      console.error(`could not book the answer for MFC item ${job.mfcItemId}`, failure);
-    });
+    await throttle.answered(`the answer for MFC item ${mfcItemId}`);
     return Result.ok(outcome);
   }
 
@@ -484,7 +480,7 @@ export function createFetcher(deps: FetcherDeps) {
    */
   async function booked(job: Job, outcome: ItemOutcome): Promise<ItemOutcome> {
     try {
-      const written = await booking(job, outcome);
+      const written = await booking(outcome, job.mfcItemId);
       return written.match({
         ok: (kept) => kept,
         err: (failure) => {
