@@ -263,8 +263,8 @@ describe("the throttle's books", () => {
     const unavailable = (op: "get" | "set", message: string) =>
       new SessionStorageUnavailable({ key: "throttle", op, cause: new Error(message) });
 
-    /** Fails the `nth` write of the books once the arming item's page has answered. */
-    function failingBooks(nth: number) {
+    /** Fails the `nth` write of the books once the arming item's page has answered, by refusing it or by throwing. */
+    function failingBooks(nth: number, how: "refuses" | "throws" = "refuses") {
       const stored = memoryValue(OPEN_THROTTLE);
       let armed = false;
       let count = 0;
@@ -274,10 +274,11 @@ describe("the throttle's books", () => {
         },
         throttleState: {
           load: stored.load,
-          save: async (next: typeof OPEN_THROTTLE) =>
-            armed && ++count === nth
-              ? Result.err(unavailable("set", "QuotaExceededError"))
-              : stored.save(next),
+          save: async (next: typeof OPEN_THROTTLE) => {
+            if (!armed || ++count !== nth) return stored.save(next);
+            if (how === "throws") throw new TypeError("storage.session.set is not a function");
+            return Result.err(unavailable("set", "QuotaExceededError"));
+          },
         },
       };
     }
@@ -343,6 +344,31 @@ describe("the throttle's books", () => {
         const answered = run.results().map((result) => result.ok || result.error);
         expect(answered).toEqual([...ids.slice(0, -1).map(() => true as const), "unexpected_page"]);
         expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+      },
+    );
+
+    test.each([
+      ["the only item of a run", [1], 1],
+      ["the last item of a run", [1, 2, 3], 3],
+    ] as const)(
+      "an answer whose booking throws for %s is reported as a defect, ends the run and closes the MFC tab",
+      async (_name, ids, last) => {
+        const books = failingBooks(2, "throws");
+        const extension = fakeExtension({
+          throttleState: books.throttleState,
+          pages: armedOn(books, last),
+        });
+        const run = extension.run(ids);
+        await extension.clock.runUntil(run.done);
+        await extension.settle();
+
+        const answered = run.results().map((result) => result.ok || result.error);
+        expect(answered).toEqual([...ids.slice(0, -1).map(() => true as const), "unexpected_page"]);
+        expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
+        expect(error).toHaveBeenCalledTimes(1);
+        const [message, defect] = error.mock.calls[0] ?? [];
+        expect(String(message)).toContain(`MFC item ${last}`);
+        expect(Panic.is(defect)).toBe(true);
       },
     );
 
