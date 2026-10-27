@@ -306,7 +306,7 @@ describe("the throttle's books", () => {
       ]);
     });
 
-    test("an answer that cannot be booked fails its item, and the queue goes on", async () => {
+    test("an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on", async () => {
       const books = failingBooks(2);
       const extension = fakeExtension({
         throttleState: books.throttleState,
@@ -315,22 +315,22 @@ describe("the throttle's books", () => {
       const run = extension.run([1, 2]);
       await extension.clock.runUntil(run.done);
 
-      expect(run.results().map((result) => result.ok || result.error)).toEqual([
-        "unexpected_page",
-        true,
-      ]);
+      expect(run.results().map((result) => result.ok || result.error)).toEqual([true, true]);
       expect(fetches(extension.calls)).toEqual([itemId(1), itemId(2)]);
-      expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
-        expect.stringContaining("SessionStorageUnavailable for MFC item 1:"),
+      expect(error.mock.calls.map(([message, failure]) => [String(message), failure])).toEqual([
+        [
+          "could not book the answer for MFC item 1",
+          expect.objectContaining({ _tag: "SessionStorageUnavailable" }),
+        ],
       ]);
-      expect(error).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
     });
 
     test.each([
       ["the only item of a run", [1], 1],
       ["the last item of a run", [1, 2, 3], 3],
     ] as const)(
-      "an answer that cannot be booked for %s ends the run and closes the MFC tab",
+      "an answer that cannot be booked for %s keeps its page, ends the run and closes the MFC tab",
       async (_name, ids, last) => {
         const books = failingBooks(2);
         const extension = fakeExtension({
@@ -342,7 +342,7 @@ describe("the throttle's books", () => {
         await extension.settle();
 
         const answered = run.results().map((result) => result.ok || result.error);
-        expect(answered).toEqual([...ids.slice(0, -1).map(() => true as const), "unexpected_page"]);
+        expect(answered).toEqual(ids.map(() => true as const));
         expect(extension.tabs.log).toEqual([`create inactive ${ORIGINS.mfc}/`, "remove 101"]);
       },
     );
