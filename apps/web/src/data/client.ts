@@ -479,7 +479,7 @@ async function runCommand<Input, Output, Failure extends Error>(
   const written = await attempt(async (): Promise<Result<Output, Failure | Panic>> => {
     if (patched.isErr()) return Result.err(patched.error);
     const saved = await spec.persist(input);
-    if (saved.isErr()) return saved;
+    if (saved.isErr()) return Result.err(asFailure(saved.error));
     const output = saved.value;
     const successTitle = spec.successTitle?.(input, output);
     if (successTitle !== undefined)

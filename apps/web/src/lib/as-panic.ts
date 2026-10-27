@@ -1,4 +1,4 @@
-import { isTaggedError, Panic } from "better-result";
+import { isTaggedError, Panic, UnhandledException } from "better-result";
 
 /** What a screen shows for a defect, whose own message is never shown. */
 export const DEFECT_TEXT = "Something went wrong. Reload the page and try again";
@@ -12,9 +12,14 @@ export function asPanic(cause: unknown): Panic {
   return new Panic({ message: DEFECT_TEXT, cause });
 }
 
-/** A declared failure stays itself. Anything else is a defect: a Panic, an untagged error, a non-error. */
-export function asFailure(cause: unknown): Error {
-  return isTaggedError(cause) && !Panic.is(cause) ? cause : asPanic(cause);
+/**
+ * A declared failure stays itself. Anything else is a defect: a Panic, an UnhandledException,
+ * whose message embeds what was thrown, an untagged error, a non-error.
+ */
+export function asFailure<Failure>(cause: Failure): Failure | Panic {
+  return isTaggedError(cause) && !Panic.is(cause) && !UnhandledException.is(cause)
+    ? cause
+    : asPanic(cause);
 }
 
 /** Logs a defect with what was thrown, since the defect's own message is the safe text. */
