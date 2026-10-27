@@ -7,6 +7,7 @@ import type { InferOk, Result } from "better-result";
 import { call } from "../api";
 import type { ApiFailure } from "../api";
 import { defineCommand, defineResource, infiniteRead } from "../client";
+import { positionOrderCommand } from "../position-order";
 import { items } from "./item";
 
 type ItemQueryData = InferOk<Awaited<ReturnType<typeof getItem>>>;
@@ -36,8 +37,9 @@ export type WishlistPage = NonNullable<Awaited<ReturnType<typeof app.api.wishlis
 
 export const setWishlistMembership = defineCommand({
   invalidates: ["wishlist"],
-  failureTitle: ({ wishlisted }: Membership) =>
-    wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
+  failureToast: ({ wishlisted }: Membership) => ({
+    title: wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
+  }),
   persist: async ({ itemId, wishlisted }: Membership) => {
     const item = app.api.wishlist({ itemId });
     const written: Result<unknown, ApiFailure> = wishlisted
@@ -59,8 +61,16 @@ export const setWishlistMembership = defineCommand({
   },
 });
 
-export function moveWishlistItems(intent: PositionOrderInput) {
-  return call(app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }), {
-    fallback: "Failed to save Wishlist order",
-  });
-}
+export const moveWishlistItemsCommand = positionOrderCommand({
+  family: "wishlist",
+  queryKey: wishlist.items.key({ releaseStatus: "all" }),
+  additionalInvalidations: [
+    { queryKey: wishlist.items.partialKey({ releaseStatus: "upcoming" }) },
+    { queryKey: wishlist.items.partialKey({ releaseStatus: "available" }) },
+  ],
+  persist: (intent: PositionOrderInput) =>
+    call(app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }), {
+      fallback: "Failed to save Wishlist order",
+    }),
+  failureTitle: "Failed to save Wishlist order",
+});

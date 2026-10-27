@@ -3,7 +3,7 @@ import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
 import { updateOrderDate, updateOrderStatus } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
 import { collectionWriteFamilies } from "../catalog";
-import { defineCommand, rootedRead } from "../client";
+import { defineCommand, messageAs, rootedRead } from "../client";
 
 type Month = { readonly month: number; readonly year: number };
 
@@ -29,8 +29,7 @@ export const updateKanbanOrderStatusCommand = defineCommand({
   persist: ({ orderId, status }: { readonly orderId: string; readonly status: OrderStatus }) =>
     updateOrderStatus(orderId, status),
   successTitle: ({ status }) => (status === "Owned" ? "Order marked as collected" : undefined),
-  failureTitle: () => "Failed to update order status. Please try again.",
-  declaredFailureTitle: (_input, error) => error.message,
+  failureToast: messageAs("title", () => "Failed to update order status. Please try again."),
 });
 
 export const updateKanbanOrderDateCommand = defineCommand({
@@ -45,6 +44,5 @@ export const updateKanbanOrderDateCommand = defineCommand({
     readonly field: OrderDateField;
     readonly date: string | null;
   }) => updateOrderDate(orderId, field, date),
-  failureTitle: () => "Failed to update date",
-  failureDescription: (_input, error) => error.message,
+  failureToast: messageAs("description", () => "Failed to update date"),
 });

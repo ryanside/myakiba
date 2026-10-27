@@ -1,5 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { QueryClient } from "@tanstack/react-query";
 import type { Treaty } from "@elysiajs/eden";
 import type {
   DataTransferArchiveV1,
@@ -19,10 +17,15 @@ import {
 } from "@/queries/data-transfer";
 import { syncResultFamilies } from "../catalog";
 import { panic } from "better-result";
-import type { InferOk, Result } from "better-result";
+import type { InferOk } from "better-result";
 import { call } from "../api";
-import type { ApiFailure } from "../api";
-import { invalidateFamilies, rootedRead, settle, streamedRead, useWrite } from "../client";
+import {
+  defineCommand,
+  invalidateFamilies,
+  rootedRead,
+  streamedRead,
+  useResourceMutation,
+} from "../client";
 import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
 import { importDataTransferItems } from "../extension-run";
 import { startImport } from "../start-import";
@@ -100,39 +103,54 @@ export const dataTransfer = {
   }),
 };
 
+const exportCommand = defineCommand({ invalidates: "nothing", persist: exportDataTransfer });
+
 /** Builds an export for `onSaved` to download. Nothing caches it, so the write goes back to idle. */
 export function useExportData(onSaved: (archive: DataTransferArchiveV1) => void) {
-  const mutation = useMutation({
-    mutationFn: () => settle(exportDataTransfer),
-    onSuccess: (archive) => {
-      onSaved(archive);
-      mutation.reset();
-    },
+  const write = useResourceMutation(exportCommand, {
+    onSaved: (_input, archive) => onSaved(archive),
   });
-  return useWrite(mutation);
-}
-
-/** A write that shows the current import it returns at once and rereads it once it settles. */
-function useCurrentImportWrite<Output, Input = void>(
-  persist: (input: Input) => Promise<Result<Output, ApiFailure>>,
-  show: (queryClient: QueryClient, output: Output) => void,
-  onSaved: (output: Output) => void,
-) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (input: Input) => settle(() => persist(input)),
-    onSuccess: (output) => {
-      onSaved(output);
-      show(queryClient, output);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: currentImportKey }),
-  });
-  return useWrite(mutation);
+  const run = async () => {
+    const exported = await write.run();
+    if (exported.isOk()) write.reset();
+    return exported;
+  };
+  return { ...write, run } as const;
 }
 
 type Started = InferOk<Awaited<ReturnType<typeof startDataTransferImport>>>;
 type Retried = InferOk<Awaited<ReturnType<typeof retryCurrentDataTransferImport>>>;
 type Deleted = InferOk<Awaited<ReturnType<typeof deleteCurrentDataTransferImport>>>;
+
+/** A write that shows the current import it returns at once and rereads it once it settles. */
+const currentImportWrite = { invalidates: ["currentImport"], refetchAfterFailure: true } as const;
+
+const startImportCommand = defineCommand({
+  ...currentImportWrite,
+  persist: startDataTransferImport,
+  saved: async (queryClient, _request, started) => {
+    queryClient.setQueryData(currentImportKey, started);
+  },
+});
+
+/** A retried import streams its status again from the start. */
+const retryImportCommand = defineCommand({
+  ...currentImportWrite,
+  persist: retryCurrentDataTransferImport,
+  saved: async (queryClient, _input, retried) => {
+    queryClient.removeQueries({ queryKey: importStatusKey(retried.id), exact: true });
+    queryClient.setQueryData(currentImportKey, retried);
+  },
+});
+
+const deleteImportCommand = defineCommand({
+  ...currentImportWrite,
+  persist: deleteCurrentDataTransferImport,
+  saved: async (queryClient, _input, deleted) => {
+    queryClient.removeQueries({ queryKey: importStatusKey(deleted.id), exact: true });
+    queryClient.setQueryData(currentImportKey, null);
+  },
+});
 
 /** The extension fetches the items a started or retried import is missing. */
 function fetchMissing({ id, missingMfcItemIds }: Started | Retried): void {
@@ -141,44 +159,30 @@ function fetchMissing({ id, missingMfcItemIds }: Started | Retried): void {
 
 /** Starts an import through `startImport`. */
 export function useStartImport(onSaved: (started: Started) => void) {
-  const write = useCurrentImportWrite(
-    startDataTransferImport,
-    (queryClient, started) => {
-      queryClient.setQueryData(currentImportKey, started);
-    },
-    (started) => {
+  const write = useResourceMutation(startImportCommand, {
+    onSaved: (_request, started) => {
       fetchMissing(started);
       onSaved(started);
     },
-  );
+  });
   const run = (request: DataTransferImportRequest) => startImport(() => write.run(request));
   return { ...write, run } as const;
 }
 
-/** Retries an import through `startImport`. A retried import streams its status again from the start. */
+/** Retries an import through `startImport`. */
 export function useRetryImport(onSaved: (retried: Retried) => void) {
-  const write = useCurrentImportWrite(
-    retryCurrentDataTransferImport,
-    (queryClient, retried) => {
-      queryClient.removeQueries({ queryKey: importStatusKey(retried.id), exact: true });
-      queryClient.setQueryData(currentImportKey, retried);
-    },
-    (retried) => {
+  const write = useResourceMutation(retryImportCommand, {
+    onSaved: (_input, retried) => {
       fetchMissing(retried);
       onSaved(retried);
     },
-  );
+  });
   const run = () => startImport(() => write.run());
   return { ...write, run } as const;
 }
 
 export function useDeleteImport(onSaved: (deleted: Deleted) => void) {
-  return useCurrentImportWrite(
-    deleteCurrentDataTransferImport,
-    (queryClient, deleted) => {
-      queryClient.removeQueries({ queryKey: importStatusKey(deleted.id), exact: true });
-      queryClient.setQueryData(currentImportKey, null);
-    },
-    onSaved,
-  );
+  return useResourceMutation(deleteImportCommand, {
+    onSaved: (_input, deleted) => onSaved(deleted),
+  });
 }

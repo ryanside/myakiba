@@ -5,7 +5,7 @@ import { orders } from "./resources/orders";
 import { wishlist } from "./resources/wishlist";
 
 const persist = async (itemId: string) => Result.ok(itemId);
-const failureTitle = () => "Failed";
+const failureToast = () => ({ title: "Failed" });
 const ITEMS_QUERY = { limit: 10, offset: 0, sort: "createdAt", order: "desc" } as const;
 
 test("a read's key is its family, its entry name and the part of the input that changes the result", () => {
@@ -19,19 +19,23 @@ test("a read's key is its family, its entry name and the part of the input that 
 });
 
 test("a write must name the cataloged families it refreshes", () => {
-  defineCommand({ invalidates: ["wishlist"], persist, failureTitle });
+  defineCommand({ invalidates: ["wishlist"], persist, failureToast });
 
   // @ts-expect-error -- a write declares the families it refreshes.
-  defineCommand({ persist, failureTitle });
+  defineCommand({ persist, failureToast });
 
   // @ts-expect-error -- a write refreshes at least one family.
-  defineCommand({ invalidates: [], persist, failureTitle });
+  defineCommand({ invalidates: [], persist, failureToast });
 
   // @ts-expect-error -- only cataloged families exist.
-  defineCommand({ invalidates: ["wishlists"], persist, failureTitle });
+  defineCommand({ invalidates: ["wishlists"], persist, failureToast });
+
+  defineCommand({ invalidates: ["currentImport"], persist, failureToast });
+
+  defineCommand({ invalidates: "nothing", persist });
 
   // @ts-expect-error -- a live stream is never refreshed by a write.
-  defineCommand({ invalidates: ["syncJobStatus"], persist, failureTitle });
+  defineCommand({ invalidates: ["syncJobStatus"], persist, failureToast });
 
   // @ts-expect-error -- a write answers a Result, so its failure cannot be a bare rejection.
   defineCommand({ invalidates: ["wishlist"], persist: async (itemId: string) => itemId });

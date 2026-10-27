@@ -2,10 +2,12 @@ import { Download01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRef, useState } from "react";
 import type { DataTransferArchiveV1 } from "@myakiba/contracts/data-transfer/schema";
+import type { Result } from "better-result";
 import { Button } from "@/components/ui/button";
 import { useDataTransferImportStatusQuery } from "@/hooks/use-data-transfer-import-status-query";
 import { downloadDataTransferArchive, readDataTransferFile } from "@/lib/data-transfer";
 import { failureText, useRead } from "@/data/client";
+import type { WriteFailed } from "@/lib/errors/write-failed";
 import {
   dataTransfer,
   useDeleteImport,
@@ -41,6 +43,19 @@ export type DataTransferViewState = {
 export type DataTransferViewActions = ImportViewActions & {
   readonly handleExport: () => void;
 };
+
+/** A write's state beside its button: in flight, or the last write's failure until it is reset. */
+function actionState({
+  isPending,
+  last,
+}: {
+  readonly isPending: boolean;
+  readonly last: Result<unknown, WriteFailed> | undefined;
+}): ActionState {
+  if (isPending) return { kind: "pending" };
+  if (last?.isErr()) return { kind: "error", message: failureText(last.error.cause) };
+  return { kind: "idle" };
+}
 
 export function DataTransfer() {
   const [preparedFile, setPreparedFile] = useState<PreparedFile>({ kind: "idle" });
@@ -95,29 +110,10 @@ export function DataTransfer() {
     );
   };
 
-  let exportState: ActionState = { kind: "idle" };
-  if (exportMutation.isPending) exportState = { kind: "pending" };
-  else if (exportMutation.error) {
-    exportState = { kind: "error", message: failureText(exportMutation.error) };
-  }
-
-  let startState: ActionState = { kind: "idle" };
-  if (startMutation.isPending) startState = { kind: "pending" };
-  else if (startMutation.error) {
-    startState = { kind: "error", message: failureText(startMutation.error) };
-  }
-
-  let retryState: ActionState = { kind: "idle" };
-  if (retryMutation.isPending) retryState = { kind: "pending" };
-  else if (retryMutation.error) {
-    retryState = { kind: "error", message: failureText(retryMutation.error) };
-  }
-
-  let deleteState: ActionState = { kind: "idle" };
-  if (deleteMutation.isPending) deleteState = { kind: "pending" };
-  else if (deleteMutation.error) {
-    deleteState = { kind: "error", message: failureText(deleteMutation.error) };
-  }
+  const exportState = actionState(exportMutation);
+  const startState = actionState(startMutation);
+  const retryState = actionState(retryMutation);
+  const deleteState = actionState(deleteMutation);
 
   let currentView: CurrentImportViewState = { kind: "none" };
   if (currentImport?.status === "queued" || currentImport?.status === "running") {

@@ -6,7 +6,7 @@ type FamilySpec =
       readonly roots: readonly string[];
       readonly collectionWrites: boolean;
     }
-  | { readonly kind: "live" | "account" | "static"; readonly roots: readonly string[] };
+  | { readonly kind: "live" | "stream" | "account" | "static"; readonly roots: readonly string[] };
 
 /**
  * Every query family the web app caches. A persisted family refreshes after every
@@ -41,8 +41,8 @@ const catalog = {
   linkedAccounts: { kind: "account", roots: ["linked-accounts"] },
   usernameAvailability: { kind: "live", roots: ["username-availability"] },
   currentImport: { kind: "live", roots: ["dataTransferImport"] },
-  importStatus: { kind: "live", roots: ["dataTransferImportStatus"] },
-  syncJobStatus: { kind: "live", roots: ["syncJobStatus"] },
+  importStatus: { kind: "stream", roots: ["dataTransferImportStatus"] },
+  syncJobStatus: { kind: "stream", roots: ["syncJobStatus"] },
   version: { kind: "static", roots: ["version"] },
 } as const satisfies Record<string, FamilySpec>;
 
@@ -52,9 +52,9 @@ export type PersistedFamily = {
   [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" ? F : never;
 }[Family];
 
-/** Families a write can change: the synced data and the signed-in account's own lists. */
+/** Families a write can refetch: the synced data, the account's own lists and live reads. A stream never refetches for a write. */
 export type WritableFamily = {
-  [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" | "account" ? F : never;
+  [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" | "account" | "live" ? F : never;
 }[Family];
 
 const isPersisted = (family: Family): family is PersistedFamily =>

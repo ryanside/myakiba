@@ -1,12 +1,12 @@
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { useIsMutating, useMutation } from "@tanstack/react-query";
+import { useIsMutating } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { isTaggedError, Panic, Result } from "better-result";
+import { Result } from "better-result";
 import { toast } from "@/components/ui/toast";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { AuthRequestFailed } from "@/lib/errors/auth-request-failed";
 import { getAccountType } from "@/queries/settings";
-import { defineCommand, failureText, guard, rootedRead, settle, useWrite } from "../client";
+import { defineCommand, messageAs, rootedRead, useResourceMutation } from "../client";
 
 type SignedInSession = NonNullable<
   Awaited<ReturnType<typeof authClient.listSessions>>["data"]
@@ -99,6 +99,12 @@ async function unlinkGoogle(): Promise<Result<GoogleUnlink, AuthRequestFailed>> 
 
 const SIGN_OUT_DELAY = "It can take up to 5 minutes to sign out there.";
 
+/** A change to the signed-in user. `fallback` is the failure toast's title when Better Auth gives no text. */
+type UserUpdate = {
+  readonly changes: Parameters<typeof authClient.updateUser>[0];
+  readonly fallback: string;
+};
+
 export const settings = {
   accountType: rootedRead("accountType", {
     key: () => ["account-type"] as const,
@@ -146,8 +152,7 @@ export const settings = {
       authWrite(() => authClient.revokeSession({ token }), `Couldn't sign out of ${name}`),
     successTitle: ({ name }) => `Signed out of ${name}`,
     successDescription: () => SIGN_OUT_DELAY,
-    failureTitle: ({ name }) => `Couldn't sign out of ${name}`,
-    declaredFailureTitle: (_input, failure) => failure.message,
+    failureToast: messageAs("title", ({ name }) => `Couldn't sign out of ${name}`),
   }),
   revokeOtherSessions: defineCommand({
     invalidates: ["devices"],
@@ -155,16 +160,21 @@ export const settings = {
       authWrite(() => authClient.revokeOtherSessions(), "Couldn't sign out other devices"),
     successTitle: () => "Signed out of other devices",
     successDescription: () => SIGN_OUT_DELAY,
-    failureTitle: () => "Couldn't sign out other devices",
-    declaredFailureTitle: (_input, failure) => failure.message,
+    failureToast: messageAs("title", () => "Couldn't sign out other devices"),
   }),
   unlinkGoogle: defineCommand({
     invalidates: ["linkedAccounts", "accountType"],
     persist: () => unlinkGoogle(),
     successTitle: (_input, unlink) =>
       unlink.kind === "unlinked" ? "Google disconnected" : undefined,
-    failureTitle: () => "Couldn't disconnect Google",
-    declaredFailureTitle: (_input, failure) => failure.message,
+    failureToast: messageAs("title", () => "Couldn't disconnect Google"),
+  }),
+  /** The session holds the user, so a screen reloads the router once this saves. */
+  updateUser: defineCommand({
+    invalidates: "nothing",
+    persist: ({ changes, fallback }: UserUpdate) =>
+      authWrite(() => authClient.updateUser(changes), fallback),
+    failureToast: messageAs("title", ({ fallback }) => fallback),
   }),
 };
 
@@ -179,25 +189,14 @@ const SAVE_PREFERENCES = ["save-preferences"] as const;
 export function usePreferencesSave() {
   const router = useRouter();
   const saving = useIsMutating({ mutationKey: SAVE_PREFERENCES }) > 0;
-  const mutation = useMutation({
+  const { run } = useResourceMutation(settings.updateUser, {
     mutationKey: SAVE_PREFERENCES,
-    mutationFn: (changes: Partial<Formats>) =>
-      settle(() => authWrite(() => authClient.updateUser(changes), PREFERENCES_FAILED)),
-    onSuccess: () =>
-      guard(async () => {
-        await router.invalidate();
-        toast.add({ type: "success", title: "Preferences updated successfully" });
-      }),
-    onError: (failure) => {
-      const isDefect = Panic.is(failure) || !isTaggedError(failure);
-      toast.add({
-        type: "error",
-        title: isDefect ? PREFERENCES_FAILED : failureText(failure),
-        ...(isDefect && { description: failureText(failure) }),
-      });
+    onSaved: async () => {
+      await router.invalidate();
+      toast.add({ type: "success", title: "Preferences updated successfully" });
     },
   });
-  const { run } = useWrite(mutation);
+  const save = (changes: Partial<Formats>) => run({ changes, fallback: PREFERENCES_FAILED });
 
-  return { save: run, saving } as const;
+  return { save, saving } as const;
 }

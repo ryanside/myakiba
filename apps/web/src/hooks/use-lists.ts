@@ -123,7 +123,7 @@ export function useAddTargetsToListsMutation() {
     run: (input: { readonly targets: ListTarget[]; readonly listIds: string[] }) =>
       mutation.run(input),
     isPending: mutation.isPending,
-    error: mutation.error,
+    last: mutation.last,
     reset: mutation.reset,
   } as const;
 }
@@ -133,8 +133,7 @@ export function useRemoveTargetsFromListMutation(targets: readonly ListTarget[])
   return {
     run: (listId: string) => mutation.run({ targets, listId }),
     isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    error: mutation.error,
+    last: mutation.last,
   } as const;
 }
 

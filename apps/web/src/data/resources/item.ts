@@ -49,8 +49,10 @@ export const refreshItemCommand = defineCommand({
   persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) =>
     refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
-  failureTitle: () => "Failed to request item refresh",
-  failureDescription: (_externalId, failure) => refreshFailureText(failure),
+  failureToast: (_externalId, failure) => ({
+    title: "Failed to request item refresh",
+    ...(failure && { description: refreshFailureText(failure) }),
+  }),
 });
 
 /** Refreshes an item through `startImport`, so a refused refresh asks the extension for nothing. */

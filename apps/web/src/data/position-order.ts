@@ -1,16 +1,14 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { hashKey, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { InfiniteData, QueryClient, QueryKey } from "@tanstack/react-query";
-import { isTaggedError, Panic } from "better-result";
-import type { Result } from "better-result";
-import { toast } from "@/components/ui/toast";
+import { hashKey } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import { Result } from "better-result";
 import type { ApiFailure } from "./api";
+import type { WritableFamily } from "./catalog";
 import { StalePositionOrder } from "@/lib/errors/stale-position-order";
-import { failureText, settle, useWrite } from "./client";
+import { defineCommand, useResourceMutation } from "./client";
+import type { Command, RefetchKey } from "./client";
 
-// react-query aborts a write only through a throw from onMutate, so a stale cache is thrown there
-// as the move's declared failure.
-const stale = () => new StalePositionOrder({ message: "The saved order changed" });
+const stale = () => Result.err(new StalePositionOrder({ message: "The saved order changed" }));
 
 const pendingMovesByClient = new WeakMap<QueryClient, Map<string, number>>();
 
@@ -23,51 +21,57 @@ function pendingMovesOf(queryClient: QueryClient) {
   return pendingMoves;
 }
 
-export function usePositionOrderMutation({
+type OrderedPages = InfiniteData<
+  {
+    readonly items: { readonly id: string }[];
+    readonly totalCount: number;
+    readonly limit: number;
+    readonly offset: number;
+  },
+  number
+>;
+
+type PositionOrderMove = Command<PositionOrderInput, unknown, ApiFailure | StalePositionOrder>;
+
+/**
+ * A move of items within one ordered list. It patches the list's cache at once, and the list
+ * refetches once no move of it is still saving.
+ */
+export function positionOrderCommand<const F extends WritableFamily>({
+  family,
   queryKey,
   persist,
-  additionalInvalidations,
+  additionalInvalidations = [],
   failureTitle,
 }: {
-  readonly queryKey: QueryKey;
+  readonly family: F;
+  readonly queryKey: RefetchKey<F>["queryKey"];
   readonly persist: (intent: PositionOrderInput) => Promise<Result<unknown, ApiFailure>>;
-  readonly additionalInvalidations?: readonly {
-    readonly queryKey: QueryKey;
-    readonly exact?: boolean;
-  }[];
+  readonly additionalInvalidations?: readonly RefetchKey<F>[];
   readonly failureTitle: string;
-}) {
-  const queryClient = useQueryClient();
+}): PositionOrderMove {
   const moveKey = hashKey(queryKey);
-  const mutation = useMutation({
-    mutationKey: queryKey,
-    mutationFn: async (intent: PositionOrderInput): Promise<void> => {
-      await settle(() => persist(intent));
-    },
-    onMutate: async (intent) => {
+  return defineCommand<PositionOrderInput, unknown, ApiFailure | StalePositionOrder, F>({
+    invalidates: [family],
+    refetchKeys: () => [{ queryKey, exact: true, refetchType: "none" }, ...additionalInvalidations],
+    persist,
+    optimistic: async (queryClient, intent) => {
       const pendingMoves = pendingMovesOf(queryClient);
       pendingMoves.set(moveKey, (pendingMoves.get(moveKey) ?? 0) + 1);
       await queryClient.cancelQueries({ queryKey, exact: true });
-      const current = queryClient.getQueryData<
-        InfiniteData<
-          {
-            readonly items: { readonly id: string }[];
-            readonly totalCount: number;
-            readonly limit: number;
-            readonly offset: number;
-          },
-          number
-        >
-      >(queryKey);
-      if (!current) throw stale();
+      const current = queryClient.getQueryData<OrderedPages>(queryKey);
+      if (!current) return stale();
+      const restore = () => {
+        queryClient.setQueryData(queryKey, current);
+      };
 
       const items = current.pages.flatMap((page) => page.items);
       const movedIdSet = new Set(intent.movedIds);
       const movedItems = items.filter((item) => movedIdSet.has(item.id));
-      if (movedItems.length !== intent.movedIds.length) throw stale();
+      if (movedItems.length !== intent.movedIds.length) return stale();
       if (intent.anchorId !== null && movedIdSet.has(intent.anchorId)) {
-        queryClient.setQueryData(queryKey, current);
-        return { previous: current };
+        restore();
+        return Result.ok(restore);
       }
 
       const remainingItems = items.filter((item) => !movedIdSet.has(item.id));
@@ -76,7 +80,7 @@ export function usePositionOrderMutation({
         insertionIndex = intent.placement === "before" ? 0 : remainingItems.length;
       } else {
         const anchorIndex = remainingItems.findIndex((item) => item.id === intent.anchorId);
-        if (anchorIndex === -1) throw stale();
+        if (anchorIndex === -1) return stale();
         insertionIndex = anchorIndex + (intent.placement === "after" ? 1 : 0);
       }
 
@@ -92,26 +96,10 @@ export function usePositionOrderMutation({
           items: reorderedItems.slice(page.offset, page.offset + page.items.length),
         })),
       });
-      return { previous: current };
+      return Result.ok(restore);
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey, exact: true, refetchType: "none" }),
-        ...(additionalInvalidations ?? []).map((invalidation) =>
-          queryClient.invalidateQueries(invalidation),
-        ),
-      ]);
-    },
-    onError: (error, _intent, context) => {
-      if (context) queryClient.setQueryData(queryKey, context.previous);
-      const isDefect = Panic.is(error) || !isTaggedError(error);
-      toast.add({
-        type: "error",
-        title: failureTitle,
-        ...(isDefect && { description: failureText(error) }),
-      });
-    },
-    onSettled: () => {
+    failureToast: () => ({ title: failureTitle }),
+    settled: (queryClient) => {
       const pendingMoves = pendingMovesOf(queryClient);
       const remaining = (pendingMoves.get(moveKey) ?? 1) - 1;
       if (remaining > 0) {
@@ -122,7 +110,9 @@ export function usePositionOrderMutation({
       void queryClient.invalidateQueries({ queryKey, exact: true });
     },
   });
+}
 
-  const { run, isPending } = useWrite(mutation);
+export function usePositionOrderMutation(command: PositionOrderMove) {
+  const { run, isPending } = useResourceMutation(command);
   return { move: run, isPending } as const;
 }

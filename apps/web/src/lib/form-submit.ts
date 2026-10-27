@@ -5,7 +5,7 @@ type Submittable = { readonly handleSubmit: () => Promise<void> };
 
 /**
  * Awaits a submit and never rejects. A write handler resolves a Result and never rejects, so a
- * rejection is a defect, reported here as a Panic the way `useWrite` reports one. A submit that no
+ * rejection is a defect, reported here as a Panic the way `useResourceMutation` reports one. A submit that no
  * form event starts, such as a key handler's, runs through this.
  */
 export async function runSubmit(submit: Submittable["handleSubmit"]): Promise<void> {

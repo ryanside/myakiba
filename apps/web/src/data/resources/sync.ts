@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import type { Treaty } from "@elysiajs/eden";
 import type {
   SyncSessionItemStatus,
@@ -11,6 +11,7 @@ import {
 } from "@myakiba/contracts/sync/constants";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
+import { SYNC_OPTION_META } from "@/lib/sync";
 import { app } from "@/lib/treaty-client";
 import type { Result } from "better-result";
 import { panic } from "better-result";
@@ -30,15 +31,13 @@ import type { SyncResponse } from "@/queries/sync";
 import { syncResultFamilies } from "../catalog";
 import {
   defineCommand,
-  failureText,
-  guard,
   invalidateFamilies,
+  messageAs,
   rootedRead,
-  settle,
   streamedRead,
   useResourceMutation,
-  useWrite,
 } from "../client";
+import type { Command, FailureToast } from "../client";
 import { toastRunOutcome } from "@/components/extension/run-outcome-toast";
 import { importSyncItems } from "../extension-run";
 import { startImport } from "../start-import";
@@ -154,51 +153,55 @@ export const sync = {
   }),
 };
 
+/**
+ * Sends one sync without waiting on a refetch. A sync the server finished at once refetches every
+ * family a sync changes, and a queued one refetches the import history.
+ */
+function syncSend<Input>(
+  persist: (input: Input) => Promise<Result<SyncResponse, ApiFailure>>,
+  failureTitle: string,
+) {
+  return defineCommand({
+    invalidates: syncResultFamilies,
+    refetchBy: "background",
+    refetchKeys: (_input: Input, { isFinished }) => (isFinished ? undefined : [allSessions]),
+    persist,
+    failureToast: messageAs("description", () => failureTitle),
+  });
+}
+
 /** What each sync sends. A screen sends one through `useSyncSubmit`. */
 export const syncSends = {
-  item: sendItemSync,
-  csv: sendItems,
-  order: sendOrder,
-  orderItem: sendOrderItems,
-  collection: sendCollection,
+  item: syncSend(sendItemSync, SYNC_OPTION_META.item.failureTitle),
+  csv: syncSend(sendItems, SYNC_OPTION_META.csv.failureTitle),
+  order: syncSend(sendOrder, SYNC_OPTION_META.order.failureTitle),
+  orderItem: syncSend(sendOrderItems, SYNC_OPTION_META["order-item"].failureTitle),
+  collection: syncSend(sendCollection, SYNC_OPTION_META.collection.failureTitle),
 };
 
 type SubmitFeedback = {
   readonly onSaved: (response: SyncResponse) => void;
-  /** Gets the text under the failure toast's title, which for a defect never is its message. */
-  readonly onFailed: (description: string) => void;
+  /** Shows the failure toast, whose description for a defect never is its message. */
+  readonly onFailed: (failureToast: FailureToast) => void;
 };
 
-/**
- * Sends a sync through `startImport` without waiting on a refetch, and the extension fetches the
- * items the server lists as missing. A sync the server finished at once refetches every family a
- * sync changes, and a queued one refetches the import history.
- */
+/** Sends a sync through `startImport`, and the extension fetches the items the server lists as missing. */
 export function useSyncSubmit<Input>(
-  persist: (input: Input) => Promise<Result<SyncResponse, ApiFailure>>,
+  command: Command<Input, SyncResponse, ApiFailure>,
   { onSaved, onFailed }: SubmitFeedback,
 ) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (input: Input) => settle(() => persist(input)),
-    onSuccess: (response) =>
-      guard(() => {
-        const { syncSessionId, jobId, missingMfcItemIds } = response;
-        if (jobId !== null && missingMfcItemIds.length > 0) {
-          toastRunOutcome(
-            importSyncItems({ sessionId: syncSessionId, jobId, mfcItemIds: missingMfcItemIds }),
-          );
-        }
-        onSaved(response);
-        if (response.isFinished) {
-          void invalidateFamilies(queryClient, syncResultFamilies);
-        } else {
-          void queryClient.invalidateQueries(allSessions);
-        }
-      }),
-    onError: (failure) => onFailed(failureText(failure)),
+  const { run, isPending } = useResourceMutation(command, {
+    onSaved: (_input, response) => {
+      const { syncSessionId, jobId, missingMfcItemIds } = response;
+      if (jobId !== null && missingMfcItemIds.length > 0) {
+        toastRunOutcome(
+          importSyncItems({ sessionId: syncSessionId, jobId, mfcItemIds: missingMfcItemIds }),
+        );
+      }
+      onSaved(response);
+    },
+    onFailed: (_input, failureToast) => onFailed(failureToast),
   });
-  const { run, isPending } = useWrite(mutation);
   const send = (input: Input) => startImport(() => run(input));
   return { send, isPending } as const;
 }
@@ -207,8 +210,7 @@ export const retrySyncSessionCommand = defineCommand({
   invalidates: ["syncHistory"],
   refetchKeys: (sessionId: string) => [{ queryKey: ["syncSessionDetail", sessionId] }, allSessions],
   persist: retrySyncSession,
-  failureTitle: () => "Failed to retry failed item results",
-  failureDescription: (_sessionId, error) => error.message,
+  failureToast: messageAs("description", () => "Failed to retry failed item results"),
 });
 
 /** Retries a session's failed items through `startImport`, and the extension fetches them under the retry's job. */
