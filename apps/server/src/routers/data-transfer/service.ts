@@ -76,6 +76,54 @@ type ExportFailure =
   | ExportTooManyRecords
   | ExportUnsupportedCollectionItem;
 
+async function failPendingItemsAndSettle({
+  tx,
+  current,
+  userId,
+  failure,
+  now,
+}: {
+  readonly tx: Tx;
+  readonly current: ImportView | undefined;
+  readonly userId: string;
+  readonly failure: DataTransferImportItemFailure;
+  readonly now: Date;
+}) {
+  if (current?.row.jobId === failure.jobId) {
+    await tx
+      .update(dataTransferImport)
+      .set({ heartbeatAt: now })
+      .where(eq(dataTransferImport.userId, userId));
+  }
+  if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
+    return { value: current, changed: false };
+  }
+  const failures =
+    "failures" in failure
+      ? failure.failures.map(({ mfcItemId, error }) => ({
+          mfcItemId,
+          reason: ITEM_FETCH_ERROR_MESSAGE[error],
+        }))
+      : [failure];
+  let changed = false;
+  for (const entry of failures) {
+    const failed = await tx
+      .update(dataTransferImportItem)
+      .set({ status: "failed", errorReason: entry.reason, updatedAt: now })
+      .where(
+        and(
+          eq(dataTransferImportItem.userId, userId),
+          eq(dataTransferImportItem.itemExternalId, entry.mfcItemId),
+          eq(dataTransferImportItem.status, "pending"),
+        ),
+      )
+      .returning({ id: dataTransferImportItem.itemExternalId });
+    changed = failed.length > 0 || changed;
+  }
+  if (!changed) return { value: current, changed: false };
+  return { value: await settle(tx, userId, now), changed: true };
+}
+
 // Postgres binds at most 65535 parameters per statement, so rows are written in chunks.
 const INSERT_CHUNK_SIZE = 500;
 
@@ -636,12 +684,17 @@ const DataTransferService = {
         }
         const problem = prepared.error.problem.kind;
         const message = PROBLEM_MESSAGE[problem];
-        await DataTransferService.failItem(scope, userId, {
-          jobId: upload.jobId,
-          mfcItemId: upload.mfcItemId,
-          reason: message,
+        const failed = await failPendingItemsAndSettle({
+          tx,
+          current,
+          userId,
+          failure: { jobId: upload.jobId, mfcItemId: upload.mfcItemId, reason: message },
+          now,
         });
-        return { value: Result.ok({ kind: "problem" as const, problem, message }), changed: false };
+        return {
+          value: Result.ok({ kind: "problem" as const, problem, message }),
+          changed: failed.changed,
+        };
       }
       const ready = prepared.value;
       if (ready.kind === "parsed") {
@@ -683,39 +736,7 @@ const DataTransferService = {
   ): Promise<DataTransferImport | null> {
     const now = new Date();
     const view = await mutateImport(scope, userId, now, async (tx, current) => {
-      if (current?.row.jobId === failure.jobId) {
-        await tx
-          .update(dataTransferImport)
-          .set({ heartbeatAt: now })
-          .where(eq(dataTransferImport.userId, userId));
-      }
-      if (!current || current.row.jobId !== failure.jobId || current.status !== "running") {
-        return { value: current, changed: false };
-      }
-      const failures =
-        "failures" in failure
-          ? failure.failures.map(({ mfcItemId, error }) => ({
-              mfcItemId,
-              reason: ITEM_FETCH_ERROR_MESSAGE[error],
-            }))
-          : [failure];
-      let changed = false;
-      for (const entry of failures) {
-        const failed = await tx
-          .update(dataTransferImportItem)
-          .set({ status: "failed", errorReason: entry.reason, updatedAt: now })
-          .where(
-            and(
-              eq(dataTransferImportItem.userId, userId),
-              eq(dataTransferImportItem.itemExternalId, entry.mfcItemId),
-              eq(dataTransferImportItem.status, "pending"),
-            ),
-          )
-          .returning({ id: dataTransferImportItem.itemExternalId });
-        changed = failed.length > 0 || changed;
-      }
-      if (!changed) return { value: current, changed: false };
-      return { value: await settle(tx, userId, now), changed: true };
+      return failPendingItemsAndSettle({ tx, current, userId, failure, now });
     });
 
     return view ? toImport(view) : null;

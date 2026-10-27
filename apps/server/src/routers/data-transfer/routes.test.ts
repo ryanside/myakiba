@@ -553,6 +553,46 @@ describe("items fetched through the extension", () => {
     });
   });
 
+  test.each(["failed", "imported"] as const)(
+    "a problem page for an already %s item answers 409 without changing the import",
+    async (state) => {
+      const started = await startRun(
+        archiveOf([], [collectionRecord("c1", 98_777), collectionRecord("c2", 98_778)]),
+      );
+      if (state === "failed") await fail(started.id, 98_777);
+      else await complete(started.id, 98_777);
+      const before = await currentImport();
+      expect(before).toMatchObject({ status: "running" });
+      const form = new FormData();
+      form.set("jobId", started.id);
+      form.set("mfcItemId", "98777");
+      form.set(
+        "page",
+        new File(
+          [await Bun.file(path.join(fixtures, "derived-not-found-signed-out.html")).text()],
+          "page.html",
+          {
+            type: "text/html",
+          },
+        ),
+      );
+      const rejected = await answer(
+        await app.handle(
+          new Request("http://localhost/api/data-transfer/imports/current/items", {
+            method: "POST",
+            headers,
+            body: form,
+          }),
+        ),
+      );
+      expect(rejected).toEqual({
+        status: 409,
+        body: "This upload does not belong to a running import.",
+      });
+      expect(await currentImport()).toEqual(before);
+    },
+  );
+
   test("an unverified email cannot upload an item", async () => {
     const started = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
 
