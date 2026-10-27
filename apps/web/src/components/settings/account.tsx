@@ -25,7 +25,7 @@ import {
   useButtonStatus,
 } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
-import { failureText, useRead, useResourceMutation } from "@/data/client";
+import { useRead, useResourceMutation } from "@/data/client";
 import { settings, withFallback } from "@/data/resources/settings";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
@@ -236,7 +236,7 @@ function ChangePasswordDialog() {
     onSubmit: async ({ value, formApi }) => {
       const changed = await run(() => changePassword.run(value), closesOnSuccess);
       if (changed.isErr()) {
-        const message = failureText(changed.error.cause);
+        const message = changed.error.message;
         formApi.setFieldMeta("currentPassword", (meta) => ({
           ...meta,
           errorMap: { onSubmit: message },

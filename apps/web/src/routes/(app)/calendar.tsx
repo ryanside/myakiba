@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { calendar } from "@/data/resources/calendar";
 import { calendarSearchSchema } from "@myakiba/contracts/calendar/schema";
 import type { CalendarView } from "@myakiba/contracts/calendar/schema";
@@ -170,7 +170,7 @@ function RouteComponent(): ReactNode {
 
       {isError && (
         <div className="animate-data-in rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load calendar: {failureText(error)}
+          Failed to load calendar: {error.message}
         </div>
       )}
 

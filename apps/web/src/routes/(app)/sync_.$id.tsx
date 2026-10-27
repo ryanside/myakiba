@@ -18,7 +18,7 @@ import { RetrySyncSessionButton } from "@/components/sync/retry-sync-session-but
 import { ExtensionPromptNotice } from "@/components/extension/extension-prompt-notice";
 import { BackLink } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { sync } from "@/data/resources/sync";
 import { ITEM_STATUS_CONFIG } from "@/lib/sync";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ function RouteComponent(): ReactNode {
         <div className="flex flex-col gap-1.5">
           <h1 className="text-2xl font-medium tracking-tight">Import details</h1>
           <p className="animate-data-in text-sm font-normal text-destructive">
-            Error: {failureText(error)}
+            Error: {error.message}
           </p>
         </div>
       ) : null}

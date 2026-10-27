@@ -54,7 +54,6 @@ import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
-import { failureText } from "@/data/client";
 
 type ListOptionsForTargets = NonNullable<
   InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
@@ -450,7 +449,7 @@ export function AddToListsDialog({
 
           {isError ? (
             <p className="py-6 text-center text-sm text-destructive" role="alert">
-              {failureText(error)}
+              {error.message}
             </p>
           ) : null}
 

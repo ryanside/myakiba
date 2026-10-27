@@ -6,7 +6,7 @@ import type { Result } from "better-result";
 import { Button } from "@/components/ui/button";
 import { useDataTransferImportStatusQuery } from "@/hooks/use-data-transfer-import-status-query";
 import { downloadDataTransferArchive, readDataTransferFile } from "@/lib/data-transfer";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import type { WriteFailed } from "@/lib/errors/write-failed";
 import {
   dataTransfer,
@@ -53,7 +53,7 @@ function actionState({
   readonly last: Result<unknown, WriteFailed> | undefined;
 }): ActionState {
   if (isPending) return { kind: "pending" };
-  if (last?.isErr()) return { kind: "error", message: failureText(last.error.cause) };
+  if (last?.isErr()) return { kind: "error", message: last.error.message };
   return { kind: "idle" };
 }
 
@@ -137,7 +137,7 @@ export function DataTransfer() {
   else if (currentImportQuery.isError) {
     currentState = {
       kind: "error",
-      message: failureText(currentImportQuery.error),
+      message: currentImportQuery.error.message,
       current: currentImport === null ? null : currentView,
       retrying: currentImportQuery.isFetching,
     };

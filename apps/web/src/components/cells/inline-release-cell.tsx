@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
@@ -91,7 +91,7 @@ export function InlineReleaseCell({
             </div>
           )}
           {releasesError && (
-            <div className="p-3 text-sm text-destructive">{failureText(releasesError)}</div>
+            <div className="p-3 text-sm text-destructive">{releasesError.message}</div>
           )}
           {releasesData?.releases.map((release) => (
             <SelectItem key={release.id} value={release.id} className="py-2.5">

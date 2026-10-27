@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useNavigate } from "@tanstack/react-router";
@@ -357,7 +357,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search orders"
-                    subtitle={searchError ? failureText(searchError) : undefined}
+                    subtitle={searchError?.message}
                   />
                 ) : null}
                 {!isSearchPending &&
@@ -406,7 +406,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search items"
-                    subtitle={searchError ? failureText(searchError) : undefined}
+                    subtitle={searchError?.message}
                   />
                 ) : null}
                 {!isSearchPending &&

@@ -7,7 +7,7 @@ import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/fr
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { failureText, useInvalidateRead, useRead } from "@/data/client";
+import { useInvalidateRead, useRead } from "@/data/client";
 import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
@@ -145,8 +145,7 @@ function ReleaseCalendar({
       <FramePanel className="shadow-none! border-none m-1 mt-0">
         {(() => {
           if (isPending) return <ReleaseCalendarSkeleton />;
-          if (isError)
-            return <ReleaseCalendarError message={failureText(error)} onRetry={refetch} />;
+          if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
               <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6">

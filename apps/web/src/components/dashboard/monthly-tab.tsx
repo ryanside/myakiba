@@ -8,7 +8,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import type { MonthlyData } from "@/queries/dashboard";
-import { failureText } from "@/data/client";
 
 interface MonthlyTabProps {
   readonly data: MonthlyData | undefined;
@@ -40,9 +39,7 @@ export function MonthlyTab({
       <Card>
         <CardHeader>
           <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>
-            Failed to load monthly data: {error && failureText(error)}
-          </CardDescription>
+          <CardDescription>Failed to load monthly data: {error?.message}</CardDescription>
         </CardHeader>
       </Card>
     );

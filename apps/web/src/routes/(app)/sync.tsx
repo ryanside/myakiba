@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import type { SyncSessionRow } from "@myakiba/contracts/sync/types";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { sync } from "@/data/resources/sync";
 import { SyncSessionsDataGrid } from "@/components/sync/sync-sessions-data-grid";
 import { SyncQuickFilters } from "@/components/sync/sync-quick-filters";
@@ -63,7 +63,7 @@ function RouteComponent() {
           <h1 className="text-2xl tracking-tight">Import history</h1>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {failureText(error)}</div>
+          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
         </div>
       </div>
     );

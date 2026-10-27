@@ -20,7 +20,7 @@ import {
 } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "@tanstack/react-form";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { Label } from "../ui/label";
 import {
@@ -369,7 +369,7 @@ function CollectionItemFormContent({
                         )}
                         {releasesError && (
                           <div className="p-3 text-sm text-destructive">
-                            {failureText(releasesError)}
+                            {releasesError.message}
                           </div>
                         )}
                         {releasesData?.releases.map((release) => (

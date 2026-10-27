@@ -4,7 +4,7 @@ import type { IconSvgElement } from "@hugeicons/react";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { failureText, useInvalidateRead, useRead, useResourceMutation } from "@/data/client";
+import { useInvalidateRead, useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
 import type { Devices as DevicesResult } from "@/data/resources/settings";
 import { formatDateOnlyForDisplay, formatRelativeTimeToNow } from "@/lib/date-display";
@@ -46,7 +46,7 @@ export function Devices({ dateFormat }: { readonly dateFormat: DateFormat }) {
     return (
       <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-pretty text-sm text-destructive" role="alert">
-          {failureText(error)}
+          {error.message}
         </p>
         <Button variant="outline" size="sm" onClick={() => refetchDevices()}>
           Try again

@@ -40,7 +40,6 @@ import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 import type { Saving } from "@/data/client";
-import { failureText } from "@/data/client";
 
 type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
@@ -342,7 +341,7 @@ function RouteComponent(): React.JSX.Element {
       {isPending && viewMode === "list" ? <MediaViewSkeletons viewMode="list" count={4} /> : null}
 
       {isError && !data ? (
-        <LoadError title="Couldn't load your Lists" message={failureText(error)} />
+        <LoadError title="Couldn't load your Lists" message={error.message} />
       ) : null}
 
       {!isPending && data && lists.length === 0 ? (

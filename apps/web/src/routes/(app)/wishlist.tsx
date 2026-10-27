@@ -21,7 +21,7 @@ import {
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { buttonVariants } from "@/components/ui/button";
-import { failureText, useResourceMutation } from "@/data/client";
+import { useResourceMutation } from "@/data/client";
 import { setWishlistMembership } from "@/data/resources/wishlist";
 import { useMoveWishlistItemsMutation, useWishlistItemsQuery } from "@/hooks/use-wishlist";
 import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
@@ -100,7 +100,7 @@ function RouteComponent(): React.JSX.Element {
       {hasInitialError ? (
         <LoadError
           title="Couldn't load your Wishlist"
-          message={itemsQuery.error ? failureText(itemsQuery.error) : "Failed to load Wishlist"}
+          message={itemsQuery.error ? itemsQuery.error.message : "Failed to load Wishlist"}
         />
       ) : null}
 

@@ -7,7 +7,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { KPICard } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import type { DashboardResponse } from "@/queries/dashboard";
-import { failureText } from "@/data/client";
 
 interface OverviewTabProps {
   readonly data: DashboardResponse | undefined;
@@ -35,9 +34,7 @@ export function OverviewTab({
       <Card>
         <CardHeader>
           <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>
-            Failed to load dashboard data: {error && failureText(error)}
-          </CardDescription>
+          <CardDescription>Failed to load dashboard data: {error?.message}</CardDescription>
         </CardHeader>
       </Card>
     );

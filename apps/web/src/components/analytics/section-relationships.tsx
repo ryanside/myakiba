@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
-import { failureText, useRead } from "@/data/client";
+import { useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import { ANALYTICS_SECTIONS } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
@@ -117,7 +117,7 @@ function RelationshipPage({
     return (
       <Alert variant="destructive">
         <AlertTitle>Failed to load relationships</AlertTitle>
-        <AlertDescription>{error && failureText(error)}</AlertDescription>
+        <AlertDescription>{error?.message}</AlertDescription>
         <AlertAction>
           <Button
             type="button"

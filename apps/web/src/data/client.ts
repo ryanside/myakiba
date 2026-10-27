@@ -8,7 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
-import { isTaggedError, Panic, Result } from "better-result";
+import { Panic, Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
 import { asFailure, asPanic, DEFECT_TEXT, reportDefect } from "@/lib/as-panic";
@@ -319,15 +319,6 @@ export function invalidateFamilies(
 }
 
 type Rollback = () => void;
-
-/**
- * The text a screen shows for a read's or a write's failure: a declared failure's message, or
- * the safe text for a defect. Only a tagged error other than a Panic is declared, so anything
- * else react-query caught is a defect too.
- */
-export function failureText(failure: Error): string {
-  return Panic.is(failure) || !isTaggedError(failure) ? DEFECT_TEXT : failure.message;
-}
 
 export type FailureToast = { readonly title: string; readonly description?: string };
 

@@ -5,7 +5,7 @@ import { useId, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
-import { failureText, useRead, useResourceMutation } from "@/data/client";
+import { useRead, useResourceMutation } from "@/data/client";
 import { settings } from "@/data/resources/settings";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { User } from "@/lib/auth-client";
@@ -40,7 +40,7 @@ function useUsernameCheck(draft: string, saved: string): UsernameCheck {
   if (!isChanged) return { kind: "unchanged" };
   if (problem) return { kind: "invalid", message: problem };
   if (settled !== draft || availability.isPending) return { kind: "checking" };
-  if (availability.isError) return { kind: "failed", message: failureText(availability.error) };
+  if (availability.isError) return { kind: "failed", message: availability.error.message };
   return availability.data ? { kind: "available" } : { kind: "taken" };
 }
 

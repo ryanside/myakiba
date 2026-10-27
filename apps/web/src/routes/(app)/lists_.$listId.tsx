@@ -1,5 +1,4 @@
 import { Delete02Icon, Edit03Icon, FolderOpenIcon } from "@hugeicons/core-free-icons";
-import { failureText } from "@/data/client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BackLink } from "@/components/ui/back-link";
@@ -195,7 +194,7 @@ function RouteComponent(): React.JSX.Element {
       {hasInitialError ? (
         <LoadError
           title="Couldn't load this List"
-          message={loadError ? failureText(loadError) : "Failed to load List"}
+          message={loadError ? loadError.message : "Failed to load List"}
         />
       ) : null}
 
