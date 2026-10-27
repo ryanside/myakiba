@@ -5,13 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { ComponentType, ReactElement } from "react";
 import type { SearchEntriesResponse } from "@myakiba/contracts/search/schema";
-import { answer } from "../../test/request-answers";
+import { Result } from "better-result";
 
 const realSearch = await import("@/queries/search");
 await mock.module("@/queries/search", () => ({
   ...realSearch,
   searchEntries: async () =>
-    answer<SearchEntriesResponse>({
+    Result.ok<SearchEntriesResponse>({
       entries: [{ id: "entry-miku", name: "Hatsune Miku", category: "Character" }],
     }),
 }));

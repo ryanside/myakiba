@@ -3,8 +3,9 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { answer, refusal, settledAs } from "../../test/request-answers";
 import type { Saving } from "@/data/client";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 type Write = { readonly name: string; finish: () => void; fail: () => void };
 const server = { inFlight: [] as Write[], finished: [] as string[] };
@@ -17,15 +18,24 @@ const write =
         name,
         finish: () => {
           server.finished.push(name);
-          resolve(answer(null));
+          resolve(Result.ok(null));
         },
-        fail: () => resolve(refusal(`${name} rejected by server`)),
+        fail: () =>
+          resolve(
+            Result.err(
+              new ApiServerError({
+                status: 500,
+                body: `${name} rejected by server`,
+                message: `${name} rejected by server`,
+              }),
+            ),
+          ),
       });
     });
 
 await mock.module("@/queries/orders", () => ({
   getOrders: async () =>
-    answer({
+    Result.ok({
       items: [],
       totalCount: 0,
       totalSpent: 0,
@@ -35,8 +45,8 @@ await mock.module("@/queries/orders", () => ({
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },
-  getOrderItems: async () => answer({ items: [], totalCount: 0 }),
-  getOrderItemReleases: async () => answer([]),
+  getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
+  getOrderItemReleases: async () => Result.ok([]),
   mergeOrders: write("merge"),
   splitOrders: write("split"),
   editOrder: write("edit order"),
@@ -124,11 +134,11 @@ describe.each(LISTS)(
 
     test.each(HANDLERS)("%s: a rejected write rejects the caller's await", async (_name, run) => {
       const handlers = renderOrdersPage(filters);
-      const call = settledAs(run(handlers.current));
+      const call = run(handlers.current).then((saved) => saved.status);
       await waitFor(() => expect(server.inFlight).toHaveLength(1));
       await act(async () => serverWrite().fail());
 
-      expect(await call).toBe("rejected");
+      expect(await call).toBe("error");
     });
   },
 );

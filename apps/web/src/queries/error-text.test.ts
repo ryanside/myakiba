@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { failureOf } from "../../test/request-answers";
 import { exportDataTransfer } from "./data-transfer";
 import { requestResync } from "./item";
 import { retrySyncSession } from "./sync";
@@ -27,8 +26,11 @@ const calls = [
 describe.each(calls)("%s uses safe error text", (_name, call, fallback) => {
   test("a 500 shows the operation fallback", async () => {
     answerWith(async () => new Response("Failed to queue order creation", { status: 500 }));
-    expect(await failureOf<unknown>(call())).toMatchObject({
-      message: fallback,
+    expect(await call()).toMatchObject({
+      status: "error",
+      error: {
+        message: fallback,
+      },
     });
   });
 
@@ -36,15 +38,18 @@ describe.each(calls)("%s uses safe error text", (_name, call, fallback) => {
     answerWith(async () =>
       Response.json({ type: "validation", message: "Expected string" }, { status: 422 }),
     );
-    expect(await failureOf<unknown>(call())).toMatchObject({ message: fallback });
+    expect(await call()).toMatchObject({ status: "error", error: { message: fallback } });
   });
 
   test("an unreachable server shows the operation fallback", async () => {
     answerWith(async () => {
       throw new TypeError("Failed to fetch");
     });
-    expect(await failureOf<unknown>(call())).toMatchObject({
-      message: fallback,
+    expect(await call()).toMatchObject({
+      status: "error",
+      error: {
+        message: fallback,
+      },
     });
   });
 });

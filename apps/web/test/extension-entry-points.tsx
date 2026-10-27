@@ -7,7 +7,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { ExtensionBridge } from "@/lib/extension-bridge";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
-import { answer } from "./request-answers";
+import { Result } from "better-result";
 
 let extension = fakeExtension();
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
@@ -42,7 +42,7 @@ const accepted = {
 };
 const sends = (type: string) => async () => {
   sent.push(type);
-  return answer(accepted);
+  return Result.ok(accepted);
 };
 const realSync = await import("@/queries/sync");
 await mock.module("@/queries/sync", () => ({
@@ -54,7 +54,7 @@ await mock.module("@/queries/sync", () => ({
   sendCollection: sends("collection"),
   retrySyncSession: async (sessionId: string) => {
     retriedSessions.push(sessionId);
-    return answer({ jobId: "job-2", missingMfcItemIds: [] });
+    return Result.ok({ jobId: "job-2", missingMfcItemIds: [] });
   },
 }));
 

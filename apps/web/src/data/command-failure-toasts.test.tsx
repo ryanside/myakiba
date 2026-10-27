@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Panic, Result } from "better-result";
 import type { ReactNode } from "react";
 import { ApiRejected } from "@/lib/errors/api-rejected";
-import { failureWording } from "../../test/command-wording";
 
 const COOLDOWN_TEXT = "Item details were recently refreshed";
 const refresh = async () =>
@@ -113,8 +112,16 @@ test("a move against a list the page no longer holds says the order was not save
 });
 
 test.each([
-  ["words its failures", failureWording<null>("Failed to save", (failure) => failure.message)],
-  ["words none", failureWording<null>("Failed to save")],
+  [
+    "words its failures",
+    {
+      failureToast: (_input: null, failure: Error | null) => ({
+        title: "Failed to save",
+        ...(failure && { description: failure.message }),
+      }),
+    },
+  ],
+  ["words none", { failureToast: () => ({ title: "Failed to save" }) }],
 ] as const)(
   "a defect in a write whose command %s shows the safe text under its title, never its message",
   async (_name, wording) => {
@@ -148,7 +155,10 @@ test("a defect while a write's answer is read shows the safe text under its titl
       call(Promise.reject(new Panic({ message: "the answer reader lost its schema" })), {
         fallback: "Failed to save",
       }),
-    ...failureWording<null>("Failed to save", (failure) => failure.message),
+    failureToast: (_input, failure) => ({
+      title: "Failed to save",
+      ...(failure && { description: failure.message }),
+    }),
   });
   const error = spyOn(console, "error").mockImplementation(() => {});
   const queryClient = new QueryClient();

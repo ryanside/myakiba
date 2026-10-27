@@ -1,5 +1,4 @@
 import { afterEach, expect, test } from "bun:test";
-import { failureOf } from "../../test/request-answers";
 import * as sync from "@/queries/sync";
 import * as transfer from "@/queries/data-transfer";
 import { getResyncStatus, requestResync } from "@/queries/item";
@@ -81,7 +80,7 @@ for (const [screen, request, fallback] of callers) {
       },
     ]) {
       globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
-      expect(await failureOf<unknown>(request())).toMatchObject({ message: fallback });
+      expect(await request()).toMatchObject({ status: "error", error: { message: fallback } });
     }
   });
 }

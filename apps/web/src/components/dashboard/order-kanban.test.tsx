@@ -12,7 +12,8 @@ import {
   stopDrags,
   stubKanbanLayout,
 } from "../../../test/kanban-drag";
-import { answer, refusal } from "../../../test/request-answers";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
@@ -49,8 +50,11 @@ const sendWrite = (orderId: string, change: Write["change"]) =>
     writes.push({
       orderId,
       change,
-      settle: () => resolve(answer(null)),
-      fail: () => resolve(refusal("offline")),
+      settle: () => resolve(Result.ok(null)),
+      fail: () =>
+        resolve(
+          Result.err(new ApiServerError({ status: 500, body: "offline", message: "offline" })),
+        ),
     });
   });
 
