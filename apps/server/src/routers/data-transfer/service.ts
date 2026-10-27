@@ -309,7 +309,7 @@ const DataTransferService = {
   async checkUpload(userId: string, upload: DataTransferImportItemUpload, db: ReadTx) {
     const current = await readView(db, userId, new Date());
     return (await pendingUpload(db, current, userId, upload))
-      ? Result.ok(undefined)
+      ? Result.ok()
       : Result.err(new UploadNotInRunningImport());
   },
 

@@ -1396,6 +1396,47 @@ describe("committed data-transfer publication", () => {
   });
 });
 
+async function checkUploadOwnership(stage: string, state: string) {
+  const run = await startRun(
+    archiveOf([], [collectionRecord("c1", 98_777), collectionRecord("c2", 98_778)]),
+  );
+  const invalidate = async () => {
+    switch (state) {
+      case "finished import":
+        await db
+          .update(dataTransferImport)
+          .set({ status: "completed" })
+          .where(eq(dataTransferImport.userId, userId));
+        break;
+      case "wrong job":
+        await db
+          .update(dataTransferImport)
+          .set({ jobId: "another-job" })
+          .where(eq(dataTransferImport.userId, userId));
+        break;
+      case "missing item":
+        await db
+          .delete(dataTransferImportItem)
+          .where(eq(dataTransferImportItem.itemExternalId, 98_777));
+        break;
+      default:
+        await db
+          .update(dataTransferImportItem)
+          .set({ status: state === "failed item" ? "failed" : "imported" })
+          .where(eq(dataTransferImportItem.itemExternalId, 98_777));
+    }
+  };
+  if (stage === "before preparation") await invalidate();
+  else duringPicturePut = invalidate;
+  expect(await complete(run.id, 98_777)).toEqual({
+    status: 409,
+    body: "This upload does not belong to a running import.",
+  });
+  expect(picturePuts).toBe(stage === "before preparation" ? 0 : 1);
+  expect(await db.select().from(item)).toEqual([]);
+  expect(await db.select().from(collection)).toEqual([]);
+}
+
 describe("upload ownership", () => {
   for (const stage of ["before preparation", "after preparation"]) {
     for (const state of [
@@ -1405,46 +1446,7 @@ describe("upload ownership", () => {
       "imported item",
       "missing item",
     ]) {
-      test(`${stage} refuses ${state}`, async () => {
-        const run = await startRun(
-          archiveOf([], [collectionRecord("c1", 98_777), collectionRecord("c2", 98_778)]),
-        );
-        const invalidate = async () => {
-          switch (state) {
-            case "finished import":
-              await db
-                .update(dataTransferImport)
-                .set({ status: "completed" })
-                .where(eq(dataTransferImport.userId, userId));
-              break;
-            case "wrong job":
-              await db
-                .update(dataTransferImport)
-                .set({ jobId: "another-job" })
-                .where(eq(dataTransferImport.userId, userId));
-              break;
-            case "missing item":
-              await db
-                .delete(dataTransferImportItem)
-                .where(eq(dataTransferImportItem.itemExternalId, 98_777));
-              break;
-            default:
-              await db
-                .update(dataTransferImportItem)
-                .set({ status: state === "failed item" ? "failed" : "imported" })
-                .where(eq(dataTransferImportItem.itemExternalId, 98_777));
-          }
-        };
-        if (stage === "before preparation") await invalidate();
-        else duringPicturePut = invalidate;
-        expect(await complete(run.id, 98_777)).toEqual({
-          status: 409,
-          body: "This upload does not belong to a running import.",
-        });
-        expect(picturePuts).toBe(stage === "before preparation" ? 0 : 1);
-        expect(await db.select().from(item)).toEqual([]);
-        expect(await db.select().from(collection)).toEqual([]);
-      });
+      test(`${stage} refuses ${state}`, () => checkUploadOwnership(stage, state));
     }
   }
 });

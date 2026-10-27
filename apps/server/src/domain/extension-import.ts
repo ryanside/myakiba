@@ -8,8 +8,6 @@ import type { AnyFailure } from "./failure";
 /** All extension import operations share this release decision, before any preparation. */
 export function gated<I, T, F extends AnyFailure, M extends string>(op: Op<I, T, F, M>) {
   return gate(op, () =>
-    EXTENSION_RELEASE === "in_review"
-      ? Result.err(new ExtensionImportUnavailable())
-      : Result.ok(),
+    EXTENSION_RELEASE === "in_review" ? Result.err(new ExtensionImportUnavailable()) : Result.ok(),
   );
 }
