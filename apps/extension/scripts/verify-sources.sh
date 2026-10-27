@@ -9,10 +9,14 @@ untracked=$(comm -23 <(unzip -Z1 "$sources" | sort) <(git ls-files --full-name -
 [ -z "$untracked" ] || { echo "the sources zip holds files git does not track, so commit or exclude them:" >&2; echo "$untracked" >&2; exit 1; }
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-unzip -q "$sources" -d "$work"
-(cd "$work" && bun install --frozen-lockfile > /dev/null && cd apps/extension && bun run zip > /dev/null 2>&1)
+unzip -q "$sources" -d "$work/src"
+if ! (cd "$work/src" && bun install --frozen-lockfile && cd apps/extension && bun run zip) > "$work/rebuild.log" 2>&1; then
+  echo "the rebuild from the sources zip failed:" >&2
+  cat "$work/rebuild.log" >&2
+  exit 1
+fi
 for kind in chrome firefox sources; do
   zip="myakiba-$version-$kind.zip"
-  cmp ".output/$zip" "$work/apps/extension/.output/$zip"
+  cmp ".output/$zip" "$work/src/apps/extension/.output/$zip"
   echo "$zip matches the build from the sources zip"
 done
