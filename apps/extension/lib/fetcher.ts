@@ -407,9 +407,17 @@ export function createFetcher(deps: FetcherDeps) {
   }
 
   /**
-   * Answers one item, and is where its failures end. An expected failure is logged and answered as it is. A defect,
-   * whatever step throws it, is reported and answered as unexpected_page, so the queue moves on instead of retrying it
-   * forever. Null answers nothing, because the signal aborted: no run waits for the item any more.
+   * A defect, whatever step throws it, is reported with this and answered as unexpected_page, so the queue moves on
+   * instead of retrying it forever.
+   */
+  const defect = (job: Job) => ({
+    report: `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
+    outcome: { kind: "failed", code: "unexpected_page" } as const satisfies ItemOutcome,
+  });
+
+  /**
+   * Answers one item, and is where its failures end. An expected failure is logged and answered as it is, and a defect
+   * as `defect` says. Null answers nothing, because the signal aborted: no run waits for the item any more.
    */
   async function attempt(job: Job, signal: AbortSignal): Promise<ItemOutcome | null> {
     const requester = liveRequester(job);
@@ -434,11 +442,9 @@ export function createFetcher(deps: FetcherDeps) {
         return await solveChallenge(job, requester, reading.status, signal);
       });
     } catch (error) {
-      console.error(
-        `MFC item ${job.mfcItemId} failed on a defect, so it answers unexpected_page`,
-        error,
-      );
-      return signal.aborted ? null : { kind: "failed", code: "unexpected_page" };
+      const { report, outcome } = defect(job);
+      console.error(report, error);
+      return signal.aborted ? null : outcome;
     }
     if (signal.aborted) return null;
     if (answer.isOk()) return { kind: "page", page: answer.value };
@@ -450,7 +456,7 @@ export function createFetcher(deps: FetcherDeps) {
   }
 
   /** A rate limit is booked as one, which may halt the queue. A halt was booked when it happened. */
-  async function booked(
+  async function booking(
     outcome: ItemOutcome,
   ): Promise<Result<ItemOutcome, SessionStorageUnavailable>> {
     if (outcome.kind === "halted") return Result.ok(outcome);
@@ -464,7 +470,27 @@ export function createFetcher(deps: FetcherDeps) {
     return answered.map(() => outcome);
   }
 
-  /** An answer whose booking cannot be written fails its item with that failure, so the run still ends. */
+  /**
+   * An answer whose booking storage refuses fails its item with that refusal, and one whose booking throws fails it as a
+   * defect, so the run still ends.
+   */
+  async function booked(job: Job, outcome: ItemOutcome): Promise<ItemOutcome> {
+    try {
+      const written = await booking(outcome);
+      return written.match({
+        ok: (kept) => kept,
+        err: (failure) => {
+          console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
+          return outcomeOf(failure);
+        },
+      });
+    } catch (error) {
+      const { report, outcome: failed } = defect(job);
+      console.error(report, error);
+      return failed;
+    }
+  }
+
   async function drain(): Promise<Result<void, SessionStorageUnavailable>> {
     for (;;) {
       dispatch({ type: "started" });
@@ -475,15 +501,7 @@ export function createFetcher(deps: FetcherDeps) {
       const outcome = await attempt(job, controller.signal);
       current = null;
       if (outcome === null) continue;
-      const booking = await booked(outcome);
-      const settled = booking.match({
-        ok: (kept) => kept,
-        err: (failure) => {
-          console.warn(`${failure._tag} for MFC item ${job.mfcItemId}: ${failure.message}`);
-          return outcomeOf(failure);
-        },
-      });
-      dispatch({ type: "answered", job, outcome: settled });
+      dispatch({ type: "answered", job, outcome: await booked(job, outcome) });
     }
     return Result.gen(async function* () {
       yield* Result.await(mfcTabs.release());
