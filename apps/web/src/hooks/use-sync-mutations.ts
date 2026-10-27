@@ -6,6 +6,7 @@ import { syncSends, useSyncSubmit } from "@/data/resources/sync";
 import type { SyncResponse } from "@/queries/sync";
 import type { SyncType } from "@myakiba/contracts/shared/types";
 import { toast } from "@/components/ui/toast";
+import type { FailureToast } from "@/data/client";
 import type { ItemSyncInput } from "@myakiba/contracts/sync/schema";
 import type { Result } from "better-result";
 
@@ -20,13 +21,12 @@ export type UseSyncMutationsReturn = {
   readonly isSyncing: boolean;
 };
 
-async function sendWithExtension<Input>(
+async function submitSync<Input>(
   send: (input: Input) => Promise<Result<SyncResponse, unknown>>,
   input: Input,
 ): Promise<SyncSubmit> {
   const sent = await send(input);
-  if (sent.isErr()) return "not_sent";
-  return "sent";
+  return sent.isOk() ? "sent" : "not_sent";
 }
 
 export function useSyncMutations(onComplete?: () => void): UseSyncMutationsReturn {
@@ -76,13 +76,12 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
     [navigate, onComplete],
   );
 
-  const itemSync = useSyncSubmit(syncSends.item, {
-    onSaved: (data) => handleSuccess(data, "item"),
-    onFailed: ({ title, description = "" }) => {
+  const toastFailure = useCallback(
+    (title: string, description: string): void => {
       const toastId = toast.add({
         type: "error",
         title,
-        description: description.trim() || "Failed to submit item database items.",
+        description,
         actionProps: {
           children: "View import history",
           onClick() {
@@ -92,82 +91,40 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
         },
       });
     },
+    [navigate],
+  );
+  const failedWith =
+    (fallback: string) =>
+    ({ title, description = "" }: FailureToast): void =>
+      toastFailure(title, description.trim() || fallback);
+
+  const itemSync = useSyncSubmit(syncSends.item, {
+    onSaved: (data) => handleSuccess(data, "item"),
+    onFailed: failedWith("Failed to submit item database items."),
   });
 
   const csvSync = useSyncSubmit(syncSends.csv, {
     onSaved: (data) => handleSuccess(data, "csv"),
-    onFailed: ({ title, description = "" }) => {
-      const toastId = toast.add({
-        type: "error",
-        title,
-        description: description.trim() || "Failed to submit MyFigureCollection CSV.",
-        actionProps: {
-          children: "View import history",
-          onClick() {
-            toast.close(toastId);
-            void navigate({ to: "/sync" });
-          },
-        },
-      });
-    },
+    onFailed: failedWith("Failed to submit MyFigureCollection CSV."),
   });
 
   const orderSync = useSyncSubmit(syncSends.order, {
     onSaved: (data) => handleSuccess(data, "order"),
-    onFailed: ({ title, description = "" }) => {
-      const toastId = toast.add({
-        type: "error",
-        title,
-        description: description.trim() || "Failed to submit order.",
-        actionProps: {
-          children: "View import history",
-          onClick() {
-            toast.close(toastId);
-            void navigate({ to: "/sync" });
-          },
-        },
-      });
-    },
+    onFailed: failedWith("Failed to submit order."),
   });
 
   const orderItemSync = useSyncSubmit(syncSends.orderItem, {
     onSaved: (data) => handleSuccess(data, "order-item"),
-    onFailed: ({ title, description = "" }) => {
-      const toastId = toast.add({
-        type: "error",
-        title,
-        description: description.trim() || "Failed to submit order items.",
-        actionProps: {
-          children: "View import history",
-          onClick() {
-            toast.close(toastId);
-            void navigate({ to: "/sync" });
-          },
-        },
-      });
-    },
+    onFailed: failedWith("Failed to submit order items."),
   });
 
   const collectionSync = useSyncSubmit(syncSends.collection, {
     onSaved: (data) => handleSuccess(data, "collection"),
-    onFailed: ({ title, description = "" }) => {
-      const toastId = toast.add({
-        type: "error",
-        title,
-        description: description.trim() || "Failed to submit collection items.",
-        actionProps: {
-          children: "View import history",
-          onClick() {
-            toast.close(toastId);
-            void navigate({ to: "/sync" });
-          },
-        },
-      });
-    },
+    onFailed: failedWith("Failed to submit collection items."),
   });
 
   const handleSyncItemsSubmit = useCallback(
-    (values: ItemSyncInput) => sendWithExtension(itemSync.send, values),
+    (values: ItemSyncInput) => submitSync(itemSync.send, values),
     [itemSync],
   );
 
@@ -175,38 +132,27 @@ export function useSyncMutations(onComplete?: () => void): UseSyncMutationsRetur
     async (value: File | undefined): Promise<SyncSubmit> => {
       const userItems = await transformCSVData({ file: value });
       if (userItems.isErr()) {
-        const toastId = toast.add({
-          type: "error",
-          title: SYNC_OPTION_META.csv.failureTitle,
-          description: userItems.error.message,
-          actionProps: {
-            children: "View import history",
-            onClick() {
-              toast.close(toastId);
-              void navigate({ to: "/sync" });
-            },
-          },
-        });
+        toastFailure(SYNC_OPTION_META.csv.failureTitle, userItems.error.message);
         return "not_sent";
       }
 
-      return sendWithExtension(csvSync.send, userItems.value);
+      return submitSync(csvSync.send, userItems.value);
     },
-    [csvSync, navigate],
+    [csvSync, toastFailure],
   );
 
   const handleSyncOrderSubmit = useCallback(
-    (values: SyncOrder) => sendWithExtension(orderSync.send, values),
+    (values: SyncOrder) => submitSync(orderSync.send, values),
     [orderSync],
   );
 
   const handleSyncCollectionSubmit = useCallback(
-    (values: SyncCollectionItem[]) => sendWithExtension(collectionSync.send, values),
+    (values: SyncCollectionItem[]) => submitSync(collectionSync.send, values),
     [collectionSync],
   );
 
   const handleSyncOrderItemSubmit = useCallback(
-    (values: SyncOrderItems) => sendWithExtension(orderItemSync.send, values),
+    (values: SyncOrderItems) => submitSync(orderItemSync.send, values),
     [orderItemSync],
   );
 
