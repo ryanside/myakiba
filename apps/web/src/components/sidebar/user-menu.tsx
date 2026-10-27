@@ -22,7 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useTheme } from "next-themes";
 import type { Session } from "@/lib/session";
 import { toast } from "@/components/ui/toast";
-import { withFallback } from "@/data/resources/settings";
 import { Button } from "../ui/button";
 
 export default function UserMenu({ session }: { session: Session }) {
@@ -34,7 +33,7 @@ export default function UserMenu({ session }: { session: Session }) {
     if (result.isErr()) {
       toast.add({
         type: "error",
-        title: withFallback(result.error, "Couldn't sign out. Try again.").message,
+        title: result.error.message || "Couldn't sign out. Try again.",
       });
       return;
     }
