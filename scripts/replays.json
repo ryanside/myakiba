@@ -2020,8 +2020,8 @@
       ]
     },
     {
-      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "imports could write while the browser extension was in review",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -2038,8 +2038,8 @@
       ]
     },
     {
-      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "data-transfer imports could write during review and unsolicited uploads stored pictures",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -2053,22 +2053,22 @@
       ]
     },
     {
-      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "catalog ingest remained live during extension review",
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": ["in review refuses ingest without writing and leaves missing lookup open"]
     },
     {
-      "fix": "b39330874634e93a6365ee65f72bb9cb15a2dc5a",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "shared catalog refresh remained live during extension review",
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": ["in review refuses refresh without writing and leaves refresh status open"]
     },
     {
-      "fix": "c4d0430d1cb9f0756ce373afbc43139eb05fa384",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "25f42bee257c1930005088734df5a23fccb3394c",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "committed import publication could hang and used error-level diagnostics",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -2077,8 +2077,8 @@
       ]
     },
     {
-      "fix": "c4d0430d1cb9f0756ce373afbc43139eb05fa384",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "25f42bee257c1930005088734df5a23fccb3394c",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "committed import publication could hang and used error-level diagnostics",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -2087,8 +2087,8 @@
       ]
     },
     {
-      "fix": "2892d4e4ee9b6df4839e6d8e8902b0a1da630153",
-      "testAt": "0a175cab41bea5c47ddcc57146642012048f7f4c",
+      "fix": "61b860cbad7072757e7620e42023d1214bf4e2cd",
+      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "sync session detail omitted persisted CSV price warnings",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -2098,8 +2098,8 @@
       ]
     },
     {
-      "fix": "a61267d9a2d26ce6ee3df3d75814a87c886d4042",
-      "testAt": "a61267d9a2d26ce6ee3df3d75814a87c886d4042",
+      "fix": "ad74814a87490b3dbeaa82114ce9f6f6b4797ccf",
+      "testAt": "ad74814a87490b3dbeaa82114ce9f6f6b4797ccf",
       "bug": "main scraped results, itemsToScrape queues and raw CSV prices could not be read or retried",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
