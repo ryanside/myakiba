@@ -24,13 +24,12 @@ export async function publishImportStatus({
   const attempted =
     redis.status === "ready"
       ? await Result.tryPromise({
-          try: () =>
-            withDeadline(async () => {
-              const status = await load();
-              return status
-                ? writeJobStatusSnapshotAndPublish(redis, status.jobId, status)
-                : Result.ok("unread" as const);
-            }),
+          try: async () => {
+            const status = await load();
+            return status
+              ? withDeadline(() => writeJobStatusSnapshotAndPublish(redis, status.jobId, status))
+              : Result.ok("unread" as const);
+          },
           catch: failed,
         })
       : Result.err(failed(new Error(`Redis is ${redis.status}`)));
