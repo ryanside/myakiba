@@ -1,4 +1,10 @@
-import { storedItemStatus, storedJobDataSchema } from "./stored-data";
+import {
+  storedItemStatus,
+  storedJobDataSchema,
+  storedRequestPayload,
+  storedLegacyCsvPayload,
+  storedSessionWarnings,
+} from "./stored-data";
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
@@ -14,11 +20,7 @@ import {
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
 import { and, inArray, eq, desc, getTableColumns, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
-import {
-  csvJobDataSchema,
-  sessionStatusToPhase,
-  sessionStatusToTerminalState,
-} from "@myakiba/contracts/sync/schema";
+import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow, SyncSessionDetail } from "@myakiba/contracts/sync/types";
 import type { SyncJobStatus, CollectionInsertType, ExistingItemWithLatestRelease } from "./model";
 import type { OrderInsertType } from "../orders/model";
@@ -547,61 +549,27 @@ class SyncService {
     items: DbEnrichedSyncSessionItemRow[];
     totalItems: number;
   } | null> {
-    // Bun/Drizzle has also persisted payloads as JSON strings; project both stored forms alike.
-    const requestPayload = sql`case when jsonb_typeof(${syncSession.requestPayload}) = 'string'
-      and pg_input_is_valid(${syncSession.requestPayload} #>> '{}', 'jsonb')
-      then (${syncSession.requestPayload} #>> '{}')::jsonb else ${syncSession.requestPayload} end`;
-    const detailSession = db
+    const payload = storedRequestPayload;
+    const {
+      requestPayload: _requestPayload,
+      endCause: _endCause,
+      ...columns
+    } = getTableColumns(syncSession);
+    const [sessionRecord] = await db
       .select({
-        ...getTableColumns(syncSession),
-        hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`.as(
-          "has_request_payload",
-        ),
-        requestPayload: requestPayload.as("request_payload"),
+        ...columns,
+        storedWarnings: sql<unknown>`case when ${payload}->>'type' = 'csv'
+          then ${payload}->'warnings' else null end`.mapWith(syncSession.requestPayload),
+        legacyPayload: storedLegacyCsvPayload,
+        hasRequestPayload: sql<boolean>`${syncSession.requestPayload} is not null`,
       })
       .from(syncSession)
       .where(and(eq(syncSession.id, sessionId), eq(syncSession.userId, userId)))
-      .limit(1)
-      .as("detail_session");
-    const [sessionRecord] = await db
-      .select({
-        id: detailSession.id,
-        userId: detailSession.userId,
-        syncType: detailSession.syncType,
-        jobId: detailSession.jobId,
-        status: detailSession.status,
-        statusMessage: detailSession.statusMessage,
-        orderId: detailSession.orderId,
-        totalItems: detailSession.totalItems,
-        successCount: detailSession.successCount,
-        failCount: detailSession.failCount,
-        createdAt: detailSession.createdAt,
-        updatedAt: detailSession.updatedAt,
-        revision: detailSession.revision,
-        completedAt: detailSession.completedAt,
-        storedWarnings: sql<unknown>`case when ${detailSession.requestPayload}->>'type' = 'csv'
-          then ${detailSession.requestPayload}->'warnings' else null end`.mapWith(
-          syncSession.requestPayload,
-        ),
-        legacyPayload: sql<unknown>`case when ${detailSession.requestPayload}->>'type' = 'csv'
-          and jsonb_path_exists(${detailSession.requestPayload}, '$.items[*] ? (!(exists(@.priceMinorUnits)))')
-          then ${detailSession.requestPayload} else null end`.mapWith(syncSession.requestPayload),
-        hasRequestPayload: detailSession.hasRequestPayload,
-      })
-      .from(detailSession);
+      .limit(1);
 
     if (!sessionRecord) return null;
     const { hasRequestPayload, storedWarnings, legacyPayload, ...record } = sessionRecord;
-    const warnings = (() => {
-      if (legacyPayload !== null) {
-        const payload = storedJobDataSchema.safeParse(legacyPayload);
-        return importWarnings(payload.success ? payload.data : null).warnings ?? [];
-      }
-      const parsed = csvJobDataSchema
-        .pick({ warnings: true })
-        .safeParse({ warnings: storedWarnings });
-      return parsed.success ? parsed.data.warnings : [];
-    })();
+    const warnings = storedSessionWarnings({ storedWarnings, legacyPayload });
     const { interrupted, revision: _revision, ...session } = viewSession(record, Date.now());
     const targetOrderIsAvailable =
       !(
