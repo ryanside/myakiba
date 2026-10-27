@@ -2201,19 +2201,19 @@
       ]
     },
     {
-      "fix": "15e24c8bd99b965084845f521f0c35288e08f6bc",
+      "fix": "4a1c3bf6c85fa5cba8ceb722bbafbf4d916684be",
       "bug": "a read defect showed the safe text but was logged nowhere, because the app's QueryClient had no error handler",
       "test": "apps/web/src/components/item/item-page-errors.test.tsx",
       "fixed": ["a defect in the item page's Collection read is logged once with what was thrown"]
     },
     {
-      "fix": "15e24c8bd99b965084845f521f0c35288e08f6bc",
+      "fix": "4a1c3bf6c85fa5cba8ceb722bbafbf4d916684be",
       "bug": "a read defect showed the safe text but was logged nowhere, because the app's QueryClient had no error handler",
       "test": "apps/web/src/data/read-defects.test.tsx",
       "fixed": ["a read defect that is retried is logged once with what was thrown"]
     },
     {
-      "fix": "b7c5b78462bfd3b02f38605acad89ca1f4f34ace",
+      "fix": "d53e20ff182fd4519bc2cd8e130c08f8a9e12691",
       "bug": "a persist that failed with an untagged error or an UnhandledException showed its own message and was not logged",
       "test": "apps/web/src/data/write-defect-toasts.test.tsx",
       "fixed": [
