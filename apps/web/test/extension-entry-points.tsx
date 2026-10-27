@@ -136,12 +136,10 @@ export const importActions = (proceed: () => void) => ({
   handleDeleteCurrentImport: async () => {},
 });
 
-const ONBOARDING_KEY = "myakiba:onboarding-v2";
 export const SYNC_STEP_TITLE = "Bring in your items.";
 export const collectionChoice = new RegExp(`^${SYNC_OPTION_META.collection.title}`, "u");
 
 export function onboardingAtSyncStep() {
-  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
   return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
 }
 
