@@ -1,6 +1,7 @@
 import {
   experimental_streamedQuery as streamedQuery,
   infiniteQueryOptions,
+  QueryCache,
   QueryClient,
   queryOptions,
   useInfiniteQuery,
@@ -19,9 +20,18 @@ import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
 
-/** The app's one cache. */
+/**
+ * The app's one cache. A read defect is reported here, once its query has failed for good, so a
+ * retried read reports it once and its log keeps what was thrown.
+ */
 export function createQueryClient(): QueryClient {
-  return new QueryClient();
+  return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error) => {
+        if (Panic.is(error)) reportDefect(error);
+      },
+    }),
+  });
 }
 
 /** What a read's `error` can be: the failures its load declares, or a defect. */
