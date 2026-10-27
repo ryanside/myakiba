@@ -12,9 +12,6 @@ configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
 const extension = fakeExtension({ installed: true });
-// These runs start as they do once the extension is released. A revision from before the release
-// state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 const bridge = createExtensionBridge(extension.window);
 await mock.module("@/lib/extension-bridge", () => ({

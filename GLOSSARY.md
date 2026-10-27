@@ -212,6 +212,14 @@ A saved record of one MyFigureCollection Import request and its successful and f
 An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
+**Browser Extension**:
+The myakiba extension for desktop Chrome, other Chromium browsers, and Firefox. It fetches the MyFigureCollection pages for every MyFigureCollection Import and Item Refresh with the user's own MyFigureCollection sign-in, so neither can start without it.
+_Avoid_: Plugin, add-on
+
+**Extension Listing**:
+A store's public page for the Browser Extension: the Chrome Web Store for Chromium browsers, and Firefox Add-ons for Firefox. Each store reviews and lists it on its own; until a store has an Extension Listing, visitors whose browser uses that store are told the extension is under review.
+_Avoid_: Release state, released when a store is meant
+
 **Data Transfer Archive**:
 A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Import History.
 _Avoid_: Backup, all your data

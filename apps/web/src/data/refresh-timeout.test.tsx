@@ -4,6 +4,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { fakeExtension } from "../../test/fake-extension";
+import { SUPPORTED_BROWSERS, listIn, browseWith } from "../../test/extension-browser";
+
+const [CHROME] = SUPPORTED_BROWSERS;
+browseWith(CHROME.userAgent);
+listIn(CHROME.store);
 
 const realFetch = globalThis.fetch;
 const deadlines = new Set<() => void>();
@@ -19,9 +24,6 @@ const clock = {
 };
 let status: ExtensionStatus = { kind: "absent" };
 let extension = fakeExtension({ onFetch: () => {} });
-// A refresh asks for the extension as it does once the extension is released. A revision from
-// before the release state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 let bridge = createExtensionBridge(extension.window);
 await mock.module("@/lib/extension-bridge", () => ({

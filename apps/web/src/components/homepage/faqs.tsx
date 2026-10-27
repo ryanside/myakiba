@@ -4,16 +4,64 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { EXTENSION_REVIEW_NOTICE } from "@/components/extension/extension-review-notice";
-import { extensionReleased } from "@/lib/extension-gate";
+import type { ReactNode } from "react";
+import {
+  EXTENSION_FAQ_ID,
+  STORE_NAMES,
+  UNDER_REVIEW_TITLE,
+  underReviewBody,
+} from "@/components/extension/extension-notice";
+import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
+import type { ExtensionStore } from "@/lib/extension-listings";
 
-const EXTENSION_FAQ_ID = "faq-extension";
-export const EXTENSION_FAQ_HREF = `/#${EXTENSION_FAQ_ID}`;
+const STORE_BROWSERS = {
+  chromeWebStore: "Chrome, Edge and other Chromium browsers",
+  firefoxAddons: "Firefox",
+} as const satisfies Record<ExtensionStore, string>;
+
+const EXTENSION_USES =
+  "You need the extension on a computer to add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details.";
+
+function ExtensionInstallAnswer() {
+  const reviewing = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] === null);
+  if (reviewing.length === EXTENSION_STORES.length) {
+    return `${UNDER_REVIEW_TITLE}. ${underReviewBody(reviewing)}`;
+  }
+  return (
+    <>
+      {EXTENSION_USES}
+      {EXTENSION_STORES.map((store) => (
+        <StoreInstructions key={store} store={store} />
+      ))}
+    </>
+  );
+}
+
+function StoreInstructions({ store }: { readonly store: ExtensionStore }) {
+  const url = EXTENSION_LISTINGS[store];
+  if (url === null) {
+    return ` For ${STORE_BROWSERS[store]}, it is in review at ${STORE_NAMES[store]} now, and it will be released shortly.`;
+  }
+  return (
+    <>
+      {` For ${STORE_BROWSERS[store]}, install it from `}
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="font-medium text-foreground hover:underline"
+      >
+        {STORE_NAMES[store]}
+      </a>
+      , then reload myakiba.
+    </>
+  );
+}
 
 const FAQ_ITEMS: readonly {
   readonly id: string;
   readonly question: string;
-  readonly answer: string;
+  readonly answer: ReactNode;
 }[] = [
   {
     id: "item-1",
@@ -24,9 +72,7 @@ const FAQ_ITEMS: readonly {
   {
     id: EXTENSION_FAQ_ID,
     question: "How do I install the myakiba browser extension?",
-    answer: extensionReleased()
-      ? "You need the extension to add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details. Install it from the Chrome Web Store or Firefox Add-ons, then reload myakiba."
-      : `${EXTENSION_REVIEW_NOTICE.title}. ${EXTENSION_REVIEW_NOTICE.body}`,
+    answer: <ExtensionInstallAnswer />,
   },
   {
     id: "item-2",

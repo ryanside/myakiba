@@ -1,5 +1,4 @@
-// Every place that starts an extension import, for the tests that gate them. A test file mocks
-// `@/lib/extension-release` before it imports this module, so its screens see that release.
+// Every place that starts an extension import, for the tests that gate them.
 import { expect, mock } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import type userEvent from "@testing-library/user-event";
@@ -326,8 +325,6 @@ export type Form = {
   readonly fill: (user: User) => Promise<void>;
   readonly kept: () => void;
   readonly submit: string;
-  /** The form opens only through a gated button, so it never shows while imports are refused. */
-  readonly opensThroughGate?: true;
 };
 
 const CSV = [
@@ -366,7 +363,6 @@ export const FORMS: readonly Form[] = [
     fill: typeItemId,
     kept: itemIdKept,
     submit: "Add to order",
-    opensThroughGate: true,
   },
   {
     name: "the CSV form",

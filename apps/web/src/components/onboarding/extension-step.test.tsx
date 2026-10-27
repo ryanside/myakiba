@@ -3,14 +3,21 @@ import { cleanup, configure, render, screen, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
+import {
+  LISTING_URLS,
+  SUPPORTED_BROWSERS,
+  listIn,
+  browseWith,
+} from "../../../test/extension-browser";
+
+const [CHROME] = SUPPORTED_BROWSERS;
+browseWith(CHROME.userAgent);
+listIn(CHROME.store);
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
 let extension = fakeExtension();
-// The extension step shows install steps once the extension is released. A revision from before the
-// release state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 let bridge = createExtensionBridge(extension.window);
 await mock.module("@/lib/extension-bridge", () => ({
@@ -75,7 +82,7 @@ test("an installed extension reads as connected", async () => {
   expect(screen.queryByRole("link")).toBeNull();
 });
 
-test("with no extension it shows how to install it", async () => {
+test("with no extension it links to the store listing", async () => {
   loadExtension({ installed: false });
   render(<ExtensionStep />);
 
@@ -83,9 +90,9 @@ test("with no extension it shows how to install it", async () => {
   expect(await screen.findByText("Not installed")).toBeDefined();
   expect(
     screen
-      .getByRole("link", { name: "How to install it (opens in a new tab)" })
+      .getByRole("link", { name: "Install from the Chrome Web Store (opens in a new tab)" })
       .getAttribute("href"),
-  ).toBe("/#faq-extension");
+  ).toBe(LISTING_URLS.chromeWebStore);
   expect(screen.getByText("Reload this page after you install it.")).toBeDefined();
 });
 
