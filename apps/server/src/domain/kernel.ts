@@ -536,6 +536,7 @@ export function gate<I, T, F extends AnyFailure, M extends string, G extends Any
   op: Op<I, T, F, M>,
   check: () => Result<void, G>,
 ): Op<I, T, F | G, M> {
+  if (guards.has(op)) panic(`${op.action} already has a guard; a second guard would replace it`);
   guards.set(op, check);
   return op;
 }
