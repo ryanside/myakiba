@@ -1997,6 +1997,17 @@
         "a throttle turn > reads its books from storage once, however many turns it runs",
         "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
       ]
+    },
+    {
+      "fix": "384c9c33804f6f83d059eb0fc78fffb900612b7b",
+      "testAt": "384c9c33804f6f83d059eb0fc78fffb900612b7b",
+      "bug": "a collector throw was handled apart from attempt's defect path, so it closed or retried MFC tabs and was logged as an expected failure",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "an attempt that breaks > a collector that throws a defect fails only its item, and the queue moves on in the same tab",
+        "an attempt that breaks > a collector that throws a defect in a borrowed tab fails its item without a second try",
+        "the developer log > reports an unexpected throw from the collector as a defect with its Panic"
+      ]
     }
   ],
   "lint": [
