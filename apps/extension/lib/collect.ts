@@ -102,22 +102,13 @@ export const pageAnswerCodec = Result.codec({
 /** How the collector fails to read a picture in the tab. */
 export type PictureFailure = PictureRejected | PictureFetchFailed | PictureTimedOut;
 
-const pictureFailureWireSchema = z.union([
-  z
-    .strictObject({
-      _tag: z.literal("PictureRejected"),
-      reason: z.enum(["http_status", "no_body", "too_large", "unknown_format"]),
-      status: z.number().int(),
-      bytes: z.number().int().nullable(),
-    })
-    .transform(({ reason, status, bytes }) => new PictureRejected({ reason, status, bytes })),
-  z
-    .strictObject({ _tag: z.literal("PictureFetchFailed"), cause: errorSummarySchema })
-    .transform(({ cause }) => new PictureFetchFailed({ cause })),
-  z
-    .strictObject({ _tag: z.literal("PictureTimedOut"), timeoutMs: z.number() })
-    .transform(({ timeoutMs }) => new PictureTimedOut({ timeoutMs })),
-]);
+const pictureFailureSummarySchema = z.strictObject({
+  _tag: z.enum(["PictureRejected", "PictureFetchFailed", "PictureTimedOut"]),
+  message: z.string(),
+});
+
+/** A picture failure as it reaches the background, which only logs it: the item imports without its picture. */
+export type PictureFailureSummary = z.output<typeof pictureFailureSummarySchema>;
 
 /**
  * The collector's answer to a picture request. No picture means the tab does not show the picture asked for, which is
@@ -126,15 +117,15 @@ const pictureFailureWireSchema = z.union([
 export const pictureAnswerCodec = Result.codec({
   serialize: {
     ok: portPictureSchema.nullable(),
-    err: z.union([
-      z
-        .instanceof(PictureRejected)
-        .transform(({ _tag, reason, status, bytes }) => ({ _tag, reason, status, bytes })),
-      z.instanceof(PictureFetchFailed).transform(({ _tag, cause }) => ({ _tag, cause })),
-      z.instanceof(PictureTimedOut).transform(({ _tag, timeoutMs }) => ({ _tag, timeoutMs })),
-    ]),
+    err: z
+      .union([
+        z.instanceof(PictureRejected),
+        z.instanceof(PictureFetchFailed),
+        z.instanceof(PictureTimedOut),
+      ])
+      .transform(({ _tag, message }) => ({ _tag, message })),
   },
-  deserialize: { ok: portPictureSchema.nullable(), err: pictureFailureWireSchema },
+  deserialize: { ok: portPictureSchema.nullable(), err: pictureFailureSummarySchema },
 });
 
 const collectorDefectSchema = z.strictObject({

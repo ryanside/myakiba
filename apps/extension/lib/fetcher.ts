@@ -11,7 +11,7 @@ import type {
   CollectorFailure,
   PageCollectFailure,
   PageRequest,
-  PictureFailure,
+  PictureFailureSummary,
 } from "./collect";
 import { MfcChallengeUnsolved } from "./errors/mfc-challenge-unsolved";
 import { MfcItemHiddenOrMissing } from "./errors/mfc-item-hidden-or-missing";
@@ -97,7 +97,7 @@ type PageFailure = TurnFailure | PageCollectFailure;
 
 type ItemFetchFailure = PageFailure | LeaseFailure;
 
-type PictureCollectFailure = CollectorFailure | PictureFailure;
+type PictureCollectFailure = CollectorFailure | PictureFailureSummary;
 
 type PictureReadFailure = TurnFailure | TabOpenFailure | PictureCollectFailure;
 

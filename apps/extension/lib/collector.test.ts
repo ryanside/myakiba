@@ -6,7 +6,6 @@ import { itemId } from "../test/fake-browser";
 import { armCollector, pageAnswerCodec, pictureAnswerCodec, readAnswer } from "./collect";
 import type { AnswerCodec, CollectRequest } from "./collect";
 import { ORIGINS } from "./config";
-import { PictureFetchFailed } from "./errors/picture-fetch-failed";
 
 const TAB_ID = 7;
 const PICTURE_URL = `${ORIGINS.mfc}/upload/items/1/1.jpg`;
@@ -61,7 +60,7 @@ describe("the collector reading a picture in its tab", () => {
     using _fetch = spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("Failed to fetch"));
     const read = await readGatedPicture();
 
-    expect(read.isErr() && PictureFetchFailed.is(read.error)).toBe(true);
+    expect(read.isErr() && read.error._tag).toBe("PictureFetchFailed");
   });
 
   test("hands a defect while it reads the picture to the background as a Panic", async () => {

@@ -138,41 +138,26 @@ describe("the collector's answer", () => {
   });
 
   test.each([
-    [
-      "a rejected picture",
-      new PictureRejected({ reason: "too_large", status: 200, bytes: 11 }),
-      { _tag: "PictureRejected", reason: "too_large", status: 200, bytes: 11 } as const,
-    ],
+    ["a rejected picture", new PictureRejected({ reason: "too_large", status: 200, bytes: 11 })],
     [
       "a failed picture fetch",
       new PictureFetchFailed({ cause: { name: "TypeError", message: "Failed to fetch" } }),
-      {
-        _tag: "PictureFetchFailed",
-        cause: { name: "TypeError", message: "Failed to fetch" },
-      } as const,
     ],
-    [
-      "a picture that timed out",
-      new PictureTimedOut({ timeoutMs: 20_000 }),
-      { _tag: "PictureTimedOut", timeoutMs: 20_000 } as const,
-    ],
-  ])("%s goes through as that failure, with only its safe fields", async (_name, failure, wire) => {
+    ["a picture that timed out", new PictureTimedOut({ timeoutMs: 20_000 })],
+  ])("%s goes through as its tag and message only", async (_name, failure) => {
+    const summary = { _tag: failure._tag, message: failure.message };
     const answer = pictureAnswerCodec.serializeUnsafe(Result.err(failure));
     const read = await readAnswer(pictureAnswerCodec, injected(answer), TAB_ID, "gated-picture");
 
-    expect(answer).toEqual({ status: "error", error: wire });
-    expect(read.isErr() && read.error).toBeInstanceOf(failure.constructor);
-    expect(read.isErr() && read.error).toMatchObject(wire);
+    expect(answer).toEqual({ status: "error", error: summary });
+    expect(read.isErr() && read.error).toEqual(summary);
   });
 
   test.each([
     ["a picture from a collector without the envelope", { base64: "AQID" }],
     [
-      "a rejection with a reason the codec does not know",
-      {
-        status: "error",
-        error: { _tag: "PictureRejected", reason: "blurry", status: 200, bytes: null },
-      },
+      "a picture failure the codec does not know",
+      { status: "error", error: { _tag: "PictureBlurry", message: "blurry" } },
     ],
     [
       "a page failure in a picture answer",
