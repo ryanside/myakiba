@@ -42,7 +42,8 @@ export async function setResyncCooldown(
       withDeadline(() => redis.set(getCooldownKey(itemId), value, "EX", COOLDOWN_TTL_SECONDS)),
     catch: (cause) => new ResyncCooldownUnavailable({ itemId, cause }),
   });
-  return written.map(() => new Date(now + COOLDOWN_TTL_SECONDS * 1000).toISOString());
+  if (written.isErr()) return written;
+  return Result.ok(new Date(now + COOLDOWN_TTL_SECONDS * 1000).toISOString());
 }
 
 type ResyncCooldown = {

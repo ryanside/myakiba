@@ -502,47 +502,49 @@ export async function completeSyncItem(
     sessionId,
     userId,
     { lockOrder: true },
-    (tx, run) =>
-      Result.gen(async function* () {
-        const open = await tx
-          .select({ id: syncSessionItem.id })
-          .from(syncSessionItem)
-          .where(
-            and(ofItem(sessionId, mfcItemId), inArray(syncSessionItem.status, OPEN_ITEM_STATUSES)),
-          );
-        if (open.length === 0) {
-          return Result.ok({
-            result: { outcome: "already_imported", reason: null },
-            change: null,
-          } as const);
-        }
-
-        const absent = missingOrder(run);
-        if (absent) return Result.err(absent);
-        if (ready.kind === "parsed")
-          yield* Result.await(ensureMfcItem(tx, ready.page, ready.stored));
-        const [imported] = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
-          [mfcItemId],
-          tx,
+    async (tx, run) => {
+      const open = await tx
+        .select({ id: syncSessionItem.id })
+        .from(syncSessionItem)
+        .where(
+          and(ofItem(sessionId, mfcItemId), inArray(syncSessionItem.status, OPEN_ITEM_STATUSES)),
         );
-        if (!imported) {
-          panic(
-            `MFC item ${mfcItemId} was not in the item database after its ingest in sync session ${sessionId}`,
-          );
-        }
-        const payload = run.payload?.unwrapOr(null);
-        if (!payload)
-          panic(
-            `Sync session ${sessionId} has no valid stored request to import item ${mfcItemId} into`,
-            run.payload?.isErr() ? run.payload.error : undefined,
-          );
-        yield* Result.await(writeItemRows(tx, run, payload, fetchedItemRows(payload, imported)));
-        await markImported(tx, sessionId, [mfcItemId]);
+      if (open.length === 0) {
         return Result.ok({
-          result: { outcome: "imported", reason: null },
-          change: "item",
+          result: { outcome: "already_imported", reason: null },
+          change: null,
         } as const);
-      }),
+      }
+
+      const absent = missingOrder(run);
+      if (absent) return Result.err(absent);
+      if (ready.kind === "parsed") {
+        const ensured = await ensureMfcItem(tx, ready.page, ready.stored);
+        if (ensured.isErr()) return ensured;
+      }
+      const [imported] = await SyncService.getExistingItemsWithLatestReleaseByExternalIds(
+        [mfcItemId],
+        tx,
+      );
+      if (!imported) {
+        panic(
+          `MFC item ${mfcItemId} was not in the item database after its ingest in sync session ${sessionId}`,
+        );
+      }
+      const payload = run.payload?.unwrapOr(null);
+      if (!payload)
+        panic(
+          `Sync session ${sessionId} has no valid stored request to import item ${mfcItemId} into`,
+          run.payload?.isErr() ? run.payload.error : undefined,
+        );
+      const written = await writeItemRows(tx, run, payload, fetchedItemRows(payload, imported));
+      if (written.isErr()) return written;
+      await markImported(tx, sessionId, [mfcItemId]);
+      return Result.ok({
+        result: { outcome: "imported", reason: null },
+        change: "item",
+      } as const);
+    },
   );
 }
 

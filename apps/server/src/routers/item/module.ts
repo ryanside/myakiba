@@ -546,13 +546,10 @@ export const Items = {
           if (held.value) return Result.err(new ResyncCooldownActive());
           const read = await readMfcItemPage(found.id, input);
           if (read.isErr()) {
-            return read.error.match({
-              MfcPageUnreadable: ({ problem }) => {
-                scope.log.set({ mfc: { itemId: found.id, outcome: problem.kind } });
-                return Result.err(new MfcPageRejected({ problem: problem.kind }));
-              },
-              StoreItemPictureFailed: (failure) => Result.err(failure),
-            });
+            const failure = read.error;
+            if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
+            scope.log.set({ mfc: { itemId: found.id, outcome: failure.problem.kind } });
+            return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
           }
           const { page, stored } = read.value;
           return scope.proceed({ itemId: found.itemId, page, stored });

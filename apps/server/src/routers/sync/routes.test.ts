@@ -1147,6 +1147,26 @@ test("an S3 timeout records the item as a persistence failure", async () => {
   });
 });
 
+test("a database outage during item completion records the item failure after rollback", async () => {
+  const run = await start("collection", [collectionEntry(X, 200)]);
+  await db.execute(`CREATE FUNCTION reject_item_write() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION USING MESSAGE = 'item storage unavailable', ERRCODE = '08006'; END $$`);
+  await db.execute(`CREATE TRIGGER reject_item_write BEFORE INSERT ON item
+    FOR EACH ROW EXECUTE FUNCTION reject_item_write()`);
+  try {
+    expect(await complete(run, X)).toMatchObject({ status: 200, body: { outcome: "failed" } });
+    expect(await results(run.syncSessionId)).toEqual([
+      { id: X, status: "failed", reason: "Failed to save this item" },
+    ]);
+    expect(await db.$count(item, eq(item.externalId, X))).toBe(0);
+    expect(await db.$count(collection)).toBe(0);
+    expect(await session(run.syncSessionId)).toMatchObject({ status: "failed", failCount: 1 });
+  } finally {
+    await db.execute(`DROP TRIGGER reject_item_write ON item`);
+    await db.execute(`DROP FUNCTION reject_item_write()`);
+  }
+});
+
 test("two concurrent first completes create one Order and import both items", async () => {
   const run = await start("order", orderBody([orderItem(X, 2000), orderItem(Y, 3000)]));
   const held = Promise.withResolvers<null>();

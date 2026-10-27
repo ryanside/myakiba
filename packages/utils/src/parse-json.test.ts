@@ -11,6 +11,14 @@ describe("parseJson", () => {
     expect(result.isOk() && result.value).toEqual({ status: "done" });
   });
 
+  test("a throwing schema propagates its original defect", () => {
+    const original = new Error("broken schema transform");
+    const schema = z.string().transform(() => {
+      throw original;
+    });
+    expect(() => parseJson(schema, '"value"')).toThrow(original);
+  });
+
   test("returns InvalidJson for text that is not JSON, without the text", () => {
     const result = parseJson(statusSchema, '{"status":"s3cret');
 

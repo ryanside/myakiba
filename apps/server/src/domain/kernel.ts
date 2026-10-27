@@ -416,42 +416,6 @@ class Rollback {
   }
 }
 
-/**
- * better-result rethrows a value thrown inside `Result.gen` or a combinator callback as a
- * Panic with one of these messages and the value as its cause. The kernel looks through
- * them, so a Postgres error means the same thing whether or not the body used gen.
- * `kernel.test.ts` makes better-result produce each one.
- */
-const RETHROWN = new Set([
-  "generator body threw",
-  "generator cleanup threw",
-  "map callback threw",
-  "mapError callback threw",
-  "andThen callback threw",
-  "andThenAsync callback threw",
-  "tryRecover callback threw",
-  "tryRecoverAsync callback threw",
-  "match ok handler threw",
-  "match err handler threw",
-  "matchError handler threw",
-  "tap callback threw",
-  "tapAsync callback threw",
-  "tapError callback threw",
-  "tapErrorAsync callback threw",
-  "tapBoth ok callback threw",
-  "tapBoth err callback threw",
-  "tapBothAsync ok callback threw",
-  "tapBothAsync err callback threw",
-  "Result.try catch handler threw",
-  "Result.tryPromise catch handler threw",
-  "Result.allAsync input promise rejected",
-  "Result.partitionAsync input promise rejected",
-  "shouldRetry predicate threw",
-  "Result.tryPromise delayMs callback threw",
-  "Result.codec serialize schema threw",
-  "Result.codec deserialize schema threw",
-]);
-
 /** How an operation ended, before `run` turns it into a Result or a throw. */
 type Settled =
   | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
@@ -460,13 +424,10 @@ type Settled =
   /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
   | { readonly kind: "left"; readonly error: AnyTaggedError };
 
-/** Walks better-result's rethrow wrappers to what was really thrown. */
 function classify(cause: unknown): Settled {
-  let value = cause;
-  while (Panic.is(value) && RETHROWN.has(value.message)) value = value.cause;
-  if (Panic.is(value)) return { kind: "defect", panic: value };
-  if (UnhandledException.is(value)) return { kind: "left", error: value };
-  return { kind: "left", error: new UnhandledException({ cause: value }) };
+  if (Panic.is(cause)) return { kind: "defect", panic: cause };
+  if (UnhandledException.is(cause)) return { kind: "left", error: cause };
+  return { kind: "left", error: new UnhandledException({ cause }) };
 }
 
 /** Sorts what a body, `before` or `recover` returned. A returned Panic is a defect. */

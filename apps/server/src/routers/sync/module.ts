@@ -751,32 +751,37 @@ export const SyncRuns = {
           });
         },
       },
-      async (scope, input) =>
-        Result.gen(async function* () {
-          const result = yield* Result.await(
-            completeSyncItem(scope, input.id, scope.viewer.userId, input.upload, input.prepared),
-          );
-          if (result === null) return Result.err(new ItemNotInImport());
-          scope.log.set({ outcome: result.outcome });
-          return Result.ok(result);
-        }),
+      async (scope, input) => {
+        const completed = await completeSyncItem(
+          scope,
+          input.id,
+          scope.viewer.userId,
+          input.upload,
+          input.prepared,
+        );
+        if (completed.isErr()) return completed;
+        const result = completed.value;
+        if (result === null) return Result.err(new ItemNotInImport());
+        scope.log.set({ outcome: result.outcome });
+        return Result.ok(result);
+      },
       {
         retry: retryOrderLock,
         recover: async (scope, input, error) => {
-          const { missingOrder, original } = error.match({
-            SyncOrderAbsent: (absent) => ({ missingOrder: true, original: absent }),
-            SyncOrderUnowned: (unowned) => ({ missingOrder: false, original: unowned }),
-            MfcItemNotPersisted: (unsaved) => ({ missingOrder: false, original: unsaved }),
-            StoreItemPictureFailed: ({ cause }) => ({
+          const { missingOrder, cause } = error.match({
+            SyncOrderAbsent: (absent) => ({ missingOrder: true, cause: absent }),
+            SyncOrderUnowned: (unowned) => ({ missingOrder: false, cause: unowned }),
+            MfcItemNotPersisted: (unsaved) => ({ missingOrder: false, cause: unsaved }),
+            StoreItemPictureFailed: (failed) => ({
               missingOrder: false,
-              original: cause instanceof Error ? cause : new Error(String(cause)),
+              cause: failed.cause,
             }),
             UnhandledException: (thrown) => ({
               missingOrder: false,
-              original:
-                thrown.cause instanceof Error ? thrown.cause : new Error(String(thrown.cause)),
+              cause: thrown.cause,
             }),
           });
+          const original = cause instanceof Error ? cause : new Error(String(cause));
           try {
             const recorded = await scope.execute(runFailure, { ...input, missingOrder });
             if (!missingOrder) scope.log.error(original);

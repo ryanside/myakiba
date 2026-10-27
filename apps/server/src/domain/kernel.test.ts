@@ -1,5 +1,5 @@
-import { describe, expect, spyOn, test } from "bun:test";
-import { Panic, Result, UnhandledException, matchError, panic } from "better-result";
+import { describe, expect, mock, spyOn, test } from "bun:test";
+import { Panic, Result, UnhandledException, panic } from "better-result";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
@@ -49,7 +49,6 @@ async function valueOf<T, E>(answer: Promise<Result<T, E>>): Promise<T> {
   return outcome.unwrap();
 }
 
-/** A Postgres call that fails, as a step inside `Result.gen`. */
 const rejected = async (error: Error): Promise<Result<number, never>> => {
   throw error;
 };
@@ -476,18 +475,11 @@ describe("command commit hooks and recovery", () => {
 
   test("a rethrown error reaches the caller as the value originally thrown", async () => {
     const original = new Error("original persistence error");
-    const operation = command(
-      config,
-      async () =>
-        Result.gen(async function* () {
-          return Result.ok(yield* Result.await(rejected(original)));
-        }),
-      {
-        recover: async (_scope, _input, error) => {
-          throw error;
-        },
+    const operation = command(config, async () => rejected(original), {
+      recover: async (_scope, _input, error) => {
+        throw error;
       },
-    );
+    });
 
     await expect(run(viewer, operation, undefined, log)).rejects.toBe(original);
   });
@@ -576,9 +568,7 @@ test("several operations in a route keep its first action and log the failing st
   await serve(caller, writeThen("ok"), { id: "route-action" });
   const original = new Error("later operation failed");
   const later = query({ action: "test.later", failure: "Later failed" }, async () =>
-    Result.gen(async function* () {
-      return Result.ok(yield* Result.await(rejected(original)));
-    }),
+    rejected(original),
   );
   const logged = spyOn(caller.log, "error");
   expect(await serve(caller, later, {})).toMatchObject({
@@ -769,97 +759,39 @@ describe("a defect raised while recovering always answers", () => {
   });
 });
 
-/**
- * Each message better-result wraps a thrown value in. The kernel looks through every one,
- * so a value thrown in any of them reaches the caller as itself, not as a defect.
- */
-describe("better-result's rethrow wrappers", () => {
-  const Tagged = tagged("Tagged");
-  const failing = () => Result.err(new Tagged({ message: "expected" }));
+describe("throwing Result callbacks are defects", () => {
+  const original = new Error("unexpected callback failure");
   const throwing = () => {
-    throw thrown;
+    throw original;
   };
-  const rejecting = async () => {
-    throw thrown;
-  };
-  const throwingSchema = {
-    "~standard": { version: 1 as const, vendor: "test", validate: throwing },
-  };
-  const codec = Result.codec({
-    serialize: { ok: throwingSchema, err: throwingSchema },
-    deserialize: { ok: throwingSchema, err: throwingSchema },
-  });
-  let thrown = new Error("thrown inside better-result");
   const producers = {
-    "generator body threw": () =>
+    generator: () =>
       Result.gen(function* () {
-        const value = yield* Result.ok(1);
-        return value ? throwing() : Result.ok(value);
+        yield* Result.ok(1);
+        return throwing();
       }),
-    "generator cleanup threw": () =>
-      Result.gen(function* () {
-        try {
-          yield* failing();
-          return Result.ok(1);
-        } finally {
-          throwing();
-        }
-      }),
-    "map callback threw": () => Result.ok(1).map(throwing),
-    "mapError callback threw": () => failing().mapError(throwing),
-    "andThen callback threw": () => Result.ok(1).andThen(throwing),
-    "andThenAsync callback threw": () => Result.ok(1).andThenAsync(rejecting),
-    "tryRecover callback threw": () => failing().tryRecover(throwing),
-    "tryRecoverAsync callback threw": () => failing().tryRecoverAsync(rejecting),
-    "match ok handler threw": () => Result.ok(1).match({ ok: throwing, err: () => 0 }),
-    "match err handler threw": () => failing().match({ ok: () => 0, err: throwing }),
-    "matchError handler threw": () =>
-      matchError(new Tagged({ message: "x" }), { Tagged: throwing }),
-    "tap callback threw": () => Result.ok(1).tap(throwing),
-    "tapAsync callback threw": () => Result.ok(1).tapAsync(rejecting),
-    "tapError callback threw": () => failing().tapError(throwing),
-    "tapErrorAsync callback threw": () => failing().tapErrorAsync(rejecting),
-    "tapBoth ok callback threw": () => Result.ok(1).tapBoth({ ok: throwing, err: () => {} }),
-    "tapBoth err callback threw": () => failing().tapBoth({ ok: () => {}, err: throwing }),
-    "tapBothAsync ok callback threw": () =>
-      Result.ok(1).tapBothAsync({ ok: rejecting, err: async () => {} }),
-    "tapBothAsync err callback threw": () =>
-      failing().tapBothAsync({ ok: async () => {}, err: rejecting }),
-    "Result.try catch handler threw": () => Result.try({ try: throwing, catch: throwing }),
-    "Result.tryPromise catch handler threw": () =>
-      Result.tryPromise({ try: rejecting, catch: throwing }),
-    "Result.allAsync input promise rejected": () => Result.allAsync([rejecting()]),
-    "Result.partitionAsync input promise rejected": () => Result.partitionAsync([rejecting()]),
-    "shouldRetry predicate threw": () =>
-      Result.tryPromise(
-        { try: rejecting, catch: () => new Tagged({ message: "x" }) },
-        { retry: { times: 1, delayMs: 0, backoff: "constant", shouldRetry: throwing } },
-      ),
-    "Result.tryPromise delayMs callback threw": () =>
-      Result.tryPromise(
-        { try: rejecting, catch: () => new Tagged({ message: "x" }) },
-        { retry: { times: 1, delayMs: throwing } },
-      ),
-    "Result.codec serialize schema threw": () => codec.serialize(Result.ok(1)),
-    "Result.codec deserialize schema threw": () => codec.deserialize({ status: "ok", value: 1 }),
+    combinator: () => Result.ok(1).map(throwing),
+    "tagged error match": () => new Contended({ message: "locked" }).match({ Contended: throwing }),
+    "catch handler": () => Result.try({ try: throwing, catch: throwing }),
   };
-
   test.each(Object.entries(producers))(
-    "%s reaches the caller as the value thrown",
-    async (name, produce) => {
-      thrown = new Error(`thrown inside ${name}`);
-      const wrapped = await (async () => produce())().then(
-        () => panic(`${name} did not throw`),
-        (error) => error,
+    "%s never reaches retry or recover",
+    async (_name, produce) => {
+      const retry = mock(() => false);
+      const recover = mock(async () => Result.ok(0));
+      const operation = command(
+        config,
+        async (scope) => {
+          await scope.tx.insert(user).values(newUser("callback-defect"));
+          produce();
+          return Result.ok(1);
+        },
+        { retry, recover },
       );
-      expect(wrapped).toBeInstanceOf(Panic);
-      expect(Panic.is(wrapped) && wrapped.message).toBe(name);
-
-      const operation = query({ action: "test.wrapped", failure: "Failed to read" }, async () => {
-        await produce();
-        return Result.ok(1);
-      });
-      await expect(run(viewer, operation, undefined, log)).rejects.toBe(thrown);
+      await expect(run(viewer, operation, undefined, log)).rejects.toBeInstanceOf(Panic);
+      expect(retry).not.toHaveBeenCalled();
+      expect(recover).not.toHaveBeenCalled();
+      expect(await userExists("callback-defect")).toBe(false);
     },
   );
 });

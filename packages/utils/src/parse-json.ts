@@ -7,13 +7,13 @@ export function parseJson<T>(
   schema: z.ZodType<T>,
   text: string,
 ): Result<T, InvalidJson | JsonSchemaMismatch> {
-  return Result.try({
+  const decoded = Result.try({
     try: () => JSON.parse(text),
     catch: () => new InvalidJson(),
-  }).andThen((value): Result<T, JsonSchemaMismatch> => {
-    const parsed = schema.safeParse(value);
-    return parsed.success
-      ? Result.ok(parsed.data)
-      : Result.err(new JsonSchemaMismatch({ cause: parsed.error }));
   });
+  if (decoded.isErr()) return decoded;
+  const parsed = schema.safeParse(decoded.value);
+  return parsed.success
+    ? Result.ok(parsed.data)
+    : Result.err(new JsonSchemaMismatch({ cause: parsed.error }));
 }

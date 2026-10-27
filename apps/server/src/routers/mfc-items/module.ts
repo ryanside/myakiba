@@ -43,13 +43,10 @@ export const MfcItems = {
         before: async (scope, input: ItemUpload) => {
           const prepared = await prepareMfcItem(scope.tx, input);
           if (prepared.isErr()) {
-            return prepared.error.match({
-              MfcPageUnreadable: ({ mfcItemId, problem }) => {
-                scope.log.set({ mfc: { itemId: mfcItemId, outcome: problem.kind } });
-                return Result.err(new MfcPageRejected({ problem: problem.kind }));
-              },
-              StoreItemPictureFailed: (failed) => Result.err(failed),
-            });
+            const failure = prepared.error;
+            if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
+            scope.log.set({ mfc: { itemId: failure.mfcItemId, outcome: failure.problem.kind } });
+            return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
           }
           const ready = prepared.value;
           if (ready.kind === "parsed") return scope.proceed(ready);

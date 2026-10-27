@@ -58,28 +58,25 @@ export const DataTransfer = {
     async (scope, _input: Record<never, never>) => {
       try {
         const exported = await DataTransferService.exportArchive(scope.viewer.userId, scope.tx);
-        return exported.tapBoth({
-          ok: (archive) =>
-            scope.log.set({
-              dataTransfer: {
-                exportId: archive.exportId,
-                orders: archive.orders.length,
-                collectionItems: archive.collectionItems.length,
-              },
-            }),
-          err: (failure) =>
-            scope.log.set({
-              dataTransfer: {
-                code: failure.match({
-                  ExportArchiveEmpty: () => "DATA_TRANSFER_ARCHIVE_EMPTY",
-                  ExportArchiveTooLarge: () => "DATA_TRANSFER_ARCHIVE_TOO_LARGE",
-                  ExportTooManyRecords: () => "DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS",
-                  ExportUnsupportedCollectionItem: () =>
-                    "DATA_TRANSFER_UNSUPPORTED_COLLECTION_ITEM",
-                }),
-              },
-            }),
-        });
+        if (exported.isOk()) {
+          const archive = exported.value;
+          scope.log.set({
+            dataTransfer: {
+              exportId: archive.exportId,
+              orders: archive.orders.length,
+              collectionItems: archive.collectionItems.length,
+            },
+          });
+        } else {
+          const code = exported.error.match({
+            ExportArchiveEmpty: () => "DATA_TRANSFER_ARCHIVE_EMPTY",
+            ExportArchiveTooLarge: () => "DATA_TRANSFER_ARCHIVE_TOO_LARGE",
+            ExportTooManyRecords: () => "DATA_TRANSFER_ARCHIVE_TOO_MANY_RECORDS",
+            ExportUnsupportedCollectionItem: () => "DATA_TRANSFER_UNSUPPORTED_COLLECTION_ITEM",
+          });
+          scope.log.set({ dataTransfer: { code } });
+        }
+        return exported;
       } catch (error) {
         // The wide event has always named an unexpected export failure by its message.
         if (error instanceof Error) scope.log.set({ dataTransfer: { code: error.message } });
@@ -141,10 +138,9 @@ export const DataTransfer = {
           ...input,
           userId: scope.viewer.userId,
         });
-        return started.tapBoth({
-          ok: (run) => logRun(scope, run),
-          err: () => scope.log.set({ dataTransfer: { code: "DATA_TRANSFER_ACTIVE_IMPORT" } }),
-        });
+        if (started.isOk()) logRun(scope, started.value);
+        else scope.log.set({ dataTransfer: { code: "DATA_TRANSFER_ACTIVE_IMPORT" } });
+        return started;
       },
     ),
   ),
@@ -153,11 +149,9 @@ export const DataTransfer = {
       { action: "dataTransfer.retryImport", failure: "Failed to retry import." },
       async (scope, _input: Record<never, never>) => {
         const retried = await DataTransferService.retryImport(scope, scope.viewer.userId);
-        return retried.tapBoth({
-          ok: (run) => logRun(scope, run),
-          err: () =>
-            scope.log.set({ dataTransfer: { code: "DATA_TRANSFER_IMPORT_NOT_RETRYABLE" } }),
-        });
+        if (retried.isOk()) logRun(scope, retried.value);
+        else scope.log.set({ dataTransfer: { code: "DATA_TRANSFER_IMPORT_NOT_RETRYABLE" } });
+        return retried;
       },
     ),
   ),
