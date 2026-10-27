@@ -2147,7 +2147,7 @@
       "testAt": "3f12228bf0f4ba3f45d24a9b46a652bf260c600d"
     },
     {
-      "fix": "ef983fa4f3d073a0485728e45cdc16693f8b9ee8",
+      "fix": "7a01d2dd26292e0bd8f1c7567f20aaac5d9d9cda",
       "bug": "the item page's Collection panel showed a defect's own message, because a defect kept the thrown message",
       "test": "apps/web/src/components/item/item-page-errors.test.tsx",
       "fixed": [
@@ -2155,7 +2155,7 @@
       ]
     },
     {
-      "fix": "9dcbf569c1b5201f191625489d62ff93aa876b50",
+      "fix": "08232759cd28453eee2dbd8a1fb6e9b0cd95aefb",
       "bug": "an answer whose booking storage refused failed its fetched page as unexpected_page",
       "test": "apps/extension/lib/fetcher.test.ts",
       "fixed": [
