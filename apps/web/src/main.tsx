@@ -5,15 +5,16 @@ import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { createRouter } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { RouterAppContext } from "./routes/__root";
 import { NotFound } from "@/components/errors/not-found";
 import { RouteError } from "@/components/errors/route-error";
 import { AuthRouterProvider } from "@/components/auth/auth-router-provider";
 import { createSessionSource } from "@/lib/session";
+import { createQueryClient } from "@/data/client";
 
-const queryClient = new QueryClient();
+const queryClient = createQueryClient();
 const sessions = createSessionSource();
 
 const router = createRouter({

@@ -1,13 +1,14 @@
 import {
   experimental_streamedQuery as streamedQuery,
   infiniteQueryOptions,
+  QueryClient,
   queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
+import type { keepPreviousData } from "@tanstack/react-query";
 import { Panic, Result } from "better-result";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
@@ -17,6 +18,11 @@ import { call } from "./api";
 import type { EdenAnswer } from "./api";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
+
+/** The app's one cache. */
+export function createQueryClient(): QueryClient {
+  return new QueryClient();
+}
 
 /** What a read's `error` can be: the failures its load declares, or a defect. */
 type ReadFailure<Failure> = Failure | Panic;
