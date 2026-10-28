@@ -1,5 +1,4 @@
-import type { CompositionScope } from "@/domain/kernel";
-import type { InputOf } from "@/domain/kernel";
+import type { CompositionScope, InputOf } from "@/domain/kernel";
 import { jobStatusError } from "@/boundary/job-status-error";
 import { streamStatus } from "./stream";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";

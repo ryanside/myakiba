@@ -435,5 +435,5 @@ const eventStream = stream(
 const servedStream = () => serve(caller, eventStream, { count: 1 });
 void (true satisfies Equal<
   ReturnType<typeof servedStream>,
-  AsyncGenerator<number, void | ElysiaCustomStatusResponse<500, "Stream failed">>
+  AsyncGenerator<number, ReturnType<() => void> | ElysiaCustomStatusResponse<500, "Stream failed">>
 >);

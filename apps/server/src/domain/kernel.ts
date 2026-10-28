@@ -421,7 +421,7 @@ function errorCauses(error: Error) {
 }
 
 /** Logs an operation failure, including the driver diagnostics in its cause chain. */
-export function logOperationError(log: RequestLogger, action: string, error: Error): void {
+function logOperationError(log: RequestLogger, action: string, error: Error): void {
   log.error(error, { step: action });
   const causes = errorCauses(error);
   if (causes.length > 0) log.set({ errorCauses: causes });
@@ -440,7 +440,7 @@ export function serve<I, T, M extends string>(
   caller: Caller,
   op: StreamOp<I, T, M>,
   input: NoInfer<I>,
-): AsyncGenerator<T, void | ElysiaCustomStatusResponse<500, M>>;
+): AsyncGenerator<T, ReturnType<() => void> | ElysiaCustomStatusResponse<500, M>>;
 export function serve<I, T, F extends AnyFailure, M extends string>(
   caller: Caller,
   op: Op<I, T, F, M>,
@@ -452,7 +452,7 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
   input: NoInfer<I>,
 ):
   | Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>
-  | AsyncGenerator<StreamValue<T>, void | ElysiaCustomStatusResponse<500, M>> {
+  | AsyncGenerator<StreamValue<T>, ReturnType<() => void> | ElysiaCustomStatusResponse<500, M>> {
   const terminal = streams.get(op as AnyOp);
   if (!terminal) return serveResult(caller, op, input);
   return (async function* () {
