@@ -1,3 +1,4 @@
+import type { ExecutionFailed } from "@/domain/kernel";
 import { sse } from "elysia";
 import type { RequestLogger } from "evlog";
 import type { Result } from "better-result";
@@ -6,7 +7,6 @@ import type {
   SyncJobError,
   SyncTerminalState,
 } from "@myakiba/contracts/sync/schema";
-import type { StreamReadFailed } from "@/boundary/stream-read";
 import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import type { SyncJobNotFound } from "@/routers/sync/errors/sync-job-not-found";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
@@ -43,11 +43,13 @@ export async function* streamStatus({
   jobId,
   signal,
   read,
+  poll,
 }: {
   readonly log: RequestLogger;
   readonly jobId: string;
   readonly signal: AbortSignal;
-  readonly read: () => Promise<Result<SyncJobStatus, SyncJobNotFound | StreamReadFailed>>;
+  readonly read: () => Promise<Result<SyncJobStatus, SyncJobNotFound>>;
+  readonly poll: () => Promise<Result<SyncJobStatus, SyncJobNotFound | ExecutionFailed>>;
 }) {
   log.set({
     sync: { jobId },
@@ -71,8 +73,7 @@ export async function* streamStatus({
   const initialJobStatusRead = await read();
 
   if (initialJobStatusRead.isErr()) {
-    const isNotFound = initialJobStatusRead.error._tag === "SyncJobNotFound";
-    const message = isNotFound ? "Job not found" : "Error fetching job status";
+    const message = initialJobStatusRead.error.message;
 
     yield sse({
       data: createTerminalJobStatus({
@@ -122,8 +123,7 @@ export async function* streamStatus({
     const replayJobStatusRead = await read();
 
     if (replayJobStatusRead.isErr()) {
-      const isNotFound = replayJobStatusRead.error._tag === "SyncJobNotFound";
-      const message = isNotFound ? "Job not found" : "Error fetching job status";
+      const message = replayJobStatusRead.error.message;
 
       yield sse({
         data: createTerminalJobStatus({
@@ -209,10 +209,9 @@ export async function* streamStatus({
           continue;
         }
         nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
-        const polledStatusRead = await read();
+        const polledStatusRead = await poll();
         if (polledStatusRead.isErr()) {
-          const isNotFound = polledStatusRead.error._tag === "SyncJobNotFound";
-          if (!isNotFound) {
+          if (polledStatusRead.error._tag === "ExecutionFailed") {
             yield sse({ data: latestJobStatus });
             continue;
           }

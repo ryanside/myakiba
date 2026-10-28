@@ -1140,6 +1140,23 @@ test("an S3 timeout records the item as a persistence failure", async () => {
   });
 });
 
+test("an existing Item import reports a failed session insert as a save failure", async () => {
+  await db.execute(`CREATE FUNCTION reject_item_session_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'insert unavailable'; END $$`);
+  await db.execute(`CREATE TRIGGER reject_item_session_insert BEFORE INSERT ON sync_session
+    FOR EACH ROW EXECUTE FUNCTION reject_item_session_insert()`);
+  try {
+    expect(await post("/item", { items: [PRESENT] })).toEqual({
+      status: 500,
+      body: "Failed to save import record",
+    });
+    expect(await db.$count(syncSession)).toBe(0);
+  } finally {
+    await db.execute(`DROP TRIGGER reject_item_session_insert ON sync_session`);
+    await db.execute(`DROP FUNCTION reject_item_session_insert()`);
+  }
+});
+
 test("an existing Item import rolls back its session when completion fails", async () => {
   await db.execute(`CREATE FUNCTION reject_item_completion() RETURNS trigger LANGUAGE plpgsql AS $$
     BEGIN RAISE EXCEPTION 'completion unavailable'; END $$`);
@@ -1148,7 +1165,7 @@ test("an existing Item import rolls back its session when completion fails", asy
   try {
     expect(await post("/item", { items: [PRESENT] })).toEqual({
       status: 500,
-      body: "Failed to update import record",
+      body: "Failed to save import record",
     });
     expect(await db.$count(syncSession)).toBe(0);
     expect(await db.$count(syncSessionItem)).toBe(0);
@@ -2033,7 +2050,7 @@ test("a missing Item import completion is refused instead of reporting success",
   try {
     expect(await post("/item", { items: [PRESENT] })).toEqual({
       status: 500,
-      body: "Failed to update import record",
+      body: "Failed to save import record",
     });
   } finally {
     update.mockRestore();

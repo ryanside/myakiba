@@ -20,7 +20,7 @@ const dataTransferRouter = privateApi("/data-transfer")
   .get(
     "/imports/current/status",
     async function* (ctx) {
-      yield* serve(ctx, DataTransfer.stream, { signal: ctx.request.signal });
+      return yield* serve(ctx, DataTransfer.stream, { signal: ctx.request.signal });
     },
     {
       auth: true,

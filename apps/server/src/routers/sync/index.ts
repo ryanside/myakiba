@@ -177,7 +177,7 @@ const syncRouter = privateApi("/sync")
   .get(
     "/job-status",
     async function* (ctx) {
-      yield* serve(ctx, SyncRequests.stream, {
+      return yield* serve(ctx, SyncRequests.stream, {
         jobId: ctx.query.jobId,
         signal: ctx.request.signal,
       });

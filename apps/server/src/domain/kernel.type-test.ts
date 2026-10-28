@@ -427,10 +427,13 @@ void (true satisfies Equal<
   | ElysiaCustomStatusResponse<500, "Plan failed" | "Step failed">
 >);
 const eventStream = stream(
-  { action: "types.stream", failure: "Stream failed" },
+  { action: "types.stream", failure: "Stream failed", onError: () => 0 },
   async function* (_scope, input: { readonly count: number }) {
     yield input.count;
   },
 );
 const servedStream = () => serve(caller, eventStream, { count: 1 });
-void (true satisfies Equal<ReturnType<typeof servedStream>, AsyncGenerator<number, void>>);
+void (true satisfies Equal<
+  ReturnType<typeof servedStream>,
+  AsyncGenerator<number, ReturnType<() => void> | ElysiaCustomStatusResponse<500, "Stream failed">>
+>);

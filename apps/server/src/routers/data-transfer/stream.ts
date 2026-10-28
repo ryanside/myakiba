@@ -1,8 +1,8 @@
+import type { ExecutionFailed } from "@/domain/kernel";
 import { sse } from "elysia";
 import type { RequestLogger } from "evlog";
 import type { Result } from "better-result";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import type { StreamReadFailed } from "@/boundary/stream-read";
 import { jobStatusSubscriptionRegistry } from "@/lib/job-status-subscription-registry";
 import {
   MAX_JOB_STATUS_STREAM_DURATION_MS,
@@ -14,10 +14,12 @@ export async function* streamStatus({
   log,
   signal,
   read,
+  poll,
 }: {
   readonly log: RequestLogger;
   readonly signal: AbortSignal;
-  readonly read: () => Promise<Result<SyncJobStatus | null, StreamReadFailed>>;
+  readonly read: () => Promise<Result<SyncJobStatus | null, never>>;
+  readonly poll: () => Promise<Result<SyncJobStatus | null, ExecutionFailed>>;
 }) {
   const streamStartedAt = Date.now();
   const abortPromise = signal.aborted
@@ -28,10 +30,7 @@ export async function* streamStatus({
 
   const initialStatusRead = await read();
 
-  if (initialStatusRead.isErr()) {
-    return;
-  }
-  const initialStatus = initialStatusRead.value;
+  const initialStatus = initialStatusRead.unwrap();
   if (initialStatus === null) {
     log.set({ outcome: "not_found" });
     return;
@@ -54,10 +53,7 @@ export async function* streamStatus({
 
   try {
     const replayStatusRead = await read();
-    if (replayStatusRead.isErr()) {
-      return;
-    }
-    const replayStatus = replayStatusRead.value;
+    const replayStatus = replayStatusRead.unwrap();
     if (replayStatus === null) {
       log.set({ outcome: "not_found" });
       return;
@@ -107,7 +103,7 @@ export async function* streamStatus({
           continue;
         }
         nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
-        const polledStatusRead = await read();
+        const polledStatusRead = await poll();
         if (polledStatusRead.isErr()) {
           yield sse({ data: latestStatus });
           continue;

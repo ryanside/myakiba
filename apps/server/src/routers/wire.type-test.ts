@@ -1,3 +1,4 @@
+import type { InputOf } from "@/domain/kernel";
 /**
  * The wire of every operation a route serves: each failure's status and literal
  * message, the 500, and each string answer's literal. Written against the kernel
@@ -24,9 +25,7 @@ import { Wishlist } from "@/routers/wishlist/module";
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infer I) => void } }
-  ? I
-  : never;
+
 type Answer<F> = F extends () => Promise<infer A> ? A : never;
 /** Every status answer: one per failure, plus the 500. */
 type Failures<F> =
@@ -516,7 +515,7 @@ void (true satisfies Equal<
         >
       | S<500, "Failed to check for existing items">;
     start: S<500, "Failed to create import record">;
-    completeItemSession: S<500, "Failed to update import record">;
+    completeItemSession: S<500, "Failed to save import record">;
     completeCsv: S<500, "Failed to save collection items and orders">;
     completeOrder: S<500, "Failed to save the order and its items">;
     completeOrderItem: S<500, "Failed to save order items">;

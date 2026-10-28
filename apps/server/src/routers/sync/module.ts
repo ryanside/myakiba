@@ -1,4 +1,5 @@
-import { readStream } from "@/boundary/stream-read";
+import type { CompositionScope, InputOf } from "@/domain/kernel";
+import { jobStatusError } from "@/boundary/job-status-error";
 import { streamStatus } from "./stream";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import {
@@ -15,7 +16,7 @@ import {
 import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
 import { Result, panic } from "better-result";
-import { command, compose, query, stream } from "@/domain/kernel";
+import { ExecutionFailed, command, compose, query, stream } from "@/domain/kernel";
 import { EmailNotVerified } from "./errors/email-not-verified";
 import { ImportNotFound } from "./errors/import-not-found";
 import { InvalidLimit } from "./errors/invalid-limit";
@@ -77,11 +78,7 @@ function startOperation<const M extends string>(failure: M) {
     },
     {
       recover: async (scope, input, error) => {
-        try {
-          await scope.execute(failedStart, { ...input, failure: "before_start" });
-        } catch {
-          /* The original persistence error takes precedence over history. */
-        }
+        await scope.execute(failedStart, { ...input, failure: "before_start" });
         throw error;
       },
     },
@@ -98,15 +95,11 @@ function completeOperation<const M extends string>(failure: M) {
     },
     {
       recover: async (scope, input, error) => {
-        try {
-          await scope.execute(failedStart, {
-            session: input.session,
-            requestPayload: input.requestPayload,
-            failure: "request_persistence",
-          });
-        } catch {
-          /* The original persistence error takes precedence over history. */
-        }
+        await scope.execute(failedStart, {
+          session: input.session,
+          requestPayload: input.requestPayload,
+          failure: "request_persistence",
+        });
         throw error;
       },
     },
@@ -648,7 +641,7 @@ export const Sync = {
   completeOrderItem: completeOperation("Failed to save order items"),
   completeCollection: completeOperation("Failed to save collection items"),
   completeItemSession: command(
-    { action: "sync.completeItemSession", failure: "Failed to update import record" },
+    { action: "sync.completeItemSession", failure: "Failed to save import record" },
     async (
       scope,
       input: { readonly session: SyncSessionCreation; readonly statusMessage: string },
@@ -767,14 +760,10 @@ export const SyncRuns = {
           }),
         });
         const original = cause instanceof Error ? cause : new Error(String(cause));
-        try {
-          const recorded = await scope.execute(runFailure, { ...input, missingOrder });
-          if (!missingOrder) scope.log.error(original);
-          return recorded;
-        } catch (recordError) {
-          // A missing Order reports why recording failed; anything else reports the original.
-          throw missingOrder ? recordError : original;
-        }
+        const recorded = await scope.execute(runFailure, { ...input, missingOrder });
+        if (recorded.isErr() && ExecutionFailed.is(recorded.error) && !missingOrder) throw original;
+        if (!missingOrder) scope.log.error(original);
+        return recorded;
       },
     },
   ),
@@ -837,19 +826,30 @@ export const SyncRuns = {
   ),
 };
 
-type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infer I) => void } }
-  ? I
-  : never;
+/** The four planned imports either start a fetch or complete from saved Items. */
+function plannedImport<const M extends string>(complete: ReturnType<typeof completeOperation<M>>) {
+  return async (
+    scope: Pick<CompositionScope<readonly [typeof Sync.start, typeof complete]>, "execute">,
+    plan: ReturnType<typeof plannedSync>,
+  ) => {
+    const saved = plan.response.jobId
+      ? await scope.execute(Sync.start, plan)
+      : await scope.execute(complete, plan.complete);
+    if (saved.isErr()) return saved;
+    return Result.ok(plan.response);
+  };
+}
 
 export const SyncRequests = {
   stream: stream(
-    { action: "sync.jobStatus", failure: "Error fetching job status" },
+    { action: "sync.jobStatus", failure: "Error fetching job status", onError: jobStatusError },
     (scope, input: { readonly jobId: string; readonly signal: AbortSignal }) =>
       streamStatus({
         log: scope.log,
         jobId: input.jobId,
         signal: input.signal,
-        read: () => readStream(scope, Sync.jobStatus, { jobId: input.jobId }),
+        read: () => scope.execute(Sync.jobStatus, { jobId: input.jobId }),
+        poll: () => scope.poll(Sync.jobStatus, { jobId: input.jobId }),
       }),
   ),
 
@@ -881,13 +881,7 @@ export const SyncRequests = {
       steps: [Sync.planCsv, Sync.start, Sync.completeCsv],
       before: (scope, input: InputOf<typeof Sync.planCsv>) => scope.execute(Sync.planCsv, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeCsv, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeCsv),
   ),
   order: compose(
     {
@@ -897,13 +891,7 @@ export const SyncRequests = {
       before: (scope, input: InputOf<typeof Sync.planOrder>) =>
         scope.execute(Sync.planOrder, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeOrder, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeOrder),
   ),
   orderItem: compose(
     {
@@ -916,13 +904,7 @@ export const SyncRequests = {
         return scope.execute(Sync.planOrderItem, { body: input.body, order: order.value });
       },
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeOrderItem, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeOrderItem),
   ),
   collection: compose(
     {
@@ -932,13 +914,7 @@ export const SyncRequests = {
       before: (scope, input: InputOf<typeof Sync.planCollection>) =>
         scope.execute(Sync.planCollection, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeCollection, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeCollection),
   ),
   complete: compose(
     {
