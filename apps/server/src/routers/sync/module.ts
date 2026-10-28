@@ -15,7 +15,7 @@ import {
 import type { CompleteSyncItemResult } from "./run";
 import { createId } from "@paralleldrive/cuid2";
 import { Result, panic } from "better-result";
-import { command, compose, query, stream } from "@/domain/kernel";
+import { ExecutionFailed, command, compose, query, stream } from "@/domain/kernel";
 import { EmailNotVerified } from "./errors/email-not-verified";
 import { ImportNotFound } from "./errors/import-not-found";
 import { InvalidLimit } from "./errors/invalid-limit";
@@ -98,15 +98,11 @@ function completeOperation<const M extends string>(failure: M) {
     },
     {
       recover: async (scope, input, error) => {
-        try {
-          await scope.execute(failedStart, {
-            session: input.session,
-            requestPayload: input.requestPayload,
-            failure: "request_persistence",
-          });
-        } catch {
-          /* The original persistence error takes precedence over history. */
-        }
+        await scope.execute(failedStart, {
+          session: input.session,
+          requestPayload: input.requestPayload,
+          failure: "request_persistence",
+        });
         throw error;
       },
     },
@@ -767,14 +763,10 @@ export const SyncRuns = {
           }),
         });
         const original = cause instanceof Error ? cause : new Error(String(cause));
-        try {
-          const recorded = await scope.execute(runFailure, { ...input, missingOrder });
-          if (!missingOrder) scope.log.error(original);
-          return recorded;
-        } catch (recordError) {
-          // A missing Order reports why recording failed; anything else reports the original.
-          throw missingOrder ? recordError : original;
-        }
+        const recorded = await scope.execute(runFailure, { ...input, missingOrder });
+        if (recorded.isErr() && ExecutionFailed.is(recorded.error) && !missingOrder) throw original;
+        if (!missingOrder) scope.log.error(original);
+        return recorded;
       },
     },
   ),

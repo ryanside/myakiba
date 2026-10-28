@@ -10,8 +10,8 @@ import type {
 } from "@myakiba/contracts/data-transfer/schema";
 import { DATA_TRANSFER_MAX_BYTES } from "@myakiba/contracts/data-transfer/schema";
 import { UNSAVED_ITEM_REASON } from "@myakiba/contracts/sync/constants";
-import { Result } from "better-result";
-import { command, query, stream } from "@/domain/kernel";
+import { Result, UnhandledException } from "better-result";
+import { ExecutionFailed, command, query, stream } from "@/domain/kernel";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import DataTransferService from "./service";
@@ -201,15 +201,14 @@ export const DataTransfer = {
           UnhandledException: ({ cause }) => cause,
         });
         const original = thrown instanceof Error ? thrown : new Error(String(thrown));
-        try {
-          const recorded = await scope.execute(recordFailure, {
-            jobId: input.jobId,
-            mfcItemId: input.mfcItemId,
-            reason: UNSAVED_ITEM_REASON,
-          });
-          scope.log.error(original);
-          return recorded;
-        } catch (recordError) {
+        const recorded = await scope.execute(recordFailure, {
+          jobId: input.jobId,
+          mfcItemId: input.mfcItemId,
+          reason: UNSAVED_ITEM_REASON,
+        });
+        if (recorded.isErr() && ExecutionFailed.is(recorded.error)) {
+          const cause = recorded.error.cause;
+          const recordError = UnhandledException.is(cause) ? cause.cause : cause;
           const failure =
             recordError instanceof Error ? recordError : new Error(String(recordError));
           scope.log.warn(failure.message, {
@@ -225,6 +224,8 @@ export const DataTransfer = {
           });
           throw thrown;
         }
+        scope.log.error(original);
+        return recorded;
       },
     },
   ),

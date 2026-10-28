@@ -48,7 +48,7 @@ import type {
   Recover,
 } from "./operations";
 
-export { query, command, compose, stream } from "./operations";
+export { query, command, compose, stream, ExecutionFailed } from "./operations";
 export type { Op, CommandScope } from "./operations";
 
 /**
