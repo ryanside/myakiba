@@ -15,7 +15,10 @@ const STORE_BROWSERS: readonly { readonly store: ExtensionStore; readonly versio
   { store: "firefoxAddons", version: /Firefox\/(\d+)/u },
 ];
 
-/** The store whose extension runs in this browser, or null when none does. */
+/**
+ * The store whose extension runs in this browser, or null when none does. An Android tablet in
+ * Chrome's desktop mode sends a desktop Linux user agent, so it reads as desktop here.
+ */
 export function storeForBrowser(userAgent: string): ExtensionStore | null {
   if (describeUserAgent(userAgent).kind !== "desktop") return null;
   const browser = STORE_BROWSERS.find(
