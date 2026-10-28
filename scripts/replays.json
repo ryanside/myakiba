@@ -2513,7 +2513,11 @@
         "a sync read panic terminates without another poll",
         "a sync read throw terminates without another poll",
         "a data transfer read panic terminates without another poll",
-        "a data transfer read throw terminates without another poll"
+        "a data transfer read throw terminates without another poll",
+        "a sync first read panic answers a logged safe 500",
+        "a sync first read throw answers a logged safe 500",
+        "a data transfer first read panic answers a logged safe 500",
+        "a data transfer first read throw answers a logged safe 500"
       ]
     },
     {

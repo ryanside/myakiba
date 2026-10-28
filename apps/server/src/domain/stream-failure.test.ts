@@ -69,61 +69,66 @@ const status = {
 
 for (const kind of ["sync", "data transfer"] as const) {
   for (const defect of ["panic", "throw"] as const) {
-    test(`a ${kind} read ${defect} terminates without another poll`, async () => {
-      const { jobStatusSubscriptionRegistry } =
-        await import("@/lib/job-status-subscription-registry");
-      const timing = await import("@/lib/job-status-stream");
-      const unsubscribe = mock(async () => {});
-      spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
-        next: () => new Promise(() => {}),
-        unsubscribe,
-      });
-      spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
-      let now = Date.now();
-      spyOn(Date, "now").mockImplementation(() => {
-        now += 31_000;
-        return now;
-      });
-      let reads = 0;
-      const read = () => {
-        reads += 1;
-        if (reads > 2) {
-          if (defect === "panic") panic("internal read defect");
-          throw new Error("internal read defect");
-        }
-        return status;
-      };
-      const { default: syncService } = await import("@/routers/sync/service");
-      const { SyncRequests } = await import("@/routers/sync/module");
-      const { default: DataTransferService } = await import("@/routers/data-transfer/service");
-      const { DataTransfer } = await import("@/routers/data-transfer/module");
-      spyOn(syncService, "getJobStatus").mockImplementation(async () => Result.ok(read()));
-      spyOn(DataTransferService, "getImportJobStatus").mockImplementation(async () => read());
-      const log = createRequestLogger();
-      const logged = spyOn(log, "error");
-      const app = new Elysia().get("/", async function* (ctx) {
-        if (kind === "sync")
-          return yield* serve({ viewer, log }, SyncRequests.stream, {
-            jobId: status.jobId,
-            signal: ctx.request.signal,
-          });
-        else
+    for (const failAt of [1, 3]) {
+      const name =
+        failAt === 1
+          ? `a ${kind} first read ${defect} answers a logged safe 500`
+          : `a ${kind} read ${defect} terminates without another poll`;
+      test(name, async () => {
+        const { jobStatusSubscriptionRegistry } =
+          await import("@/lib/job-status-subscription-registry");
+        const timing = await import("@/lib/job-status-stream");
+        const unsubscribe = mock(async () => {});
+        spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
+          next: () => new Promise(() => {}),
+          unsubscribe,
+        });
+        spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
+        let now = Date.now();
+        spyOn(Date, "now").mockImplementation(() => {
+          now += 31_000;
+          return now;
+        });
+        let reads = 0;
+        const read = () => {
+          reads += 1;
+          if (reads >= failAt) {
+            if (defect === "panic") panic("internal read defect");
+            throw new Error("internal read defect");
+          }
+          return status;
+        };
+        const { default: syncService } = await import("@/routers/sync/service");
+        const { SyncRequests } = await import("@/routers/sync/module");
+        const { default: DataTransferService } = await import("@/routers/data-transfer/service");
+        const { DataTransfer } = await import("@/routers/data-transfer/module");
+        spyOn(syncService, "getJobStatus").mockImplementation(async () => Result.ok(read()));
+        spyOn(DataTransferService, "getImportJobStatus").mockImplementation(async () => read());
+        const log = createRequestLogger();
+        const logged = spyOn(log, "error");
+        const app = new Elysia().get("/", async function* (ctx) {
+          if (kind === "sync")
+            return yield* serve({ viewer, log }, SyncRequests.stream, {
+              jobId: status.jobId,
+              signal: ctx.request.signal,
+            });
           return yield* serve({ viewer, log }, DataTransfer.stream, { signal: ctx.request.signal });
+        });
+        const response = await app.handle(new Request("http://localhost/"));
+        const body = await response.text();
+        expect(response.status).toBe(failAt === 1 ? 500 : 200);
+        if (failAt === 3) expect(body).toContain('"terminalState":"error"');
+        expect(body).toContain(
+          kind === "sync" ? "Error fetching job status" : "Failed to check import status.",
+        );
+        expect(body).not.toContain("internal read defect");
+        expect(reads).toBe(failAt);
+        expect(unsubscribe).toHaveBeenCalledTimes(failAt === 1 ? 0 : 1);
+        expect(logged).toHaveBeenCalledTimes(1);
+        expect(logged.mock.calls[0]?.[1]).toEqual({
+          step: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
+        });
       });
-      const response = await app.handle(new Request("http://localhost/"));
-      const body = await response.text();
-      expect(response.status).toBe(200);
-      expect(body).toContain('"terminalState":"error"');
-      expect(body).toContain(
-        kind === "sync" ? "Error fetching job status" : "Failed to check import status.",
-      );
-      expect(body).not.toContain("internal read defect");
-      expect(reads).toBe(3);
-      expect(unsubscribe).toHaveBeenCalledTimes(1);
-      expect(logged).toHaveBeenCalledTimes(1);
-      expect(logged.mock.calls[0]?.[1]).toEqual({
-        step: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
-      });
-    });
+    }
   }
 }
