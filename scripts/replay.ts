@@ -14,6 +14,8 @@ type TestReplay = {
    * uses so HEAD's copy can no longer run against the fix. Without it, the harness is HEAD's.
    */
   testAt?: string;
+  /** Current coverage when the historical harness uses names or files that HEAD renamed. */
+  head?: { test: string; fixed: string[] }[];
 };
 
 type LintReplay = {
@@ -322,7 +324,9 @@ const difference = (left: string[], right: string[]) => {
   });
 };
 
-for (const testFile of new Set(selected.map((replay) => replay.test))) {
+for (const testFile of new Set(
+  selected.flatMap((replay) => [replay.test, ...(replay.head ?? []).map((head) => head.test)]),
+)) {
   const run = await runTest(root, testFile);
   const pass =
     run.exitCode === 0 &&

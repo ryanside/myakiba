@@ -10,7 +10,18 @@
         "normalizeScrapedDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
         "normalizeScrapedDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "head": [
+        {
+          "test": "packages/utils/src/date-only.test.ts",
+          "fixed": [
+            "normalizeMfcDate with release dates as MFC prints them > \"10/13/2010\" becomes \"2010-10-13\"",
+            "normalizeMfcDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
+            "normalizeMfcDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
+            "normalizeMfcDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
+          ]
+        }
+      ]
     },
     {
       "fix": "dd30621e3d4073382cff9ee6a2c55c2eda63f690",
@@ -626,7 +637,17 @@
         "an extension that is too old asks for an update",
         "a new install shows after the reload, and onboarding reopens at the extension step"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "head": [
+        {
+          "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
+          "fixed": [
+            "with no extension it links to the store listing",
+            "an extension that is too old asks for an update",
+            "a new install shows after the reload, and onboarding reopens at the extension step"
+          ]
+        }
+      ]
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -658,7 +679,38 @@
         "closing the dialog keeps its copy while it closes and returns focus to the button",
         "a gated button shows it is checking and ignores a second click until the check ends"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+          "fixed": [
+            "the sync launcher's Collection option > links to the store listing instead when the extension is not installed",
+            "the sync launcher's Order option > links to the store listing instead when the extension is not installed",
+            "the sync launcher's MyFigureCollection CSV option > links to the store listing instead when the extension is not installed",
+            "the sync launcher's Item Database option > links to the store listing instead when the extension is not installed",
+            "the command palette's Collection action > links to the store listing instead when the extension is not installed",
+            "the command palette's Order action > links to the store listing instead when the extension is not installed",
+            "the command palette's MyFigureCollection CSV action > links to the store listing instead when the extension is not installed",
+            "the command palette's Item Database action > links to the store listing instead when the extension is not installed",
+            "the item sheet button > links to the store listing instead when the extension is not installed",
+            "the collection sheet button > links to the store listing instead when the extension is not installed",
+            "onboarding's Add to collection choice > links to the store listing instead when the extension is not installed",
+            "onboarding's Create order choice > links to the store listing instead when the extension is not installed",
+            "onboarding's Import MyFigureCollection CSV choice > links to the store listing instead when the extension is not installed",
+            "the order page's add items > links to the store listing instead when the extension is not installed",
+            "the item page's Add to collection > links to the store listing instead when the extension is not installed",
+            "the item page's Create order > links to the store listing instead when the extension is not installed",
+            "the item page's Add to item database > links to the store listing instead when the extension is not installed",
+            "the item page's resync button > links to the store listing instead when the extension is not installed",
+            "the import's retry > links to the store listing instead when the extension is not installed",
+            "the settings import > links to the store listing instead when the extension is not installed",
+            "the settings import's retry > links to the store listing instead when the extension is not installed",
+            "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
+            "closing the dialog keeps its copy while it closes and returns focus to the button",
+            "a gated button shows it is checking and ignores a second click until the check ends"
+          ]
+        }
+      ]
     },
     {
       "fix": "d061fb8a3572ac0453cd9475d35136123b04d921",
@@ -815,7 +867,23 @@
         "a fetch failure cannot hide a recorded persistence failure",
         "extension CSV cannot reuse another user's Order"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "head": [
+        {
+          "test": "apps/server/src/routers/sync/routes.test.ts",
+          "fixed": [
+            "an S3 timeout records the item as a persistence failure",
+            "a persistence failure after an imported item retains the partial-success message",
+            "CSV completion imports an Owned row whose Order does not exist yet",
+            "failure reporting accepts the full hourly ingest budget",
+            "polling uses durable status through a Redis blip and retries",
+            "persistence failure survives cache expiry and a changed display message",
+            "a failed history fallback preserves the original persistence error",
+            "a fetch failure cannot hide a recorded persistence failure",
+            "extension CSV cannot reuse another user's Order"
+          ]
+        }
+      ]
     },
     {
       "fix": "8c19d2088de705335017ea933100f1f00078e19e",
@@ -825,7 +893,13 @@
         "an S3 preparation timeout records a retryable import item failure",
         "import polling keeps its last status through a database blip and retries"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "head": [
+        {
+          "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+          "fixed": ["an S3 preparation timeout records a retryable import item failure"]
+        }
+      ]
     },
     {
       "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
@@ -865,7 +939,21 @@
         "a 1000-item failure batch uses one transaction and rate-limit unit",
         "a mixed failure batch preserves imported Items and ignores a stale job"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "head": [
+        {
+          "test": "apps/server/src/routers/sync/routes.test.ts",
+          "fixed": [
+            "failedBeforeStart does not label item results as persistence failures",
+            "in-request persistence failure keeps its original item reasons",
+            "interruption keeps its error after an earlier persistence failure and cache expiry",
+            "persistence failure survives cache expiry and a changed display message",
+            "display text alone cannot classify a persistence failure",
+            "a 1000-item failure batch uses one transaction and rate-limit unit",
+            "a mixed failure batch preserves imported Items and ignores a stale job"
+          ]
+        }
+      ]
     },
     {
       "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
@@ -897,7 +985,15 @@
       "fixed": [
         "the MFC tab > a focus that comes while the extension reads whose tab it is keeps the tab open and where it was, at every read"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "head": [
+        {
+          "test": "apps/extension/lib/fetcher.test.ts",
+          "fixed": [
+            "the MFC tab > a focus that comes while the browser answers the extension keeps the tab open and where it was, at every answer"
+          ]
+        }
+      ]
     },
     {
       "fix": "f4f14142b27e1247fdec8154a57a7e8a234f9c1c",
@@ -955,7 +1051,28 @@
         "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
         "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "head": [
+        {
+          "test": "apps/extension/lib/fetcher.test.ts",
+          "fixed": [
+            "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (at once commits)",
+            "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Chrome-style commits)",
+            "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style commits)",
+            "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style, complete before it starts commits)",
+            "the MFC tab > a worker restarted while a load the user took over still runs waits for it to end"
+          ]
+        },
+        {
+          "test": "apps/extension/lib/load-invariant.test.ts",
+          "fixed": [
+            "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (at once commits)",
+            "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Chrome-style commits)",
+            "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
+            "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
+          ]
+        }
+      ]
     },
     {
       "fix": "e23ace1d616ce7985bd10d4d687192d743afc2fc",
@@ -1384,7 +1501,15 @@
       "testAt": "9d5af6afb7b2137f6074a8c2807419dc77be6f6d",
       "bug": "a defect in an Item Refresh was read as a refused refresh and logged nowhere",
       "test": "apps/web/src/data/item-refresh.test.tsx",
-      "fixed": ["a defect in the refresh is reported as a Panic, not read as a refused refresh"]
+      "fixed": ["a defect in the refresh is reported as a Panic, not read as a refused refresh"],
+      "head": [
+        {
+          "test": "apps/web/src/data/item-refresh.test.tsx",
+          "fixed": [
+            "a defect in the refresh is reported as a Panic and shows the safe text, not its message"
+          ]
+        }
+      ]
     },
     {
       "fix": "ce466a1c2e35af14dbde49a5b4e4271956d293b1",
@@ -1861,6 +1986,31 @@
         "strict money input > rejects \"1.234\" for precision",
         "strict money input > rejects \"90071992547409.92\" for unsafe_integer",
         "strict money input > rejects \"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\" for unsafe_integer"
+      ],
+      "head": [
+        {
+          "test": "packages/utils/src/currency.test.ts",
+          "fixed": [
+            "strict money input > rejects \"12,50\" for format",
+            "strict money input > rejects \"1.2.3\" for format",
+            "strict money input > rejects \"1-2\" for format",
+            "strict money input > rejects \"-5\" for negative",
+            "strict money input > rejects \"-0\" for negative",
+            "strict money input > rejects \"1,234.567\" for precision",
+            "strict money input > rejects \"abc\" for format",
+            "strict money input > rejects \"12,34\" for format",
+            "strict money input > rejects \"1234,567\" for format",
+            "strict money input > rejects \"1,,234\" for format",
+            "strict money input > rejects \"1,234,56\" for format",
+            "strict money input > rejects \"$12\" for format",
+            "strict money input > rejects \"+5\" for format",
+            "strict money input > rejects \"1 234\" for format",
+            "strict money input > rejects \"1e3\" for format",
+            "strict money input > rejects \"1.234\" for precision",
+            "strict money input > rejects \"90071992547409.92\" for unsafe_integer",
+            "strict money input > rejects \"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\" for unsafe_integer"
+          ]
+        }
       ]
     },
     {
@@ -1972,6 +2122,16 @@
         "the throttle's books > when storage fails > an answer that cannot be booked fails its item, and the queue goes on",
         "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run ends the run and closes the MFC tab"
+      ],
+      "head": [
+        {
+          "test": "apps/extension/lib/fetcher.test.ts",
+          "fixed": [
+            "the throttle's books > when storage fails > an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on",
+            "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
+            "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
+          ]
+        }
       ]
     },
     {
@@ -1984,6 +2144,16 @@
         "a throttle turn > whose books storage will not read runs on an open throttle and logs why",
         "a throttle turn > reads its books from storage once, however many turns it runs",
         "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
+      ],
+      "head": [
+        {
+          "test": "apps/extension/lib/throttle.test.ts",
+          "fixed": [
+            "a throttle turn > whose books storage will not read runs on an open throttle and logs why",
+            "a throttle turn > reads its books from storage once, however many turns it runs",
+            "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
+          ]
+        }
       ]
     },
     {
@@ -2038,6 +2208,12 @@
         "extension release gate > in review refuses heartbeat without writing",
         "extension release gate > in review refuses interrupt without writing",
         "an upload without a current import stores no picture or catalog item"
+      ],
+      "head": [
+        {
+          "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+          "fixed": ["an upload without a current import stores no picture or catalog item"]
+        }
       ]
     },
     {
@@ -2210,8 +2386,8 @@
       ]
     },
     {
-      "fix": "2d6dc59d",
-      "testAt": "2d6dc59d",
+      "fix": "2d6dc59dd652e44c18943c7587fb9257f415163b",
+      "testAt": "2d6dc59dd652e44c18943c7587fb9257f415163b",
       "bug": "the kernel unwrapped better-result Panics into recoverable exceptions",
       "test": "apps/server/src/domain/kernel.test.ts",
       "fixed": [
@@ -2222,8 +2398,8 @@
       ]
     },
     {
-      "fix": "2d6dc59d",
-      "testAt": "2d6dc59d",
+      "fix": "2d6dc59dd652e44c18943c7587fb9257f415163b",
+      "testAt": "2d6dc59dd652e44c18943c7587fb9257f415163b",
       "bug": "a throwing schema ran inside a Result callback and lost its original exception",
       "test": "packages/utils/src/parse-json.test.ts",
       "fixed": ["parseJson > a throwing schema propagates its original defect"]
