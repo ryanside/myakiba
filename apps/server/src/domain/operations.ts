@@ -109,7 +109,7 @@ export type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
    * Runs a fresh operation. A Failure comes back as an Err; an unanswerable child
    * outcome comes back as ExecutionFailed, preserving its operation through Result.gen.
    * A defect raised here always wins: once `recover` settles, the kernel answers with
-   * it even if `recover` caught it, so a recovery can never hide a broken invariant.
+   * it even if `recover` ignored its Err, so a recovery can never hide a broken invariant.
    */
   readonly execute: <I, T, F extends AnyFailure, M extends string>(
     op: Op<I, T, F, M>,
