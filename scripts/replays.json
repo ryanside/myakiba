@@ -2371,6 +2371,39 @@
         "recover forwards a child's panic as a Result with its own failure and log",
         "recover gen forwards a child's panic as a Result with its own failure and log"
       ]
+    },
+    {
+      "fix": "e6ac0f701cad494bf6317127656562e54f2b706e",
+      "bug": "stream factories and iteration bypassed safe failure handling and stream reads retried defects",
+      "test": "apps/server/src/domain/stream-failure.test.ts",
+      "fixed": [
+        "a stream panic in factory logs once and answers safely",
+        "a stream throw in factory logs once and answers safely",
+        "a stream panic in first next logs once and answers safely",
+        "a stream throw in first next logs once and answers safely",
+        "a stream panic in after event logs once and answers safely",
+        "a stream throw in after event logs once and answers safely",
+        "a sync read panic terminates without another poll",
+        "a sync read throw terminates without another poll",
+        "a data transfer read panic terminates without another poll",
+        "a data transfer read throw terminates without another poll"
+      ]
+    },
+    {
+      "fix": "56e83defa6d635d07a606bba4e8f39f2d7ac894f",
+      "bug": "recovery callers treated execute Results as thrown failures and lost the original persistence error",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": ["a failed persistence fallback warns and rethrows the original error"]
+    },
+    {
+      "fix": "18410a5423ff544a37befd28fe7bf7442545c8fe",
+      "bug": "an existing Item import reported an insert failure as a failed update",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "an existing Item import reports a failed session insert as a save failure",
+        "an existing Item import rolls back its session when completion fails",
+        "a missing Item import completion is refused instead of reporting success"
+      ]
     }
   ],
   "lint": [
