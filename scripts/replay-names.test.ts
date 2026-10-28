@@ -160,6 +160,7 @@ function namesIn(file: string, source: string): Set<string> {
   ): Value {
     switch (node.type) {
       case "Literal": {
+        if (node.raw === null) return absent;
         if (/^["']/u.test(node.raw)) return text(String(node.value));
         if (/^\d/u.test(node.raw)) return number(Number(node.value));
         if (node.raw === "true" || node.raw === "false")
@@ -268,7 +269,7 @@ function namesIn(file: string, source: string): Set<string> {
           const mapped = object.values.map((row, i) => {
             const next = new Map(bound);
             arg.params.forEach((parameter, index) => {
-              if (parameter.type !== "RestElement")
+              if (parameter.type !== "RestElement" && parameter.type !== "TSParameterProperty")
                 bind(parameter, index === 0 ? row : number(i), next);
             });
             return value(body, next, resolving, module);
@@ -287,6 +288,7 @@ function namesIn(file: string, source: string): Set<string> {
         return absent;
       }
       case "BinaryExpression": {
+        if (node.left.type === "PrivateIdentifier") return absent;
         const left = value(node.left, bound, resolving, module);
         const right = value(node.right, bound, resolving, module);
         if (node.operator === "+" && (left.kind === "text" || right.kind === "text"))
@@ -344,7 +346,8 @@ function namesIn(file: string, source: string): Set<string> {
             callback?.type === "FunctionExpression"
           )
             callback.params.forEach((parameter, i) => {
-              if (parameter.type !== "RestElement") bind(parameter, args[i] ?? absent, next);
+              if (parameter.type !== "RestElement" && parameter.type !== "TSParameterProperty")
+                bind(parameter, args[i] ?? absent, next);
             });
           let cursor = 0;
           const rendered = display(value(title, next))
