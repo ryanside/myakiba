@@ -670,7 +670,7 @@ describe("a defect raised while recovering always answers", () => {
   const broken = command({ ...config, action: "test.broken" }, async () =>
     panic("a recovery operation found a broken invariant"),
   );
-  test("even when recover catches it and answers ok", async () => {
+  test("even when recover ignores its Err and answers ok", async () => {
     const operation = command(
       config,
       async () => {
@@ -678,11 +678,8 @@ describe("a defect raised while recovering always answers", () => {
       },
       {
         recover: async (scope) => {
-          try {
-            await scope.execute(broken, {});
-          } catch {
-            /* a recovery that hides the defect */
-          }
+          const result = await scope.execute(broken, {});
+          expect(result.isErr()).toBe(true);
           return Result.ok("hidden" as const);
         },
       },
@@ -693,21 +690,14 @@ describe("a defect raised while recovering always answers", () => {
     );
   });
 
-  test("and when recover rethrows it after catching it", async () => {
+  test("and when recover forwards its Err", async () => {
     const operation = command(
       config,
       async () => {
         throw new Error("persistence failed");
       },
       {
-        recover: async (scope) => {
-          try {
-            return await scope.execute(broken, {});
-          } catch (error) {
-            scope.log.set({ recovery: "failed" });
-            throw error;
-          }
-        },
+        recover: (scope) => scope.execute(broken, {}),
       },
     );
     const caller = { viewer, log: createRequestLogger() };
@@ -938,7 +928,7 @@ describe("composed operations", () => {
     expect(body).not.toHaveBeenCalled();
   });
 
-  test("a child defect wins even when its composition catches it", async () => {
+  test("a child defect wins even when its composition ignores its Err", async () => {
     const broken = command(config, async (_scope, _input: Record<never, never>) =>
       panic("a composed step broke its invariant"),
     );
@@ -950,11 +940,8 @@ describe("composed operations", () => {
         before: async () => Result.ok(0),
       },
       async (scope) => {
-        try {
-          await scope.execute(broken, {});
-        } catch {
-          return Result.ok(1);
-        }
+        const result = await scope.execute(broken, {});
+        expect(result.isErr()).toBe(true);
         return Result.ok(0);
       },
     );
