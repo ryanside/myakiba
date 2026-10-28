@@ -280,17 +280,26 @@ export function query<
 export type StreamOp<I, T, M extends string> = Op<I, AsyncGenerator<T, void>, never, M> & {
   readonly "~stream": true;
 };
-export const streams = new WeakSet<AnyOp>();
+export const streams = new WeakMap<AnyOp, (message: string, last: never) => Ok<unknown, never>>();
+
+export type StreamScope = PoolScope & {
+  readonly execute: <I, T, F extends AnyFailure, M extends string>(
+    op: Op<I, T, F, M>,
+    input: NoInfer<I>,
+  ) => Promise<Result<T, F>>;
+};
 
 /** An event stream whose route delegates with yield* serve(...), keeping the framework's generator lifecycle. */
 export function stream<I, T, const M extends string>(
-  config: OpConfig<M>,
-  body: (scope: PoolScope, input: I) => AsyncGenerator<T, void>,
+  config: OpConfig<M> & {
+    readonly onError: (message: string, last: T) => T;
+  },
+  body: (scope: StreamScope, input: I) => AsyncGenerator<T, void>,
 ): StreamOp<I, T, M> {
   const op = { action: config.action, failure: config.failure, "~stream": true as const };
-  bodies.set(op, (async (scope, input) => Result.ok(body(scope as PoolScope, input))) as Body);
+  bodies.set(op, (async (scope, input) => Result.ok(body(scope as StreamScope, input))) as Body);
   poolReads.add(op);
-  streams.add(op);
+  streams.set(op, (message, last) => Result.ok(config.onError(message, last)));
   return op;
 }
 

@@ -1,4 +1,4 @@
-import { readStream } from "@/boundary/stream-read";
+import { jobStatusError } from "@/boundary/job-status-error";
 import { streamStatus } from "./stream";
 import { Buffer } from "node:buffer";
 import type { RequestLogger } from "evlog";
@@ -59,12 +59,16 @@ const importStatus = query(
 
 export const DataTransfer = {
   stream: stream(
-    { action: "dataTransfer.importStatus", failure: "Failed to check import status." },
+    {
+      action: "dataTransfer.importStatus",
+      failure: "Failed to check import status.",
+      onError: jobStatusError,
+    },
     (scope, input: { readonly signal: AbortSignal }) =>
       streamStatus({
         log: scope.log,
         signal: input.signal,
-        read: () => readStream(scope, importStatus, {}),
+        read: () => scope.execute(importStatus, {}),
       }),
   ),
 

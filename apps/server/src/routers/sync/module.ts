@@ -1,4 +1,4 @@
-import { readStream } from "@/boundary/stream-read";
+import { jobStatusError } from "@/boundary/job-status-error";
 import { streamStatus } from "./stream";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import {
@@ -843,13 +843,13 @@ type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infe
 
 export const SyncRequests = {
   stream: stream(
-    { action: "sync.jobStatus", failure: "Error fetching job status" },
+    { action: "sync.jobStatus", failure: "Error fetching job status", onError: jobStatusError },
     (scope, input: { readonly jobId: string; readonly signal: AbortSignal }) =>
       streamStatus({
         log: scope.log,
         jobId: input.jobId,
         signal: input.signal,
-        read: () => readStream(scope, Sync.jobStatus, { jobId: input.jobId }),
+        read: () => scope.execute(Sync.jobStatus, { jobId: input.jobId }),
       }),
   ),
 

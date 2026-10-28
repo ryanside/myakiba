@@ -903,7 +903,7 @@ test("an S3 preparation timeout records a retryable import item failure", async 
   });
 });
 
-test("import polling keeps its last status through a database blip and retries", async () => {
+test("import polling terminates with a safe error after a database throw", async () => {
   await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
   const { default: service } = await import("./service");
   const original = service.getImportJobStatus;
@@ -946,11 +946,13 @@ test("import polling keeps its last status through a database blip and retries",
     const now = Date.now();
     clock.mockReturnValue(now + 31_000);
     failRead = true;
-    expect(await readStatus()).toEqual(initial);
+    expect(await readStatus()).toMatchObject({
+      terminalState: "error",
+      error: { message: "Failed to check import status." },
+    });
     expect(failRead).toBe(false);
-    clock.mockReturnValue(now + 62_000);
-    expect(await readStatus()).toMatchObject({ terminalState: null });
-    expect(read.mock.calls.length).toBe(reads + 2);
+    expect(await reader.read()).toMatchObject({ done: true });
+    expect(read.mock.calls.length).toBe(reads + 1);
   } finally {
     clock.mockRestore();
     read.mockRestore();

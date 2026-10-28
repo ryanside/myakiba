@@ -195,7 +195,23 @@ async function runEffects(
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = bodyOf(op);
   try {
-    return settle(await body({ viewer, tx: pool, read: readPrepared, log } as never, input));
+    return settle(
+      await body(
+        {
+          viewer,
+          tx: pool,
+          read: readPrepared,
+          log,
+          execute: async (next: AnyOp, value: never) => {
+            const child = await evaluate(next, viewer, value, log);
+            const result = executionResult(child, next);
+            if (result.isErr() && ExecutionFailed.is(result.error)) throw result.error;
+            return result;
+          },
+        } as never,
+        input,
+      ),
+    );
   } catch (error) {
     return classify(error);
   }
@@ -424,7 +440,7 @@ export function serve<I, T, M extends string>(
   caller: Caller,
   op: StreamOp<I, T, M>,
   input: NoInfer<I>,
-): AsyncGenerator<T, void>;
+): AsyncGenerator<T, void | ElysiaCustomStatusResponse<500, M>>;
 export function serve<I, T, F extends AnyFailure, M extends string>(
   caller: Caller,
   op: Op<I, T, F, M>,
@@ -436,12 +452,31 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
   input: NoInfer<I>,
 ):
   | Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>
-  | AsyncGenerator<StreamValue<T>, void> {
-  if (!streams.has(op as AnyOp)) return serveResult(caller, op, input);
+  | AsyncGenerator<StreamValue<T>, void | ElysiaCustomStatusResponse<500, M>> {
+  const terminal = streams.get(op as AnyOp);
+  if (!terminal) return serveResult(caller, op, input);
   return (async function* () {
     const response = await serveResult(caller, op, input);
-    if (response instanceof ElysiaCustomStatusResponse) return;
-    yield* response as T & AsyncGenerator<StreamValue<T>, void>;
+    if (response instanceof ElysiaCustomStatusResponse)
+      return response as ElysiaCustomStatusResponse<500, M>;
+    let last: IteratorYieldResult<StreamValue<T>> | undefined;
+    try {
+      for await (const value of response as T & AsyncGenerator<StreamValue<T>, void>) {
+        last = { done: false, value };
+        yield value;
+      }
+    } catch (error) {
+      const failed = ExecutionFailed.is(error) ? error.operation : op;
+      const cause = ExecutionFailed.is(error) ? error.cause : error;
+      const logged = UnhandledException.is(cause) ? cause.cause : cause;
+      logOperationError(
+        caller.log,
+        failed.action,
+        logged instanceof Error ? logged : new Error(String(logged)),
+      );
+      if (!last) return status(500, failed.failure) as ElysiaCustomStatusResponse<500, M>;
+      yield terminal(failed.failure, last.value as never).value as StreamValue<T>;
+    }
   })();
 }
 
