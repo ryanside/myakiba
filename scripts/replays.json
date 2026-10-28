@@ -1294,16 +1294,6 @@
       ]
     },
     {
-      "fix": "860b425edd00fd7c5156d0d6b2fb8ee77d7cbd29",
-      "bug": "Resend refused verification and reset emails but auth requests answered success",
-      "test": "packages/auth/src/server.test.ts",
-      "fixed": [
-        "send-verification-email fails when the email provider refuses the send",
-        "request-password-reset fails when the email provider refuses the send"
-      ],
-      "testAt": "860b425edd00fd7c5156d0d6b2fb8ee77d7cbd29"
-    },
-    {
       "fix": "b53a73fda737e4082e273dacc80323d7617bbf5d",
       "testAt": "b1bfe8eb368ed73a7719863ab511206bed8006f1",
       "bug": "unsupported user currency and date format values were accepted at sign-up and update",
@@ -2180,24 +2170,6 @@
     {
       "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
       "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
-      "bug": "imports could write while the browser extension was in review",
-      "test": "apps/server/src/routers/sync/routes.test.ts",
-      "fixed": [
-        "extension release gate > in review refuses item start without writing",
-        "extension release gate > in review refuses collection start without writing",
-        "extension release gate > in review refuses order start without writing",
-        "extension release gate > in review refuses order-item start without writing",
-        "extension release gate > in review refuses csv start without writing",
-        "extension release gate > in review refuses complete without writing",
-        "extension release gate > in review refuses retry without writing",
-        "extension release gate > in review refuses failure without writing",
-        "extension release gate > in review refuses heartbeat without writing",
-        "extension release gate > in review refuses interrupt without writing"
-      ]
-    },
-    {
-      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
-      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "data-transfer imports could write during review and unsolicited uploads stored pictures",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": [
@@ -2215,20 +2187,6 @@
           "fixed": ["an upload without a current import stores no picture or catalog item"]
         }
       ]
-    },
-    {
-      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
-      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
-      "bug": "catalog ingest remained live during extension review",
-      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
-      "fixed": ["in review refuses ingest without writing and leaves missing lookup open"]
-    },
-    {
-      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
-      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
-      "bug": "shared catalog refresh remained live during extension review",
-      "test": "apps/server/src/routers/item/resync.test.ts",
-      "fixed": ["in review refuses refresh without writing and leaves refresh status open"]
     },
     {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
@@ -2334,13 +2292,6 @@
       "bug": "kernel 500 logs lost the underlying Postgres message and diagnostics",
       "test": "apps/server/src/domain/kernel.test.ts",
       "fixed": ["a failing DB write logs the underlying Postgres message and diagnostics"]
-    },
-    {
-      "fix": "7e51f393c8d0f0319a69ff8aa52822447387c420",
-      "testAt": "7e51f393c8d0f0319a69ff8aa52822447387c420",
-      "bug": "a second operation guard silently replaced the release gate",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": ["a second guard panics with the operation name and preserves the first guard"]
     },
     {
       "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",

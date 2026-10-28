@@ -201,3 +201,55 @@ Intentionally retired portions of the old expectation:
 - extension release gate > in review refuses failure without writing
 - extension release gate > in review refuses heartbeat without writing
 - extension release gate > in review refuses interrupt without writing
+
+## Retired entries
+
+### 860b425edd00fd7c5156d0d6b2fb8ee77d7cbd29 — packages/auth/src/server.test.ts
+
+Auth now intentionally answers success and logs provider refusal to avoid account enumeration; refusing the HTTP request is no longer the contract.
+
+Historical names:
+
+- send-verification-email fails when the email provider refuses the send
+- request-password-reset fails when the email provider refuses the send
+
+### a4982e051e30ae25606de2f61be3046cf42f7c8a — apps/server/src/routers/sync/routes.test.ts
+
+Server-side store-review gates were removed intentionally; installed extensions may import and refresh regardless of store listing status.
+
+Historical names:
+
+- extension release gate > in review refuses item start without writing
+- extension release gate > in review refuses collection start without writing
+- extension release gate > in review refuses order start without writing
+- extension release gate > in review refuses order-item start without writing
+- extension release gate > in review refuses csv start without writing
+- extension release gate > in review refuses complete without writing
+- extension release gate > in review refuses retry without writing
+- extension release gate > in review refuses failure without writing
+- extension release gate > in review refuses heartbeat without writing
+- extension release gate > in review refuses interrupt without writing
+
+### a4982e051e30ae25606de2f61be3046cf42f7c8a — apps/server/src/routers/mfc-items/routes.test.ts
+
+Server-side store-review gates were removed intentionally; installed extensions may import and refresh regardless of store listing status.
+
+Historical names:
+
+- in review refuses ingest without writing and leaves missing lookup open
+
+### a4982e051e30ae25606de2f61be3046cf42f7c8a — apps/server/src/routers/item/resync.test.ts
+
+Server-side store-review gates were removed intentionally; installed extensions may import and refresh regardless of store listing status.
+
+Historical names:
+
+- in review refuses refresh without writing and leaves refresh status open
+
+### 7e51f393c8d0f0319a69ff8aa52822447387c420 — apps/server/src/domain/kernel.test.ts
+
+The operation guard API was removed; compositions declare their steps and before phases instead. The replaced API cannot regress at HEAD.
+
+Historical names:
+
+- a second guard panics with the operation name and preserves the first guard
