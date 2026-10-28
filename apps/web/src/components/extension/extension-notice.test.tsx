@@ -189,3 +189,17 @@ test("the FAQ links both stores once both list the extension", async () => {
   );
   expect(answer.textContent).not.toContain("in review");
 });
+
+test("the update link opens an FAQ answer that says how to update, even while every store reviews", async () => {
+  listIn();
+  const { UPDATE_LINK } = await import("@/components/extension/extension-notice");
+  window.location.hash = new URL(UPDATE_LINK.href, "https://myakiba.test").hash;
+
+  render(<FAQsSection />);
+
+  const answer = await screen.findByText(/updates the extension/u);
+  expect(answer.textContent).toContain("Check for Updates");
+  expect(answer.textContent).toContain("reload myakiba");
+  expect(answer.textContent).not.toContain("in review");
+  window.location.hash = "";
+});

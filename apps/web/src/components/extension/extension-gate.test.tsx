@@ -98,7 +98,7 @@ describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as 
         screen
           .getByRole("link", { name: "How to update it (opens in a new tab)" })
           .getAttribute("href"),
-      ).toBe("/#faq-extension");
+      ).toBe("/#faq-extension-update");
       expect(proceeded()).toBe(false);
     });
   },

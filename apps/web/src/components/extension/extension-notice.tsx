@@ -21,7 +21,12 @@ export type ExtensionNoticeCopy = {
 
 export const EXTENSION_FAQ_ID = "faq-extension";
 
-export const UPDATE_LINK = { label: "How to update it", href: `/#${EXTENSION_FAQ_ID}` } as const;
+export const EXTENSION_UPDATE_FAQ_ID = "faq-extension-update";
+
+export const UPDATE_LINK = {
+  label: "How to update it",
+  href: `/#${EXTENSION_UPDATE_FAQ_ID}`,
+} as const;
 
 export const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
 
