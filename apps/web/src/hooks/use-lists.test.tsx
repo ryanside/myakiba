@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { useEffect } from "react";
 import type { Saving } from "@/data/client";
-import { settledAs } from "../../test/request-answers";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -500,7 +499,7 @@ function useListActions() {
 type ListActions = ReturnType<typeof useListActions>;
 
 type WriteResult = {
-  readonly outcome: "resolved" | "rejected";
+  readonly outcome: "ok" | "error";
   readonly writes: readonly string[];
   readonly toasts: readonly string[];
   readonly refetchedBeforeResolve: readonly string[];
@@ -529,11 +528,12 @@ async function writeToLists(write: (actions: ListActions) => Saving): Promise<Wr
   await settled();
   server.fetches.length = 0;
   toastAdd.mockClear();
-  let outcome: WriteResult["outcome"] = "resolved";
+  let outcome: WriteResult["outcome"] = "ok";
   await act(async () => {
     const actions = currentActions;
     if (!actions) throw new Error("the list screens did not render");
-    outcome = await settledAs(write(actions));
+    const saved = await write(actions);
+    outcome = saved.status;
   });
   const refetchedBeforeResolve = [...server.fetches].toSorted();
   await settled();
@@ -558,14 +558,14 @@ const LIST_WRITES: readonly {
     name: "create a List",
     run: ({ lists }) => lists.createList({ title: "Shelf", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["create Shelf"],
       toasts: ["success: List created: Open List"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["create Shelf"],
       toasts: ["error: Failed to create list"],
       refetchedBeforeResolve: [],
@@ -576,14 +576,14 @@ const LIST_WRITES: readonly {
     name: "create a List from the add dialog",
     run: ({ quietLists }) => quietLists.createList({ title: "Shelf", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["create Shelf"],
       toasts: ["success: List created: Open List"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["create Shelf"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -594,14 +594,14 @@ const LIST_WRITES: readonly {
     name: "update a List",
     run: ({ lists }) => lists.updateList({ listId: "l1", title: "Grails 2", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["update l1"],
       toasts: ["success: List updated"],
       refetchedBeforeResolve: ["l1 detail", "options", "overview"],
       refetched: ["l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["update l1"],
       toasts: ["error: Failed to update list"],
       refetchedBeforeResolve: [],
@@ -612,14 +612,14 @@ const LIST_WRITES: readonly {
     name: "delete a List",
     run: ({ lists }) => lists.deleteList("l1"),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["delete l1"],
       toasts: ["success: List deleted"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["delete l1"],
       toasts: ["error: Failed to delete List"],
       refetchedBeforeResolve: [],
@@ -630,14 +630,14 @@ const LIST_WRITES: readonly {
     name: "delete two Lists",
     run: ({ lists }) => lists.deleteLists(new Set(["l1", "l2"])),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["delete l1,l2"],
       toasts: ["success: 2 Lists deleted"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["delete l1,l2"],
       toasts: ["error: Failed to delete Lists"],
       refetchedBeforeResolve: [],
@@ -648,14 +648,14 @@ const LIST_WRITES: readonly {
     name: "add an Item to two Lists",
     run: ({ add }) => add.run({ targets: [...TARGETS], listIds: ["l1", "l2"] }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["add to l1,l2"],
       toasts: ["success: 1 Item added to 2 Lists: Open Lists"],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["add to l1,l2"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -666,14 +666,14 @@ const LIST_WRITES: readonly {
     name: "remove an Item from a List",
     run: ({ removeTarget }) => removeTarget.run("l1"),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["remove target from l1"],
       toasts: [],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["remove target from l1"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -684,14 +684,14 @@ const LIST_WRITES: readonly {
     name: "remove members from a List",
     run: ({ removeMembers }) => removeMembers.run(["m1", "m2"]),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["remove m1,m2 from l1"],
       toasts: ["success: 2 removed from List"],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["remove m1,m2 from l1"],
       toasts: ["error: Failed to remove from List"],
       refetchedBeforeResolve: [],

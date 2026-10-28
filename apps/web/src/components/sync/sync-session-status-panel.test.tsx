@@ -1,4 +1,4 @@
-import { afterEach, expect, mock, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -7,41 +7,12 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { SyncSessionStatusPanel } from "./sync-session-status-panel";
 
 const warnings = [
   { mfcItemId: 101, input: "12,50" },
   { mfcItemId: 202, input: "abc" },
 ];
-
-// Revisions before the session detail carried warnings read them from the job-status stream.
-const endedJob = {
-  jobId: "job-1",
-  phase: "completed",
-  statusMessage: "Import complete",
-  progress: null,
-  recentItems: [],
-  error: null,
-  startedAt: "2026-10-26T00:00:00.000Z",
-  updatedAt: "2026-10-26T00:01:00.000Z",
-  terminalState: "success",
-  warnings,
-};
-
-async function* stream(...chunks: unknown[]) {
-  for (const data of chunks) yield { data };
-}
-
-const realClient = await import("@/lib/treaty-client");
-await mock.module("@/lib/treaty-client", () => ({
-  ...realClient,
-  app: {
-    api: {
-      sync: { "job-status": { get: async () => ({ data: stream(endedJob), error: null }) } },
-    },
-  },
-}));
-
-const { SyncSessionStatusPanel } = await import("./sync-session-status-panel");
 
 afterEach(cleanup);
 

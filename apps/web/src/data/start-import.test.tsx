@@ -1,12 +1,15 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Result } from "better-result";
 import type { ReactNode } from "react";
 import type { WriteFailed } from "@/lib/errors/write-failed";
 import type { ExtensionMissing } from "@/lib/extension-gate";
+import { SUPPORTED_BROWSERS, listIn, browseWith } from "../../test/extension-browser";
 
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "in_review" }));
+const [CHROME] = SUPPORTED_BROWSERS;
+browseWith(CHROME.userAgent);
+listIn(CHROME.store);
 const { ExtensionRequiredDialog } =
   await import("@/components/extension/extension-required-dialog");
 const { dismissMissingExtension } = await import("@/lib/extension-gate");
@@ -24,7 +27,6 @@ afterEach(() => {
   requests.length = 0;
 });
 
-const UNDER_REVIEW = "The myakiba browser extension is under review";
 const noFeedback = { onSaved: () => {}, onFailed: () => {} };
 const archive = { orders: [], collectionItems: [] } as never;
 
@@ -70,7 +72,7 @@ const writes = {
 } satisfies Record<string, StartsImport>;
 
 describe.each(Object.entries(writes))("%s", (_name, useStart) => {
-  test("while the extension is under review sends nothing and shows the review notice", async () => {
+  test("without the extension sends nothing and shows how to install it", async () => {
     globalThis.fetch = Object.assign(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         requests.push(`${init?.method ?? "GET"} ${String(input)}`);
@@ -90,8 +92,10 @@ describe.each(Object.entries(writes))("%s", (_name, useStart) => {
       started = await result.current();
     });
 
-    expect(started).toMatchObject({ status: "error", error: { kind: "in_review" } });
-    expect(await screen.findByRole("dialog", { name: UNDER_REVIEW })).toBeDefined();
+    expect(started).toMatchObject({ status: "error", error: { kind: "absent" } });
+    expect(
+      await screen.findByRole("dialog", { name: "Install the myakiba extension first" }),
+    ).toBeDefined();
     expect(requests).toEqual([]);
   });
 });

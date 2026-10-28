@@ -3,15 +3,21 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Result } from "better-result";
 import { defineCommand, useResourceMutation } from "@/data/client";
-import { failureWording } from "../../../test/command-wording";
-import { refusal } from "../../../test/request-answers";
+import { ApiServerError } from "@/lib/errors/api-server-error";
 import { Toaster, toast } from "@/components/ui/toast";
 import { PopoverMultiInputCell } from "./popover-multi-input-cell";
 
 const command = defineCommand({
   invalidates: ["orders"],
-  persist: (_values: Record<string, number>) => refusal("Couldn't save the fees"),
-  ...failureWording<Record<string, number>>("Couldn't save the fees"),
+  persist: async (_values: Record<string, number>) =>
+    Result.err(
+      new ApiServerError({
+        status: 500,
+        body: "Couldn't save the fees",
+        message: "Couldn't save the fees",
+      }),
+    ),
+  failureToast: () => ({ title: "Couldn't save the fees" }),
 });
 
 function FeesCell() {

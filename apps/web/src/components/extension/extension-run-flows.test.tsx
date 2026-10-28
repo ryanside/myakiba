@@ -6,15 +6,12 @@ import type { ReactElement } from "react";
 import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { RunOutcome } from "@/data/extension-run";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
-import { answer } from "../../../test/request-answers";
+import { Result } from "better-result";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
 const extension = fakeExtension({ installed: true });
-// These runs start as they do once the extension is released. A revision from before the release
-// state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 const bridge = createExtensionBridge(extension.window);
 await mock.module("@/lib/extension-bridge", () => ({
@@ -59,10 +56,10 @@ await mock.module("@/queries/sync", () => ({
   ...realSync,
   sendItemSync: async () => {
     syncsSent += 1;
-    return answer(syncAnswer);
+    return Result.ok(syncAnswer);
   },
-  sendOrder: async () => answer(syncAnswer),
-  retrySyncSession: async () => answer({ jobId: "job-2", missingMfcItemIds: [11, 12] }),
+  sendOrder: async () => Result.ok(syncAnswer),
+  retrySyncSession: async () => Result.ok({ jobId: "job-2", missingMfcItemIds: [11, 12] }),
 }));
 const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
 const realRouter = await import("@tanstack/react-router");
@@ -88,11 +85,11 @@ let currentImport: DataTransferImport | null = null;
 const realDataTransfer = await import("@/queries/data-transfer");
 await mock.module("@/queries/data-transfer", () => ({
   ...realDataTransfer,
-  getCurrentDataTransferImport: async () => answer(currentImport),
+  getCurrentDataTransferImport: async () => Result.ok(currentImport),
   startDataTransferImport: async () =>
-    answer({ ...partialImport, id: "imp-2", status: "running", missingMfcItemIds: [21, 22] }),
+    Result.ok({ ...partialImport, id: "imp-2", status: "running", missingMfcItemIds: [21, 22] }),
   retryCurrentDataTransferImport: async () =>
-    answer({ ...partialImport, status: "running", missingMfcItemIds: [31] }),
+    Result.ok({ ...partialImport, status: "running", missingMfcItemIds: [31] }),
 }));
 const realStatus = await import("@/hooks/use-data-transfer-import-status-query");
 await mock.module("@/hooks/use-data-transfer-import-status-query", () => ({
@@ -102,7 +99,7 @@ await mock.module("@/hooks/use-data-transfer-import-status-query", () => ({
 const realFile = await import("@/lib/data-transfer");
 await mock.module("@/lib/data-transfer", () => ({
   ...realFile,
-  readDataTransferFile: async () => answer({ orders: [{}], collectionItems: [{}, {}] }),
+  readDataTransferFile: async () => Result.ok({ orders: [{}], collectionItems: [{}, {}] }),
 }));
 
 const { toast } = await import("@/components/ui/toast");

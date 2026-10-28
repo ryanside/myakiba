@@ -7,8 +7,8 @@ import { Dropzone } from "@/components/kibo-ui/dropzone";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingsRow } from "@/components/settings/settings-row";
-import { extensionReleased, requireExtension, useExtensionGate } from "@/lib/extension-gate";
-import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
+import { requireExtension, useExtensionGate } from "@/lib/extension-gate";
+import { MissingExtensionNotice } from "@/components/extension/extension-notice";
 import { CurrentImportCard } from "./current-import-card";
 import type { ActionState, CurrentImportViewState } from "./current-import-card";
 
@@ -149,7 +149,7 @@ export function ImportSection({
         ) : null}
       </SettingsRow>
 
-      {extensionReleased() ? null : <ExtensionReviewNotice className="mx-4 mb-4" />}
+      <MissingExtensionNotice className="mx-4 mb-4" />
 
       {showPreparedDetails ? (
         <div className="flex flex-col gap-4 px-4 pb-4">

@@ -169,7 +169,8 @@
         "merge dialog submit > stays open with the selection kept and no unhandled rejection after the write fails",
         "move to an existing order submit > stays open with the selection kept and no unhandled rejection after the write fails",
         "move to a new order submit > stays open with the selection kept and no unhandled rejection after the write fails"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "488ec693253a30f9df5625175d6eced2e9a7ea20",
@@ -184,7 +185,8 @@
         "an order action's promise settles after the server write (unfiltered list) > handleDeleteItems: a rejected write rejects the caller's await",
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: the caller's await waits for the write",
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: a rejected write rejects the caller's await"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
@@ -192,7 +194,8 @@
       "test": "apps/web/src/data/resources/orders.test.tsx",
       "fixed": [
         "a failed Order write after the filter changes > leaves the new list as the server sent it"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
@@ -200,7 +203,8 @@
       "test": "apps/web/src/data/resources/collection.test.tsx",
       "fixed": [
         "a failed Collection Item write after the filter changes > leaves the new list as the server sent it"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "ad737d6d23e685ae0df64e0c61fe646872a1b9ce",
@@ -237,7 +241,8 @@
         "collection filters dialog starts each open from the URL filters > after browser Back to an earlier filter, the reopened dialog shows that filter",
         "collection filters dialog starts each open from the URL filters > closing without Apply discards the draft",
         "collection filters dialog starts each open from the URL filters > reopening while the dialog is still closing discards the draft"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "cd02b2ac8a371d6f43c8d38d10b7871f31b1940e",
@@ -251,7 +256,8 @@
         "a dashboard kanban card keeps the user's change while its write is in flight > a card the server moved again during its status write shows in the server's column once the write settles",
         "a dashboard kanban card keeps the user's change while its write is in flight > an edited date stays on the card when a refetch lands mid-write",
         "a dashboard kanban card keeps the user's change while its write is in flight > a card the server moved during its date write shows in the server's column once the write settles"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "bcefafcf17ea8cbec3e55d19e10a558be945260b",
@@ -260,7 +266,8 @@
       "fixed": [
         "reconciling the board with a fetch > keeps the board's columns when picking up or releasing a card changes nothing",
         "reconciling the board with a fetch > returns new columns for a real change and keeps the columns it did not touch"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "0e06a016c9b7cbc4a39f78b2b8e145e2f3104c4b",
@@ -307,7 +314,8 @@
       "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
       "bug": "the item search pager kept Next enabled on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
-      "fixed": ["DataTablePagination > a page past the end cannot go further"]
+      "fixed": ["DataTablePagination > a page past the end cannot go further"],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
@@ -325,7 +333,8 @@
       "fixed": [
         "a failed dashboard kanban write rolls back only its own change > a failed status write returns its card and keeps another card's move that is still in flight",
         "a failed dashboard kanban write rolls back only its own change > a failed date write restores its date and keeps another card's move that is still in flight"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "2ca2fcb21cc059d6bfe83447efc5f9802f16daf4",
@@ -335,7 +344,8 @@
         "a failed cell edit > pressing Enter in a text cell leaves no unhandled rejection",
         "a failed cell edit > leaving a text cell leaves no unhandled rejection",
         "a failed cell edit > pressing Enter in a count cell leaves no unhandled rejection"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
@@ -349,7 +359,8 @@
         "an order that fails to load > reads as a connection problem when the server answers 422 with a validation body",
         "an order that fails to load > reads as a connection problem when the server answers 401 without a message",
         "a dashboard that cannot reach the server fails with a readable message"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
@@ -432,13 +443,15 @@
         "DataTablePagination past the end > a one-page result offers its only page",
         "DataTablePagination past the end > an empty result offers page 1",
         "DataTablePagination past the end > previous goes to the last page with rows"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "9597fbf59b6981d09ab01f5cf11db5c0dd0390ef",
       "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
-      "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
+      "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "abc05395f63485d3cf3852ae5b233397f1847d5c",
@@ -601,7 +614,8 @@
         "the order page's add items form > sends nothing when the extension went away while it was open, and keeps its values",
         "the CSV form > sends nothing when the extension went away while it was open, and keeps its values",
         "the import confirmation sends nothing when the extension went away while it was open"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -611,7 +625,8 @@
         "with no extension it shows how to install it",
         "an extension that is too old asks for an update",
         "a new install shows after the reload, and onboarding reopens at the extension step"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -642,7 +657,8 @@
         "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
         "closing the dialog keeps its copy while it closes and returns focus to the button",
         "a gated button shows it is checking and ignores a second click until the check ends"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "d061fb8a3572ac0453cd9475d35136123b04d921",
@@ -683,7 +699,8 @@
         "a session retry says the hourly import limit stopped its run",
         "an Import/Export import says the hourly import limit stopped its run",
         "an Import/Export retry says the hourly import limit stopped its run"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "d5ed21c8e5fa3216fd4e2d7729290c0054c6e542",
@@ -701,7 +718,8 @@
       "fixed": [
         "the sync launcher shows it is checking on the chosen option",
         "the command palette shows it is checking on the chosen option"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "444213950d6442f4f070fb06c1a2859d4be234ea",
@@ -1123,13 +1141,15 @@
         "delete import hides server, validator and network details",
         "refresh status hides server, validator and network details",
         "refresh item hides server, validator and network details"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "ff8199cb790afb4d03ee53f9374ed4a0aabc0e30",
       "bug": "W-F6: fees edits show a second failure toast",
       "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
-      "fixed": ["a failed fees edit shows one command toast and restores the saved total"]
+      "fixed": ["a failed fees edit shows one command toast and restores the saved total"],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "ed157e9268b821ad586201e701fd03ae76012ff3",
@@ -1401,7 +1421,8 @@
       "fixed": [
         "a defect in a write whose command words its failures shows the safe text under its title, never its message",
         "a defect in a write whose command words none shows the safe text under its title, never its message"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "010683336822df38cd0b7ba018ff916bc7bab9af",
@@ -1418,7 +1439,8 @@
       "test": "apps/web/src/data/command-failure-toasts.test.tsx",
       "fixed": [
         "a defect in a Kanban status write shows retry advice and the safe text, never its message"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "2261bfc9286d75e9178460e0b5db590d94f844ed",
@@ -1904,43 +1926,8 @@
       "fix": "e6bddc6c89e79f643f959235b6b70a711ebf50f1",
       "bug": "an import's detail panel never listed the CSV rows saved without a price they could not read",
       "test": "apps/web/src/components/sync/sync-session-status-panel.test.tsx",
-      "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"]
-    },
-    {
-      "fix": "2be4b1528a190705c721f685e72f18d55406ae96",
-      "bug": "imports could start and install prompts showed while the extension was not installable during store review",
-      "test": "apps/web/src/components/extension/extension-review.test.tsx",
-      "fixed": [
-        "the sync launcher's Collection option > shows the review notice and starts nothing, even with the extension ready",
-        "the sync launcher's Order option > shows the review notice and starts nothing, even with the extension ready",
-        "the sync launcher's MyFigureCollection CSV option > shows the review notice and starts nothing, even with the extension ready",
-        "the sync launcher's Item Database option > shows the review notice and starts nothing, even with the extension ready",
-        "the command palette's Collection action > shows the review notice and starts nothing, even with the extension ready",
-        "the command palette's Order action > shows the review notice and starts nothing, even with the extension ready",
-        "the command palette's MyFigureCollection CSV action > shows the review notice and starts nothing, even with the extension ready",
-        "the command palette's Item Database action > shows the review notice and starts nothing, even with the extension ready",
-        "the item sheet button > shows the review notice and starts nothing, even with the extension ready",
-        "the collection sheet button > shows the review notice and starts nothing, even with the extension ready",
-        "onboarding's Add to collection choice > shows the review notice and starts nothing, even with the extension ready",
-        "onboarding's Create order choice > shows the review notice and starts nothing, even with the extension ready",
-        "onboarding's Import MyFigureCollection CSV choice > shows the review notice and starts nothing, even with the extension ready",
-        "the order page's add items > shows the review notice and starts nothing, even with the extension ready",
-        "the item page's Add to collection > shows the review notice and starts nothing, even with the extension ready",
-        "the item page's Create order > shows the review notice and starts nothing, even with the extension ready",
-        "the item page's Add to item database > shows the review notice and starts nothing, even with the extension ready",
-        "the item page's resync button > shows the review notice and starts nothing, even with the extension ready",
-        "the import's retry > shows the review notice and starts nothing, even with the extension ready",
-        "the settings import > shows the review notice and starts nothing, even with the extension ready",
-        "the settings import's retry > shows the review notice and starts nothing, even with the extension ready",
-        "the Add to item database form > a submit sends nothing and shows the review notice, even with the extension ready",
-        "the Add to collection form > a submit sends nothing and shows the review notice, even with the extension ready",
-        "the Create order form > a submit sends nothing and shows the review notice, even with the extension ready",
-        "the CSV form > a submit sends nothing and shows the review notice, even with the extension ready",
-        "onboarding's extension step shows the review notice instead of install steps",
-        "onboarding's sync step says importing is unavailable",
-        "the settings import says importing is unavailable",
-        "the FAQ answers how to get the extension with the review notice"
-      ]
+      "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "9600a085a9b473b076cf80f7595e222765568e58",
@@ -1964,7 +1951,8 @@
       "test": "apps/web/src/data/command-failure-toasts.test.tsx",
       "fixed": [
         "a defect while a write's answer is read shows the safe text under its title, never its message"
-      ]
+      ],
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
     },
     {
       "fix": "9600a085a9b473b076cf80f7595e222765568e58",
@@ -2247,6 +2235,126 @@
       "fixed": [
         "an existing Item import rolls back its session when completion fails",
         "an existing Item import creates and completes its session in one transaction"
+      ]
+    },
+    {
+      "fix": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
+      "bug": "every import refused while the stores reviewed the extension, even with the extension installed and ready",
+      "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+      "fixed": [
+        "the sync launcher's Collection option > goes ahead when the extension is ready, even while no store lists it",
+        "the sync launcher's Collection option > links to the store listing instead when the extension is not installed",
+        "the sync launcher's Collection option > asks for an update when the extension is too old",
+        "the sync launcher's Order option > goes ahead when the extension is ready, even while no store lists it",
+        "the sync launcher's Order option > links to the store listing instead when the extension is not installed",
+        "the sync launcher's Order option > asks for an update when the extension is too old",
+        "the sync launcher's MyFigureCollection CSV option > goes ahead when the extension is ready, even while no store lists it",
+        "the sync launcher's MyFigureCollection CSV option > links to the store listing instead when the extension is not installed",
+        "the sync launcher's MyFigureCollection CSV option > asks for an update when the extension is too old",
+        "the sync launcher's Item Database option > goes ahead when the extension is ready, even while no store lists it",
+        "the sync launcher's Item Database option > links to the store listing instead when the extension is not installed",
+        "the sync launcher's Item Database option > asks for an update when the extension is too old",
+        "the command palette's Collection action > goes ahead when the extension is ready, even while no store lists it",
+        "the command palette's Collection action > links to the store listing instead when the extension is not installed",
+        "the command palette's Collection action > asks for an update when the extension is too old",
+        "the command palette's Order action > goes ahead when the extension is ready, even while no store lists it",
+        "the command palette's Order action > links to the store listing instead when the extension is not installed",
+        "the command palette's Order action > asks for an update when the extension is too old",
+        "the command palette's MyFigureCollection CSV action > goes ahead when the extension is ready, even while no store lists it",
+        "the command palette's MyFigureCollection CSV action > links to the store listing instead when the extension is not installed",
+        "the command palette's MyFigureCollection CSV action > asks for an update when the extension is too old",
+        "the command palette's Item Database action > goes ahead when the extension is ready, even while no store lists it",
+        "the command palette's Item Database action > links to the store listing instead when the extension is not installed",
+        "the command palette's Item Database action > asks for an update when the extension is too old",
+        "the item sheet button > goes ahead when the extension is ready, even while no store lists it",
+        "the item sheet button > links to the store listing instead when the extension is not installed",
+        "the item sheet button > asks for an update when the extension is too old",
+        "the collection sheet button > goes ahead when the extension is ready, even while no store lists it",
+        "the collection sheet button > links to the store listing instead when the extension is not installed",
+        "the collection sheet button > asks for an update when the extension is too old",
+        "onboarding's Add to collection choice > goes ahead when the extension is ready, even while no store lists it",
+        "onboarding's Add to collection choice > links to the store listing instead when the extension is not installed",
+        "onboarding's Add to collection choice > asks for an update when the extension is too old",
+        "onboarding's Create order choice > goes ahead when the extension is ready, even while no store lists it",
+        "onboarding's Create order choice > links to the store listing instead when the extension is not installed",
+        "onboarding's Create order choice > asks for an update when the extension is too old",
+        "onboarding's Import MyFigureCollection CSV choice > goes ahead when the extension is ready, even while no store lists it",
+        "onboarding's Import MyFigureCollection CSV choice > links to the store listing instead when the extension is not installed",
+        "onboarding's Import MyFigureCollection CSV choice > asks for an update when the extension is too old",
+        "the order page's add items > goes ahead when the extension is ready, even while no store lists it",
+        "the order page's add items > links to the store listing instead when the extension is not installed",
+        "the order page's add items > asks for an update when the extension is too old",
+        "the item page's Add to collection > goes ahead when the extension is ready, even while no store lists it",
+        "the item page's Add to collection > links to the store listing instead when the extension is not installed",
+        "the item page's Add to collection > asks for an update when the extension is too old",
+        "the item page's Create order > goes ahead when the extension is ready, even while no store lists it",
+        "the item page's Create order > links to the store listing instead when the extension is not installed",
+        "the item page's Create order > asks for an update when the extension is too old",
+        "the item page's Add to item database > goes ahead when the extension is ready, even while no store lists it",
+        "the item page's Add to item database > links to the store listing instead when the extension is not installed",
+        "the item page's Add to item database > asks for an update when the extension is too old",
+        "the item page's resync button > goes ahead when the extension is ready, even while no store lists it",
+        "the item page's resync button > links to the store listing instead when the extension is not installed",
+        "the item page's resync button > asks for an update when the extension is too old",
+        "the import's retry > goes ahead when the extension is ready, even while no store lists it",
+        "the import's retry > links to the store listing instead when the extension is not installed",
+        "the import's retry > asks for an update when the extension is too old",
+        "the settings import > goes ahead when the extension is ready, even while no store lists it",
+        "the settings import > links to the store listing instead when the extension is not installed",
+        "the settings import > asks for an update when the extension is too old",
+        "the settings import's retry > goes ahead when the extension is ready, even while no store lists it",
+        "the settings import's retry > links to the store listing instead when the extension is not installed",
+        "the settings import's retry > asks for an update when the extension is too old",
+        "in Chrome > an import starts when the extension is ready, whichever stores list it",
+        "in Chrome > a missing extension links to this browser's store listing",
+        "in Chrome > a missing extension is under review while this browser's store has no listing",
+        "in Chrome > an outdated extension asks for an update",
+        "in Firefox > an import starts when the extension is ready, whichever stores list it",
+        "in Firefox > a missing extension links to this browser's store listing",
+        "in Firefox > a missing extension is under review while this browser's store has no listing",
+        "in Firefox > an outdated extension asks for an update",
+        "another browser is told the extension needs desktop Chrome or Firefox",
+        "an extension that answers ready in another browser still starts the import",
+        "the sync launcher shows it is checking on the chosen option",
+        "the command palette shows it is checking on the chosen option",
+        "the dialog closes, and the next try probes again",
+        "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
+        "onboarding completes once the extension answers ready",
+        "closing the dialog keeps its copy while it closes and returns focus to the button",
+        "a gated button shows it is checking and ignores a second click until the check ends",
+        "a gate whose check throws stops checking and can check again"
+      ]
+    },
+    {
+      "fix": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
+      "bug": "onboarding, Settings and the FAQ showed the review notice even with the extension installed, and never linked a store listing",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": [
+        "onboarding's extension step > in Chrome > links to this browser's store listing while the extension is missing",
+        "onboarding's extension step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's extension step > in Chrome > shows no notice once the extension is installed, even with no listing",
+        "onboarding's extension step > in Firefox > links to this browser's store listing while the extension is missing",
+        "onboarding's extension step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's extension step > in Firefox > shows no notice once the extension is installed, even with no listing",
+        "onboarding's extension step > says the extension needs desktop Chrome or Firefox in another browser",
+        "onboarding's sync step > in Chrome > links to this browser's store listing while the extension is missing",
+        "onboarding's sync step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's sync step > in Chrome > shows no notice once the extension is installed, even with no listing",
+        "onboarding's sync step > in Firefox > links to this browser's store listing while the extension is missing",
+        "onboarding's sync step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's sync step > in Firefox > shows no notice once the extension is installed, even with no listing",
+        "onboarding's sync step > says the extension needs desktop Chrome or Firefox in another browser",
+        "the settings import > in Chrome > links to this browser's store listing while the extension is missing",
+        "the settings import > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+        "the settings import > in Chrome > shows no notice once the extension is installed, even with no listing",
+        "the settings import > in Firefox > links to this browser's store listing while the extension is missing",
+        "the settings import > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+        "the settings import > in Firefox > shows no notice once the extension is installed, even with no listing",
+        "the settings import > says the extension needs desktop Chrome or Firefox in another browser",
+        "onboarding's extension step reads as connected once the extension is installed",
+        "the FAQ says the extension is under review while no store lists it",
+        "the FAQ links each listed store and says which are still reviewing",
+        "the FAQ links both stores once both list the extension"
       ]
     }
   ],

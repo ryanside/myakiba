@@ -83,7 +83,7 @@ The extension does not use the `tabs` permission. A host permission is enough to
 
 The manifest declares `browser_specific_settings.gecko.data_collection_permissions` as `{ "required": ["websiteContent"] }`. Firefox shows it at install, and AMO shows it on the listing. Website content covers page text, images and request data, which is what the extension sends to myakiba. Nothing is optional, so there is no `optional` list.
 
-`strict_min_version` is `140.0`, the first Firefox that shows this built-in consent. Older Firefox would need a consent screen of the extension's own. The code also needs Firefox 133 for `Uint8Array.fromBase64` and `toBase64`, so 140 drops no supported browser.
+`strict_min_version` is `140.0`, the first Firefox that shows this built-in consent. It and Chrome's `minimum_chrome_version` come from `EXTENSION_MIN_BROWSER_VERSION` in `packages/contracts/src/shared/extension-browsers.ts`, which the web app also reads to tell an older browser that the extension cannot run there. Older Firefox would need a consent screen of the extension's own. The code also needs Firefox 133 for `Uint8Array.fromBase64` and `toBase64`, so 140 drops no supported browser.
 
 The add-on ID is `extension@myakiba.app`. AMO ties every future version to it, so it never changes.
 
@@ -95,7 +95,7 @@ The policy is the web page at https://myakiba.app/privacy. Its text is in `apps/
 
 ## Reviewer notes
 
-Paste this into Chrome's **Test instructions** tab and AMO's **Notes to Reviewer**, and fill in the account lines.
+Paste this into Chrome's **Test instructions** tab and AMO's **Notes to Reviewer**, and fill in the myakiba account lines.
 
 ```text
 What it does
@@ -105,12 +105,10 @@ Test account
 myakiba: sign in at https://myakiba.app/login
   Email: <test account email>
   Password: <test account password>
-MFC: most item pages work without MFC sign-in. To test items that MFC shows only to signed-in members, sign in to MFC at https://myfigurecollection.net with:
-  Username: <MFC test account, or "not provided">
-  Password: <MFC test password>
+No MyFigureCollection account is needed. Public MFC items cover the whole flow.
 
 How to test
-1. Install the extension and sign in to myakiba.
+1. Install the extension and sign in to myakiba. Until a store lists the extension, myakiba tells visitors without it that it is under review. With the extension installed, imports start as they will after release.
 2. Click Add at the top right, then choose Item Database.
 3. Paste one or two MFC item links, such as https://myfigurecollection.net/item/<id>, and submit. Use items that are not in myakiba yet: myakiba does not ask the extension for an item it already has.
 4. An MFC tab opens in the background, loads each item page, and closes when the import ends. The import's progress and the new items appear in myakiba.
@@ -168,7 +166,7 @@ The small promo tile (440x280) and the marquee tile (1400x560) are optional. Chr
    5. Fill in the name, summary, description, categories, support site, license and privacy policy.
    6. Paste the reviewer notes and the source code paragraph into **Notes to Reviewer**.
    7. Upload the screenshots on the listing page after the version is submitted.
-6. After both stores approve the extension, update the "How do I install the myakiba browser extension?" answer in `apps/web/src/components/homepage/faqs.tsx` to link to the two listings.
+6. When a store approves the extension, set that store's listing URL in `apps/web/src/lib/extension-listings.ts`: `chromeWebStore` for the Chrome Web Store, `firefoxAddons` for AMO. Release each store on its own day; the other stays under review until its URL is set. That one line is the whole release: visitors whose browser uses the store get an install link instead of the under-review notice, and the "How do I install the myakiba browser extension?" FAQ links the listing.
 
 ## Sources
 

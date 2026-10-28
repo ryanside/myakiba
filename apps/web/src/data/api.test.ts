@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 import { Panic } from "better-result";
-import { failureOf } from "../../test/request-answers";
 
 let sessionRechecks = 0;
 const realAuthClient = await import("@/lib/auth-client");
@@ -145,26 +144,35 @@ const cases = {
 describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version }) => {
   test("a safe read shows the server's 4xx text or its fallback", async () => {
     answerWith(answer);
-    expect(await failureOf(getOrder("od-alpha"))).toMatchObject({ _tag: tag, message: safe });
+    expect(await getOrder("od-alpha")).toMatchObject({
+      status: "error",
+      error: { _tag: tag, message: safe },
+    });
   });
 
   test("a write shows safe server text or its own fallback", async () => {
     answerWith(answer);
-    expect(await failureOf(retrySyncSession("session-1"))).toMatchObject({
-      _tag: tag,
-      message: safe === ORDER_FALLBACK ? RETRY_FALLBACK : safe,
+    expect(await retrySyncSession("session-1")).toMatchObject({
+      status: "error",
+      error: {
+        _tag: tag,
+        message: safe === ORDER_FALLBACK ? RETRY_FALLBACK : safe,
+      },
     });
   });
 
   test("the version read shows a body's message", async () => {
     answerWith(answer);
-    expect(await failureOf(getVersion())).toMatchObject({ _tag: tag, message: version });
+    expect(await getVersion()).toMatchObject({
+      status: "error",
+      error: { _tag: tag, message: version },
+    });
   });
 
   test("the job status stream shows one fixed text", async () => {
     answerWith(answer);
     const watch = sync.jobStatus.options({ jobId: "job-1", onEnd: () => {} });
-    expect(await failureOf(new QueryClient().fetchQuery(watch))).toMatchObject({
+    await expect(new QueryClient().fetchQuery(watch)).rejects.toMatchObject({
       message: STREAM_FALLBACK,
     });
   });
@@ -173,23 +181,32 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
 describe("a read that names its own 422 text", () => {
   test("shows it for a validation body", async () => {
     answerWith(body(422, validation, "application/json"));
-    expect(await failureOf(getReleaseCalendar(13, 2026))).toMatchObject({
-      _tag: "ApiInvalid",
-      message: "Invalid month or year",
+    expect(await getReleaseCalendar(13, 2026)).toMatchObject({
+      status: "error",
+      error: {
+        _tag: "ApiInvalid",
+        message: "Invalid month or year",
+      },
     });
   });
 
   test("shows the server's text for a 422 with visible text", async () => {
     answerWith(body(422, "Month out of range", "text/plain"));
-    expect(await failureOf(getReleaseCalendar(13, 2026))).toMatchObject({
-      message: "Month out of range",
+    expect(await getReleaseCalendar(13, 2026)).toMatchObject({
+      status: "error",
+      error: {
+        message: "Month out of range",
+      },
     });
   });
 
   test("keeps its general fallback for other failures", async () => {
     answerWith(unreachable);
-    expect(await failureOf(getReleaseCalendar(1, 2026))).toMatchObject({
-      message: "Failed to get release calendar",
+    expect(await getReleaseCalendar(1, 2026)).toMatchObject({
+      status: "error",
+      error: {
+        message: "Failed to get release calendar",
+      },
     });
   });
 });
@@ -197,9 +214,12 @@ describe("a read that names its own 422 text", () => {
 describe("a read that requires data", () => {
   test("fails with its empty text when a 2xx has no body", async () => {
     answerWith(body(200, "", "text/plain"));
-    expect(await failureOf(getOrder("od-alpha"))).toMatchObject({
-      _tag: "ApiUnreadable",
-      message: "Failed to get order",
+    expect(await getOrder("od-alpha")).toMatchObject({
+      status: "error",
+      error: {
+        _tag: "ApiUnreadable",
+        message: "Failed to get order",
+      },
     });
   });
 
@@ -217,28 +237,40 @@ describe("a read whose screen has its own not-found view", () => {
 
   test("fails with its fallback for any other failure", async () => {
     answerWith(body(500, "Failed to get item", "text/plain"));
-    expect(await failureOf(getItem(98_777))).toMatchObject({ message: "Failed to get item" });
+    expect(await getItem(98_777)).toMatchObject({
+      status: "error",
+      error: { message: "Failed to get item" },
+    });
   });
 });
 
 describe("a move whose target is gone", () => {
   test("fails with the server's 404 text", async () => {
     answerWith(body(404, "Order items not found", "text/plain"));
-    expect(await failureOf(moveItem("od-2", new Set(["c-1"])))).toMatchObject({
-      _tag: "MoveTargetGone",
-      message: "Order items not found",
+    expect(await moveItem("od-2", new Set(["c-1"]))).toMatchObject({
+      status: "error",
+      error: {
+        _tag: "MoveTargetGone",
+        message: "Order items not found",
+      },
     });
   });
 
   test("fails with an empty text for an empty 404", async () => {
     answerWith(body(404, "", "text/plain"));
-    expect(await failureOf(moveItem("od-2", new Set(["c-1"])))).toMatchObject({ message: "" });
+    expect(await moveItem("od-2", new Set(["c-1"]))).toMatchObject({
+      status: "error",
+      error: { message: "" },
+    });
   });
 
   test("fails with its fallback for any other failure", async () => {
     answerWith(body(500, "Move crashed", "text/plain"));
-    expect(await failureOf(moveItem("od-2", new Set(["c-1"])))).toMatchObject({
-      message: "Failed to move items",
+    expect(await moveItem("od-2", new Set(["c-1"]))).toMatchObject({
+      status: "error",
+      error: {
+        message: "Failed to move items",
+      },
     });
   });
 });
@@ -246,15 +278,13 @@ describe("a move whose target is gone", () => {
 test("a defect while the answer is read stays a defect", async () => {
   const defect = new Panic({ message: "the answer reader lost its schema" });
 
-  const failure = await failureOf(
+  await expect(
     call(Promise.reject(defect), { fallback: "Couldn't load this order." }),
-  );
-
-  expect(failure).toBe(defect);
+  ).rejects.toBe(defect);
 });
 
 test("a 401 rechecks the session before the failure is decoded", async () => {
   answerWith(body(401, "", "text/plain"));
-  await failureOf(getOrder("od-alpha"));
+  await getOrder("od-alpha");
   expect(sessionRechecks).toBe(1);
 });

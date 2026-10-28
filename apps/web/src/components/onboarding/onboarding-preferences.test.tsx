@@ -9,9 +9,6 @@ configure({ asyncUtilTimeout: 3000 });
 
 let invalidations = 0;
 const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
-// Onboarding walks through the extension step as it does once the extension is released. A revision
-// from before the release state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...realRouter,

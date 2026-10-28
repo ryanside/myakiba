@@ -1,16 +1,18 @@
-import { afterEach, describe, expect, mock, setDefaultTimeout, test } from "bun:test";
+import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SUPPORTED_BROWSERS, listIn, browseWith } from "../../../test/extension-browser";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
-// These forms send as they do once the extension is released. A revision from before the
-// release state ignores this mock.
-await mock.module("@/lib/extension-release", () => ({ EXTENSION_RELEASE: "released" }));
 const { FORMS, currentExtension, loadExtension, noop, renderWithDialog, resetEntryPoints, sent } =
   await import("../../../test/extension-entry-points");
 const { DataTransferView } = await import("@/components/settings/data-transfer");
+
+const [CHROME] = SUPPORTED_BROWSERS;
+browseWith(CHROME.userAgent);
+listIn(CHROME.store);
 
 afterEach(resetEntryPoints);
 

@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
 import { env } from "@myakiba/env/extension";
 import { defineConfig } from "wxt";
 import { assertReleaseOrigins } from "./lib/release-profile";
@@ -23,12 +24,12 @@ export default defineConfig({
             browser_specific_settings: {
               gecko: {
                 id: "extension@myakiba.app",
-                strict_min_version: "140.0",
+                strict_min_version: `${EXTENSION_MIN_BROWSER_VERSION}.0`,
                 data_collection_permissions: { required: ["websiteContent"] },
               },
             },
           }
-        : { minimum_chrome_version: "140" }),
+        : { minimum_chrome_version: String(EXTENSION_MIN_BROWSER_VERSION) }),
     };
   },
   zip: {

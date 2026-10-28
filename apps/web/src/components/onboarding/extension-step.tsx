@@ -6,10 +6,16 @@ import {
   Loading03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { EXTENSION_FAQ_HREF } from "@/components/homepage/faqs";
-import { ExtensionReviewNotice } from "@/components/extension/extension-review-notice";
-import { extensionReleased, useExtensionStatus } from "@/lib/extension-gate";
+import { Button } from "@/components/ui/button";
+import {
+  ExtensionLink,
+  ExtensionNotice,
+  UPDATE_LINK,
+  missingExtensionCopy,
+} from "@/components/extension/extension-notice";
+import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
+import { extensionAvailability } from "@/lib/extension-availability";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +30,25 @@ const STATUS_LINE = {
 >;
 
 export function ExtensionStep() {
-  return extensionReleased() ? <InstallStatus /> : <ExtensionReviewNotice />;
+  const status = useExtensionStatus();
+  if (status.kind !== "absent") {
+    return <InstallStatus status={status} link={status.kind === "outdated" ? UPDATE_LINK : null} />;
+  }
+  const copy = missingExtensionCopy(extensionAvailability());
+  return copy.link ? (
+    <InstallStatus status={status} link={copy.link} />
+  ) : (
+    <ExtensionNotice copy={copy} />
+  );
 }
 
-function InstallStatus() {
-  const status = useExtensionStatus();
+function InstallStatus({
+  status,
+  link,
+}: {
+  readonly status: ExtensionStatus;
+  readonly link: ExtensionNoticeCopy["link"];
+}) {
   const line = STATUS_LINE[status.kind];
   const spinning = status.kind === "checking";
 
@@ -42,17 +62,9 @@ function InstallStatus() {
         />
         {line.label}
       </p>
-      {status.kind === "absent" || status.kind === "outdated" ? (
+      {link ? (
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={EXTENSION_FAQ_HREF}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonVariants({ size: "sm" })}
-          >
-            {status.kind === "absent" ? "How to install it" : "How to update it"}
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
+          <ExtensionLink link={link} />
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             Reload page
           </Button>
