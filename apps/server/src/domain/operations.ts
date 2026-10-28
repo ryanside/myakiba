@@ -1,5 +1,14 @@
-import { Panic, Result, TaggedError, panic } from "better-result";
-import type { AnyTaggedError, Err, InferErr, InferOk, Ok, UnhandledException } from "better-result";
+import { tagged } from "./tagged";
+import { Result, TaggedError, panic } from "better-result";
+import type {
+  Panic,
+  AnyTaggedError,
+  Err,
+  InferErr,
+  InferOk,
+  Ok,
+  UnhandledException,
+} from "better-result";
 import type { RequestLogger } from "evlog";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { AnyFailure, Category } from "./failure";
@@ -54,7 +63,13 @@ export function isFailure(error: Leftover): error is AnyFailure {
 export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailure ? E : never;
 
 /** An Err the client never sees: it exists for `retry` and `recover`. */
-type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
+type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> | ExecutionFailed ? never : E;
+
+/** An unanswerable child outcome travels through Result combinators without throwing. */
+export class ExecutionFailed extends tagged("ExecutionFailed")<{
+  readonly cause: Panic | AnyTaggedError;
+  readonly operation: OpConfig<string>;
+}> {}
 
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
 type Recoverable<E> = InternalOf<E> | UnhandledException;
@@ -91,16 +106,15 @@ export type CommandScope = Omit<ReadScope, "tx"> & {
 
 export type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
   /**
-   * Runs a fresh operation with `run`'s contract: a Failure comes back as an Err, an
-   * unhandled throw throws the value originally thrown, an operational error throws
-   * itself, and a defect throws its Panic.
+   * Runs a fresh operation. A Failure comes back as an Err; an unanswerable child
+   * outcome comes back as ExecutionFailed, preserving its operation through Result.gen.
    * A defect raised here always wins: once `recover` settles, the kernel answers with
    * it even if `recover` caught it, so a recovery can never hide a broken invariant.
    */
   readonly execute: <I, T, F extends AnyFailure, M extends string>(
     op: Op<I, T, F, M>,
     input: NoInfer<I>,
-  ) => Promise<Result<T, F>>;
+  ) => Promise<Result<T, F | ExecutionFailed>>;
 };
 
 /**
@@ -306,7 +320,7 @@ export function command<
   B extends AnyResult,
   R extends AnyResult,
   const M extends string,
-  C extends Result<unknown, AnyFailure> = never,
+  C extends Result<unknown, AnyFailure | ExecutionFailed> = never,
   const O extends Operational = [],
 >(
   config: OpConfig<M, O> & { readonly before: Before<I, B> },
@@ -335,7 +349,7 @@ export function command<
   I,
   R extends AnyResult,
   const M extends string,
-  C extends Result<unknown, AnyFailure> = never,
+  C extends Result<unknown, AnyFailure | ExecutionFailed> = never,
   const O extends Operational = [],
 >(
   config: OpConfig<M, O> & { readonly before?: never },
@@ -376,7 +390,7 @@ export type CompositionScope<Steps extends readonly AnyOp[]> = Pick<ReadScope, "
   readonly execute: <O extends Steps[number]>(
     op: O,
     input: NoInfer<InputOf<O>>,
-  ) => Promise<Result<ValueOf<O>, ErrorOf<O>>>;
+  ) => Promise<Result<ValueOf<O>, ErrorOf<O> | ExecutionFailed>>;
 };
 
 export const compositions = new WeakMap<

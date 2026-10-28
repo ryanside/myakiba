@@ -12,31 +12,9 @@ import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
 import type { AnyFailure, Category } from "./failure";
 import type { Viewer } from "./viewer";
 
-/**
- * The one way a route reads or writes user data. A domain module exports
- * operations built with `query`, `command`, `compose` or `stream`, and a route answers with
- * `serve(ctx, Module.op, input)`.
- *
- * A body returns a better-result `Result`. Every error a client may see is a
- * `Failure`, a class that carries its own category and literal message. Any other
- * Err is internal, and only a command's `recover` may see it, unless the operation
- * lists its class in `operational`. A deliberate `panic` is a defect: it is never
- * retried or recovered and answers a logged 500. Any other throw also answers that
- * 500, after `retry` and `recover` see it as an `UnhandledException`, and so does an
- * operational error that nothing recovered.
- *
- * A command runs in one transaction. Any Err or throw rolls it back;
- * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
- * A query reads from the pool, so its parallel reads run on separate connections
- * and may see different commits; a query whose reads must agree sets
- * `snapshot: true` and reads one snapshot in one transaction. A command whose slow
- * work must not hold a connection does it in `before`, which reads from the pool
- * before the transaction opens. `serve` turns the outcome into the response: the
- * value, the failure's status and message, or a logged 500 with the operation's
- * `failure`.
- */
 import {
   FAILURE_STATUS,
+  ExecutionFailed,
   isCommitted,
   isProceed,
   isFailure,
@@ -69,9 +47,33 @@ import type {
   StreamOp,
   Recover,
 } from "./operations";
+
 export { query, command, compose, stream } from "./operations";
 export type { Op, CommandScope } from "./operations";
 
+/**
+ * The one way a route reads or writes user data. A domain module exports
+ * operations built with `query`, `command`, `compose` or `stream`, and a route answers with
+ * `serve(ctx, Module.op, input)`.
+ *
+ * A body returns a better-result `Result`. Every error a client may see is a
+ * `Failure`, a class that carries its own category and literal message. Any other
+ * Err is internal, and only a command's `recover` may see it, unless the operation
+ * lists its class in `operational`. A deliberate `panic` is a defect: it is never
+ * retried or recovered and answers a logged 500. Any other throw also answers that
+ * 500, after `retry` and `recover` see it as an `UnhandledException`, and so does an
+ * operational error that nothing recovered.
+ *
+ * A command runs in one transaction. Any Err or throw rolls it back;
+ * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
+ * A query reads from the pool, so its parallel reads run on separate connections
+ * and may see different commits; a query whose reads must agree sets
+ * `snapshot: true` and reads one snapshot in one transaction. A command whose slow
+ * work must not hold a connection does it in `before`, which reads from the pool
+ * before the transaction opens. `serve` turns the outcome into the response: the
+ * value, the failure's status and message, or a logged 500 with the operation's
+ * `failure`.
+ */
 const pool: ReadTx = db;
 const readPrepared = <T>(statement: Prepared<T>, placeholders?: Placeholders) =>
   statement.statement.execute(placeholders);
@@ -99,9 +101,7 @@ type FailureResponse<F> = F extends {
   ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
   : never;
 
-type Stopped =
-  | { readonly kind: "rollback"; readonly result: Err<unknown, Leftover> }
-  | { readonly kind: "forward"; readonly settled: Exclude<Settled, { readonly kind: "answer" }> };
+type Stopped = { readonly kind: "rollback"; readonly result: Err<unknown, Leftover> };
 
 class Stop {
   readonly outcome: Stopped;
@@ -115,12 +115,16 @@ class Stop {
 type Settled =
   | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
   /** A deliberate `panic` or `unwrap`, possibly wrapped: never retried or recovered. */
-  | { readonly kind: "defect"; readonly panic: Panic; readonly operation?: AnyOp }
+  | { readonly kind: "defect"; readonly panic: Panic; readonly operation?: OpConfig<string> }
   /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
-  | { readonly kind: "left"; readonly error: AnyTaggedError; readonly operation?: AnyOp };
+  | {
+      readonly kind: "left";
+      readonly error: AnyTaggedError;
+      readonly operation?: OpConfig<string>;
+    };
 
-function classify(cause: unknown): Settled {
-  if (cause instanceof Stop && cause.outcome.kind === "forward") return cause.outcome.settled;
+function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
+  if (ExecutionFailed.is(cause)) return { ...classify(cause.cause), operation: cause.operation };
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
   return { kind: "left", error: new UnhandledException({ cause }) };
@@ -130,6 +134,7 @@ function classify(cause: unknown): Settled {
 function settle(result: AnyResult): Settled {
   if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
   const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
+  if (ExecutionFailed.is(error)) return classify(error);
   if (Panic.is(error)) return { kind: "defect", panic: error };
   if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
   return { kind: "left", error };
@@ -275,20 +280,26 @@ async function recovered(
   left: AnyTaggedError,
   log: RequestLogger,
 ): Promise<Settled> {
-  let defect: Panic | undefined;
+  let defect: Settled | undefined;
   const execute: RecoveryScope["execute"] = async (next, value) => {
-    try {
-      return await run(viewer, next, value, log);
-    } catch (error) {
-      const sorted = classify(error);
-      if (sorted.kind === "defect") defect ??= sorted.panic;
-      throw error;
-    }
+    const child = await evaluate(next as AnyOp, viewer, value as never, log);
+    if (child.kind === "defect") defect ??= child;
+    return executionResult(child, next) as never;
   };
   const settled = await guarded(async () =>
     settle(await recover({ viewer, log, execute }, input, left)),
   );
-  return defect ? { kind: "defect", panic: defect } : settled;
+  return defect ?? settled;
+}
+
+function executionResult(child: Settled, op: OpConfig<string>): AnyResult {
+  if (child.kind === "answer") return child.result;
+  return Result.err(
+    new ExecutionFailed({
+      cause: child.kind === "defect" ? child.panic : child.error,
+      operation: child.operation ?? op,
+    }),
+  );
 }
 
 async function evaluate(
@@ -307,10 +318,7 @@ async function evaluate(
       execute: async (next, value) => {
         const child = await evaluate(next, viewer, value as never, log);
         if (child.kind === "defect") defect ??= child;
-        if (child.kind !== "answer") {
-          throw new Stop({ kind: "forward", settled: child });
-        }
-        return child.result as never;
+        return executionResult(child, next) as never;
       },
     };
     settled = await guarded(async () => settle(await composition(scope, input)));
