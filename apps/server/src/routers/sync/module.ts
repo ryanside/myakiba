@@ -644,7 +644,7 @@ export const Sync = {
   completeOrderItem: completeOperation("Failed to save order items"),
   completeCollection: completeOperation("Failed to save collection items"),
   completeItemSession: command(
-    { action: "sync.completeItemSession", failure: "Failed to update import record" },
+    { action: "sync.completeItemSession", failure: "Failed to save import record" },
     async (
       scope,
       input: { readonly session: SyncSessionCreation; readonly statusMessage: string },

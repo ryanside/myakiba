@@ -516,7 +516,7 @@ void (true satisfies Equal<
         >
       | S<500, "Failed to check for existing items">;
     start: S<500, "Failed to create import record">;
-    completeItemSession: S<500, "Failed to update import record">;
+    completeItemSession: S<500, "Failed to save import record">;
     completeCsv: S<500, "Failed to save collection items and orders">;
     completeOrder: S<500, "Failed to save the order and its items">;
     completeOrderItem: S<500, "Failed to save order items">;
