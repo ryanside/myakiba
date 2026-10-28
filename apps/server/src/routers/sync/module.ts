@@ -849,6 +849,7 @@ export const SyncRequests = {
         jobId: input.jobId,
         signal: input.signal,
         read: () => scope.execute(Sync.jobStatus, { jobId: input.jobId }),
+        poll: () => scope.poll(Sync.jobStatus, { jobId: input.jobId }),
       }),
   ),
 

@@ -70,10 +70,13 @@ const status = {
 for (const kind of ["sync", "data transfer"] as const) {
   for (const defect of ["panic", "throw"] as const) {
     for (const failAt of [1, 3]) {
-      const name =
-        failAt === 1
-          ? `a ${kind} first read ${defect} answers a logged safe 500`
-          : `a ${kind} read ${defect} terminates without another poll`;
+      let name = `a ${kind} first read ${defect} answers a logged safe 500`;
+      if (failAt === 3) {
+        name =
+          defect === "panic"
+            ? `a ${kind} read panic terminates without another poll`
+            : `a ${kind} polling read throw retries with the last status and recovers`;
+      }
       test(name, async () => {
         const { jobStatusSubscriptionRegistry } =
           await import("@/lib/job-status-subscription-registry");
@@ -90,12 +93,20 @@ for (const kind of ["sync", "data transfer"] as const) {
           return now;
         });
         let reads = 0;
+        const original = new Error("internal read failure");
         const read = () => {
           reads += 1;
-          if (reads >= failAt) {
+          if (reads === failAt) {
             if (defect === "panic") panic("internal read defect");
-            throw new Error("internal read defect");
+            throw original;
           }
+          if (failAt === 3 && reads > failAt)
+            return {
+              ...status,
+              phase: "completed" as const,
+              terminalState: "success" as const,
+              statusMessage: "Recovered",
+            };
           return status;
         };
         const { default: syncService } = await import("@/routers/sync/service");
@@ -117,14 +128,26 @@ for (const kind of ["sync", "data transfer"] as const) {
         const response = await app.handle(new Request("http://localhost/"));
         const body = await response.text();
         expect(response.status).toBe(failAt === 1 ? 500 : 200);
-        if (failAt === 3) expect(body).toContain('"terminalState":"error"');
-        expect(body).toContain(
-          kind === "sync" ? "Error fetching job status" : "Failed to check import status.",
-        );
+        if (failAt === 3 && defect === "throw") {
+          expect(body).toContain('"terminalState":"success"');
+          expect(body).toContain('"statusMessage":"Recovered"');
+          const events = body.split("\n\n").filter(Boolean);
+          expect(events).toHaveLength(3);
+          expect(events[1]).toBe(events[0]);
+          expect(reads).toBe(4);
+        } else {
+          if (failAt === 3) expect(body).toContain('"terminalState":"error"');
+          expect(body).toContain(
+            kind === "sync" ? "Error fetching job status" : "Failed to check import status.",
+          );
+          expect(reads).toBe(failAt);
+        }
         expect(body).not.toContain("internal read defect");
-        expect(reads).toBe(failAt);
+        expect(body).not.toContain(original.message);
         expect(unsubscribe).toHaveBeenCalledTimes(failAt === 1 ? 0 : 1);
         expect(logged).toHaveBeenCalledTimes(1);
+        if (defect === "panic") expect(logged.mock.calls[0]?.[0]).toBeInstanceOf(Panic);
+        else expect(logged.mock.calls[0]?.[0]).toBe(original);
         expect(logged.mock.calls[0]?.[1]).toEqual({
           step: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
         });

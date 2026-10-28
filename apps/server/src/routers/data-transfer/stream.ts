@@ -1,3 +1,4 @@
+import type { ExecutionFailed } from "@/domain/kernel";
 import { sse } from "elysia";
 import type { RequestLogger } from "evlog";
 import type { Result } from "better-result";
@@ -13,10 +14,12 @@ export async function* streamStatus({
   log,
   signal,
   read,
+  poll,
 }: {
   readonly log: RequestLogger;
   readonly signal: AbortSignal;
   readonly read: () => Promise<Result<SyncJobStatus | null, never>>;
+  readonly poll: () => Promise<Result<SyncJobStatus | null, ExecutionFailed>>;
 }) {
   const streamStartedAt = Date.now();
   const abortPromise = signal.aborted
@@ -100,8 +103,12 @@ export async function* streamStatus({
           continue;
         }
         nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
-        const polledStatusRead = await read();
-        const polledStatus = polledStatusRead.unwrap();
+        const polledStatusRead = await poll();
+        if (polledStatusRead.isErr()) {
+          yield sse({ data: latestStatus });
+          continue;
+        }
+        const polledStatus = polledStatusRead.value;
         if (polledStatus === null) {
           log.set({ outcome: "not_found" });
           return;

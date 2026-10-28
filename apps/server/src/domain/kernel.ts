@@ -208,6 +208,21 @@ async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLog
             if (result.isErr() && ExecutionFailed.is(result.error)) throw result.error;
             return result;
           },
+          poll: async (next: AnyOp, value: never) => {
+            const child = await evaluate(next, viewer, value, log);
+            const result = executionResult(child, next);
+            if (result.isErr() && ExecutionFailed.is(result.error)) {
+              const error = result.error;
+              if (Panic.is(error.cause)) throw error;
+              const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
+              logOperationError(
+                log,
+                error.operation.action,
+                cause instanceof Error ? cause : new Error(String(cause)),
+              );
+            }
+            return result;
+          },
         } as never,
         input,
       ),

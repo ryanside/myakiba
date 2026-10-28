@@ -79,15 +79,12 @@ Intentionally retired portions of the old expectation:
 
 ### 8c19d2088de705335017ea933100f1f00078e19e — apps/server/src/routers/data-transfer/routes.test.ts
 
-Unexpected DB throws now terminate a stream by design (this task). The S3 preparation failure regression remains live; the new stream replay covers the new polling contract.
+Both historical regressions remain live. A non-Panic database throw on a heartbeat polling read logs its error, re-sends the last status and polls again. The earlier retirement of this resilience case was incorrect and has been reversed.
 
 HEAD tests:
 
 - `apps/server/src/routers/data-transfer/routes.test.ts` — an S3 preparation timeout records a retryable import item failure
-
-Intentionally retired portions of the old expectation:
-
-- import polling keeps its last status through a database blip and retries
+- `apps/server/src/routers/data-transfer/routes.test.ts` — import polling keeps its last status through a database blip and retries
 
 ### 19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f — apps/server/src/routers/sync/routes.test.ts
 

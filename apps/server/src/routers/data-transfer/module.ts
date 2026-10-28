@@ -69,6 +69,7 @@ export const DataTransfer = {
         log: scope.log,
         signal: input.signal,
         read: () => scope.execute(importStatus, {}),
+        poll: () => scope.poll(importStatus, {}),
       }),
   ),
 

@@ -287,6 +287,11 @@ export type StreamScope = PoolScope & {
     op: Op<I, T, F, M>,
     input: NoInfer<I>,
   ) => Promise<Result<T, F>>;
+  /** Runs polling reads through the operation's hooks; Panics throw, other unhandled outcomes log and return an Err for the next poll. */
+  readonly poll: <I, T, F extends AnyFailure, M extends string>(
+    op: Op<I, T, F, M>,
+    input: NoInfer<I>,
+  ) => Promise<Result<T, F | ExecutionFailed>>;
 };
 
 /** An event stream whose route delegates with yield* serve(...), keeping the framework's generator lifecycle. */
