@@ -1,3 +1,4 @@
+import type { InputOf } from "@/domain/kernel";
 import type { UploadNotInRunningImport } from "./errors/upload-not-in-running-import";
 /**
  * dataTransfer.completeItem answers an unreadable page with one of the MFC page messages.
@@ -10,9 +11,7 @@ import { DataTransfer } from "./module";
 
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infer I) => void } }
-  ? I
-  : never;
+
 declare const caller: Parameters<typeof serve>[0];
 declare function inputOf<O>(op: O): InputOf<O>;
 

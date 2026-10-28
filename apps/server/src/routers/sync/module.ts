@@ -1,3 +1,5 @@
+import type { CompositionScope } from "@/domain/kernel";
+import type { InputOf } from "@/domain/kernel";
 import { jobStatusError } from "@/boundary/job-status-error";
 import { streamStatus } from "./stream";
 import { prepareMfcItem } from "@/lib/mfc-item-ingest";
@@ -77,11 +79,7 @@ function startOperation<const M extends string>(failure: M) {
     },
     {
       recover: async (scope, input, error) => {
-        try {
-          await scope.execute(failedStart, { ...input, failure: "before_start" });
-        } catch {
-          /* The original persistence error takes precedence over history. */
-        }
+        await scope.execute(failedStart, { ...input, failure: "before_start" });
         throw error;
       },
     },
@@ -829,9 +827,19 @@ export const SyncRuns = {
   ),
 };
 
-type InputOf<O> = O extends { readonly "~types"?: { readonly input: (input: infer I) => void } }
-  ? I
-  : never;
+/** The four planned imports either start a fetch or complete from saved Items. */
+function plannedImport<const M extends string>(complete: ReturnType<typeof completeOperation<M>>) {
+  return async (
+    scope: Pick<CompositionScope<readonly [typeof Sync.start, typeof complete]>, "execute">,
+    plan: ReturnType<typeof plannedSync>,
+  ) => {
+    const saved = plan.response.jobId
+      ? await scope.execute(Sync.start, plan)
+      : await scope.execute(complete, plan.complete);
+    if (saved.isErr()) return saved;
+    return Result.ok(plan.response);
+  };
+}
 
 export const SyncRequests = {
   stream: stream(
@@ -873,13 +881,7 @@ export const SyncRequests = {
       steps: [Sync.planCsv, Sync.start, Sync.completeCsv],
       before: (scope, input: InputOf<typeof Sync.planCsv>) => scope.execute(Sync.planCsv, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeCsv, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeCsv),
   ),
   order: compose(
     {
@@ -889,13 +891,7 @@ export const SyncRequests = {
       before: (scope, input: InputOf<typeof Sync.planOrder>) =>
         scope.execute(Sync.planOrder, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeOrder, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeOrder),
   ),
   orderItem: compose(
     {
@@ -908,13 +904,7 @@ export const SyncRequests = {
         return scope.execute(Sync.planOrderItem, { body: input.body, order: order.value });
       },
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeOrderItem, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeOrderItem),
   ),
   collection: compose(
     {
@@ -924,13 +914,7 @@ export const SyncRequests = {
       before: (scope, input: InputOf<typeof Sync.planCollection>) =>
         scope.execute(Sync.planCollection, input),
     },
-    async (scope, plan) => {
-      const saved = plan.response.jobId
-        ? await scope.execute(Sync.start, plan)
-        : await scope.execute(Sync.completeCollection, plan.complete);
-      if (saved.isErr()) return saved;
-      return Result.ok(plan.response);
-    },
+    plannedImport(Sync.completeCollection),
   ),
   complete: compose(
     {

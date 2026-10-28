@@ -49,7 +49,7 @@ import type {
 } from "./operations";
 
 export { query, command, compose, stream, ExecutionFailed } from "./operations";
-export type { Op, CommandScope } from "./operations";
+export type { Op, CommandScope, InputOf, CompositionScope } from "./operations";
 
 /**
  * The one way a route reads or writes user data. A domain module exports

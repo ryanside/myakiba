@@ -392,7 +392,7 @@ export function command(
   return op;
 }
 
-type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
+export type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
 type ValueOf<O> = O extends Op<infer _I, infer T, infer _F, infer _M> ? T : never;
 type ErrorOf<O> = O extends Op<infer _I, infer _T, infer F, infer _M> ? F : never;
 export type CompositionScope<Steps extends readonly AnyOp[]> = Pick<ReadScope, "viewer" | "log"> & {
