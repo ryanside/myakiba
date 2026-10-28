@@ -2356,6 +2356,21 @@
         "the FAQ links each listed store and says which are still reviewing",
         "the FAQ links both stores once both list the extension"
       ]
+    },
+    {
+      "fix": "e3a64c3fc1367914b60c94042437ccc8ff7f56a3",
+      "bug": "composition and recovery execute threw control objects through Result.gen and lost child failure ownership",
+      "test": "apps/server/src/domain/execute.test.ts",
+      "fixed": [
+        "gen forwards a child's throw as a Result with its own failure and log",
+        "recover forwards a child's throw as a Result with its own failure and log",
+        "recover gen forwards a child's throw as a Result with its own failure and log",
+        "gen forwards a child's operational as a Result with its own failure and log",
+        "recover forwards a child's operational as a Result with its own failure and log",
+        "recover gen forwards a child's operational as a Result with its own failure and log",
+        "recover forwards a child's panic as a Result with its own failure and log",
+        "recover gen forwards a child's panic as a Result with its own failure and log"
+      ]
     }
   ],
   "lint": [
