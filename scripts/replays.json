@@ -893,13 +893,7 @@
         "an S3 preparation timeout records a retryable import item failure",
         "import polling keeps its last status through a database blip and retries"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
-      "head": [
-        {
-          "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-          "fixed": ["an S3 preparation timeout records a retryable import item failure"]
-        }
-      ]
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
     },
     {
       "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
@@ -2511,9 +2505,7 @@
         "a stream panic in after event logs once and answers safely",
         "a stream throw in after event logs once and answers safely",
         "a sync read panic terminates without another poll",
-        "a sync read throw terminates without another poll",
         "a data transfer read panic terminates without another poll",
-        "a data transfer read throw terminates without another poll",
         "a sync first read panic answers a logged safe 500",
         "a sync first read throw answers a logged safe 500",
         "a data transfer first read panic answers a logged safe 500",
@@ -2535,6 +2527,21 @@
         "an existing Item import rolls back its session when completion fails",
         "a missing Item import completion is refused instead of reporting success"
       ]
+    },
+    {
+      "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
+      "bug": "plain throws on heartbeat polling reads were treated as terminal defects instead of retaining status and retrying",
+      "test": "apps/server/src/domain/stream-failure.test.ts",
+      "fixed": [
+        "a sync polling read throw retries with the last status and recovers",
+        "a data transfer polling read throw retries with the last status and recovers"
+      ]
+    },
+    {
+      "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
+      "bug": "the data-transfer stream closed on a database blip instead of keeping its last status and polling again",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": ["import polling keeps its last status through a database blip and retries"]
     }
   ],
   "lint": [
