@@ -2356,6 +2356,14 @@
         "the FAQ links each listed store and says which are still reviewing",
         "the FAQ links both stores once both list the extension"
       ]
+    },
+    {
+      "fix": "9dfbaef5bc463d7302c6f659dcde9c39063f47a2",
+      "bug": "the outdated extension's How to update it link opened the install answer, which said nothing about updating while every store reviewed",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": [
+        "the update link opens an FAQ answer that says how to update, even while every store reviews"
+      ]
     }
   ],
   "lint": [
