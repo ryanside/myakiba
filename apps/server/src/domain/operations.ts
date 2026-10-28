@@ -87,7 +87,7 @@ export type Statement<T> = { readonly execute: (placeholders?: Placeholders) => 
 export type Prepared<T> = { readonly statement: Statement<T> };
 
 /** A query without `snapshot` reads from the pool, so it can also run reads built once by `prepared()`. */
-type PoolScope = ReadScope & {
+export type PoolScope = ReadScope & {
   readonly read: <T>(statement: Prepared<T>, placeholders?: Placeholders) => Promise<T>;
 };
 
@@ -244,6 +244,10 @@ export type Recover = (
 ) => Promise<AnyResult>;
 
 export const bodies = new WeakMap<AnyOp, Body>();
+export const poolBodies = new WeakMap<
+  AnyOp,
+  (scope: PoolScope, input: never) => Promise<AnyResult>
+>();
 export const befores = new WeakMap<AnyOp, Hook>();
 export const retries = new WeakMap<AnyOp, Retry>();
 export const recoveries = new WeakMap<AnyOp, Recover>();
@@ -271,19 +275,31 @@ export function query<
   ) => Promise<R & Checked<R, InferErr<R>, false, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M> {
   const op = { action: config.action, failure: config.failure };
-  bodies.set(op, body as Body);
+  if (config.snapshot) {
+    bodies.set(op, body as Body);
+    snapshots.add(op);
+  } else {
+    poolBodies.set(op, body);
+    poolReads.add(op);
+  }
   if (config.operational) operationals.set(op, config.operational);
-  (config.snapshot ? snapshots : poolReads).add(op);
   return op;
 }
 
 export type StreamOp<I, T, M extends string> = Op<I, AsyncGenerator<T, void>, never, M> & {
   readonly "~stream": true;
 };
-export const streams = new WeakMap<AnyOp, (message: string, last: never) => Ok<unknown, never>>();
+export const streams = new WeakMap<
+  AnyOp,
+  {
+    readonly body: (scope: StreamScope, input: never) => AsyncGenerator<unknown, void>;
+    readonly onError: (message: string, last: never) => Ok<unknown, never>;
+  }
+>();
 
 export type StreamScope = PoolScope & {
-  readonly execute: <I, T, F extends AnyFailure, M extends string>(
+  /** Returns public failures as Err. Throws an unanswerable read outcome to the stream boundary, preserving its original error. */
+  readonly readOrThrow: <I, T, F extends AnyFailure, M extends string>(
     op: Op<I, T, F, M>,
     input: NoInfer<I>,
   ) => Promise<Result<T, F>>;
@@ -302,9 +318,10 @@ export function stream<I, T, const M extends string>(
   body: (scope: StreamScope, input: I) => AsyncGenerator<T, void>,
 ): StreamOp<I, T, M> {
   const op = { action: config.action, failure: config.failure, "~stream": true as const };
-  bodies.set(op, (async (scope, input) => Result.ok(body(scope as StreamScope, input))) as Body);
-  poolReads.add(op);
-  streams.set(op, (message, last) => Result.ok(config.onError(message, last)));
+  streams.set(op, {
+    body,
+    onError: (message, last) => Result.ok(config.onError(message, last)),
+  });
   return op;
 }
 

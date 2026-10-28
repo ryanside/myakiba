@@ -19,6 +19,7 @@ import {
   isProceed,
   isFailure,
   bodies,
+  poolBodies,
   befores,
   retries,
   recoveries,
@@ -45,6 +46,7 @@ import type {
   Placeholders,
   CompositionScope,
   StreamOp,
+  StreamScope,
   Recover,
 } from "./operations";
 
@@ -193,43 +195,58 @@ async function runEffects(
 
 /** Runs a query that reads the pool, one autocommit statement at a time. */
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
-  const body = bodyOf(op);
-  try {
-    return settle(
-      await body(
-        {
-          viewer,
-          tx: pool,
-          read: readPrepared,
+  const body = poolBodies.get(op);
+  if (!body) panic(`${op.action} has no pool query body to run`);
+  return guarded(async () =>
+    settle(await body({ viewer, tx: pool, read: readPrepared, log }, input)),
+  );
+}
+
+async function streamStep<I, T, F extends AnyFailure, M extends string>(
+  viewer: Viewer,
+  op: Op<I, T, F, M>,
+  input: I,
+  log: RequestLogger,
+): Promise<Result<T, F | ExecutionFailed>> {
+  return executionResult(await evaluate(op as AnyOp, viewer, input as never, log), op) as Result<
+    T,
+    F | ExecutionFailed
+  >;
+}
+
+/** Only a stream receives throwing reads and resumable polling reads. */
+async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
+  const registration = streams.get(op);
+  if (!registration) panic(`${op.action} has no stream body to run`);
+  const scope: StreamScope = {
+    viewer,
+    tx: pool,
+    read: readPrepared,
+    log,
+    readOrThrow: async (next, value) => {
+      const result = await streamStep(viewer, next, value, log);
+      if (result.isErr()) {
+        if (ExecutionFailed.is(result.error)) throw result.error;
+        return Result.err(result.error);
+      }
+      return Result.ok(result.value);
+    },
+    poll: async (next, value) => {
+      const result = await streamStep(viewer, next, value, log);
+      if (result.isErr() && ExecutionFailed.is(result.error)) {
+        const error = result.error;
+        if (Panic.is(error.cause)) throw error;
+        const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
+        logOperationError(
           log,
-          execute: async (next: AnyOp, value: never) => {
-            const child = await evaluate(next, viewer, value, log);
-            const result = executionResult(child, next);
-            if (result.isErr() && ExecutionFailed.is(result.error)) throw result.error;
-            return result;
-          },
-          poll: async (next: AnyOp, value: never) => {
-            const child = await evaluate(next, viewer, value, log);
-            const result = executionResult(child, next);
-            if (result.isErr() && ExecutionFailed.is(result.error)) {
-              const error = result.error;
-              if (Panic.is(error.cause)) throw error;
-              const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
-              logOperationError(
-                log,
-                error.operation.action,
-                cause instanceof Error ? cause : new Error(String(cause)),
-              );
-            }
-            return result;
-          },
-        } as never,
-        input,
-      ),
-    );
-  } catch (error) {
-    return classify(error);
-  }
+          error.operation.action,
+          cause instanceof Error ? cause : new Error(String(cause)),
+        );
+      }
+      return result;
+    },
+  };
+  return guarded(async () => settle(Result.ok(registration.body(scope, input))));
 }
 
 /** Runs `before` and every attempt of a command, retrying what `retry` accepts. */
@@ -354,6 +371,8 @@ async function evaluate(
     };
     settled = await guarded(async () => settle(await composition(scope, input)));
     if (defect) settled = defect;
+  } else if (streams.has(op)) {
+    settled = await openStream(op, viewer, input, log);
   } else if (poolReads.has(op)) {
     settled = await readPool(op, viewer, input, log);
   } else {
@@ -490,7 +509,7 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
         logged instanceof Error ? logged : new Error(String(logged)),
       );
       if (!last) return status(500, failed.failure) as ElysiaCustomStatusResponse<500, M>;
-      yield terminal(failed.failure, last.value as never).value as StreamValue<T>;
+      yield terminal.onError(failed.failure, last.value as never).value as StreamValue<T>;
     }
   })();
 }

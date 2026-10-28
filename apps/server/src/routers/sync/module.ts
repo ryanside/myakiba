@@ -848,7 +848,7 @@ export const SyncRequests = {
         log: scope.log,
         jobId: input.jobId,
         signal: input.signal,
-        read: () => scope.execute(Sync.jobStatus, { jobId: input.jobId }),
+        read: () => scope.readOrThrow(Sync.jobStatus, { jobId: input.jobId }),
         poll: () => scope.poll(Sync.jobStatus, { jobId: input.jobId }),
       }),
   ),
