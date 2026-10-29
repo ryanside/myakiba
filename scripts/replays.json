@@ -3048,6 +3048,34 @@
         "SIGINT wins over a failing setup and still reports its error",
         "SIGTERM wins over a failing setup and still reports its error"
       ]
+    },
+    {
+      "fix": "0511bc129c7302a1670f8125297bcce3067cea83",
+      "bug": "With MFC's SFW mode on, an NSFW item's og:image is MFC's nsfw.png placeholder, and the item imported without its picture instead of being refused.",
+      "test": "packages/mfc/src/page.test.ts",
+      "fixed": ["og:image > MFC's SFW placeholder means SFW mode hides the picture"]
+    },
+    {
+      "fix": "0511bc129c7302a1670f8125297bcce3067cea83",
+      "bug": "With MFC's SFW mode on, an NSFW item's og:image is MFC's nsfw.png placeholder, and the item imported without its picture instead of being refused.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage warnings > an og:image hidden by SFW mode is sfw_hidden, so the item is never imported without its picture"
+      ]
+    },
+    {
+      "fix": "0511bc129c7302a1670f8125297bcce3067cea83",
+      "bug": "With MFC's SFW mode on, an NSFW item's og:image is MFC's nsfw.png placeholder, and the item imported without its picture instead of being refused.",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": ["a page whose picture SFW mode hides fails the item and imports nothing"]
+    },
+    {
+      "fix": "0511bc129c7302a1670f8125297bcce3067cea83",
+      "bug": "With MFC's SFW mode on, an NSFW item's og:image is MFC's nsfw.png placeholder, and the item imported without its picture instead of being refused.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
+      ]
     }
   ],
   "lint": [
