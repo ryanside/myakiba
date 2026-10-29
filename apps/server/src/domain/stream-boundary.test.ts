@@ -69,3 +69,41 @@ for (const phase of ["first", "after event", "poll"] as const) {
     });
   }
 }
+
+for (const method of ["readOrThrow", "poll"] as const) {
+  test(`a stream rejects its own action in ${method} before executing the read`, async () => {
+    let reads = 0;
+    const child = query({ action: "test.sameAction", failure: "Child failed" }, async () => {
+      reads += 1;
+      return Result.ok("ready" as const);
+    });
+    const op = stream(
+      {
+        action: "test.sameAction",
+        failure: "Stream failed",
+        onError: (message: string) => sse({ data: message }),
+      },
+      async function* (scope) {
+        await scope[method](child, {});
+        yield sse({ data: "should not run" });
+      },
+    );
+    const log = createRequestLogger();
+    const logged = spyOn(log, "error");
+    const app = new Elysia().get("/", async function* () {
+      return yield* serve({ viewer, log }, op, {});
+    });
+    const response = await app.handle(new Request("http://localhost/"));
+    expect({ status: response.status, body: await response.text() }).toEqual({
+      status: 500,
+      body: "Stream failed",
+    });
+    expect(reads).toBe(0);
+    expect(logged).toHaveBeenCalledTimes(1);
+    const error = logged.mock.calls[0]?.[0];
+    if (!Panic.is(error)) throw new Error("Expected a stream action Panic");
+    expect(error.message).toContain("test.sameAction");
+    expect(error.message).toContain("distinct action");
+    expect(logged.mock.calls[0]?.[1]).toEqual({ step: "test.sameAction" });
+  });
+}

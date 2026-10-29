@@ -63,11 +63,11 @@ const ExecutionFailure = tagged("ExecutionFailed")<{
 export interface ExecutionFailed extends InstanceType<typeof ExecutionFailure> {
   readonly [executionIdentity]: true;
 }
-const executionFailures = new WeakSet<object>();
+const executionReceivers = new WeakMap<object, OpConfig<string>>();
 function isExecutionFailed(
   error: Parameters<typeof ExecutionFailure.is>[0],
 ): error is ExecutionFailed {
-  return ExecutionFailure.is(error) && executionFailures.has(error);
+  return ExecutionFailure.is(error) && executionReceivers.has(error);
 }
 const executionFailedGuard = Object.freeze({ is: isExecutionFailed });
 export { executionFailedGuard as ExecutionFailed };
@@ -75,6 +75,7 @@ export { executionFailedGuard as ExecutionFailed };
 /** Only this module can construct and brand an outcome. Its trusted metadata is immutable. */
 function executionFailed(
   props: ConstructorParameters<typeof ExecutionFailure>[0],
+  receiver: OpConfig<string>,
 ): ExecutionFailed {
   const failure: ExecutionFailed = Object.assign(
     new ExecutionFailure({
@@ -86,7 +87,7 @@ function executionFailed(
     }),
     { [executionIdentity]: true as const },
   );
-  executionFailures.add(failure);
+  executionReceivers.set(failure, receiver);
   Object.freeze(failure);
   return failure;
 }
@@ -169,29 +170,38 @@ type Settled =
       readonly childAction?: string;
     };
 
-function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
-  if (isExecutionFailed(cause))
-    return { ...classify(cause.cause), operation: cause.operation, childAction: cause.childAction };
+function classify(
+  cause: unknown,
+  returningOp: OpConfig<string>,
+): Exclude<Settled, { readonly kind: "answer" }> {
+  if (isExecutionFailed(cause)) {
+    const receivedHere = executionReceivers.get(cause) === returningOp;
+    return {
+      ...classify(cause.cause, returningOp),
+      operation: receivedHere ? cause.operation : returningOp,
+      childAction: cause.childAction ?? (receivedHere ? undefined : cause.operation.action),
+    };
+  }
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
   return { kind: "left", error: new UnhandledException({ cause }) };
 }
 
 /** Sorts what a body, `before` or `recover` returned. A returned Panic is a defect. */
-function settle(result: AnyResult): Settled {
+function settle(result: AnyResult, op: OpConfig<string>): Settled {
   if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
   const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
-  if (isExecutionFailed(error)) return classify(error);
+  if (isExecutionFailed(error)) return classify(error, op);
   if (Panic.is(error)) return { kind: "defect", panic: error };
   if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
   return { kind: "left", error };
 }
 
-async function guarded(step: () => Promise<Settled>): Promise<Settled> {
+async function guarded(op: OpConfig<string>, step: () => Promise<Settled>): Promise<Settled> {
   try {
     return await step();
   } catch (error) {
-    return classify(error);
+    return classify(error, op);
   }
 }
 
@@ -242,21 +252,25 @@ async function runEffects(
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = poolBodies.get(op);
   if (!body) panic(`${op.action} has no pool query body to run`);
-  return guarded(async () =>
-    settle(await body({ viewer, tx: pool, read: readPrepared, log }, input)),
+  return guarded(op, async () =>
+    settle(await body({ viewer, tx: pool, read: readPrepared, log }, input), op),
   );
 }
 
 async function streamStep<I, T, F extends AnyFailure, M extends string>(
+  receiver: OpConfig<string>,
   viewer: Viewer,
   op: Op<I, T, F, M>,
   input: I,
   log: RequestLogger,
 ): Promise<Result<T, F | ExecutionFailed>> {
-  return executionResult(await evaluate(op as AnyOp, viewer, input as never, log), op) as Result<
-    T,
-    F | ExecutionFailed
-  >;
+  if (receiver.action === op.action)
+    panic(`${receiver.action} stream read ${op.action} must use a distinct action`);
+  return executionResult(
+    await evaluate(op as AnyOp, viewer, input as never, log),
+    op,
+    receiver,
+  ) as Result<T, F | ExecutionFailed>;
 }
 
 /** Only a stream receives throwing reads and resumable polling reads. */
@@ -269,7 +283,7 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
     read: readPrepared,
     log,
     readOrThrow: async (next, value) => {
-      const result = await streamStep(viewer, next, value, log);
+      const result = await streamStep(op, viewer, next, value, log);
       if (result.isErr()) {
         if (isExecutionFailed(result.error)) throw result.error;
         log.set({ outcome: result.error.category });
@@ -278,7 +292,7 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
       return Result.ok(result.value);
     },
     poll: async (next, value) => {
-      const result = await streamStep(viewer, next, value, log);
+      const result = await streamStep(op, viewer, next, value, log);
       if (result.isOk()) return result;
       if (isExecutionFailed(result.error)) {
         const error = result.error;
@@ -296,7 +310,7 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
       return result;
     },
   };
-  return guarded(async () => settle(Result.ok(registration.body(scope, input))));
+  return guarded(op, async () => settle(Result.ok(registration.body(scope, input)), op));
 }
 
 /** Runs `before` and every attempt of a command, retrying what `retry` accepts. */
@@ -322,9 +336,9 @@ async function attempts(
         input,
       );
     } catch (error) {
-      return classify(error);
+      return classify(error, op);
     }
-    if (!isProceed(first)) return settle(first);
+    if (!isProceed(first)) return settle(first, op);
     handoff = first.value["~proceed"];
   }
   const body = bodyOf(op);
@@ -352,19 +366,19 @@ async function attempts(
         snapshots.has(op) ? SNAPSHOT : undefined,
       );
       await runEffects(op, attemptEffects, viewer, log);
-      settled = settle(result);
+      settled = settle(result, op);
     } catch (error) {
       settled =
         error instanceof Stop && error.outcome.kind === "rollback"
-          ? settle(error.outcome.result)
-          : classify(error);
+          ? settle(error.outcome.result, op)
+          : classify(error, op);
     }
     if (settled.kind !== "left" || !retry) return settled;
     let again: boolean;
     try {
       again = retry(settled.error, attempt);
     } catch (error) {
-      return classify(error);
+      return classify(error, op);
     }
     if (!again) return settled;
   }
@@ -372,6 +386,7 @@ async function attempts(
 
 /** Runs `recover` with fresh operations, and answers with any defect they raised. */
 async function recovered(
+  op: OpConfig<string>,
   recover: Recover,
   viewer: Viewer,
   input: never,
@@ -382,22 +397,29 @@ async function recovered(
   const execute: RecoveryScope["execute"] = async (next, value) => {
     const child = await evaluate(next as AnyOp, viewer, value as never, log);
     if (child.kind === "defect") defect ??= child;
-    return executionResult(child, next) as never;
+    return executionResult(child, next, op) as never;
   };
-  const settled = await guarded(async () =>
-    settle(await recover({ viewer, log, execute }, input, left)),
+  const settled = await guarded(op, async () =>
+    settle(await recover({ viewer, log, execute }, input, left), op),
   );
   return defect ?? settled;
 }
 
-function executionResult(child: Settled, op: OpConfig<string>): AnyResult {
+function executionResult(
+  child: Settled,
+  op: OpConfig<string>,
+  receiver: OpConfig<string>,
+): AnyResult {
   if (child.kind === "answer") return child.result;
   return Result.err(
-    executionFailed({
-      cause: child.kind === "defect" ? child.panic : child.error,
-      operation: child.operation ?? op,
-      childAction: child.childAction,
-    }),
+    executionFailed(
+      {
+        cause: child.kind === "defect" ? child.panic : child.error,
+        operation: child.operation ?? op,
+        childAction: child.childAction,
+      },
+      receiver,
+    ),
   );
 }
 
@@ -417,10 +439,10 @@ async function evaluate(
       execute: async (next, value) => {
         const child = await evaluate(next, viewer, value as never, log);
         if (child.kind === "defect") defect ??= child;
-        return executionResult(child, next) as never;
+        return executionResult(child, next, op) as never;
       },
     };
-    settled = await guarded(async () => settle(await composition(scope, input)));
+    settled = await guarded(op, async () => settle(await composition(scope, input), op));
     if (defect) settled = defect;
   } else if (streams.has(op)) {
     settled = await openStream(op, viewer, input, log);
@@ -430,12 +452,12 @@ async function evaluate(
     settled = await attempts(op, viewer, input, log);
     const recover = recoveries.get(op);
     if (settled.kind === "left" && recover) {
-      settled = await recovered(recover, viewer, input, settled.error, log);
+      settled = await recovered(op, recover, viewer, input, settled.error, log);
     }
   }
   if (settled.kind === "answer") return settled;
   if (settled.operation) {
-    if (composition || settled.operation === op) return settled;
+    if (composition) return settled;
     return {
       ...settled,
       operation: op,

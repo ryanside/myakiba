@@ -328,7 +328,7 @@ const difference = (left: string[], right: string[]) => {
 };
 
 for (const testFile of new Set(
-  selected.flatMap((replay) => [replay.test, ...(replay.head ?? []).map((head) => head.test)]),
+  selected.flatMap((replay) => replay.head?.map((head) => head.test) ?? [replay.test]),
 )) {
   const run = await runTest(root, testFile);
   const pass =

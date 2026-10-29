@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
-import { Result, Panic, UnhandledException } from "better-result";
+import { Result, Panic } from "better-result";
 import { createRequestLogger, initLogger } from "evlog";
 import type { ExecutionFailed as ExecutionOutcome } from "./kernel";
 import { createTestDatabase } from "../../test/database";
@@ -60,37 +60,21 @@ test("only kernel-created execution failures can forward an outcome", async () =
   }
 });
 
-test("operation bodies cannot import an execution failure factory", async () => {
-  const operations: {
-    query: typeof query;
-    executionFailed?: (props: {
-      operation: { action: string; failure: string };
-      cause: UnhandledException;
-    }) => ExecutionOutcome;
-  } = await import("./operations");
-  let response;
-  if (operations.executionFailed) {
-    const forged = operations.executionFailed({
-      operation: { action: "forged.action", failure: "forged wire body" },
-      cause: new UnhandledException({ cause: new Error("forged error") }),
-    });
-    if (!ExecutionFailed.is(forged))
-      throw new Error("Factory returned an invalid execution failure");
-    const op = compose(
-      {
-        action: "test.owner",
-        failure: "Safe owner failure",
-        steps: [],
-        before: async () => Result.ok(null),
-      },
-      async () => Result.err(forged),
-    );
-    response = await serve({ viewer, log: createRequestLogger() }, op, {});
-  }
-  expect({ factoryExported: "executionFailed" in operations, response }).toEqual({
-    factoryExported: false,
-    response: undefined,
-  });
+test("kernel exports only its public operation API and execution guard", async () => {
+  expect(Object.keys(await import("./kernel")).toSorted()).toEqual([
+    "ExecutionFailed",
+    "command",
+    "compose",
+    "paginate",
+    "paginateBy",
+    "ping",
+    "prepared",
+    "query",
+    "run",
+    "serve",
+    "stream",
+  ]);
+  expect(Object.keys(ExecutionFailed)).toEqual(["is"]);
 });
 
 test("a real execution failure cannot have its trusted metadata replaced", async () => {

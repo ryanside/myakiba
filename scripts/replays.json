@@ -2731,7 +2731,16 @@
       "fix": "d8aaa3ddddab742b581423a044657d8dc1bd6cf6",
       "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
       "test": "scripts/replay-names.test.ts",
-      "fixed": ["replay name matching excludes skipped and pending registrations"]
+      "fixed": ["replay name matching excludes skipped and pending registrations"],
+      "testAt": "bdac66d6d4922506b78a224e649faacc1bb37ff6",
+      "reason": "Preserve the old static-parser skipped-registration flip; current coverage reads actual Bun outcomes instead.",
+      "head": [
+        {
+          "test": "scripts/replay-reports.test.ts",
+          "fixed": ["Bun reports count only passed cases with their real file and suite names"],
+          "reason": "The source parser was deleted; passed, skipped, todo and failed JUnit cases now exercise the coverage boundary."
+        }
+      ]
     },
     {
       "fix": "fc29f5e65ef05f840e594c5b81ecaaa51c734930",
@@ -2740,6 +2749,18 @@
       "fixed": [
         "operation bodies cannot import an execution failure factory",
         "a real execution failure cannot have its trusted metadata replaced"
+      ],
+      "testAt": "bdac66d6d4922506b78a224e649faacc1bb37ff6",
+      "reason": "Preserve the historical operations-module factory probe; construction now lives privately in the kernel and is checked through its exact public exports.",
+      "head": [
+        {
+          "test": "apps/server/src/domain/execution-failed.test.ts",
+          "fixed": [
+            "kernel exports only its public operation API and execution guard",
+            "a real execution failure cannot have its trusted metadata replaced"
+          ],
+          "reason": "The export assertion now checks the actual kernel module and its guard; immutable outcome metadata remains covered."
+        }
       ]
     },
     {
@@ -2749,6 +2770,15 @@
       "fixed": [
         "Redis snapshot tests require TEST_REDIS_URL locally",
         "Redis snapshot tests require TEST_REDIS_URL in CI"
+      ],
+      "testAt": "bdac66d6d4922506b78a224e649faacc1bb37ff6",
+      "reason": "Keep the two historical diagnostic cases for the flip; CI and local runs now exercise one identical missing-URL path.",
+      "head": [
+        {
+          "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
+          "fixed": ["Redis snapshot tests require TEST_REDIS_URL locally"],
+          "reason": "The redundant CI flag case was removed; one real subprocess still proves a missing Redis URL fails with the required diagnostic."
+        }
       ]
     },
     {
@@ -2759,6 +2789,23 @@
         "replay name matching excludes conditional registrations and blocks",
         "replay name matching resolves spread arguments to each",
         "pinned replay harnesses and head coverage explain their historical revisions"
+      ],
+      "testAt": "bdac66d6d4922506b78a224e649faacc1bb37ff6",
+      "reason": "Preserve the historical static conditional/spread parser and metadata assertions for the flip; Bun JUnit results replaced the parser.",
+      "head": [
+        {
+          "test": "scripts/replay-coverage.test.ts",
+          "fixed": [
+            "replay coverage rejects names Bun did not actually run",
+            "replay coverage accepts runtime and finally registrations"
+          ],
+          "reason": "Executing a real Bun fixture covers conditional registrations, aliases, uncalled helpers, early returns, spreads and finally blocks without re-deriving JavaScript behavior."
+        },
+        {
+          "test": "scripts/replay-reasons.test.ts",
+          "fixed": ["pinned replay harnesses and head coverage explain their historical revisions"],
+          "reason": "The independent pin and remap reason policy is retained in its own tooling test."
+        }
       ]
     },
     {
@@ -2775,6 +2822,40 @@
         "a data transfer first read throw answers a logged safe 500",
         "a data transfer polling read throw retries with the last status and recovers"
       ]
+    },
+    {
+      "fix": "8a5a450e134461f0781a8c607a7abf3c7fc32d13",
+      "bug": "An unrelated composition forwarded a stashed genuine child outcome outside its declared failure type.",
+      "test": "apps/server/src/domain/execution-scope.test.ts",
+      "fixed": [
+        "a stashed real outcome belongs to the returning compose",
+        "a stashed real outcome belongs to the returning compose before"
+      ]
+    },
+    {
+      "fix": "51ced5cdf2dec9d6d13e75ce1db958992430b9d6",
+      "bug": "A stream could reuse its read action, making descendant diagnostics ambiguous.",
+      "test": "apps/server/src/domain/stream-boundary.test.ts",
+      "fixed": [
+        "a stream rejects its own action in readOrThrow before executing the read",
+        "a stream rejects its own action in poll before executing the read"
+      ]
+    },
+    {
+      "fix": "dd851781a4a657bd742133f70a4cf78064d17f37",
+      "bug": "Static source parsing counted uncalled registrations as coverage and silently passed without package test results.",
+      "test": "scripts/replay-coverage.test.ts",
+      "fixed": [
+        "replay coverage rejects names Bun did not actually run",
+        "replay coverage without reports requires the full test run",
+        "replay coverage accepts runtime and finally registrations"
+      ]
+    },
+    {
+      "fix": "9f24050e28f099e156018f29c0dd02e105cffabb",
+      "bug": "HEAD preflight attempted a deleted historical test file despite an explicit replacement head group.",
+      "test": "scripts/replay-head.test.ts",
+      "fixed": ["a replay head remap replaces a deleted historical test file"]
     }
   ],
   "lint": [

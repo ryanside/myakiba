@@ -13,7 +13,8 @@
     },
     "test": {
       "cache": false,
-      "passThroughEnv": ["TEST_DATABASE_URL", "TEST_REDIS_URL", "CI"]
+      "passThroughEnv": ["TEST_DATABASE_URL", "TEST_REDIS_URL", "CI"],
+      "outputs": ["test-results.xml"]
     },
     "dev": {
       "cache": false,
