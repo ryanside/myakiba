@@ -397,7 +397,7 @@ test("pinned replay tests still exist in the current test files", async () => {
       test: string;
       testAt?: string;
       fixed: string[];
-      head?: { test: string; fixed: string[] }[];
+      head?: { test: string; fixed: string[]; reason: string }[];
     }[];
   } = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
   const current = replays

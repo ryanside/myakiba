@@ -15,7 +15,9 @@ type TestReplay = {
    */
   testAt?: string;
   /** Current coverage when the historical harness uses names or files that HEAD renamed. */
-  head?: { test: string; fixed: string[] }[];
+  head?: { test: string; fixed: string[]; reason: string }[];
+  /** Why historical coverage was partially retired or its harness pinned. */
+  reason?: string;
 };
 
 type LintReplay = {

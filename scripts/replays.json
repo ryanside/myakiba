@@ -19,7 +19,8 @@
             "normalizeMfcDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
             "normalizeMfcDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
             "normalizeMfcDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
-          ]
+          ],
+          "reason": "The normalizer was renamed; the same four date cases remain."
         }
       ]
     },
@@ -679,7 +680,8 @@
             "with no extension it links to the store listing",
             "an extension that is too old asks for an update",
             "a new install shows after the reload, and onboarding reopens at the extension step"
-          ]
+          ],
+          "reason": "The installation UX now links to the browser store; onboarding probe/reload behavior is still covered."
         }
       ]
     },
@@ -742,7 +744,8 @@
             "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
             "closing the dialog keeps its copy while it closes and returns focus to the button",
             "a gated button shows it is checking and ignores a second click until the check ends"
-          ]
+          ],
+          "reason": "The missing-extension gate now links to a store listing; the same entry points still gate their imports."
         }
       ]
     },
@@ -919,9 +922,11 @@
             "a failed history fallback preserves the original persistence error",
             "a fetch failure cannot hide a recorded persistence failure",
             "extension CSV cannot reuse another user's Order"
-          ]
+          ],
+          "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
         }
-      ]
+      ],
+      "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
     },
     {
       "fix": "8c19d2088de705335017ea933100f1f00078e19e",
@@ -985,7 +990,8 @@
             "display text alone cannot classify a persistence failure",
             "a 1000-item failure batch uses one transaction and rate-limit unit",
             "a mixed failure batch preserves imported Items and ignores a stale job"
-          ]
+          ],
+          "reason": "The worker no longer imports Items. Durable persistence error classification after cache expiry remains covered in the request-driven importer."
         }
       ]
     },
@@ -1025,7 +1031,8 @@
           "test": "apps/extension/lib/fetcher.test.ts",
           "fixed": [
             "the MFC tab > a focus that comes while the browser answers the extension keeps the tab open and where it was, at every answer"
-          ]
+          ],
+          "reason": "The focus race test was renamed from storage reads to browser answers; it still asserts tab ownership at every answer."
         }
       ]
     },
@@ -1095,7 +1102,8 @@
             "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style commits)",
             "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style, complete before it starts commits)",
             "the MFC tab > a worker restarted while a load the user took over still runs waits for it to end"
-          ]
+          ],
+          "reason": "The load invariant test moved into its own file; focused takeover tests remain in fetcher.test.ts."
         },
         {
           "test": "apps/extension/lib/load-invariant.test.ts",
@@ -1104,7 +1112,8 @@
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Chrome-style commits)",
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
-          ]
+          ],
+          "reason": "The load invariant test moved into its own file; focused takeover tests remain in fetcher.test.ts."
         }
       ]
     },
@@ -1561,7 +1570,8 @@
           "test": "apps/web/src/data/item-refresh.test.tsx",
           "fixed": [
             "a defect in the refresh is reported as a Panic and shows the safe text, not its message"
-          ]
+          ],
+          "reason": "The existing defect test gained an explicit safe-text assertion and was renamed."
         }
       ]
     },
@@ -2099,9 +2109,11 @@
             "strict money input > rejects \"1.234\" for precision",
             "strict money input > rejects \"90071992547409.92\" for unsafe_integer",
             "strict money input > rejects \"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\" for unsafe_integer"
-          ]
+          ],
+          "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
         }
-      ]
+      ],
+      "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
     },
     {
       "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
@@ -2228,7 +2240,8 @@
             "the throttle's books > when storage fails > an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on",
             "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
             "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
-          ]
+          ],
+          "reason": "Answer-booking failures now preserve fetched pages. The same tests still cover queue progress, run completion, tab cleanup and duplicate fetches."
         }
       ]
     },
@@ -2250,7 +2263,8 @@
             "a throttle turn > whose books storage will not read runs on an open throttle and logs why",
             "a throttle turn > reads its books from storage once, however many turns it runs",
             "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
-          ]
+          ],
+          "reason": "The storage-unavailable regression moved from the old nested fetcher suite into the throttle-turn suite."
         }
       ]
     },
@@ -2294,9 +2308,11 @@
           "test": "apps/server/src/routers/data-transfer/routes.test.ts",
           "fixed": [
             "an upload without a current import stores no picture or catalog item"
-          ]
+          ],
+          "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
         }
-      ]
+      ],
+      "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
     },
     {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
