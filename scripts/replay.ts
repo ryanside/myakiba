@@ -165,8 +165,9 @@ async function installedVersion(packageDir: string, dependency: string) {
 async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
+  const command = packageDir === "." ? "bun test" : scripts.test;
   const { exitCode, stdout, stderr } =
-    await $`sh -c ${`${scripts.test} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
+    await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
       .nothrow()
       .quiet();

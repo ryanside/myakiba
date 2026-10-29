@@ -2615,6 +2615,12 @@
         "a missing sync job in replay records the not_found outcome",
         "a missing sync job in polling records the not_found outcome"
       ]
+    },
+    {
+      "fix": "d8aaa3ddddab742b581423a044657d8dc1bd6cf6",
+      "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
+      "test": "scripts/replay-names.test.ts",
+      "fixed": ["replay name matching excludes skipped and pending registrations"]
     }
   ],
   "lint": [
