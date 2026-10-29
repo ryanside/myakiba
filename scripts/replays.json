@@ -2629,6 +2629,15 @@
       "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
       "test": "scripts/replay-names.test.ts",
       "fixed": ["replay name matching excludes skipped and pending registrations"]
+    },
+    {
+      "fix": "fc29f5e65ef05f840e594c5b81ecaaa51c734930",
+      "bug": "An exported factory and mutable branded metadata let operation bodies forge an undeclared 500 response.",
+      "test": "apps/server/src/domain/execution-failed.test.ts",
+      "fixed": [
+        "operation bodies cannot import an execution failure factory",
+        "a real execution failure cannot have its trusted metadata replaced"
+      ]
     }
   ],
   "lint": [
