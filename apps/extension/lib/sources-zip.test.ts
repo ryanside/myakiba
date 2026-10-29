@@ -34,6 +34,8 @@ test("the sources zip leaves out the test reports bun run test writes", async ()
     "packages/env/package.json",
     "packages/env/src/extension.ts",
     "packages/env/test-results.xml",
+    "apps/extension/.test-results/run/test-results.xml",
+    "packages/env/.test-results/run/test-results.xml",
   ]);
 
   const zipped = await glob(zip.includeSources, {
