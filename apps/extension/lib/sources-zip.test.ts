@@ -22,7 +22,7 @@ async function repoLike(files: readonly string[]): Promise<string> {
 }
 
 // WXT builds the sources zip with tinyglobby from these options (wxt/dist/core/zip.mjs).
-test("the sources zip leaves out the test reports bun run test writes", async () => {
+test("the sources zip leaves out legacy test reports at package roots", async () => {
   const zip = config.zip;
   if (!zip?.includeSources || !zip.excludeSources) throw new Error("wxt.config sets no sources");
   const root = await repoLike([
