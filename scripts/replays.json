@@ -3036,6 +3036,7 @@
       "fixed": [
         "a report symlink cannot borrow another run's passed cases",
         "a report directory is rejected as a non-regular file",
+        "a FIFO at a report path is rejected without blocking the run",
         "replacing a consumed report path cannot change the cases read"
       ]
     },
