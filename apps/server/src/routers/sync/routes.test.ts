@@ -1753,12 +1753,13 @@ test("the order lookup keeps its own 500 body", async () => {
   }
 });
 
-test.each([1, 2])("sync SSE read %s keeps the original error in its wide event", async (failAt) => {
+test.each([1, 2])("sync SSE read %i records the original error", async (failAt) => {
   const run = await start("item", { items: [X] });
   const { default: service } = await import("./service");
   const { useLogger } = await import("evlog/elysia");
   const original = service.getJobStatus.bind(service);
   let reads = 0;
+  const events: unknown[] = [];
   let logged: ReturnType<typeof useLogger> | undefined;
   const read = spyOn(service, "getJobStatus").mockImplementation(async (...args) => {
     logged = useLogger();
@@ -1766,7 +1767,13 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
     if (reads === failAt) throw new Error("original sync read error");
     return original(...args);
   });
-  initLogger({ silent: true, drain: () => {} });
+  initLogger({
+    enabled: true,
+    silent: true,
+    drain: ({ event }) => {
+      events.push(structuredClone(event));
+    },
+  });
   try {
     const response = await app.handle(
       new Request(`http://localhost/api/sync/job-status?jobId=${run.jobId}`, {
@@ -1774,10 +1781,22 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
       }),
     );
     await response.text();
-    expect(logged?.getContext()).toMatchObject({
+    const expected = {
       action: "sync.jobStatusStream",
+      outcome: "error",
+      step: "sync.jobStatusStream",
+      childAction: "sync.jobStatus",
       error: { message: "original sync read error" },
-    });
+    };
+    if (failAt === 1) expect(logged?.getContext()).toMatchObject(expected);
+    else
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          ...expected,
+          event: "stream.end",
+          error: expect.objectContaining(expected.error),
+        }),
+      );
   } finally {
     initLogger({ enabled: false });
     read.mockRestore();

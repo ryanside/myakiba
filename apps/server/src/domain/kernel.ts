@@ -1,5 +1,6 @@
 import { ElysiaCustomStatusResponse, status } from "elysia";
 import * as z from "zod";
+import { createLogger } from "evlog";
 import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
@@ -306,12 +307,24 @@ async function openStream(
         const error = result.error;
         if (Panic.is(error.cause)) throw error;
         const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
-        logOperationError(
-          log,
-          op.action,
-          cause instanceof Error ? cause : new Error(String(cause)),
-          error.childAction ?? error.operation.action,
-        );
+        const original = cause instanceof Error ? cause : new Error(String(cause));
+        const childAction = error.childAction ?? error.operation.action;
+        logOperationError(log, op.action, original, childAction);
+        log.set({
+          pollingErrors: [
+            {
+              step: op.action,
+              childAction,
+              error: {
+                name: original.name,
+                message: original.message,
+                stack: original.stack,
+                cause: original.cause,
+              },
+              errorCauses: errorCauses(original),
+            },
+          ],
+        });
       } else {
         log.set({ outcome: result.error.category });
       }
@@ -585,15 +598,29 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
   const terminal = streams.get(op as AnyOp);
   if (!terminal) return serveResult(caller, op, input);
   return (async function* () {
-    const response = await serveResult(caller, op, input);
+    // Keep the logger object held by stream bodies and reads, but hand its methods
+    // to a standalone event before Elysia emits the request at the first yield.
+    const log = { ...caller.log };
+    const endLog = createLogger();
+    const response = await serveResult({ viewer: caller.viewer, log }, op, input);
     if (response instanceof ElysiaCustomStatusResponse)
       return response as ElysiaCustomStatusResponse<500, M>;
     let last: IteratorYieldResult<StreamValue<T>> | undefined;
+    let ended = false;
     try {
       for await (const value of response as T & AsyncGenerator<StreamValue<T>, void>) {
+        if (!last) {
+          endLog.set({
+            ...structuredClone(log.getContext()),
+            action: op.action,
+            event: "stream.end",
+          });
+          Object.assign(log, endLog);
+        }
         last = { done: false, value };
         yield value;
       }
+      ended = true;
     } catch (error) {
       const childAction = isExecutionFailed(error)
         ? (error.childAction ?? error.operation.action)
@@ -601,13 +628,19 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
       const cause = isExecutionFailed(error) ? error.cause : error;
       const logged = UnhandledException.is(cause) ? cause.cause : cause;
       logOperationError(
-        caller.log,
+        log,
         op.action,
         logged instanceof Error ? logged : new Error(String(logged)),
         childAction,
       );
       if (!last) return status(500, op.failure) as ElysiaCustomStatusResponse<500, M>;
+      ended = true;
       yield terminal.onError(op.failure, last.value as never).value as StreamValue<T>;
+    } finally {
+      if (last) {
+        if (!ended) log.set({ outcome: "aborted" });
+        endLog.emit();
+      }
     }
   })();
 }
