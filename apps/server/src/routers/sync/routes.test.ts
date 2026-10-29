@@ -1261,6 +1261,47 @@ test("an Order deleted mid-run fails the remaining items without ingesting them"
   expect(await session(run.syncSessionId)).toMatchObject({ status: "partial", failCount: 1 });
 });
 
+test("a missing Order recording failure keeps the completion wire failure and logs the child action", async () => {
+  const run = await start("order", orderBody([orderItem(PRESENT, 1000), orderItem(X, 2000)]));
+  const current = await session(run.syncSessionId);
+  if (!current?.orderId) throw new Error("Order missing");
+  await db.delete(order).where(eq(order.id, current.orderId));
+  const runs = await import("./run");
+  const original = new Error("missing-Order failure recording unavailable");
+  const calls: unknown[][] = [];
+  let restoreLog = () => {};
+  const record = spyOn(runs, "failRunWithoutOrder").mockImplementation(async (scope) => {
+    const errors = spyOn(scope.log, "error").mockImplementation((...args) => {
+      calls.push(args);
+    });
+    restoreLog = () => errors.mockRestore();
+    throw original;
+  });
+  try {
+    const response = await complete(run, X);
+    expect({ response, log: calls.map(([error, metadata]) => ({ error, metadata })) }).toEqual({
+      response: { status: 500, body: "Failed to import item" },
+      log: [
+        {
+          error: original,
+          metadata: { step: "sync.completeItem", childAction: "sync.recordItemFailure" },
+        },
+      ],
+    });
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toBe(original);
+    expect(calls[0]?.[1]).toEqual({
+      step: "sync.completeItem",
+      childAction: "sync.recordItemFailure",
+    });
+    expect(await db.$count(item, eq(item.externalId, X))).toBe(0);
+  } finally {
+    restoreLog();
+    record.mockRestore();
+  }
+});
+
 test("control and failure requests use separate per-user rate limits", async () => {
   const run = await start("item", { items: [X] });
   await heartbeat(run);

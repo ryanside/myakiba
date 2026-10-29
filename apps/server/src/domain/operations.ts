@@ -69,6 +69,7 @@ type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> | ExecutionFai
 export class ExecutionFailed extends tagged("ExecutionFailed")<{
   readonly cause: Panic | AnyTaggedError;
   readonly operation: OpConfig<string>;
+  readonly childAction?: string;
 }> {}
 
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */

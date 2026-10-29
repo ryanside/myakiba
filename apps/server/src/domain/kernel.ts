@@ -117,16 +117,23 @@ class Stop {
 type Settled =
   | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
   /** A deliberate `panic` or `unwrap`, possibly wrapped: never retried or recovered. */
-  | { readonly kind: "defect"; readonly panic: Panic; readonly operation?: OpConfig<string> }
+  | {
+      readonly kind: "defect";
+      readonly panic: Panic;
+      readonly operation?: OpConfig<string>;
+      readonly childAction?: string;
+    }
   /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
   | {
       readonly kind: "left";
       readonly error: AnyTaggedError;
       readonly operation?: OpConfig<string>;
+      readonly childAction?: string;
     };
 
 function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
-  if (ExecutionFailed.is(cause)) return { ...classify(cause.cause), operation: cause.operation };
+  if (ExecutionFailed.is(cause))
+    return { ...classify(cause.cause), operation: cause.operation, childAction: cause.childAction };
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
   return { kind: "left", error: new UnhandledException({ cause }) };
@@ -239,8 +246,9 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
         const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
         logOperationError(
           log,
-          error.operation.action,
+          op.action,
           cause instanceof Error ? cause : new Error(String(cause)),
+          error.childAction ?? error.operation.action,
         );
       }
       return result;
@@ -346,6 +354,7 @@ function executionResult(child: Settled, op: OpConfig<string>): AnyResult {
     new ExecutionFailed({
       cause: child.kind === "defect" ? child.panic : child.error,
       operation: child.operation ?? op,
+      childAction: child.childAction,
     }),
   );
 }
@@ -383,7 +392,14 @@ async function evaluate(
     }
   }
   if (settled.kind === "answer") return settled;
-  if (settled.operation) return settled;
+  if (settled.operation) {
+    if (composition || settled.operation === op) return settled;
+    return {
+      ...settled,
+      operation: op,
+      childAction: settled.childAction ?? settled.operation.action,
+    };
+  }
   if (
     settled.kind === "left" &&
     !UnhandledException.is(settled.error) &&
@@ -455,8 +471,13 @@ function errorCauses(error: Error) {
 }
 
 /** Logs an operation failure, including the driver diagnostics in its cause chain. */
-function logOperationError(log: RequestLogger, action: string, error: Error): void {
-  log.error(error, { step: action });
+function logOperationError(
+  log: RequestLogger,
+  action: string,
+  error: Error,
+  childAction?: string,
+): void {
+  log.error(error, { step: action, ...(childAction && { childAction }) });
   const causes = errorCauses(error);
   if (causes.length > 0) log.set({ errorCauses: causes });
   log.set({ outcome: "error" });
@@ -500,16 +521,19 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
         yield value;
       }
     } catch (error) {
-      const failed = ExecutionFailed.is(error) ? error.operation : op;
+      const childAction = ExecutionFailed.is(error)
+        ? (error.childAction ?? error.operation.action)
+        : undefined;
       const cause = ExecutionFailed.is(error) ? error.cause : error;
       const logged = UnhandledException.is(cause) ? cause.cause : cause;
       logOperationError(
         caller.log,
-        failed.action,
+        op.action,
         logged instanceof Error ? logged : new Error(String(logged)),
+        childAction,
       );
-      if (!last) return status(500, failed.failure) as ElysiaCustomStatusResponse<500, M>;
-      yield terminal.onError(failed.failure, last.value as never).value as StreamValue<T>;
+      if (!last) return status(500, op.failure) as ElysiaCustomStatusResponse<500, M>;
+      yield terminal.onError(op.failure, last.value as never).value as StreamValue<T>;
     }
   })();
 }
@@ -524,9 +548,13 @@ async function serveResult<I, T, F extends AnyFailure, M extends string>(
     user: { id: caller.viewer.userId },
   });
   let failed: OpConfig<string> = op;
+  let childAction: string | undefined;
   try {
     const settled = await evaluate(op as AnyOp, caller.viewer, input as never, caller.log);
-    if (settled.kind !== "answer") failed = settled.operation ?? op;
+    if (settled.kind !== "answer") {
+      failed = settled.operation ?? op;
+      childAction = settled.childAction;
+    }
     const result = answer(settled) as Result<T, F>;
     if (result.isOk()) {
       // An operation may name its own outcome, such as "imported", in place of "success".
@@ -543,6 +571,7 @@ async function serveResult<I, T, F extends AnyFailure, M extends string>(
       caller.log,
       failed.action,
       error instanceof Error ? error : new Error(String(error)),
+      childAction,
     );
     return status(500, failed.failure) as ElysiaCustomStatusResponse<500, M>;
   }

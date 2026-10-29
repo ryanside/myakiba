@@ -150,6 +150,7 @@ for (const kind of ["sync", "data transfer"] as const) {
         else expect(logged.mock.calls[0]?.[0]).toBe(original);
         expect(logged.mock.calls[0]?.[1]).toEqual({
           step: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
+          childAction: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
         });
       });
     }
