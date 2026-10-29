@@ -28,3 +28,4 @@ test.ts
 tsconfig.tsbuildinfo
 bts.jsonc
 **/test-results.xml
+**/.test-results
