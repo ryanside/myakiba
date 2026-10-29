@@ -457,3 +457,14 @@ void (true satisfies Equal<
 
 type CanConstruct<T> = T extends abstract new (...args: never[]) => object ? true : false;
 void (false satisfies CanConstruct<typeof ExecutionFailed>);
+
+const SelfMadeExecutionFailure = tagged("ExecutionFailed")<{
+  readonly cause: UnhandledException;
+  readonly operation: { readonly action: string; readonly failure: string };
+}>;
+const selfMadeExecutionFailure = new SelfMadeExecutionFailure({
+  cause: new UnhandledException({ cause: new Error("forged") }),
+  operation: { action: "forged", failure: "forged wire body" },
+});
+// @ts-expect-error a self-made outcome has no private kernel identity
+void (selfMadeExecutionFailure satisfies ExecutionFailed);

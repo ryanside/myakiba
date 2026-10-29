@@ -1,4 +1,4 @@
-import { tagged } from "./tagged";
+import type { ExecutionFailed } from "./kernel";
 import { Result, TaggedError, panic } from "better-result";
 import type {
   Panic,
@@ -64,31 +64,6 @@ export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailur
 
 /** An Err the client never sees: it exists for `retry` and `recover`. */
 type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> | ExecutionFailed ? never : E;
-
-/** An unanswerable child outcome travels through Result combinators without throwing. */
-class ExecutionFailure extends tagged("ExecutionFailed")<{
-  readonly cause: Panic | AnyTaggedError;
-  readonly operation: OpConfig<string>;
-  readonly childAction?: string;
-}> {}
-
-export type ExecutionFailed = ExecutionFailure;
-const executionFailures = new WeakSet<ExecutionFailure>();
-const executionFailedGuard = {
-  is(error: Parameters<typeof ExecutionFailure.is>[0]): error is ExecutionFailed {
-    return ExecutionFailure.is(error) && executionFailures.has(error);
-  },
-};
-export { executionFailedGuard as ExecutionFailed };
-
-/** Internal construction capability, consumed by the kernel. The public API exports only the type and guard. */
-export function executionFailed(
-  props: ConstructorParameters<typeof ExecutionFailure>[0],
-): ExecutionFailed {
-  const failure = new ExecutionFailure(props);
-  executionFailures.add(failure);
-  return failure;
-}
 
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
 type Recoverable<E> = InternalOf<E> | UnhandledException;
