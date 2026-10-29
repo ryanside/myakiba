@@ -26,7 +26,6 @@ import {
   operationals,
   SNAPSHOT,
   snapshots,
-  poolReads,
   streams,
   compositions,
   proceeding,
@@ -425,7 +424,7 @@ async function evaluate(
     if (defect) settled = defect;
   } else if (streams.has(op)) {
     settled = await openStream(op, viewer, input, log);
-  } else if (poolReads.has(op)) {
+  } else if (poolBodies.has(op)) {
     settled = await readPool(op, viewer, input, log);
   } else {
     settled = await attempts(op, viewer, input, log);
