@@ -2672,10 +2672,12 @@
       ]
     },
     {
-      "fix": "fa24e994b7714c4168f950a9ca5369e391fa488e",
-      "bug": "the update answer told Chrome users to remove and re-add the extension, which clears its stored data",
+      "fix": "9faba76f0cabf73ae234637d9dfe49382674e411",
+      "bug": "the update answer told Chrome users to wait hours for Chrome's next check while an outdated extension blocked imports",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
-      "fixed": ["the update answer tells Chrome users to wait instead of removing the extension"]
+      "fixed": [
+        "the update answer tells Chrome users how to update now without removing the extension"
+      ]
     },
     {
       "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
