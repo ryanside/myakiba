@@ -1,4 +1,6 @@
-import { lstat, mkdir, rm } from "node:fs/promises";
+import { constants } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
+import { lstat, mkdir, open, rm } from "node:fs/promises";
 import path from "node:path";
 
 const identity = Symbol("full test run");
@@ -92,20 +94,42 @@ export async function beginTestRun(root: string): Promise<TestRun> {
   return run;
 }
 
-/** Every expected report must exist in this run; the handle may be consumed only once. */
+async function readReport(report: string) {
+  const invalid = `Bun JUnit report must be a regular file; symlinks are not allowed: ${report}`;
+  let file: FileHandle;
+  try {
+    file = await open(report, constants.O_RDONLY + constants.O_NOFOLLOW + constants.O_NONBLOCK);
+  } catch (error) {
+    if (error instanceof Error && "code" in error) {
+      if (error.code === "ELOOP") throw new Error(invalid, { cause: error });
+      if (error.code === "ENOENT")
+        throw new Error(
+          `Missing current-run Bun JUnit report: ${report}. Run bun run test without filters.`,
+          { cause: error },
+        );
+    }
+    throw error;
+  }
+  try {
+    const details = await file.stat();
+    if (!details.isFile()) throw new Error(invalid);
+    return await file.readFile("utf-8");
+  } finally {
+    await file.close();
+  }
+}
+
+/** Consume each regular report through its checked handle, returning contents rather than paths. */
 export async function consumeTestRun(root: string, run?: TestRun) {
   if (!run) throw new Error(runFirst);
   const state = active.get(run);
   if (!state || state.root !== root || state.consumed) throw new Error(runFirst);
   state.consumed = true;
   for (const namespace of state.created) await ownedDirectory(namespace);
-  for (const report of state.reports.values()) {
-    if (!(await Bun.file(report).exists()))
-      throw new Error(
-        `Missing current-run Bun JUnit report: ${report}. Run bun run test without filters.`,
-      );
-  }
-  return state.reports;
+  const contents = new Map<string, string>();
+  for (const [directory, report] of state.reports)
+    contents.set(directory, await readReport(report));
+  return contents;
 }
 
 /** Readers finish before the runner removes only its own directories. */

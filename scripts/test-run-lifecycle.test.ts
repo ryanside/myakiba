@@ -338,3 +338,51 @@ for (const primary of [
     );
   }, 30_000);
 }
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  test(`${signal} wins over a failing setup and still reports its error`, async () => {
+    await fixture("", async (root) => {
+      const preload = path.join(root, "node_modules/setup-pause.ts");
+      await Bun.write(
+        preload,
+        `
+        import * as fs from "node:fs/promises";
+        import {mock} from "bun:test";
+        const original=fs.lstat;
+        const gate=Promise.withResolvers();
+        process.once("${signal}",()=>gate.resolve());
+        const replacement={...fs,lstat:async(target,...args)=>{
+          if(target===process.cwd()+"/apps/a/.test-results") {
+            await Bun.write("node_modules/ready","ready");
+            await gate.promise;
+            throw new Error("paused setup failed");
+          }
+          return original(target,...args);
+        }};
+        mock.module("node:fs/promises",()=>replacement);
+      `,
+      );
+      const child = Bun.spawn([process.execPath, "--preload", preload, "scripts/run-tests.ts"], {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const result = Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ]);
+      try {
+        await waitFor(path.join(root, "node_modules/ready"));
+        child.kill(signal);
+        const [code, stdout, stderr] = await result;
+        expect(code).toBe(signal === "SIGINT" ? 130 : 143);
+        expect(stdout + stderr).toContain("paused setup failed");
+        expect(await namespaces(root)).toEqual([]);
+      } finally {
+        child.kill();
+        await result;
+      }
+    });
+  }, 30_000);
+}
