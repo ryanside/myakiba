@@ -30,7 +30,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
-    "test": "turbo run test && bun test ./tools/oxlint/ ./scripts/",
+    "test": "turbo run test && bun test ./tools/oxlint/ ./scripts/ && bun scripts/check-replay-coverage.ts",
     "stop": "turbo run db:stop redis:stop",
     "dev:native": "turbo run dev -F native",
     "dev:web": "turbo run dev -F web",
