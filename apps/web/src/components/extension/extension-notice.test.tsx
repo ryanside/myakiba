@@ -204,7 +204,7 @@ test("the update link opens an FAQ answer that says how to update, even while ev
   window.location.hash = "";
 });
 
-test("the update answer tells Chrome users to wait instead of removing the extension", async () => {
+test("the update answer tells Chrome users how to update now without removing the extension", async () => {
   const user = userEvent.setup();
   render(<FAQsSection />);
   await user.click(
@@ -212,6 +212,8 @@ test("the update answer tells Chrome users to wait instead of removing the exten
   );
 
   const answer = await screen.findByText(/updates the extension/u);
-  expect(answer.textContent).toContain("In Chrome, wait for its next check.");
+  expect(answer.textContent).toContain(
+    "In Chrome, open chrome://extensions, turn on Developer mode and click Update.",
+  );
   expect(answer.textContent).not.toContain("remove the extension");
 });
