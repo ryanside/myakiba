@@ -12,8 +12,8 @@ const { Viewer } = await import("./viewer");
 
 for (const concurrent of [false, true]) {
   test(`an outcome cannot cross ${concurrent ? "concurrent" : "sequential"} invocations of the same op`, async () => {
-    const ready = Promise.withResolvers<void>();
-    const release = Promise.withResolvers<void>();
+    const ready = Promise.withResolvers<null>();
+    const release = Promise.withResolvers<null>();
     const original = new Error("first request error");
     let captured: Outcome | undefined;
     const child = query({ action: "test.child", failure: "Child text" }, async () => {
@@ -30,7 +30,7 @@ for (const concurrent of [false, true]) {
         if (input.capture) {
           const result = await scope.execute(child, {});
           if (result.isErr() && ExecutionFailed.is(result.error)) captured = result.error;
-          ready.resolve();
+          ready.resolve(null);
           await release.promise;
           return Result.ok(1);
         }
@@ -46,7 +46,7 @@ for (const concurrent of [false, true]) {
     );
     await ready.promise;
     if (!concurrent) {
-      release.resolve();
+      release.resolve(null);
       await first;
     }
     const log = createRequestLogger();
@@ -65,7 +65,7 @@ for (const concurrent of [false, true]) {
       expect(logged.mock.calls[0]?.[1]).toEqual({ step: "test.owner", childAction: "test.child" });
       expect(fields).toHaveBeenCalledWith({ action: "test.owner", user: { id: "second-user" } });
     } finally {
-      release.resolve();
+      release.resolve(null);
       await first;
       logged.mockRestore();
       fields.mockRestore();
