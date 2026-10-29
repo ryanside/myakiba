@@ -82,6 +82,35 @@ jobs:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
           TEST_REDIS_URL: redis://localhost:6379
 
+  extension-sources:
+    name: Rebuild the extension from its sources zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      # apps/extension/SOURCE_CODE_REVIEW.md tells AMO's reviewers to build with Node 24.
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Zip the extension
+        working-directory: apps/extension
+        run: bun run zip
+
+      - name: Rebuild from the sources zip and compare
+        working-directory: apps/extension
+        run: bun run verify-sources
+
   build-images:
     name: Build ${{ matrix.image }} image
     needs: validate
