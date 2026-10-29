@@ -10,7 +10,6 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
       path.join(import.meta.dir, "../package.json"),
     ).json();
     await mkdir(path.join(root, "scripts"));
-    await mkdir(path.join(root, "tools/oxlint"), { recursive: true });
     await mkdir(path.join(root, "apps/a"), { recursive: true });
     await Bun.write(
       path.join(root, "package.json"),
@@ -34,7 +33,7 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
       path.join(root, ".gitignore"),
       "node_modules\n.turbo\n.test-results/\ntest-results.xml\n",
     );
-    // Historical runner revisions imported the checker before it moved into replay-reports.
+    // The a47b2ec2 replay needs its parent's checker import and committed Git fingerprint fixture.
     for (const file of [
       "test-run.ts",
       "run-tests.ts",
@@ -57,14 +56,12 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
       path.join(root, "apps/a/cases.test.ts"),
       `
       import {test} from "bun:test";
-      import {$} from "bun";
       import path from "node:path";
-      import {chmod} from "node:fs/promises";
       const root=path.resolve(import.meta.dir,"../..");
       test("package",async()=>{${action}},20_000);
     `,
     );
-    await Bun.write(path.join(root, "input.ts"), "export const value=1;\n");
+    // Keep Git setup and the commit for the a47b2ec2 parent fingerprint.
     await $`git init --quiet`.cwd(root).quiet();
     await $`git config user.name Test`.cwd(root).quiet();
     await $`git config user.email test@example.invalid`.cwd(root).quiet();
@@ -306,7 +303,7 @@ for (const primary of [
             }),
           );
         if (primary === "begin error")
-          await Bun.write(path.join(root, ".test-results"), "not a directory");
+          await Bun.write(path.join(root, "apps/a/.test-results"), "not a directory");
         const run = start(root);
         try {
           if (hold) {
@@ -328,8 +325,11 @@ for (const primary of [
             expect(result.output).toContain("Failed to clean test report namespaces");
           if (primary === "coverage error")
             expect(result.output).toContain("Missing passed replay coverage");
-          if (primary === "begin error")
+          if (primary === "begin error") {
+            expect(result.output).toContain("Failed to roll back test report namespaces");
+            expect(result.output).toContain("cleanup blocked");
             expect(result.output).toContain("must be a real directory");
+          }
         } finally {
           stop(run.child.pid);
           await run.result;

@@ -36,6 +36,7 @@ async function probe(program: string) {
       ${program}
     `,
     );
+    // The a47b2ec2 parent fingerprints committed files; its replay still needs this Git fixture.
     await $`git init --quiet`.cwd(root).quiet();
     await $`git add .`.cwd(root).quiet();
     await $`git -c user.name=Test -c user.email=test@example.invalid -c core.hooksPath=/dev/null commit --quiet -m fixture`
