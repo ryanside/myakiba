@@ -1278,7 +1278,9 @@
         "og:image > rejects a size that is not a small integer",
         "og:image > rejects not a URL",
         "og:image > no og:image is absent"
-      ]
+      ],
+      "testAt": "0d47a63832e9cdd7d156bfb6e816887b9040b6a4",
+      "reason": "The guest-menu fix rewrote the single-quoted user-menu test to edit the guest menu that later fixtures carry; the pinned copy edits the page header as the fixtures of this fix expect."
     },
     {
       "fix": "3918467b9bcb408305686b696dcc945c849144fe",
