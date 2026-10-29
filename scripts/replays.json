@@ -2893,8 +2893,8 @@
     {
       "fix": "fc4731982b8a0d8aeb802fa56aab798dc0256f5e",
       "bug": "The local Redis prerequisite regression inherited CI from its parent and did not exercise local behavior.",
-      "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
-      "fixed": ["Redis snapshot tests require TEST_REDIS_URL locally"]
+      "test": "scripts/snapshot-local.test.ts",
+      "fixed": ["the local Redis prerequisite subprocess clears inherited CI"]
     },
     {
       "fix": "bd27794ce93711a82984e0ff70056d007067057b",
