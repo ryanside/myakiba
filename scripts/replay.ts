@@ -285,7 +285,7 @@ async function runKnip(checkout: string) {
   return { exitCode, output: `${stdout}${stderr}` };
 }
 
-async function checkTypes(checkout: string, packageDir: string) {
+async function checkTypes(checkout: string, packageDir: string, extraArgs: string[] = []) {
   const { scripts } = await readPackage(path.join(checkout, packageDir));
   const script: string = scripts?.["check-types"] ?? "";
   const [command, ...args] = script.split(/\s+/).filter(Boolean);
@@ -294,7 +294,7 @@ async function checkTypes(checkout: string, packageDir: string) {
   const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
     path.join(dir, "node_modules", ".bin"),
   );
-  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
+  const { exitCode, stdout } = await $`tsc ${args} ${extraArgs} --pretty false`
     .cwd(path.join(checkout, packageDir))
     .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
     .nothrow()
@@ -564,7 +564,7 @@ try {
     const directives = source.match(directive)?.length ?? 0;
     await Bun.write(file, source.replace(directive, "$1//"));
 
-    const run = await checkTypes(worktree, fixture.package);
+    const run = await checkTypes(worktree, fixture.package, ["--noEmit"]);
     const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
     const expected = (line: string) => fixture.errors.some((error) => line.startsWith(`${error}:`));
     const notReported = fixture.errors.filter(
