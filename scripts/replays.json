@@ -2681,6 +2681,23 @@
       ]
     },
     {
+      "fix": "fa24e994b7714c4168f950a9ca5369e391fa488e",
+      "testAt": "fa24e994b7714c4168f950a9ca5369e391fa488e",
+      "bug": "the update answer told Chrome users to remove and re-add the extension, which clears its stored data",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": ["the update answer tells Chrome users to wait instead of removing the extension"],
+      "reason": "9faba76f replaced the wait wording with Chrome's Update button; preserve the original assertion for this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+          "fixed": [
+            "the update answer tells Chrome users how to update now without removing the extension"
+          ],
+          "reason": "The current test still asserts the answer never tells Chrome users to remove the extension."
+        }
+      ]
+    },
+    {
       "fix": "9faba76f0cabf73ae234637d9dfe49382674e411",
       "bug": "the update answer told Chrome users to wait hours for Chrome's next check while an outdated extension blocked imports",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
