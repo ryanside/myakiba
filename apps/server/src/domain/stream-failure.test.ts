@@ -154,3 +154,52 @@ for (const kind of ["sync", "data transfer"] as const) {
     });
   }
 }
+
+for (const [phase, missingAt] of [
+  ["initial", 1],
+  ["replay", 2],
+  ["polling", 3],
+] as const) {
+  test(`a missing sync job in ${phase} records the not_found outcome`, async () => {
+    const { jobStatusSubscriptionRegistry } =
+      await import("@/lib/job-status-subscription-registry");
+    const timing = await import("@/lib/job-status-stream");
+    const { default: syncService } = await import("@/routers/sync/service");
+    const { SyncRequests } = await import("@/routers/sync/module");
+    const { SyncJobNotFound } = await import("@/routers/sync/errors/sync-job-not-found");
+    const unsubscribe = mock(async () => {});
+    spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
+      next: () => new Promise(() => {}),
+      unsubscribe,
+    });
+    spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
+    let now = Date.now();
+    spyOn(Date, "now").mockImplementation(() => {
+      now += 31_000;
+      return now;
+    });
+    let reads = 0;
+    spyOn(syncService, "getJobStatus").mockImplementation(async () => {
+      reads += 1;
+      return reads === missingAt ? Result.err(new SyncJobNotFound()) : Result.ok(status);
+    });
+    const log = createRequestLogger();
+    const logged = spyOn(log, "error");
+    const fields = spyOn(log, "set");
+    const app = new Elysia().get("/", async function* (ctx) {
+      return yield* serve({ viewer, log }, SyncRequests.stream, {
+        jobId: status.jobId,
+        signal: ctx.request.signal,
+      });
+    });
+    const response = await app.handle(new Request("http://localhost/"));
+    const body = await response.text();
+    expect(response.status).toBe(200);
+    expect(body).toContain("Job not found");
+    expect(body).toContain('"terminalState":"error"');
+    expect(reads).toBe(missingAt);
+    expect(unsubscribe).toHaveBeenCalledTimes(missingAt === 1 ? 0 : 1);
+    expect(logged).not.toHaveBeenCalled();
+    expect(fields.mock.calls.at(-1)?.[0]).toEqual({ outcome: "not_found" });
+  });
+}

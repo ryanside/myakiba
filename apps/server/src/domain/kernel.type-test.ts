@@ -1,4 +1,3 @@
-import type { ExecutionFailed } from "./kernel";
 /**
  * Each `@ts-expect-error` is a past mistake rewritten against the kernel, so
  * `tsc -b` fails if one of them compiles. `bun scripts/replay.ts --types kernel`
@@ -454,6 +453,8 @@ void (true satisfies Equal<
   Awaited<ReturnType<typeof recoveryAnswer>>,
   ElysiaCustomStatusResponse<500, "Recovery failed">
 >);
+
+import type { ExecutionFailed } from "./kernel";
 
 type CanConstruct<T> = T extends abstract new (...args: never[]) => object ? true : false;
 void (false satisfies CanConstruct<typeof ExecutionFailed>);

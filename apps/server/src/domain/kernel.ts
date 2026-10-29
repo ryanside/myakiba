@@ -235,13 +235,15 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
       const result = await streamStep(viewer, next, value, log);
       if (result.isErr()) {
         if (ExecutionFailed.is(result.error)) throw result.error;
+        log.set({ outcome: result.error.category });
         return Result.err(result.error);
       }
       return Result.ok(result.value);
     },
     poll: async (next, value) => {
       const result = await streamStep(viewer, next, value, log);
-      if (result.isErr() && ExecutionFailed.is(result.error)) {
+      if (result.isOk()) return result;
+      if (ExecutionFailed.is(result.error)) {
         const error = result.error;
         if (Panic.is(error.cause)) throw error;
         const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
@@ -251,6 +253,8 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
           cause instanceof Error ? cause : new Error(String(cause)),
           error.childAction ?? error.operation.action,
         );
+      } else {
+        log.set({ outcome: result.error.category });
       }
       return result;
     },
