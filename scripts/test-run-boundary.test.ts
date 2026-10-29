@@ -164,6 +164,20 @@ test("a report directory is rejected as a non-regular file", async () => {
   ).toMatchObject({ code: 0 });
 });
 
+test("a FIFO at a report path is rejected without blocking the run", async () => {
+  expect(
+    await probe(`
+    const run=await beginTestRun(root); await reports(run);
+    const report=path.join(root,run.reportFile);
+    await rm(report); Bun.spawnSync(["mkfifo",report]);
+    const blocked=setTimeout(()=>{console.error("consumeTestRun blocked on a FIFO");process.exit(2);},3000);
+    await expect(consumeTestRun(root,run)).rejects.toThrow("must be a regular file");
+    clearTimeout(blocked);
+    await cleanupTestRun(run);
+  `),
+  ).toMatchObject({ code: 0 });
+});
+
 test("replacing a consumed report path cannot change the cases read", async () => {
   expect(
     await probe(`
