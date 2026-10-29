@@ -457,7 +457,7 @@ async function evaluate(
   }
   if (settled.kind === "answer") return settled;
   if (settled.operation) {
-    if (composition || settled.operation === op) return settled;
+    if (composition) return settled;
     return {
       ...settled,
       operation: op,
