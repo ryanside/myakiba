@@ -1389,13 +1389,17 @@
       "fix": "bba418eae667673676c4758ba667e80830fbcce8",
       "bug": "Redis connection error events bypassed evlog",
       "test": "packages/redis/src/client.test.ts",
-      "fixed": ["the shared Redis client reports emitted errors through evlog"]
+      "fixed": ["the shared Redis client reports emitted errors through evlog"],
+      "testAt": "4e26f5361a1bdbd2d72961789c4f3f0d72733781",
+      "reason": "The original test passed only while a Redis listened on 127.0.0.1:56379; the pinned copy checks just the error it emits, so the flip holds with nothing on that port."
     },
     {
       "fix": "bba418eae667673676c4758ba667e80830fbcce8",
       "bug": "Redis connection error events bypassed evlog",
       "test": "apps/server/src/lib/job-status-subscription-registry.test.ts",
-      "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"]
+      "fixed": ["the Redis subscriber logs connection errors and notifies its consumers"],
+      "testAt": "883a19df2d181b1d95c028b360a0a96a6047bd08",
+      "reason": "The original test subscribed through a Redis fixed at 127.0.0.1:56379 and passed only while one listened there; the pinned copy uses TEST_REDIS_URL."
     },
     {
       "fix": "6dbb035be7d5d521243352fdf57d445b344cf08f",
