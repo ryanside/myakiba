@@ -17,7 +17,8 @@ afterAll(() => client.disconnect());
 test("the shared Redis client reports emitted errors through evlog", () => {
   const error = new Error("Redis connection lost");
   client.emit("error", error);
-  expect(events).toEqual([
+  // Nothing listens on the port, so the client's own connection errors may be logged too.
+  expect(events.filter((event) => JSON.stringify(event.error).includes(error.message))).toEqual([
     expect.objectContaining({
       action: "redis.connection",
       outcome: "error",
