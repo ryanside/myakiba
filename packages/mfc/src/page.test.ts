@@ -174,11 +174,18 @@ describe("markup the envelope ignores", () => {
 });
 
 describe("signed-in state", () => {
+  test("MFC's guest menu reads signed out, and a menu whose handle is a profile reads signed in", async () => {
+    const guest = await fixture("derived-public-item.html");
+    const member = edit(guest, 'href="/session/signin/"><img', 'href="/profile/fixture_user"><img');
+    expect(envelopeOf(guest)).toMatchObject({ kind: "item", signedIn: false });
+    expect(envelopeOf(member)).toMatchObject({ kind: "item", signedIn: true });
+  });
+
   test("a single-quoted class list with the user-menu token", async () => {
     const html = edit(
       await fixture("derived-public-item.html"),
-      "<header>",
-      "<header><div class='tbx-menu user-menu'></div>",
+      '<div class="tbx-menu user-menu"><a class="handle" href="/session/signin/">',
+      '<div class=\'tbx-menu user-menu\'><a class="handle" href="/profile/fixture_user">',
     );
     expect(envelopeOf(html)).toMatchObject({ kind: "item", signedIn: true });
   });

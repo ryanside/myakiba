@@ -1,3 +1,5 @@
+import { isSignInLink } from "./guest";
+
 const REMOVED = "script, style, noscript, iframe, form, input, textarea, select, button, template";
 const KEPT_META = 'meta[property="og:image"], meta[name="pictures"], meta[name="description"]';
 const COMMENT_NODE = 8;
@@ -14,12 +16,19 @@ export function scrubMfcPage(doc: Document): string {
   for (const meta of root.querySelectorAll("meta")) {
     if (!meta.matches(KEPT_META)) meta.remove();
   }
-  for (const menu of root.querySelectorAll(".user-menu")) keepOnlyClass(menu);
+  for (const menu of root.querySelectorAll(".user-menu")) {
+    if (!isGuestMenu(menu)) keepOnlyClass(menu);
+  }
   for (const element of root.querySelectorAll("[href]")) {
     if (isProfileLink(element.getAttribute("href") ?? "")) keepOnlyClass(element);
   }
   removeComments(root);
   return `<!DOCTYPE html>\n${root.outerHTML}`;
+}
+
+/** The guest menu names no one, and the parser needs its sign-in handle to read the page as signed out. */
+function isGuestMenu(menu: Element): boolean {
+  return isSignInLink(menu.querySelector("a.handle")?.getAttribute("href") ?? "");
 }
 
 function keepOnlyClass(element: Element): void {

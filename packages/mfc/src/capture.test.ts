@@ -91,6 +91,12 @@ describe("scrubMfcPage keeps what readMfcEnvelope reads on other pages", () => {
     expect(envelopeOf(scrub(html), status)).toEqual(envelopeOf(html, status));
   });
 
+  test("a guest user menu names no one, so it stays and the page still reads signed out", async () => {
+    const html = await fixture("derived-not-found-signed-out.html");
+    expect(scrub(html)).toContain('href="/session/signin/"');
+    expect(envelopeOf(scrub(html), 404)).toEqual({ kind: "not_found", signedIn: false });
+  });
+
   test("an absolute profile link is emptied like a relative one", () => {
     const html = edit(
       item98777,

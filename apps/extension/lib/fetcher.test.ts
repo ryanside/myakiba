@@ -1725,7 +1725,7 @@ describe("the MFC tab, however the browser shows a load before it commits", () =
 });
 
 describe("item results", () => {
-  test("a 404 is signed out without the user menu and hidden or missing with it", async () => {
+  test("a 404 is signed out with MFC's guest menu and hidden or missing with a signed-in menu", async () => {
     const extension = fakeExtension({
       pages: ({ mfcItemId }) => page(notFoundPage(mfcItemId === 2), { status: 404 }),
     });

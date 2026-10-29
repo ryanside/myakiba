@@ -436,8 +436,11 @@ export function itemPage(id: number, picture: "gated" | "public" | null = null):
   ].join("");
 }
 
+/** A signed-out page keeps MFC's guest menu through scrubbing; a signed-in menu is scrubbed empty. */
 export function notFoundPage(signedIn: boolean): string {
-  const menu = signedIn ? '<div class="tbx-menu user-menu"></div>' : "";
+  const menu = signedIn
+    ? '<div class="tbx-menu user-menu"></div>'
+    : '<div class="tbx-menu user-menu"><a class="handle" href="/session/signin/"><span class="username desktop">Guest</span></a></div>';
   return `<html><head><title>MyFigureCollection.net</title></head><body>${menu}<p>The page you requested was not found.</p></body></html>`;
 }
 

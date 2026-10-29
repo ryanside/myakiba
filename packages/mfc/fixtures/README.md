@@ -19,14 +19,14 @@ None of these was captured. Each one except the challenge page is `item-98777.ht
 - `derived-public-item.html` is a signed-out view of the same item.
   - Every literal `[Explicit] - ` prefix was removed, in the title, the description, the Open Graph tags, `h1.title` and the image `alt` texts.
   - `og:image` and the main `.item-picture img` became `https://static.myfigurecollection.net/upload/items/1/98777-a1b2c.jpg`.
-  - The user menu was removed.
+  - The user menu became MFC's guest menu, as captured from a signed-out page: its handle links to `/session/signin/` and reads `Guest`.
   - The `18+` rating link in Various was removed.
   - The header thumbnail still uses the gated picture, and the share links keep the URL-encoded prefix.
 - `derived-not-found-signed-in.html` is a 404 for a signed-in user.
   - The `<title>` became `MyFigureCollection.net`.
   - The description, Open Graph tags and canonical link were removed.
   - The item content was replaced by `<p>The page you requested was not found.</p>`.
-- `derived-not-found-signed-out.html` is the signed-in 404 without the user menu.
+- `derived-not-found-signed-out.html` is the signed-in 404 with the user menu replaced by MFC's guest menu, as above.
 - `derived-challenge.html` is written by hand after Cloudflare's "Just a moment..." interstitial. It shares no markup with the item page.
 
 ## Unverified against real MFC

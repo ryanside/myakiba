@@ -1,5 +1,6 @@
 import { Parser } from "htmlparser2";
 import { MAX_MFC_ITEM_ID } from "@myakiba/contracts/shared/constants";
+import { isSignInLink } from "./guest";
 
 export type MfcItemId = number & { readonly __brand: "MfcItemId" };
 
@@ -95,6 +96,8 @@ function scanPage(html: string): PageMarkers {
   };
   let hiddenDepth = 0;
   let titleState: "before" | "inside" | "after" = "before";
+  // A signed-in menu reaches the parser scrubbed empty; a guest menu's first link is its sign-in handle.
+  let userMenuOpened = false;
   const parser = new Parser({
     onopentag(name, attributes) {
       if (HIDDEN_ELEMENTS.has(name)) hiddenDepth += 1;
@@ -106,7 +109,16 @@ function scanPage(html: string): PageMarkers {
       if (name === "meta" && attributes.property === "og:image") {
         page.ogImage ??= attributes.content ?? "";
       }
-      if (attributes.class?.split(ASCII_WHITESPACE).includes("user-menu")) page.signedIn = true;
+      if (attributes.class?.split(ASCII_WHITESPACE).includes("user-menu")) {
+        page.signedIn = true;
+        userMenuOpened = true;
+      } else if (name === "a" && userMenuOpened) {
+        userMenuOpened = false;
+        const guestHandle =
+          attributes.class?.split(ASCII_WHITESPACE).includes("handle") &&
+          isSignInLink(attributes.href ?? "");
+        if (guestHandle) page.signedIn = false;
+      }
     },
     onclosetag(name) {
       if (HIDDEN_ELEMENTS.has(name)) hiddenDepth -= 1;
