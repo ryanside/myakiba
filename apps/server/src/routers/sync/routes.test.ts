@@ -1779,7 +1779,7 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
     );
     await response.text();
     expect(logged?.getContext()).toMatchObject({
-      action: "sync.jobStatus",
+      action: "sync.jobStatusStream",
       error: { message: "original sync read error" },
     });
   } finally {

@@ -60,7 +60,7 @@ const importStatus = query(
 export const DataTransfer = {
   stream: stream(
     {
-      action: "dataTransfer.importStatus",
+      action: "dataTransfer.importStatusStream",
       failure: "Failed to check import status.",
       onError: jobStatusError,
     },
