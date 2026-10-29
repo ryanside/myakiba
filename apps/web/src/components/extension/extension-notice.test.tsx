@@ -203,3 +203,16 @@ test("the update link opens an FAQ answer that says how to update, even while ev
   expect(answer.textContent).not.toContain("in review");
   window.location.hash = "";
 });
+
+test("the update answer tells Chrome users how to update sooner", async () => {
+  const user = userEvent.setup();
+  render(<FAQsSection />);
+  await user.click(
+    screen.getByRole("button", { name: "How do I update the myakiba browser extension?" }),
+  );
+
+  const answer = await screen.findByText(/updates the extension/u);
+  expect(answer.textContent).toContain(
+    "To update it sooner in Chrome, remove the extension and add it again from the Chrome Web Store while no import is running.",
+  );
+});

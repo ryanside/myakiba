@@ -79,7 +79,7 @@ const FAQ_ITEMS: readonly {
     id: EXTENSION_UPDATE_FAQ_ID,
     question: "How do I update the myakiba browser extension?",
     answer:
-      "Your browser updates the extension from its store on its own: Chrome every few hours, and Firefox about once a day. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. Then reload myakiba.",
+      "Your browser updates the extension from its store on its own: Chrome every few hours, and Firefox about once a day. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. To update it sooner in Chrome, remove the extension and add it again from the Chrome Web Store while no import is running. Then reload myakiba.",
   },
   {
     id: "item-2",
