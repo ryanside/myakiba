@@ -2840,6 +2840,16 @@
         "a stream rejects its own action in readOrThrow before executing the read",
         "a stream rejects its own action in poll before executing the read"
       ]
+    },
+    {
+      "fix": "dd851781a4a657bd742133f70a4cf78064d17f37",
+      "bug": "Static source parsing counted uncalled registrations as coverage and silently passed without package test results.",
+      "test": "scripts/replay-coverage.test.ts",
+      "fixed": [
+        "replay coverage rejects names Bun did not actually run",
+        "replay coverage without reports requires the full test run",
+        "replay coverage accepts runtime and finally registrations"
+      ]
     }
   ],
   "lint": [
