@@ -738,6 +738,31 @@ test("a page that is not the item fails it with the reason", async () => {
   expect(await complete({ ...run, syncSessionId: "missing" }, X)).toMatchObject({ status: 404 });
 });
 
+test("a page whose picture SFW mode hides fails the item and imports nothing", async () => {
+  const run = await start("item", { items: [X] });
+  const sfwHidden = (pages.get(X) ?? "").replace(
+    `content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=${X}&amp;size=1"`,
+    'content="https://static.myfigurecollection.net/ressources/icons/nsfw.png"',
+  );
+  expect(sfwHidden).not.toBe(pages.get(X));
+
+  expect(await complete(run, X, sfwHidden)).toEqual({
+    status: 200,
+    body: {
+      outcome: "failed",
+      reason: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+    },
+  });
+  expect(await results(run.syncSessionId)).toEqual([
+    {
+      id: X,
+      status: "failed",
+      reason: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+    },
+  ]);
+  expect(await db.$count(item, eq(item.externalId, X))).toBe(0);
+});
+
 test("a stale job's failure is ignored and its late success still imports", async () => {
   const first = await start("collection", [collectionEntry(X, 200), collectionEntry(Y, 300)]);
   await fail(first, X);

@@ -23,6 +23,7 @@ export type MfcEnvelope =
 export type MfcOgImage =
   | { readonly kind: "picture"; readonly picture: MfcPicture }
   | { readonly kind: "rejected"; readonly raw: string }
+  | { readonly kind: "sfw_hidden" }
   | { readonly kind: "absent" };
 
 export type MfcPicture = {
@@ -38,6 +39,9 @@ export const MFC_STATIC_ORIGIN = "https://static.myfigurecollection.net";
 export function isCloudflareChallenge(cfMitigated: string | null): boolean {
   return cfMitigated?.trim().toLowerCase() === "challenge";
 }
+
+/** What MFC shows in place of an NSFW item's picture while the viewer's SFW mode is on. */
+const SFW_PLACEHOLDER = `${MFC_STATIC_ORIGIN}/ressources/icons/nsfw.png`;
 
 /** Only pictures under this path on the static origin are item pictures. */
 export function isItemPicturePath(pathname: string): boolean {
@@ -120,6 +124,7 @@ function scanPage(html: string): PageMarkers {
 
 function readOgImage(raw: string | null, id: MfcItemId): MfcOgImage {
   if (raw === null) return { kind: "absent" };
+  if (raw === SFW_PLACEHOLDER) return { kind: "sfw_hidden" };
   const picture = allowPicture(raw, id);
   return picture ? { kind: "picture", picture } : { kind: "rejected", raw };
 }

@@ -272,6 +272,12 @@ describe("og:image", () => {
     expect(envelopeOf(withOgImage(url))).toMatchObject(rejected(url.replaceAll("&amp;", "&")));
   });
 
+  test("MFC's SFW placeholder means SFW mode hides the picture", () => {
+    expect(
+      envelopeOf(withOgImage("https://static.myfigurecollection.net/ressources/icons/nsfw.png")),
+    ).toMatchObject({ kind: "item", ogImage: { kind: "sfw_hidden" } });
+  });
+
   test("no og:image is absent", () => {
     expect(envelopeOf(edit(item98777, OG_IMAGE_98777, ""))).toMatchObject({
       kind: "item",

@@ -7,6 +7,7 @@ export const PROBLEM_MESSAGE = {
   not_found: "MyFigureCollection did not show this item",
   not_an_item_page: "The page is not a MyFigureCollection item page",
   wrong_item: "The page is for a different item",
+  sfw_hidden: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
   missing_title: "The item page has no title",
   missing_category: "The item page has no category",
   unsupported_category: "This item category is not supported",

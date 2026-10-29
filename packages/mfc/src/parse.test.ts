@@ -286,6 +286,15 @@ describe("parseMfcItemPage warnings", () => {
     expect(page.warnings).toEqual([`picture rejected: "${raw}"`]);
   });
 
+  test("an og:image hidden by SFW mode is sfw_hidden, so the item is never imported without its picture", () => {
+    const html = edit(
+      item98777,
+      'content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"',
+      'content="https://static.myfigurecollection.net/ressources/icons/nsfw.png"',
+    );
+    expect(problemOf(html)).toEqual({ kind: "sfw_hidden" });
+  });
+
   test("no og:image leaves no picture and no warning", () => {
     const html = edit(
       item98777,

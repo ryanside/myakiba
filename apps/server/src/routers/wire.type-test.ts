@@ -261,7 +261,8 @@ void (true satisfies Equal<
           | "The item page has no title"
           | "The page is for a different item"
           | "The page is not a MyFigureCollection item page"
-          | "This item category is not supported",
+          | "This item category is not supported"
+          | "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
           400
         >
       | S<404, "Item not found">
@@ -342,7 +343,8 @@ void (true satisfies Equal<
           | "The item page has no title"
           | "The page is for a different item"
           | "The page is not a MyFigureCollection item page"
-          | "This item category is not supported",
+          | "This item category is not supported"
+          | "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
           400
         >
       | S<500, "Failed to import item">;

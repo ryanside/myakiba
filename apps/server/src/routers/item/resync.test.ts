@@ -476,6 +476,27 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await resyncStatus()).toEqual(IDLE);
   });
 
+  test("a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown", async () => {
+    await upload(page98777, JPEG);
+    const before = await itemRows();
+
+    expect(
+      await resync(
+        edit(
+          page98777,
+          'content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"',
+          'content="https://static.myfigurecollection.net/ressources/icons/nsfw.png"',
+        ),
+      ),
+    ).toEqual({
+      status: 400,
+      body: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+    });
+
+    expect(await itemRows()).toEqual(before);
+    expect(await resyncStatus()).toEqual(IDLE);
+  });
+
   test("an item that was never imported answers 404 on both routes and stores nothing", async () => {
     const notFound = { status: 404, body: "Item not found" };
     expect(await resync(page98777, JPEG)).toEqual(notFound);

@@ -54,6 +54,7 @@ export type MfcPageProblem =
   | { readonly kind: "not_found" }
   | { readonly kind: "not_an_item_page" }
   | { readonly kind: "wrong_item"; readonly found: MfcItemId }
+  | { readonly kind: "sfw_hidden" }
   | { readonly kind: "missing_title" }
   | { readonly kind: "missing_category" }
   | { readonly kind: "unsupported_category"; readonly raw: string };
@@ -75,6 +76,7 @@ export function parseMfcItemPage(
   if (envelope.mfcItemId !== expected) {
     return unreadable({ kind: "wrong_item", found: envelope.mfcItemId });
   }
+  if (envelope.ogImage.kind === "sfw_hidden") return unreadable({ kind: "sfw_hidden" });
 
   const $ = cheerio.load(html);
   const rawTitle = $("h1.title").first().text().trim();
