@@ -3,7 +3,9 @@ import { afterAll, expect, mock, test } from "bun:test";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 
-const subscriber = new Redis({ host: "127.0.0.1", port: 56_379, lazyConnect: true });
+const redisUrl = process.env.TEST_REDIS_URL;
+if (!redisUrl) throw new Error("TEST_REDIS_URL is required for the Redis subscriber test");
+const subscriber = new Redis(redisUrl, { lazyConnect: true });
 afterAll(() => subscriber.disconnect());
 await mock.module("@myakiba/redis/client", () => ({ redis: { duplicate: () => subscriber } }));
 const events: DrainContext["event"][] = [];
