@@ -2750,6 +2750,16 @@
         "Redis snapshot tests require TEST_REDIS_URL locally",
         "Redis snapshot tests require TEST_REDIS_URL in CI"
       ]
+    },
+    {
+      "fix": "49270b4e2b52b35e9f9c77d9e42fb8a58fa6da32",
+      "bug": "Conditional registrations counted as coverage, test.each spreads lost cases, and historical pins lacked explanations.",
+      "test": "scripts/replay-names.test.ts",
+      "fixed": [
+        "replay name matching excludes conditional registrations and blocks",
+        "replay name matching resolves spread arguments to each",
+        "pinned replay harnesses and head coverage explain their historical revisions"
+      ]
     }
   ],
   "lint": [
