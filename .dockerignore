@@ -27,3 +27,4 @@ test.ts
 .prettierrc*
 tsconfig.tsbuildinfo
 bts.jsonc
+**/test-results.xml
