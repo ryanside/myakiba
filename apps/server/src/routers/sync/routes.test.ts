@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import path from "node:path";
 import { Elysia } from "elysia";
-import { initLogger } from "evlog";
+import { createRequestLogger, initLogger } from "evlog";
 import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
 import { SYNC_RUN_LEASE_MS, SYNC_SESSION_RETRY_WINDOW_MS } from "@myakiba/contracts/sync/constants";
@@ -253,14 +253,19 @@ async function start(type: string, body: Json) {
   return startedSchema.parse(reply.body);
 }
 
-async function complete(run: Run, id: number, page = pages.get(id) ?? "") {
+async function complete(
+  run: Run,
+  id: number,
+  page = pages.get(id) ?? "",
+  target: Pick<typeof app, "handle"> = app,
+) {
   const form = new FormData();
   form.set("jobId", run.jobId);
   form.set("mfcItemId", String(id));
   form.set("page", new File([page], "page.html", { type: "text/html" }));
   form.set("picture", new File([JPEG], "picture", { type: "image/jpeg" }));
   return answer(
-    await app.handle(
+    await target.handle(
       new Request(`http://localhost/api/sync/sessions/${run.syncSessionId}/items`, {
         method: "POST",
         headers: { "x-test-user": userId },
@@ -1268,36 +1273,27 @@ test("a missing Order recording failure keeps the completion wire failure and lo
   await db.delete(order).where(eq(order.id, current.orderId));
   const runs = await import("./run");
   const original = new Error("missing-Order failure recording unavailable");
-  const calls: unknown[][] = [];
-  let restoreLog = () => {};
-  const record = spyOn(runs, "failRunWithoutOrder").mockImplementation(async (scope) => {
-    const errors = spyOn(scope.log, "error").mockImplementation((...args) => {
-      calls.push(args);
-    });
-    restoreLog = () => errors.mockRestore();
-    throw original;
-  });
+  const log = createRequestLogger();
+  const errors = spyOn(log, "error");
+  const observed = new Elysia({ prefix: "/api" })
+    .resolve({ as: "global" }, () => ({ log }))
+    .use(syncRouter);
+  const record = spyOn(runs, "failRunWithoutOrder").mockRejectedValue(original);
   try {
-    const response = await complete(run, X);
-    expect({ response, log: calls.map(([error, metadata]) => ({ error, metadata })) }).toEqual({
-      response: { status: 500, body: "Failed to import item" },
-      log: [
-        {
-          error: original,
-          metadata: { step: "sync.completeItem", childAction: "sync.recordItemFailure" },
-        },
-      ],
+    expect(await complete(run, X, pages.get(X), observed)).toEqual({
+      status: 500,
+      body: "Failed to import item",
     });
     expect(record).toHaveBeenCalledTimes(1);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.[0]).toBe(original);
-    expect(calls[0]?.[1]).toEqual({
+    expect(errors).toHaveBeenCalledTimes(1);
+    expect(errors.mock.calls[0]?.[0]).toBe(original);
+    expect(errors.mock.calls[0]?.[1]).toEqual({
       step: "sync.completeItem",
       childAction: "sync.recordItemFailure",
     });
     expect(await db.$count(item, eq(item.externalId, X))).toBe(0);
   } finally {
-    restoreLog();
+    errors.mockRestore();
     record.mockRestore();
   }
 });
@@ -1779,7 +1775,7 @@ test.each([1, 2])("sync SSE read %s keeps the original error in its wide event",
     );
     await response.text();
     expect(logged?.getContext()).toMatchObject({
-      action: "sync.jobStatus",
+      action: "sync.jobStatusStream",
       error: { message: "original sync read error" },
     });
   } finally {
@@ -2104,7 +2100,6 @@ test("a corrupt retained sync payload refuses retry explicitly and logs its sche
   await db.execute(
     sql`UPDATE sync_session SET request_payload = '{"type":"obsolete"}'::jsonb WHERE id = ${run.syncSessionId}`,
   );
-  const { createRequestLogger } = await import("evlog");
   const { serve } = await import("@/domain/kernel");
   const { Viewer } = await import("@/domain/viewer");
   const { SyncRuns } = await import("./module");

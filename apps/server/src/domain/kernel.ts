@@ -11,11 +11,10 @@ import type { ReadTx } from "@myakiba/db/tx";
 import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
 import type { AnyFailure, Category } from "./failure";
 import type { Viewer } from "./viewer";
+import { tagged } from "./tagged";
 
 import {
   FAILURE_STATUS,
-  ExecutionFailed,
-  executionFailed,
   isCommitted,
   isProceed,
   isFailure,
@@ -27,7 +26,6 @@ import {
   operationals,
   SNAPSHOT,
   snapshots,
-  poolReads,
   streams,
   compositions,
   proceeding,
@@ -51,8 +49,47 @@ import type {
   Recover,
 } from "./operations";
 
-export { query, command, compose, stream, ExecutionFailed } from "./operations";
+export { query, command, compose, stream } from "./operations";
 export type { Op, CommandScope, InputOf, CompositionScope } from "./operations";
+
+/** An unanswerable child outcome travels through Result combinators without throwing. */
+const executionIdentity = Symbol("kernel execution outcome");
+const ExecutionFailure = tagged("ExecutionFailed")<{
+  readonly cause: Panic | AnyTaggedError;
+  readonly operation: OpConfig<string>;
+  readonly childAction?: string;
+}>;
+
+export interface ExecutionFailed extends InstanceType<typeof ExecutionFailure> {
+  readonly [executionIdentity]: true;
+}
+const executionFailures = new WeakSet<object>();
+function isExecutionFailed(
+  error: Parameters<typeof ExecutionFailure.is>[0],
+): error is ExecutionFailed {
+  return ExecutionFailure.is(error) && executionFailures.has(error);
+}
+const executionFailedGuard = Object.freeze({ is: isExecutionFailed });
+export { executionFailedGuard as ExecutionFailed };
+
+/** Only this module can construct and brand an outcome. Its trusted metadata is immutable. */
+function executionFailed(
+  props: ConstructorParameters<typeof ExecutionFailure>[0],
+): ExecutionFailed {
+  const failure: ExecutionFailed = Object.assign(
+    new ExecutionFailure({
+      ...props,
+      operation: Object.freeze({
+        action: props.operation.action,
+        failure: props.operation.failure,
+      }),
+    }),
+    { [executionIdentity]: true as const },
+  );
+  executionFailures.add(failure);
+  Object.freeze(failure);
+  return failure;
+}
 
 /**
  * The one way a route reads or writes user data. A domain module exports
@@ -133,7 +170,7 @@ type Settled =
     };
 
 function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
-  if (ExecutionFailed.is(cause))
+  if (isExecutionFailed(cause))
     return { ...classify(cause.cause), operation: cause.operation, childAction: cause.childAction };
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
@@ -144,7 +181,7 @@ function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }>
 function settle(result: AnyResult): Settled {
   if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
   const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
-  if (ExecutionFailed.is(error)) return classify(error);
+  if (isExecutionFailed(error)) return classify(error);
   if (Panic.is(error)) return { kind: "defect", panic: error };
   if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
   return { kind: "left", error };
@@ -234,7 +271,7 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
     readOrThrow: async (next, value) => {
       const result = await streamStep(viewer, next, value, log);
       if (result.isErr()) {
-        if (ExecutionFailed.is(result.error)) throw result.error;
+        if (isExecutionFailed(result.error)) throw result.error;
         log.set({ outcome: result.error.category });
         return Result.err(result.error);
       }
@@ -243,7 +280,7 @@ async function openStream(op: AnyOp, viewer: Viewer, input: never, log: RequestL
     poll: async (next, value) => {
       const result = await streamStep(viewer, next, value, log);
       if (result.isOk()) return result;
-      if (ExecutionFailed.is(result.error)) {
+      if (isExecutionFailed(result.error)) {
         const error = result.error;
         if (Panic.is(error.cause)) throw error;
         const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
@@ -387,7 +424,7 @@ async function evaluate(
     if (defect) settled = defect;
   } else if (streams.has(op)) {
     settled = await openStream(op, viewer, input, log);
-  } else if (poolReads.has(op)) {
+  } else if (poolBodies.has(op)) {
     settled = await readPool(op, viewer, input, log);
   } else {
     settled = await attempts(op, viewer, input, log);
@@ -526,10 +563,10 @@ export function serve<I, T, F extends AnyFailure, M extends string>(
         yield value;
       }
     } catch (error) {
-      const childAction = ExecutionFailed.is(error)
+      const childAction = isExecutionFailed(error)
         ? (error.childAction ?? error.operation.action)
         : undefined;
-      const cause = ExecutionFailed.is(error) ? error.cause : error;
+      const cause = isExecutionFailed(error) ? error.cause : error;
       const logged = UnhandledException.is(cause) ? cause.cause : cause;
       logOperationError(
         caller.log,

@@ -148,7 +148,7 @@ for (const kind of ["sync", "data transfer"] as const) {
       if (defect === "panic") expect(logged.mock.calls[0]?.[0]).toBeInstanceOf(Panic);
       else expect(logged.mock.calls[0]?.[0]).toBe(original);
       expect(logged.mock.calls[0]?.[1]).toEqual({
-        step: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
+        step: kind === "sync" ? "sync.jobStatusStream" : "dataTransfer.importStatusStream",
         childAction: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
       });
     });

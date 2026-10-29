@@ -1,4 +1,3 @@
-import type { ExecutionFailed } from "./kernel";
 /**
  * Each `@ts-expect-error` is a past mistake rewritten against the kernel, so
  * `tsc -b` fails if one of them compiles. `bun scripts/replay.ts --types kernel`
@@ -19,7 +18,7 @@ import { privateApi } from "@/boundary/private-api";
 import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
-import { command, compose, paginate, query, serve, stream } from "./kernel";
+import { command, compose, paginate, query, serve, stream, ExecutionFailed } from "./kernel";
 import { tagged } from "./tagged";
 
 const config = { action: "probe", failure: "Probe failed" };
@@ -42,11 +41,15 @@ void Failure("Misspelled", "not_fund", "Order item not found");
 new Elysia()
   .use(betterAuth)
   .use(evlog())
-  // @ts-expect-error 5a51f519: a route without a session reached user data; it has no viewer
-  .delete("/:orderId/items/:collectionId", (ctx) => serve(ctx, Orders.removeItem, ctx.params));
+  .delete("/:orderId/items/:collectionId", (ctx) => {
+    // @ts-expect-error 5a51f519: a route without a session reached user data; it has no viewer
+    const sessionCaller: Parameters<typeof serve>[0] = ctx;
+    return serve(sessionCaller, Orders.removeItem, ctx.params);
+  });
 
 // @ts-expect-error a hand-built viewer; only the auth macro creates one
-void serve({ viewer: { userId: "u1" }, log: createRequestLogger() }, Orders.removeItem, {
+const handBuiltViewer: Parameters<typeof serve>[0]["viewer"] = { userId: "u1" };
+void serve({ viewer: handBuiltViewer, log: createRequestLogger() }, Orders.removeItem, {
   orderId: "o1",
   collectionId: "c1",
 });
@@ -457,3 +460,19 @@ void (true satisfies Equal<
 
 type CanConstruct<T> = T extends abstract new (...args: never[]) => object ? true : false;
 void (false satisfies CanConstruct<typeof ExecutionFailed>);
+
+const SelfMadeExecutionFailure = tagged("ExecutionFailed")<{
+  readonly cause: UnhandledException;
+  readonly operation: { readonly action: string; readonly failure: string };
+}>;
+const selfMadeExecutionFailure = new SelfMadeExecutionFailure({
+  cause: new UnhandledException({ cause: new Error("forged") }),
+  operation: { action: "forged", failure: "forged wire body" },
+});
+// @ts-expect-error a self-made outcome has no private kernel identity
+void (selfMadeExecutionFailure satisfies ExecutionFailed);
+
+const executionFailureProbe = new Error("unanswerable child");
+if (ExecutionFailed.is(executionFailureProbe)) {
+  void (executionFailureProbe.operation.failure satisfies string);
+}

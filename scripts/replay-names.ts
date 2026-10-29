@@ -14,7 +14,7 @@ type Bindings = Map<string, Value>;
 type Registration = {
   call: CallExpression;
   kind: "test" | "describe";
-  each?: Expression;
+  each?: CallExpression;
   disabled: boolean;
 };
 const absent: Value = { kind: "none" };
@@ -111,28 +111,50 @@ export function namesIn(file: string, source: string): Set<string> {
   const current = moduleAt(path.resolve(file), source);
   const registrations: Registration[] = [];
   const loops: ForOfStatement[] = [];
+  const conditionalBlocks: Pick<CallExpression, "start" | "end">[] = [];
   new Visitor({
     ForOfStatement(node) {
       loops.push(node);
     },
+    IfStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    ConditionalExpression(node) {
+      conditionalBlocks.push(node);
+    },
+    LogicalExpression(node) {
+      conditionalBlocks.push(node);
+    },
+    SwitchStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    WhileStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    DoWhileStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    ForStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    ForInStatement(node) {
+      conditionalBlocks.push(node);
+    },
+    TryStatement(node) {
+      conditionalBlocks.push(node);
+    },
     CallExpression(call) {
       let callee = call.callee;
-      let each: Expression | undefined;
+      let each: CallExpression | undefined;
       let disabled = false;
       while (true) {
         if (
           callee.type === "CallExpression" &&
           callee.callee.type === "MemberExpression" &&
           callee.callee.property.type === "Identifier" &&
-          ["each", "skipIf", "todoIf"].includes(callee.callee.property.name)
+          ["each", "skipIf", "todoIf", "if"].includes(callee.callee.property.name)
         ) {
-          const argument = callee.arguments[0];
-          if (
-            callee.callee.property.name === "each" &&
-            argument &&
-            argument.type !== "SpreadElement"
-          )
-            each = argument;
+          if (callee.callee.property.name === "each") each = callee;
           else disabled = true;
           callee = callee.callee.object;
         } else if (
@@ -330,7 +352,19 @@ export function namesIn(file: string, source: string): Set<string> {
       ({ call, kind }) =>
         kind === "describe" && call.start < entry.call.start && call.end > entry.call.end,
     );
-    if (entry.disabled || parents.some((parent) => parent.disabled)) continue;
+    if (
+      entry.disabled ||
+      conditionalBlocks.some(
+        (block) => block.start <= entry.call.start && block.end >= entry.call.end,
+      ) ||
+      registrations.some(
+        (parent) =>
+          parent.disabled &&
+          parent.call.start < entry.call.start &&
+          parent.call.end > entry.call.end,
+      )
+    )
+      continue;
     const containers = [
       ...parents.map((registration) => ({ start: registration.call.start, registration })),
       ...loops
@@ -357,7 +391,22 @@ export function namesIn(file: string, source: string): Set<string> {
         const title = registration.call.arguments[0];
         const callback = registration.call.arguments[1];
         if (!title || title.type === "SpreadElement") return [];
-        const rows = registration.each ? value(registration.each, bound) : list([absent]);
+        let rows: Value = list([absent]);
+        if (registration.each) {
+          const each = registration.each;
+          const parameters = each.arguments.flatMap((argument) => {
+            if (argument.type !== "SpreadElement") return [value(argument, bound)];
+            const spread = value(argument.argument, bound);
+            if (spread.kind !== "list")
+              throw new Error(
+                `${file}:${each.start}: cannot resolve test.each spread arguments statically`,
+              );
+            return spread.values;
+          });
+          if (parameters.length !== 1)
+            throw new Error(`${file}:${each.start}: test.each requires one cases argument`);
+          rows = parameters[0] ?? absent;
+        }
         if (rows.kind !== "list") return [];
         return rows.values.map((row, index) => {
           const next = new Map(bound);

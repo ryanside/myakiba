@@ -1137,7 +1137,7 @@ test.each([1, 2])(
       );
       await response.text();
       expect(logged?.getContext()).toMatchObject({
-        action: "dataTransfer.importStatus",
+        action: "dataTransfer.importStatusStream",
         error: { message: "original import read error" },
       });
     } finally {

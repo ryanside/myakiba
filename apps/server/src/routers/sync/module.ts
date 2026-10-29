@@ -842,7 +842,11 @@ function plannedImport<const M extends string>(complete: ReturnType<typeof compl
 
 export const SyncRequests = {
   stream: stream(
-    { action: "sync.jobStatus", failure: "Error fetching job status", onError: jobStatusError },
+    {
+      action: "sync.jobStatusStream",
+      failure: "Error fetching job status",
+      onError: jobStatusError,
+    },
     (scope, input: { readonly jobId: string; readonly signal: AbortSignal }) =>
       streamStatus({
         log: scope.log,

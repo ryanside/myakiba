@@ -1,4 +1,4 @@
-import { tagged } from "./tagged";
+import type { ExecutionFailed } from "./kernel";
 import { Result, TaggedError, panic } from "better-result";
 import type {
   Panic,
@@ -65,31 +65,6 @@ export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailur
 /** An Err the client never sees: it exists for `retry` and `recover`. */
 type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> | ExecutionFailed ? never : E;
 
-/** An unanswerable child outcome travels through Result combinators without throwing. */
-class ExecutionFailure extends tagged("ExecutionFailed")<{
-  readonly cause: Panic | AnyTaggedError;
-  readonly operation: OpConfig<string>;
-  readonly childAction?: string;
-}> {}
-
-export type ExecutionFailed = ExecutionFailure;
-const executionFailures = new WeakSet<ExecutionFailure>();
-const executionFailedGuard = {
-  is(error: Parameters<typeof ExecutionFailure.is>[0]): error is ExecutionFailed {
-    return ExecutionFailure.is(error) && executionFailures.has(error);
-  },
-};
-export { executionFailedGuard as ExecutionFailed };
-
-/** Internal construction capability, consumed by the kernel. The public API exports only the type and guard. */
-export function executionFailed(
-  props: ConstructorParameters<typeof ExecutionFailure>[0],
-): ExecutionFailed {
-  const failure = new ExecutionFailure(props);
-  executionFailures.add(failure);
-  return failure;
-}
-
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
 type Recoverable<E> = InternalOf<E> | UnhandledException;
 
@@ -106,7 +81,7 @@ export type Statement<T> = { readonly execute: (placeholders?: Placeholders) => 
 export type Prepared<T> = { readonly statement: Statement<T> };
 
 /** A query without `snapshot` reads from the pool, so it can also run reads built once by `prepared()`. */
-export type PoolScope = ReadScope & {
+type PoolScope = ReadScope & {
   readonly read: <T>(statement: Prepared<T>, placeholders?: Placeholders) => Promise<T>;
 };
 
@@ -274,7 +249,6 @@ export const operationals = new WeakMap<AnyOp, Operational>();
 
 export const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
 export const snapshots = new WeakSet<AnyOp>();
-export const poolReads = new WeakSet<AnyOp>();
 /**
  * A read. The body takes the scope and one input object, never positional params, and
  * returns a Result whose errors are all Failures or listed in `operational`. Without
@@ -299,7 +273,6 @@ export function query<
     snapshots.add(op);
   } else {
     poolBodies.set(op, body);
-    poolReads.add(op);
   }
   if (config.operational) operationals.set(op, config.operational);
   return op;
@@ -485,7 +458,7 @@ export function compose<
     const planning: CompositionScope<Steps> = {
       ...checked,
       execute: async (next, value) => {
-        if (!poolReads.has(next) && !snapshots.has(next))
+        if (!poolBodies.has(next) && !snapshots.has(next))
           panic(`${op.action} tried to execute command ${next.action} in before`);
         return checked.execute(next, value);
       },

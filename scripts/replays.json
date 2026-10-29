@@ -22,7 +22,8 @@
           ],
           "reason": "The normalizer was renamed; the same four date cases remain."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "dd30621e3d4073382cff9ee6a2c55c2eda63f690",
@@ -182,7 +183,8 @@
         "move to an existing order submit > stays open with the selection kept and no unhandled rejection after the write fails",
         "move to a new order submit > stays open with the selection kept and no unhandled rejection after the write fails"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "488ec693253a30f9df5625175d6eced2e9a7ea20",
@@ -198,7 +200,8 @@
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: the caller's await waits for the write",
         "an order action's promise settles after the server write (unfiltered list) > handleMoveItem: a rejected write rejects the caller's await"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
@@ -207,7 +210,8 @@
       "fixed": [
         "a failed Order write after the filter changes > leaves the new list as the server sent it"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
@@ -216,7 +220,8 @@
       "fixed": [
         "a failed Collection Item write after the filter changes > leaves the new list as the server sent it"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ad737d6d23e685ae0df64e0c61fe646872a1b9ce",
@@ -254,7 +259,8 @@
         "collection filters dialog starts each open from the URL filters > closing without Apply discards the draft",
         "collection filters dialog starts each open from the URL filters > reopening while the dialog is still closing discards the draft"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "cd02b2ac8a371d6f43c8d38d10b7871f31b1940e",
@@ -269,7 +275,8 @@
         "a dashboard kanban card keeps the user's change while its write is in flight > an edited date stays on the card when a refetch lands mid-write",
         "a dashboard kanban card keeps the user's change while its write is in flight > a card the server moved during its date write shows in the server's column once the write settles"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "bcefafcf17ea8cbec3e55d19e10a558be945260b",
@@ -279,7 +286,8 @@
         "reconciling the board with a fetch > keeps the board's columns when picking up or releasing a card changes nothing",
         "reconciling the board with a fetch > returns new columns for a real change and keeps the columns it did not touch"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "0e06a016c9b7cbc4a39f78b2b8e145e2f3104c4b",
@@ -327,7 +335,8 @@
       "bug": "the item search pager kept Next enabled on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["DataTablePagination > a page past the end cannot go further"],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
@@ -346,7 +355,8 @@
         "a failed dashboard kanban write rolls back only its own change > a failed status write returns its card and keeps another card's move that is still in flight",
         "a failed dashboard kanban write rolls back only its own change > a failed date write restores its date and keeps another card's move that is still in flight"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "2ca2fcb21cc059d6bfe83447efc5f9802f16daf4",
@@ -357,7 +367,8 @@
         "a failed cell edit > leaving a text cell leaves no unhandled rejection",
         "a failed cell edit > pressing Enter in a count cell leaves no unhandled rejection"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
@@ -372,7 +383,8 @@
         "an order that fails to load > reads as a connection problem when the server answers 401 without a message",
         "a dashboard that cannot reach the server fails with a readable message"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
@@ -456,14 +468,16 @@
         "DataTablePagination past the end > an empty result offers page 1",
         "DataTablePagination past the end > previous goes to the last page with rows"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9597fbf59b6981d09ab01f5cf11db5c0dd0390ef",
       "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "abc05395f63485d3cf3852ae5b233397f1847d5c",
@@ -592,7 +606,8 @@
       "fixed": [
         "a resync that fails part way leaves no cooldown and no refresh > a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes"
       ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "25fd8793bf4949b0645a15b6f66811e7d93586dc",
@@ -603,7 +618,8 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 33.335 percent rounds as Postgres after import",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 0.0000001 percent rounds as Postgres after import"
       ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "95e0582eb92797fdfcdce8d1ce734286a8b1d48b",
@@ -627,7 +643,8 @@
         "the CSV form > sends nothing when the extension went away while it was open, and keeps its values",
         "the import confirmation sends nothing when the extension went away while it was open"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -649,7 +666,8 @@
           ],
           "reason": "The installation UX now links to the browser store; onboarding probe/reload behavior is still covered."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -713,7 +731,8 @@
           ],
           "reason": "The missing-extension gate now links to a store listing; the same entry points still gate their imports."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "d061fb8a3572ac0453cd9475d35136123b04d921",
@@ -724,7 +743,8 @@
         "a sync run stops when the server says it is over",
         "an Import/Export run stops when the server says it is over"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "90682bd953fa8b5ddbd5519cdade2075f40311c6",
@@ -734,7 +754,8 @@
         "the upload cap > holds for two runs together",
         "the upload cap > lets no page waiting for a slot go out after a busy answer"
       ],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "09a8732be40d51c066b6ce558dc9bf49255551b3",
@@ -743,7 +764,8 @@
       "fixed": [
         "a sync run > a busy run counts every item it did not import, reported failures included"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "09a8732be40d51c066b6ce558dc9bf49255551b3",
@@ -755,7 +777,8 @@
         "an Import/Export import says the hourly import limit stopped its run",
         "an Import/Export retry says the hourly import limit stopped its run"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "d5ed21c8e5fa3216fd4e2d7729290c0054c6e542",
@@ -764,7 +787,8 @@
       "fixed": [
         "an Item Refresh refetches the item, its releases, and the collection, orders and calendar that show it"
       ],
-      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ebb23965a56ea8b39fad07944004842d10054b7d",
@@ -774,7 +798,8 @@
         "the sync launcher shows it is checking on the chosen option",
         "the command palette shows it is checking on the chosen option"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "444213950d6442f4f070fb06c1a2859d4be234ea",
@@ -795,7 +820,8 @@
         "failure reports > still go out after a busy upload, and are answered before the final interrupt",
         "an Import/Export run reports to the import's endpoints"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "35c7296c12bb87bc242be9d4fd6ecc08f8915714",
@@ -805,7 +831,8 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share of 1.005 percent rounds as Postgres after import",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a stored 1.00 share changes when the page shows 1.005 percent"
       ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "147ab01837422f1bda92441994791a6ef242cfc0",
@@ -824,14 +851,16 @@
         "a poll whose session was deleted sends a terminal error and closes",
         "two extension CSV Items share one Order"
       ],
-      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "147ab01837422f1bda92441994791a6ef242cfc0",
       "bug": "An older committed snapshot could replace and publish over a newer revision",
       "test": "apps/server/src/routers/sync/snapshot.test.ts",
       "fixed": ["Redis atomically keeps and publishes only the latest committed revision"],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c2ff4dbb811c628558625d2f1ea553f299d0955f",
@@ -888,7 +917,7 @@
           "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
         }
       ],
-      "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "8c19d2088de705335017ea933100f1f00078e19e",
@@ -898,7 +927,8 @@
         "an S3 preparation timeout records a retryable import item failure",
         "import polling keeps its last status through a database blip and retries"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
@@ -923,7 +953,8 @@
         "CSV request retains the original empty-title fallback",
         "two extension CSV Items share one Order"
       ],
-      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
@@ -953,7 +984,8 @@
           ],
           "reason": "The worker no longer imports Items. Durable persistence error classification after cache expiry remains covered in the request-driven importer."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
@@ -966,7 +998,8 @@
         "a 1000-item import failure batch uses one transaction and rate-limit unit",
         "a mixed import failure batch preserves imported Items and ignores a stale job"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "258770eb267ed1dd85f0ce70765a9cd97c75c90b",
@@ -976,7 +1009,8 @@
         "CSV and order-item completions import the same missing Item without deadlocking",
         "CSV retry locks Orders from in-request rows before its session"
       ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665"
+      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "1f796363d6f1889c9e5916840a6ec0bb0316c51f",
@@ -994,7 +1028,8 @@
           ],
           "reason": "The focus race test was renamed from storage reads to browser answers; it still asserts tab ownership at every answer."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "f4f14142b27e1247fdec8154a57a7e8a234f9c1c",
@@ -1003,7 +1038,8 @@
       "fixed": [
         "a challenge > whose tab the browser refuses to show, as during a drag, stays the extension's and closes once it can"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded extension lifecycle harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "bce24b2b4847df55bfd097f2afb3ac0891218528",
@@ -1035,7 +1071,8 @@
         "the MFC tab > a homepage that is answered with a 204 or a download after 0 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)",
         "the MFC tab > a homepage that is answered with a 204 or a download after 1500 ms fails as an unexpected page within moments and closes its tab (Firefox-style, complete before it starts commits)"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded extension lifecycle harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "a2ec7b6df36bb0bf1c5c54046048ab2066d42e83",
@@ -1075,7 +1112,8 @@
           ],
           "reason": "The load invariant test moved into its own file; focused takeover tests remain in fetcher.test.ts."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "e23ace1d616ce7985bd10d4d687192d743afc2fc",
@@ -1085,14 +1123,16 @@
         "the MFC tab > its own tab on the browser's error page fails only the item it was asked for, and the next item loads a fresh tab",
         "the MFC tab > while every tab of its own shows the browser's error page, each item fails after one fresh tab"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded extension lifecycle harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "20290a0db22899978ffda456082f7fef2ce14792",
       "bug": "the status widget flashed the queued prompt at the start of every extension batch",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": ["a sync run > shows that it waits for the extension only once the wait lasts"],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "5564a14328b70218ded52b7a5849011ee202c020",
@@ -1103,7 +1143,8 @@
         "an answer that breaks off after its headers > counts a failure report as failed and still ends the run with an interrupt",
         "an answer that breaks off after its headers > keeps the run going on a heartbeat"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "5564a14328b70218ded52b7a5849011ee202c020",
@@ -1115,7 +1156,8 @@
         "an Import/Export import says its run stopped when the run breaks off",
         "an Import/Export retry says its run stopped when the run breaks off"
       ],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "b6c069dc5e4ff79bae5752f8ccf48b3a858ae599",
@@ -1128,7 +1170,8 @@
         "a run the user lost access to > stops fetching once an upload answers 401",
         "a run the user lost access to > stops fetching once a failure report answers 401"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "37b4c36011c8b06e5de0b0c506895ed59d458fb3",
@@ -1139,14 +1182,16 @@
         "an upload waiting out a Retry-After > is not sent again once a heartbeat says the run is over",
         "an upload waiting out a Retry-After > is not sent again once a heartbeat answers 401"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "8ec2fb08aaaf93ee9ddff8114834e47d6787b7a9",
       "bug": "an item refresh posted its page beside two run uploads, past the tab's upload cap",
       "test": "apps/web/src/data/extension-run.test.tsx",
       "fixed": ["refreshing an item > waits for a free upload slot while runs hold both"],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "22c19ddec996f20ee20a018cde875b1f5c75b511",
@@ -1156,7 +1201,8 @@
         "leaving the page with failures not yet reported > reports them with their reasons before the keepalive interrupt",
         "leaving the page with failures not yet reported > reports what fits in the page's 64 KiB keepalive budget, in order"
       ],
-      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63"
+      "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "e9b38285c00428cb42a118ad3041b0dfd825701c",
@@ -1165,28 +1211,32 @@
       "fixed": [
         "an Item Refresh refetches the dashboard, analytics, searches, Wishlist, lists and expenses that show it"
       ],
-      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ea0f1215b0d4399637213312aaecf502b33608fb",
       "bug": "a refresh refused for the item's cooldown left the button idle until the status refetched",
       "test": "apps/web/src/data/resources/item.test.tsx",
       "fixed": ["a refresh refused during the item's cooldown shows the cooldown at once"],
-      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab"
+      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
       "bug": "the extension probe threw in browsers without Promise.withResolvers",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
       "fixed": ["probe > works in a browser without Promise.withResolvers"],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
       "bug": "a gate whose extension check threw stayed checking, so its button spun forever",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": ["a gate whose check throws stops checking and can check again"],
-      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809"
+      "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "3918467b9bcb408305686b696dcc945c849144fe",
@@ -1229,7 +1279,8 @@
         "parseMfcItemPage warnings > a bracket that is part of the name does not warn",
         "parseMfcItemPage warnings > a rejected og:image leaves no picture and warns"
       ],
-      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a"
+      "testAt": "2759d1538553a72f28c05e3f8f88c535ad65b88a",
+      "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
@@ -1239,7 +1290,8 @@
         "failed commit effects keep the committed response and run later effects",
         "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
       ],
-      "testAt": "39f38f0952386e3b7d06f4bea66bba992080e0ba"
+      "testAt": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "26af6e8beb3be0cbccb6ed253dd6408e102e59b4",
@@ -1262,14 +1314,16 @@
         "refresh status hides server, validator and network details",
         "refresh item hides server, validator and network details"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ff8199cb790afb4d03ee53f9374ed4a0aabc0e30",
       "bug": "W-F6: fees edits show a second failure toast",
       "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
       "fixed": ["a failed fees edit shows one command toast and restores the saved total"],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ed157e9268b821ad586201e701fd03ae76012ff3",
@@ -1306,7 +1360,8 @@
         "update-user rejects unsupported currency",
         "sign-up rejects unsupported dateFormat",
         "update-user rejects unsupported dateFormat"
-      ]
+      ],
+      "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "619a9044e76ed5bdb1de1050e4923f8ef6639c5a",
@@ -1362,7 +1417,8 @@
         "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
         "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
       ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a"
+      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "f75b692b5f6069590b333da9cd93718a14840a7d",
@@ -1374,7 +1430,8 @@
         "request-password-reset succeeds and logs when the email provider refuses the send",
         "failed reset email does not disclose whether the account exists",
         "sign-up succeeds and logs when verification email fails"
-      ]
+      ],
+      "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
@@ -1385,14 +1442,16 @@
         "hanging cooldown write settles within its deadline",
         "hanging cooldown status settles within its deadline",
         "hanging cooldown guard settles within its deadline"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
       "testAt": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
       "bug": "optional Redis calls could hang indefinitely",
       "test": "apps/server/src/routers/sync/routes.test.ts",
-      "fixed": ["hanging job status cache read settles within its deadline"]
+      "fixed": ["hanging job status cache read settles within its deadline"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "1114796ebd8b495b65d97032af33421a1579ae58",
@@ -1402,7 +1461,8 @@
       "fixed": [
         "an unanswered status cache read uses the DB row and logs JobStatusCacheUnavailable",
         "hanging job status cache read settles within its deadline"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "8cf8fe63234b69491a8baa4bd17d3e816dda94b9",
@@ -1414,21 +1474,24 @@
         "worker logs and exits for unhandledRejection during boot with success flush",
         "worker logs and exits for unhandledRejection during boot with reject flush",
         "worker logs and exits for unhandledRejection during boot with stuck flush"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
       "testAt": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
       "bug": "commit effect Panics were logged only at warning level",
       "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": ["a Panic in a commit effect logs at error level and keeps the response"]
+      "fixed": ["a Panic in a commit effect logs at error level and keeps the response"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "58ed44e3455b219a0787dae6e0479fed6b5cfb2a",
       "testAt": "58ed44e3455b219a0787dae6e0479fed6b5cfb2a",
       "bug": "corrupt status cache diagnostics discarded the typed parser failure",
       "test": "apps/server/src/routers/sync/routes.test.ts",
-      "fixed": ["a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status"]
+      "fixed": ["a corrupt snapshot logs JobStatusSnapshotCorrupt and serves the DB status"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
@@ -1437,14 +1500,16 @@
       "test": "apps/server/src/routers/item/routes.test.ts",
       "fixed": [
         "a named Entry missing after insert rolls back the custom Item instead of dropping its link"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
       "testAt": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
       "bug": "server silently discarded an invariant failure and reported success",
       "test": "apps/server/src/routers/sync/routes.test.ts",
-      "fixed": ["a missing Item import completion is refused instead of reporting success"]
+      "fixed": ["a missing Item import completion is refused instead of reporting success"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "bd61ebcd765c3203e4bf7bdcc6c6c619bd3da419",
@@ -1453,7 +1518,8 @@
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
         "a corrupt retained sync payload refuses retry explicitly and logs its schema failure"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
@@ -1464,7 +1530,8 @@
         "session storage get preserves its rejection and logs SessionStoreUnavailable",
         "session storage set preserves its rejection and logs SessionStoreUnavailable",
         "session storage delete preserves its rejection and logs SessionStoreUnavailable"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "c23da077651843394e7f962396c8c88183f4f4db",
@@ -1503,7 +1570,8 @@
           ],
           "reason": "The existing defect test gained an explicit safe-text assertion and was renamed."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "ce466a1c2e35af14dbde49a5b4e4271956d293b1",
@@ -1541,7 +1609,8 @@
         "a defect in a write whose command words its failures shows the safe text under its title, never its message",
         "a defect in a write whose command words none shows the safe text under its title, never its message"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "010683336822df38cd0b7ba018ff916bc7bab9af",
@@ -1559,7 +1628,8 @@
       "fixed": [
         "a defect in a Kanban status write shows retry advice and the safe text, never its message"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "2261bfc9286d75e9178460e0b5db590d94f844ed",
@@ -1574,7 +1644,8 @@
       "testAt": "a835ad684a0a86a9c3d4c0f5797fd8892ab0d120",
       "bug": "worker boot failures were logged and flushed twice through the fatal handler",
       "test": "apps/worker/boot-failure.test.ts",
-      "fixed": ["a worker boot failure logs one boot error, flushes once and exits 1"]
+      "fixed": ["a worker boot failure logs one boot error, flushes once and exits 1"],
+      "reason": "Keep the recorded worker startup harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",
@@ -1589,7 +1660,8 @@
         "job status skips Redis while reconnecting and warns with the unchanged DB fallback",
         "job status skips Redis while close and warns with the unchanged DB fallback",
         "job status skips Redis while end and warns with the unchanged DB fallback"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",
@@ -1601,7 +1673,8 @@
         "best-effort cooldown failures > Redis disconnected after the cooldown guard commits the refresh without queueing a write",
         "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
         "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "116c4b148e4d9e3af119ba791f2e5b2356d6e265",
@@ -1612,7 +1685,8 @@
         "a malformed retained order payload refuses retry before reading Order lock fields",
         "a malformed retained order-item payload refuses retry before reading Order lock fields",
         "a malformed retained csv payload refuses retry before reading Order lock fields"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c6607a0bf8dbb9f1cc08c4b05991fb17e2917095",
@@ -1624,7 +1698,8 @@
         "sign-up rejects unsupported dateFormat",
         "update-user rejects unsupported currency",
         "update-user rejects unsupported dateFormat"
-      ]
+      ],
+      "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c12a11799bcc383a8828b2b5bacd4aba733a7c96",
@@ -1634,14 +1709,16 @@
       "fixed": [
         "signing out with a network error reports the failure and keeps the session",
         "deleting an account with a network error reports the failure and keeps the session"
-      ]
+      ],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "caf43f57759863dc77e5f9e28f71f399ccac4d10",
       "testAt": "b1220fc8f29f51ea3fbcaaf5ad40b0fd371062ab",
       "bug": "ConfirmDialog swallowed a rejected onConfirm without reporting the defect",
       "test": "apps/web/src/components/ui/confirm-dialog.test.tsx",
-      "fixed": ["a confirm that rejects is reported as a defect and keeps the dialog open"]
+      "fixed": ["a confirm that rejects is reported as a defect and keeps the dialog open"],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9a118470683dc1bba03662c0b030ea1c9ec59b7c",
@@ -1651,14 +1728,16 @@
       "fixed": [
         "the page bridge > a reloaded extension's error is logged once as the reason the bridge detached",
         "the page bridge > any other error from the port is a defect that panics and leaves the bridge attached"
-      ]
+      ],
+      "reason": "Keep the recorded extension lifecycle harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "f44011e68d4a498acf79525c6716343a22f4f428",
       "testAt": "990ff1eb05a564c28439d73ba00e46e921554b4c",
       "bug": "ten web submits, including the inline count cell's, let a rejected submit go unhandled instead of reporting it as a defect",
       "test": "apps/web/src/components/cells/inline-count-cell.test.tsx",
-      "fixed": ["a count submit that rejects is reported as a defect"]
+      "fixed": ["a count submit that rejects is reported as a defect"],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "667c8154",
@@ -1880,7 +1959,8 @@
       "testAt": "12dcb1da",
       "bug": "for one render after Save, Preferences showed the old currency and date format because the session reached the route a render late",
       "test": "apps/web/src/components/settings/preferences.test.tsx",
-      "fixed": ["after Save the form keeps the saved formats while the session catches up"]
+      "fixed": ["after Save the form keeps the saved formats while the session catches up"],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "36894e3b",
@@ -1931,7 +2011,8 @@
       "testAt": "501f306eca6b3313570a3b3b3084711248404fb4",
       "bug": "a confirm dialog reopened within 1.5 s of a confirm showed a check and ignored clicks",
       "test": "apps/web/src/components/ui/confirm-dialog.test.tsx",
-      "fixed": ["reopened right after a confirm, the confirm button is idle and confirms again"]
+      "fixed": ["reopened right after a confirm, the confirm button is idle and confirms again"],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "0a1c8851",
@@ -1940,7 +2021,8 @@
       "test": "apps/web/src/components/lists/list-form-dialog.test.tsx",
       "fixed": [
         "the submit button is never disabled through a submit that fails, so it keeps focus"
-      ]
+      ],
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "eb976f10",
@@ -2007,7 +2089,7 @@
           "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
         }
       ],
-      "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
@@ -2017,7 +2099,8 @@
       "fixed": [
         "in-request CSV imports an invalid price as zero",
         "fetched CSV imports an invalid price as zero"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
@@ -2027,7 +2110,8 @@
       "fixed": [
         "CSV imports a rejected price as zero and warns in its immediate result",
         "CSV price warnings survive fetched completion, retry and the DB status fallback"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "33e20786069d6ecda8962d55e9ea450625428b42",
@@ -2039,7 +2123,8 @@
         "strict money input > accepts \".5\" as 50 minor units",
         "strict money input > accepts \"12.\" as 1200 minor units",
         "strict money input > accepts \"1,234.\" as 123400 minor units"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
@@ -2073,7 +2158,8 @@
       "bug": "an import's detail panel never listed the CSV rows saved without a price they could not read",
       "test": "apps/web/src/components/sync/sync-session-status-panel.test.tsx",
       "fixed": ["a finished CSV import lists each price it could not read, with a link to edit it"],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9600a085a9b473b076cf80f7595e222765568e58",
@@ -2098,7 +2184,8 @@
       "fixed": [
         "a defect while a write's answer is read shows the safe text under its title, never its message"
       ],
-      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0"
+      "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "9600a085a9b473b076cf80f7595e222765568e58",
@@ -2129,7 +2216,8 @@
           ],
           "reason": "Answer-booking failures now preserve fetched pages. The same tests still cover queue progress, run completion, tab cleanup and duplicate fetches."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "4b0e8dffe4c70b7fe71169dd1ebe96948adae631",
@@ -2152,7 +2240,8 @@
           ],
           "reason": "The storage-unavailable regression moved from the old nested fetcher suite into the throttle-turn suite."
         }
-      ]
+      ],
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "06a42973e144d4b8b2de9f67cf62f24474c9e1b4",
@@ -2163,7 +2252,8 @@
         "an attempt that breaks > a collector that throws a defect fails only its item, and the queue moves on in the same tab",
         "an attempt that breaks > a collector that throws a defect in a borrowed tab fails its item without a second try",
         "the developer log > reports an unexpected throw from the collector as a defect with its Panic"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "a5085b92b726fe8a3f39249daa39fd33cea70ba9",
@@ -2173,7 +2263,8 @@
       "fixed": [
         "the throttle's books > when storage fails > an answer whose booking throws for the only item of a run is reported as a defect, ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer whose booking throws for the last item of a run is reported as a defect, ends the run and closes the MFC tab"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
@@ -2196,7 +2287,7 @@
           "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
         }
       ],
-      "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
+      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
     },
     {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
@@ -2206,7 +2297,8 @@
       "fixed": [
         "committed sync publication > a reconnecting cache skips publication and answers the committed start",
         "committed sync publication > a cache that never settles cannot hang the committed start"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
@@ -2216,7 +2308,8 @@
       "fixed": [
         "committed data-transfer publication > a reconnecting cache skips publication and answers the committed start",
         "committed data-transfer publication > a cache that never settles cannot hang the committed start"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "61b860cbad7072757e7620e42023d1214bf4e2cd",
@@ -2227,7 +2320,8 @@
         "sync detail price warnings > detail returns persisted CSV warnings for 12,50",
         "sync detail price warnings > detail returns persisted CSV warnings for 12.50",
         "sync detail price warnings > non-CSV detail returns an explicit empty warning list"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "ad74814a87490b3dbeaa82114ce9f6f6b4797ccf",
@@ -2240,7 +2334,8 @@
         "main retained payloads > retries main order itemsToScrape",
         "main retained payloads > retries main order-item itemsToScrape",
         "main retained payloads > raw main CSV prices normalize once for reads, retry and fetched completion"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "063ef8871182c50e67854d75aeef63de133ebea2",
@@ -2269,14 +2364,16 @@
         "upload ownership > after preparation refuses imported item",
         "upload ownership > after preparation refuses missing item"
       ],
-      "testAt": "07e0499babfa7bf49d88e0a5f9ae28c9ce1948d0"
+      "testAt": "07e0499babfa7bf49d88e0a5f9ae28c9ce1948d0",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "312b66b966b8b1e2ec85e8bba80a538bfc4bf9b6",
       "bug": "a slow status load outlived the publication deadline and started a Redis write after the caller had answered",
       "test": "apps/server/src/lib/publish-import-status.test.ts",
       "fixed": ["a slow load cannot write after publication has already answered its deadline"],
-      "testAt": "3f12228bf0f4ba3f45d24a9b46a652bf260c600d"
+      "testAt": "3f12228bf0f4ba3f45d24a9b46a652bf260c600d",
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "7a01d2dd26292e0bd8f1c7567f20aaac5d9d9cda",
@@ -2301,7 +2398,8 @@
       "testAt": "f28d3e1e6648d759c261c13a90a1e24ece7da0cf",
       "bug": "kernel 500 logs lost the underlying Postgres message and diagnostics",
       "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": ["a failing DB write logs the underlying Postgres message and diagnostics"]
+      "fixed": ["a failing DB write logs the underlying Postgres message and diagnostics"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",
@@ -2323,7 +2421,8 @@
         "upload ownership > after preparation refuses missing item",
         "items fetched through the extension > a problem page for an already failed item answers 409 without changing the import",
         "items fetched through the extension > a problem page for an already imported item answers 409 without changing the import"
-      ]
+      ],
+      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "4a1c3bf6c85fa5cba8ceb722bbafbf4d916684be",
@@ -2356,14 +2455,16 @@
         "throwing Result callbacks are defects > combinator never reaches retry or recover",
         "throwing Result callbacks are defects > tagged error match never reaches retry or recover",
         "throwing Result callbacks are defects > catch handler never reaches retry or recover"
-      ]
+      ],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "2d6dc59dd652e44c18943c7587fb9257f415163b",
       "testAt": "2d6dc59dd652e44c18943c7587fb9257f415163b",
       "bug": "a throwing schema ran inside a Result callback and lost its original exception",
       "test": "packages/utils/src/parse-json.test.ts",
-      "fixed": ["parseJson > a throwing schema propagates its original defect"]
+      "fixed": ["parseJson > a throwing schema propagates its original defect"],
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "5b18648a69a54fdb2735e6956e5abcbcb7144bf3",
@@ -2373,7 +2474,8 @@
       "fixed": [
         "an existing Item import rolls back its session when completion fails",
         "an existing Item import creates and completes its session in one transaction"
-      ]
+      ],
+      "reason": "Later tests assert \"Failed to save import record\"; preserve the original failure-text assertion for this historical flip."
     },
     {
       "fix": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
@@ -2462,7 +2564,8 @@
         "closing the dialog keeps its copy while it closes and returns focus to the button",
         "a gated button shows it is checking and ignores a second click until the check ends",
         "a gate whose check throws stops checking and can check again"
-      ]
+      ],
+      "reason": "The update link later moved to /#faq-extension-update; preserve the original link assertion for this historical flip."
     },
     {
       "fix": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
@@ -2629,6 +2732,49 @@
       "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
       "test": "scripts/replay-names.test.ts",
       "fixed": ["replay name matching excludes skipped and pending registrations"]
+    },
+    {
+      "fix": "fc29f5e65ef05f840e594c5b81ecaaa51c734930",
+      "bug": "An exported factory and mutable branded metadata let operation bodies forge an undeclared 500 response.",
+      "test": "apps/server/src/domain/execution-failed.test.ts",
+      "fixed": [
+        "operation bodies cannot import an execution failure factory",
+        "a real execution failure cannot have its trusted metadata replaced"
+      ]
+    },
+    {
+      "fix": "c72469393b87c91d1636bc09f1b8d2a7a2463c33",
+      "bug": "Redis is required locally and in CI; a missing URL must name TEST_REDIS_URL without a misleading CI-only diagnostic.",
+      "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
+      "fixed": [
+        "Redis snapshot tests require TEST_REDIS_URL locally",
+        "Redis snapshot tests require TEST_REDIS_URL in CI"
+      ]
+    },
+    {
+      "fix": "49270b4e2b52b35e9f9c77d9e42fb8a58fa6da32",
+      "bug": "Conditional registrations counted as coverage, test.each spreads lost cases, and historical pins lacked explanations.",
+      "test": "scripts/replay-names.test.ts",
+      "fixed": [
+        "replay name matching excludes conditional registrations and blocks",
+        "replay name matching resolves spread arguments to each",
+        "pinned replay harnesses and head coverage explain their historical revisions"
+      ]
+    },
+    {
+      "fix": "38860bf58c1dea356bb1aa244aec97b027f21324",
+      "bug": "Stream failures logged the same action as their read operations, making childAction redundant.",
+      "test": "apps/server/src/domain/stream-failure.test.ts",
+      "fixed": [
+        "a sync first read panic answers a logged safe 500",
+        "a sync read panic terminates without another poll",
+        "a sync first read throw answers a logged safe 500",
+        "a sync polling read throw retries with the last status and recovers",
+        "a data transfer first read panic answers a logged safe 500",
+        "a data transfer read panic terminates without another poll",
+        "a data transfer first read throw answers a logged safe 500",
+        "a data transfer polling read throw retries with the last status and recovers"
+      ]
     }
   ],
   "lint": [
@@ -2761,46 +2907,47 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error with no recover from a query, a command body and a before, a recover match that skips an error, a recover that answers an internal error, a returned Panic from a body and a recover, a Failure given another message, a message function called without its props, an internal error that a query or a recover-less command does not list in operational, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error with no recover from a query, a command body and a before, a recover match that skips an error, a recover that answers an internal error, a returned Panic from a body and a recover, a Failure given another message, a message function called without its props, an internal error that a query or a recover-less command does not list in operational, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it, and a self-made execution outcome without private kernel identity",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
-        "src/domain/kernel.type-test.ts(28,15): error TS2345",
-        "src/domain/kernel.type-test.ts(28,22): error TS7006",
-        "src/domain/kernel.type-test.ts(32,18): error TS2339",
-        "src/domain/kernel.type-test.ts(37,29): error TS2769",
-        "src/domain/kernel.type-test.ts(40,28): error TS2345",
-        "src/domain/kernel.type-test.ts(46,59): error TS2769",
-        "src/domain/kernel.type-test.ts(49,14): error TS2769",
-        "src/domain/kernel.type-test.ts(60,55): error TS2322",
-        "src/domain/kernel.type-test.ts(66,5): error TS2741",
-        "src/domain/kernel.type-test.ts(88,29): error TS2769",
-        "src/domain/kernel.type-test.ts(93,30): error TS2339",
-        "src/domain/kernel.type-test.ts(102,22): error TS2339",
-        "src/domain/kernel.type-test.ts(120,9): error TS2769",
-        "src/domain/kernel.type-test.ts(148,24): error TS2339",
-        "src/domain/kernel.type-test.ts(162,19): error TS2339",
-        "src/domain/kernel.type-test.ts(176,9): error TS2339",
-        "src/domain/kernel.type-test.ts(183,5): error TS2769",
-        "src/domain/kernel.type-test.ts(183,20): error TS7006",
-        "src/domain/kernel.type-test.ts(190,35): error TS2339",
-        "src/domain/kernel.type-test.ts(200,28): error TS2345",
-        "src/domain/kernel.type-test.ts(203,27): error TS2322",
-        "src/domain/kernel.type-test.ts(209,27): error TS2322",
-        "src/domain/kernel.type-test.ts(212,17): error TS2769",
-        "src/domain/kernel.type-test.ts(220,5): error TS2769",
-        "src/domain/kernel.type-test.ts(239,19): error TS2769",
-        "src/domain/kernel.type-test.ts(247,3): error TS2769",
-        "src/domain/kernel.type-test.ts(251,29): error TS2769",
-        "src/domain/kernel.type-test.ts(255,3): error TS2769",
-        "src/domain/kernel.type-test.ts(289,17): error TS2322",
-        "src/domain/kernel.type-test.ts(302,6): error TS2554",
-        "src/domain/kernel.type-test.ts(380,60): error TS2345",
-        "src/domain/kernel.type-test.ts(389,3): error TS2769",
-        "src/domain/kernel.type-test.ts(394,34): error TS2322",
-        "src/domain/kernel.type-test.ts(398,3): error TS2322",
-        "src/domain/kernel.type-test.ts(403,3): error TS2322",
-        "src/domain/kernel.type-test.ts(407,34): error TS2322"
+        "src/domain/kernel.type-test.ts(27,15): error TS2345",
+        "src/domain/kernel.type-test.ts(27,22): error TS7006",
+        "src/domain/kernel.type-test.ts(31,18): error TS2339",
+        "src/domain/kernel.type-test.ts(36,29): error TS2769",
+        "src/domain/kernel.type-test.ts(39,28): error TS2345",
+        "src/domain/kernel.type-test.ts(46,11): error TS2741",
+        "src/domain/kernel.type-test.ts(51,7): error TS2741",
+        "src/domain/kernel.type-test.ts(63,55): error TS2322",
+        "src/domain/kernel.type-test.ts(69,5): error TS2741",
+        "src/domain/kernel.type-test.ts(91,29): error TS2769",
+        "src/domain/kernel.type-test.ts(96,30): error TS2339",
+        "src/domain/kernel.type-test.ts(105,22): error TS2339",
+        "src/domain/kernel.type-test.ts(123,9): error TS2769",
+        "src/domain/kernel.type-test.ts(151,24): error TS2339",
+        "src/domain/kernel.type-test.ts(165,19): error TS2339",
+        "src/domain/kernel.type-test.ts(179,9): error TS2339",
+        "src/domain/kernel.type-test.ts(186,5): error TS2769",
+        "src/domain/kernel.type-test.ts(186,20): error TS7006",
+        "src/domain/kernel.type-test.ts(193,35): error TS2339",
+        "src/domain/kernel.type-test.ts(203,28): error TS2345",
+        "src/domain/kernel.type-test.ts(206,27): error TS2322",
+        "src/domain/kernel.type-test.ts(212,27): error TS2322",
+        "src/domain/kernel.type-test.ts(215,17): error TS2769",
+        "src/domain/kernel.type-test.ts(223,5): error TS2769",
+        "src/domain/kernel.type-test.ts(242,19): error TS2769",
+        "src/domain/kernel.type-test.ts(250,3): error TS2769",
+        "src/domain/kernel.type-test.ts(254,29): error TS2769",
+        "src/domain/kernel.type-test.ts(258,3): error TS2769",
+        "src/domain/kernel.type-test.ts(292,17): error TS2322",
+        "src/domain/kernel.type-test.ts(305,6): error TS2554",
+        "src/domain/kernel.type-test.ts(383,60): error TS2345",
+        "src/domain/kernel.type-test.ts(392,3): error TS2769",
+        "src/domain/kernel.type-test.ts(397,34): error TS2322",
+        "src/domain/kernel.type-test.ts(401,3): error TS2322",
+        "src/domain/kernel.type-test.ts(406,3): error TS2322",
+        "src/domain/kernel.type-test.ts(410,34): error TS2322",
+        "src/domain/kernel.type-test.ts(473,32): error TS1360"
       ]
     }
   ]
