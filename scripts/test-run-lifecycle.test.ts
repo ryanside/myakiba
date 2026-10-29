@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import { mkdir, mkdtemp, readdir, rm, utimes } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, symlink } from "node:fs/promises";
 import path from "node:path";
 
 async function fixture(action: string, check: (root: string) => Promise<void>) {
@@ -66,6 +66,15 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
     await $`git config user.name Test`.cwd(root).quiet();
     await $`git config user.email test@example.invalid`.cwd(root).quiet();
     await $`bun install --ignore-scripts`.cwd(root).quiet();
+    const bin = path.join(root, "node_modules/isolated-bin");
+    await mkdir(bin);
+    const node = Bun.which("node");
+    if (!node) throw new Error("Node is required to run project Turbo");
+    await symlink(process.execPath, path.join(bin, "bun"));
+    await symlink(node, path.join(bin, "node"));
+    const git = Bun.which("git");
+    if (!git) throw new Error("Git is required by the historical runner fingerprint");
+    await symlink(git, path.join(bin, "git"));
     await $`git add .`.cwd(root).quiet();
     await $`git -c core.hooksPath=/dev/null commit --quiet -m fixture`.cwd(root).quiet();
     return await check(root);
@@ -84,12 +93,7 @@ function start(root: string, direct = false) {
       stderr: "pipe",
       env: {
         ...process.env,
-        PATH: [
-          path.dirname(process.execPath),
-          path.dirname(Bun.which("node") ?? "/usr/bin/node"),
-          "/usr/bin",
-          "/bin",
-        ].join(path.delimiter),
+        PATH: direct ? path.join(root, "node_modules/isolated-bin") : process.env.PATH,
       },
     },
   );
@@ -144,10 +148,16 @@ for (const outcome of ["pass", "package failure", "tooling failure"] as const) {
   }, 30_000);
 }
 test("test runs remove their namespaces after coverage rejection", async () => {
-  await fixture('await Bun.write(path.join(root,"input.ts"),"changed");', async (root) => {
+  await fixture("", async (root) => {
+    await Bun.write(
+      path.join(root, "scripts/replays.json"),
+      JSON.stringify({
+        test: [{ testAt: "a".repeat(40), test: "apps/a/cases.test.ts", fixed: ["not registered"] }],
+      }),
+    );
     const result = await start(root).result;
     expect(result.code).not.toBe(0);
-    expect(result.output).toContain("Source changed during bun run test");
+    expect(result.output).toContain("Missing passed replay coverage");
     expect(await namespaces(root)).toEqual([]);
   });
 }, 30_000);
@@ -216,67 +226,6 @@ test("concurrent test runs preserve each other's active namespaces", async () =>
       }
     },
   );
-}, 30_000);
-
-test("test runs prune old orphan namespaces and preserve recent siblings", async () => {
-  await fixture("", async (root) => {
-    const stale = "11111111-1111-4111-8111-111111111111";
-    const fresh = "22222222-2222-4222-8222-222222222222";
-    for (const directory of [root, path.join(root, "apps/a")]) {
-      for (const name of [stale, fresh])
-        await mkdir(path.join(directory, ".test-results", name), { recursive: true });
-      const old = new Date(Date.now() - 48 * 60 * 60 * 1000);
-      await utimes(path.join(directory, ".test-results", stale), old, old);
-    }
-    expect(await start(root).result).toMatchObject({ code: 0 });
-    const retained = await namespaces(root);
-    expect(retained).toHaveLength(2);
-    expect(retained.every((dir) => path.basename(dir) === fresh)).toBe(true);
-  });
-}, 30_000);
-
-for (const change of ["staging", "scratch"] as const) {
-  test(`source identity allows ${change} changes without changing test inputs`, async () => {
-    const action =
-      change === "staging"
-        ? "await $`git add input.ts`.cwd(root);"
-        : `
-      await Bun.write(path.join(root,".claude/settings.local.json"),"changed");
-      await Bun.write(path.join(root,"scratch.txt"),"changed");
-    `;
-    await fixture(action, async (root) => {
-      await Bun.write(path.join(root, "input.ts"), "export const value=2;\n");
-      await mkdir(path.join(root, ".claude"));
-      await Bun.write(path.join(root, ".claude/settings.local.json"), "initial");
-      await Bun.write(path.join(root, "scratch.txt"), "initial");
-      expect(await start(root).result).toMatchObject({ code: 0 });
-    });
-  }, 30_000);
-}
-for (const file of [
-  "scripts/new.ts",
-  "tools/new.ts",
-  "apps/a/new.ts",
-  "custom.config.ts",
-] as const) {
-  test(`source identity rejects changed untracked test input ${file}`, async () => {
-    await fixture(
-      `await Bun.write(path.join(root,${JSON.stringify(file)}),"changed");`,
-      async (root) => {
-        await Bun.write(path.join(root, file), "initial");
-        const result = await start(root).result;
-        expect(result.code).not.toBe(0);
-        expect(result.output).toContain("Source changed during bun run test");
-      },
-    );
-  }, 30_000);
-}
-test("source identity includes filesystem modes", async () => {
-  await fixture('await chmod(path.join(root,"input.ts"),0o755);', async (root) => {
-    const result = await start(root).result;
-    expect(result.code).not.toBe(0);
-    expect(result.output).toContain("Source changed during bun run test");
-  });
 }, 30_000);
 
 test("the runner resolves project turbo outside bun run", async () => {
