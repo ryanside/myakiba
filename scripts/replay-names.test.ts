@@ -21,6 +21,18 @@ test("replay name matching uses full Bun names, including generated cases", () =
   expect(namesIn("fixture.ts", '// test("removed", () => {})')).not.toContain("removed");
 });
 
+test("replay name matching excludes skipped and pending registrations", () => {
+  for (const modifier of ["skip", "todo", "skipIf(false)", "todoIf(false)"]) {
+    const source = `
+      test.${modifier}("pinned", () => {});
+      it.${modifier}("pending", () => {});
+      describe.${modifier}("suite", () => { test("nested", () => {}); });
+      test.${modifier}.each(["row"])("generated %s", () => {});
+    `;
+    expect([...namesIn("fixture.ts", source)]).toEqual([]);
+  }
+});
+
 test("pinned replay tests still exist in the current test files", async () => {
   const {
     test: replays,

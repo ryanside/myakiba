@@ -11,7 +11,12 @@ type Value =
   | { kind: "list"; values: Value[] }
   | { kind: "record"; fields: Map<string, Value> };
 type Bindings = Map<string, Value>;
-type Registration = { call: CallExpression; kind: "test" | "describe"; each?: Expression };
+type Registration = {
+  call: CallExpression;
+  kind: "test" | "describe";
+  each?: Expression;
+  disabled: boolean;
+};
 const absent: Value = { kind: "none" };
 const text = (value: string): Value => ({ kind: "text", value });
 const number = (value: number): Value => ({ kind: "number", value });
@@ -113,20 +118,36 @@ export function namesIn(file: string, source: string): Set<string> {
     CallExpression(call) {
       let callee = call.callee;
       let each: Expression | undefined;
-      if (
-        callee.type === "CallExpression" &&
-        callee.callee.type === "MemberExpression" &&
-        callee.callee.property.type === "Identifier" &&
-        ["each", "skipIf", "todoIf"].includes(callee.callee.property.name)
-      ) {
-        const argument = callee.arguments[0];
-        if (callee.callee.property.name === "each" && argument && argument.type !== "SpreadElement")
-          each = argument;
-        callee = callee.callee.object;
+      let disabled = false;
+      while (true) {
+        if (
+          callee.type === "CallExpression" &&
+          callee.callee.type === "MemberExpression" &&
+          callee.callee.property.type === "Identifier" &&
+          ["each", "skipIf", "todoIf"].includes(callee.callee.property.name)
+        ) {
+          const argument = callee.arguments[0];
+          if (
+            callee.callee.property.name === "each" &&
+            argument &&
+            argument.type !== "SpreadElement"
+          )
+            each = argument;
+          else disabled = true;
+          callee = callee.callee.object;
+        } else if (
+          callee.type === "MemberExpression" &&
+          callee.property.type === "Identifier" &&
+          ["skip", "todo"].includes(callee.property.name)
+        ) {
+          disabled = true;
+          callee = callee.object;
+        } else break;
       }
       if (callee.type === "Identifier" && ["test", "it", "describe"].includes(callee.name))
         registrations.push({
           call,
+          disabled,
           kind: callee.name === "describe" ? "describe" : "test",
           ...(each && { each }),
         });
@@ -309,6 +330,7 @@ export function namesIn(file: string, source: string): Set<string> {
       ({ call, kind }) =>
         kind === "describe" && call.start < entry.call.start && call.end > entry.call.end,
     );
+    if (entry.disabled || parents.some((parent) => parent.disabled)) continue;
     const containers = [
       ...parents.map((registration) => ({ start: registration.call.start, registration })),
       ...loops
