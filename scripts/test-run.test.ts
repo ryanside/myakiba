@@ -3,7 +3,7 @@ import { $ } from "bun";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
-type Mode = "standalone" | "partial" | "source" | "revision" | "reuse";
+type Mode = "partial" | "reuse";
 async function fixture(mode: Mode) {
   const root = await mkdtemp(path.join(import.meta.dir, "../node_modules/test-run-"));
   try {
@@ -35,10 +35,10 @@ async function fixture(mode: Mode) {
       "node_modules\n.turbo\ntest-results.xml\n.test-results/\n",
     );
     for (const file of [
-      "check-replay-coverage.ts",
       "replay-reports.ts",
       "run-tests.ts",
       "test-run.ts",
+      "check-replay-coverage.ts",
     ]) {
       const source = Bun.file(path.join(import.meta.dir, file));
       if (await source.exists()) await Bun.write(path.join(root, "scripts", file), source);
@@ -51,14 +51,10 @@ async function fixture(mode: Mode) {
       path.join(root, "apps/a/package.json"),
       JSON.stringify({ name: "a", scripts: { test: "bun test" } }),
     );
-    let action = "";
-    if (mode === "source")
-      action =
-        'await Bun.write(import.meta.path, await Bun.file(import.meta.path).text() + "\\n// source changed\\n");';
-    if (mode === "revision")
-      action = "await $`git -c core.hooksPath=/dev/null commit --allow-empty --quiet -m changed`;";
-    const source = `import {test} from "bun:test"; import {$} from "bun"; test("passed case",async()=>{${action}});`;
-    await Bun.write(path.join(root, "apps/a/cases.test.ts"), source);
+    await Bun.write(
+      path.join(root, "apps/a/cases.test.ts"),
+      'import {test} from "bun:test"; test("passed case",()=>{});',
+    );
     const partial = mode === "partial";
     if (partial) {
       await mkdir(path.join(root, "apps/b"));
@@ -121,7 +117,6 @@ async function fixture(mode: Mode) {
       ]);
       return { code, output: stdout + stderr };
     };
-    if (mode === "standalone") return await run(["scripts/check-replay-coverage.ts"]);
     if (mode === "reuse") {
       await Bun.write(
         path.join(root, "reuse.ts"),
@@ -143,17 +138,18 @@ async function fixture(mode: Mode) {
   }
 }
 
-for (const mode of ["standalone", "partial", "source", "revision", "reuse"] as const) {
-  test(`coverage rejects ${mode} reports outside the current full run and source`, async () => {
-    const run = await fixture(mode);
-    expect(run).not.toMatchObject({ code: 0 });
-    const messages = {
-      standalone: "No active full test run",
-      reuse: "No active full test run",
-      partial: "Missing current-run Bun JUnit report",
-      source: "Source changed during bun run test",
-      revision: "Source changed during bun run test",
-    };
-    expect(run.output).toContain(messages[mode]);
-  }, 30_000);
+for (const mode of ["partial", "reuse"] as const) {
+  test(
+    mode === "partial"
+      ? "a missing task report cannot borrow another run's report"
+      : "a consumed run handle cannot be reused",
+    async () => {
+      const run = await fixture(mode);
+      expect(run.code).not.toBe(0);
+      expect(run.output).toContain(
+        mode === "reuse" ? "No active full test run" : "Missing current-run Bun JUnit report",
+      );
+    },
+    30_000,
+  );
 }

@@ -2881,16 +2881,16 @@
         "replay coverage accepts runtime and finally registrations"
       ],
       "testAt": "90fcfa1f913c58ebd82bbc1a873ee24052fed49c",
-      "reason": "The original runtime-name probe used standalone fixed reports; current coverage runs inside the source-bound full test invocation.",
+      "reason": "Preserve the original fixed-report harness for the historical flip; current coverage is checked in-process through its run handle.",
       "head": [
         {
           "test": "scripts/replay-coverage.test.ts",
           "fixed": [
             "replay coverage rejects names Bun did not actually run",
-            "replay coverage without reports requires the full test run",
+            "replay coverage requires an active run handle",
             "replay coverage accepts runtime and finally registrations"
           ],
-          "reason": "The current probe generates reports inside an active source-bound test run while preserving the runtime registration assertions."
+          "reason": "Runtime Bun registration assertions remain, and the active-handle assertion replaces the removed standalone checker probe."
         }
       ]
     },
@@ -2926,11 +2926,20 @@
       "bug": "Stale fixed-path JUnit reports could authorize standalone or partial coverage checks after source or revision changes.",
       "test": "scripts/test-run.test.ts",
       "fixed": [
-        "coverage rejects standalone reports outside the current full run and source",
         "coverage rejects partial reports outside the current full run and source",
-        "coverage rejects source reports outside the current full run and source",
-        "coverage rejects revision reports outside the current full run and source",
         "coverage rejects reuse reports outside the current full run and source"
+      ],
+      "testAt": "a5f38376455387bc500348fbaf49c354ed7e346c",
+      "reason": "Keep the curated original harness for missing-report and consumed-handle flips. Partially retire standalone, source and revision cases: the standalone checker and source/revision fingerprint were removed by design; fresh UUID namespaces and the in-process handle now define freshness.",
+      "head": [
+        {
+          "test": "scripts/test-run.test.ts",
+          "fixed": [
+            "a missing task report cannot borrow another run's report",
+            "a consumed run handle cannot be reused"
+          ],
+          "reason": "Report completeness and single-use handle ownership still protect against borrowing stale results without a standalone checker or source fingerprint."
+        }
       ]
     },
     {
@@ -2951,12 +2960,29 @@
         "test runs remove their namespaces after SIGINT",
         "test runs remove their namespaces after SIGTERM",
         "concurrent test runs preserve each other's active namespaces",
-        "test runs prune old orphan namespaces and preserve recent siblings",
-        "source identity allows staging changes without changing test inputs",
-        "source identity allows scratch changes without changing test inputs",
         "the runner resolves project turbo outside bun run",
         "the runner names Turbo package tests and its failed exit code",
         "the runner names Tooling tests and its failed exit code"
+      ],
+      "testAt": "a5f38376455387bc500348fbaf49c354ed7e346c",
+      "reason": "Keep the curated runner harness for lifecycle and diagnostic flips; its isolated bin includes Git for the historical fingerprint. Partially retire age-pruning and staging/scratch fingerprint cases because pruning and fingerprinting were removed by design.",
+      "head": [
+        {
+          "test": "scripts/test-run-lifecycle.test.ts",
+          "fixed": [
+            "test runs remove their namespaces after pass",
+            "test runs remove their namespaces after package failure",
+            "test runs remove their namespaces after tooling failure",
+            "test runs remove their namespaces after coverage rejection",
+            "test runs remove their namespaces after SIGINT",
+            "test runs remove their namespaces after SIGTERM",
+            "concurrent test runs preserve each other's active namespaces",
+            "the runner resolves project turbo outside bun run",
+            "the runner names Turbo package tests and its failed exit code",
+            "the runner names Tooling tests and its failed exit code"
+          ],
+          "reason": "Cleanup, interrupts, concurrency, project Turbo resolution and failed-step diagnostics remain; the current isolated PATH contains only bun and node."
+        }
       ]
     },
     {
@@ -2964,6 +2990,35 @@
       "bug": "Empty JUnit report namespace directories entered Docker build contexts after report files were excluded.",
       "test": "scripts/docker-context.test.ts",
       "fixed": ["Docker contexts exclude report namespace directories at every depth"]
+    },
+    {
+      "fix": "a47b2ec2d0371547e02b993be309411035d52b1b",
+      "bug": "Report ownership was inferred from timestamps and pruning followed symlink parents; setup leaked on partial failure and cleanup deleted replacement directories.",
+      "test": "scripts/test-run-boundary.test.ts",
+      "fixed": [
+        "a run accepts its own reports regardless of wall-clock file times",
+        "starting another run preserves every existing namespace",
+        "namespace creation refuses a symlink parent",
+        "namespace creation refuses a file parent",
+        "partial namespace creation rolls back directories already created",
+        "cleanup refuses a replaced symlink parent and preserves outside contents",
+        "cleanup preserves a replacement symlink at its namespace path",
+        "cleanup preserves a replacement directory at its namespace path"
+      ]
+    },
+    {
+      "fix": "a47b2ec2d0371547e02b993be309411035d52b1b",
+      "bug": "Cleanup faults replaced primary exit codes and pending errors, leaked signal handlers, and the runner unnecessarily required Git on its PATH.",
+      "test": "scripts/test-run-lifecycle.test.ts",
+      "fixed": [
+        "the runner resolves project turbo outside bun run",
+        "cleanup faults preserve success and remove signal handlers",
+        "cleanup faults preserve step failure and remove signal handlers",
+        "cleanup faults preserve coverage error and remove signal handlers",
+        "cleanup faults preserve SIGINT and remove signal handlers",
+        "cleanup faults preserve SIGTERM and remove signal handlers",
+        "cleanup faults preserve begin error and remove signal handlers"
+      ]
     }
   ],
   "lint": [

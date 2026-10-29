@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import { mkdir, mkdtemp, readdir, rm, utimes } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, symlink } from "node:fs/promises";
 import path from "node:path";
 
 async function fixture(action: string, check: (root: string) => Promise<void>) {
@@ -34,13 +34,16 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
       path.join(root, ".gitignore"),
       "node_modules\n.turbo\n.test-results/\ntest-results.xml\n",
     );
+    // Historical runner revisions imported the checker before it moved into replay-reports.
     for (const file of [
       "test-run.ts",
       "run-tests.ts",
-      "check-replay-coverage.ts",
       "replay-reports.ts",
-    ])
-      await Bun.write(path.join(root, "scripts", file), Bun.file(path.join(import.meta.dir, file)));
+      "check-replay-coverage.ts",
+    ]) {
+      const source = Bun.file(path.join(import.meta.dir, file));
+      if (await source.exists()) await Bun.write(path.join(root, "scripts", file), source);
+    }
     await Bun.write(
       path.join(root, "scripts/tooling.test.ts"),
       'import {test} from "bun:test"; test("tooling",()=>{});',
@@ -66,6 +69,12 @@ async function fixture(action: string, check: (root: string) => Promise<void>) {
     await $`git config user.name Test`.cwd(root).quiet();
     await $`git config user.email test@example.invalid`.cwd(root).quiet();
     await $`bun install --ignore-scripts`.cwd(root).quiet();
+    const bin = path.join(root, "node_modules/isolated-bin");
+    await mkdir(bin);
+    const node = Bun.which("node");
+    if (!node) throw new Error("Node is required to run project Turbo");
+    await symlink(process.execPath, path.join(bin, "bun"));
+    await symlink(node, path.join(bin, "node"));
     await $`git add .`.cwd(root).quiet();
     await $`git -c core.hooksPath=/dev/null commit --quiet -m fixture`.cwd(root).quiet();
     return await check(root);
@@ -84,12 +93,7 @@ function start(root: string, direct = false) {
       stderr: "pipe",
       env: {
         ...process.env,
-        PATH: [
-          path.dirname(process.execPath),
-          path.dirname(Bun.which("node") ?? "/usr/bin/node"),
-          "/usr/bin",
-          "/bin",
-        ].join(path.delimiter),
+        PATH: direct ? path.join(root, "node_modules/isolated-bin") : process.env.PATH,
       },
     },
   );
@@ -144,10 +148,16 @@ for (const outcome of ["pass", "package failure", "tooling failure"] as const) {
   }, 30_000);
 }
 test("test runs remove their namespaces after coverage rejection", async () => {
-  await fixture('await Bun.write(path.join(root,"input.ts"),"changed");', async (root) => {
+  await fixture("", async (root) => {
+    await Bun.write(
+      path.join(root, "scripts/replays.json"),
+      JSON.stringify({
+        test: [{ testAt: "a".repeat(40), test: "apps/a/cases.test.ts", fixed: ["not registered"] }],
+      }),
+    );
     const result = await start(root).result;
     expect(result.code).not.toBe(0);
-    expect(result.output).toContain("Source changed during bun run test");
+    expect(result.output).toContain("Missing passed replay coverage");
     expect(await namespaces(root)).toEqual([]);
   });
 }, 30_000);
@@ -218,67 +228,6 @@ test("concurrent test runs preserve each other's active namespaces", async () =>
   );
 }, 30_000);
 
-test("test runs prune old orphan namespaces and preserve recent siblings", async () => {
-  await fixture("", async (root) => {
-    const stale = "11111111-1111-4111-8111-111111111111";
-    const fresh = "22222222-2222-4222-8222-222222222222";
-    for (const directory of [root, path.join(root, "apps/a")]) {
-      for (const name of [stale, fresh])
-        await mkdir(path.join(directory, ".test-results", name), { recursive: true });
-      const old = new Date(Date.now() - 48 * 60 * 60 * 1000);
-      await utimes(path.join(directory, ".test-results", stale), old, old);
-    }
-    expect(await start(root).result).toMatchObject({ code: 0 });
-    const retained = await namespaces(root);
-    expect(retained).toHaveLength(2);
-    expect(retained.every((dir) => path.basename(dir) === fresh)).toBe(true);
-  });
-}, 30_000);
-
-for (const change of ["staging", "scratch"] as const) {
-  test(`source identity allows ${change} changes without changing test inputs`, async () => {
-    const action =
-      change === "staging"
-        ? "await $`git add input.ts`.cwd(root);"
-        : `
-      await Bun.write(path.join(root,".claude/settings.local.json"),"changed");
-      await Bun.write(path.join(root,"scratch.txt"),"changed");
-    `;
-    await fixture(action, async (root) => {
-      await Bun.write(path.join(root, "input.ts"), "export const value=2;\n");
-      await mkdir(path.join(root, ".claude"));
-      await Bun.write(path.join(root, ".claude/settings.local.json"), "initial");
-      await Bun.write(path.join(root, "scratch.txt"), "initial");
-      expect(await start(root).result).toMatchObject({ code: 0 });
-    });
-  }, 30_000);
-}
-for (const file of [
-  "scripts/new.ts",
-  "tools/new.ts",
-  "apps/a/new.ts",
-  "custom.config.ts",
-] as const) {
-  test(`source identity rejects changed untracked test input ${file}`, async () => {
-    await fixture(
-      `await Bun.write(path.join(root,${JSON.stringify(file)}),"changed");`,
-      async (root) => {
-        await Bun.write(path.join(root, file), "initial");
-        const result = await start(root).result;
-        expect(result.code).not.toBe(0);
-        expect(result.output).toContain("Source changed during bun run test");
-      },
-    );
-  }, 30_000);
-}
-test("source identity includes filesystem modes", async () => {
-  await fixture('await chmod(path.join(root,"input.ts"),0o755);', async (root) => {
-    const result = await start(root).result;
-    expect(result.code).not.toBe(0);
-    expect(result.output).toContain("Source changed during bun run test");
-  });
-}, 30_000);
-
 test("the runner resolves project turbo outside bun run", async () => {
   await fixture("", async (root) => {
     expect(await start(root, true).result).toMatchObject({ code: 0 });
@@ -298,6 +247,93 @@ for (const step of ["Turbo package tests", "Tooling tests"] as const) {
         const result = await start(root).result;
         expect(result.code).toBe(code);
         expect(result.output).toContain(`${step} failed with exit code ${code}`);
+      },
+    );
+  }, 30_000);
+}
+
+async function cleanupFault(root: string) {
+  await Bun.write(
+    path.join(root, "node_modules/cleanup-fault.ts"),
+    `
+    import * as fs from "node:fs/promises";
+    import {mock} from "bun:test";
+    const before=[process.listenerCount("SIGINT"),process.listenerCount("SIGTERM")];
+    process.on("exit",()=>console.error(
+      JSON.stringify(before)===JSON.stringify([process.listenerCount("SIGINT"),process.listenerCount("SIGTERM")])
+        ? "signal handlers restored" : "signal handlers leaked"));
+    const original=fs.rm;
+    const replacement={...fs,rm:async(target,options)=>{
+      if(typeof target==="string" && /\\/\\.test-results\\/[0-9a-f-]{36}$/u.test(target))
+        throw new Error("cleanup blocked");
+      return original(target,options);
+    }};
+    mock.module("node:fs/promises",()=>replacement);
+  `,
+  );
+  const manifest = await Bun.file(path.join(root, "package.json")).json();
+  manifest.scripts.test = "bun --preload ./node_modules/cleanup-fault.ts scripts/run-tests.ts";
+  await Bun.write(path.join(root, "package.json"), JSON.stringify(manifest));
+}
+for (const primary of [
+  "success",
+  "step failure",
+  "coverage error",
+  "SIGINT",
+  "SIGTERM",
+  "begin error",
+] as const) {
+  test(`cleanup faults preserve ${primary} and remove signal handlers`, async () => {
+    const hold = primary === "SIGINT" || primary === "SIGTERM";
+    await fixture(
+      hold
+        ? 'await Bun.write(path.join(root,"node_modules/ready"),"ready"); await new Promise(()=>{});'
+        : "",
+      async (root) => {
+        await cleanupFault(root);
+        if (primary === "step failure") {
+          const manifest = await Bun.file(path.join(root, "package.json")).json();
+          manifest.scripts["test:tooling"] = "sh -c 'exit 7' sh";
+          await Bun.write(path.join(root, "package.json"), JSON.stringify(manifest));
+        }
+        if (primary === "coverage error")
+          await Bun.write(
+            path.join(root, "scripts/replays.json"),
+            JSON.stringify({
+              test: [
+                { testAt: "a".repeat(40), test: "apps/a/cases.test.ts", fixed: ["not registered"] },
+              ],
+            }),
+          );
+        if (primary === "begin error")
+          await Bun.write(path.join(root, ".test-results"), "not a directory");
+        const run = start(root);
+        try {
+          if (hold) {
+            await waitFor(path.join(root, "node_modules/ready"));
+            run.child.kill(primary);
+          }
+          const result = await run.result;
+          const codes = {
+            success: 0,
+            "step failure": 7,
+            "coverage error": 1,
+            SIGINT: 130,
+            SIGTERM: 143,
+            "begin error": 1,
+          };
+          expect(result.code).toBe(codes[primary]);
+          expect(result.output).toContain("signal handlers restored");
+          if (primary !== "begin error")
+            expect(result.output).toContain("Failed to clean test report namespaces");
+          if (primary === "coverage error")
+            expect(result.output).toContain("Missing passed replay coverage");
+          if (primary === "begin error")
+            expect(result.output).toContain("must be a real directory");
+        } finally {
+          stop(run.child.pid);
+          await run.result;
+        }
       },
     );
   }, 30_000);
