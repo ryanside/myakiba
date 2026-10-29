@@ -26,7 +26,8 @@ test("a replay head remap replaces a deleted historical test file", async () => 
     await Bun.write(path.join(root, "operation.ts"), "export const answer = 2;\n");
     await $`git add operation.ts`.cwd(root).quiet();
     await $`git -c core.hooksPath=/dev/null commit --quiet -m fix`.cwd(root).quiet();
-    const fix = (await $`git rev-parse HEAD`.cwd(root).text()).trim();
+    const revision = await $`git rev-parse HEAD`.cwd(root).text();
+    const fix = revision.trim();
     await Bun.write(
       path.join(root, "current.test.ts"),
       source.replace("legacy case", "current case"),

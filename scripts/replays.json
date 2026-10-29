@@ -2850,6 +2850,12 @@
         "replay coverage without reports requires the full test run",
         "replay coverage accepts runtime and finally registrations"
       ]
+    },
+    {
+      "fix": "9f24050e28f099e156018f29c0dd02e105cffabb",
+      "bug": "HEAD preflight attempted a deleted historical test file despite an explicit replacement head group.",
+      "test": "scripts/replay-head.test.ts",
+      "fixed": ["a replay head remap replaces a deleted historical test file"]
     }
   ],
   "lint": [
