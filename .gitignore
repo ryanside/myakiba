@@ -53,5 +53,7 @@ lerna-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Bun JUnit reports, restored with cached test tasks.
+# Bun JUnit artifacts belong to one complete, uncached test invocation.
 test-results.xml
+
+.test-results/

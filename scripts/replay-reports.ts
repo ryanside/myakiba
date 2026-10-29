@@ -1,6 +1,7 @@
 import path from "node:path";
+import type { TestRun } from "./test-run";
+import { consumeTestRun } from "./test-run";
 
-const REPORT_FILE = "test-results.xml";
 type Coverage = { test: string; fixed: string[] };
 
 function elements(node: Bun.XML.Node): Bun.XML.Node[] {
@@ -54,21 +55,16 @@ async function packageDirectory(root: string, file: string) {
 }
 
 /** Validate pins against actual passing cases, loading each package's report once. */
-export async function missingPassedTests(root: string, coverage: Coverage[]) {
+export async function missingPassedTests(root: string, coverage: Coverage[], run?: TestRun) {
+  const files = await consumeTestRun(root, run);
   const reports = new Map<string, Map<string, Set<string>>>();
+  for (const [directory, report] of files)
+    reports.set(directory, passedCases(await Bun.file(report).text(), directory));
   const missing: string[] = [];
   for (const entry of coverage) {
     const directory = await packageDirectory(root, entry.test);
-    let cases = reports.get(directory);
-    if (!cases) {
-      const report = Bun.file(path.join(directory, REPORT_FILE));
-      if (!(await report.exists()))
-        throw new Error(
-          `Missing Bun JUnit report: ${report.name}. Run bun run test first to generate reports.`,
-        );
-      cases = passedCases(await report.text(), directory);
-      reports.set(directory, cases);
-    }
+    const cases = reports.get(directory);
+    if (!cases) throw new Error(`No test task report for ${entry.test}. Run bun run test.`);
     const names = cases.get(path.resolve(root, entry.test));
     for (const name of entry.fixed) if (!names?.has(name)) missing.push(`${entry.test}: ${name}`);
   }
