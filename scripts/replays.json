@@ -2638,6 +2638,15 @@
         "operation bodies cannot import an execution failure factory",
         "a real execution failure cannot have its trusted metadata replaced"
       ]
+    },
+    {
+      "fix": "c72469393b87c91d1636bc09f1b8d2a7a2463c33",
+      "bug": "Redis is required locally and in CI; a missing URL must name TEST_REDIS_URL without a misleading CI-only diagnostic.",
+      "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
+      "fixed": [
+        "Redis snapshot tests require TEST_REDIS_URL locally",
+        "Redis snapshot tests require TEST_REDIS_URL in CI"
+      ]
     }
   ],
   "lint": [
