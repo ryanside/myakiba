@@ -2569,10 +2569,10 @@
       ]
     },
     {
-      "fix": "87f0749316ac51dd06c5d714ebc29c349a05ac22",
-      "bug": "the update answer told Chrome users only to wait for Chrome to update the extension",
+      "fix": "fa24e994b7714c4168f950a9ca5369e391fa488e",
+      "bug": "the update answer told Chrome users to remove and re-add the extension, which clears its stored data",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
-      "fixed": ["the update answer tells Chrome users how to update sooner"]
+      "fixed": ["the update answer tells Chrome users to wait instead of removing the extension"]
     },
     {
       "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
