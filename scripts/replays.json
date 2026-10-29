@@ -2938,7 +2938,7 @@
             "a missing task report cannot borrow another run's report",
             "a consumed run handle cannot be reused"
           ],
-          "reason": "Report completeness and single-use handle ownership still protect against borrowing stale results without a standalone checker or source fingerprint."
+          "reason": "The HEAD probe seeds a passing report in a sibling UUID namespace, requires the current task's report and verifies the sibling stays untouched; it also checks consumed-handle reuse."
         }
       ]
     },
@@ -3018,6 +3018,25 @@
         "cleanup faults preserve SIGINT and remove signal handlers",
         "cleanup faults preserve SIGTERM and remove signal handlers",
         "cleanup faults preserve begin error and remove signal handlers"
+      ]
+    },
+    {
+      "fix": "12f1b0eb7c8e00938e6688b9f707b578ebd37500",
+      "bug": "A report symlink or replacement between validation and reading borrowed another run's cases; non-regular report paths were not rejected explicitly.",
+      "test": "scripts/test-run-boundary.test.ts",
+      "fixed": [
+        "a report symlink cannot borrow another run's passed cases",
+        "a report directory is rejected as a non-regular file",
+        "replacing a consumed report path cannot change the cases read"
+      ]
+    },
+    {
+      "fix": "12f1b0eb7c8e00938e6688b9f707b578ebd37500",
+      "bug": "A setup exception after a received SIGINT or SIGTERM skipped the signal exit status and exited 1 instead of 130 or 143.",
+      "test": "scripts/test-run-lifecycle.test.ts",
+      "fixed": [
+        "SIGINT wins over a failing setup and still reports its error",
+        "SIGTERM wins over a failing setup and still reports its error"
       ]
     }
   ],
