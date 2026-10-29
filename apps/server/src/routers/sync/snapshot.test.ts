@@ -11,7 +11,7 @@ import {
 const redisUrl = process.env.TEST_REDIS_URL;
 
 test("Redis atomically keeps and publishes only the latest committed revision", async () => {
-  if (!redisUrl) throw new Error("CI requires TEST_REDIS_URL for the real Redis Lua test");
+  if (!redisUrl) throw new Error("TEST_REDIS_URL is required for the real Redis Lua test");
   const client = new Redis(redisUrl);
   const subscriber = client.duplicate();
   const jobId = `revision-test-${crypto.randomUUID()}`;
