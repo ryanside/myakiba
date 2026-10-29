@@ -2902,9 +2902,18 @@
     },
     {
       "fix": "90fcfa1f913c58ebd82bbc1a873ee24052fed49c",
+      "testAt": "6c222ecec923782dbcdd4e26e93f0929945513a9",
       "bug": "the extension sources zip took in the test-results.xml reports bun run test writes, so verify-sources refused it",
       "test": "apps/extension/lib/sources-zip.test.ts",
-      "fixed": ["the sources zip leaves out the test reports bun run test writes"]
+      "fixed": ["the sources zip leaves out the test reports bun run test writes"],
+      "reason": "The test file was added in 6c222ece, after this fix; run it as first written.",
+      "head": [
+        {
+          "test": "apps/extension/lib/sources-zip.test.ts",
+          "fixed": ["the sources zip leaves out legacy test reports at package roots"],
+          "reason": "bun run test now writes reports under .test-results/<run>/, which the sources zip never takes, so the test was retitled to the legacy package-root reports it guards."
+        }
+      ]
     },
     {
       "fix": "7930ff7e0454c63cce1ac4d174be7a45cb156af5",
