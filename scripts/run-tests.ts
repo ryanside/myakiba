@@ -26,6 +26,7 @@ process.on("SIGINT", onInt);
 process.on("SIGTERM", onTerm);
 let run: TestRun | undefined;
 let code = 0;
+let failure: { error: unknown } | undefined;
 try {
   run = await beginTestRun(root);
   const reporter = ["--reporter=junit", `--reporter-outfile=${run.reportFile}`];
@@ -53,6 +54,8 @@ try {
     }
   }
   if (!interrupted && code === 0) await checkReplayCoverage(root, run);
+} catch (error) {
+  failure = { error };
 } finally {
   try {
     if (run) await cleanupTestRun(run);
@@ -63,5 +66,11 @@ try {
     process.off("SIGTERM", onTerm);
   }
 }
-if (interrupted) code = interrupted === "SIGINT" ? 130 : 143;
-process.exitCode = code;
+if (interrupted) {
+  if (failure) console.error("Test run failed while interrupted:", failure.error);
+  process.exitCode = interrupted === "SIGINT" ? 130 : 143;
+} else if (failure) {
+  throw failure.error;
+} else {
+  process.exitCode = code;
+}

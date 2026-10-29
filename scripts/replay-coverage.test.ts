@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { $ } from "bun";
 import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { missingPassedTests } from "./replay-reports";
@@ -74,11 +73,6 @@ async function fixture(name: string) {
       await checkReplayCoverage(root,run);
     `,
     );
-    await $`git init --quiet`.cwd(root).quiet();
-    await $`git add .`.cwd(root).quiet();
-    await $`git -c user.name=Coverage -c user.email=coverage@example.invalid -c core.hooksPath=/dev/null commit --quiet -m fixture`
-      .cwd(root)
-      .quiet();
     const run = Bun.spawn([process.execPath, "./driver.ts"], {
       cwd: root,
       stdout: "pipe",

@@ -8,7 +8,6 @@ async function fixture(mode: Mode) {
   const root = await mkdtemp(path.join(import.meta.dir, "../node_modules/test-run-"));
   try {
     await mkdir(path.join(root, "scripts"));
-    await mkdir(path.join(root, "tools/oxlint"), { recursive: true });
     await mkdir(path.join(root, "apps/a"), { recursive: true });
     const {
       scripts,
@@ -34,12 +33,7 @@ async function fixture(mode: Mode) {
       path.join(root, ".gitignore"),
       "node_modules\n.turbo\ntest-results.xml\n.test-results/\n",
     );
-    for (const file of [
-      "replay-reports.ts",
-      "run-tests.ts",
-      "test-run.ts",
-      "check-replay-coverage.ts",
-    ]) {
+    for (const file of ["replay-reports.ts", "run-tests.ts", "test-run.ts"]) {
       const source = Bun.file(path.join(import.meta.dir, file));
       if (await source.exists()) await Bun.write(path.join(root, "scripts", file), source);
     }
@@ -56,6 +50,10 @@ async function fixture(mode: Mode) {
       'import {test} from "bun:test"; test("passed case",()=>{});',
     );
     const partial = mode === "partial";
+    const leftover = path.join(
+      root,
+      "apps/b/.test-results/11111111-1111-4111-8111-111111111111/test-results.xml",
+    );
     if (partial) {
       await mkdir(path.join(root, "apps/b"));
       await Bun.write(
@@ -66,13 +64,14 @@ async function fixture(mode: Mode) {
         path.join(root, "apps/b/cases.test.ts"),
         'import {test} from "bun:test"; test("passed case",()=>{});',
       );
+      await mkdir(path.dirname(leftover), { recursive: true });
       const seed = Bun.spawn(
         [
           process.execPath,
           "test",
           "./cases.test.ts",
           "--reporter=junit",
-          "--reporter-outfile=test-results.xml",
+          `--reporter-outfile=${path.relative(path.join(root, "apps/b"), leftover)}`,
         ],
         { cwd: path.join(root, "apps/b"), stdout: "pipe", stderr: "pipe" },
       );
@@ -81,10 +80,6 @@ async function fixture(mode: Mode) {
         new Response(seed.stdout).text(),
         new Response(seed.stderr).text(),
       ]);
-      await Bun.write(
-        path.join(root, "apps/b/cases.test.ts"),
-        'import {test} from "bun:test"; test.skip("passed case",()=>{});',
-      );
     }
     await Bun.write(
       path.join(root, "scripts/replays.json"),
@@ -98,12 +93,7 @@ async function fixture(mode: Mode) {
         ],
       }),
     );
-    await $`git init --quiet`.cwd(root).quiet();
-    await $`git config user.name Run`.cwd(root).quiet();
-    await $`git config user.email run@example.invalid`.cwd(root).quiet();
     await $`bun install --ignore-scripts`.cwd(root).quiet();
-    await $`git add .`.cwd(root).quiet();
-    await $`git -c core.hooksPath=/dev/null commit --quiet -m source`.cwd(root).quiet();
     const run = async (args: string[]) => {
       const child = Bun.spawn([process.execPath, ...args], {
         cwd: root,
@@ -132,7 +122,10 @@ async function fixture(mode: Mode) {
       );
       return await run(["reuse.ts"]);
     }
-    return await run(["run", "test"]);
+    const seeded = await Bun.file(leftover).text();
+    const result = await run(["run", "test"]);
+    expect(await Bun.file(leftover).text()).toBe(seeded);
+    return result;
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -56,10 +56,9 @@ async function packageDirectory(root: string, file: string) {
 
 /** Validate pins against actual passing cases, loading each package's report once. */
 export async function missingPassedTests(root: string, coverage: Coverage[], run?: TestRun) {
-  const files = await consumeTestRun(root, run);
+  const contents = await consumeTestRun(root, run);
   const reports = new Map<string, Map<string, Set<string>>>();
-  for (const [directory, report] of files)
-    reports.set(directory, passedCases(await Bun.file(report).text(), directory));
+  for (const [directory, xml] of contents) reports.set(directory, passedCases(xml, directory));
   const missing: string[] = [];
   for (const entry of coverage) {
     const directory = await packageDirectory(root, entry.test);

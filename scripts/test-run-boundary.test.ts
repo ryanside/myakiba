@@ -17,14 +17,12 @@ async function probe(program: string) {
       JSON.stringify({ scripts: { test: "bun test" } }),
     );
     await Bun.write(path.join(root, ".gitignore"), "node_modules\n.test-results/\n");
-    await Bun.write(
-      path.join(root, "scripts/test-run.ts"),
-      Bun.file(path.join(import.meta.dir, "test-run.ts")),
-    );
+    for (const file of ["test-run.ts", "replay-reports.ts"])
+      await Bun.write(path.join(root, "scripts", file), Bun.file(path.join(import.meta.dir, file)));
     await Bun.write(
       path.join(root, "driver.ts"),
       `
-      import {expect} from "bun:test";
+      import {expect,mock} from "bun:test";
       import {mkdir,readdir,rename,rm,symlink,lstat,utimes} from "node:fs/promises";
       import path from "node:path";
       import {beginTestRun,consumeTestRun,cleanupTestRun} from "./scripts/test-run";
@@ -36,6 +34,7 @@ async function probe(program: string) {
       ${program}
     `,
     );
+    // The a47b2ec2 parent fingerprints committed files; its replay still needs this Git fixture.
     await $`git init --quiet`.cwd(root).quiet();
     await $`git add .`.cwd(root).quiet();
     await $`git -c user.name=Test -c user.email=test@example.invalid -c core.hooksPath=/dev/null commit --quiet -m fixture`
@@ -138,3 +137,52 @@ for (const kind of ["symlink", "directory"] as const) {
     ).toMatchObject({ code: 0 });
   });
 }
+
+test("a report symlink cannot borrow another run's passed cases", async () => {
+  expect(
+    await probe(`
+    const first=await beginTestRun(root); await reports(first);
+    await Bun.write(path.join(root,first.reportFile),'<testsuites><testsuite name="cases.test.ts"><testcase name="borrowed" file="cases.test.ts" /></testsuite></testsuites>');
+    const second=await beginTestRun(root); await reports(second);
+    await rm(path.join(root,second.reportFile));
+    await symlink(path.join(root,first.reportFile),path.join(root,second.reportFile));
+    const {missingPassedTests}=await import("./scripts/replay-reports");
+    await expect(missingPassedTests(root,[{test:"cases.test.ts",fixed:["borrowed"]}],second)).rejects.toThrow("must be a regular file");
+    await cleanupTestRun(first); await cleanupTestRun(second);
+  `),
+  ).toMatchObject({ code: 0 });
+});
+
+test("a report directory is rejected as a non-regular file", async () => {
+  expect(
+    await probe(`
+    const run=await beginTestRun(root); await reports(run);
+    await rm(path.join(root,run.reportFile)); await mkdir(path.join(root,run.reportFile));
+    await expect(consumeTestRun(root,run)).rejects.toThrow("must be a regular file");
+    await cleanupTestRun(run);
+  `),
+  ).toMatchObject({ code: 0 });
+});
+
+test("replacing a consumed report path cannot change the cases read", async () => {
+  expect(
+    await probe(`
+    const first=await beginTestRun(root); await reports(first);
+    await Bun.write(path.join(root,first.reportFile),'<testsuites><testsuite name="cases.test.ts"><testcase name="borrowed" file="cases.test.ts" /></testsuite></testsuites>');
+    const second=await beginTestRun(root); await reports(second);
+    const actual=await import("./scripts/test-run");
+    const consume=actual.consumeTestRun;
+    const replacement={...actual,consumeTestRun:async(...args)=>{
+      const result=await consume(...args);
+      await rm(path.join(root,second.reportFile));
+      await symlink(path.join(root,first.reportFile),path.join(root,second.reportFile));
+      return result;
+    }};
+    mock.module("./scripts/test-run",()=>replacement);
+    const {missingPassedTests}=await import("./scripts/replay-reports");
+    expect(await missingPassedTests(root,[{test:"cases.test.ts",fixed:["borrowed"]}],second))
+      .toEqual({missing:["cases.test.ts: borrowed"],reports:2});
+    await cleanupTestRun(first); await cleanupTestRun(second);
+  `),
+  ).toMatchObject({ code: 0 });
+});
