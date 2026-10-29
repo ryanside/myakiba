@@ -2351,6 +2351,7 @@
     },
     {
       "fix": "5b18648a69a54fdb2735e6956e5abcbcb7144bf3",
+      "testAt": "5b18648a69a54fdb2735e6956e5abcbcb7144bf3",
       "bug": "an existing Item import committed its session before completion and left it behind when completion failed",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": [
@@ -2360,6 +2361,7 @@
     },
     {
       "fix": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
+      "testAt": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
       "bug": "every import refused while the stores reviewed the extension, even with the extension installed and ready",
       "test": "apps/web/src/components/extension/extension-gate.test.tsx",
       "fixed": [
