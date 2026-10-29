@@ -2484,14 +2484,9 @@
       "test": "apps/server/src/domain/execute.test.ts",
       "fixed": [
         "gen forwards a child's throw as a Result with its own failure and log",
-        "recover forwards a child's throw as a Result with its own failure and log",
-        "recover gen forwards a child's throw as a Result with its own failure and log",
-        "gen forwards a child's operational as a Result with its own failure and log",
-        "recover forwards a child's operational as a Result with its own failure and log",
-        "recover gen forwards a child's operational as a Result with its own failure and log",
-        "recover forwards a child's panic as a Result with its own failure and log",
-        "recover gen forwards a child's panic as a Result with its own failure and log"
-      ]
+        "gen forwards a child's operational as a Result with its own failure and log"
+      ],
+      "reason": "Recovery forwarding was deliberately replaced by parent ownership to match its declared 500 type. Composition forwarding remains live here; the recovery contract and child diagnostics are protected by f08ae5fc2ab9e54cf149462b819d7176d40ea71c."
     },
     {
       "fix": "e6ac0f701cad494bf6317127656562e54f2b706e",
@@ -2510,7 +2505,9 @@
         "a sync first read throw answers a logged safe 500",
         "a data transfer first read panic answers a logged safe 500",
         "a data transfer first read throw answers a logged safe 500"
-      ]
+      ],
+      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
     },
     {
       "fix": "56e83defa6d635d07a606bba4e8f39f2d7ac894f",
@@ -2535,7 +2532,9 @@
       "fixed": [
         "a sync polling read throw retries with the last status and recovers",
         "a data transfer polling read throw retries with the last status and recovers"
-      ]
+      ],
+      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
     },
     {
       "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
@@ -2549,6 +2548,40 @@
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
       "fixed": [
         "the update link opens an FAQ answer that says how to update, even while every store reviews"
+      ]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "recoveries forwarded child failures outside the parent operation wire contract",
+      "test": "apps/server/src/domain/execute.test.ts",
+      "fixed": [
+        "recover owns a child's throw with parent failure and child diagnostics",
+        "recover gen owns a child's throw with parent failure and child diagnostics",
+        "recover owns a child's operational with parent failure and child diagnostics",
+        "recover gen owns a child's operational with parent failure and child diagnostics",
+        "recover owns a child's panic with parent failure and child diagnostics",
+        "recover gen owns a child's panic with parent failure and child diagnostics"
+      ]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "stream read outcomes used the child failure text and step instead of the stream owner",
+      "test": "apps/server/src/domain/stream-boundary.test.ts",
+      "fixed": [
+        "a stream owns its distinct child's throw in first",
+        "a stream owns its distinct child's panic in first",
+        "a stream owns its distinct child's throw in after event",
+        "a stream owns its distinct child's panic in after event",
+        "a stream owns its distinct child's throw in poll",
+        "a stream owns its distinct child's panic in poll"
+      ]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "recording a missing Order failure returned an undeclared child failure from SyncRuns.complete",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "a missing Order recording failure keeps the completion wire failure and logs the child action"
       ]
     }
   ],
