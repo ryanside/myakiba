@@ -2784,6 +2784,15 @@
         "a stashed real outcome belongs to the returning compose",
         "a stashed real outcome belongs to the returning compose before"
       ]
+    },
+    {
+      "fix": "51ced5cdf2dec9d6d13e75ce1db958992430b9d6",
+      "bug": "A stream could reuse its read action, making descendant diagnostics ambiguous.",
+      "test": "apps/server/src/domain/stream-boundary.test.ts",
+      "fixed": [
+        "a stream rejects its own action in readOrThrow before executing the read",
+        "a stream rejects its own action in poll before executing the read"
+      ]
     }
   ],
   "lint": [
