@@ -2938,6 +2938,32 @@
       "bug": "Bun JUnit reports entered Docker build contexts and pruned database images.",
       "test": "scripts/docker-context.test.ts",
       "fixed": ["Docker contexts exclude test-results.xml at every depth"]
+    },
+    {
+      "fix": "e24d7c7a2d10a6471b7c5f0ecbbf259c59ad8f53",
+      "bug": "Report runs retained namespaces on completion and interruption, rejected unchanged staging and scratch edits, depended on PATH, and omitted failed-step diagnostics.",
+      "test": "scripts/test-run-lifecycle.test.ts",
+      "fixed": [
+        "test runs remove their namespaces after pass",
+        "test runs remove their namespaces after package failure",
+        "test runs remove their namespaces after tooling failure",
+        "test runs remove their namespaces after coverage rejection",
+        "test runs remove their namespaces after SIGINT",
+        "test runs remove their namespaces after SIGTERM",
+        "concurrent test runs preserve each other's active namespaces",
+        "test runs prune old orphan namespaces and preserve recent siblings",
+        "source identity allows staging changes without changing test inputs",
+        "source identity allows scratch changes without changing test inputs",
+        "the runner resolves project turbo outside bun run",
+        "the runner names Turbo package tests and its failed exit code",
+        "the runner names Tooling tests and its failed exit code"
+      ]
+    },
+    {
+      "fix": "e24d7c7a2d10a6471b7c5f0ecbbf259c59ad8f53",
+      "bug": "Empty JUnit report namespace directories entered Docker build contexts after report files were excluded.",
+      "test": "scripts/docker-context.test.ts",
+      "fixed": ["Docker contexts exclude report namespace directories at every depth"]
     }
   ],
   "lint": [

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { $ } from "bun";
-import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
 type Mode = "standalone" | "partial" | "source" | "revision" | "reuse";
@@ -10,9 +10,11 @@ async function fixture(mode: Mode) {
     await mkdir(path.join(root, "scripts"));
     await mkdir(path.join(root, "tools/oxlint"), { recursive: true });
     await mkdir(path.join(root, "apps/a"), { recursive: true });
-    const { scripts }: { scripts: { test: string; "test:tooling"?: string } } = await Bun.file(
-      path.join(import.meta.dir, "../package.json"),
-    ).json();
+    const {
+      scripts,
+      devDependencies,
+    }: { scripts: { test: string; "test:tooling"?: string }; devDependencies: { turbo: string } } =
+      await Bun.file(path.join(import.meta.dir, "../package.json")).json();
     await Bun.write(
       path.join(root, "package.json"),
       JSON.stringify({
@@ -21,6 +23,7 @@ async function fixture(mode: Mode) {
         packageManager: "bun@1.4.4",
         workspaces: { packages: ["apps/*"] },
         scripts,
+        devDependencies: { turbo: devDependencies.turbo },
       }),
     );
     await Bun.write(
@@ -56,7 +59,7 @@ async function fixture(mode: Mode) {
       action = "await $`git -c core.hooksPath=/dev/null commit --allow-empty --quiet -m changed`;";
     const source = `import {test} from "bun:test"; import {$} from "bun"; test("passed case",async()=>{${action}});`;
     await Bun.write(path.join(root, "apps/a/cases.test.ts"), source);
-    const partial = mode === "partial" || mode === "standalone";
+    const partial = mode === "partial";
     if (partial) {
       await mkdir(path.join(root, "apps/b"));
       await Bun.write(
@@ -103,11 +106,6 @@ async function fixture(mode: Mode) {
     await $`git config user.name Run`.cwd(root).quiet();
     await $`git config user.email run@example.invalid`.cwd(root).quiet();
     await $`bun install --ignore-scripts`.cwd(root).quiet();
-    await mkdir(path.join(root, "node_modules/.bin"), { recursive: true });
-    await symlink(
-      path.resolve(import.meta.dir, "../node_modules/.bin/turbo"),
-      path.join(root, "node_modules/.bin/turbo"),
-    );
     await $`git add .`.cwd(root).quiet();
     await $`git -c core.hooksPath=/dev/null commit --quiet -m source`.cwd(root).quiet();
     const run = async (args: string[]) => {
@@ -124,10 +122,22 @@ async function fixture(mode: Mode) {
       return { code, output: stdout + stderr };
     };
     if (mode === "standalone") return await run(["scripts/check-replay-coverage.ts"]);
-    const full = await run(["run", "test"]);
-    if (mode !== "reuse") return full;
-    expect(full).toMatchObject({ code: 0 });
-    return await run(["scripts/check-replay-coverage.ts"]);
+    if (mode === "reuse") {
+      await Bun.write(
+        path.join(root, "reuse.ts"),
+        `
+        import path from "node:path";
+        import {beginTestRun,consumeTestRun} from "./scripts/test-run";
+        const root=process.cwd(); const run=await beginTestRun(root);
+        for(const dir of [root,path.join(root,"apps/a")])
+          await Bun.write(path.join(dir,run.reportFile),"<testsuites />");
+        await consumeTestRun(root,run);
+        await consumeTestRun(root,run);
+      `,
+      );
+      return await run(["reuse.ts"]);
+    }
+    return await run(["run", "test"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -137,6 +147,13 @@ for (const mode of ["standalone", "partial", "source", "revision", "reuse"] as c
   test(`coverage rejects ${mode} reports outside the current full run and source`, async () => {
     const run = await fixture(mode);
     expect(run).not.toMatchObject({ code: 0 });
-    expect(run.output).toContain("bun run test");
+    const messages = {
+      standalone: "No active full test run",
+      reuse: "No active full test run",
+      partial: "Missing current-run Bun JUnit report",
+      source: "Source changed during bun run test",
+      revision: "Source changed during bun run test",
+    };
+    expect(run.output).toContain(messages[mode]);
   }, 30_000);
 }
