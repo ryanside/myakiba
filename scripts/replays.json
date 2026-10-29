@@ -2741,6 +2741,8 @@
     },
     {
       "fix": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
+      "testAt": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
+      "reason": "1dffa82d added a kernel export assertion to this file that also fails at the parent; preserve the original single-flip harness.",
       "bug": "Only kernel-created execution failures may forward a child outcome; cloned lookalikes must become an internal defect.",
       "test": "apps/server/src/domain/execution-failed.test.ts",
       "fixed": ["only kernel-created execution failures can forward an outcome"]
