@@ -264,6 +264,8 @@ async function streamStep<I, T, F extends AnyFailure, M extends string>(
   input: I,
   log: RequestLogger,
 ): Promise<Result<T, F | ExecutionFailed>> {
+  if (receiver.action === op.action)
+    panic(`${receiver.action} stream read ${op.action} must use a distinct action`);
   return executionResult(
     await evaluate(op as AnyOp, viewer, input as never, log),
     op,
