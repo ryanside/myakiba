@@ -2775,6 +2775,15 @@
         "a data transfer first read throw answers a logged safe 500",
         "a data transfer polling read throw retries with the last status and recovers"
       ]
+    },
+    {
+      "fix": "8a5a450e134461f0781a8c607a7abf3c7fc32d13",
+      "bug": "An unrelated composition forwarded a stashed genuine child outcome outside its declared failure type.",
+      "test": "apps/server/src/domain/execution-scope.test.ts",
+      "fixed": [
+        "a stashed real outcome belongs to the returning compose",
+        "a stashed real outcome belongs to the returning compose before"
+      ]
     }
   ],
   "lint": [
