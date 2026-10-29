@@ -3109,6 +3109,33 @@
       "bug": "The data-transfer status stream lost the original read error after its first event because the request wide event had already been emitted.",
       "test": "apps/server/src/routers/data-transfer/routes.test.ts",
       "fixed": ["data-transfer SSE read 2 records the original error"]
+    },
+    {
+      "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
+      "bug": "Signed out, MFC renders a guest user menu; the reader counted any user menu as a sign-in and the scrubber emptied the guest menu, so signed-out users were told to check their content settings instead of signing in.",
+      "test": "packages/mfc/src/page.test.ts",
+      "fixed": [
+        "signed-in state > MFC's guest menu reads signed out, and a menu whose handle is a profile reads signed in",
+        "signed-in state > a single-quoted class list with the user-menu token"
+      ]
+    },
+    {
+      "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
+      "bug": "Signed out, MFC renders a guest user menu; the reader counted any user menu as a sign-in and the scrubber emptied the guest menu, so signed-out users were told to check their content settings instead of signing in.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage keeps what readMfcEnvelope reads on other pages > a guest user menu names no one, so it stays and the page still reads signed out"
+      ]
+    },
+    {
+      "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
+      "bug": "Signed out, MFC renders a guest user menu; the reader counted any user menu as a sign-in and the scrubber emptied the guest menu, so signed-out users were told to check their content settings instead of signing in.",
+      "test": "apps/extension/lib/fetcher.test.ts",
+      "fixed": [
+        "a challenge > solved into a signed-out 404 answers at once and leaves the rest of the queue running",
+        "item results > a 404 is signed out with MFC's guest menu and hidden or missing with a signed-in menu",
+        "the developer log > names each failed item's error and id once, without the page"
+      ]
     }
   ],
   "lint": [
