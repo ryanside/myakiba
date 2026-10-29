@@ -2552,6 +2552,12 @@
       "fixed": [
         "the update link opens an FAQ answer that says how to update, even while every store reviews"
       ]
+    },
+    {
+      "fix": "87f0749316ac51dd06c5d714ebc29c349a05ac22",
+      "bug": "the update answer told Chrome users only to wait for Chrome to update the extension",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": ["the update answer tells Chrome users how to update sooner"]
     }
   ],
   "lint": [
