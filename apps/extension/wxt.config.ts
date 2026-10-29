@@ -49,6 +49,7 @@ export default defineConfig({
       "packages/mfc/{fixtures,test}/**",
       "**/*.type-test.ts",
       "**/dist/**",
+      "**/test-results.xml",
     ],
   },
 });
