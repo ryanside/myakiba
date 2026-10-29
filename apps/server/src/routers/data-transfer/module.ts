@@ -68,7 +68,7 @@ export const DataTransfer = {
       streamStatus({
         log: scope.log,
         signal: input.signal,
-        read: () => scope.execute(importStatus, {}),
+        read: () => scope.readOrThrow(importStatus, {}),
         poll: () => scope.poll(importStatus, {}),
       }),
   ),

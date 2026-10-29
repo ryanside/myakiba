@@ -1,3 +1,4 @@
+import type { ExecutionFailed } from "./kernel";
 /**
  * Each `@ts-expect-error` is a past mistake rewritten against the kernel, so
  * `tsc -b` fails if one of them compiles. `bun scripts/replay.ts --types kernel`
@@ -437,3 +438,22 @@ void (true satisfies Equal<
   ReturnType<typeof servedStream>,
   AsyncGenerator<number, ReturnType<() => void> | ElysiaCustomStatusResponse<500, "Stream failed">>
 >);
+
+const recoveryChild = query({ action: "types.child", failure: "Child failed" }, async () => {
+  throw new Error("child unavailable");
+});
+const recoveryParent = command(
+  { action: "types.recovery", failure: "Recovery failed" },
+  async () => {
+    throw new Error("recover me");
+  },
+  { recover: (scope) => scope.execute(recoveryChild, {}) },
+);
+const recoveryAnswer = () => serve(caller, recoveryParent, {});
+void (true satisfies Equal<
+  Awaited<ReturnType<typeof recoveryAnswer>>,
+  ElysiaCustomStatusResponse<500, "Recovery failed">
+>);
+
+type CanConstruct<T> = T extends abstract new (...args: never[]) => object ? true : false;
+void (false satisfies CanConstruct<typeof ExecutionFailed>);

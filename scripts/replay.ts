@@ -15,7 +15,9 @@ type TestReplay = {
    */
   testAt?: string;
   /** Current coverage when the historical harness uses names or files that HEAD renamed. */
-  head?: { test: string; fixed: string[] }[];
+  head?: { test: string; fixed: string[]; reason: string }[];
+  /** Why historical coverage was partially retired or its harness pinned. */
+  reason?: string;
 };
 
 type LintReplay = {
@@ -163,8 +165,9 @@ async function installedVersion(packageDir: string, dependency: string) {
 async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
+  const command = packageDir === "." ? "bun test" : scripts.test;
   const { exitCode, stdout, stderr } =
-    await $`sh -c ${`${scripts.test} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
+    await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
       .nothrow()
       .quiet();
@@ -282,7 +285,7 @@ async function runKnip(checkout: string) {
   return { exitCode, output: `${stdout}${stderr}` };
 }
 
-async function checkTypes(checkout: string, packageDir: string) {
+async function checkTypes(checkout: string, packageDir: string, extraArgs: string[] = []) {
   const { scripts } = await readPackage(path.join(checkout, packageDir));
   const script: string = scripts?.["check-types"] ?? "";
   const [command, ...args] = script.split(/\s+/).filter(Boolean);
@@ -291,7 +294,7 @@ async function checkTypes(checkout: string, packageDir: string) {
   const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
     path.join(dir, "node_modules", ".bin"),
   );
-  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
+  const { exitCode, stdout } = await $`tsc ${args} ${extraArgs} --pretty false`
     .cwd(path.join(checkout, packageDir))
     .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
     .nothrow()
@@ -561,7 +564,7 @@ try {
     const directives = source.match(directive)?.length ?? 0;
     await Bun.write(file, source.replace(directive, "$1//"));
 
-    const run = await checkTypes(worktree, fixture.package);
+    const run = await checkTypes(worktree, fixture.package, ["--noEmit"]);
     const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
     const expected = (line: string) => fixture.errors.some((error) => line.startsWith(`${error}:`));
     const notReported = fixture.errors.filter(

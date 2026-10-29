@@ -1,4 +1,4 @@
-import type { ExecutionFailed } from "@/domain/kernel";
+import { ExecutionFailed } from "@/domain/kernel";
 import { sse } from "elysia";
 import type { RequestLogger } from "evlog";
 import type { Result } from "better-result";
@@ -211,7 +211,7 @@ export async function* streamStatus({
         nextPollAt = Date.now() + JOB_STATUS_POLL_INTERVAL_MS;
         const polledStatusRead = await poll();
         if (polledStatusRead.isErr()) {
-          if (polledStatusRead.error._tag === "ExecutionFailed") {
+          if (ExecutionFailed.is(polledStatusRead.error)) {
             yield sse({ data: latestJobStatus });
             continue;
           }

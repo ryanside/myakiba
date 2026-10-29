@@ -19,7 +19,8 @@
             "normalizeMfcDate with release dates as MFC prints them > \"09/18/2025\" becomes \"2025-09-18\"",
             "normalizeMfcDate with release dates as MFC prints them > \"1/5/2012\" becomes \"2012-01-05\"",
             "normalizeMfcDate with release dates as MFC prints them > \" 10/13/2010 \" becomes \"2010-10-13\""
-          ]
+          ],
+          "reason": "The normalizer was renamed; the same four date cases remain."
         }
       ]
     },
@@ -645,7 +646,8 @@
             "with no extension it links to the store listing",
             "an extension that is too old asks for an update",
             "a new install shows after the reload, and onboarding reopens at the extension step"
-          ]
+          ],
+          "reason": "The installation UX now links to the browser store; onboarding probe/reload behavior is still covered."
         }
       ]
     },
@@ -708,7 +710,8 @@
             "a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back",
             "closing the dialog keeps its copy while it closes and returns focus to the button",
             "a gated button shows it is checking and ignores a second click until the check ends"
-          ]
+          ],
+          "reason": "The missing-extension gate now links to a store listing; the same entry points still gate their imports."
         }
       ]
     },
@@ -881,9 +884,11 @@
             "a failed history fallback preserves the original persistence error",
             "a fetch failure cannot hide a recorded persistence failure",
             "extension CSV cannot reuse another user's Order"
-          ]
+          ],
+          "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
         }
-      ]
+      ],
+      "reason": "Worker-era controls were removed on purpose. Durable Redis fallback polling and the other run guarantees remain covered."
     },
     {
       "fix": "8c19d2088de705335017ea933100f1f00078e19e",
@@ -945,7 +950,8 @@
             "display text alone cannot classify a persistence failure",
             "a 1000-item failure batch uses one transaction and rate-limit unit",
             "a mixed failure batch preserves imported Items and ignores a stale job"
-          ]
+          ],
+          "reason": "The worker no longer imports Items. Durable persistence error classification after cache expiry remains covered in the request-driven importer."
         }
       ]
     },
@@ -985,7 +991,8 @@
           "test": "apps/extension/lib/fetcher.test.ts",
           "fixed": [
             "the MFC tab > a focus that comes while the browser answers the extension keeps the tab open and where it was, at every answer"
-          ]
+          ],
+          "reason": "The focus race test was renamed from storage reads to browser answers; it still asserts tab ownership at every answer."
         }
       ]
     },
@@ -1055,7 +1062,8 @@
             "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style commits)",
             "the MFC tab > a tab the user focuses during a 70000 ms load is theirs, and the next load waits for that load to end (Firefox-style, complete before it starts commits)",
             "the MFC tab > a worker restarted while a load the user took over still runs waits for it to end"
-          ]
+          ],
+          "reason": "The load invariant test moved into its own file; focused takeover tests remain in fetcher.test.ts."
         },
         {
           "test": "apps/extension/lib/load-invariant.test.ts",
@@ -1064,7 +1072,8 @@
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Chrome-style commits)",
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style commits)",
             "one MFC load at a time, each 2.5 s after the last ended, and only unclaimed tabs of the extension's closed, across cancels, challenges, rate limits, stalled, redirected and dropped navigations, picture reads, claims and restarts (Firefox-style, complete before it starts commits)"
-          ]
+          ],
+          "reason": "The load invariant test moved into its own file; focused takeover tests remain in fetcher.test.ts."
         }
       ]
     },
@@ -1491,7 +1500,8 @@
           "test": "apps/web/src/data/item-refresh.test.tsx",
           "fixed": [
             "a defect in the refresh is reported as a Panic and shows the safe text, not its message"
-          ]
+          ],
+          "reason": "The existing defect test gained an explicit safe-text assertion and was renamed."
         }
       ]
     },
@@ -1993,9 +2003,11 @@
             "strict money input > rejects \"1.234\" for precision",
             "strict money input > rejects \"90071992547409.92\" for unsafe_integer",
             "strict money input > rejects \"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\" for unsafe_integer"
-          ]
+          ],
+          "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
         }
-      ]
+      ],
+      "reason": "Leading/trailing-decimal forms are intentionally accepted now. All remaining malformed, precision and range rejection regressions remain covered."
     },
     {
       "fix": "1efc55df40731143af9f3bd86de7b06349424db0",
@@ -2114,7 +2126,8 @@
             "the throttle's books > when storage fails > an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on",
             "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
             "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
-          ]
+          ],
+          "reason": "Answer-booking failures now preserve fetched pages. The same tests still cover queue progress, run completion, tab cleanup and duplicate fetches."
         }
       ]
     },
@@ -2136,7 +2149,8 @@
             "a throttle turn > whose books storage will not read runs on an open throttle and logs why",
             "a throttle turn > reads its books from storage once, however many turns it runs",
             "a throttle turn > whose booking storage will not write still keeps the next turn a gap after it, and logs why"
-          ]
+          ],
+          "reason": "The storage-unavailable regression moved from the old nested fetcher suite into the throttle-turn suite."
         }
       ]
     },
@@ -2178,9 +2192,11 @@
       "head": [
         {
           "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-          "fixed": ["an upload without a current import stores no picture or catalog item"]
+          "fixed": ["an upload without a current import stores no picture or catalog item"],
+          "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
         }
-      ]
+      ],
+      "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
     },
     {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
@@ -2486,14 +2502,9 @@
       "test": "apps/server/src/domain/execute.test.ts",
       "fixed": [
         "gen forwards a child's throw as a Result with its own failure and log",
-        "recover forwards a child's throw as a Result with its own failure and log",
-        "recover gen forwards a child's throw as a Result with its own failure and log",
-        "gen forwards a child's operational as a Result with its own failure and log",
-        "recover forwards a child's operational as a Result with its own failure and log",
-        "recover gen forwards a child's operational as a Result with its own failure and log",
-        "recover forwards a child's panic as a Result with its own failure and log",
-        "recover gen forwards a child's panic as a Result with its own failure and log"
-      ]
+        "gen forwards a child's operational as a Result with its own failure and log"
+      ],
+      "reason": "Recovery forwarding was deliberately replaced by parent ownership to match its declared 500 type. Composition forwarding remains live here; the recovery contract and child diagnostics are protected by f08ae5fc2ab9e54cf149462b819d7176d40ea71c."
     },
     {
       "fix": "e6ac0f701cad494bf6317127656562e54f2b706e",
@@ -2512,7 +2523,9 @@
         "a sync first read throw answers a logged safe 500",
         "a data transfer first read panic answers a logged safe 500",
         "a data transfer first read throw answers a logged safe 500"
-      ]
+      ],
+      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
     },
     {
       "fix": "56e83defa6d635d07a606bba4e8f39f2d7ac894f",
@@ -2537,7 +2550,9 @@
       "fixed": [
         "a sync polling read throw retries with the last status and recovers",
         "a data transfer polling read throw retries with the last status and recovers"
-      ]
+      ],
+      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
     },
     {
       "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
@@ -2558,6 +2573,62 @@
       "bug": "the update answer told Chrome users only to wait for Chrome to update the extension",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
       "fixed": ["the update answer tells Chrome users how to update sooner"]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "recoveries forwarded child failures outside the parent operation wire contract",
+      "test": "apps/server/src/domain/execute.test.ts",
+      "fixed": [
+        "recover owns a child's throw with parent failure and child diagnostics",
+        "recover gen owns a child's throw with parent failure and child diagnostics",
+        "recover owns a child's operational with parent failure and child diagnostics",
+        "recover gen owns a child's operational with parent failure and child diagnostics",
+        "recover owns a child's panic with parent failure and child diagnostics",
+        "recover gen owns a child's panic with parent failure and child diagnostics"
+      ]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "stream read outcomes used the child failure text and step instead of the stream owner",
+      "test": "apps/server/src/domain/stream-boundary.test.ts",
+      "fixed": [
+        "a stream owns its distinct child's throw in first",
+        "a stream owns its distinct child's panic in first",
+        "a stream owns its distinct child's throw in after event",
+        "a stream owns its distinct child's panic in after event",
+        "a stream owns its distinct child's throw in poll",
+        "a stream owns its distinct child's panic in poll"
+      ]
+    },
+    {
+      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
+      "bug": "recording a missing Order failure returned an undeclared child failure from SyncRuns.complete",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": [
+        "a missing Order recording failure keeps the completion wire failure and logs the child action"
+      ]
+    },
+    {
+      "fix": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
+      "bug": "Only kernel-created execution failures may forward a child outcome; cloned lookalikes must become an internal defect.",
+      "test": "apps/server/src/domain/execution-failed.test.ts",
+      "fixed": ["only kernel-created execution failures can forward an outcome"]
+    },
+    {
+      "fix": "b6b00aca6ad5d36338167c5f2ba5b7db70a7b944",
+      "bug": "Missing sync jobs record their not_found category on initial, replay and polling reads instead of leaving a successful outcome.",
+      "test": "apps/server/src/domain/stream-failure.test.ts",
+      "fixed": [
+        "a missing sync job in initial records the not_found outcome",
+        "a missing sync job in replay records the not_found outcome",
+        "a missing sync job in polling records the not_found outcome"
+      ]
+    },
+    {
+      "fix": "d8aaa3ddddab742b581423a044657d8dc1bd6cf6",
+      "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
+      "test": "scripts/replay-names.test.ts",
+      "fixed": ["replay name matching excludes skipped and pending registrations"]
     }
   ],
   "lint": [
@@ -2694,42 +2765,42 @@
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
-        "src/domain/kernel.type-test.ts(27,15): error TS2345",
-        "src/domain/kernel.type-test.ts(27,22): error TS7006",
-        "src/domain/kernel.type-test.ts(31,18): error TS2339",
-        "src/domain/kernel.type-test.ts(36,29): error TS2769",
-        "src/domain/kernel.type-test.ts(39,28): error TS2345",
-        "src/domain/kernel.type-test.ts(45,59): error TS2741",
-        "src/domain/kernel.type-test.ts(48,14): error TS2741",
-        "src/domain/kernel.type-test.ts(59,55): error TS2322",
-        "src/domain/kernel.type-test.ts(65,5): error TS2741",
-        "src/domain/kernel.type-test.ts(87,29): error TS2769",
-        "src/domain/kernel.type-test.ts(92,30): error TS2339",
-        "src/domain/kernel.type-test.ts(101,22): error TS2339",
-        "src/domain/kernel.type-test.ts(119,9): error TS2769",
-        "src/domain/kernel.type-test.ts(147,24): error TS2339",
-        "src/domain/kernel.type-test.ts(161,19): error TS2339",
-        "src/domain/kernel.type-test.ts(175,9): error TS2339",
-        "src/domain/kernel.type-test.ts(182,5): error TS2769",
-        "src/domain/kernel.type-test.ts(182,20): error TS7006",
-        "src/domain/kernel.type-test.ts(189,35): error TS2339",
-        "src/domain/kernel.type-test.ts(199,28): error TS2345",
-        "src/domain/kernel.type-test.ts(202,27): error TS2322",
-        "src/domain/kernel.type-test.ts(208,27): error TS2322",
-        "src/domain/kernel.type-test.ts(211,17): error TS2769",
-        "src/domain/kernel.type-test.ts(219,5): error TS2769",
-        "src/domain/kernel.type-test.ts(238,19): error TS2769",
-        "src/domain/kernel.type-test.ts(246,3): error TS2769",
-        "src/domain/kernel.type-test.ts(250,29): error TS2769",
-        "src/domain/kernel.type-test.ts(254,3): error TS2769",
-        "src/domain/kernel.type-test.ts(288,17): error TS2322",
-        "src/domain/kernel.type-test.ts(301,6): error TS2554",
-        "src/domain/kernel.type-test.ts(379,60): error TS2345",
-        "src/domain/kernel.type-test.ts(388,3): error TS2769",
-        "src/domain/kernel.type-test.ts(393,34): error TS2322",
-        "src/domain/kernel.type-test.ts(397,3): error TS2322",
-        "src/domain/kernel.type-test.ts(402,3): error TS2322",
-        "src/domain/kernel.type-test.ts(406,34): error TS2322"
+        "src/domain/kernel.type-test.ts(28,15): error TS2345",
+        "src/domain/kernel.type-test.ts(28,22): error TS7006",
+        "src/domain/kernel.type-test.ts(32,18): error TS2339",
+        "src/domain/kernel.type-test.ts(37,29): error TS2769",
+        "src/domain/kernel.type-test.ts(40,28): error TS2345",
+        "src/domain/kernel.type-test.ts(46,59): error TS2769",
+        "src/domain/kernel.type-test.ts(49,14): error TS2769",
+        "src/domain/kernel.type-test.ts(60,55): error TS2322",
+        "src/domain/kernel.type-test.ts(66,5): error TS2741",
+        "src/domain/kernel.type-test.ts(88,29): error TS2769",
+        "src/domain/kernel.type-test.ts(93,30): error TS2339",
+        "src/domain/kernel.type-test.ts(102,22): error TS2339",
+        "src/domain/kernel.type-test.ts(120,9): error TS2769",
+        "src/domain/kernel.type-test.ts(148,24): error TS2339",
+        "src/domain/kernel.type-test.ts(162,19): error TS2339",
+        "src/domain/kernel.type-test.ts(176,9): error TS2339",
+        "src/domain/kernel.type-test.ts(183,5): error TS2769",
+        "src/domain/kernel.type-test.ts(183,20): error TS7006",
+        "src/domain/kernel.type-test.ts(190,35): error TS2339",
+        "src/domain/kernel.type-test.ts(200,28): error TS2345",
+        "src/domain/kernel.type-test.ts(203,27): error TS2322",
+        "src/domain/kernel.type-test.ts(209,27): error TS2322",
+        "src/domain/kernel.type-test.ts(212,17): error TS2769",
+        "src/domain/kernel.type-test.ts(220,5): error TS2769",
+        "src/domain/kernel.type-test.ts(239,19): error TS2769",
+        "src/domain/kernel.type-test.ts(247,3): error TS2769",
+        "src/domain/kernel.type-test.ts(251,29): error TS2769",
+        "src/domain/kernel.type-test.ts(255,3): error TS2769",
+        "src/domain/kernel.type-test.ts(289,17): error TS2322",
+        "src/domain/kernel.type-test.ts(302,6): error TS2554",
+        "src/domain/kernel.type-test.ts(380,60): error TS2345",
+        "src/domain/kernel.type-test.ts(389,3): error TS2769",
+        "src/domain/kernel.type-test.ts(394,34): error TS2322",
+        "src/domain/kernel.type-test.ts(398,3): error TS2322",
+        "src/domain/kernel.type-test.ts(403,3): error TS2322",
+        "src/domain/kernel.type-test.ts(407,34): error TS2322"
       ]
     }
   ]
