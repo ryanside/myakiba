@@ -200,6 +200,6 @@ for (const [phase, missingAt] of [
     expect(reads).toBe(missingAt);
     expect(unsubscribe).toHaveBeenCalledTimes(missingAt === 1 ? 0 : 1);
     expect(logged).not.toHaveBeenCalled();
-    expect(fields.mock.calls.at(-1)?.[0]).toEqual({ outcome: "not_found" });
+    expect(fields).toHaveBeenCalledWith({ outcome: "not_found" });
   });
 }

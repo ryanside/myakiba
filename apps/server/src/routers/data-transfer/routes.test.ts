@@ -1115,37 +1115,53 @@ test("a failed persistence fallback warns and rethrows the original error", asyn
   }
 });
 
-test.each([1, 2])(
-  "data-transfer SSE read %s keeps the original error in its wide event",
-  async (failAt) => {
-    await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
-    const { default: service } = await import("./service");
-    const { useLogger } = await import("evlog/elysia");
-    const original = service.getImportJobStatus.bind(service);
-    let reads = 0;
-    let logged: ReturnType<typeof useLogger> | undefined;
-    const read = spyOn(service, "getImportJobStatus").mockImplementation(async (...args) => {
-      logged = useLogger();
-      reads += 1;
-      if (reads === failAt) throw new Error("original import read error");
-      return original(...args);
-    });
-    initLogger({ enabled: true });
-    try {
-      const response = await app.handle(
-        new Request("http://localhost/api/data-transfer/imports/current/status", { headers }),
+test.each([1, 2])("data-transfer SSE read %i records the original error", async (failAt) => {
+  await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));
+  const { default: service } = await import("./service");
+  const { useLogger } = await import("evlog/elysia");
+  const original = service.getImportJobStatus.bind(service);
+  let reads = 0;
+  const events: unknown[] = [];
+  let logged: ReturnType<typeof useLogger> | undefined;
+  const read = spyOn(service, "getImportJobStatus").mockImplementation(async (...args) => {
+    logged = useLogger();
+    reads += 1;
+    if (reads === failAt) throw new Error("original import read error");
+    return original(...args);
+  });
+  initLogger({
+    enabled: true,
+    silent: true,
+    drain: ({ event }) => {
+      events.push(structuredClone(event));
+    },
+  });
+  try {
+    const response = await app.handle(
+      new Request("http://localhost/api/data-transfer/imports/current/status", { headers }),
+    );
+    await response.text();
+    const expected = {
+      action: "dataTransfer.importStatusStream",
+      outcome: "error",
+      step: "dataTransfer.importStatusStream",
+      childAction: "dataTransfer.importStatus",
+      error: { message: "original import read error" },
+    };
+    if (failAt === 1) expect(logged?.getContext()).toMatchObject(expected);
+    else
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          ...expected,
+          event: "stream.end",
+          error: expect.objectContaining(expected.error),
+        }),
       );
-      await response.text();
-      expect(logged?.getContext()).toMatchObject({
-        action: "dataTransfer.importStatusStream",
-        error: { message: "original import read error" },
-      });
-    } finally {
-      initLogger({ enabled: false });
-      read.mockRestore();
-    }
-  },
-);
+  } finally {
+    initLogger({ enabled: false });
+    read.mockRestore();
+  }
+});
 
 test("an import heartbeat's wide event names the import", async () => {
   const run = await startRun(archiveOf([], [collectionRecord("c1", 98_777)]));

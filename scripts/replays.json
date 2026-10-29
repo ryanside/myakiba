@@ -3076,6 +3076,35 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
       ]
+    },
+    {
+      "fix": "f531372430dae6b585940d6651851a1d09d0ce8b",
+      "bug": "Elysia emitted the request wide event at a generator stream's first yield, dropping terminal outcomes and later failures, info and warnings.",
+      "test": "apps/server/src/domain/stream-logging.test.ts",
+      "fixed": [
+        "a drained stream end records success after request emission",
+        "a drained stream end records timeout after request emission",
+        "a drained stream end records aborted after request emission",
+        "a drained stream end records not_found after request emission",
+        "a drained post-event Panic keeps its stream step, child action and original error",
+        "a drained stream retains a polling failure it survives",
+        "a drained stream retains every polling failure before it completes",
+        "a drained stream keeps post-event info and warn messages",
+        "a drained stream end records an unrecovered polling failure when the body ends",
+        "closing an Elysia generator drains one aborted end event after cleanup"
+      ]
+    },
+    {
+      "fix": "f531372430dae6b585940d6651851a1d09d0ce8b",
+      "bug": "The sync status stream lost the original read error after its first event because the request wide event had already been emitted.",
+      "test": "apps/server/src/routers/sync/routes.test.ts",
+      "fixed": ["sync SSE read 2 records the original error"]
+    },
+    {
+      "fix": "f531372430dae6b585940d6651851a1d09d0ce8b",
+      "bug": "The data-transfer status stream lost the original read error after its first event because the request wide event had already been emitted.",
+      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
+      "fixed": ["data-transfer SSE read 2 records the original error"]
     }
   ],
   "lint": [
