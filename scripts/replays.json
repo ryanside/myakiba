@@ -2867,6 +2867,15 @@
       "bug": "HEAD preflight attempted a deleted historical test file despite an explicit replacement head group.",
       "test": "scripts/replay-head.test.ts",
       "fixed": ["a replay head remap replaces a deleted historical test file"]
+    },
+    {
+      "fix": "7930ff7e0454c63cce1ac4d174be7a45cb156af5",
+      "bug": "An outcome from one invocation could be forwarded by another invocation of the same op, including across users.",
+      "test": "apps/server/src/domain/execution-invocation.test.ts",
+      "fixed": [
+        "an outcome cannot cross sequential invocations of the same op",
+        "an outcome cannot cross concurrent invocations of the same op"
+      ]
     }
   ],
   "lint": [
