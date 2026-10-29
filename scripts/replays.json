@@ -2760,6 +2760,21 @@
         "replay name matching resolves spread arguments to each",
         "pinned replay harnesses and head coverage explain their historical revisions"
       ]
+    },
+    {
+      "fix": "38860bf58c1dea356bb1aa244aec97b027f21324",
+      "bug": "Stream failures logged the same action as their read operations, making childAction redundant.",
+      "test": "apps/server/src/domain/stream-failure.test.ts",
+      "fixed": [
+        "a sync first read panic answers a logged safe 500",
+        "a sync read panic terminates without another poll",
+        "a sync first read throw answers a logged safe 500",
+        "a sync polling read throw retries with the last status and recovers",
+        "a data transfer first read panic answers a logged safe 500",
+        "a data transfer read panic terminates without another poll",
+        "a data transfer first read throw answers a logged safe 500",
+        "a data transfer polling read throw retries with the last status and recovers"
+      ]
     }
   ],
   "lint": [
