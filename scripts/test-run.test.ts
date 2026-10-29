@@ -35,10 +35,10 @@ async function fixture(mode: Mode) {
       "node_modules\n.turbo\ntest-results.xml\n.test-results/\n",
     );
     for (const file of [
-      "check-replay-coverage.ts",
       "replay-reports.ts",
       "run-tests.ts",
       "test-run.ts",
+      "check-replay-coverage.ts",
     ]) {
       const source = Bun.file(path.join(import.meta.dir, file));
       if (await source.exists()) await Bun.write(path.join(root, "scripts", file), source);
@@ -139,11 +139,17 @@ async function fixture(mode: Mode) {
 }
 
 for (const mode of ["partial", "reuse"] as const) {
-  test(`coverage rejects ${mode} reports outside the current full run and source`, async () => {
-    const run = await fixture(mode);
-    expect(run.code).not.toBe(0);
-    expect(run.output).toContain(
-      mode === "reuse" ? "No active full test run" : "Missing current-run Bun JUnit report",
-    );
-  }, 30_000);
+  test(
+    mode === "partial"
+      ? "a missing task report cannot borrow another run's report"
+      : "a consumed run handle cannot be reused",
+    async () => {
+      const run = await fixture(mode);
+      expect(run.code).not.toBe(0);
+      expect(run.output).toContain(
+        mode === "reuse" ? "No active full test run" : "Missing current-run Bun JUnit report",
+      );
+    },
+    30_000,
+  );
 }

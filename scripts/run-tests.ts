@@ -1,6 +1,7 @@
 import path from "node:path";
+import type { TestRun } from "./test-run";
 import { beginTestRun, cleanupTestRun } from "./test-run";
-import { checkReplayCoverage } from "./check-replay-coverage";
+import { checkReplayCoverage } from "./replay-reports";
 
 if (process.argv.length > 2)
   throw new Error(
@@ -23,9 +24,10 @@ const onInt = () => interrupt("SIGINT");
 const onTerm = () => interrupt("SIGTERM");
 process.on("SIGINT", onInt);
 process.on("SIGTERM", onTerm);
-const run = await beginTestRun(root);
+let run: TestRun | undefined;
 let code = 0;
 try {
+  run = await beginTestRun(root);
   const reporter = ["--reporter=junit", `--reporter-outfile=${run.reportFile}`];
   const steps = [
     {
@@ -52,9 +54,14 @@ try {
   }
   if (!interrupted && code === 0) await checkReplayCoverage(root, run);
 } finally {
-  await cleanupTestRun(run);
-  process.off("SIGINT", onInt);
-  process.off("SIGTERM", onTerm);
+  try {
+    if (run) await cleanupTestRun(run);
+  } catch (error) {
+    console.error("Failed to clean test report namespaces:", error);
+  } finally {
+    process.off("SIGINT", onInt);
+    process.off("SIGTERM", onTerm);
+  }
 }
 if (interrupted) code = interrupted === "SIGINT" ? 130 : 143;
 process.exitCode = code;
