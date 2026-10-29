@@ -932,9 +932,18 @@
     },
     {
       "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
+      "testAt": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
       "bug": "CI silently skipped the real Redis Lua test without its Redis URL",
       "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
-      "fixed": ["CI fails when the Redis Lua test has no Redis URL"]
+      "fixed": ["CI fails when the Redis Lua test has no Redis URL"],
+      "reason": "c7246939 made the Redis Lua test required in every environment, so HEAD's test no longer depends on CI; preserve the original CI-only assertion for this historical flip.",
+      "head": [
+        {
+          "test": "apps/server/src/routers/sync/snapshot-ci.test.ts",
+          "fixed": ["Redis snapshot tests require TEST_REDIS_URL locally"],
+          "reason": "The CI-only case became a requirement in every environment; the same missing-URL failure is asserted without CI."
+        }
+      ]
     },
     {
       "fix": "602817ab9c79064d969b51821a6d85c886a38a70",
