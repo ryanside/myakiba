@@ -39,8 +39,8 @@ for (const phase of ["first", "after event", "poll"] as const) {
             const polled = await scope.poll(child, {});
             if (polled.isErr()) {
               yield event(first.unwrap(), null);
-              yield event((await scope.readOrThrow(child, {})).unwrap(), "success");
-              return;
+              const recovered = await scope.readOrThrow(child, {});
+              yield event(recovered.unwrap(), "success");
             }
           } else await scope.readOrThrow(child, {});
         },
