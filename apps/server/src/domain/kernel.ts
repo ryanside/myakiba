@@ -15,6 +15,7 @@ import type { Viewer } from "./viewer";
 import {
   FAILURE_STATUS,
   ExecutionFailed,
+  executionFailed,
   isCommitted,
   isProceed,
   isFailure,
@@ -351,7 +352,7 @@ async function recovered(
 function executionResult(child: Settled, op: OpConfig<string>): AnyResult {
   if (child.kind === "answer") return child.result;
   return Result.err(
-    new ExecutionFailed({
+    executionFailed({
       cause: child.kind === "defect" ? child.panic : child.error,
       operation: child.operation ?? op,
       childAction: child.childAction,
