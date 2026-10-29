@@ -2867,6 +2867,12 @@
       "bug": "HEAD preflight attempted a deleted historical test file despite an explicit replacement head group.",
       "test": "scripts/replay-head.test.ts",
       "fixed": ["a replay head remap replaces a deleted historical test file"]
+    },
+    {
+      "fix": "90fcfa1f913c58ebd82bbc1a873ee24052fed49c",
+      "bug": "the extension sources zip took in the test-results.xml reports bun run test writes, so verify-sources refused it",
+      "test": "apps/extension/lib/sources-zip.test.ts",
+      "fixed": ["the sources zip leaves out the test reports bun run test writes"]
     }
   ],
   "lint": [
