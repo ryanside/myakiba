@@ -473,7 +473,7 @@
     },
     {
       "fix": "9597fbf59b6981d09ab01f5cf11db5c0dd0390ef",
-      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101–5 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
@@ -2879,6 +2879,19 @@
         "replay coverage rejects names Bun did not actually run",
         "replay coverage without reports requires the full test run",
         "replay coverage accepts runtime and finally registrations"
+      ],
+      "testAt": "90fcfa1f913c58ebd82bbc1a873ee24052fed49c",
+      "reason": "The original runtime-name probe used standalone fixed reports; current coverage runs inside the source-bound full test invocation.",
+      "head": [
+        {
+          "test": "scripts/replay-coverage.test.ts",
+          "fixed": [
+            "replay coverage rejects names Bun did not actually run",
+            "replay coverage without reports requires the full test run",
+            "replay coverage accepts runtime and finally registrations"
+          ],
+          "reason": "The current probe generates reports inside an active source-bound test run while preserving the runtime registration assertions."
+        }
       ]
     },
     {
@@ -2892,6 +2905,39 @@
       "bug": "the extension sources zip took in the test-results.xml reports bun run test writes, so verify-sources refused it",
       "test": "apps/extension/lib/sources-zip.test.ts",
       "fixed": ["the sources zip leaves out the test reports bun run test writes"]
+    },
+    {
+      "fix": "7930ff7e0454c63cce1ac4d174be7a45cb156af5",
+      "bug": "An outcome from one invocation could be forwarded by another invocation of the same op, including across users.",
+      "test": "apps/server/src/domain/execution-invocation.test.ts",
+      "fixed": [
+        "an outcome cannot cross sequential invocations of the same op",
+        "an outcome cannot cross concurrent invocations of the same op"
+      ]
+    },
+    {
+      "fix": "fc4731982b8a0d8aeb802fa56aab798dc0256f5e",
+      "bug": "The local Redis prerequisite regression inherited CI from its parent and did not exercise local behavior.",
+      "test": "scripts/snapshot-local.test.ts",
+      "fixed": ["the local Redis prerequisite subprocess clears inherited CI"]
+    },
+    {
+      "fix": "bd27794ce93711a82984e0ff70056d007067057b",
+      "bug": "Stale fixed-path JUnit reports could authorize standalone or partial coverage checks after source or revision changes.",
+      "test": "scripts/test-run.test.ts",
+      "fixed": [
+        "coverage rejects standalone reports outside the current full run and source",
+        "coverage rejects partial reports outside the current full run and source",
+        "coverage rejects source reports outside the current full run and source",
+        "coverage rejects revision reports outside the current full run and source",
+        "coverage rejects reuse reports outside the current full run and source"
+      ]
+    },
+    {
+      "fix": "9eb45e51de8b258d83f2ebc29f91cf1186283dcd",
+      "bug": "Bun JUnit reports entered Docker build contexts and pruned database images.",
+      "test": "scripts/docker-context.test.ts",
+      "fixed": ["Docker contexts exclude test-results.xml at every depth"]
     }
   ],
   "lint": [

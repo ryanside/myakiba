@@ -4,7 +4,7 @@ test("Redis snapshot tests require TEST_REDIS_URL locally", async () => {
   const child = Bun.spawn(
     [process.execPath, "test", "--isolate", `${import.meta.dir}/snapshot.test.ts`],
     {
-      env: { ...process.env, TEST_REDIS_URL: "" },
+      env: { ...process.env, CI: "", TEST_REDIS_URL: "" },
       stdout: "pipe",
       stderr: "pipe",
     },
