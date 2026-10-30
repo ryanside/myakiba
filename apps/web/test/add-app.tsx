@@ -33,6 +33,13 @@ type CommitBody = {
   readonly listIds: readonly string[];
 };
 
+const searchAnswer = (text: string): Answer => {
+  const items = [...server.items.values()].filter(({ title }) =>
+    title.toLowerCase().includes(text.toLowerCase()),
+  );
+  return ok({ items, totalCount: items.length });
+};
+
 const answerOf = (body: CommitBody) =>
   ok({
     committed: body.rows.map(({ itemId }) => {
@@ -54,6 +61,7 @@ export const server = {
   items: new Map<string, AddItem>(),
   itemsFailure: null as Answer | null,
   searches: [] as string[],
+  search: async (text: string): Promise<Answer> => searchAnswer(text),
   commits: [] as CommitBody[],
   commitAnswer: async (body: CommitBody): Promise<Answer> => answerOf(body),
   uploads: [] as number[],
@@ -67,6 +75,7 @@ export function resetServer() {
   server.items.clear();
   server.itemsFailure = null;
   server.searches.length = 0;
+  server.search = async (text) => searchAnswer(text);
   server.commits.length = 0;
   server.commitAnswer = async (body) => answerOf(body);
   server.uploads.length = 0;
@@ -101,11 +110,7 @@ await mock.module("@/lib/treaty-client", () => ({
         items: {
           get: async ({ query }: { readonly query: { readonly query: string } }) => {
             server.searches.push(query.query);
-            const text = query.query.toLowerCase();
-            const items = [...server.items.values()].filter(({ title }) =>
-              title.toLowerCase().includes(text),
-            );
-            return ok({ items, totalCount: items.length });
+            return server.search(query.query);
           },
         },
         orders: {

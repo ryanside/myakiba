@@ -42,7 +42,8 @@ export function AddSearch({
     { enabled: debouncedQuery.length > 0 },
   );
   const results = debouncedQuery.length > 0 ? (data?.items ?? []) : [];
-  const stale = query !== debouncedQuery || isPlaceholderData;
+  // Busy from the first keystroke until the answer to the words on screen, even with no earlier list.
+  const stale = query !== debouncedQuery || isPlaceholderData || isPending;
   const showPanel = open && query.length > 0;
 
   // cmdk always writes aria-expanded="true", which is false while this panel is closed.
@@ -60,7 +61,7 @@ export function AddSearch({
       }}
     >
       <p role="status" className="sr-only">
-        {showPanel && !stale && !isPending ? resultsAnnouncement(results.length, isError) : ""}
+        {showPanel && !stale ? resultsAnnouncement(results.length, isError) : ""}
       </p>
       <Command
         shouldFilter={false}
@@ -142,7 +143,7 @@ export function AddSearch({
               })}
               {results.length === 0 ? (
                 <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  {searchStatus({ isError, searching: stale || isPending })}
+                  {searchStatus({ isError, searching: stale })}
                 </p>
               ) : null}
             </CommandList>
