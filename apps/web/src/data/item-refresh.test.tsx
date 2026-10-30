@@ -71,7 +71,7 @@ const failed = (description: string) => ({
 });
 
 test.each([
-  ["mfc_signed_out", "Sign in to MyFigureCollection to import this item"],
+  ["mfc_signed_out", "Sign in to MyFigureCollection to refresh this item"],
   [
     "hidden_or_missing",
     "MyFigureCollection hides this item. Check your MyFigureCollection content settings",

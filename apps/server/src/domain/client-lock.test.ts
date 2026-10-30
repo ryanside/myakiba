@@ -72,7 +72,7 @@ const files = {
     source: `import { db } from "@myakiba/db/client";\n\nconst pool = db;\nexport const probe = () => pool.execute("select 1");\nexport { pool as client };\n`,
     flagged: [EXPORT],
   },
-  "apps/server/src/routers/sync/probe.ts": {
+  "apps/server/src/routers/add/probe.ts": {
     source: `import { db } from "@myakiba/db/client";\nimport { helper } from "./helper.test";\n\nexport const probe = () => [db, helper];\n`,
     flagged: [CLIENT, TEST_FILE],
   },

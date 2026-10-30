@@ -20,7 +20,7 @@ type PageRejection = Extract<NonNullable<IngestAnswer["error"]>, { status: 400 }
 
 // Typed against the server's 400 answers, so a reworded message fails the type check here.
 const SFW_HIDDEN =
-  "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item" satisfies PageRejection;
+  "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item" satisfies PageRejection;
 
 /** What a failed pick upload means for the pick. A 400 is the server's reason the page cannot be read. */
 export function pickFailureOf(cause: unknown): PickFailure {

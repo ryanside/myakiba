@@ -20,7 +20,6 @@ import { MfcItems } from "@/routers/mfc-items/module";
 import { Orders } from "@/routers/orders/module";
 import { Search } from "@/routers/search/module";
 import { Settings } from "@/routers/settings/module";
-import { Sync, SyncRuns } from "@/routers/sync/module";
 import { Wishlist } from "@/routers/wishlist/module";
 
 type Equal<A, B> =
@@ -212,7 +211,7 @@ void (true satisfies Equal<
           | "The page is for a different item"
           | "The page is not a MyFigureCollection item page"
           | "This item category is not supported"
-          | "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+          | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
           400
         >
       | S<404, "Item not found">
@@ -277,11 +276,9 @@ void (true satisfies Equal<
 
 // MfcItems
 const mfcItemsIngest = () => serve(caller, MfcItems.ingest, inputOf(MfcItems.ingest));
-const mfcItemsMissing = () => serve(caller, MfcItems.missing, inputOf(MfcItems.missing));
 void (true satisfies Equal<
   {
     ingest: Failures<typeof mfcItemsIngest>;
-    missing: Failures<typeof mfcItemsMissing>;
   },
   {
     ingest:
@@ -294,11 +291,10 @@ void (true satisfies Equal<
           | "The page is for a different item"
           | "The page is not a MyFigureCollection item page"
           | "This item category is not supported"
-          | "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+          | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
           400
         >
       | S<500, "Failed to import item">;
-    missing: S<500, "Failed to check which items are missing">;
   }
 >);
 
@@ -400,142 +396,6 @@ void (true satisfies Equal<
   },
   {
     accountType: S<500, "Failed to check account type">;
-  }
->);
-
-// Sync
-const syncPlanItem = () => serve(caller, Sync.planItem, inputOf(Sync.planItem));
-const syncPlanCsv = () => serve(caller, Sync.planCsv, inputOf(Sync.planCsv));
-const syncPlanOrder = () => serve(caller, Sync.planOrder, inputOf(Sync.planOrder));
-const syncPlanOrderItem = () => serve(caller, Sync.planOrderItem, inputOf(Sync.planOrderItem));
-const syncPlanCollection = () => serve(caller, Sync.planCollection, inputOf(Sync.planCollection));
-const syncStart = () => serve(caller, Sync.start, inputOf(Sync.start));
-const syncCompleteItemSession = () =>
-  serve(caller, Sync.completeItemSession, inputOf(Sync.completeItemSession));
-const syncCompleteCsv = () => serve(caller, Sync.completeCsv, inputOf(Sync.completeCsv));
-const syncCompleteOrder = () => serve(caller, Sync.completeOrder, inputOf(Sync.completeOrder));
-const syncCompleteOrderItem = () =>
-  serve(caller, Sync.completeOrderItem, inputOf(Sync.completeOrderItem));
-const syncCompleteCollection = () =>
-  serve(caller, Sync.completeCollection, inputOf(Sync.completeCollection));
-const syncSessions = () => serve(caller, Sync.sessions, inputOf(Sync.sessions));
-const syncSessionDetail = () => serve(caller, Sync.sessionDetail, inputOf(Sync.sessionDetail));
-const syncOrder = () => serve(caller, Sync.order, inputOf(Sync.order));
-const syncJobStatus = () => serve(caller, Sync.jobStatus, inputOf(Sync.jobStatus));
-void (true satisfies Equal<
-  {
-    planItem: Failures<typeof syncPlanItem>;
-    planCsv: Failures<typeof syncPlanCsv>;
-    planOrder: Failures<typeof syncPlanOrder>;
-    planOrderItem: Failures<typeof syncPlanOrderItem>;
-    planCollection: Failures<typeof syncPlanCollection>;
-    start: Failures<typeof syncStart>;
-    completeItemSession: Failures<typeof syncCompleteItemSession>;
-    completeCsv: Failures<typeof syncCompleteCsv>;
-    completeOrder: Failures<typeof syncCompleteOrder>;
-    completeOrderItem: Failures<typeof syncCompleteOrderItem>;
-    completeCollection: Failures<typeof syncCompleteCollection>;
-    sessions: Failures<typeof syncSessions>;
-    sessionDetail: Failures<typeof syncSessionDetail>;
-    order: Failures<typeof syncOrder>;
-    jobStatus: Failures<typeof syncJobStatus>;
-  },
-  {
-    planItem:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<500, "Failed to check for existing items">;
-    planCsv:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<500, "Failed to check for existing items">;
-    planOrder:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<500, "Failed to check for existing items">;
-    planOrderItem: S<500, "Failed to check for existing items">;
-    planCollection:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<500, "Failed to check for existing items">;
-    start: S<500, "Failed to create import record">;
-    completeItemSession: S<500, "Failed to save import record">;
-    completeCsv: S<500, "Failed to save collection items and orders">;
-    completeOrder: S<500, "Failed to save the order and its items">;
-    completeOrderItem: S<500, "Failed to save order items">;
-    completeCollection: S<500, "Failed to save collection items">;
-    sessions:
-      | S<400, "Invalid limit parameter">
-      | S<400, "Invalid page parameter">
-      | S<500, "Failed to load import history">;
-    sessionDetail:
-      | S<400, "Invalid limit parameter">
-      | S<400, "Invalid page parameter">
-      | S<404, "Import not found">
-      | S<500, "Failed to load import details">;
-    order:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<404, "Order not found">
-      | S<500, "Failed to load order">;
-    jobStatus: S<404, "Job not found"> | S<500, "Error fetching job status">;
-  }
->);
-
-// SyncRuns
-const syncRunsComplete = () => serve(caller, SyncRuns.complete, inputOf(SyncRuns.complete));
-const syncRunsFailure = () => serve(caller, SyncRuns.failure, inputOf(SyncRuns.failure));
-const syncRunsHeartbeat = () => serve(caller, SyncRuns.heartbeat, inputOf(SyncRuns.heartbeat));
-const syncRunsInterrupt = () => serve(caller, SyncRuns.interrupt, inputOf(SyncRuns.interrupt));
-const syncRunsItemStatus = () => serve(caller, SyncRuns.itemStatus, inputOf(SyncRuns.itemStatus));
-const syncRunsRetry = () => serve(caller, SyncRuns.retry, inputOf(SyncRuns.retry));
-void (true satisfies Equal<
-  {
-    complete: Failures<typeof syncRunsComplete>;
-    failure: Failures<typeof syncRunsFailure>;
-    heartbeat: Failures<typeof syncRunsHeartbeat>;
-    interrupt: Failures<typeof syncRunsInterrupt>;
-    itemStatus: Failures<typeof syncRunsItemStatus>;
-    retry: Failures<typeof syncRunsRetry>;
-  },
-  {
-    complete: S<404, "This item is not part of the import"> | S<500, "Failed to import item">;
-    failure:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<404, "Import not found">
-      | S<500, "Failed to save the item result">;
-    heartbeat: S<404, "Import not found"> | S<500, "Failed to renew the import">;
-    interrupt: S<404, "Import not found"> | S<500, "Failed to stop the import">;
-    itemStatus:
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<404, "This item is not part of the import">
-      | S<500, "Failed to import item">;
-    retry:
-      | S<409, "The 20-day window to retry failed item results has expired">
-      | S<409, "This import can't be retried">
-      | S<409, "These failed item results cannot be retried">
-      | S<
-          403,
-          "Verify your email before adding items or importing a CSV. Check your inbox for the verification email sent when you signed up."
-        >
-      | S<404, "Import not found">
-      | S<500, "Failed to retry failed item results">;
   }
 >);
 

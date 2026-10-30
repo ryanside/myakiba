@@ -166,17 +166,6 @@ async function upload({ mfcItemId: id, page, pageAs = "file", picture, headers }
   return answer(response);
 }
 
-async function lookup(mfcItemIds: readonly number[], headers?: Record<string, string>) {
-  const response = await app.handle(
-    new Request("http://localhost/api/mfc-items/missing", {
-      method: "POST",
-      headers: { "x-test-user": userId, "content-type": "application/json", ...headers },
-      body: JSON.stringify({ mfcItemIds }),
-    }),
-  );
-  return answer(response);
-}
-
 async function itemRows(externalId: number) {
   const [row] = await db
     .select({
@@ -488,53 +477,33 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 });
 
-describe("POST /api/mfc-items/missing lists the ids with no MFC item", () => {
-  test("ids already saved are left out, in the order sent", async () => {
-    await upload({ mfcItemId: 98_777, page: page98777 });
-    await db.insert(item).values({ source: "custom", externalId: 5, title: "Custom figure" });
-
-    expect(await lookup([98_779, 98_777, 5])).toEqual({
-      status: 200,
-      body: { missing: [98_779, 5] },
-    });
-  });
-
-  test("repeated ids are refused", async () => {
-    const { status } = await lookup([98_777, 98_777]);
-
-    expect(status).toBe(422);
-  });
-});
-
-describe("both routes need a verified email and have their own rate limit", () => {
-  test("an unverified user gets 403 with the sync routes' message", async () => {
+describe("POST /api/mfc-items needs a verified email and has its own rate limit", () => {
+  test("an unverified user gets 403 with the verification message", async () => {
     const unverified = { "x-test-unverified": "1" };
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, headers: unverified })).toEqual({
       status: 403,
       body: EMAIL_VERIFICATION_REQUIRED,
     });
-    expect(await lookup([98_777], unverified)).toEqual({
-      status: 403,
-      body: EMAIL_VERIFICATION_REQUIRED,
-    });
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });
 
-  test("each route counts against its own per-user limit", async () => {
+  test("an upload counts against its per-user limit", async () => {
     await upload({ mfcItemId: 98_777, page: page98777 });
-    await lookup([98_777]);
 
-    expect(rateLimitKeys).toEqual([`rl:mfc-ingest:${userId}`, `rl:mfc-lookup:${userId}`]);
+    expect(rateLimitKeys).toEqual([`rl:mfc-ingest:${userId}`]);
   });
 
   test("a user over the limit gets 429 with Retry-After", async () => {
-    rateLimitCount = 901;
+    rateLimitCount = 2001;
+    const form = new FormData();
+    form.append("mfcItemId", "98777");
+    form.append("page", new File([page98777], "page.html", { type: "text/html" }));
     const response = await app.handle(
-      new Request("http://localhost/api/mfc-items/missing", {
+      new Request("http://localhost/api/mfc-items", {
         method: "POST",
-        headers: { "x-test-user": userId, "content-type": "application/json" },
-        body: JSON.stringify({ mfcItemIds: [98_777] }),
+        headers: { "x-test-user": userId },
+        body: form,
       }),
     );
 

@@ -1,9 +1,7 @@
-import { and, eq, inArray } from "drizzle-orm";
-import type { ItemUpload, MissingItemsInput } from "@myakiba/contracts/mfc-items/schema";
-import { item } from "@myakiba/db/schema/figure";
+import type { ItemUpload } from "@myakiba/contracts/mfc-items/schema";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
-import { command, query } from "@/domain/kernel";
+import { command } from "@/domain/kernel";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
@@ -20,18 +18,6 @@ type IngestResult =
     };
 
 export const MfcItems = {
-  missing: query(
-    { action: "mfc_items.missing", failure: "Failed to check which items are missing" },
-    async (scope, input: MissingItemsInput) => {
-      const found = await scope.tx
-        .select({ externalId: item.externalId })
-        .from(item)
-        .where(and(eq(item.source, "mfc"), inArray(item.externalId, input.mfcItemIds)));
-      const existing = new Set(found.map((row) => row.externalId));
-      return Result.ok({ missing: input.mfcItemIds.filter((id) => !existing.has(id)) });
-    },
-  ),
-
   ingest: command(
     {
       action: "mfc_items.ingest",

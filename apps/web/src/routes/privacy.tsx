@@ -64,11 +64,10 @@ function PrivacyPolicy() {
             browser until myakiba&apos;s Add page collects them. Click the button again to unpick.
           </p>
           <p>
-            When you add an MFC item to myakiba, import an MFC CSV, or refresh an item&apos;s
-            details, the myakiba page at myakiba.app asks the extension for those items. For each
-            item, the extension opens an MFC tab or reuses one you already have open, reads the
-            item&apos;s page with your own MFC sign-in, and passes the page and the item&apos;s main
-            picture back to the myakiba page.
+            When you refresh an item&apos;s details, the myakiba page at myakiba.app asks the
+            extension for that item. The extension opens an MFC tab or reuses one you already have
+            open, reads the item&apos;s page with your own MFC sign-in, and passes the page and the
+            item&apos;s main picture back to the myakiba page.
           </p>
         </Section>
 
@@ -157,9 +156,9 @@ function PrivacyPolicy() {
         <Section title="Your choices">
           <p>
             The extension reads an MFC page only when you click Pick for myakiba on it, or while
-            myakiba adds, imports or refreshes items you asked for. Click the button again to unpick
-            an item and delete what the extension kept for it. You can remove the extension from
-            your browser at any time. The browser then deletes its storage, picks included.
+            myakiba refreshes items you asked for. Click the button again to unpick an item and
+            delete what the extension kept for it. You can remove the extension from your browser at
+            any time. The browser then deletes its storage, picks included.
           </p>
         </Section>
 

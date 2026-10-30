@@ -21,7 +21,7 @@ function uploadSlots(size: number) {
   };
 }
 
-/** Every upload of an item page from this tab, from runs, Item Refresh and pick saves alike. */
+/** Every upload of an item page from this tab, from Item Refresh and pick saves alike. */
 export const tabUploadSlots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
 export async function inUploadSlot<Value>(upload: () => Promise<Value>): Promise<Value> {

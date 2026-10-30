@@ -65,7 +65,6 @@ test("the command palette's Add items opens the Add page, and the old paste form
   const addItems = await screen.findByRole("option", { name: /^Add items/u });
   expect(screen.queryByRole("option", { name: /^Add to collection/u })).toBeNull();
   expect(screen.queryByRole("option", { name: /^Create order/u })).toBeNull();
-  expect(screen.getByRole("option", { name: /^Import MyFigureCollection CSV/u })).toBeDefined();
   await user.click(addItems);
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/add"));

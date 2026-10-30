@@ -1,5 +1,4 @@
 import { afterEach, expect, test } from "bun:test";
-import * as sync from "@/queries/sync";
 import { getResyncStatus, requestResync } from "@/queries/item";
 
 const realFetch = globalThis.fetch;
@@ -7,37 +6,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-const order = {
-  title: "Order",
-  shop: "",
-  status: "Ordered",
-  shippingMethod: "n/a",
-  shippingFee: 0,
-  taxes: 0,
-  duties: 0,
-  tariffs: 0,
-  miscFees: 0,
-  notes: "",
-  items: [],
-  orderDate: null,
-  releaseDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-} satisfies Parameters<typeof sync.sendOrder>[0];
 const callers = [
-  ["CSV sync", () => sync.sendItems([]), "Failed to submit MyFigureCollection CSV"],
-  ["item sync", () => sync.sendItemSync({ items: [1] }), "Failed to submit item database items"],
-  ["order sync", () => sync.sendOrder(order), "Failed to submit order"],
-  [
-    "order item sync",
-    () => sync.sendOrderItems({ orderId: "order", items: [] }),
-    "Failed to submit order items",
-  ],
-  ["collection sync", () => sync.sendCollection([]), "Failed to submit collection items"],
-  ["import history", () => sync.fetchSyncSessions({}), "Failed to load import history"],
-  ["import details", () => sync.fetchSyncSessionDetail("session"), "Failed to load import details"],
-  ["sync retry", () => sync.retrySyncSession("session"), "Failed to retry failed item results"],
   ["refresh status", () => getResyncStatus(1), "Failed to check item refresh status"],
   [
     "refresh item",

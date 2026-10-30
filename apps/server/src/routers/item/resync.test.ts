@@ -490,7 +490,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
       ),
     ).toEqual({
       status: 400,
-      body: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+      body: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
     });
 
     expect(await itemRows()).toEqual(before);

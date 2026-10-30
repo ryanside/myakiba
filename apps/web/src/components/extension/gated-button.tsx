@@ -15,7 +15,7 @@ type GatedButtonProps = Omit<ComponentProps<typeof Button>, "onClick" | "aria-bu
 };
 
 /**
- * A button that asks for the extension before it starts an import, so the notice shows before
+ * A button that asks for the extension before it starts an Item Refresh, so the notice shows before
  * anything opens or sends. It shows it is checking and ignores clicks until the check ends.
  */
 export function GatedButton({

@@ -5,7 +5,7 @@ import {
   getItemReleases,
   getResyncStatus,
 } from "@/queries/item";
-import { syncResultFamilies } from "../catalog";
+import { refreshResultFamilies } from "../catalog";
 import { defineCommand, rootedRead, useResourceMutation } from "../client";
 import { refreshFailureText, refreshItemWithExtension } from "../extension-run";
 import { startImport } from "../start-import";
@@ -42,7 +42,7 @@ export const items = {
 };
 
 export const refreshItemCommand = defineCommand({
-  invalidates: syncResultFamilies,
+  invalidates: refreshResultFamilies,
   failureRefetchKeys: (externalId: number) => [
     { queryKey: items.resyncStatus.key(externalId), exact: true },
   ],

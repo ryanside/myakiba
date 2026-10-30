@@ -152,7 +152,7 @@ test("a pick hidden by SFW mode also links to MFC's settings", async () => {
     picks: [
       failed({
         kind: "rejected",
-        message: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+        message: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
       }),
     ],
   });

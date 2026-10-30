@@ -32,7 +32,7 @@ export const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review
 
 export function underReviewBody(stores: readonly ExtensionStore[]): string {
   const where = stores.map((store) => STORE_NAMES[store]).join(" and ");
-  return `It is in review at ${where} now, and it will be released shortly. It will be the new way to import items from MyFigureCollection. Importing needs it, so importing is unavailable until it passes review.`;
+  return `It is in review at ${where} now, and it will be released shortly. Picking items and refreshing item details need it, so both are unavailable until it passes review.`;
 }
 
 /** What to tell a visitor without the extension, by where their browser gets it. */
@@ -41,15 +41,15 @@ export function missingExtensionCopy(availability: ExtensionAvailability): Exten
     case "listed":
       return {
         title: "Install the myakiba extension first",
-        body: `myakiba imports MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. Install it from ${STORE_NAMES[availability.store]}, then reload this page.`,
+        body: `myakiba refreshes item details through its browser extension, with your own MyFigureCollection sign-in. Install it from ${STORE_NAMES[availability.store]}, then reload this page.`,
         link: { label: `Install from ${STORE_NAMES[availability.store]}`, href: availability.url },
       };
     case "in_review":
       return { title: UNDER_REVIEW_TITLE, body: underReviewBody([availability.store]), link: null };
     case "unsupported":
       return {
-        title: "Importing needs desktop Chrome or Firefox",
-        body: `myakiba imports MyFigureCollection items through its browser extension, which runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox, version ${EXTENSION_MIN_BROWSER_VERSION} or later. Open myakiba in one of them to import.`,
+        title: "Refreshing item details needs desktop Chrome or Firefox",
+        body: `myakiba refreshes item details through its browser extension, which runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox, version ${EXTENSION_MIN_BROWSER_VERSION} or later. Open myakiba in one of them to refresh item details.`,
         link: null,
       };
   }
@@ -57,7 +57,7 @@ export function missingExtensionCopy(availability: ExtensionAvailability): Exten
 
 const ALREADY_ADDABLE = "Items already in the Item Database can still be added";
 
-/** The same, for a surface that takes new Items by Pick rather than by import. */
+/** The same, for a surface that takes new Items by Pick. */
 export function pickExtensionCopy(availability: ExtensionAvailability): ExtensionNoticeCopy {
   switch (availability.kind) {
     case "listed":

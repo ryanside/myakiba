@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
 import { Panic } from "better-result";
 
 let sessionRechecks = 0;
@@ -11,11 +10,9 @@ await mock.module("@/lib/auth-client", () => ({
   },
 }));
 const { getReleaseCalendar } = await import("@/queries/dashboard");
-const { getItem } = await import("@/queries/item");
+const { getItem, requestResync } = await import("@/queries/item");
 const { getOrder, moveItem } = await import("@/queries/orders");
-const { retrySyncSession } = await import("@/queries/sync");
 const { getVersion } = await import("@/queries/version");
-const { sync } = await import("@/data/resources/sync");
 const { call } = await import("@/data/api");
 
 const realFetch = globalThis.fetch;
@@ -37,9 +34,8 @@ const body = (status: number, text: string, contentType: string) => async () =>
   new Response(text, { status, headers: { "content-type": contentType } });
 
 const ORDER_FALLBACK = "Couldn't load this order. Check your connection and try again.";
-const RETRY_FALLBACK = "Failed to retry failed item results";
+const REFRESH_FALLBACK = "Failed to request item refresh";
 const VERSION_FALLBACK = "Failed to get version";
-const STREAM_FALLBACK = "Failed to connect to job status stream";
 
 const validation = JSON.stringify({ type: "validation", message: "Expected string" });
 const gatewayPage = "<html><body><h1>502 Bad Gateway</h1></body></html>";
@@ -152,11 +148,11 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
 
   test("a write shows safe server text or its own fallback", async () => {
     answerWith(answer);
-    expect(await retrySyncSession("session-1")).toMatchObject({
+    expect(await requestResync(98_777, { page: "<html></html>" })).toMatchObject({
       status: "error",
       error: {
         _tag: tag,
-        message: safe === ORDER_FALLBACK ? RETRY_FALLBACK : safe,
+        message: safe === ORDER_FALLBACK ? REFRESH_FALLBACK : safe,
       },
     });
   });
@@ -166,14 +162,6 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
     expect(await getVersion()).toMatchObject({
       status: "error",
       error: { _tag: tag, message: version },
-    });
-  });
-
-  test("the job status stream shows one fixed text", async () => {
-    answerWith(answer);
-    const watch = sync.jobStatus.options({ jobId: "job-1", onEnd: () => {} });
-    await expect(new QueryClient().fetchQuery(watch)).rejects.toMatchObject({
-      message: STREAM_FALLBACK,
     });
   });
 });
@@ -225,7 +213,10 @@ describe("a read that requires data", () => {
 
   test("a write without that check passes an empty 2xx through", async () => {
     answerWith(body(200, "", "text/plain"));
-    expect(await retrySyncSession("session-1")).toMatchObject({ status: "ok", value: "" });
+    expect(await requestResync(98_777, { page: "<html></html>" })).toMatchObject({
+      status: "ok",
+      value: "",
+    });
   });
 });
 

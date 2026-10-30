@@ -1,12 +1,11 @@
-// Every place that starts an extension import, for the tests that gate them.
-import { expect, mock } from "bun:test";
+// What the tests that gate the extension render: Item Refresh's gate and onboarding's notices.
+import { mock } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import type userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
 import type { ExtensionBridge } from "@/lib/extension-bridge";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
-import { Result } from "better-result";
 
 let extension = fakeExtension();
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
@@ -25,47 +24,10 @@ await mock.module("@tanstack/react-router", () => ({
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
 }));
 
-/** The syncs the server was sent, by type. */
-export const sent: string[] = [];
-const retriedSessions: string[] = [];
-const accepted = {
-  syncSessionId: "ss-1",
-  status: "Import queued",
-  isFinished: false,
-  existingItemsToInsert: 0,
-  newItems: 1,
-  jobId: "job-1",
-  missingMfcItemIds: [],
-};
-const sends = (type: string) => async () => {
-  sent.push(type);
-  return Result.ok(accepted);
-};
-const realSync = await import("@/queries/sync");
-await mock.module("@/queries/sync", () => ({
-  ...realSync,
-  sendItemSync: sends("item"),
-  sendItems: sends("csv"),
-  sendOrder: sends("order"),
-  sendOrderItems: sends("order-item"),
-  sendCollection: sends("collection"),
-  retrySyncSession: async (sessionId: string) => {
-    retriedSessions.push(sessionId);
-    return Result.ok({ jobId: "job-2", missingMfcItemIds: [] });
-  },
-}));
-
 const { ExtensionRequiredDialog } =
   await import("@/components/extension/extension-required-dialog");
 const { dismissMissingExtension } = await import("@/lib/extension-gate");
-const { AppCommand } = await import("@/components/command/app-command");
-const { SyncActionSheet } = await import("@/components/sync/sync-launcher");
-const { default: SyncOrderItemForm } = await import("@/components/sync/sync-order-item-form");
-const { useSyncMutations } = await import("@/hooks/use-sync-mutations");
-const { ItemResyncButton } = await import("@/components/item/item-resync-button");
-const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
 const { OnboardingDialog } = await import("@/components/onboarding/onboarding-dialog");
-const { SYNC_OPTION_META } = await import("@/lib/sync");
 
 export type User = ReturnType<typeof userEvent.setup>;
 
@@ -85,8 +47,6 @@ export function useBridge(next: ExtensionBridge) {
 export function resetEntryPoints() {
   cleanup();
   dismissMissingExtension();
-  sent.length = 0;
-  retriedSessions.length = 0;
   localStorage.clear();
 }
 
@@ -96,18 +56,7 @@ export const click = (name: string) => async (user: User) => {
 
 export const noop = () => {};
 
-export type EntryPoint = {
-  readonly name: string;
-  readonly render: (proceed: () => void) => ReactElement;
-  readonly start: (user: User) => Promise<void>;
-  readonly proceeded: (calls: number) => boolean;
-};
-
-const sheetOpened = (title: string) => () => screen.queryByRole("dialog", { name: title }) !== null;
-const called = (calls: number) => calls > 0;
-
 export const ADD_STEP_TITLE = "Pick your first items.";
-export const csvChoice = new RegExp(`^${SYNC_OPTION_META.csv.title}`, "u");
 
 export function onboardingDialog() {
   return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
@@ -131,45 +80,6 @@ export async function openAddStep(user: User) {
   await screen.findByRole("dialog", { name: ADD_STEP_TITLE });
 }
 
-export const ENTRY_POINTS: readonly EntryPoint[] = [
-  {
-    name: "the command palette's MyFigureCollection CSV action",
-    render: () => <AppCommand />,
-    start: async (user) => {
-      await click("Search")(user);
-      await user.click(await screen.findByRole("option", { name: csvChoice }));
-    },
-    proceeded: sheetOpened(SYNC_OPTION_META.csv.title),
-  },
-  {
-    name: "the item page's resync button",
-    render: (proceed) => (
-      <ItemResyncButton
-        status="idle"
-        isPending={false}
-        cooldownExpiresAt={null}
-        onRequest={proceed}
-      />
-    ),
-    start: click("Refresh item details"),
-    proceeded: called,
-  },
-  {
-    name: "the import's retry",
-    render: () => (
-      <RetrySyncSessionButton
-        sessionId="ss-1"
-        retrySupported
-        canRetry
-        isRetrying={false}
-        failCount={1}
-      />
-    ),
-    start: click("Retry failed item results"),
-    proceeded: () => retriedSessions.length > 0,
-  },
-];
-
 function withQueryClient(ui: ReactElement) {
   const queryClient = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -184,88 +94,4 @@ function withQueryClient(ui: ReactElement) {
   );
 }
 
-export function renderEntryPoint(entryPoint: EntryPoint) {
-  let calls = 0;
-  withQueryClient(
-    entryPoint.render(() => {
-      calls += 1;
-    }),
-  );
-  return { proceeded: () => entryPoint.proceeded(calls) };
-}
-
 export const renderWithDialog = withQueryClient;
-
-export type Form = {
-  readonly name: string;
-  readonly sends: string;
-  readonly render: () => ReactElement;
-  readonly open: (user: User) => Promise<void>;
-  readonly fill: (user: User) => Promise<void>;
-  readonly kept: () => void;
-  readonly submit: string;
-};
-
-// No entry point opens this form now. It stays gated until R2 deletes it with the other forms.
-function OrderItemForm() {
-  const { handleSyncOrderItemSubmit } = useSyncMutations(noop);
-  return (
-    <SyncOrderItemForm
-      orderId="od-1"
-      handleSyncOrderItemSubmit={handleSyncOrderItemSubmit}
-      currency="USD"
-    />
-  );
-}
-
-const CSV = [
-  "ID,Title,Root,Category,Release Date,Price,Scale,Barcode,Status,Count,Score,Payment Date,Shipping Date,Collecting Date,Price,Shop,Shipping Method,Tracking Number,Wishibility,Note",
-  `98777,"Hello, Good-bye",Figures,Prepainted,2024-01-01,"¥10,000",1/7,,Owned,1,8/10,2024-02-01,,,"$80.00",AmiAmi,EMS,,,`,
-].join("\n");
-
-const typeItemId = async (user: User) => {
-  await user.type(screen.getByPlaceholderText("MyFigureCollection item link or ID"), "98777");
-};
-const itemIdKept = () => {
-  expect(
-    screen.getByPlaceholderText<HTMLInputElement>("MyFigureCollection item link or ID").value,
-  ).toBe("98777");
-};
-
-/** Every form that sends a sync, rendered open as a deep link or a reopened sheet would leave it. */
-export const FORMS: readonly Form[] = [
-  ...(["item", "collection", "order"] as const).map((syncType): Form => ({
-    name: `the ${SYNC_OPTION_META[syncType].title} form`,
-    sends: syncType,
-    render: () => <SyncActionSheet syncType={syncType} onSyncTypeChange={noop} />,
-    open: async () => {},
-    fill: typeItemId,
-    kept: itemIdKept,
-    submit: { item: "Add", collection: "Add to collection", order: "Create order" }[syncType],
-  })),
-  {
-    name: "the order page's add items form",
-    sends: "order-item",
-    render: () => <OrderItemForm />,
-    open: async () => {},
-    fill: typeItemId,
-    kept: itemIdKept,
-    submit: "Add to order",
-  },
-  {
-    name: "the CSV form",
-    sends: "csv",
-    render: () => <SyncActionSheet syncType="csv" onSyncTypeChange={noop} />,
-    open: async () => {},
-    fill: async (user) => {
-      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
-      if (input === null) throw new Error("the CSV form has no file input");
-      await user.upload(input, new File([CSV], "mfc.csv", { type: "text/csv" }));
-      await screen.findByText("mfc.csv");
-    },
-    kept: () => {
-      expect(screen.getByText("mfc.csv")).toBeDefined();
-    },
-    submit: "Import CSV",
-  },
-];

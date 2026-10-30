@@ -12,7 +12,7 @@ await mock.module("@myakiba/redis/client", () => ({
 
 const { rateLimit } = await import("./rate-limit");
 const app = new Elysia().use(rateLimit).get("/probe", () => "allowed", {
-  rateLimit: "mfcLookup",
+  rateLimit: "addCommit",
 });
 
 test.each([

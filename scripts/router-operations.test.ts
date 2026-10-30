@@ -6,7 +6,7 @@ import type { CallExpression, Expression } from "oxc-parser";
 
 const METHODS = new Set(["get", "post", "put", "patch", "delete", "all", "head", "options"]);
 
-function violations(file: string, source: string, sync = false) {
+function violations(file: string, source: string, oncePerHandler = false) {
   const hits: string[] = [];
   const ast = parseSync(file, source).program;
   const names = new Set<string>();
@@ -67,7 +67,7 @@ function violations(file: string, source: string, sync = false) {
         `${file}:${source.slice(0, call.start).split("\n").length} must return serve directly`,
       );
   }
-  if (sync) {
+  if (oncePerHandler) {
     for (const call of calls) {
       const { callee } = call;
       if (
@@ -104,7 +104,7 @@ test("router operation check rejects status and null branching, including aliase
     expect(violations("fixture.ts", source).length).toBeGreaterThan(0);
 });
 
-test("router operation check accepts direct answers and rejects missing or repeated sync operations", () => {
+test("router operation check accepts direct answers and rejects missing or repeated operations", () => {
   const imported = `import { serve } from "@/domain/kernel";`;
   expect(
     violations(
@@ -138,12 +138,9 @@ test("router operation check accepts direct answers and rejects missing or repea
   ).toBeGreaterThan(0);
 });
 
-const SERVE_ONCE = new Set([
-  "apps/server/src/routers/sync/index.ts",
-  "apps/server/src/routers/add/index.ts",
-]);
+const SERVE_ONCE = new Set(["apps/server/src/routers/add/index.ts"]);
 
-test("routers return their domain operation and every sync and Add entry point serves exactly once", async () => {
+test("routers return their domain operation and every Add entry point serves exactly once", async () => {
   const root = path.resolve(import.meta.dir, "..");
   const hits: string[] = [];
   const checked: string[] = [];

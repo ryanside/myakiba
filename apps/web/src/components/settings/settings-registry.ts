@@ -129,7 +129,7 @@ export const SETTINGS = {
   "view-item-database": {
     section: "layout",
     title: "Item Database",
-    description: "Every item synced to myakiba.",
+    description: "Every item in myakiba.",
     keywords: ["default view", "grid", "list", "gallery", "items"],
   },
   "table-collection": {
@@ -207,7 +207,7 @@ export const SETTINGS = {
   "getting-started": {
     section: "about",
     title: "Getting Started",
-    description: "The welcome tour that sets your formats and starts your first import.",
+    description: "The welcome tour that sets your formats and helps you pick your first items.",
     keywords: ["onboarding", "tour", "welcome", "setup", "help"],
   },
   discord: {

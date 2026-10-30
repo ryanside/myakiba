@@ -43,7 +43,7 @@ describe("every route outside public-routes.ts needs a session", () => {
   });
 
   test("the route table was discovered", () => {
-    expect(routes.routes.length).toBeGreaterThan(70);
+    expect(routes.routes.length).toBeGreaterThan(60);
   });
 
   test.each(routes.routes.filter((route) => !publicNames.includes(nameOf(route))).map(nameOf))(

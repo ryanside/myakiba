@@ -3,11 +3,12 @@ import { Elysia, sse } from "elysia";
 import { Panic, Result, panic } from "better-result";
 import { createRequestLogger, initLogger } from "evlog";
 import { createTestDatabase } from "../../test/database";
+import { Failure } from "./failure";
 
 initLogger({ enabled: false });
 afterEach(() => mock.restore());
 await createTestDatabase();
-const { serve, stream } = await import("./kernel");
+const { ExecutionFailed, query, serve, stream } = await import("./kernel");
 const { Viewer } = await import("./viewer");
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
 
@@ -55,17 +56,61 @@ for (const phase of ["factory", "first next", "after event"] as const) {
   }
 }
 
-const status = {
-  jobId: "stream-job",
-  phase: "importing",
-  statusMessage: "Importing",
-  progress: null,
-  recentItems: [],
-  error: null,
-  startedAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  terminalState: null,
-} as const;
+type Status = { readonly terminalState: "success" | "error" | null; readonly message: string };
+
+const WORKING: Status = { terminalState: null, message: "Working" };
+const RECOVERED: Status = { terminalState: "success", message: "Recovered" };
+const statusEvent = (data: Status) => sse({ data });
+
+const StatusMissing = Failure("StatusMissing", "not_found", "Status not found");
+
+/** A stream shaped like a status feed: an initial read, a replay read, then polling reads. */
+function pollingStream(read: (call: number) => Result<Status, InstanceType<typeof StatusMissing>>) {
+  let reads = 0;
+  const readStatus = query(
+    { action: "test.statusRead", failure: "Safe read failure" },
+    async (): Promise<Result<Status, InstanceType<typeof StatusMissing>>> => {
+      reads += 1;
+      return read(reads);
+    },
+  );
+  const ended = (message: string) => statusEvent({ terminalState: "error", message });
+  const operation = stream(
+    {
+      action: "test.statusStream",
+      failure: "Safe status failure",
+      onError: (message: string, last: { readonly data: Status }) =>
+        statusEvent({ ...last.data, terminalState: "error", message }),
+    },
+    (scope) =>
+      (async function* () {
+        const initial = await scope.readOrThrow(readStatus, {});
+        if (initial.isErr()) {
+          yield ended(initial.error.message);
+          return;
+        }
+        let last = initial.value;
+        yield statusEvent(last);
+        const replay = await scope.readOrThrow(readStatus, {});
+        if (replay.isErr()) {
+          yield ended(replay.error.message);
+          return;
+        }
+        last = replay.value;
+        while (last.terminalState === null) {
+          const polled = await scope.poll(readStatus, {});
+          if (polled.isErr()) {
+            if (!ExecutionFailed.is(polled.error)) {
+              yield ended(polled.error.message);
+              return;
+            }
+          } else last = polled.value;
+          yield statusEvent(last);
+        }
+      })(),
+  );
+  return { operation, reads: () => reads };
+}
 
 const readCases = [
   ["panic", 1, "first read panic answers a logged safe 500"],
@@ -75,73 +120,43 @@ const readCases = [
 ] as const;
 
 for (const [defect, failAt, description] of readCases) {
-  test(`a sync ${description}`, async () => {
-    const { jobStatusSubscriptionRegistry } =
-      await import("@/lib/job-status-subscription-registry");
-    const timing = await import("@/lib/job-status-stream");
-    const unsubscribe = mock(async () => {});
-    spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
-      next: () => new Promise(() => {}),
-      unsubscribe,
-    });
-    spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
-    let now = Date.now();
-    spyOn(Date, "now").mockImplementation(() => {
-      now += 31_000;
-      return now;
-    });
-    let reads = 0;
+  test(`a polling stream ${description}`, async () => {
     const original = new Error("internal read failure");
-    const read = () => {
-      reads += 1;
-      if (reads === failAt) {
+    const { operation, reads } = pollingStream((call) => {
+      if (call === failAt) {
         if (defect === "panic") panic("internal read defect");
         throw original;
       }
-      if (failAt === 3 && reads > failAt)
-        return {
-          ...status,
-          phase: "completed" as const,
-          terminalState: "success" as const,
-          statusMessage: "Recovered",
-        };
-      return status;
-    };
-    const { default: syncService } = await import("@/routers/sync/service");
-    const { SyncRequests } = await import("@/routers/sync/module");
-    spyOn(syncService, "getJobStatus").mockImplementation(async () => Result.ok(read()));
+      return Result.ok(failAt === 3 && call > failAt ? RECOVERED : WORKING);
+    });
     const log = createRequestLogger();
     const logged = spyOn(log, "error");
-    const app = new Elysia().get("/", async function* (ctx) {
-      return yield* serve({ viewer, log }, SyncRequests.stream, {
-        jobId: status.jobId,
-        signal: ctx.request.signal,
-      });
+    const app = new Elysia().get("/", async function* () {
+      return yield* serve({ viewer, log }, operation, {});
     });
     const response = await app.handle(new Request("http://localhost/"));
     const body = await response.text();
     expect(response.status).toBe(failAt === 1 ? 500 : 200);
     if (failAt === 3 && defect === "throw") {
-      expect(body).toContain('"terminalState":"success"');
-      expect(body).toContain('"statusMessage":"Recovered"');
       const events = body.split("\n\n").filter(Boolean);
       expect(events).toHaveLength(3);
       expect(events[1]).toBe(events[0]);
-      expect(reads).toBe(4);
+      expect(events[2]).toContain('"terminalState":"success"');
+      expect(events[2]).toContain('"message":"Recovered"');
+      expect(reads()).toBe(4);
     } else {
       if (failAt === 3) expect(body).toContain('"terminalState":"error"');
-      expect(body).toContain("Error fetching job status");
-      expect(reads).toBe(failAt);
+      expect(body).toContain("Safe status failure");
+      expect(reads()).toBe(failAt);
     }
     expect(body).not.toContain("internal read defect");
     expect(body).not.toContain(original.message);
-    expect(unsubscribe).toHaveBeenCalledTimes(failAt === 1 ? 0 : 1);
     expect(logged).toHaveBeenCalledTimes(1);
     if (defect === "panic") expect(logged.mock.calls[0]?.[0]).toBeInstanceOf(Panic);
     else expect(logged.mock.calls[0]?.[0]).toBe(original);
     expect(logged.mock.calls[0]?.[1]).toEqual({
-      step: "sync.jobStatusStream",
-      childAction: "sync.jobStatus",
+      step: "test.statusStream",
+      childAction: "test.statusRead",
     });
   });
 }
@@ -151,45 +166,22 @@ for (const [phase, missingAt] of [
   ["replay", 2],
   ["polling", 3],
 ] as const) {
-  test(`a missing sync job in ${phase} records the not_found outcome`, async () => {
-    const { jobStatusSubscriptionRegistry } =
-      await import("@/lib/job-status-subscription-registry");
-    const timing = await import("@/lib/job-status-stream");
-    const { default: syncService } = await import("@/routers/sync/service");
-    const { SyncRequests } = await import("@/routers/sync/module");
-    const { SyncJobNotFound } = await import("@/routers/sync/errors/sync-job-not-found");
-    const unsubscribe = mock(async () => {});
-    spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
-      next: () => new Promise(() => {}),
-      unsubscribe,
-    });
-    spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
-    let now = Date.now();
-    spyOn(Date, "now").mockImplementation(() => {
-      now += 31_000;
-      return now;
-    });
-    let reads = 0;
-    spyOn(syncService, "getJobStatus").mockImplementation(async () => {
-      reads += 1;
-      return reads === missingAt ? Result.err(new SyncJobNotFound()) : Result.ok(status);
-    });
+  test(`a missing status in ${phase} records the not_found outcome`, async () => {
+    const { operation, reads } = pollingStream((call) =>
+      call === missingAt ? Result.err(new StatusMissing()) : Result.ok(WORKING),
+    );
     const log = createRequestLogger();
     const logged = spyOn(log, "error");
     const fields = spyOn(log, "set");
-    const app = new Elysia().get("/", async function* (ctx) {
-      return yield* serve({ viewer, log }, SyncRequests.stream, {
-        jobId: status.jobId,
-        signal: ctx.request.signal,
-      });
+    const app = new Elysia().get("/", async function* () {
+      return yield* serve({ viewer, log }, operation, {});
     });
     const response = await app.handle(new Request("http://localhost/"));
     const body = await response.text();
     expect(response.status).toBe(200);
-    expect(body).toContain("Job not found");
+    expect(body).toContain("Status not found");
     expect(body).toContain('"terminalState":"error"');
-    expect(reads).toBe(missingAt);
-    expect(unsubscribe).toHaveBeenCalledTimes(missingAt === 1 ? 0 : 1);
+    expect(reads()).toBe(missingAt);
     expect(logged).not.toHaveBeenCalled();
     expect(fields).toHaveBeenCalledWith({ outcome: "not_found" });
   });

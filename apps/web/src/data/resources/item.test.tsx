@@ -75,7 +75,6 @@ test("an Item Refresh refetches the dashboard, analytics, searches, Wishlist, li
     ["resource", "wishlist", "items", { releaseStatus: "all" }],
     ["lists", "overview"],
     ["expenses", "filter-options"],
-    ["syncSessions"],
   ];
   for (const key of shown) queryClient.setQueryData(key, {});
   const { result } = renderRefresh(queryClient);

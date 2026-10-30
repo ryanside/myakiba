@@ -34,9 +34,6 @@ test("a write must name the cataloged families it refreshes", () => {
 
   defineCommand({ invalidates: "nothing", persist });
 
-  // @ts-expect-error -- a live stream is never refreshed by a write.
-  defineCommand({ invalidates: ["syncJobStatus"], persist, failureToast });
-
   // @ts-expect-error -- a write answers a Result, so its failure cannot be a bare rejection.
   defineCommand({ invalidates: ["wishlist"], persist: async (itemId: string) => itemId });
 
@@ -61,7 +58,7 @@ test("a rooted read keeps its family's hand-built key", () => {
   // @ts-expect-error -- a read answers a Result, so its failure cannot be a bare rejection.
   rootedRead("orders", { key: (orderId: string) => ["order", orderId] as const, load: bareLoad });
 
-  // @ts-expect-error -- a read's key root is one of its family's cataloged roots, so sync refreshes it.
+  // @ts-expect-error -- a read's key root is one of its family's cataloged roots, so an Item Refresh refreshes it.
   rootedRead("collection", { key: (orderId: string) => ["order", orderId] as const, load });
 
   // @ts-expect-error -- an uncataloged root would never refresh.

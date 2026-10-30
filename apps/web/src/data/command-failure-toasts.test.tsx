@@ -25,7 +25,6 @@ const { toast } = await import("@/components/ui/toast");
 const { defineCommand, useResourceMutation } = await import("./client");
 const { call } = await import("./api");
 const { refreshItemCommand } = await import("./resources/item");
-const { retrySyncSessionCommand } = await import("./resources/sync");
 const { updateKanbanOrderStatusCommand } = await import("./resources/dashboard");
 const { useMoveListsMutation } = await import("@/hooks/use-lists");
 
@@ -82,20 +81,6 @@ test("a refused Item Refresh shows why under its title", async () => {
   });
 });
 
-test("a refused import retry shows the server's text under its title", async () => {
-  answerWith(() => new Response("Retry is not available", { status: 409 }));
-  const queryClient = new QueryClient();
-  const { result } = renderHook(() => useResourceMutation(retrySyncSessionCommand), {
-    wrapper: wrapperFor(queryClient),
-  });
-
-  expect(await lastToastAfter(() => result.current.run("session-1"))).toEqual({
-    type: "error",
-    title: "Failed to retry failed item results",
-    description: "Retry is not available",
-  });
-});
-
 test("a move against a list the page no longer holds says the order was not saved and sends nothing", async () => {
   answerWith(() => Response.json(null));
   const queryClient = new QueryClient();
@@ -126,7 +111,7 @@ test.each([
   "a defect in a write whose command %s shows the safe text under its title, never its message",
   async (_name, wording) => {
     const command = defineCommand({
-      invalidates: ["syncHistory"],
+      invalidates: ["wishlist"],
       persist: async (_input: null): Promise<Result<null, Error>> => {
         throw new TypeError("cannot read properties of undefined (reading 'items')");
       },
@@ -150,7 +135,7 @@ test.each([
 
 test("a defect while a write's answer is read shows the safe text under its title, never its message", async () => {
   const command = defineCommand({
-    invalidates: ["syncHistory"],
+    invalidates: ["wishlist"],
     persist: (_input: null) =>
       call(Promise.reject(new Panic({ message: "the answer reader lost its schema" })), {
         fallback: "Failed to save",

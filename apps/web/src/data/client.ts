@@ -1,5 +1,4 @@
 import {
-  experimental_streamedQuery as streamedQuery,
   infiniteQueryOptions,
   QueryCache,
   QueryClient,
@@ -51,14 +50,6 @@ async function settle<Value, Failure>(load: () => Promise<Result<Value, Failure>
   }
   if (result.isErr()) throw asFailure(result.error);
   return result.value;
-}
-
-async function* failingAsDeclared<Chunk>(stream: AsyncIterable<Chunk>): AsyncGenerator<Chunk> {
-  try {
-    yield* stream;
-  } catch (error) {
-    throw asFailure(error);
-  }
 }
 
 type PageCursor = { readonly limit: number; readonly offset: number };
@@ -155,7 +146,7 @@ type ReadCache = {
 };
 
 type RootedReadSpec<F extends Family, Input, Data, Failure> = ReadCache & {
-  /** A hand-built key under one of the family's cataloged roots, so sync and the family's writes refresh it. */
+  /** A hand-built key under one of the family's cataloged roots, so an Item Refresh and the family's writes refresh it. */
   readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
   /** Its failure is what the screen sees as `error`. */
   readonly load: (input: Input) => Promise<Result<Data, Failure>>;
@@ -189,58 +180,6 @@ type RootedRead<F extends Family, Input, Data, Failure> = ReturnType<
   typeof rootedRead<F, Input, Data, Failure>
 >;
 
-type StreamedReadSpec<F extends Family, Input, Chunk, Data, Failure> = {
-  readonly key: (input: Input) => readonly [RootOf<F>, ...unknown[]];
-  /**
-   * Opens the stream. `client` is the cache the read lives in, for what a chunk refreshes.
-   * A failure while reading the stream is thrown from it, because streamedQuery reads only throws.
-   */
-  readonly open: (
-    input: Input,
-    context: { readonly signal: AbortSignal; readonly client: QueryClient },
-  ) => Promise<Result<AsyncIterable<Chunk>, Failure>>;
-  readonly initialValue: (input: Input) => Data;
-  readonly reducer: (data: Data, chunk: Chunk) => Data;
-  /** Keeps the data a refetch reconnects from, instead of starting over. */
-  readonly refetchMode?: "append";
-  readonly retry: false | ((failureCount: number, error: ReadFailure<Failure>) => boolean);
-};
-
-/** A read that follows a server stream. Focusing the window never reopens it. */
-export function streamedRead<F extends Family, Input, Chunk, Data, Failure>(
-  family: F,
-  {
-    key,
-    open,
-    initialValue,
-    reducer,
-    refetchMode,
-    retry,
-  }: StreamedReadSpec<F, Input, Chunk, Data, Failure>,
-) {
-  return {
-    family,
-    key,
-    options: (input: Input) =>
-      queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
-        queryKey: key(input),
-        queryFn: streamedQuery({
-          streamFn: async ({ signal, client }) =>
-            failingAsDeclared(await settle(() => open(input, { signal, client }))),
-          reducer,
-          initialValue: initialValue(input),
-          refetchMode,
-        }),
-        refetchOnWindowFocus: false,
-        retry,
-      }),
-  };
-}
-
-type StreamedRead<F extends Family, Input, Chunk, Data, Failure> = ReturnType<
-  typeof streamedRead<F, Input, Chunk, Data, Failure>
->;
-
 type ReadSwitch = { readonly enabled?: boolean };
 
 type ReadArgs<Input> = undefined extends Input
@@ -248,8 +187,8 @@ type ReadArgs<Input> = undefined extends Input
   : [input: Input, readSwitch?: ReadSwitch];
 
 /** `error` is the read's declared failure or a defect, and its `message` is the text to show. */
-export function useRead<F extends Family, Input, Data, Failure, Chunk = never>(
-  read: RootedRead<F, Input, Data, Failure> | StreamedRead<F, Input, Chunk, Data, Failure>,
+export function useRead<F extends Family, Input, Data, Failure>(
+  read: RootedRead<F, Input, Data, Failure>,
   ...[input, readSwitch]: ReadArgs<Input>
 ) {
   const enabled = readSwitch?.enabled;
@@ -313,22 +252,8 @@ export function useInvalidateRead<F extends Family, Input, Data, Failure>(
   );
 }
 
-/** Loads one read's query before it shows, like a row about to expand. It never rejects. */
-export function usePrefetchRead<F extends Family, Input, Data, Failure>(
-  read: RootedRead<F, Input, Data, Failure>,
-) {
-  const queryClient = useQueryClient();
-  return useCallback(
-    (input: Input) => queryClient.prefetchQuery(read.options(input)),
-    [queryClient, read],
-  );
-}
-
 /** Refetches every query of these families, the way a write's refetch does. */
-export function invalidateFamilies(
-  queryClient: QueryClient,
-  families: readonly Family[],
-): Promise<void> {
+function invalidateFamilies(queryClient: QueryClient, families: readonly Family[]): Promise<void> {
   return queryClient.invalidateQueries({
     predicate: (query) => inFamilies(query.queryKey, families),
   });

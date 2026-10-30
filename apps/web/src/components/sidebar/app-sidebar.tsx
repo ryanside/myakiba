@@ -88,12 +88,6 @@ const data = {
       icon: Calendar01Icon,
     },
     {
-      title: "Import history",
-      url: "/sync",
-      icon: Clock02Icon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
       title: "Settings",
       url: "/settings",
       icon: Settings01Icon,

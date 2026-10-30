@@ -34,8 +34,7 @@ function expectReviewNotice(text: string | null | undefined, storeName: string) 
   expect(text).toContain(UNDER_REVIEW);
   expect(text).toContain(`It is in review at ${storeName} now`);
   expect(text).toContain("it will be released shortly");
-  expect(text).toContain("the new way to import items from MyFigureCollection");
-  expect(text).toContain("importing is unavailable until it passes review");
+  expect(text).toContain("so both are unavailable until it passes review");
 }
 
 function expectPickReviewNotice(text: string | null | undefined, storeName: string) {
@@ -61,7 +60,7 @@ const SURFACES = [
     },
   },
   {
-    name: "onboarding's sync step",
+    name: "onboarding's add step",
     open: async () => {
       const user = userEvent.setup();
       renderWithDialog(onboardingDialog());
@@ -171,7 +170,7 @@ test("the FAQ links each listed store and says which are still reviewing", async
   expect(answer.textContent).toContain(
     "For Firefox, it is in review at Firefox Add-ons now, and it will be released shortly.",
   );
-  expect(answer.textContent).not.toContain("importing is unavailable");
+  expect(answer.textContent).not.toContain("both are unavailable");
 });
 
 test("the FAQ links both stores once both list the extension", async () => {

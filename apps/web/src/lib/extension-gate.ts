@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 
-/** Why an import did not start: the extension is missing or too old here. */
+/** Why an Item Refresh did not start: the extension is missing or too old here. */
 export type ExtensionMissing =
   | { readonly kind: "absent" }
   | { readonly kind: "outdated"; readonly version: string };
@@ -36,7 +36,7 @@ async function checkExtension(): Promise<Result<void, ExtensionMissing>> {
   );
 }
 
-/** Asks for the extension before an import. A refusal opens the notice that says why. */
+/** Asks for the extension before an Item Refresh. A refusal opens the notice that says why. */
 export async function requireExtension(): Promise<Result<void, ExtensionMissing>> {
   const checked = await checkExtension();
   if (checked.isErr()) showDialog({ open: true, refusal: checked.error });

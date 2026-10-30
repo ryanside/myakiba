@@ -1,41 +1,26 @@
-import { MAX_ITEM_FAILURES_PER_REPORT } from "@myakiba/contracts/mfc-items/schema";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { matchError, matchErrorPartial, Result } from "better-result";
+import { matchErrorPartial, Result } from "better-result";
 import type { InferOk } from "better-result";
 import { ExtensionStopped } from "@/lib/errors/extension-stopped";
 import { InvalidMfcItemId } from "@/lib/errors/invalid-mfc-item-id";
 import type { MfcItemFetchFailed } from "@/lib/errors/mfc-item-fetch-failed";
-import { RunClosed } from "@/lib/errors/run-closed";
-import { RunRateLimited } from "@/lib/errors/run-rate-limited";
-import { RunUploadFailed } from "@/lib/errors/run-upload-failed";
 import { extensionBridge } from "@/lib/extension-bridge";
 import { requireExtension } from "@/lib/extension-gate";
-import type {
-  ExtensionBridge,
-  ExtensionFetchEvent,
-  ItemFetchFailure,
-} from "@/lib/extension-bridge";
+import type { ExtensionFetchEvent, ItemFetchFailure } from "@/lib/extension-bridge";
 import { setExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
-import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
-import { call } from "./api";
-import type { ApiFailure, EdenAnswer, Wording } from "./api";
-import { inUploadSlot, tabUploadSlots } from "./upload-slots";
+import type { ApiFailure } from "./api";
+import { inUploadSlot } from "./upload-slots";
 
-const HEARTBEAT_MS = 20_000;
-const FAILURE_FLUSH_MS = 1000;
 const QUEUED_PROMPT_DELAY_MS = 1000;
-const MAX_RETRY_AFTER_MS = 60_000;
-// A page may have at most 64 KiB of keepalive request bodies in flight.
-const KEEPALIVE_BODY_BYTES = 64 * 1024;
 
 type StatusEvent = Extract<ExtensionFetchEvent, { readonly type: "status" }>;
 type ItemError = MfcItemFetchFailed["code"];
 
 const ITEM_ERROR_MESSAGE = {
-  mfc_signed_out: "Sign in to MyFigureCollection to import this item",
+  mfc_signed_out: "Sign in to MyFigureCollection to refresh this item",
   hidden_or_missing:
     "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
   challenge_unsolved: "The MyFigureCollection security check was not completed",
@@ -46,101 +31,12 @@ const ITEM_ERROR_MESSAGE = {
   unknown: "The extension could not fetch this item",
 } as const satisfies Record<ItemError | "extension_stopped", string>;
 
-type ServerFailure = RunUploadFailed | RunRateLimited | RunClosed;
+type ItemPage = { readonly page: File; readonly picture?: File };
 
-type ServerAnswer = Result<void, ServerFailure>;
-
-/** The text `call` keeps for a failed run request. Nobody sees it: the run words its own failures. */
-const RUN_REQUEST: Wording = { fallback: "The extension run's request failed", policy: "fixed" };
-
-/** What a failed answer means for the run: it ended, it must wait, or its items were not imported. */
-function runFailure(failure: ApiFailure): ServerFailure {
-  return matchError(failure, {
-    ApiNotFound: () => new RunClosed({ status: 404 }),
-    ApiRejected: ({ status, retryAfterMs }) => {
-      if (status === 401 || status === 403) return new RunClosed({ status });
-      if (status === 429) return new RunRateLimited({ retryAfterMs: retryAfterMs ?? null });
-      return new RunUploadFailed({ status, cause: failure });
-    },
-    ApiInvalid: () => new RunUploadFailed({ status: 422, cause: failure }),
-    ApiServerError: ({ status }) => new RunUploadFailed({ status, cause: failure }),
-    ApiUnreachable: () => new RunUploadFailed({ status: 503, cause: failure }),
-    // Eden rejects when the connection drops after the headers, a request that failed like any other.
-    ApiUnreadable: ({ cause }) => new RunUploadFailed({ status: null, cause }),
-  });
-}
-
-async function answerOf<Data>(
-  sending: PromiseLike<EdenAnswer<Data>>,
-  read: (data: Data) => ServerAnswer = () => Result.ok(),
-): Promise<ServerAnswer> {
-  const answered = await call(sending, RUN_REQUEST);
-  return answered.mapError(runFailure).andThen(read);
-}
-
-const notSaved = () => Result.err(new RunUploadFailed({ status: null }));
-const ended = () => Result.err(new RunClosed({ status: null }));
-
-type ItemPage = { readonly mfcItemId: MfcItemId; readonly page: File; readonly picture?: File };
-
-function itemPage(id: MfcItemId, html: string, picture: Blob | null): ItemPage {
+function itemPage(html: string, picture: Blob | null): ItemPage {
   const page = new File([html], "page.html", { type: "text/html" });
-  if (picture === null) return { mfcItemId: id, page };
-  return {
-    mfcItemId: id,
-    page,
-    picture: new File([picture], "picture", { type: picture.type }),
-  };
-}
-
-type ItemFailure = { readonly mfcItemId: MfcItemId; readonly error: ItemError };
-
-type Delivery = { readonly keepalive: boolean };
-
-type RunBody = { readonly jobId: string };
-type FailureBody = RunBody & { readonly failures: ItemFailure[] };
-
-const runBody = (jobId: string): RunBody => ({ jobId });
-
-const failureBody = (jobId: string, failures: readonly ItemFailure[]): FailureBody => ({
-  jobId,
-  failures: [...failures],
-});
-
-type ExtensionRun = {
-  readonly jobId: string;
-  readonly sessionId: string;
-  readonly mfcItemIds: readonly number[];
-  readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
-  readonly report: (failures: readonly ItemFailure[], delivery: Delivery) => Promise<ServerAnswer>;
-  readonly heartbeat: () => Promise<ServerAnswer>;
-  readonly interrupt: (delivery: Delivery) => Promise<ServerAnswer>;
-};
-
-export function syncRun(run: {
-  readonly sessionId: string;
-  readonly jobId: string;
-  readonly mfcItemIds: readonly number[];
-}): ExtensionRun {
-  const { sessionId, jobId } = run;
-  const session = app.api.sync.sessions({ id: sessionId });
-  return {
-    jobId,
-    sessionId,
-    mfcItemIds: run.mfcItemIds,
-    complete: (item) =>
-      answerOf(session.items.post({ jobId, ...item }), (data) =>
-        data.outcome === "failed" ? notSaved() : Result.ok(),
-      ),
-    report: (failures, { keepalive }) =>
-      answerOf(session.failures.post(failureBody(jobId, failures), { fetch: { keepalive } })),
-    heartbeat: () =>
-      answerOf(session.heartbeat.post(runBody(jobId)), (data) =>
-        data.active ? Result.ok() : ended(),
-      ),
-    interrupt: ({ keepalive }) =>
-      answerOf(session.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
-  };
+  if (picture === null) return { page };
+  return { page, picture: new File([picture], "picture", { type: picture.type }) };
 }
 
 function promptFor(event: StatusEvent): ExtensionPrompt | null {
@@ -156,269 +52,40 @@ function promptFor(event: StatusEvent): ExtensionPrompt | null {
   }
 }
 
-type FetchedPage = {
-  readonly mfcItemId: MfcItemId;
-  readonly page: Result<ItemPage, ItemFetchFailure>;
-};
-
-type PromptTarget = { readonly runId: string; readonly sessionId: string | null };
-
-type FetchDeps = {
-  readonly bridge: ExtensionBridge;
-  readonly queuedPromptDelayMs: number;
-  readonly onResponse?: () => void;
-};
-
-async function* fetchPagesShowingPrompts(
-  { bridge, queuedPromptDelayMs, onResponse }: FetchDeps,
-  { runId, sessionId }: PromptTarget,
-  ids: readonly MfcItemId[],
+async function fetchPageShowingPrompts(
+  id: MfcItemId,
   signal: AbortSignal,
-): AsyncGenerator<FetchedPage> {
+  onResponse: () => void,
+): Promise<Result<ItemPage, ItemFetchFailure>> {
+  const refreshId = `resync:${id}`;
   let queuedPromptTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (prompt: ExtensionPrompt | null) => {
     clearTimeout(queuedPromptTimer);
     if (prompt?.kind === "queued") {
-      setExtensionPrompt(runId, null);
+      setExtensionPrompt(refreshId, null);
       queuedPromptTimer = setTimeout(
-        () => setExtensionPrompt(runId, { sessionId, prompt }),
-        queuedPromptDelayMs,
+        () => setExtensionPrompt(refreshId, prompt),
+        QUEUED_PROMPT_DELAY_MS,
       );
     } else {
-      setExtensionPrompt(runId, prompt && { sessionId, prompt });
+      setExtensionPrompt(refreshId, prompt);
     }
   };
+  let fetched: Result<ItemPage, ItemFetchFailure> = Result.err(new ExtensionStopped());
   try {
-    for await (const event of bridge.fetchItems(ids, { signal })) {
-      onResponse?.();
+    for await (const event of extensionBridge.fetchItems([id], { signal })) {
+      onResponse();
       if (event.type === "status") {
         show(promptFor(event));
         continue;
       }
       show(null);
-      const { mfcItemId: id, result } = event;
-      yield { mfcItemId: id, page: result.map(({ html, picture }) => itemPage(id, html, picture)) };
+      fetched = event.result.map(({ html, picture }) => itemPage(html, picture));
     }
   } finally {
     show(null);
   }
-}
-
-async function waitUnlessAborted(ms: number, signal: AbortSignal): Promise<void> {
-  if (signal.aborted) return;
-  await new Promise<void>((resolve) => {
-    const stop = () => {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", stop);
-      resolve();
-    };
-    const timer = setTimeout(stop, ms);
-    signal.addEventListener("abort", stop, { once: true });
-  });
-}
-
-async function completeOnce(
-  run: ExtensionRun,
-  item: ItemPage,
-  signal: AbortSignal,
-): Promise<ServerAnswer> {
-  const answer = await run.complete(item);
-  if (answer.isOk() || !RunRateLimited.is(answer.error)) return answer;
-  const { retryAfterMs } = answer.error;
-  if (retryAfterMs === null || retryAfterMs > MAX_RETRY_AFTER_MS) return answer;
-  await waitUnlessAborted(retryAfterMs, signal);
-  return signal.aborted ? Result.err(new RunUploadFailed({ status: null })) : run.complete(item);
-}
-
-let pageKeepaliveBytes = 0;
-
-const jsonBytes = (body: RunBody | FailureBody | ItemFailure) =>
-  new TextEncoder().encode(JSON.stringify(body)).byteLength;
-
-async function sendKeepalive(bytes: number, send: () => Promise<ServerAnswer>): Promise<void> {
-  pageKeepaliveBytes += bytes;
-  await send();
-  pageKeepaliveBytes -= bytes;
-}
-
-function leadingFailuresWithin(
-  maxBytes: number,
-  jobId: string,
-  failures: readonly ItemFailure[],
-): readonly ItemFailure[] {
-  let bytes = jsonBytes(failureBody(jobId, []));
-  let fit = 0;
-  for (const failure of failures) {
-    bytes += jsonBytes(failure) + (fit > 0 ? 1 : 0);
-    if (bytes > maxBytes) break;
-    fit += 1;
-  }
-  return failures.slice(0, fit);
-}
-
-export type RunOutcome =
-  | { readonly kind: "ended" }
-  | { readonly kind: "busy"; readonly notImported: number; readonly retryAfterMs: number | null };
-
-const ENDED: RunOutcome = { kind: "ended" };
-
-type Stop =
-  | { readonly kind: "busy"; readonly retryAfterMs: number | null }
-  | { readonly kind: "over" }
-  | { readonly kind: "left" };
-
-const serverHoldsEnd = (stop: Stop | null) => stop?.kind === "over" || stop?.kind === "left";
-
-type RunTally = { imported: number; unanswered: number; stop: Stop | null };
-
-type PageEvents = {
-  readonly addEventListener: (type: "pagehide", listener: () => void) => void;
-  readonly removeEventListener: (type: "pagehide", listener: () => void) => void;
-};
-
-type RunnerDeps = FetchDeps & {
-  readonly page: PageEvents;
-  readonly heartbeatMs: number;
-  readonly failureFlushMs: number;
-};
-
-export function createExtensionRunner(deps: RunnerDeps) {
-  const { page, heartbeatMs, failureFlushMs } = deps;
-
-  return async function runWithExtension(run: ExtensionRun): Promise<RunOutcome> {
-    const ids = [...new Set(run.mfcItemIds.map(mfcItemId).filter((id) => id !== null))];
-    if (ids.length === 0) return ENDED;
-    const controller = new AbortController();
-    const tally: RunTally = { imported: 0, unanswered: 0, stop: null };
-    const halt = (stop: Stop) => {
-      tally.stop ??= stop;
-      controller.abort();
-    };
-    const refused = (failure: ServerFailure, items: number) => {
-      tally.unanswered += items;
-      failure.match({
-        RunRateLimited: ({ retryAfterMs }) => halt({ kind: "busy", retryAfterMs }),
-        RunClosed: () => halt({ kind: "over" }),
-        RunUploadFailed: () => {},
-      });
-    };
-    const renew = async () => {
-      const answer = await run.heartbeat();
-      if (answer.isErr() && RunClosed.is(answer.error)) halt({ kind: "over" });
-    };
-    const heartbeat = setInterval(() => {
-      void renew();
-    }, heartbeatMs);
-
-    const reports: Promise<void>[] = [];
-    const report = async (batch: readonly ItemFailure[]) => {
-      const answer = await run.report(batch, { keepalive: false });
-      if (answer.isErr()) refused(answer.error, batch.length);
-    };
-    let failures: ItemFailure[] = [];
-    let flushTimer: ReturnType<typeof setTimeout> | undefined;
-    const takeFailures = () => {
-      clearTimeout(flushTimer);
-      flushTimer = undefined;
-      const batch = failures;
-      failures = [];
-      return batch;
-    };
-    const flush = () => {
-      const batch = takeFailures();
-      if (batch.length > 0 && !serverHoldsEnd(tally.stop)) reports.push(report(batch));
-    };
-    const fail = (failure: ItemFailure) => {
-      failures.push(failure);
-      if (failures.length >= MAX_ITEM_FAILURES_PER_REPORT) flush();
-      else flushTimer ??= setTimeout(flush, failureFlushMs);
-    };
-
-    // A page restored from the back-forward cache must not drive a run the server has since settled.
-    const leave = () => {
-      const interruptBytes = jsonBytes(runBody(run.jobId));
-      const room = KEEPALIVE_BODY_BYTES - pageKeepaliveBytes - interruptBytes;
-      const sent = leadingFailuresWithin(room, run.jobId, takeFailures());
-      if (sent.length > 0) {
-        const reportBytes = jsonBytes(failureBody(run.jobId, sent));
-        void sendKeepalive(reportBytes, () => run.report(sent, { keepalive: true }));
-      }
-      void sendKeepalive(interruptBytes, () => run.interrupt({ keepalive: true }));
-      halt({ kind: "left" });
-    };
-    page.addEventListener("pagehide", leave);
-
-    const uploads: Promise<void>[] = [];
-    const takeSlotUnlessStopped = async () => {
-      if (tally.stop !== null) return false;
-      await tabUploadSlots.take();
-      if (tally.stop === null) return true;
-      tabUploadSlots.give();
-      return false;
-    };
-    const upload = async (item: ItemPage) => {
-      try {
-        const answer = await completeOnce(run, item, controller.signal);
-        if (answer.isOk()) tally.imported += 1;
-        else refused(answer.error, 1);
-      } finally {
-        tabUploadSlots.give();
-      }
-    };
-
-    const target = { runId: run.jobId, sessionId: run.sessionId };
-    try {
-      for await (const { mfcItemId: id, page: fetched } of fetchPagesShowingPrompts(
-        deps,
-        target,
-        ids,
-        controller.signal,
-      )) {
-        if (fetched.isErr()) {
-          fetched.error.match({
-            ExtensionStopped: () => {
-              tally.unanswered += 1;
-            },
-            MfcItemFetchFailed: ({ code }) => fail({ mfcItemId: id, error: code }),
-          });
-        } else if (await takeSlotUnlessStopped()) {
-          uploads.push(upload(fetched.value));
-        } else {
-          tally.unanswered += 1;
-        }
-      }
-      await Promise.all(uploads);
-      flush();
-      await Promise.all(reports);
-      if (tally.unanswered > 0 && !serverHoldsEnd(tally.stop)) {
-        await run.interrupt({ keepalive: false });
-      }
-    } finally {
-      clearInterval(heartbeat);
-      clearTimeout(flushTimer);
-      page.removeEventListener("pagehide", leave);
-    }
-    const { stop } = tally;
-    return stop?.kind === "busy"
-      ? { kind: "busy", notImported: ids.length - tally.imported, retryAfterMs: stop.retryAfterMs }
-      : ENDED;
-  };
-}
-
-const fetchDeps: FetchDeps = {
-  bridge: extensionBridge,
-  queuedPromptDelayMs: QUEUED_PROMPT_DELAY_MS,
-};
-
-const runWithExtension = createExtensionRunner({
-  ...fetchDeps,
-  page: window,
-  heartbeatMs: HEARTBEAT_MS,
-  failureFlushMs: FAILURE_FLUSH_MS,
-});
-
-export function importSyncItems(run: Parameters<typeof syncRun>[0]): Promise<RunOutcome> {
-  return runWithExtension(syncRun(run));
+  return fetched;
 }
 
 type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;
@@ -455,8 +122,6 @@ async function fetchForRefresh(
 ): Promise<Result<ItemPage, RefreshFailure>> {
   const id = mfcItemId(externalId);
   if (id === null) return Result.err(new InvalidMfcItemId({ externalId }));
-  let fetched: Result<ItemPage, ItemFetchFailure> = Result.err(new ExtensionStopped());
-  const target = { runId: `resync:${id}`, sessionId: null };
   const controller = new AbortController();
   let timedOut = false;
   const cancelDeadline = clock.after(5000, () => {
@@ -466,19 +131,12 @@ async function fetchForRefresh(
   try {
     // An answering extension may queue work or wait for the user's MFC security check.
     // Only silence before its first response means no content script answered this request.
-    for await (const { page } of fetchPagesShowingPrompts(
-      { ...fetchDeps, onResponse: cancelDeadline },
-      target,
-      [id],
-      controller.signal,
-    )) {
-      fetched = page;
-    }
+    const fetched = await fetchPageShowingPrompts(id, controller.signal, cancelDeadline);
+    if (timedOut) await requireExtension();
+    return fetched;
   } finally {
     cancelDeadline();
   }
-  if (timedOut) await requireExtension();
-  return fetched;
 }
 
 export async function refreshItemWithExtension(

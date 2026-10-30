@@ -13,38 +13,32 @@ function describe(prompt: ExtensionPrompt) {
         title: "Complete the security check in the MyFigureCollection tab",
         detail:
           prompt.untilMs === null
-            ? "The import continues once the check is done."
-            : `Finish it by ${format(prompt.untilMs, "p")}. The import continues once the check is done.`,
+            ? "Item details refresh once the check is done."
+            : `Finish it by ${format(prompt.untilMs, "p")}. Item details refresh once the check is done.`,
       };
     case "backing_off":
       return {
         title: "MyFigureCollection asked to slow down",
         detail:
           prompt.untilMs === null
-            ? "The import resumes shortly."
-            : `The import resumes at ${format(prompt.untilMs, "p")}.`,
+            ? "The refresh resumes shortly."
+            : `The refresh resumes at ${format(prompt.untilMs, "p")}.`,
       };
     case "queued":
       return {
         title: "Waiting for the extension",
-        detail: "It is finishing another import first.",
+        detail: "It is finishing another refresh first.",
       };
   }
 }
 
-export function ExtensionPromptNotice({
-  sessionId,
-  className,
-}: {
-  readonly sessionId?: string;
-  readonly className?: string;
-}) {
-  const prompt = useExtensionPrompt(sessionId);
+export function ExtensionPromptNotice() {
+  const prompt = useExtensionPrompt();
   if (prompt === null) return null;
   const { title, detail } = describe(prompt);
 
   return (
-    <Alert className={className} role="status">
+    <Alert role="status">
       <HugeiconsIcon
         icon={prompt.kind === "needs_user" ? Alert02Icon : Clock02Icon}
         className={cn(prompt.kind === "needs_user" && "text-warning-foreground")}

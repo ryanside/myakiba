@@ -16,7 +16,6 @@
     "redis:down": "docker compose down"
   },
   "dependencies": {
-    "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "better-result": "catalog:",

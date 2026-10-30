@@ -205,23 +205,12 @@ _Avoid_: Sync Order, Add to order when creating a new Order
 On the Add Page, adding Order Items to an existing Order; they copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order Items
 
-**Import MyFigureCollection CSV**:
-An action that reads a MyFigureCollection CSV export and creates new Collection Items and Orders for its supported Owned and Ordered items, reusing or adding the needed Items. Importing the same file again creates additional Collection Items and Orders.
-_Avoid_: Sync CSV, Import from MyFigureCollection when a CSV file is required
-
-**MyFigureCollection Import**:
-A MyFigureCollection Import brings data from MyFigureCollection into myakiba by finding existing Items or adding missing ones, without sending changes back to MyFigureCollection. It can add Items on their own, add Collection Items, create Orders, or add Order Items.
-_Avoid_: Sync, two-way sync
-
-**Import History**:
-A saved record of one MyFigureCollection Import request and its successful and failed item results; requests that only add Items to the Item Database are included, and separate Collection Items can give it repeated results for the same MyFigureCollection ID. The record expires 30 days after the original request was created, even if unfinished, and the user can retry only its failed item results for the first 20 days without starting a new record.
-
 **Item Refresh**:
 An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **Browser Extension**:
-The myakiba extension for desktop Chrome, other Chromium browsers, and Firefox. It fetches the MyFigureCollection pages for every MyFigureCollection Import and Item Refresh with the user's own MyFigureCollection sign-in, so neither can start without it.
+The myakiba extension for desktop Chrome, other Chromium browsers, and Firefox. It keeps the MFC Item page a user picks, and fetches an MFC page only for an Item Refresh, with the user's own MFC sign-in.
 _Avoid_: Plugin, add-on
 
 **Extension Listing**:

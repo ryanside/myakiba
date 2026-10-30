@@ -22,7 +22,6 @@ import { Route as appItemsRouteImport } from './routes/(app)/items'
 import { Route as appListsRouteImport } from './routes/(app)/lists'
 import { Route as appOrdersRouteImport } from './routes/(app)/orders'
 import { Route as appSettingsRouteImport } from './routes/(app)/settings'
-import { Route as appSyncRouteImport } from './routes/(app)/sync'
 import { Route as appWishlistRouteImport } from './routes/(app)/wishlist'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
@@ -34,7 +33,6 @@ import { Route as appAnalyticsSectionNameRouteImport } from './routes/(app)/anal
 import { Route as appItemExternalIdRouteImport } from './routes/(app)/item_.$externalId'
 import { Route as appListsListIdRouteImport } from './routes/(app)/lists_.$listId'
 import { Route as appOrdersIdRouteImport } from './routes/(app)/orders_.$id'
-import { Route as appSyncIdRouteImport } from './routes/(app)/sync_.$id'
 import { Route as changelogChangelogIndexRouteImport } from './routes/(changelog)/changelog.index'
 import { Route as changelogChangelogSlugRouteImport } from './routes/(changelog)/changelog.$slug'
 import { Route as appItemCustomIdRouteImport } from './routes/(app)/item_.custom.$id'
@@ -103,11 +101,6 @@ const appSettingsRoute = appSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => appRouteRoute,
 } as any)
-const appSyncRoute = appSyncRouteImport.update({
-  id: '/sync',
-  path: '/sync',
-  getParentRoute: () => appRouteRoute,
-} as any)
 const appWishlistRoute = appWishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
@@ -163,11 +156,6 @@ const appOrdersIdRoute = appOrdersIdRouteImport.update({
   path: '/orders/$id',
   getParentRoute: () => appRouteRoute,
 } as any)
-const appSyncIdRoute = appSyncIdRouteImport.update({
-  id: '/sync_/$id',
-  path: '/sync/$id',
-  getParentRoute: () => appRouteRoute,
-} as any)
 const changelogChangelogIndexRoute = changelogChangelogIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -197,7 +185,6 @@ export interface FileRoutesByFullPath {
   '/lists': typeof appListsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
-  '/sync': typeof appSyncRoute
   '/wishlist': typeof appWishlistRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
@@ -209,7 +196,6 @@ export interface FileRoutesByFullPath {
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
-  '/sync/$id': typeof appSyncIdRoute
   '/changelog/$slug': typeof changelogChangelogSlugRoute
   '/changelog/': typeof changelogChangelogIndexRoute
   '/item/custom/$id': typeof appItemCustomIdRoute
@@ -227,7 +213,6 @@ export interface FileRoutesByTo {
   '/lists': typeof appListsRoute
   '/orders': typeof appOrdersRoute
   '/settings': typeof appSettingsRoute
-  '/sync': typeof appSyncRoute
   '/wishlist': typeof appWishlistRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
@@ -238,7 +223,6 @@ export interface FileRoutesByTo {
   '/item/$externalId': typeof appItemExternalIdRoute
   '/lists/$listId': typeof appListsListIdRoute
   '/orders/$id': typeof appOrdersIdRoute
-  '/sync/$id': typeof appSyncIdRoute
   '/changelog/$slug': typeof changelogChangelogSlugRoute
   '/changelog': typeof changelogChangelogIndexRoute
   '/item/custom/$id': typeof appItemCustomIdRoute
@@ -258,7 +242,6 @@ export interface FileRoutesById {
   '/(app)/lists': typeof appListsRoute
   '/(app)/orders': typeof appOrdersRoute
   '/(app)/settings': typeof appSettingsRoute
-  '/(app)/sync': typeof appSyncRoute
   '/(app)/wishlist': typeof appWishlistRoute
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
@@ -270,7 +253,6 @@ export interface FileRoutesById {
   '/(app)/item_/$externalId': typeof appItemExternalIdRoute
   '/(app)/lists_/$listId': typeof appListsListIdRoute
   '/(app)/orders_/$id': typeof appOrdersIdRoute
-  '/(app)/sync_/$id': typeof appSyncIdRoute
   '/(changelog)/changelog/$slug': typeof changelogChangelogSlugRoute
   '/(changelog)/changelog/': typeof changelogChangelogIndexRoute
   '/(app)/item_/custom/$id': typeof appItemCustomIdRoute
@@ -290,7 +272,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/orders'
     | '/settings'
-    | '/sync'
     | '/wishlist'
     | '/forgot-password'
     | '/login'
@@ -302,7 +283,6 @@ export interface FileRouteTypes {
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
-    | '/sync/$id'
     | '/changelog/$slug'
     | '/changelog/'
     | '/item/custom/$id'
@@ -320,7 +300,6 @@ export interface FileRouteTypes {
     | '/lists'
     | '/orders'
     | '/settings'
-    | '/sync'
     | '/wishlist'
     | '/forgot-password'
     | '/login'
@@ -331,7 +310,6 @@ export interface FileRouteTypes {
     | '/item/$externalId'
     | '/lists/$listId'
     | '/orders/$id'
-    | '/sync/$id'
     | '/changelog/$slug'
     | '/changelog'
     | '/item/custom/$id'
@@ -350,7 +328,6 @@ export interface FileRouteTypes {
     | '/(app)/lists'
     | '/(app)/orders'
     | '/(app)/settings'
-    | '/(app)/sync'
     | '/(app)/wishlist'
     | '/(auth)/forgot-password'
     | '/(auth)/login'
@@ -362,7 +339,6 @@ export interface FileRouteTypes {
     | '/(app)/item_/$externalId'
     | '/(app)/lists_/$listId'
     | '/(app)/orders_/$id'
-    | '/(app)/sync_/$id'
     | '/(changelog)/changelog/$slug'
     | '/(changelog)/changelog/'
     | '/(app)/item_/custom/$id'
@@ -473,13 +449,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appSettingsRouteImport
       parentRoute: typeof appRouteRoute
     }
-    '/(app)/sync': {
-      id: '/(app)/sync'
-      path: '/sync'
-      fullPath: '/sync'
-      preLoaderRoute: typeof appSyncRouteImport
-      parentRoute: typeof appRouteRoute
-    }
     '/(app)/wishlist': {
       id: '/(app)/wishlist'
       path: '/wishlist'
@@ -557,13 +526,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appOrdersIdRouteImport
       parentRoute: typeof appRouteRoute
     }
-    '/(app)/sync_/$id': {
-      id: '/(app)/sync_/$id'
-      path: '/sync/$id'
-      fullPath: '/sync/$id'
-      preLoaderRoute: typeof appSyncIdRouteImport
-      parentRoute: typeof appRouteRoute
-    }
     '/(changelog)/changelog/': {
       id: '/(changelog)/changelog/'
       path: '/'
@@ -599,13 +561,11 @@ interface appRouteRouteChildren {
   appListsRoute: typeof appListsRoute
   appOrdersRoute: typeof appOrdersRoute
   appSettingsRoute: typeof appSettingsRoute
-  appSyncRoute: typeof appSyncRoute
   appWishlistRoute: typeof appWishlistRoute
   appAnalyticsSectionNameRoute: typeof appAnalyticsSectionNameRoute
   appItemExternalIdRoute: typeof appItemExternalIdRoute
   appListsListIdRoute: typeof appListsListIdRoute
   appOrdersIdRoute: typeof appOrdersIdRoute
-  appSyncIdRoute: typeof appSyncIdRoute
   appItemCustomIdRoute: typeof appItemCustomIdRoute
 }
 
@@ -620,13 +580,11 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appListsRoute: appListsRoute,
   appOrdersRoute: appOrdersRoute,
   appSettingsRoute: appSettingsRoute,
-  appSyncRoute: appSyncRoute,
   appWishlistRoute: appWishlistRoute,
   appAnalyticsSectionNameRoute: appAnalyticsSectionNameRoute,
   appItemExternalIdRoute: appItemExternalIdRoute,
   appListsListIdRoute: appListsListIdRoute,
   appOrdersIdRoute: appOrdersIdRoute,
-  appSyncIdRoute: appSyncIdRoute,
   appItemCustomIdRoute: appItemCustomIdRoute,
 }
 

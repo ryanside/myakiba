@@ -12,7 +12,7 @@ import { PageBackground } from "@/components/page-background";
 import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
-import SyncStatusWidget from "@/components/sync/sync-status-widget";
+import { ExtensionPromptPopover } from "@/components/extension/extension-prompt-popover";
 import { AppCommand } from "@/components/command/app-command";
 import { ExtensionRequiredDialog } from "@/components/extension/extension-required-dialog";
 import { buttonVariants } from "@/components/ui/button";
@@ -99,7 +99,7 @@ function RouteComponent() {
               <div className="flex items-center">
                 <SidebarTrigger className="-ml-1" />
                 <AppCommand />
-                <SyncStatusWidget />
+                <ExtensionPromptPopover />
               </div>
               <div className="flex items-center gap-2">
                 <Link to="/add" className={buttonVariants({ variant: "default", size: "sm" })}>

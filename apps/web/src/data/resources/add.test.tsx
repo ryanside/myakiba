@@ -418,13 +418,10 @@ describe("pick intake", () => {
   test.each([
     [
       "an NSFW page under SFW mode",
-      refused(
-        400,
-        "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
-      ),
+      refused(400, "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item"),
       {
         kind: "rejected",
-        message: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+        message: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
       },
     ],
     ["an unverified email", refused(403, EMAIL_VERIFICATION_REQUIRED), { kind: "unverified" }],
@@ -492,7 +489,7 @@ describe("pick failure copy", () => {
     const sfw = pickFailureCopy(
       {
         kind: "rejected",
-        message: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+        message: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
       },
       98_777,
     );
@@ -502,7 +499,7 @@ describe("pick failure copy", () => {
     );
 
     expect(sfw).toEqual({
-      text: "Turn off SFW mode in your MyFigureCollection settings to import this NSFW item",
+      text: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
       actions: [
         { kind: "retry" },
         { kind: "open", label: "Open on MFC", href: "https://myfigurecollection.net/item/98777" },

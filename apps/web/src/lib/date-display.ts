@@ -50,15 +50,6 @@ export function formatTimestampForDisplay(
   return formatDateFns(date, TIMESTAMP_PATTERN_BY_FORMAT[format]);
 }
 
-export function formatShortDateTime(date: Date, locale?: Intl.LocalesArgument): string {
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(date));
-}
-
 export function formatRelativeTimeToNow(date: Date): string {
   const timestamp = new Date(date).getTime();
   if (Number.isNaN(timestamp)) return "-";

@@ -1,184 +1,14 @@
-import { panic } from "better-result";
 import * as z from "zod";
-import {
-  itemUploadSchema,
-  MAX_ITEM_FAILURES_PER_REPORT,
-  mfcItemIdField,
-} from "../mfc-items/schema";
-import {
-  CONDITIONS,
-  MAX_MFC_ITEM_ID,
-  ORDER_STATUSES,
-  SHIPPING_METHODS,
-  SYNC_SESSION_ITEM_STATUSES,
-  SYNC_SESSION_STATUSES,
-  SYNC_TYPES,
-} from "../shared/constants";
-import type { SyncSessionStatus } from "../shared/types";
-import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
-import { ITEM_FETCH_ERROR_CODES } from "../mfc-items/fetch-errors";
+import { CONDITIONS, ORDER_STATUSES, SHIPPING_METHODS } from "../shared/constants";
+import { newOrderSchema } from "../orders/schema";
 import { MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
 
-const MFC_ITEM_URL_PATTERN =
-  /^(?:https?:\/\/)?(?:(?:www|de|es|fi|fr|it|ja|nl|no|pl|pt|ru|sv|zh)\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;
-
-export const mfcItemIdSchema = z
-  .string()
-  .trim()
-  .transform((value, context) => {
-    if (value === "") {
-      context.addIssue({
-        code: "custom",
-        message: "MyFigureCollection item link or ID is required",
-      });
-      return z.NEVER;
-    }
-
-    const itemId = /^\d+$/.test(value) ? value : value.match(MFC_ITEM_URL_PATTERN)?.[1];
-    if (!itemId) {
-      context.addIssue({
-        code: "custom",
-        message: "Please enter a valid MyFigureCollection item link or ID",
-      });
-      return z.NEVER;
-    }
-
-    return Number(itemId);
-  })
-  .pipe(z.number().int().positive());
-
-export const itemSyncSchema = z.object({
-  items: z
-    .array(
-      z
-        .union([mfcItemIdSchema, z.number().int().positive()], {
-          error: "Please enter a valid MyFigureCollection item link or ID",
-        })
-        .pipe(z.number().max(MAX_MFC_ITEM_ID)),
-    )
-    .min(1, "Enter at least one MyFigureCollection item link or ID")
-    .transform((ids) => [...new Set(ids)])
-    .refine(
-      (ids) => ids.length <= MAX_ITEM_SYNC_ITEMS,
-      `Enter at most ${MAX_ITEM_SYNC_ITEMS} unique items`,
-    ),
-});
-
-export type ItemSyncInput = z.infer<typeof itemSyncSchema>;
-
-const syncItemFetchErrorSchema = z.enum([...ITEM_FETCH_ERROR_CODES, "unknown"]);
-const syncItemFailureEntrySchema = z.strictObject({
-  mfcItemId: mfcItemIdField,
-  error: syncItemFetchErrorSchema,
-});
-
-const syncItemFailureBatchSchema = z.strictObject({
-  jobId: z.string().min(1),
-  failures: z.array(syncItemFailureEntrySchema).min(1).max(MAX_ITEM_FAILURES_PER_REPORT),
-});
-export const syncItemFailureSchema = z.union([
-  itemUploadSchema.pick({ mfcItemId: true }).extend({
-    jobId: z.string().min(1),
-    error: syncItemFetchErrorSchema,
-  }),
-  syncItemFailureBatchSchema,
-]);
-export type SyncItemFailure = z.infer<typeof syncItemFailureSchema>;
-
-/**
- * Schema for CSV date fields that handles MFC export quirks.
- * - Returns null for placeholder dates (0000-00-00)
- * - Normalizes dates with 00 values (e.g., "2002-00-00" -> "2002-01-01")
- */
-const csvDateSchema = z
-  .string()
-  .transform((value): string | null => {
-    if (value.trim() === "") return null;
-    if (value === "0000-00-00") return null;
-    return value.replaceAll("-00", "-01");
-  })
-  .pipe(z.iso.date().nullable());
-
-export const syncSearchSchema = z.object({
-  page: paginationPageSchema.optional(),
-  limit: paginationLimitSchema.optional(),
-  status: z.array(z.enum(SYNC_SESSION_STATUSES)).optional(),
-  syncType: z.array(z.enum(SYNC_TYPES)).optional(),
-});
-
-export const syncSessionDetailSearchSchema = z.object({
-  status: z.array(z.enum(SYNC_SESSION_ITEM_STATUSES)).optional(),
-});
-
-const syncTerminalStateSchema = z.enum(["success", "partial", "error", "timeout"]);
-
-const syncJobPhaseSchema = z.enum(["queued", "importing", "saving", "completed", "failed"]);
-
-const syncJobProgressSchema = z.object({
-  processed: z.number().int().nonnegative(),
-  total: z.number().int().nonnegative(),
-  succeeded: z.number().int().nonnegative(),
-  failed: z.number().int().nonnegative(),
-});
-
-const syncJobRecentItemSchema = z.object({
-  externalId: z.number().int(),
-  title: z.string().nullable(),
-  outcome: z.enum(["succeeded", "failed"]),
-  failureReason: z.string().nullable(),
-  completedAt: z.iso.datetime(),
-});
-
-const syncJobErrorCodeSchema = z.enum([
-  "fetch_failed",
-  "persistence_failed",
-  "connection_lost",
-  "timeout",
-  "unknown",
-]);
-
-const syncJobErrorSchema = z.object({
-  code: syncJobErrorCodeSchema,
-  message: z.string(),
-});
+// The shape of `sync_session.request_payload`. Kept only for that column's type until the table goes.
+const syncOrderSchema = newOrderSchema.extend({ id: z.string(), userId: z.string() });
 
 const syncPriceWarningSchema = z.object({
   mfcItemId: z.number().int().positive(),
   input: z.string(),
-});
-
-export const syncJobStatusSchema = z.object({
-  revision: z.number().int().nonnegative().optional(),
-  jobId: z.string(),
-  phase: syncJobPhaseSchema,
-  statusMessage: z.string(),
-  progress: syncJobProgressSchema.nullable(),
-  warnings: z.array(syncPriceWarningSchema).readonly().optional(),
-  recentItems: z.array(syncJobRecentItemSchema).max(5).readonly(),
-  error: syncJobErrorSchema.nullable(),
-  startedAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
-  terminalState: syncTerminalStateSchema.nullable().default(null),
-});
-
-export const syncOrderSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  status: z.enum(ORDER_STATUSES),
-  title: z.string(),
-  shop: z.string().trim(),
-  orderDate: z.iso.date().nullable(),
-  releaseDate: z.iso.date().nullable(),
-  paymentDate: z.iso.date().nullable(),
-  shippingDate: z.iso.date().nullable(),
-  collectionDate: z.iso.date().nullable(),
-  shippingMethod: z.enum(SHIPPING_METHODS),
-  shippingFee: z.number().int(),
-  taxes: z.number().int(),
-  duties: z.number().int(),
-  tariffs: z.number().int(),
-  miscFees: z.number().int(),
-  notes: z.string(),
 });
 
 const syncOrderItemSchema = z.object({
@@ -199,20 +29,7 @@ const syncOrderItemSchema = z.object({
   collectionDate: z.iso.date().nullable(),
 });
 
-export const syncOrderItemInputSchema = syncOrderItemSchema.omit({
-  collectionId: true,
-  userId: true,
-  orderId: true,
-  releaseId: true,
-  itemId: true,
-});
-
-export const syncOrderItemsSchema = z.object({
-  orderId: z.string(),
-  items: z.array(syncOrderItemInputSchema).min(1),
-});
-
-export const syncCollectionItemSchema = z.object({
+const syncCollectionItemSchema = z.object({
   collectionId: z.string(),
   userId: z.string(),
   releaseId: z.string().nullable(),
@@ -232,52 +49,7 @@ export const syncCollectionItemSchema = z.object({
   notes: z.string(),
 });
 
-const csvItemIdSchema = z
-  .string()
-  .trim()
-  .regex(/^\d+$/)
-  .transform(Number)
-  .pipe(z.number().int().positive());
-const csvItemCountSchema = z
-  .string()
-  .trim()
-  .transform((value) => value || "1")
-  .refine((value) => /^\d+$/.test(value), "Count must be a positive integer")
-  .transform(Number)
-  .pipe(z.number().int().positive());
-
-const csvItemSchema = z.object({
-  id: csvItemIdSchema,
-  title: z.string(),
-  root: z.string(),
-  category: z.string(),
-  release_date: csvDateSchema,
-  price: z.string(),
-  scale: z.string(),
-  barcode: z.string(),
-  status: z
-    .string()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.enum(["Owned", "Ordered", "Wished"]).default("Owned")),
-  count: csvItemCountSchema,
-  score: z.string().transform((value) => value.split("/", 1).join("")),
-  payment_date: csvDateSchema,
-  shipping_date: csvDateSchema,
-  collecting_date: csvDateSchema,
-  price_1: z.string(),
-  shop: z.string().trim(),
-  shipping_method: z
-    .string()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.enum(SHIPPING_METHODS).default("n/a")),
-  tracking_number: z.string(),
-  wishibility: z.string().optional(),
-  note: z.string(),
-});
-
-export const csvSchema = z.array(csvItemSchema);
-
-export const internalCsvItemSchema = z.object({
+const internalCsvItemSchema = z.object({
   collectionId: z.string(),
   itemExternalId: z.number(),
   status: z.enum(SYNC_CSV_ITEM_STATUSES),
@@ -319,9 +91,7 @@ const pricedCsvItemSchema = internalCsvItemSchema.extend({
   priceMinorUnits: z.number().int(),
 });
 
-export type PricedCsvItem = z.infer<typeof pricedCsvItemSchema>;
-
-export const csvJobDataSchema = z.object({
+const csvJobDataSchema = z.object({
   type: z.literal("csv"),
   warnings: z.array(syncPriceWarningSchema).default([]),
   payloadVersion: z.literal(3),
@@ -332,7 +102,7 @@ export const csvJobDataSchema = z.object({
   ordersToInsert: z.array(syncOrderSchema),
 });
 
-export const jobDataSchema = z.discriminatedUnion("type", [
+const jobDataSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("item"),
     payloadVersion: z.literal(3),
@@ -375,70 +145,4 @@ export const jobDataSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-export type SyncTerminalState = z.infer<typeof syncTerminalStateSchema>;
-export type SyncJobPhase = z.infer<typeof syncJobPhaseSchema>;
-export type SyncJobProgress = z.infer<typeof syncJobProgressSchema>;
-export type SyncJobRecentItem = z.infer<typeof syncJobRecentItemSchema>;
-export type SyncJobError = z.infer<typeof syncJobErrorSchema>;
-export type SyncJobStatus = z.infer<typeof syncJobStatusSchema>;
-
-/**
- * Maps a persisted session status to the closest `SyncJobPhase` snapshot.
- *
- * Use this when rebuilding a job-status payload from durable session data,
- * especially after Redis expires or when cleanup code only has the persisted
- * `SyncSessionStatus`.
- *
- * This is intentionally lossy:
- * - `processing` maps to `importing` because saving is not stored durably
- * - `partial` maps to `completed` because partial is a terminal outcome, not a phase
- *
- * @example
- * sessionStatusToPhase("pending")
- * // "queued"
- *
- * @example
- * sessionStatusToPhase("partial")
- * // "completed"
- */
-export const sessionStatusToPhase = (status: SyncSessionStatus): SyncJobPhase => {
-  switch (status) {
-    case "pending":
-      return "queued";
-    case "processing":
-      return "importing";
-    case "completed":
-    case "partial":
-      return "completed";
-    case "failed":
-      return "failed";
-    default:
-      return panic(`Unknown sync session status "${String(status satisfies never)}"`);
-  }
-};
-
-export const sessionStatusToTerminalState = (
-  status: SyncSessionStatus,
-): SyncTerminalState | null => {
-  switch (status) {
-    case "completed":
-      return "success";
-    case "partial":
-      return "partial";
-    case "failed":
-      return "error";
-    case "pending":
-    case "processing":
-      return null;
-    default:
-      return panic(`Unknown sync session status "${String(status satisfies never)}"`);
-  }
-};
-export type NormalizedInternalCsvItem = z.infer<typeof internalCsvItemSchema>;
-export type InternalCsvItem = Omit<NormalizedInternalCsvItem, "collectionId"> & {
-  readonly collectionId?: string;
-};
-export type QueuedCollectionItem = z.infer<typeof queuedCollectionItemSchema>;
-export type UpdatedSyncOrder = z.infer<typeof syncOrderSchema>;
-export type SyncOrderItemsInput = z.infer<typeof syncOrderItemsSchema>;
 export type JobData = z.infer<typeof jobDataSchema>;

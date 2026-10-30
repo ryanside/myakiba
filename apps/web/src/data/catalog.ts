@@ -6,12 +6,12 @@ type FamilySpec =
       readonly roots: readonly string[];
       readonly collectionWrites: boolean;
     }
-  | { readonly kind: "live" | "stream" | "account" | "static"; readonly roots: readonly string[] };
+  | { readonly kind: "live" | "account" | "static"; readonly roots: readonly string[] };
 
 /**
  * Every query family the web app caches. A persisted family refreshes after every
- * sync and import. `roots` lists the roots of the family's hand-built keys, so sync
- * and the family's writes refresh them.
+ * Item Refresh. `roots` lists the roots of the family's hand-built keys, so an Item
+ * Refresh and the family's writes refresh them.
  */
 const catalog = {
   analytics: { kind: "persisted", roots: ["analytics"], collectionWrites: true },
@@ -30,17 +30,11 @@ const catalog = {
     collectionWrites: true,
   },
   releases: { kind: "persisted", roots: ["itemReleases"], collectionWrites: false },
-  syncHistory: {
-    kind: "persisted",
-    roots: ["syncSessions", "syncSessionDetail"],
-    collectionWrites: false,
-  },
   wishlist: { kind: "persisted", roots: [], collectionWrites: false },
   accountType: { kind: "account", roots: ["account-type"] },
   devices: { kind: "account", roots: ["devices"] },
   linkedAccounts: { kind: "account", roots: ["linked-accounts"] },
   usernameAvailability: { kind: "live", roots: ["username-availability"] },
-  syncJobStatus: { kind: "stream", roots: ["syncJobStatus"] },
   version: { kind: "static", roots: ["version"] },
 } as const satisfies Record<string, FamilySpec>;
 
@@ -50,7 +44,7 @@ export type PersistedFamily = {
   [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" ? F : never;
 }[Family];
 
-/** Families a write can refetch: the synced data, the account's own lists and live reads. A stream never refetches for a write. */
+/** Families a write can refetch: the persisted data, the account's own lists and live reads. */
 export type WritableFamily = {
   [F in Family]: (typeof catalog)[F]["kind"] extends "persisted" | "account" | "live" ? F : never;
 }[Family];
@@ -66,11 +60,13 @@ function nonEmpty(families: readonly PersistedFamily[]): Families {
   return [first, ...rest];
 }
 
-export const syncResultFamilies = nonEmpty((Object.keys(catalog) as Family[]).filter(isPersisted));
+export const refreshResultFamilies = nonEmpty(
+  (Object.keys(catalog) as Family[]).filter(isPersisted),
+);
 
 /** Every family a collection or order write can change. Each such write refreshes all of them. */
 export const collectionWriteFamilies = nonEmpty(
-  syncResultFamilies.filter((family) => catalog[family].collectionWrites),
+  refreshResultFamilies.filter((family) => catalog[family].collectionWrites),
 );
 
 /** Matches a resource key `["resource", family, ...]` or a hand-built key under one of the family's roots. */

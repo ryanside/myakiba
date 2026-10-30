@@ -31,55 +31,9 @@ interface RateLimitResult {
   readonly remaining: number;
 }
 
-// At 2.5 seconds per fetch the extension uploads at most about 1,440 items an hour.
-// Batches cover mass failures without spending one request per item.
-const MFC_ITEM_HOURLY_BUDGET = 2000;
-
 const rateLimitConfigs = {
-  item: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:item",
-    strategy: "userId",
-  },
-  csv: {
-    maxRequests: 7,
-    windowSeconds: 3600,
-    keyPrefix: "rl:csv",
-    strategy: "userId",
-  },
-  collection: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:collection",
-    strategy: "userId",
-  },
-  order: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:order",
-    strategy: "userId",
-  },
-  retry: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:sync-retry",
-    strategy: "userId",
-  },
-  syncControl: {
-    maxRequests: 240,
-    windowSeconds: 60,
-    keyPrefix: "rl:sync-control",
-    strategy: "userId",
-  },
-  syncFailure: {
-    maxRequests: MFC_ITEM_HOURLY_BUDGET,
-    windowSeconds: 3600,
-    keyPrefix: "rl:sync-failure",
-    strategy: "userId",
-  },
   mfcIngest: {
-    maxRequests: MFC_ITEM_HOURLY_BUDGET,
+    maxRequests: 2000,
     windowSeconds: 3600,
     keyPrefix: "rl:mfc-ingest",
     strategy: "userId",
@@ -88,12 +42,6 @@ const rateLimitConfigs = {
     maxRequests: 60,
     windowSeconds: 3600,
     keyPrefix: "rl:item-resync",
-    strategy: "userId",
-  },
-  mfcLookup: {
-    maxRequests: 120,
-    windowSeconds: 3600,
-    keyPrefix: "rl:mfc-lookup",
     strategy: "userId",
   },
   addCommit: {

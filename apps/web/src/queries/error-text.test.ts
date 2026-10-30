@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { requestResync } from "./item";
-import { retrySyncSession } from "./sync";
 
 const realFetch = globalThis.fetch;
 
@@ -18,7 +17,6 @@ const calls = [
     () => requestResync(1001, { page: "<html></html>" }),
     "Failed to request item refresh",
   ],
-  ["an import retry", () => retrySyncSession("session-1"), "Failed to retry failed item results"],
 ] as const;
 
 describe.each(calls)("%s uses safe error text", (_name, call, fallback) => {

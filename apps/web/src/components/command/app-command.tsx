@@ -28,17 +28,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
-import { cn } from "@/lib/utils";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import type { CommandSearchResults } from "@/queries/search";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import { useExtensionGate } from "@/lib/extension-gate";
-import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
-import type {
-  LaunchableSyncType,
-  SyncLauncherOption,
-} from "@/components/sync/sync-launcher-options";
-import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
@@ -95,22 +86,10 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-function CommandLeadIcon({
-  icon,
-  busy = false,
-}: {
-  readonly icon: IconSvgElement;
-  readonly busy?: boolean;
-}): React.JSX.Element {
+function CommandLeadIcon({ icon }: { readonly icon: IconSvgElement }): React.JSX.Element {
   return (
     <div className="flex size-8 shrink-0 items-center justify-center rounded-md">
-      <HugeiconsIcon
-        icon={busy ? Loading03Icon : icon}
-        className={cn(
-          "size-4 text-muted-foreground",
-          busy && "animate-spin motion-reduce:animate-none",
-        )}
-      />
+      <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
     </div>
   );
 }
@@ -120,23 +99,16 @@ function ActionCommandItem({
   title,
   subtitle,
   leading,
-  busy = false,
   onSelect,
 }: {
   readonly value: string;
   readonly title: string;
   readonly subtitle?: string;
   readonly leading: React.ReactNode;
-  readonly busy?: boolean;
   readonly onSelect: () => void;
 }): React.JSX.Element {
   return (
-    <CommandItem
-      value={value}
-      aria-busy={busy || undefined}
-      onSelect={onSelect}
-      className="gap-3 py-2"
-    >
+    <CommandItem value={value} onSelect={onSelect} className="gap-3 py-2">
       {leading}
       <div className="min-w-0 flex-1">
         <div className="whitespace-normal break-words font-medium">{title}</div>
@@ -178,9 +150,6 @@ function StatusCommandItem({
 export function AppCommand(): React.JSX.Element {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
-  const { checking, gate } = useExtensionGate();
-  const [chosenSyncType, setChosenSyncType] = useState<LaunchableSyncType | null>(null);
   const [inputValue, setInputValue] = useState("");
   const query = inputValue.trim();
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
@@ -193,16 +162,6 @@ export function AppCommand(): React.JSX.Element {
   }, [query]);
 
   const showAddItems = matchesQuery("Add items", ADD_ITEMS_KEYWORDS, query);
-
-  const visibleSyncItems = useMemo<readonly SyncLauncherOption[]>(() => {
-    return LAUNCHABLE_SYNC_OPTIONS.filter((item) => item.type === "csv").filter((item) =>
-      matchesQuery(
-        `${SYNC_OPTION_META[item.type].title} ${item.description}`,
-        [...item.keywords, item.type],
-        query,
-      ),
-    );
-  }, [query]);
 
   const {
     data: { orderMatches, itemMatches } = EMPTY_RESULTS,
@@ -226,13 +185,6 @@ export function AppCommand(): React.JSX.Element {
   const handleNavigate = (to: AppNavigationTarget | "/add"): void => {
     closeCommand();
     void navigate({ to });
-  };
-
-  const handleSyncAction = async (nextSyncType: LaunchableSyncType): Promise<void> => {
-    if (checking) return;
-    setChosenSyncType(nextSyncType);
-    await gate(() => setSyncType(nextSyncType));
-    closeCommand();
   };
 
   const handleOrderOpen = (orderId: string): void => {
@@ -294,9 +246,8 @@ export function AppCommand(): React.JSX.Element {
   }, [open]);
 
   const showNavigationGroup = visibleNavigationItems.length > 0;
-  const showSyncGroup = showAddItems || visibleSyncItems.length > 0;
   const showSearchGroups = query.length > 0;
-  const hasVisibleResults = showNavigationGroup || showSyncGroup || showSearchGroups;
+  const hasVisibleResults = showNavigationGroup || showAddItems || showSearchGroups;
 
   return (
     <>
@@ -342,35 +293,19 @@ export function AppCommand(): React.JSX.Element {
               </CommandGroup>
             ) : null}
 
-            {showSyncGroup ? (
+            {showAddItems ? (
               <CommandGroup heading="Actions">
-                {showAddItems ? (
-                  <ActionCommandItem
-                    value="add-items"
-                    title="Add items"
-                    subtitle="Open the Add page to review your picks or search myakiba"
-                    leading={<CommandLeadIcon icon={Add01Icon} />}
-                    onSelect={() => handleNavigate("/add")}
-                  />
-                ) : null}
-                {visibleSyncItems.map((item) => {
-                  const busy = checking && chosenSyncType === item.type;
-                  return (
-                    <ActionCommandItem
-                      key={item.type}
-                      value={`sync-${item.type}`}
-                      title={SYNC_OPTION_META[item.type].title}
-                      subtitle={item.description}
-                      leading={<CommandLeadIcon icon={item.icon} busy={busy} />}
-                      busy={busy}
-                      onSelect={() => handleSyncAction(item.type)}
-                    />
-                  );
-                })}
+                <ActionCommandItem
+                  value="add-items"
+                  title="Add items"
+                  subtitle="Open the Add page to review your picks or search myakiba"
+                  leading={<CommandLeadIcon icon={Add01Icon} />}
+                  onSelect={() => handleNavigate("/add")}
+                />
               </CommandGroup>
             ) : null}
 
-            {showSyncGroup && showSearchGroups ? <CommandSeparator /> : null}
+            {showAddItems && showSearchGroups ? <CommandSeparator /> : null}
 
             {showSearchGroups ? (
               <CommandGroup heading="Orders">
@@ -478,8 +413,6 @@ export function AppCommand(): React.JSX.Element {
           </CommandFooter>
         </Command>
       </CommandDialog>
-
-      <SyncActionSheet syncType={syncType} onSyncTypeChange={setSyncType} side="right" />
     </>
   );
 }

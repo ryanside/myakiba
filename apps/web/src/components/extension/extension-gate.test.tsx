@@ -22,21 +22,11 @@ import {
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
-const {
-  ENTRY_POINTS,
-  click,
-  csvChoice,
-  currentExtension,
-  loadExtension,
-  noop,
-  renderEntryPoint,
-  resetEntryPoints,
-  useBridge,
-} = await import("../../../test/extension-entry-points");
+const { click, currentExtension, loadExtension, noop, resetEntryPoints, useBridge } =
+  await import("../../../test/extension-entry-points");
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 const { ExtensionRequiredDialog } = await import("./extension-required-dialog");
 const { dismissMissingExtension, useExtensionGate } = await import("@/lib/extension-gate");
-const { AppCommand } = await import("@/components/command/app-command");
 const { ItemResyncButton } = await import("@/components/item/item-resync-button");
 
 const [CHROME] = SUPPORTED_BROWSERS;
@@ -47,55 +37,6 @@ beforeEach(() => {
   listIn(CHROME.store);
 });
 afterEach(resetEntryPoints);
-
-describe.each(ENTRY_POINTS.map((entryPoint) => [entryPoint.name, entryPoint] as const))(
-  "%s",
-  (_name, entryPoint) => {
-    test("goes ahead when the extension is ready, even while no store lists it", async () => {
-      listIn();
-      loadExtension({ installed: true });
-      const user = userEvent.setup();
-      const { proceeded } = renderEntryPoint(entryPoint);
-
-      await entryPoint.start(user);
-
-      await waitFor(() => expect(proceeded()).toBe(true));
-      expect(screen.queryByRole("dialog", { name: /myakiba (browser )?extension/u })).toBeNull();
-    });
-
-    test("links to the store listing instead when the extension is not installed", async () => {
-      loadExtension({ installed: false });
-      const user = userEvent.setup();
-      const { proceeded } = renderEntryPoint(entryPoint);
-
-      await entryPoint.start(user);
-
-      await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
-      expect(
-        screen
-          .getByRole("link", { name: "Install from the Chrome Web Store (opens in a new tab)" })
-          .getAttribute("href"),
-      ).toBe(LISTING_URLS.chromeWebStore);
-      expect(proceeded()).toBe(false);
-    });
-
-    test("asks for an update when the extension is too old", async () => {
-      loadExtension({ protocols: { min: 0, max: 0 } });
-      const user = userEvent.setup();
-      const { proceeded } = renderEntryPoint(entryPoint);
-
-      await entryPoint.start(user);
-
-      await screen.findByRole("dialog", { name: "Update the myakiba extension" });
-      expect(
-        screen
-          .getByRole("link", { name: "How to update it (opens in a new tab)" })
-          .getAttribute("href"),
-      ).toBe("/#faq-extension-update");
-      expect(proceeded()).toBe(false);
-    });
-  },
-);
 
 function renderResyncButton() {
   let calls = 0;
@@ -115,12 +56,58 @@ function renderResyncButton() {
   return { calls: () => calls };
 }
 
+describe("the item page's resync button", () => {
+  test("goes ahead when the extension is ready, even while no store lists it", async () => {
+    listIn();
+    loadExtension({ installed: true });
+    const user = userEvent.setup();
+    const { calls } = renderResyncButton();
+
+    await click("Refresh item details")(user);
+
+    await waitFor(() => expect(calls()).toBe(1));
+    expect(screen.queryByRole("dialog", { name: /myakiba (browser )?extension/u })).toBeNull();
+  });
+
+  test("links to the store listing instead when the extension is not installed", async () => {
+    loadExtension({ installed: false });
+    const user = userEvent.setup();
+    const { calls } = renderResyncButton();
+
+    await click("Refresh item details")(user);
+
+    await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
+    expect(
+      screen
+        .getByRole("link", { name: "Install from the Chrome Web Store (opens in a new tab)" })
+        .getAttribute("href"),
+    ).toBe(LISTING_URLS.chromeWebStore);
+    expect(calls()).toBe(0);
+  });
+
+  test("asks for an update when the extension is too old", async () => {
+    loadExtension({ protocols: { min: 0, max: 0 } });
+    const user = userEvent.setup();
+    const { calls } = renderResyncButton();
+
+    await click("Refresh item details")(user);
+
+    await screen.findByRole("dialog", { name: "Update the myakiba extension" });
+    expect(
+      screen
+        .getByRole("link", { name: "How to update it (opens in a new tab)" })
+        .getAttribute("href"),
+    ).toBe("/#faq-extension-update");
+    expect(calls()).toBe(0);
+  });
+});
+
 describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as const))(
   "in %s",
   (_name, browser) => {
     beforeEach(() => browseWith(browser.userAgent));
 
-    test("an import starts when the extension is ready, whichever stores list it", async () => {
+    test("an Item Refresh starts when the extension is ready, whichever stores list it", async () => {
       for (const stores of [[], [browser.store]] as const) {
         listIn(...stores);
         loadExtension({ installed: true });
@@ -170,8 +157,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       const dialog = await screen.findByRole("dialog", { name: UNDER_REVIEW });
       expect(dialog.textContent).toContain(`It is in review at ${browser.storeName} now`);
       expect(dialog.textContent).toContain("it will be released shortly");
-      expect(dialog.textContent).toContain("the new way to import items from MyFigureCollection");
-      expect(dialog.textContent).toContain("importing is unavailable until it passes review");
+      expect(dialog.textContent).toContain("so both are unavailable until it passes review");
       expect(screen.queryByRole("link")).toBeNull();
       expect(calls()).toBe(0);
     });
@@ -200,14 +186,14 @@ test("another browser is told the extension needs desktop Chrome or Firefox", as
   await click("Refresh item details")(user);
 
   const dialog = await screen.findByRole("dialog", {
-    name: "Importing needs desktop Chrome or Firefox",
+    name: "Refreshing item details needs desktop Chrome or Firefox",
   });
-  expect(dialog.textContent).toContain("Open myakiba in one of them to import.");
+  expect(dialog.textContent).toContain("Open myakiba in one of them to refresh item details.");
   expect(screen.queryByRole("link")).toBeNull();
   expect(calls()).toBe(0);
 });
 
-test("an extension that answers ready in another browser still starts the import", async () => {
+test("an extension that answers ready in another browser still starts the refresh", async () => {
   browseWith(SAFARI);
   listIn();
   loadExtension({ installed: true });
@@ -217,24 +203,6 @@ test("an extension that answers ready in another browser still starts the import
   await click("Refresh item details")(user);
 
   await waitFor(() => expect(calls()).toBe(1));
-});
-
-test("the command palette shows it is checking on the chosen option", async () => {
-  loadExtension({ installed: false });
-  const user = userEvent.setup();
-  renderEntryPoint({
-    name: "the command palette",
-    render: () => <AppCommand />,
-    start: async () => {},
-    proceeded: () => false,
-  });
-  await click("Search")(user);
-  const option = await screen.findByRole("option", { name: csvChoice });
-
-  fireEvent.click(option);
-
-  await waitFor(() => expect(option.getAttribute("aria-busy")).toBe("true"));
-  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
 });
 
 test("the dialog closes, and the next try probes again", async () => {

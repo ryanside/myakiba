@@ -2,7 +2,8 @@ import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } fro
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { useEffect } from "react";
+import { Result } from "better-result";
+import { useEffect, useRef } from "react";
 import type { Saving } from "@/data/client";
 
 configure({ asyncUtilTimeout: 4000 });
@@ -20,7 +21,7 @@ const server = {
   lists: [...LISTS],
   listRequests: 0,
   heldOrderPatch: [] as (() => void)[],
-  finishSync: () => {},
+  finishRefresh: () => {},
   members: {} as Record<string, string[]>,
   fetches: [] as string[],
   heldSaves: [] as (() => void)[],
@@ -136,31 +137,6 @@ const fakeApp = {
         },
       },
     }),
-    sync: {
-      "job-status": {
-        get: async () => ({
-          data: (async function* stream() {
-            await new Promise<void>((resolve) => {
-              server.finishSync = resolve;
-            });
-            yield {
-              data: {
-                jobId: "job-1",
-                phase: "completed",
-                statusMessage: "Sync completed.",
-                progress: null,
-                recentItems: [],
-                error: null,
-                startedAt: "2026-10-16T00:00:00.000Z",
-                updatedAt: "2026-10-16T00:00:01.000Z",
-                terminalState: "success",
-              },
-            };
-          })(),
-          error: null,
-        }),
-      },
-    },
   },
 };
 
@@ -169,6 +145,15 @@ await mock.module("@/lib/treaty-client", () => ({
   app: fakeApp,
   getErrorMessage,
   getUserErrorMessage: getErrorMessage,
+}));
+const realRun = await import("@/data/extension-run");
+await mock.module("@/data/extension-run", () => ({
+  ...realRun,
+  refreshItemWithExtension: () =>
+    new Promise((resolve) => {
+      server.finishRefresh = () =>
+        resolve(Result.ok({ status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" }));
+    }),
 }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
@@ -190,7 +175,8 @@ const {
 } = await import("./use-lists");
 const { toast } = await import("@/components/ui/toast");
 const toastAdd = spyOn(toast, "add");
-const { useSyncJobStatusQuery } = await import("./use-sync-job-status-query");
+const { refreshItemCommand } = await import("@/data/resources/item");
+const { useResourceMutation } = await import("@/data/client");
 
 const moves = new Map<string, (intent: PositionOrderInput) => Promise<void>>();
 
@@ -212,11 +198,20 @@ afterEach(() => {
   currentActions = undefined;
 });
 
+/** An Item Refresh in flight from the moment this mounts, until the test finishes it. */
+function ItemRefresh() {
+  const { run } = useResourceMutation(refreshItemCommand);
+  const start = useRef(run);
+  useEffect(() => {
+    void start.current(98_777);
+  }, []);
+  return null;
+}
+
 describe("lists reorder", () => {
-  test("a sync that finishes while a move is saving shows the saved order once the move saves", async () => {
+  test("an Item Refresh that finishes while a move is saving shows the saved order once the move saves", async () => {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ListsOverview() {
-      useSyncJobStatusQuery("job-1", "session-1", null);
       const { data } = useListsQuery();
       const mutation = useMoveListsMutation();
       const moveOrder = mutation.move;
@@ -240,6 +235,7 @@ describe("lists reorder", () => {
       );
     render(
       <QueryClientProvider client={new QueryClient()}>
+        <ItemRefresh />
         <ListsOverview />
       </QueryClientProvider>,
     );
@@ -255,9 +251,9 @@ describe("lists reorder", () => {
       saving = move(shelfFirst);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
-    const requestsBeforeSync = server.listRequests;
-    await act(async () => server.finishSync());
-    await waitFor(() => expect(server.listRequests).toBeGreaterThan(requestsBeforeSync));
+    const requestsBeforeRefresh = server.listRequests;
+    await act(async () => server.finishRefresh());
+    await waitFor(() => expect(server.listRequests).toBeGreaterThan(requestsBeforeRefresh));
     await act(async () => {
       server.heldOrderPatch[0]?.();
       await saving;
