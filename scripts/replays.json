@@ -1,6 +1,12 @@
 {
   "test": [
     {
+      "fix": "326d3db7612f4efe33263daf9d90331f6b0b5a84",
+      "bug": "The Add page's first search read aria-busy=\"false\" while its request was in flight, beside \"Searching…\".",
+      "test": "apps/web/src/components/add/add-search.test.tsx",
+      "fixed": ["the first search says Searching… and its list is busy until the answer"]
+    },
+    {
       "fix": "8e2f46bcdbf7e018f7137f1b29f3304d8efc7cf6",
       "bug": "The SFW refusal on an MFC Item page linked to a settings page that cannot turn the switch off, and dismissing it lost keyboard focus.",
       "test": "apps/extension/lib/mfc-page/start.test.ts",
