@@ -1,8 +1,7 @@
 {
   "test": [
     {
-      "fix": "WORKTREE",
-      "base": "7793e2b13004cda90cc6612f1c1eff6d85796a71",
+      "fix": "cf4c7e622d56e3484022fe22e62d2767aaf3eb2f",
       "bug": "Signing in or registering from a protected deep link lost its query and hash.",
       "test": "apps/web/src/components/auth/deep-link.test.tsx",
       "fixed": [
