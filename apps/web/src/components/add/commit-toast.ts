@@ -20,15 +20,6 @@ export type CommitOutcome = {
 
 export type ViewAction = { readonly label: string; readonly target: NavigateOptions };
 
-const itemView = (committed: CommitAnswer["committed"]): ViewAction => {
-  const [first, ...rest] = committed;
-  if (first === undefined) return { label: "View", target: { to: "/items" } };
-  return {
-    label: rest.length === 0 ? "View" : "View first item",
-    target: itemDestination(first.itemId, first.externalId) as NavigateOptions,
-  };
-};
-
 const listView = (lists: readonly ChosenList[], label: string): ViewAction | null => {
   const [first, ...rest] = lists;
   if (first === undefined) return null;
@@ -37,16 +28,12 @@ const listView = (lists: readonly ChosenList[], label: string): ViewAction | nul
     : { label, target: { to: "/lists" } };
 };
 
-/**
- * Where the toast's View goes. `Collection.list` shows only Owned rows, and an Ordered, Paid or
- * Shipped Collection Item outside an Order shows only on its Item's page, so View goes there.
- */
+/** Where the toast's View goes. */
 export function commitView(outcome: CommitOutcome): ViewAction {
   const { ownership, answer, wishlist, lists } = outcome;
   const { committed, orderId } = answer;
   switch (ownership.kind) {
     case "collection": {
-      if (ownership.shared.status !== "Owned") return itemView(committed);
       const ids = committed.flatMap(({ collectionId }) => (collectionId ? [collectionId] : []));
       return { label: "View", target: { to: "/collection", search: { ids } } };
     }
@@ -60,7 +47,10 @@ export function commitView(outcome: CommitOutcome): ViewAction {
       if (list !== null) return list;
       const [first, ...rest] = committed;
       return first !== undefined && rest.length === 0
-        ? itemView(committed)
+        ? {
+            label: "View",
+            target: itemDestination(first.itemId, first.externalId) as NavigateOptions,
+          }
         : { label: "View", target: { to: "/items" } };
     }
   }
@@ -97,20 +87,14 @@ export function commitToastTitle(outcome: CommitOutcome): string {
 
 export function commitToastDescription(outcome: CommitOutcome): string | undefined {
   const { ownership, wishlist, lists } = outcome;
-  const notes: string[] = [];
-  if (ownership.kind !== "none") {
-    const targets = [
-      wishlist ? "on your Wishlist" : null,
-      ...lists.map(({ title }) => `in ${quoted(title)}`),
-    ]
-      .filter((target) => target !== null)
-      .join(" and ");
-    if (targets !== "") notes.push(`Also ${targets}.`);
-  }
-  if (ownership.kind === "collection" && ownership.shared.status !== "Owned") {
-    notes.push("They show on each Item's page until they are Owned.");
-  }
-  return notes.length > 0 ? notes.join(" ") : undefined;
+  if (ownership.kind === "none") return undefined;
+  const targets = [
+    wishlist ? "on your Wishlist" : null,
+    ...lists.map(({ title }) => `in ${quoted(title)}`),
+  ]
+    .filter((target) => target !== null)
+    .join(" and ");
+  return targets === "" ? undefined : `Also ${targets}.`;
 }
 
 export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {

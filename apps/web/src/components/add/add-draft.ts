@@ -15,10 +15,10 @@ const rowOverridesSchema = z.object({
   condition: z.enum(CONDITIONS).optional(),
   score: z.number().min(0).max(10).optional(),
   shop: z.string().optional(),
-  /** A row's date wins over the shared date, and null clears the shared date for that row. */
   orderDate: dateOverride,
   paymentDate: dateOverride,
   shippingDate: dateOverride,
+  /** A row's date wins over the shared date, and null clears the shared date for that row. */
   collectionDate: dateOverride,
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),

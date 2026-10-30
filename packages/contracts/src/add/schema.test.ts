@@ -23,11 +23,7 @@ import {
 const COMMIT_ID = "0b6f3f8e-7d1c-4a55-9d3e-2f6b8c1a4e77";
 
 const shared = {
-  status: "Owned",
   shop: "AmiAmi",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
   collectionDate: "2026-10-01",
   shippingMethod: "EMS",
   condition: "New",
@@ -197,6 +193,11 @@ describe("the ownership of an Add commit", () => {
     ["shared fields on not owned", { kind: "none", shared }],
     ["Collection without its shared fields", { kind: "collection" }],
     ["an extra shared field", { kind: "collection", shared: { ...shared, price: 100 } }],
+    ["a status for Collection", { kind: "collection", shared: { ...shared, status: "Owned" } }],
+    [
+      "a shared date other than the Collection Date",
+      { kind: "collection", shared: { ...shared, orderDate: null } },
+    ],
     ["an existing Order without its id", { kind: "order", order: { kind: "existing" } }],
     [
       "a new Order with an id",

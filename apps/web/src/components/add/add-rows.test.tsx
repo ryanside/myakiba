@@ -95,6 +95,10 @@ test("details open inline and depend on the ownership", async () => {
   expect(screen.getByRole("textbox", { name: "Shop" })).toBeDefined();
   expect(screen.getByRole("textbox", { name: "Notes" })).toBeDefined();
   expect(screen.getByRole("group", { name: "Score for Miku" })).toBeDefined();
+  expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+  for (const date of ["Order Date", "Payment Date", "Shipping Date", "Collection Date"]) {
+    expect(screen.getByText(date)).toBeDefined();
+  }
 });
 
 test("an Order Item's details leave out what the Order gives it", async () => {

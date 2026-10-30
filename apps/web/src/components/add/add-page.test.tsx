@@ -173,6 +173,29 @@ test.each([
   );
 });
 
+test("Collection asks for a Collection Date, never a status, and sends none", async () => {
+  const user = userEvent.setup();
+  openAddPage(`/add?item=${ITEM_ID}&to=collection`);
+
+  await screen.findByRole("button", { name: "Add 1 to collection" });
+  expect(screen.getByText("Collection Date")).toBeDefined();
+  expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
+  expect(screen.getByText("1 new Collection Item")).toBeDefined();
+
+  await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect<unknown>(server.commits[0]?.ownership).toEqual({
+    kind: "collection",
+    shared: {
+      shop: "",
+      collectionDate: null,
+      shippingMethod: "n/a",
+      condition: "New",
+      count: 1,
+    },
+  });
+});
+
 test("a link to an order presets that Order and reads its title", async () => {
   server.orders.set("spring000001", "Spring order");
   openAddPage(`/add?item=${ITEM_ID}&to=order:spring000001`);

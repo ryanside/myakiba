@@ -63,23 +63,19 @@ describe("buildCommitChoices", () => {
     expect(choices.rows.map(({ price }) => price)).toEqual([null, 1250, 0]);
   });
 
-  test("Collection sends the status's date in the shared fields and nulls the others", () => {
+  test("Collection sends the Collection Date and no status in the shared fields", () => {
     const choices = built(
       [row("a")],
       to({
         kind: "collection",
-        shared: { ...DEFAULT_SHARED, status: "Shipped", date: "2026-05-01", shop: " AmiAmi " },
+        shared: { ...DEFAULT_SHARED, collectionDate: "2026-05-01", shop: " AmiAmi " },
       }),
     );
     expect(choices.ownership).toEqual({
       kind: "collection",
       shared: {
-        status: "Shipped",
         shop: "AmiAmi",
-        orderDate: null,
-        paymentDate: null,
-        shippingDate: "2026-05-01",
-        collectionDate: null,
+        collectionDate: "2026-05-01",
         shippingMethod: "n/a",
         condition: "New",
         count: 1,
@@ -254,7 +250,7 @@ test("the summary names every place the rows will go", () => {
       to(COLLECTION, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
       4,
     ),
-  ).toBe("4 new Collection Items (Owned) · on your Wishlist · in ‘Display shelf’");
+  ).toBe("4 new Collection Items · on your Wishlist · in ‘Display shelf’");
   expect(commitSummary(to(NEW_ORDER), 1)).toBe("New Order with 1 Order Item (Ordered)");
   expect(commitSummary(to(null), 1)).toBeNull();
 });

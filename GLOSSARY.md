@@ -194,7 +194,7 @@ Saving a Pick: myakiba reads the picked page and adds its Item to the Item Datab
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-On the Add Page, creating one Collection Item per selected row with the chosen Acquisition Status.
+On the Add Page, creating one Owned Collection Item per selected row. Items not yet owned go through Create order or Add to order.
 _Avoid_: Sync Collection
 
 **Create order**:

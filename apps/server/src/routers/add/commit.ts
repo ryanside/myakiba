@@ -34,9 +34,6 @@ const orderTerms = {
   shippingMethod: order.shippingMethod,
 };
 
-// A row's own date wins even when it is null, which clears the shared date for that row.
-const own = <T>(value: T | undefined, shared: T) => (value === undefined ? shared : value);
-
 async function orderTermsOf(
   tx: Tx,
   userId: string,
@@ -72,12 +69,14 @@ async function placementOf(
       return Result.ok({
         orderId: null,
         fields: (row) => ({
-          status: shared.status,
+          status: "Owned",
           shop: row.shop ?? shared.shop,
-          orderDate: own(row.orderDate, shared.orderDate),
-          paymentDate: own(row.paymentDate, shared.paymentDate),
-          shippingDate: own(row.shippingDate, shared.shippingDate),
-          collectionDate: own(row.collectionDate, shared.collectionDate),
+          orderDate: row.orderDate,
+          paymentDate: row.paymentDate,
+          shippingDate: row.shippingDate,
+          // A row's own date wins even when it is null, which clears the shared date for that row.
+          collectionDate:
+            row.collectionDate === undefined ? shared.collectionDate : row.collectionDate,
           shippingMethod: shared.shippingMethod,
           condition: row.condition ?? shared.condition,
           count: row.count ?? shared.count,

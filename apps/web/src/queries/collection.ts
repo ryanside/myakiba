@@ -6,31 +6,11 @@ import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 export function getCollection(filters: CollectionFilters) {
   const queryParams = {
+    ...filters,
     limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
     sort: filters.sort ?? "createdAt",
     order: filters.order ?? "desc",
-    search: filters.search,
-    paidMin: filters.paidMin,
-    paidMax: filters.paidMax,
-    shop: filters.shop,
-    payDateStart: filters.payDateStart,
-    payDateEnd: filters.payDateEnd,
-    shipDateStart: filters.shipDateStart,
-    shipDateEnd: filters.shipDateEnd,
-    colDateStart: filters.colDateStart,
-    colDateEnd: filters.colDateEnd,
-    shipMethod: filters.shipMethod,
-    relDateStart: filters.relDateStart,
-    relDateEnd: filters.relDateEnd,
-    relPriceMin: filters.relPriceMin,
-    relPriceMax: filters.relPriceMax,
-    relCurrency: filters.relCurrency,
-    category: filters.category,
-    entries: filters.entries,
-    scale: filters.scale,
-    tags: filters.tags,
-    condition: filters.condition,
   };
 
   return call(

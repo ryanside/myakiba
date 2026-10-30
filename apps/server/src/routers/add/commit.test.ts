@@ -123,11 +123,7 @@ type NewOrderFields = Extract<
 const toCollection = (overrides: Partial<Shared> = {}): Ownership => ({
   kind: "collection",
   shared: {
-    status: "Owned",
     shop: "",
-    orderDate: null,
-    paymentDate: null,
-    shippingDate: null,
     collectionDate: null,
     shippingMethod: "n/a",
     condition: "New",
@@ -275,20 +271,33 @@ test("a Collection commit answers each row with its new Collection Item", async 
   expect(rows.map((row) => row.itemId)).toEqual(["item-1", "item-3"]);
 });
 
-test.each([
-  { status: "Owned", dateField: "collectionDate" },
-  { status: "Ordered", dateField: "orderDate" },
-  { status: "Paid", dateField: "paymentDate" },
-  { status: "Shipped", dateField: "shippingDate" },
-] as const)("a Collection commit with status $status keeps its $dateField", async (choice) => {
-  const dated: Partial<Shared> = { status: choice.status };
-  dated[choice.dateField] = "2026-05-05";
-  const sent = await commit(request({ rows: bare("item-1"), ownership: toCollection(dated) }));
+test("a Collection commit writes Owned rows with its Collection Date", async () => {
+  const sent = await commit(
+    request({
+      rows: bare("item-1", "item-2"),
+      ownership: toCollection({ collectionDate: "2026-05-05" }),
+    }),
+  );
 
   expect(sent.status).toBe(200);
-  const [row] = await ownedRows();
-  expect(row?.status).toBe(choice.status);
-  expect(row?.[choice.dateField]).toBe("2026-05-05");
+  const rows = await ownedRows();
+  expect(rows.map(({ status, collectionDate }) => ({ status, collectionDate }))).toEqual([
+    { status: "Owned", collectionDate: "2026-05-05" },
+    { status: "Owned", collectionDate: "2026-05-05" },
+  ]);
+});
+
+test.each([
+  ["a status", { status: "Owned" }],
+  ["a shared Order Date", { orderDate: "2026-05-05" }],
+  ["a shared Payment Date", { paymentDate: "2026-05-05" }],
+  ["a shared Shipping Date", { shippingDate: "2026-05-05" }],
+])("a Collection commit naming %s is refused and writes nothing", async (_name, extra) => {
+  const ownership = toCollection(extra as Partial<Shared>);
+  const sent = await commit(request({ rows: bare("item-1"), ownership }));
+
+  expect(sent.status).toBe(422);
+  expect(await ownedRows()).toEqual([]);
 });
 
 test("a row's own details win over the shared ones, including a cleared date", async () => {
@@ -301,17 +310,19 @@ test("a row's own details win over the shared ones, including a cleared date", a
           shop: "Mandarake",
           count: 2,
           condition: "Pre-Owned",
-          orderDate: null,
+          orderDate: "2026-01-10",
+          paymentDate: "2026-01-11",
+          shippingDate: "2026-06-20",
           collectionDate: "2026-07-07",
           score: "9.5",
           tags: ["shelf"],
           notes: "Box dented",
         },
         { itemId: "item-2", price: null },
+        { itemId: "item-3", price: null, collectionDate: null },
       ],
       ownership: toCollection({
         shop: "AmiAmi",
-        orderDate: "2026-01-10",
         collectionDate: "2026-06-30",
         shippingMethod: "SAL",
         count: 1,
@@ -321,12 +332,15 @@ test("a row's own details win over the shared ones, including a cleared date", a
   );
 
   expect(sent.status).toBe(200);
-  const [first, second] = await ownedRows();
+  const [first, second, third] = await ownedRows();
   expect(first).toMatchObject({
+    status: "Owned",
     shop: "Mandarake",
     count: 2,
     condition: "Pre-Owned",
-    orderDate: null,
+    orderDate: "2026-01-10",
+    paymentDate: "2026-01-11",
+    shippingDate: "2026-06-20",
     collectionDate: "2026-07-07",
     shippingMethod: "SAL",
     price: 3000,
@@ -338,13 +352,16 @@ test("a row's own details win over the shared ones, including a cleared date", a
     shop: "AmiAmi",
     count: 1,
     condition: "New",
-    orderDate: "2026-01-10",
+    orderDate: null,
+    paymentDate: null,
+    shippingDate: null,
     collectionDate: "2026-06-30",
     shippingMethod: "SAL",
     score: "0.0",
     tags: [],
     notes: "",
   });
+  expect(third?.collectionDate).toBeNull();
 });
 
 test("a blank price takes the latest release price only in the user's currency", async () => {

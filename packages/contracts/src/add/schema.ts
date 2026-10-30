@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { newOrderSchema } from "../orders/schema";
 import { itemDatabaseReleaseSummarySchema } from "../search/schema";
-import { CATEGORIES, COLLECTION_STATUSES, CONDITIONS, SHIPPING_METHODS } from "../shared/constants";
+import { CATEGORIES, CONDITIONS, SHIPPING_METHODS } from "../shared/constants";
 import { MAX_ADD_ROWS, MAX_COMMIT_LISTS } from "./constants";
 
 const MAX_ITEM_ID_LENGTH = 64;
@@ -60,11 +60,7 @@ const carriesDetails = (row: z.output<typeof addRowSchema>) =>
   Object.entries(row).some(([field, value]) => !BARE_ROW_FIELDS.has(field) && value !== undefined);
 
 const collectionSharedSchema = z.strictObject({
-  status: z.enum(COLLECTION_STATUSES),
   shop: shopSchema,
-  orderDate: dateOrNull,
-  paymentDate: dateOrNull,
-  shippingDate: dateOrNull,
   collectionDate: dateOrNull,
   shippingMethod: z.enum(SHIPPING_METHODS),
   condition: z.enum(CONDITIONS),

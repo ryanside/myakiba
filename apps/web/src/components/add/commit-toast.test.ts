@@ -30,31 +30,12 @@ const LIST = { id: "list-1", title: "Display shelf" };
 const NOT_OWNED = { kind: "none" } as const;
 
 describe("View", () => {
-  test("Owned Collection Items open the Collection filtered to them", () => {
+  test("Collection Items open the Collection filtered to them", () => {
     expect(commitView(outcome({ ownership: OWNED })).target).toEqual({
       to: "/collection",
       search: { ids: ["collection-0", "collection-1"] },
     });
   });
-
-  test.each(["Ordered", "Paid", "Shipped"] as const)(
-    "%s Collection Items open an Item's page, the one screen that shows them",
-    (status) => {
-      const ownership = { kind: "collection", shared: { ...DEFAULT_SHARED, status } } as const;
-      const one = {
-        ownership,
-        answer: { committed: committed(1), orderId: null, wishlistAdded: 0, listIds: [] },
-      };
-      expect(commitView(outcome(one))).toEqual({
-        label: "View",
-        target: { to: "/item/$externalId", params: { externalId: 100 } },
-      });
-      expect(commitView(outcome({ ownership }))).toEqual({
-        label: "View first item",
-        target: { to: "/item/$externalId", params: { externalId: 100 } },
-      });
-    },
-  );
 
   test("a custom Item opens its own page", () => {
     const answer = {
@@ -63,11 +44,7 @@ describe("View", () => {
       wishlistAdded: 0,
       listIds: [],
     };
-    const ownership = {
-      kind: "collection",
-      shared: { ...DEFAULT_SHARED, status: "Paid" },
-    } as const;
-    expect(commitView(outcome({ ownership, answer })).target).toEqual({
+    expect(commitView(outcome({ ownership: NOT_OWNED, answer })).target).toEqual({
       to: "/item/custom/$id",
       params: { id: "custom-1" },
     });
@@ -130,11 +107,7 @@ test("the description says where else the rows went", () => {
   expect(commitToastDescription(outcome({ ownership: OWNED, wishlist: true, lists: [LIST] }))).toBe(
     "Also on your Wishlist and in ‘Display shelf’.",
   );
-  expect(
-    commitToastDescription(
-      outcome({ ownership: { kind: "collection", shared: { ...DEFAULT_SHARED, status: "Paid" } } }),
-    ),
-  ).toBe("They show on each Item's page until they are Owned.");
+  expect(commitToastDescription(outcome({ ownership: OWNED }))).toBeUndefined();
 });
 
 test("the title says what happened", () => {

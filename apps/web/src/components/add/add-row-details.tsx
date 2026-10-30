@@ -8,13 +8,16 @@ import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import type { DraftRow, RowOverrides } from "./add-draft";
 import { DateField, LabeledField } from "./add-fields";
-import { STATUS_DATE_LABEL, statusDateField } from "./commit-input";
 import type { Ownership } from "./commit-input";
 
 const MAX_TAGS = 20;
 const MAX_TAG_LENGTH = 50;
 
-const ROW_DATE_FIELDS = ["Ordered", "Paid", "Shipped", "Owned"] as const;
+const PURCHASE_DATES = [
+  { field: "orderDate", label: "Order Date" },
+  { field: "paymentDate", label: "Payment Date" },
+  { field: "shippingDate", label: "Shipping Date" },
+] as const;
 
 /** A row's own details, inline. An Order Item takes its Shop and dates from its Order. */
 export function AddRowDetails({
@@ -60,21 +63,29 @@ export function AddRowDetails({
         </LabeledField>
       ) : null}
 
-      {shared
-        ? ROW_DATE_FIELDS.map((status) => {
-            const field = statusDateField(status);
-            const inherited = statusDateField(shared.status) === field ? shared.date : null;
-            return (
-              <DateField
-                key={field}
-                id={`${baseId}-${field}`}
-                label={STATUS_DATE_LABEL[status]}
-                value={overrides[field] === undefined ? inherited : overrides[field]}
-                onChange={(value) => onChange({ [field]: value })}
-              />
-            );
-          })
-        : null}
+      {shared ? (
+        <>
+          {PURCHASE_DATES.map(({ field, label }) => (
+            <DateField
+              key={field}
+              id={`${baseId}-${field}`}
+              label={label}
+              value={overrides[field] ?? null}
+              onChange={(value) => onChange({ [field]: value })}
+            />
+          ))}
+          <DateField
+            id={`${baseId}-collectionDate`}
+            label="Collection Date"
+            value={
+              overrides.collectionDate === undefined
+                ? shared.collectionDate
+                : overrides.collectionDate
+            }
+            onChange={(collectionDate) => onChange({ collectionDate })}
+          />
+        </>
+      ) : null}
 
       <TagsField
         id={`${baseId}-tags`}

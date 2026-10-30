@@ -1,6 +1,5 @@
 import type { addItemSchema } from "@myakiba/contracts/add/schema";
 import type {
-  COLLECTION_STATUSES,
   CONDITIONS,
   ORDER_STATUSES,
   SHIPPING_METHODS,
@@ -13,15 +12,12 @@ import type { AddSearch } from "@/lib/add-search";
 import type { DraftRow } from "./add-draft";
 
 export type AddItem = z.infer<typeof addItemSchema>;
-export type CollectionStatus = (typeof COLLECTION_STATUSES)[number];
 type OrderStatus = (typeof ORDER_STATUSES)[number];
 type ShippingMethod = (typeof SHIPPING_METHODS)[number];
 type Condition = (typeof CONDITIONS)[number];
 
 export type SharedFields = {
-  readonly status: CollectionStatus;
-  /** The date of `status`, as `statusDateField` names it. */
-  readonly date: string | null;
+  readonly collectionDate: string | null;
   readonly shop: string;
   readonly shippingMethod: ShippingMethod;
   readonly condition: Condition;
@@ -101,8 +97,7 @@ export type CommitRow = {
 };
 
 export const DEFAULT_SHARED: SharedFields = {
-  status: "Owned",
-  date: null,
+  collectionDate: null,
   shop: "",
   shippingMethod: "n/a",
   condition: "New",
@@ -126,25 +121,6 @@ export const DEFAULT_ORDER_FIELDS: OrderFields = {
   miscFees: "",
   notes: "",
 };
-
-const STATUS_DATE_FIELD = {
-  Ordered: "orderDate",
-  Paid: "paymentDate",
-  Shipped: "shippingDate",
-  Owned: "collectionDate",
-} as const satisfies Record<CollectionStatus, string>;
-
-type StatusDateField = (typeof STATUS_DATE_FIELD)[CollectionStatus];
-
-export const statusDateField = (status: CollectionStatus): StatusDateField =>
-  STATUS_DATE_FIELD[status];
-
-export const STATUS_DATE_LABEL = {
-  Ordered: "Order Date",
-  Paid: "Payment Date",
-  Shipped: "Shipping Date",
-  Owned: "Collection Date",
-} as const satisfies Record<CollectionStatus, string>;
 
 /** The bar a link's `to` presets. Only the URL presets anything. */
 export function presetDestination(to?: AddSearch["to"]): DestinationForm {
@@ -223,22 +199,6 @@ function collectionRow(row: DraftRow, issues: CommitIssue[]) {
   };
 }
 
-function sharedInput(shared: SharedFields) {
-  const { status, date, shop, shippingMethod, condition, count } = shared;
-  const dateOf = (field: StatusDateField) => (statusDateField(status) === field ? date : null);
-  return {
-    status,
-    shop: shop.trim(),
-    orderDate: dateOf("orderDate"),
-    paymentDate: dateOf("paymentDate"),
-    shippingDate: dateOf("shippingDate"),
-    collectionDate: dateOf("collectionDate"),
-    shippingMethod,
-    condition,
-    count,
-  };
-}
-
 function newOrderInput(fields: OrderFields, titles: readonly string[], issues: CommitIssue[]) {
   const { title, shop, notes, ...rest } = fields;
   // A title typed and cleared again falls back to the one the page wrote.
@@ -280,7 +240,10 @@ export function buildCommitChoices(
       case "collection":
         return {
           rows: rows.map(({ row }) => collectionRow(row, issues)),
-          ownership: { kind: "collection", shared: sharedInput(ownership.shared) },
+          ownership: {
+            kind: "collection",
+            shared: { ...ownership.shared, shop: ownership.shared.shop.trim() },
+          },
         };
       case "order": {
         const { order } = ownership;
@@ -366,7 +329,7 @@ const plural = (count: number, singular: string, several: string) =>
 function ownershipSummary(ownership: Ownership, count: number): string | null {
   switch (ownership.kind) {
     case "collection":
-      return `${plural(count, "new Collection Item", "new Collection Items")} (${ownership.shared.status})`;
+      return plural(count, "new Collection Item", "new Collection Items");
     case "order": {
       const { order } = ownership;
       if (order.kind === "new") {

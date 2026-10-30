@@ -141,11 +141,7 @@ const CHOICES: AddChoices = {
 };
 
 const SHARED = {
-  status: "Owned",
   shop: "AmiAmi",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
   collectionDate: null,
   shippingMethod: "n/a",
   condition: "New",
@@ -260,7 +256,7 @@ describe("an Add commit", () => {
     await act(() =>
       commit.current.run({
         ...CHOICES,
-        ownership: { kind: "collection", shared: { ...SHARED, status: "Ordered" } },
+        ownership: { kind: "collection", shared: { ...SHARED, condition: "Pre-Owned" } },
       }),
     );
 
