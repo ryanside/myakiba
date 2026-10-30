@@ -1,4 +1,3 @@
-import type { InputOf } from "@/domain/kernel";
 /**
  * The wire of every operation a route serves: each failure's status and literal
  * message, the 500, and each string answer's literal. Written against the kernel
@@ -8,6 +7,7 @@ import type { InputOf } from "@/domain/kernel";
 
 import type { ElysiaCustomStatusResponse as S } from "elysia";
 import { serve } from "@/domain/kernel";
+import type { Op } from "@/domain/kernel";
 import { Add } from "@/routers/add/module";
 import { Analytics } from "@/routers/analytics/module";
 import { Calendar } from "@/routers/calendar/module";
@@ -31,6 +31,8 @@ type Failures<F> =
   Answer<F> extends infer A ? (A extends S<infer _C, infer _T, infer _S> ? A : never) : never;
 /** A string answer: a message body Eden must see as its literal. */
 type Strings<F> = Extract<Answer<F>, string>;
+
+type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
 
 declare const caller: Parameters<typeof serve>[0];
 declare function inputOf<O>(op: O): InputOf<O>;

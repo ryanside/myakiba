@@ -257,5 +257,3 @@ export function command(
   if (config.operational) operationals.set(op, config.operational);
   return op;
 }
-
-export type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
