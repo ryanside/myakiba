@@ -2106,16 +2106,6 @@
       "reason": "Keep the test from the fix; the Add flow later rewrote the onboarding notices and this surface list, so its copy no longer passes against this historical flip."
     },
     {
-      "fix": "e3a64c3fc1367914b60c94042437ccc8ff7f56a3",
-      "bug": "composition and recovery execute threw control objects through Result.gen and lost child failure ownership",
-      "test": "apps/server/src/domain/execute.test.ts",
-      "fixed": [
-        "gen forwards a child's throw as a Result with its own failure and log",
-        "gen forwards a child's operational as a Result with its own failure and log"
-      ],
-      "reason": "Recovery forwarding was deliberately replaced by parent ownership to match its declared 500 type. Composition forwarding remains live here; the recovery contract and child diagnostics are protected by f08ae5fc2ab9e54cf149462b819d7176d40ea71c."
-    },
-    {
       "fix": "9dfbaef5bc463d7302c6f659dcde9c39063f47a2",
       "bug": "the outdated extension's How to update it link opened the install answer, which said nothing about updating while every store reviewed",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
@@ -2233,15 +2223,6 @@
       ]
     },
     {
-      "fix": "8a5a450e134461f0781a8c607a7abf3c7fc32d13",
-      "bug": "An unrelated composition forwarded a stashed genuine child outcome outside its declared failure type.",
-      "test": "apps/server/src/domain/execution-scope.test.ts",
-      "fixed": [
-        "a stashed real outcome belongs to the returning compose",
-        "a stashed real outcome belongs to the returning compose before"
-      ]
-    },
-    {
       "fix": "dd851781a4a657bd742133f70a4cf78064d17f37",
       "bug": "Static source parsing counted uncalled registrations as coverage and silently passed without package test results.",
       "test": "scripts/replay-coverage.test.ts",
@@ -2283,15 +2264,6 @@
           "fixed": ["the sources zip leaves out legacy test reports at package roots"],
           "reason": "bun run test now writes reports under .test-results/<run>/, which the sources zip never takes, so the test was retitled to the legacy package-root reports it guards."
         }
-      ]
-    },
-    {
-      "fix": "7930ff7e0454c63cce1ac4d174be7a45cb156af5",
-      "bug": "An outcome from one invocation could be forwarded by another invocation of the same op, including across users.",
-      "test": "apps/server/src/domain/execution-invocation.test.ts",
-      "fixed": [
-        "an outcome cannot cross sequential invocations of the same op",
-        "an outcome cannot cross concurrent invocations of the same op"
       ]
     },
     {
@@ -2633,7 +2605,7 @@
         "src/domain/kernel.type-test.ts(401,3): error TS2322",
         "src/domain/kernel.type-test.ts(406,3): error TS2322",
         "src/domain/kernel.type-test.ts(410,34): error TS2322",
-        "src/domain/kernel.type-test.ts(461,32): error TS1360"
+        "src/domain/kernel.type-test.ts(440,32): error TS1360"
       ]
     }
   ]

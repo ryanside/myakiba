@@ -18,7 +18,7 @@ import { privateApi } from "@/boundary/private-api";
 import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
-import { command, compose, paginate, query, serve, ExecutionFailed } from "./kernel";
+import { command, paginate, query, serve, ExecutionFailed } from "./kernel";
 import { tagged } from "./tagged";
 
 const config = { action: "probe", failure: "Probe failed" };
@@ -409,27 +409,6 @@ query({ ...config, operational: [UnhandledException] }, async () =>
 // @ts-expect-error a bare tagged class reads as any to TS, which would list every internal error
 query({ ...config, operational: [Absent] }, async () => Result.ok(1));
 
-const composedStep = query(
-  { action: "types.step", failure: "Step failed" },
-  async (_scope, input: { readonly count: number }) =>
-    input.count > 0 ? Result.ok(input.count) : Result.err(new NoId()),
-);
-const composedWorkflow = compose(
-  {
-    action: "types.composed",
-    failure: "Plan failed",
-    steps: [composedStep],
-    before: async (_scope, input: { readonly count: number }) => Result.ok(input),
-  },
-  (scope, input) => scope.execute(composedStep, input),
-);
-const composedAnswer = () => serve(caller, composedWorkflow, { count: 1 });
-void (true satisfies Equal<
-  Awaited<ReturnType<typeof composedAnswer>>,
-  | number
-  | ElysiaCustomStatusResponse<400, "No id">
-  | ElysiaCustomStatusResponse<500, "Plan failed" | "Step failed">
->);
 const recoveryChild = query({ action: "types.child", failure: "Child failed" }, async () => {
   throw new Error("child unavailable");
 });
@@ -451,16 +430,16 @@ void (false satisfies CanConstruct<typeof ExecutionFailed>);
 
 const SelfMadeExecutionFailure = tagged("ExecutionFailed")<{
   readonly cause: UnhandledException;
-  readonly operation: { readonly action: string; readonly failure: string };
+  readonly childAction: string;
 }>;
 const selfMadeExecutionFailure = new SelfMadeExecutionFailure({
   cause: new UnhandledException({ cause: new Error("forged") }),
-  operation: { action: "forged", failure: "forged wire body" },
+  childAction: "forged",
 });
 // @ts-expect-error a self-made outcome has no private kernel identity
 void (selfMadeExecutionFailure satisfies ExecutionFailed);
 
 const executionFailureProbe = new Error("unanswerable child");
 if (ExecutionFailed.is(executionFailureProbe)) {
-  void (executionFailureProbe.operation.failure satisfies string);
+  void (executionFailureProbe.childAction satisfies string);
 }

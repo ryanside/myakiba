@@ -6,45 +6,33 @@ import { createTestDatabase } from "../../test/database";
 
 initLogger({ enabled: false });
 await createTestDatabase();
-const { compose, query, run, serve, ExecutionFailed } = await import("./kernel");
+const { command, query, serve, ExecutionFailed } = await import("./kernel");
 const { Viewer } = await import("./viewer");
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
+const config = { action: "test.owner", failure: "Safe owner failure" } as const;
+const throwing = async () => {
+  throw new Error("recover me");
+};
+const child = query({ action: "test.child", failure: "Child failed" }, async () => {
+  throw new Error("original child error");
+});
 
 test("only kernel-created execution failures can forward an outcome", async () => {
   const log = createRequestLogger();
   let captured: ExecutionOutcome | undefined;
-  const child = query({ action: "test.child", failure: "Child failed" }, async () => {
-    throw new Error("original child error");
-  });
-  const capture = compose(
-    {
-      action: "test.capture",
-      failure: "Capture failed",
-      steps: [child],
-      before: async () => Result.ok(null),
-    },
-    async (scope) => {
+  const capture = command(config, throwing, {
+    recover: async (scope) => {
       const result = await scope.execute(child, {});
       if (result.isErr() && ExecutionFailed.is(result.error)) captured = result.error;
       return Result.ok(1);
     },
-  );
-  await run(viewer, capture, {}, log);
+  });
+  await serve({ viewer, log }, capture, {});
   if (!captured) throw new Error("Expected an execution failure to capture");
   expect(ExecutionFailed.is(captured)).toBe(true);
   const forged: ExecutionOutcome = Object.create(captured);
-  Object.defineProperty(forged, "operation", {
-    value: { action: "forged.action", failure: "forged secret failure" },
-  });
-  const operation = compose(
-    {
-      action: "test.owner",
-      failure: "Safe owner failure",
-      steps: [],
-      before: async () => Result.ok(null),
-    },
-    async () => Result.err(forged),
-  );
+  Object.defineProperty(forged, "childAction", { value: "forged.action" });
+  const operation = command(config, throwing, { recover: async () => Result.err(forged) });
   const errors = spyOn(log, "error");
   try {
     const response = await serve({ viewer, log }, operation, {});
@@ -64,7 +52,6 @@ test("kernel exports only its public operation API and execution guard", async (
   expect(Object.keys(await import("./kernel")).toSorted()).toEqual([
     "ExecutionFailed",
     "command",
-    "compose",
     "paginate",
     "paginateBy",
     "ping",
@@ -79,43 +66,29 @@ test("kernel exports only its public operation API and execution guard", async (
 test("a real execution failure cannot have its trusted metadata replaced", async () => {
   const log = createRequestLogger();
   const errors = spyOn(log, "error");
-  const child = query({ action: "test.child", failure: "Child failed" }, async () => {
-    throw new Error("original child error");
-  });
   let mutationRejected = false;
-  const operation = compose(
-    {
-      action: "test.owner",
-      failure: "Safe owner failure",
-      steps: [child],
-      before: async () => Result.ok(null),
-    },
-    async (scope) => {
+  const operation = command(config, throwing, {
+    recover: async (scope) => {
       const result = await scope.execute(child, {});
       if (result.isErr()) {
         try {
-          Object.assign(result.error, {
-            operation: { action: "forged.action", failure: "forged wire body" },
-          });
+          Object.assign(result.error, { childAction: "forged.action" });
         } catch (error) {
           if (!(error instanceof TypeError)) throw error;
           mutationRejected = true;
         }
-        expect(() =>
-          Object.assign(result.error.operation, { failure: "forged nested body" }),
-        ).toThrow(TypeError);
       }
       return result;
     },
-  );
+  });
   try {
     const response = await serve({ viewer, log }, operation, {});
     expect({ mutationRejected, response }).toMatchObject({
       mutationRejected: true,
-      response: { code: 500, response: "Child failed" },
+      response: { code: 500, response: "Safe owner failure" },
     });
     expect(errors).toHaveBeenCalledTimes(1);
-    expect(errors.mock.calls[0]?.[1]).toEqual({ step: "test.child" });
+    expect(errors.mock.calls[0]?.[1]).toEqual({ step: "test.owner", childAction: "test.child" });
   } finally {
     errors.mockRestore();
   }

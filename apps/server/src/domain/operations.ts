@@ -1,5 +1,5 @@
 import type { ExecutionFailed } from "./kernel";
-import { TaggedError, panic } from "better-result";
+import { TaggedError } from "better-result";
 import type {
   Panic,
   Result,
@@ -64,7 +64,7 @@ export function isFailure(error: Leftover): error is AnyFailure {
 export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailure ? E : never;
 
 /** An Err the client never sees: it exists for `retry` and `recover`. */
-type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> | ExecutionFailed ? never : E;
+type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
 
 /** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
 type Recoverable<E> = InternalOf<E> | UnhandledException;
@@ -102,7 +102,7 @@ export type CommandScope = Omit<ReadScope, "tx"> & {
 export type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
   /**
    * Runs a fresh operation. A Failure comes back as an Err; an unanswerable child
-   * outcome comes back as ExecutionFailed, preserving its operation through Result.gen.
+   * outcome comes back as ExecutionFailed, which passes through Result.gen.
    * A defect raised here always wins: once `recover` settles, the kernel answers with
    * it even if `recover` ignored its Err, so a recovery can never hide a broken invariant.
    */
@@ -138,7 +138,7 @@ type OperationalOf<O extends Operational> = Exclude<
   Panic | UnhandledException
 >;
 
-export type OpConfig<M extends string, O extends Operational = Operational> = {
+type OpConfig<M extends string, O extends Operational = Operational> = {
   /** The wide event's `action`, such as "orders.delete_item". */
   readonly action: string;
   /** The 500 body for a defect, an unrecovered throw or an unrecovered operational error. */
@@ -369,65 +369,3 @@ export function command(
 }
 
 export type InputOf<O> = O extends Op<infer I, infer _T, infer _F, infer _M> ? I : never;
-type ValueOf<O> = O extends Op<infer _I, infer T, infer _F, infer _M> ? T : never;
-type ErrorOf<O> = O extends Op<infer _I, infer _T, infer F, infer _M> ? F : never;
-export type CompositionScope<Steps extends readonly AnyOp[]> = Pick<ReadScope, "viewer" | "log"> & {
-  readonly execute: <O extends Steps[number]>(
-    op: O,
-    input: NoInfer<InputOf<O>>,
-  ) => Promise<Result<ValueOf<O>, ErrorOf<O> | ExecutionFailed>>;
-};
-
-export const compositions = new WeakMap<
-  AnyOp,
-  (scope: CompositionScope<readonly AnyOp[]>, input: never) => Promise<AnyResult>
->();
-
-/** Plans in before and composes operations without opening an extra transaction. Each command owns its writes, recovery, effects and failure response. */
-export function compose<
-  I,
-  B extends AnyResult,
-  R extends AnyResult,
-  const M extends string,
-  const Steps extends readonly AnyOp[],
->(
-  config: {
-    readonly action: string;
-    readonly failure: M;
-    readonly steps: Steps;
-    readonly before: (
-      scope: CompositionScope<Steps>,
-      input: I,
-    ) => Promise<B & Handled<InferErr<B>, false, never> & NoPanic<InferErr<B>>>;
-  },
-  body: (
-    scope: CompositionScope<Steps>,
-    input: InferOk<B>,
-  ) => Promise<R & Checked<R, InferErr<R>, false>>,
-): Op<I, InferOk<R>, PublicOf<InferErr<B> | InferErr<R>>, M | Steps[number]["failure"]> {
-  const op = { action: config.action, failure: config.failure };
-  compositions.set(op, async (scope, input) => {
-    const declared = scope as CompositionScope<Steps>;
-    const checked: CompositionScope<Steps> = {
-      viewer: scope.viewer,
-      log: scope.log,
-      execute: async (next, value) => {
-        if (!config.steps.includes(next))
-          panic(`${op.action} tried to execute undeclared step ${next.action}`);
-        return declared.execute(next, value);
-      },
-    };
-    const planning: CompositionScope<Steps> = {
-      ...checked,
-      execute: async (next, value) => {
-        if (!poolBodies.has(next) && !snapshots.has(next))
-          panic(`${op.action} tried to execute command ${next.action} in before`);
-        return checked.execute(next, value);
-      },
-    };
-    const plan = await config.before(planning, input);
-    if (plan.isErr()) return plan;
-    return body(checked, plan.value as InferOk<B>);
-  });
-  return op;
-}
