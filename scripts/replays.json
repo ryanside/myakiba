@@ -1,6 +1,15 @@
 {
   "test": [
     {
+      "fix": "8e2f46bcdbf7e018f7137f1b29f3304d8efc7cf6",
+      "bug": "The SFW refusal on an MFC Item page linked to a settings page that cannot turn the switch off, and dismissing it lost keyboard focus.",
+      "test": "apps/extension/lib/mfc-page/start.test.ts",
+      "fixed": [
+        "a pick that is refused > on MFC's SFW placeholder names the switch's menu, links nowhere, and sends nothing",
+        "a pick that is refused > Dismiss returns focus to the Pick button, so the keyboard keeps its place"
+      ]
+    },
+    {
       "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
       "bug": "An Item only on an Ordered Order read \"In your collection\" in the Add page's search results.",
       "test": "apps/server/src/routers/search/routes.test.ts",
