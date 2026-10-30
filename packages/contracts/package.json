@@ -7,7 +7,6 @@
     "./shared/*": "./src/shared/*.ts",
     "./orders/*": "./src/orders/*.ts",
     "./collection/*": "./src/collection/*.ts",
-    "./sync/*": "./src/sync/*.ts",
     "./item/*": "./src/item/*.ts",
     "./mfc-items/*": "./src/mfc-items/*.ts",
     "./expenses/*": "./src/expenses/*.ts",
@@ -16,7 +15,6 @@
     "./analytics/*": "./src/analytics/*.ts",
     "./lists/*": "./src/lists/*.ts",
     "./wishlist/*": "./src/wishlist/*.ts",
-    "./data-transfer/*": "./src/data-transfer/*.ts",
     "./add/*": "./src/add/*.ts"
   },
   "scripts": {

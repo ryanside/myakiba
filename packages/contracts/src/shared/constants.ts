@@ -29,18 +29,6 @@ export const ENTRY_CATEGORIES = [
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
 
-export const SYNC_TYPES = ["csv", "order", "order-item", "collection", "item"] as const;
-
-export const SYNC_SESSION_STATUSES = [
-  "pending",
-  "processing",
-  "completed",
-  "failed",
-  "partial",
-] as const;
-
-export const SYNC_SESSION_ITEM_STATUSES = ["pending", "imported", "failed"] as const;
-
 export const CATEGORIES = [
   "Prepainted",
   "Action/Dolls",
