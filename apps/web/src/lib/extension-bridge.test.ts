@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { waitFor } from "@testing-library/react";
 import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { PAGE_ORIGIN, fakeExtension } from "../../test/fake-extension";
+import { PAGE_ORIGIN, fakeExtension, fakePick } from "../../test/fake-extension";
+import { ExtensionStopped } from "./errors/extension-stopped";
 import { createExtensionBridge } from "./extension-bridge";
 import type { ExtensionBridge, ExtensionFetchEvent } from "./extension-bridge";
 
@@ -308,5 +310,102 @@ describe("fetchItems", () => {
       [3, "extension_stopped"],
     ]);
     expect(extension.cancelled).toEqual(extension.runs.map((run) => run.requestId));
+  });
+});
+
+describe("picks", () => {
+  const QUICK = { picksAnswerMs: 50 };
+
+  const requestsOf = (extension: ReturnType<typeof fakeExtension>) =>
+    extension.posted.map(({ message }) => message.request);
+
+  test("takePicks reads each pick's page and its transferred picture bytes", async () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer;
+    const extension = fakeExtension({
+      picks: [
+        { ...fakePick(1, "Rem 1/7"), picture: { bytes, contentType: "image/jpeg" } },
+        fakePick(2, null),
+      ],
+    });
+    const bridge = createExtensionBridge(extension.window, QUICK);
+
+    const takePicks = await bridge.takePicks();
+    const taken = takePicks.unwrap();
+
+    expect(requestsOf(extension)).toEqual([{ type: "take-picks" }]);
+    expect(taken.map(({ mfcItemId: pickId, title }) => [Number(pickId), title])).toEqual([
+      [1, "Rem 1/7"],
+      [2, null],
+    ]);
+    const [first, second] = taken;
+    expect(await first?.page.text()).toBe("<html>1</html>");
+    expect(first?.page.type).toBe("text/html");
+    expect(first?.picture?.type).toBe("image/jpeg");
+    expect(new Uint8Array((await first?.picture?.arrayBuffer()) ?? new ArrayBuffer(0))).toEqual(
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    );
+    expect(second?.picture).toBeNull();
+  });
+
+  test("takePicks reads an extension that stays silent as no picks", async () => {
+    const extension = fakeExtension({ picks: [fakePick(1)], answersPicks: false });
+
+    const taken = await createExtensionBridge(extension.window, QUICK).takePicks();
+
+    expect(taken.unwrap()).toEqual([]);
+  });
+
+  test("takePicks reads a picks event it cannot parse as no picks", async () => {
+    const extension = fakeExtension({ answersPicks: false });
+    const bridge = createExtensionBridge(extension.window, QUICK);
+
+    const taking = bridge.takePicks();
+    await waitFor(() => expect(extension.posted).toHaveLength(1));
+    extension.emit(extension.posted[0]?.message.requestId ?? null, {
+      type: "picks",
+      picks: [{ mfcItemId: 0, html: "" }],
+    } as never);
+
+    const taken = await taking;
+    expect(taken.unwrap()).toEqual([]);
+  });
+
+  test("takePicks ends as ExtensionStopped when the request ends without picks", async () => {
+    const extension = fakeExtension({ answersPicks: false });
+    const bridge = createExtensionBridge(extension.window, QUICK);
+
+    const taking = bridge.takePicks();
+    await waitFor(() => expect(extension.posted).toHaveLength(1));
+    extension.emit(extension.posted[0]?.message.requestId ?? null, {
+      type: "done",
+      reason: "interrupted",
+    });
+
+    const taken = await taking;
+    expect(taken.isErr() && ExtensionStopped.is(taken.error)).toBe(true);
+  });
+
+  test("picksSaved and picksDiscarded name their ids and resolve once the extension is done", async () => {
+    const extension = fakeExtension({ picks: [fakePick(1), fakePick(2), fakePick(3)] });
+    const bridge = createExtensionBridge(extension.window, QUICK);
+
+    const saved = await bridge.picksSaved(ids(1, 2) as [MfcItemId, ...MfcItemId[]]);
+    const discarded = await bridge.picksDiscarded(ids(3) as [MfcItemId]);
+
+    expect([saved.isOk(), discarded.isOk()]).toEqual([true, true]);
+    expect(requestsOf(extension)).toEqual([
+      { type: "picks-saved", mfcItemIds: [1, 2] },
+      { type: "picks-discarded", mfcItemIds: [3] },
+    ]);
+    expect(extension.picks()).toEqual([]);
+  });
+
+  test("an acknowledgement nobody answers ends as ExtensionStopped", async () => {
+    const extension = fakeExtension({ answersPicks: false });
+    const bridge = createExtensionBridge(extension.window, QUICK);
+
+    const discarded = await bridge.picksDiscarded(ids(3) as [MfcItemId]);
+
+    expect(discarded.isErr() && ExtensionStopped.is(discarded.error)).toBe(true);
   });
 });

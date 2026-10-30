@@ -22,7 +22,7 @@ const catalog = {
   entries: { kind: "persisted", roots: ["entries"], collectionWrites: false },
   expenses: { kind: "persisted", roots: ["expenses"], collectionWrites: true },
   item: { kind: "persisted", roots: ["item"], collectionWrites: true },
-  itemDatabase: { kind: "persisted", roots: ["item-database-items"], collectionWrites: false },
+  itemDatabase: { kind: "persisted", roots: ["item-database-items"], collectionWrites: true },
   lists: { kind: "persisted", roots: ["lists"], collectionWrites: true },
   orders: {
     kind: "persisted",

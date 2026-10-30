@@ -22,11 +22,11 @@ import { app } from "@/lib/treaty-client";
 import { requestResync } from "@/queries/item";
 import { call } from "./api";
 import type { ApiFailure, EdenAnswer, Wording } from "./api";
+import { inUploadSlot, tabUploadSlots } from "./upload-slots";
 
 const HEARTBEAT_MS = 20_000;
 const FAILURE_FLUSH_MS = 1000;
 const QUEUED_PROMPT_DELAY_MS = 1000;
-const MAX_UPLOADS_IN_FLIGHT = 2;
 const MAX_RETRY_AFTER_MS = 60_000;
 // A page may have at most 64 KiB of keepalive request bodies in flight.
 const KEEPALIVE_BODY_BYTES = 64 * 1024;
@@ -251,29 +251,6 @@ async function completeOnce(
   await waitUnlessAborted(retryAfterMs, signal);
   return signal.aborted ? Result.err(new RunUploadFailed({ status: null })) : run.complete(item);
 }
-
-function uploadSlots(size: number) {
-  let free = size;
-  const waiting: (() => void)[] = [];
-  return {
-    take: async (): Promise<void> => {
-      if (free > 0) {
-        free -= 1;
-        return;
-      }
-      await new Promise<void>((resolve) => {
-        waiting.push(resolve);
-      });
-    },
-    give: (): void => {
-      const wake = waiting.shift();
-      if (wake === undefined) free += 1;
-      else wake();
-    },
-  };
-}
-
-const tabUploadSlots = uploadSlots(MAX_UPLOADS_IN_FLIGHT);
 
 let pageKeepaliveBytes = 0;
 
@@ -537,10 +514,5 @@ export async function refreshItemWithExtension(
   const fetched = await fetchForRefresh(externalId, clock);
   if (fetched.isErr()) return Result.err(fetched.error);
   const { page, picture } = fetched.value;
-  await tabUploadSlots.take();
-  try {
-    return await requestResync(externalId, picture ? { page, picture } : { page });
-  } finally {
-    tabUploadSlots.give();
-  }
+  return inUploadSlot(() => requestResync(externalId, picture ? { page, picture } : { page }));
 }

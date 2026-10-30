@@ -21,6 +21,31 @@ type LooseWireEvent = {
   readonly reason?: string;
   readonly extensionVersion?: string;
   readonly protocols?: { readonly min: number; readonly max: number };
+  readonly picks?: readonly FakePick[];
+};
+
+export type FakePick = {
+  readonly mfcItemId: number;
+  readonly title: string | null;
+  readonly pickedAt: number;
+  readonly html: string;
+  readonly picture: { readonly bytes: ArrayBuffer; readonly contentType: string } | null;
+};
+
+export const fakePick = (
+  mfcItemId: number,
+  title: string | null = `Item ${mfcItemId}`,
+): FakePick => ({
+  mfcItemId,
+  title,
+  pickedAt: 1_700_000_000_000 + mfcItemId,
+  html: `<html>${mfcItemId}</html>`,
+  picture: null,
+});
+
+type Acknowledgement = {
+  readonly type: "picks-saved" | "picks-discarded";
+  readonly mfcItemIds: readonly number[];
 };
 type WireMessage =
   | BridgeRequestMessage
@@ -43,11 +68,23 @@ export function fakeExtension({
     for (const id of run.mfcItemIds) run.item(id);
     run.done("complete");
   },
+  picks: initialPicks = [],
+  answersPicks = true,
+  onTake = () => {},
 }: {
   readonly installed?: boolean;
   readonly protocols?: { readonly min: number; readonly max: number };
   readonly onFetch?: (run: FakeRun) => void;
+  readonly picks?: readonly FakePick[];
+  /** False keeps the extension silent about picks, like a content script that never answers. */
+  readonly answersPicks?: boolean;
+  /** Runs as the extension receives a take, before the page reads its answer. */
+  readonly onTake?: () => void;
 } = {}) {
+  let picks = [...initialPicks];
+  const acknowledged: Acknowledgement[] = [];
+  let takes = 0;
+  let takesStopped = false;
   const listeners = new Set<MessageListener>();
   const posted: { readonly message: BridgeRequestMessage; readonly targetOrigin: string }[] = [];
   const runs: FakeRun[] = [];
@@ -89,8 +126,22 @@ export function fakeExtension({
     if (!parsed.success) return;
     const { requestId, request } = parsed.data;
     if (request.type === "hello") announce(requestId);
-    if (request.type !== "fetch-items") return;
     const send = (event: LooseWireEvent) => emit(requestId, event);
+    if (request.type === "take-picks") {
+      takes += 1;
+      onTake();
+      if (takesStopped) send({ type: "done", reason: "complete" });
+      else if (answersPicks) send({ type: "picks", picks });
+      return;
+    }
+    if (request.type === "picks-saved" || request.type === "picks-discarded") {
+      acknowledged.push({ type: request.type, mfcItemIds: request.mfcItemIds });
+      const answered = new Set<number>(request.mfcItemIds);
+      picks = picks.filter((pick) => !answered.has(pick.mfcItemId));
+      if (answersPicks) send({ type: "done", reason: "complete" });
+      return;
+    }
+    if (request.type !== "fetch-items") return;
     const run: FakeRun = {
       requestId,
       mfcItemIds: request.mfcItemIds,
@@ -111,7 +162,25 @@ export function fakeExtension({
     installed = next;
   };
 
-  return { window, posted, runs, cancelled, deliver, emit, announce, setInstalled };
+  return {
+    window,
+    posted,
+    runs,
+    cancelled,
+    deliver,
+    emit,
+    announce,
+    setInstalled,
+    acknowledged,
+    picks: () => picks,
+    setPicks: (next: readonly FakePick[]) => {
+      picks = [...next];
+    },
+    stopTakes: (stopped: boolean) => {
+      takesStopped = stopped;
+    },
+    takes: () => takes,
+  };
 }
 
 export function delegatingBridge(current: () => ExtensionBridge): ExtensionBridge {
@@ -120,5 +189,8 @@ export function delegatingBridge(current: () => ExtensionBridge): ExtensionBridg
     subscribe: (listener) => current().subscribe(listener),
     probe: () => current().probe(),
     fetchItems: (mfcItemIds, options) => current().fetchItems(mfcItemIds, options),
+    takePicks: () => current().takePicks(),
+    picksSaved: (mfcItemIds) => current().picksSaved(mfcItemIds),
+    picksDiscarded: (mfcItemIds) => current().picksDiscarded(mfcItemIds),
   };
 }
