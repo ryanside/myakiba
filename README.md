@@ -252,7 +252,7 @@ myakiba/
 │   ├── contracts/      # Shared Zod schemas, constants, and types
 │   ├── db/             # Drizzle schema and database scripts
 │   ├── env/            # Typed environment schemas
-│   ├── redis/          # Redis clients, job status, and local Compose setup
+│   ├── redis/          # Redis client, Item Refresh cooldown, and local Compose setup
 │   └── utils/          # Shared utilities
 ├── GLOSSARY.md         # Domain glossary
 ├── docker-compose.yml  # Local full-stack build
