@@ -26,11 +26,13 @@ export const mfcItemIdSchema = z.number().transform((value, ctx): MfcItemId => {
   return id;
 });
 
-const itemIdsSchema = z
+// The pick store is capped by size, not count, so an acknowledgement may name any number of picks.
+const pickIdsSchema = z
   .array(mfcItemIdSchema)
   .min(1)
-  .max(MAX_ITEMS_PER_REQUEST)
   .refine((ids) => new Set(ids).size === ids.length, "MFC item ids must be unique");
+
+const itemIdsSchema = pickIdsSchema.max(MAX_ITEMS_PER_REQUEST);
 
 export const bridgeRequestSchema = z.strictObject({
   channel: z.literal(BRIDGE_CHANNEL),
@@ -41,8 +43,8 @@ export const bridgeRequestSchema = z.strictObject({
     z.strictObject({ type: z.literal("fetch-items"), mfcItemIds: itemIdsSchema }),
     z.strictObject({ type: z.literal("cancel"), targetRequestId: z.uuid() }),
     z.strictObject({ type: z.literal("take-picks") }),
-    z.strictObject({ type: z.literal("picks-saved"), mfcItemIds: itemIdsSchema }),
-    z.strictObject({ type: z.literal("picks-discarded"), mfcItemIds: itemIdsSchema }),
+    z.strictObject({ type: z.literal("picks-saved"), mfcItemIds: pickIdsSchema }),
+    z.strictObject({ type: z.literal("picks-discarded"), mfcItemIds: pickIdsSchema }),
   ]),
 });
 
@@ -254,12 +256,12 @@ export const portRequestSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("picks-saved"),
     requestId: z.uuid(),
-    mfcItemIds: itemIdsSchema,
+    mfcItemIds: pickIdsSchema,
   }),
   z.strictObject({
     type: z.literal("picks-discarded"),
     requestId: z.uuid(),
-    mfcItemIds: itemIdsSchema,
+    mfcItemIds: pickIdsSchema,
   }),
 ]);
 export type PortRequest = z.output<typeof portRequestSchema>;

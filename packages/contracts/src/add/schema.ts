@@ -84,7 +84,7 @@ export const addOwnershipSchema = z.discriminatedUnion("kind", [
 /** One Add click. A retry of the same click sends the same `commitId`, so the server answers it once. */
 export const addCommitSchema = z
   .strictObject({
-    commitId: z.uuid(),
+    commitId: z.uuidv4(),
     rows: z
       .array(addRowSchema)
       .min(1)

@@ -175,6 +175,7 @@ describe("an Add commit", () => {
   test.each([
     ["no commit id", { commitId: undefined }],
     ["a commit id that is not a UUID", { commitId: "click-1" }],
+    ["a UUID v7 commit id", { commitId: "019a3b2c-7d1c-7a55-9d3e-2f6b8c1a4e77" }],
     ["a user id", { userId: "user-1" }],
     ["a row id", { rows: [{ ...bareRow("item-1"), id: "collection-1" }] }],
     ["a row user id", { rows: [{ ...bareRow("item-1"), userId: "user-1" }] }],
@@ -309,8 +310,8 @@ describe("MyFigureCollection links", () => {
 });
 
 describe("the pick store", () => {
-  test("stays under the 10 MiB storage.local quota Chrome gives without unlimitedStorage", () => {
-    expect(MAX_PICK_STORE_BYTES).toBeLessThan(10 * 1024 * 1024);
+  test("holds 8 MiB, under the 10 MiB storage.local quota Chrome gives without unlimitedStorage", () => {
+    expect(MAX_PICK_STORE_BYTES).toBe(8_388_608);
   });
 
   test("keeps a pick for 14 days", () => {

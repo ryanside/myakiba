@@ -98,6 +98,16 @@ describe("decodeBridgeRequest is strict", () => {
     }
   });
 
+  test("acknowledges more picks than one fetch may ask for", () => {
+    const mfcItemIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) => index + 1);
+    for (const type of ["picks-saved", "picks-discarded"] as const) {
+      expect(decodeBridgeRequest(request({ type, mfcItemIds }))?.request).toEqual({
+        type,
+        mfcItemIds: mfcItemIds.map(itemId),
+      });
+    }
+  });
+
   test.each([
     ["take-picks with a field", { type: "take-picks", mfcItemIds: [1] }],
     ["picks-saved without ids", { type: "picks-saved", mfcItemIds: [] }],
@@ -313,6 +323,15 @@ describe("port messages inside the extension", () => {
       ).toBe(false);
     }
     expect(portRequestSchema.safeParse({ type: "take-picks" }).success).toBe(false);
+  });
+
+  test("a pick acknowledgement has no fetch count limit", () => {
+    const mfcItemIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) => index + 1);
+    for (const type of ["picks-saved", "picks-discarded"] as const) {
+      expect(portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds }).data).toEqual(
+        { type, requestId: REQUEST_ID, mfcItemIds: mfcItemIds.map(itemId) },
+      );
+    }
   });
 
   test("a picks event is strict and carries each picture as base64", () => {
