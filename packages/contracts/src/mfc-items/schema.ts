@@ -22,12 +22,14 @@ export type MissingItemsInput = z.infer<typeof missingItemsSchema>;
 const isPageSize = (bytes: number) => bytes > 0 && bytes <= MAX_ITEM_PAGE_BYTES;
 const PAGE_SIZE_MESSAGE = "The item page is empty or larger than 2 MB";
 
+export const itemPageHtmlSchema = z
+  .string()
+  .refine((page) => isPageSize(new TextEncoder().encode(page).byteLength), PAGE_SIZE_MESSAGE);
+
 const itemPageFields = {
   page: z.union([
     z.instanceof(File).refine((page) => isPageSize(page.size), PAGE_SIZE_MESSAGE),
-    z
-      .string()
-      .refine((page) => isPageSize(new TextEncoder().encode(page).byteLength), PAGE_SIZE_MESSAGE),
+    itemPageHtmlSchema,
   ]),
   picture: z.instanceof(File).optional(),
 };

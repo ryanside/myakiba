@@ -16,7 +16,8 @@
     "./analytics/*": "./src/analytics/*.ts",
     "./lists/*": "./src/lists/*.ts",
     "./wishlist/*": "./src/wishlist/*.ts",
-    "./data-transfer/*": "./src/data-transfer/*.ts"
+    "./data-transfer/*": "./src/data-transfer/*.ts",
+    "./add/*": "./src/add/*.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

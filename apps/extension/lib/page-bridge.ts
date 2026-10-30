@@ -108,6 +108,8 @@ export function startPageBridge(deps: {
       openRuns.delete(requestId);
       stopKeepaliveIfIdle();
     }
+    // No background sends picks yet; relaying them means turning each picture's base64 into transferred bytes.
+    if (event.type === "picks") return;
     if (event.type !== "item") {
       post({ channel: BRIDGE_CHANNEL, requestId, event });
       return;

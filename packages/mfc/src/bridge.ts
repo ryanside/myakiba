@@ -1,3 +1,4 @@
+import { MAX_PICK_TITLE } from "@myakiba/contracts/add/constants";
 import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/mfc-items/fetch-errors";
 import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { Result } from "better-result";
@@ -39,6 +40,9 @@ export const bridgeRequestSchema = z.strictObject({
     z.strictObject({ type: z.literal("hello") }),
     z.strictObject({ type: z.literal("fetch-items"), mfcItemIds: itemIdsSchema }),
     z.strictObject({ type: z.literal("cancel"), targetRequestId: z.uuid() }),
+    z.strictObject({ type: z.literal("take-picks") }),
+    z.strictObject({ type: z.literal("picks-saved"), mfcItemIds: itemIdsSchema }),
+    z.strictObject({ type: z.literal("picks-discarded"), mfcItemIds: itemIdsSchema }),
   ]),
 });
 
@@ -76,6 +80,20 @@ type WireEvent<Picture> =
   | StatusEvent
   | DoneEvent;
 
+/** A pick as the extension keeps it: the Item page the user picked, scrubbed, and its picture. */
+type PickedItem<Picture> = {
+  readonly mfcItemId: MfcItemId;
+  readonly title: string | null;
+  readonly pickedAt: number;
+  readonly html: string;
+  readonly picture: Picture | null;
+};
+
+type PicksEvent<Picture> = {
+  readonly type: "picks";
+  readonly picks: readonly PickedItem<Picture>[];
+};
+
 type AnnounceEvent = {
   readonly type: "announce";
   readonly extensionVersion: string;
@@ -88,7 +106,7 @@ export type BridgePicture = { readonly bytes: ArrayBuffer; readonly contentType:
 export type BridgeEventMessage = {
   readonly channel: typeof BRIDGE_CHANNEL;
   readonly requestId: string | null;
-  readonly event: AnnounceEvent | WireEvent<BridgePicture>;
+  readonly event: AnnounceEvent | WireEvent<BridgePicture> | PicksEvent<BridgePicture>;
 };
 
 type SynchronousSchema<Input, Output> = {
@@ -164,11 +182,13 @@ const pageItemPageToWire = synchronous(
   z.strictObject({ html: z.string(), picture: bridgePictureSchema.nullable() }),
 );
 const pageItemFailureToWire = synchronous(itemFailureSchema);
+const receivedPictureSchema = z.object({
+  bytes: z.instanceof(ArrayBuffer),
+  contentType: z.string(),
+});
+
 const pageItemPageFromWire = synchronous(
-  z.object({
-    html: z.string(),
-    picture: z.object({ bytes: z.instanceof(ArrayBuffer), contentType: z.string() }).nullable(),
-  }),
+  z.object({ html: z.string(), picture: receivedPictureSchema.nullable() }),
 );
 const pageItemFailureFromWire = synchronous(z.object({ code: leniently(ITEM_FETCH_ERROR_CODES) }));
 
@@ -195,6 +215,20 @@ const receivedEventSchema = z.union([
     untilMs: z.number().nullable(),
   }),
   z.object({ type: z.literal("done"), reason: leniently(DONE_REASONS) }),
+  z.object({
+    type: z.literal("picks"),
+    picks: z
+      .array(
+        z.object({
+          mfcItemId: mfcItemIdSchema,
+          title: z.string().nullable(),
+          pickedAt: z.number(),
+          html: z.string(),
+          picture: receivedPictureSchema.nullable(),
+        }),
+      )
+      .readonly(),
+  }),
   z.object({ type: z.string() }).transform(() => ({ type: "unknown" as const })),
 ]);
 
@@ -216,6 +250,17 @@ export const portRequestSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({ type: z.literal("cancel"), targetRequestId: z.uuid() }),
   z.strictObject({ type: z.literal("keepalive") }),
+  z.strictObject({ type: z.literal("take-picks"), requestId: z.uuid() }),
+  z.strictObject({
+    type: z.literal("picks-saved"),
+    requestId: z.uuid(),
+    mfcItemIds: itemIdsSchema,
+  }),
+  z.strictObject({
+    type: z.literal("picks-discarded"),
+    requestId: z.uuid(),
+    mfcItemIds: itemIdsSchema,
+  }),
 ]);
 export type PortRequest = z.output<typeof portRequestSchema>;
 
@@ -237,6 +282,23 @@ export const portEventSchema = z.strictObject({
       untilMs: z.number().nullable(),
     }),
     z.strictObject({ type: z.literal("done"), reason: z.enum(DONE_REASONS) }),
+    z.strictObject({
+      type: z.literal("picks"),
+      picks: z
+        .array(
+          z.strictObject({
+            mfcItemId: mfcItemIdSchema,
+            title: z.string().max(MAX_PICK_TITLE).nullable(),
+            pickedAt: z.number().int(),
+            html: z.string(),
+            picture: portPictureSchema.nullable(),
+          }),
+        )
+        .readonly(),
+    }),
   ]),
 });
-export type PortEvent = { readonly requestId: string; readonly event: WireEvent<PortPicture> };
+export type PortEvent = {
+  readonly requestId: string;
+  readonly event: WireEvent<PortPicture> | PicksEvent<PortPicture>;
+};

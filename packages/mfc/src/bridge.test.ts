@@ -14,6 +14,7 @@ import {
   portRequestSchema,
 } from "./bridge";
 import type { BridgeEventMessage, PortEvent } from "./bridge";
+import { MAX_PICK_TITLE } from "@myakiba/contracts/add/constants";
 import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { itemId } from "../test/fixtures";
 
@@ -85,6 +86,28 @@ describe("decodeBridgeRequest is strict", () => {
     expect(decodeBridgeRequest(request({ type: "hello" }, { extra: true }))).toBeNull();
   });
 
+  test("accepts take-picks, picks-saved and picks-discarded", () => {
+    expect(decodeBridgeRequest(request({ type: "take-picks" }))?.request).toEqual({
+      type: "take-picks",
+    });
+    for (const type of ["picks-saved", "picks-discarded"] as const) {
+      expect(decodeBridgeRequest(request({ type, mfcItemIds: [98_777, 1] }))?.request).toEqual({
+        type,
+        mfcItemIds: [itemId(98_777), itemId(1)],
+      });
+    }
+  });
+
+  test.each([
+    ["take-picks with a field", { type: "take-picks", mfcItemIds: [1] }],
+    ["picks-saved without ids", { type: "picks-saved", mfcItemIds: [] }],
+    ["picks-saved with duplicate ids", { type: "picks-saved", mfcItemIds: [1, 1] }],
+    ["picks-discarded with a string id", { type: "picks-discarded", mfcItemIds: ["98777"] }],
+    ["picks-saved with a page", { type: "picks-saved", mfcItemIds: [1], html: "<html></html>" }],
+  ])("rejects %s", (_, body) => {
+    expect(decodeBridgeRequest(request(body))).toBeNull();
+  });
+
   test("ignores the extension's own events posted on the same window", () => {
     expect(decodeBridgeRequest(event({ type: "done", reason: "complete" }))).toBeNull();
   });
@@ -117,6 +140,47 @@ describe("decodeBridgeEvent is lenient", () => {
       type: "done",
       reason: "unknown",
     });
+  });
+
+  test("reads picks with their picture bytes", () => {
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff]).buffer;
+    const message: BridgeEventMessage = {
+      channel: BRIDGE_CHANNEL,
+      requestId: REQUEST_ID,
+      event: {
+        type: "picks",
+        picks: [
+          {
+            mfcItemId: itemId(98_777),
+            title: "Rem",
+            pickedAt: 1_798_000_000_000,
+            html: "<html></html>",
+            picture: { bytes, contentType: "image/jpeg" },
+          },
+          { mfcItemId: itemId(1), title: null, pickedAt: 1, html: "<html></html>", picture: null },
+        ],
+      },
+    };
+
+    const read = decodeBridgeEvent(message);
+
+    expect(read).toEqual(message);
+    expect(read?.event.type === "picks" && read.event.picks[0]?.picture?.bytes).toBe(bytes);
+  });
+
+  test("reads a newer extension's picks, whose titles may be longer and carry more fields", () => {
+    const pick = {
+      mfcItemId: 98_777,
+      title: "R".repeat(MAX_PICK_TITLE + 1),
+      pickedAt: 1.5,
+      html: "<html></html>",
+      picture: null,
+      source: "item-page",
+    };
+
+    const read = decodeBridgeEvent(event({ type: "picks", picks: [pick] }));
+
+    expect(read?.event.type === "picks" && read.event.picks[0]?.title).toBe(pick.title);
   });
 
   test("an unknown event type reads as unknown", () => {
@@ -232,6 +296,47 @@ describe("port messages inside the extension", () => {
       portRequestSchema.safeParse({ type: "fetch-url", url: "https://myfigurecollection.net/" })
         .success,
     ).toBe(false);
+  });
+
+  test("pick requests carry their request id and only ids", () => {
+    expect(portRequestSchema.safeParse({ type: "take-picks", requestId: REQUEST_ID }).success).toBe(
+      true,
+    );
+    for (const type of ["picks-saved", "picks-discarded"]) {
+      expect(
+        portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds: [1] }).success,
+      ).toBe(true);
+      expect(portRequestSchema.safeParse({ type, mfcItemIds: [1] }).success).toBe(false);
+      expect(
+        portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds: [1], url: "x" })
+          .success,
+      ).toBe(false);
+    }
+    expect(portRequestSchema.safeParse({ type: "take-picks" }).success).toBe(false);
+  });
+
+  test("a picks event is strict and carries each picture as base64", () => {
+    const pick = {
+      mfcItemId: itemId(98_777),
+      title: "R".repeat(MAX_PICK_TITLE),
+      pickedAt: 1_798_000_000_000,
+      html: "<html></html>",
+      picture: { base64: "/9j/", contentType: "image/jpeg" },
+    };
+    const picks = (overrides: WireMessage) => ({
+      requestId: REQUEST_ID,
+      event: { type: "picks" as const, picks: [{ ...pick, ...overrides }] },
+    });
+
+    expect(portEventSchema.parse(picks({}))).toEqual(picks({}));
+    expect(
+      portEventSchema.safeParse(picks({ title: "R".repeat(MAX_PICK_TITLE + 1) })).success,
+    ).toBe(false);
+    expect(portEventSchema.safeParse(picks({ pickedAt: 1.5 })).success).toBe(false);
+    expect(
+      portEventSchema.safeParse(picks({ picture: { base64: "%", contentType: "" } })).success,
+    ).toBe(false);
+    expect(portEventSchema.safeParse(picks({ source: "item-page" })).success).toBe(false);
   });
 
   test("an event carries the picture as base64", () => {
