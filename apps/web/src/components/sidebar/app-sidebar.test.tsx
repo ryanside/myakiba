@@ -181,3 +181,8 @@ test("a page change in an already hidden tab does not wait for a paint", async (
   await expectOrders();
   expect([...frames.keys()].filter((handle) => !framesBeforeClick.has(handle))).toEqual([]);
 });
+
+test("the sidebar's Add goes to the Add page", async () => {
+  await renderSidebar();
+  expect(menuButton("Add").getAttribute("href")).toBe("/add");
+});

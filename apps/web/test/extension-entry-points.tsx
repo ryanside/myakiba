@@ -61,13 +61,10 @@ await mock.module("@/queries/sync", () => ({
 const { ExtensionRequiredDialog } =
   await import("@/components/extension/extension-required-dialog");
 const { dismissMissingExtension } = await import("@/lib/extension-gate");
-const { default: SyncWidget } = await import("@/components/sync/sync-widget");
-const { LAUNCHABLE_SYNC_OPTIONS } = await import("@/components/sync/sync-launcher-options");
 const { AppCommand } = await import("@/components/command/app-command");
-const { SyncSheetButton } = await import("@/components/sync/sync-sheet-button");
 const { SyncActionSheet } = await import("@/components/sync/sync-launcher");
-const { OrderItemSyncSheet } = await import("@/components/orders/order-item-sync-sheet");
-const { ItemSyncActions } = await import("@/components/item/item-sync-actions");
+const { default: SyncOrderItemForm } = await import("@/components/sync/sync-order-item-form");
+const { useSyncMutations } = await import("@/hooks/use-sync-mutations");
 const { ItemResyncButton } = await import("@/components/item/item-resync-button");
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
 const { DataTransferView } = await import("@/components/settings/data-transfer");
@@ -135,10 +132,10 @@ export const importActions = (proceed: () => void) => ({
   handleDeleteCurrentImport: async () => {},
 });
 
-export const SYNC_STEP_TITLE = "Bring in your items.";
-export const collectionChoice = new RegExp(`^${SYNC_OPTION_META.collection.title}`, "u");
+export const ADD_STEP_TITLE = "Pick your first items.";
+export const csvChoice = new RegExp(`^${SYNC_OPTION_META.csv.title}`, "u");
 
-export function onboardingAtSyncStep() {
+export function onboardingDialog() {
   return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
 }
 
@@ -155,9 +152,9 @@ export async function openOnboardingStep(user: User, steps: number) {
   }
 }
 
-export async function openSyncStep(user: User) {
+export async function openAddStep(user: User) {
   await openOnboardingStep(user, 3);
-  await screen.findByRole("dialog", { name: SYNC_STEP_TITLE });
+  await screen.findByRole("dialog", { name: ADD_STEP_TITLE });
 }
 
 export const settingsImport = (
@@ -193,63 +190,15 @@ const FailedImport = settingsImport(
 );
 
 export const ENTRY_POINTS: readonly EntryPoint[] = [
-  ...LAUNCHABLE_SYNC_OPTIONS.map((option): EntryPoint => ({
-    name: `the sync launcher's ${option.label} option`,
-    render: () => <SyncWidget TriggerWrapper={<button type="button">Launch</button>} />,
-    start: async (user) => {
-      await click("Launch")(user);
-      await click(option.label)(user);
-    },
-    proceeded: sheetOpened(SYNC_OPTION_META[option.type].title),
-  })),
-  ...LAUNCHABLE_SYNC_OPTIONS.map((option): EntryPoint => ({
-    name: `the command palette's ${option.label} action`,
+  {
+    name: "the command palette's MyFigureCollection CSV action",
     render: () => <AppCommand />,
     start: async (user) => {
       await click("Search")(user);
-      await user.click(
-        await screen.findByRole("option", {
-          name: new RegExp(SYNC_OPTION_META[option.type].title, "u"),
-        }),
-      );
+      await user.click(await screen.findByRole("option", { name: csvChoice }));
     },
-    proceeded: sheetOpened(SYNC_OPTION_META[option.type].title),
-  })),
-  ...(["item", "collection"] as const).map((syncType): EntryPoint => ({
-    name: `the ${syncType} sheet button`,
-    render: () => <SyncSheetButton syncType={syncType} label="Add" />,
-    start: click("Add"),
-    proceeded: sheetOpened(SYNC_OPTION_META[syncType].title),
-  })),
-  ...(["collection", "order", "csv"] as const).map((syncType): EntryPoint => ({
-    name: `onboarding's ${SYNC_OPTION_META[syncType].title} choice`,
-    render: onboardingAtSyncStep,
-    start: async (user) => {
-      await openSyncStep(user);
-      await user.click(
-        screen.getByRole("button", {
-          name: new RegExp(`^${SYNC_OPTION_META[syncType].title}`, "u"),
-        }),
-      );
-    },
-    proceeded: sheetOpened(SYNC_OPTION_META[syncType].title),
-  })),
-  {
-    name: "the order page's add items",
-    render: () => <OrderItemSyncSheet orderId="od-1" />,
-    start: click("Add"),
-    proceeded: sheetOpened(SYNC_OPTION_META["order-item"].title),
+    proceeded: sheetOpened(SYNC_OPTION_META.csv.title),
   },
-  ...(["Add to collection", "Create order", "Add to item database"] as const).map(
-    (label): EntryPoint => ({
-      name: `the item page's ${label}`,
-      render: (proceed) => (
-        <ItemSyncActions onSyncCollection={proceed} onSyncOrder={proceed} onSyncItems={proceed} />
-      ),
-      start: click(label),
-      proceeded: called,
-    }),
-  ),
   {
     name: "the item page's resync button",
     render: (proceed) => (
@@ -327,6 +276,18 @@ export type Form = {
   readonly submit: string;
 };
 
+// No entry point opens this form now. It stays gated until R2 deletes it with the other forms.
+function OrderItemForm() {
+  const { handleSyncOrderItemSubmit } = useSyncMutations(noop);
+  return (
+    <SyncOrderItemForm
+      orderId="od-1"
+      handleSyncOrderItemSubmit={handleSyncOrderItemSubmit}
+      currency="USD"
+    />
+  );
+}
+
 const CSV = [
   "ID,Title,Root,Category,Release Date,Price,Scale,Barcode,Status,Count,Score,Payment Date,Shipping Date,Collecting Date,Price,Shop,Shipping Method,Tracking Number,Wishibility,Note",
   `98777,"Hello, Good-bye",Figures,Prepainted,2024-01-01,"¥10,000",1/7,,Owned,1,8/10,2024-02-01,,,"$80.00",AmiAmi,EMS,,,`,
@@ -355,11 +316,8 @@ export const FORMS: readonly Form[] = [
   {
     name: "the order page's add items form",
     sends: "order-item",
-    render: () => <OrderItemSyncSheet orderId="od-1" />,
-    open: async (user) => {
-      await user.click(screen.getByRole("button", { name: "Add" }));
-      await screen.findByRole("dialog", { name: SYNC_OPTION_META["order-item"].title });
-    },
+    render: () => <OrderItemForm />,
+    open: async () => {},
     fill: typeItemId,
     kept: itemIdKept,
     submit: "Add to order",

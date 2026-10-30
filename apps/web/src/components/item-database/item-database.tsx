@@ -10,7 +10,7 @@ import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/comp
 import { MediaViewCollection, MediaViewSkeletons } from "@/components/media-tile";
 import { PageHeader, formatCount } from "@/components/page-header";
 import { ReleaseItemTile } from "@/components/release-item-tile";
-import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
+import { AddLink } from "@/components/add/add-link";
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -123,7 +123,7 @@ export function ItemDatabase(): React.JSX.Element {
               value={viewMode}
               onValueChange={setViewMode}
             />
-            <SyncSheetButton syncType="item" label="Add" />
+            <AddLink search={{ to: "none" }} />
           </>
         }
       />

@@ -210,22 +210,42 @@ function ToastIcon({ type }: { type: string | undefined }) {
   );
 }
 
+/** Optional extras a toast can carry in its `data`. */
+type ToastExtras = {
+  /** Shown in place of the type's icon, beside the title. */
+  readonly media?: React.ReactNode;
+  readonly secondaryAction?: { readonly label: string; readonly onClick: () => void };
+};
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
-  return toasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem}>
-      <ToastContent>
-        <ToastIcon type={toastItem.type} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <ToastTitle />
-          <ToastDescription />
-        </div>
-        <ToastAction />
-        <ToastClose />
-      </ToastContent>
-    </Toast>
-  ));
+  return toasts.map((toastItem) => {
+    const { media, secondaryAction }: ToastExtras = toastItem.data ?? {};
+    return (
+      <Toast key={toastItem.id} toast={toastItem}>
+        <ToastContent className={media ? "flex-wrap" : undefined}>
+          {media ?? <ToastIcon type={toastItem.type} />}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <ToastTitle />
+            <ToastDescription />
+          </div>
+          {media ? null : <ToastAction />}
+          <ToastClose />
+          {media ? (
+            <div className="flex basis-full justify-end gap-2">
+              {secondaryAction ? (
+                <Button variant="ghost" size="sm" onClick={() => secondaryAction.onClick()}>
+                  {secondaryAction.label}
+                </Button>
+              ) : null}
+              <ToastAction />
+            </div>
+          ) : null}
+        </ToastContent>
+      </Toast>
+    );
+  });
 }
 
 function Toaster({ children, toastManager = toast, ...props }: ToastPrimitive.Provider.Props) {

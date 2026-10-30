@@ -14,12 +14,12 @@ configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
 const {
-  SYNC_STEP_TITLE,
+  ADD_STEP_TITLE,
   importActions,
   loadExtension,
-  onboardingAtSyncStep,
+  onboardingDialog,
   openOnboardingStep,
-  openSyncStep,
+  openAddStep,
   renderWithDialog,
   resetEntryPoints,
   settingsImport,
@@ -30,6 +30,7 @@ afterEach(resetEntryPoints);
 
 const UNDER_REVIEW = "The myakiba browser extension is under review";
 const UNSUPPORTED = "Importing needs desktop Chrome or Firefox";
+const PICK_UNSUPPORTED = "Picking needs desktop Chrome or Firefox";
 const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
 
 function expectReviewNotice(text: string | null | undefined, storeName: string) {
@@ -40,6 +41,15 @@ function expectReviewNotice(text: string | null | undefined, storeName: string) 
   expect(text).toContain("importing is unavailable until it passes review");
 }
 
+function expectPickReviewNotice(text: string | null | undefined, storeName: string) {
+  expect(text).toContain(UNDER_REVIEW);
+  expect(text).toContain(`It is in review at ${storeName} now`);
+  expect(text).toContain("it will be released shortly");
+  expect(text).toContain("Until it is listed, new items can't be picked.");
+  expect(text).toContain("Items already in the Item Database can still be added.");
+  expect(text).not.toMatch(/import|discord|sideload|unpacked/iu);
+}
+
 const installLink = (browser: SupportedBrowser) =>
   screen.queryByRole("link", { name: `Install from ${browser.storeName} (opens in a new tab)` });
 
@@ -48,24 +58,30 @@ const IdleImport = settingsImport({ kind: "ready", current: { kind: "none" } }, 
 const SURFACES = [
   {
     name: "onboarding's extension step",
+    expectReview: expectPickReviewNotice,
+    unsupported: PICK_UNSUPPORTED,
     open: async () => {
       const user = userEvent.setup();
-      renderWithDialog(onboardingAtSyncStep());
+      renderWithDialog(onboardingDialog());
       await openOnboardingStep(user, 2);
       return screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
     },
   },
   {
     name: "onboarding's sync step",
+    expectReview: expectPickReviewNotice,
+    unsupported: PICK_UNSUPPORTED,
     open: async () => {
       const user = userEvent.setup();
-      renderWithDialog(onboardingAtSyncStep());
-      await openSyncStep(user);
-      return screen.getByRole("dialog", { name: SYNC_STEP_TITLE });
+      renderWithDialog(onboardingDialog());
+      await openAddStep(user);
+      return screen.getByRole("dialog", { name: ADD_STEP_TITLE });
     },
   },
   {
     name: "the settings import",
+    expectReview: expectReviewNotice,
+    unsupported: UNSUPPORTED,
     open: async () => {
       renderWithDialog(<IdleImport actions={importActions(() => {})} />);
       return document.body;
@@ -100,7 +116,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
           const container = await surface.open();
 
           await screen.findByText(UNDER_REVIEW);
-          expectReviewNotice(container.textContent, browser.storeName);
+          surface.expectReview(container.textContent, browser.storeName);
           expect(installLink(browser)).toBeNull();
         });
 
@@ -127,7 +143,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
 
       await surface.open();
 
-      expect(await screen.findByText(UNSUPPORTED)).toBeDefined();
+      expect(await screen.findByText(surface.unsupported)).toBeDefined();
       expect(screen.queryByRole("link", { name: /^Install from/u })).toBeNull();
     });
   },

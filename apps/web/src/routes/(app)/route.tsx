@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { version } from "@/data/resources/version";
@@ -12,11 +12,10 @@ import { PageBackground } from "@/components/page-background";
 import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
-import SyncWidget from "@/components/sync/sync-widget";
 import SyncStatusWidget from "@/components/sync/sync-status-widget";
 import { AppCommand } from "@/components/command/app-command";
 import { ExtensionRequiredDialog } from "@/components/extension/extension-required-dialog";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { SessionUnavailable } from "@/lib/errors/session-unavailable";
 import { env } from "@myakiba/env/web";
@@ -103,15 +102,10 @@ function RouteComponent() {
                 <SyncStatusWidget />
               </div>
               <div className="flex items-center gap-2">
-                <SyncWidget
-                  side="right"
-                  TriggerWrapper={
-                    <Button variant="default" size="sm">
-                      <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                      <span>Add</span>
-                    </Button>
-                  }
-                />
+                <Link to="/add" className={buttonVariants({ variant: "default", size: "sm" })}>
+                  <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
+                  <span>Add</span>
+                </Link>
                 <UserMenu session={session} />
               </div>
             </header>

@@ -32,6 +32,8 @@ export const add = {
         : call(app.api.add.items.get({ query: { ids: [...itemIds] } }), {
             fallback: "Failed to load the items to add",
           }),
+    // Rows already on the page keep their pictures while a new row's summary loads.
+    keepPrevious: () => true,
   }),
   search: searches.itemDatabase,
 };

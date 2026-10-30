@@ -24,14 +24,11 @@ setDefaultTimeout(30_000);
 
 const {
   ENTRY_POINTS,
-  SYNC_STEP_TITLE,
   click,
-  collectionChoice,
+  csvChoice,
   currentExtension,
   loadExtension,
   noop,
-  onboardingAtSyncStep,
-  openSyncStep,
   renderEntryPoint,
   resetEntryPoints,
   useBridge,
@@ -39,12 +36,8 @@ const {
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 const { ExtensionRequiredDialog } = await import("./extension-required-dialog");
 const { dismissMissingExtension, useExtensionGate } = await import("@/lib/extension-gate");
-const { default: SyncWidget } = await import("@/components/sync/sync-widget");
 const { AppCommand } = await import("@/components/command/app-command");
 const { ItemResyncButton } = await import("@/components/item/item-resync-button");
-const { SYNC_OPTION_META } = await import("@/lib/sync");
-
-type User = ReturnType<typeof userEvent.setup>;
 
 const [CHROME] = SUPPORTED_BROWSERS;
 const UNDER_REVIEW = "The myakiba browser extension is under review";
@@ -226,28 +219,17 @@ test("an extension that answers ready in another browser still starts the import
   await waitFor(() => expect(calls()).toBe(1));
 });
 
-test.each([
-  {
-    name: "the sync launcher",
-    view: () => <SyncWidget TriggerWrapper={<button type="button">Launch</button>} />,
-    open: async (user: User) => {
-      await click("Launch")(user);
-      return screen.findByRole("button", { name: "Collection" });
-    },
-  },
-  {
-    name: "the command palette",
-    view: () => <AppCommand />,
-    open: async (user: User) => {
-      await click("Search")(user);
-      return screen.findByRole("option", { name: collectionChoice });
-    },
-  },
-])("$name shows it is checking on the chosen option", async ({ name, view, open }) => {
+test("the command palette shows it is checking on the chosen option", async () => {
   loadExtension({ installed: false });
   const user = userEvent.setup();
-  renderEntryPoint({ name, render: view, start: async () => {}, proceeded: () => false });
-  const option = await open(user);
+  renderEntryPoint({
+    name: "the command palette",
+    render: () => <AppCommand />,
+    start: async () => {},
+    proceeded: () => false,
+  });
+  await click("Search")(user);
+  const option = await screen.findByRole("option", { name: csvChoice });
 
   fireEvent.click(option);
 
@@ -282,48 +264,6 @@ test("the dialog closes, and the next try probes again", async () => {
   await click("Refresh item details")(user);
 
   await waitFor(() => expect(calls).toBe(1));
-});
-
-test("a blocked onboarding choice keeps onboarding open and unfinished, so the user can go back", async () => {
-  loadExtension({ installed: false });
-  const user = userEvent.setup();
-  renderEntryPoint({
-    name: "onboarding",
-    render: onboardingAtSyncStep,
-    start: async () => {},
-    proceeded: () => false,
-  });
-  await openSyncStep(user);
-
-  await user.click(screen.getByRole("button", { name: collectionChoice }));
-  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
-  await click("Close")(user);
-  await waitFor(() =>
-    expect(screen.queryByRole("dialog", { name: /myakiba extension first/u })).toBeNull(),
-  );
-
-  expect(screen.getByRole("dialog", { name: SYNC_STEP_TITLE })).toBeDefined();
-  await click("Back")(user);
-  expect(
-    await screen.findByRole("dialog", { name: "Install the myakiba extension." }),
-  ).toBeDefined();
-});
-
-test("onboarding completes once the extension answers ready", async () => {
-  loadExtension({ installed: true });
-  const user = userEvent.setup();
-  renderEntryPoint({
-    name: "onboarding",
-    render: onboardingAtSyncStep,
-    start: async () => {},
-    proceeded: () => false,
-  });
-  await openSyncStep(user);
-
-  await user.click(screen.getByRole("button", { name: collectionChoice }));
-
-  await screen.findByRole("dialog", { name: SYNC_OPTION_META.collection.title });
-  expect(screen.queryByRole("dialog", { name: SYNC_STEP_TITLE })).toBeNull();
 });
 
 test("closing the dialog keeps its copy while it closes and returns focus to the button", async () => {

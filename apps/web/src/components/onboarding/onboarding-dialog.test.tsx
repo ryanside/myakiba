@@ -69,8 +69,9 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
     ),
   });
   const dashboard = createRoute({ getParentRoute: () => app, path: "/dashboard" });
+  const add = createRoute({ getParentRoute: () => app, path: "/add" });
   const router = createRouter({
-    routeTree: root.addChildren([app.addChildren([dashboard])]),
+    routeTree: root.addChildren([app.addChildren([dashboard, add])]),
     history: createMemoryHistory({ initialEntries: ["/dashboard"] }),
   });
   render(
@@ -79,6 +80,7 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
     </QueryClientProvider>,
   );
   await screen.findByRole("heading", { name: "Dashboard", hidden: true });
+  return router;
 }
 
 test("an onboarded account on a new browser keeps the welcome dialog closed", async () => {
@@ -160,4 +162,25 @@ test("Getting Started opens at the welcome step even with a step left in local s
   fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
 
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
+});
+
+test("the last step explains picking, then closes onboarding and goes to the Add page", async () => {
+  const router = await openDashboard(true);
+  fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+  for (const title of [
+    "Welcome to myakiba.",
+    "Set your username, currency, and date format.",
+    "Install the myakiba extension.",
+  ]) {
+    await screen.findByRole("dialog", { name: title });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  }
+
+  const step = await screen.findByRole("dialog", { name: "Pick your first items." });
+  expect(step.textContent).toContain("Pick for myakiba");
+  expect(step.textContent).not.toContain("CSV");
+  fireEvent.click(screen.getByRole("button", { name: "Get started" }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

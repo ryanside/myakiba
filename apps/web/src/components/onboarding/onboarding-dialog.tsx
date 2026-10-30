@@ -5,11 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  ArrowRight02Icon,
-  FileUploadIcon,
-  LibraryIcon,
   Loading03Icon,
-  PackageIcon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -41,18 +37,14 @@ import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
-import { SYNC_OPTION_META } from "@/lib/sync";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
 import { ExtensionStep } from "@/components/onboarding/extension-step";
-import { useExtensionGate } from "@/lib/extension-gate";
-import { MissingExtensionNotice } from "@/components/extension/extension-notice";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
+import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
 
-type StepId = "welcome" | "preferences" | "extension" | "sync";
+type StepId = "welcome" | "preferences" | "extension" | "add";
 
 type StepMeta = {
   readonly id: StepId;
@@ -87,11 +79,11 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
       "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
   },
   {
-    id: "sync",
+    id: "add",
     step: 4,
     eyebrow: "Add items",
-    title: "Bring in your items.",
-    description: "You can always add more later through the + button in the sidebar.",
+    title: "Pick your first items.",
+    description: "You can add more any time with the Add button in the header.",
   },
 ];
 
@@ -120,12 +112,12 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
   const { reopenAtExtensionStep, setExtensionStepOpen } = useOnboarding();
   const reopensAtExtensionStep = opensForNewAccount && reopenAtExtensionStep;
   const [open, setOpen] = useState(opensForNewAccount && (isNewAccount || reopenAtExtensionStep));
-  const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const [currentStep, setCurrentStep] = useState(
     reopensAtExtensionStep ? EXTENSION_STEP : FIRST_STEP,
   );
 
   const router = useRouter();
+  const navigate = useNavigate();
   const { run: updateUser } = useResourceMutation(settings.updateUser);
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
@@ -228,176 +220,162 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
       return;
     }
     await close();
-  }, [currentMeta.id, isLast, form, advance, close]);
-
-  const handleSelectSync = useCallback(
-    (type: LaunchableSyncType) => {
-      setSyncSheetType(type);
-      return close();
-    },
-    [close],
-  );
+    await navigate({ to: "/add" });
+  }, [currentMeta.id, isLast, form, advance, close, navigate]);
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger render={renderTrigger} />
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger render={renderTrigger} />
 
-        <DialogContent
-          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
-          showCloseButton={false}
-        >
-          <Stepper value={currentStep} onValueChange={setCurrentStep}>
-            <StepperNav className="flex gap-1.5 px-6 pt-5">
-              {STEPS.map((meta) => (
-                <StepperItem key={meta.id} step={meta.step} className="flex-1 overflow-hidden">
-                  <StepperTrigger className="w-full" asChild>
-                    <StepperIndicator
-                      className={cn(
-                        "h-1 w-full rounded-full! bg-muted",
-                        `transition-colors duration-400 ${EASE_OUT}`,
-                        "data-[state=active]:bg-foreground data-[state=completed]:bg-foreground",
-                      )}
+      <DialogContent
+        className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
+        showCloseButton={false}
+      >
+        <Stepper value={currentStep} onValueChange={setCurrentStep}>
+          <StepperNav className="flex gap-1.5 px-6 pt-5">
+            {STEPS.map((meta) => (
+              <StepperItem key={meta.id} step={meta.step} className="flex-1 overflow-hidden">
+                <StepperTrigger className="w-full" asChild>
+                  <StepperIndicator
+                    className={cn(
+                      "h-1 w-full rounded-full! bg-muted",
+                      `transition-colors duration-400 ${EASE_OUT}`,
+                      "data-[state=active]:bg-foreground data-[state=completed]:bg-foreground",
+                    )}
+                  >
+                    <span className="sr-only">{meta.eyebrow}</span>
+                  </StepperIndicator>
+                </StepperTrigger>
+              </StepperItem>
+            ))}
+          </StepperNav>
+
+          <StepperPanel className={cn("px-6 pt-5 pb-5", PANEL_MIN_HEIGHT)}>
+            {STEPS.map((meta) => (
+              <StepperContent
+                key={meta.id}
+                value={meta.step}
+                className={cn("flex flex-col gap-5", ENTER_TRANSITION)}
+              >
+                <StepHeader meta={meta} />
+                {meta.id === "preferences" ? (
+                  <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
+                    <form.Field
+                      name="username"
+                      asyncDebounceMs={1000}
+                      validators={{
+                        onChangeAsync: async ({ value }) => {
+                          if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
+                          if (value === sessionUsername) return;
+                          const checked = await decodeAuth(() =>
+                            authClient.isUsernameAvailable({ username: value }),
+                          );
+                          if (checked.isErr()) return checked.error.message;
+                          if (checked.value.available === false) return "Username is already taken";
+                        },
+                        onBlur: z
+                          .string()
+                          .min(MIN_USERNAME, `Username must be at least ${MIN_USERNAME} characters`)
+                          .max(
+                            MAX_USERNAME,
+                            `Username must be less than ${MAX_USERNAME} characters`,
+                          ),
+                      }}
                     >
-                      <span className="sr-only">{meta.eyebrow}</span>
-                    </StepperIndicator>
-                  </StepperTrigger>
-                </StepperItem>
-              ))}
-            </StepperNav>
+                      {(field) => (
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={field.name}>Username</Label>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            type="text"
+                            autoComplete="username"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            placeholder="Enter your username"
+                            maxLength={MAX_USERNAME}
+                          />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
+                        </div>
+                      )}
+                    </form.Field>
 
-            <StepperPanel className={cn("px-6 pt-5 pb-5", PANEL_MIN_HEIGHT)}>
-              {STEPS.map((meta) => (
-                <StepperContent
-                  key={meta.id}
-                  value={meta.step}
-                  className={cn("flex flex-col gap-5", ENTER_TRANSITION)}
-                >
-                  <StepHeader meta={meta} />
-                  {meta.id === "preferences" ? (
-                    <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
-                      <form.Field
-                        name="username"
-                        asyncDebounceMs={1000}
-                        validators={{
-                          onChangeAsync: async ({ value }) => {
-                            if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
-                            if (value === sessionUsername) return;
-                            const checked = await decodeAuth(() =>
-                              authClient.isUsernameAvailable({ username: value }),
-                            );
-                            if (checked.isErr()) return checked.error.message;
-                            if (checked.value.available === false)
-                              return "Username is already taken";
-                          },
-                          onBlur: z
-                            .string()
-                            .min(
-                              MIN_USERNAME,
-                              `Username must be at least ${MIN_USERNAME} characters`,
-                            )
-                            .max(
-                              MAX_USERNAME,
-                              `Username must be less than ${MAX_USERNAME} characters`,
-                            ),
-                        }}
-                      >
-                        {(field) => (
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={field.name}>Username</Label>
-                            <Input
-                              id={field.name}
-                              name={field.name}
-                              type="text"
-                              autoComplete="username"
-                              value={field.state.value}
-                              onBlur={field.handleBlur}
-                              onChange={(event) => field.handleChange(event.target.value)}
-                              placeholder="Enter your username"
-                              maxLength={MAX_USERNAME}
-                            />
-                            <FieldError className="text-xs" errors={field.state.meta.errors} />
+                    <form.Field name="currency">
+                      {(field) => (
+                        <div className="flex flex-col gap-2">
+                          <Label htmlFor={field.name}>Currency</Label>
+                          <CurrencySelect
+                            id={field.name}
+                            value={field.state.value}
+                            onValueChange={field.handleChange}
+                            onBlur={field.handleBlur}
+                            invalid={!field.state.meta.isValid}
+                          />
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
+                        </div>
+                      )}
+                    </form.Field>
+
+                    <form.Field name="dateFormat">
+                      {(field) => (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1">
+                            <Label htmlFor={field.name}>Date format</Label>
+                            <span className="text-xs text-muted-foreground">
+                              e.g. {formatDateOnlyForDisplay(new Date(), field.state.value)}
+                            </span>
                           </div>
-                        )}
-                      </form.Field>
+                          <ToggleGroup
+                            id={field.name}
+                            variant="outline"
+                            spacing={1}
+                            value={[field.state.value]}
+                            onValueChange={(next) => {
+                              const [value] = next;
+                              if (value) field.handleChange(value as DateFormat);
+                            }}
+                            className="flex-wrap"
+                          >
+                            {DATE_FORMATS.map((option) => (
+                              <ToggleGroupItem key={option} value={option}>
+                                {option}
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                          <FieldError className="text-xs" errors={field.state.meta.errors} />
+                        </div>
+                      )}
+                    </form.Field>
+                  </form>
+                ) : null}
+                {meta.id === "extension" ? <ExtensionStep /> : null}
+                {meta.id === "add" ? <AddStep /> : null}
+              </StepperContent>
+            ))}
+          </StepperPanel>
 
-                      <form.Field name="currency">
-                        {(field) => (
-                          <div className="flex flex-col gap-2">
-                            <Label htmlFor={field.name}>Currency</Label>
-                            <CurrencySelect
-                              id={field.name}
-                              value={field.state.value}
-                              onValueChange={field.handleChange}
-                              onBlur={field.handleBlur}
-                              invalid={!field.state.meta.isValid}
-                            />
-                            <FieldError className="text-xs" errors={field.state.meta.errors} />
-                          </div>
-                        )}
-                      </form.Field>
-
-                      <form.Field name="dateFormat">
-                        {(field) => (
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-col gap-1">
-                              <Label htmlFor={field.name}>Date format</Label>
-                              <span className="text-xs text-muted-foreground">
-                                e.g. {formatDateOnlyForDisplay(new Date(), field.state.value)}
-                              </span>
-                            </div>
-                            <ToggleGroup
-                              id={field.name}
-                              variant="outline"
-                              spacing={1}
-                              value={[field.state.value]}
-                              onValueChange={(next) => {
-                                const [value] = next;
-                                if (value) field.handleChange(value as DateFormat);
-                              }}
-                              className="flex-wrap"
-                            >
-                              {DATE_FORMATS.map((option) => (
-                                <ToggleGroupItem key={option} value={option}>
-                                  {option}
-                                </ToggleGroupItem>
-                              ))}
-                            </ToggleGroup>
-                            <FieldError className="text-xs" errors={field.state.meta.errors} />
-                          </div>
-                        )}
-                      </form.Field>
-                    </form>
-                  ) : null}
-                  {meta.id === "extension" ? <ExtensionStep /> : null}
-                  {meta.id === "sync" ? <SyncFields onSelect={handleSelectSync} /> : null}
-                </StepperContent>
-              ))}
-            </StepperPanel>
-
-            <form.Subscribe
-              selector={(state) => ({
-                isSubmitting: state.isSubmitting,
-                canSubmit: state.canSubmit,
-              })}
-            >
-              {({ isSubmitting, canSubmit }) => (
-                <StepFooter
-                  isFirst={isFirst}
-                  isLast={isLast}
-                  isSaving={isSubmitting}
-                  canContinue={currentMeta.id !== "preferences" || canSubmit}
-                  onBack={handleBack}
-                  onContinue={handleContinue}
-                  onSkip={close}
-                />
-              )}
-            </form.Subscribe>
-          </Stepper>
-        </DialogContent>
-      </Dialog>
-      <SyncActionSheet syncType={syncSheetType} onSyncTypeChange={setSyncSheetType} />
-    </>
+          <form.Subscribe
+            selector={(state) => ({
+              isSubmitting: state.isSubmitting,
+              canSubmit: state.canSubmit,
+            })}
+          >
+            {({ isSubmitting, canSubmit }) => (
+              <StepFooter
+                isFirst={isFirst}
+                isLast={isLast}
+                isSaving={isSubmitting}
+                canContinue={currentMeta.id !== "preferences" || canSubmit}
+                onBack={handleBack}
+                onContinue={handleContinue}
+                onSkip={close}
+              />
+            )}
+          </form.Subscribe>
+        </Stepper>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -419,88 +397,22 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-type SyncFieldsProps = {
-  readonly onSelect: (type: LaunchableSyncType) => void;
-};
-
-type SyncOption = {
-  readonly id: LaunchableSyncType;
-  readonly icon: typeof LibraryIcon;
-  readonly title: string;
-  readonly description: string;
-};
-
-const SYNC_OPTIONS: readonly SyncOption[] = [
-  {
-    id: "collection",
-    icon: LibraryIcon,
-    title: SYNC_OPTION_META.collection.title,
-    description: SYNC_OPTION_META.collection.description,
-  },
-  {
-    id: "order",
-    icon: PackageIcon,
-    title: SYNC_OPTION_META.order.title,
-    description: SYNC_OPTION_META.order.description,
-  },
-  {
-    id: "csv",
-    icon: FileUploadIcon,
-    title: SYNC_OPTION_META.csv.title,
-    description: "Use your MyFigureCollection CSV export to import your items.",
-  },
-];
-
-function SyncFields({ onSelect }: SyncFieldsProps) {
+function AddStep() {
   return (
-    <div className="flex flex-col gap-2">
-      <MissingExtensionNotice className="mb-2" />
-      {SYNC_OPTIONS.map((option) => (
-        <SyncOptionCard key={option.id} option={option} onSelect={onSelect} />
-      ))}
+    <div className="flex flex-col gap-3 text-sm">
+      <MissingExtensionNotice copyOf={pickExtensionCopy} />
+      <ol className="flex list-decimal flex-col gap-2 pl-5 text-pretty">
+        <li>Open an item on MyFigureCollection.</li>
+        <li>
+          Click <span className="font-medium">Pick for myakiba</span>, next to MFC&apos;s own
+          buttons.
+        </li>
+        <li>Open the Add page, choose where your picks go and add them.</li>
+      </ol>
+      <p className="text-pretty text-muted-foreground">
+        Items already in myakiba can be added from the Add page&apos;s search.
+      </p>
     </div>
-  );
-}
-
-type SyncOptionCardProps = {
-  readonly option: SyncOption;
-  readonly onSelect: (type: LaunchableSyncType) => void;
-};
-
-function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
-  const { checking, gate } = useExtensionGate();
-  return (
-    <Button
-      variant="outline"
-      aria-busy={checking || undefined}
-      onClick={() => gate(() => onSelect(option.id))}
-      className={cn(
-        "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
-        "transition-[transform] duration-100",
-        EASE_OUT,
-        "active:scale-[0.98]",
-        "animate-data-in",
-      )}
-    >
-      <span className="flex size-9 shrink-0 items-center justify-center text-foreground">
-        <HugeiconsIcon icon={option.icon} strokeWidth={2} className="size-4" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium leading-snug">{option.title}</span>
-        <span className="text-xs text-muted-foreground">{option.description}</span>
-      </span>
-      <HugeiconsIcon
-        icon={checking ? Loading03Icon : ArrowRight02Icon}
-        strokeWidth={2}
-        className={cn(
-          "size-4 shrink-0 text-muted-foreground",
-          "transition-[transform,color] duration-200",
-          EASE_OUT,
-          "group-hover:translate-x-0.5 group-hover:text-foreground",
-          checking && "animate-spin motion-reduce:animate-none",
-        )}
-      />
-    </Button>
   );
 }
 

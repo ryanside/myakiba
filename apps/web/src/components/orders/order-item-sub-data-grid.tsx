@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -22,7 +22,7 @@ import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
-import { OrderItemSyncSheet } from "./order-item-sync-sheet";
+import { AddLink } from "@/components/add/add-link";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
@@ -251,14 +251,7 @@ export function OrderItemSubDataGrid({
               </Button>
             }
           />
-          {isLoading ? (
-            <Button size="sm" disabled>
-              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-              Add
-            </Button>
-          ) : (
-            <OrderItemSyncSheet orderId={orderId} />
-          )}
+          <AddLink search={{ to: `order:${orderId}` }} size="sm" />
         </div>
       </div>
       {grid}

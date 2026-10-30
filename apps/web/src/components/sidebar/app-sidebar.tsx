@@ -34,8 +34,7 @@ import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
-import SyncWidget from "../sync/sync-widget";
-import { Button } from "../ui/button";
+import { buttonVariants } from "../ui/button";
 
 const data = {
   navMain: [
@@ -178,18 +177,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SyncWidget
-                TriggerWrapper={
-                  <SidebarMenuButton
-                    className="transition-colors hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
-                    tooltip="Add"
-                    render={
-                      <Button variant="default" className="justify-start">
-                        <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                        <span>Add</span>
-                      </Button>
-                    }
-                  />
+              <SidebarMenuButton
+                className="transition-colors hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
+                tooltip="Add"
+                render={
+                  <Link to="/add" className={buttonVariants({ className: "justify-start" })}>
+                    <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
+                    <span>Add</span>
+                  </Link>
                 }
               />
             </SidebarMenuItem>

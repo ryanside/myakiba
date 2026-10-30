@@ -177,24 +177,32 @@ Collection Spend shown under a matching Item Entry, the Collection Item's named 
 How many different Item Entries, Shops, or Scales appear in one Analytics section. It is not the number of different Collection Items.
 _Avoid_: Unique Owned
 
-### Imports and data transfer
+### Adding items
 
-In the Add menu, use Collection, Order, MyFigureCollection CSV, and Item Database. Within a collection, order, or the Item Database, use Add for the local add button. Keep full action names for standalone commands and sheet titles.
+Use Add for the header button and the Add Page; keep full action names for destinations.
+
+**Add Page**:
+The page where a user chooses where Items go. Its rows come from Picks and from Item Database search; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
+_Avoid_: Add menu, Add tray, sheet
+
+**Pick**:
+Choosing the MyFigureCollection Item page you are viewing with the Browser Extension's Pick for myakiba button. The extension keeps the page and its picture in the browser until the Add Page saves the Item.
+_Avoid_: Import, bookmark
 
 **Add to item database**:
-An action that adds missing Items to the Item Database using MyFigureCollection item links or IDs, without creating Collection Items or Orders. Existing Items are reused with their saved details.
+Saving a Pick: myakiba reads the picked page and adds its Item to the Item Database, or reuses the Item already there. It creates no Collection Item.
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-An action that creates Collection Items for the user, using existing Item details or importing missing details from MyFigureCollection through the browser extension.
+On the Add Page, creating one Collection Item per selected row with the chosen Acquisition Status.
 _Avoid_: Sync Collection
 
 **Create order**:
-An action that creates an Order and its Order Items using MyFigureCollection item links or IDs.
+On the Add Page, creating an Order whose Order Items copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order, Add to order when creating a new Order
 
 **Add to order**:
-An action that adds Order Items to an existing Order.
+On the Add Page, adding Order Items to an existing Order; they copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order Items
 
 **Import MyFigureCollection CSV**:

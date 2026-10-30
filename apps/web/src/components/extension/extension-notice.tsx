@@ -55,6 +55,32 @@ export function missingExtensionCopy(availability: ExtensionAvailability): Exten
   }
 }
 
+const ALREADY_ADDABLE = "Items already in the Item Database can still be added";
+
+/** The same, for a surface that takes new Items by Pick rather than by import. */
+export function pickExtensionCopy(availability: ExtensionAvailability): ExtensionNoticeCopy {
+  switch (availability.kind) {
+    case "listed":
+      return {
+        title: "Install the myakiba extension to pick items",
+        body: `Picking needs the myakiba browser extension, which reads MyFigureCollection pages with your own sign-in. Install it from ${STORE_NAMES[availability.store]}, then reload this page. ${ALREADY_ADDABLE} without it.`,
+        link: { label: `Install from ${STORE_NAMES[availability.store]}`, href: availability.url },
+      };
+    case "in_review":
+      return {
+        title: UNDER_REVIEW_TITLE,
+        body: `It is in review at ${STORE_NAMES[availability.store]} now, and it will be released shortly. Until it is listed, new items can't be picked. ${ALREADY_ADDABLE}.`,
+        link: null,
+      };
+    case "unsupported":
+      return {
+        title: "Picking needs desktop Chrome or Firefox",
+        body: `The myakiba browser extension runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox, version ${EXTENSION_MIN_BROWSER_VERSION} or later. Open myakiba in one of them to pick items. ${ALREADY_ADDABLE} here.`,
+        link: null,
+      };
+  }
+}
+
 export function ExtensionNotice({
   copy,
   className,
@@ -104,11 +130,15 @@ export function ExtensionLink({
   );
 }
 
-/** Says how to get the extension where an import starts, only while it is not installed. */
-export function MissingExtensionNotice({ className }: { readonly className?: string }) {
+/** Says how to get the extension where it is needed, only while it is not installed. */
+export function MissingExtensionNotice({
+  copyOf = missingExtensionCopy,
+  className,
+}: {
+  readonly copyOf?: (availability: ExtensionAvailability) => ExtensionNoticeCopy;
+  readonly className?: string;
+}) {
   const status = useExtensionStatus();
   if (status.kind !== "absent") return null;
-  return (
-    <ExtensionNotice copy={missingExtensionCopy(extensionAvailability())} className={className} />
-  );
+  return <ExtensionNotice copy={copyOf(extensionAvailability())} className={className} />;
 }

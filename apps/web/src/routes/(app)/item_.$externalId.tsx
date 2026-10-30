@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { createFileRoute, useParams, notFound } from "@tanstack/react-router";
 import { BackLink } from "@/components/ui/back-link";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
@@ -36,7 +33,6 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
 
 function RouteComponent(): ReactNode {
   const { externalId } = useParams({ from: "/(app)/item_/$externalId" });
-  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
 
   const { data, isPending, isError, error: itemError } = useRead(items.detail, externalId);
 
@@ -78,9 +74,7 @@ function RouteComponent(): ReactNode {
   }
 
   if (isNotFound) {
-    return (
-      <ItemNotFound externalId={externalId} syncType={syncType} onSyncTypeChange={setSyncType} />
-    );
+    return <ItemNotFound externalId={externalId} />;
   }
 
   const item = data?.item;
@@ -113,8 +107,6 @@ function RouteComponent(): ReactNode {
           isPending={isPending || isPendingItemRelatedCollection}
           isError={isErrorItemRelatedCollection}
           errorMessage={errorItemRelatedCollection?.message}
-          onSyncCollection={() => setSyncType("collection")}
-          onSyncOrder={() => setSyncType("order")}
           onEditCollectionItem={handleEditCollectionItem}
           onDeleteCollectionItems={handleDeleteCollectionItems}
           onMoveToExistingOrder={handleAddCollectionItemsToOrder}
@@ -122,12 +114,6 @@ function RouteComponent(): ReactNode {
           isCollectionOrderPending={isCollectionOrderPending}
         />
       </div>
-
-      <SyncActionSheet
-        syncType={syncType}
-        onSyncTypeChange={setSyncType}
-        initialItemExternalId={String(externalId)}
-      />
     </div>
   );
 }

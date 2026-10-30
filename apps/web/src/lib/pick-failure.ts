@@ -31,6 +31,8 @@ export function pickFailureOf(cause: unknown): PickFailure {
   return { kind: "unsaved" };
 }
 
+export const EXTENSION_STOPPED_TEXT = "The extension stopped. Reload the page to see your picks.";
+
 const RETRY: PickAction = { kind: "retry" };
 
 type PickFailureCopy = { readonly text: string; readonly actions: readonly PickAction[] };
@@ -60,6 +62,6 @@ export function pickFailureCopy(failure: PickFailure, mfcItemId: number): PickFa
     case "unsaved":
       return { text: "myakiba could not save this item.", actions: [RETRY] };
     case "stopped":
-      return { text: "The extension stopped. Reload the page to see your picks.", actions: [] };
+      return { text: EXTENSION_STOPPED_TEXT, actions: [] };
   }
 }

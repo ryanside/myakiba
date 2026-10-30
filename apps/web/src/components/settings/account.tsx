@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { useForm } from "@tanstack/react-form";
 import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
+import { useResendVerification } from "@/hooks/use-resend-verification";
 import { settings } from "@/data/resources/settings";
 import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
@@ -40,7 +41,6 @@ import { RETURN_TO_ACCOUNT, signInAgain } from "./sign-in-again";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MIN_PASSWORD_MESSAGE = `Use at least ${MIN_PASSWORD_LENGTH} characters`;
-const RESEND_COOLDOWN_SECONDS = 60;
 
 const settingsRoute = getRouteApi("/(app)/settings");
 
@@ -97,26 +97,8 @@ function StatusText({
   );
 }
 
-function useSecondsUntil(deadline: number | null): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (deadline === null) return;
-    const tick = () => {
-      const current = Date.now();
-      setNow(current);
-      if (current >= deadline) window.clearInterval(interval);
-    };
-    const interval = window.setInterval(tick, 1000);
-    tick();
-    return () => window.clearInterval(interval);
-  }, [deadline]);
-  return deadline === null ? 0 : Math.max(0, Math.ceil((deadline - now) / 1000));
-}
-
 function EmailRow({ email, isVerified }: { readonly email: string; readonly isVerified: boolean }) {
-  const [resendAt, setResendAt] = useState<number | null>(null);
-  const [isSending, setIsSending] = useState(false);
-  const secondsLeft = useSecondsUntil(resendAt);
+  const { resend, isSending, secondsLeft } = useResendVerification(email, RETURN_TO_ACCOUNT);
 
   return (
     <SettingsRow
@@ -135,28 +117,7 @@ function EmailRow({ email, isVerified }: { readonly email: string; readonly isVe
           variant="outline"
           size="sm"
           disabled={isSending || secondsLeft > 0}
-          onClick={async () => {
-            setIsSending(true);
-            const sent = await decodeAuth(() =>
-              authClient.sendVerificationEmail({
-                email,
-                callbackURL: getAuthRedirectUrl(RETURN_TO_ACCOUNT),
-              }),
-            );
-            setIsSending(false);
-            if (sent.isErr()) {
-              toast.add({
-                type: "error",
-                title:
-                  sent.error.status === 429
-                    ? "You just asked for one. Try again in a minute."
-                    : sent.error.message || "Couldn't send the email. Try again.",
-              });
-              return;
-            }
-            setResendAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
-            toast.add({ type: "success", title: `Verification email sent to ${email}` });
-          }}
+          onClick={resend}
         >
           {secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend verification email"}
         </Button>

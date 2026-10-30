@@ -1,4 +1,5 @@
 import {
+  Add01Icon,
   ArrowRight01Icon,
   LibraryIcon,
   Loading03Icon,
@@ -42,6 +43,17 @@ import { itemDestination } from "@/lib/item-destination";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
+const ADD_ITEMS_KEYWORDS = [
+  "add",
+  "pick",
+  "picks",
+  "collection",
+  "order",
+  "wishlist",
+  "item",
+  "mfc",
+  "myfigurecollection",
+] as const;
 const EMPTY_RESULTS: CommandSearchResults = {
   orderMatches: [],
   itemMatches: [],
@@ -180,8 +192,10 @@ export function AppCommand(): React.JSX.Element {
     );
   }, [query]);
 
+  const showAddItems = matchesQuery("Add items", ADD_ITEMS_KEYWORDS, query);
+
   const visibleSyncItems = useMemo<readonly SyncLauncherOption[]>(() => {
-    return LAUNCHABLE_SYNC_OPTIONS.filter((item) =>
+    return LAUNCHABLE_SYNC_OPTIONS.filter((item) => item.type === "csv").filter((item) =>
       matchesQuery(
         `${SYNC_OPTION_META[item.type].title} ${item.description}`,
         [...item.keywords, item.type],
@@ -209,7 +223,7 @@ export function AppCommand(): React.JSX.Element {
     }
   };
 
-  const handleNavigate = (to: AppNavigationTarget): void => {
+  const handleNavigate = (to: AppNavigationTarget | "/add"): void => {
     closeCommand();
     void navigate({ to });
   };
@@ -280,7 +294,7 @@ export function AppCommand(): React.JSX.Element {
   }, [open]);
 
   const showNavigationGroup = visibleNavigationItems.length > 0;
-  const showSyncGroup = visibleSyncItems.length > 0;
+  const showSyncGroup = showAddItems || visibleSyncItems.length > 0;
   const showSearchGroups = query.length > 0;
   const hasVisibleResults = showNavigationGroup || showSyncGroup || showSearchGroups;
 
@@ -330,6 +344,15 @@ export function AppCommand(): React.JSX.Element {
 
             {showSyncGroup ? (
               <CommandGroup heading="Actions">
+                {showAddItems ? (
+                  <ActionCommandItem
+                    value="add-items"
+                    title="Add items"
+                    subtitle="Open the Add page to review your picks or search myakiba"
+                    leading={<CommandLeadIcon icon={Add01Icon} />}
+                    onSelect={() => handleNavigate("/add")}
+                  />
+                ) : null}
                 {visibleSyncItems.map((item) => {
                   const busy = checking && chosenSyncType === item.type;
                   return (

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ItemSyncActions } from "@/components/item/item-sync-actions";
+import { AddLink } from "@/components/add/add-link";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import {
   Empty,
@@ -27,8 +27,6 @@ export function ItemCollection({
   isPending,
   isError,
   errorMessage,
-  onSyncCollection,
-  onSyncOrder,
   onEditCollectionItem,
   onDeleteCollectionItems,
   onMoveToExistingOrder,
@@ -42,8 +40,6 @@ export function ItemCollection({
   readonly isPending: boolean;
   readonly isError: boolean;
   readonly errorMessage: string | undefined;
-  readonly onSyncCollection: () => void;
-  readonly onSyncOrder: () => void;
   readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
   readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onMoveToExistingOrder: (
@@ -84,7 +80,14 @@ export function ItemCollection({
               <EmptyDescription>Add this item to your collection or a new order.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <ItemSyncActions onSyncCollection={onSyncCollection} onSyncOrder={onSyncOrder} />
+              {item ? (
+                <div className="flex w-full flex-col justify-center gap-2 sm:flex-row">
+                  <AddLink search={{ item: item.id, to: "collection" }}>Add to collection</AddLink>
+                  <AddLink search={{ item: item.id, to: "order-new" }} variant="outline">
+                    Add to an order
+                  </AddLink>
+                </div>
+              ) : null}
             </EmptyContent>
           </Empty>
         )}

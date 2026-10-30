@@ -6,6 +6,7 @@ import { StarIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { AddLink } from "@/components/add/add-link";
 import { WishlistItemGrid } from "@/components/wishlist/wishlist-item-grid";
 import { InfiniteListStatus } from "@/components/lists/infinite-list-status";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
@@ -93,6 +94,7 @@ function RouteComponent(): React.JSX.Element {
               value={viewMode}
               onValueChange={setViewMode}
             />
+            <AddLink search={{ to: "wishlist" }} />
           </>
         }
       />

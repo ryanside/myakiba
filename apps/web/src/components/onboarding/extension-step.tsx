@@ -11,7 +11,7 @@ import {
   ExtensionLink,
   ExtensionNotice,
   UPDATE_LINK,
-  missingExtensionCopy,
+  pickExtensionCopy,
 } from "@/components/extension/extension-notice";
 import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
 import { extensionAvailability } from "@/lib/extension-availability";
@@ -34,7 +34,7 @@ export function ExtensionStep() {
   if (status.kind !== "absent") {
     return <InstallStatus status={status} link={status.kind === "outdated" ? UPDATE_LINK : null} />;
   }
-  const copy = missingExtensionCopy(extensionAvailability());
+  const copy = pickExtensionCopy(extensionAvailability());
   return copy.link ? (
     <InstallStatus status={status} link={copy.link} />
   ) : (

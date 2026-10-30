@@ -164,7 +164,7 @@ test("onboarding moved past the extension step does not reopen there after a rel
   await openExtensionStep(user);
 
   await user.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Bring in your items." });
+  await screen.findByRole("dialog", { name: "Pick your first items." });
   reloadWith({ installed: false });
 
   await new Promise((resolve) => {

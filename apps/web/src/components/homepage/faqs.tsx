@@ -68,7 +68,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you add an MFC item that isn't in myakiba yet, the myakiba browser extension opens its page with your MFC sign-in and imports the item details. It loads one page every few seconds so it never hammers their site. Imported items are shared, so an item imported once never needs importing again. You can also click Pick for myakiba on an MFC item page: the extension keeps that page in your browser until you review it in myakiba.",
+      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. Saved items are shared, so an item added once never needs adding again. A CSV import or an item refresh loads MFC pages with your MFC sign-in, one every few seconds, so it never hammers their site.",
+  },
+  {
+    id: "faq-add-items",
+    question: "How do I add items?",
+    answer:
+      "Open an item on MFC and click Pick for myakiba, next to MFC's own buttons. Your picks wait in the extension until you open the Add page in myakiba, where you choose where they go: your collection, an order, your wishlist or a list. Items already in myakiba can be added from the Add page's search, without the extension.",
   },
   {
     id: EXTENSION_FAQ_ID,
