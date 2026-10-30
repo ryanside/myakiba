@@ -3,7 +3,6 @@ import {
   MAX_ADD_ROWS,
   MAX_COMMIT_LISTS,
   MAX_PICK_STORE_BYTES,
-  MFC_SETTINGS_URL,
   MFC_SIGN_IN_URL,
   PICK_TTL_MS,
   mfcItemUrl,
@@ -318,7 +317,6 @@ describe("MyFigureCollection links", () => {
       "https://myfigurecollection.net/?_tb=commit&commit=nsp&objectType=item&objectId=98777&size=1",
     );
     expect(MFC_SIGN_IN_URL).toBe("https://myfigurecollection.net/session/signin/");
-    expect(MFC_SETTINGS_URL).toBe("https://myfigurecollection.net/settings/");
   });
 });
 

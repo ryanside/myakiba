@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { Mock } from "bun:test";
-import { MFC_SETTINGS_URL } from "@myakiba/contracts/add/constants";
 import { ORIGINS, itemId } from "../../test/fake-browser";
 import {
   ITEM_98777,
@@ -329,7 +328,7 @@ describe("a click on Pick", () => {
 });
 
 describe("a pick that is refused", () => {
-  test("on MFC's SFW placeholder explains it locally, links to MFC's settings, and sends nothing", async () => {
+  test("on MFC's SFW placeholder names the switch's menu, links nowhere, and sends nothing", async () => {
     const og = /<meta property="og:image" content="([^"]+)"/.exec(ITEM_98777)?.[1] ?? "";
     const started = await start({ html: edit(ITEM_98777, og, SFW_IMAGE) });
 
@@ -337,8 +336,10 @@ describe("a pick that is refused", () => {
 
     expect(started.background.sent).toEqual([{ type: "mfc-hello" }]);
     expect(started.fetch).not.toHaveBeenCalled();
-    expect(refusal(started)?.textContent).toContain("SFW");
-    expect(refusal(started)?.querySelector("a")?.getAttribute("href")).toBe(MFC_SETTINGS_URL);
+    expect(refusal(started)?.textContent).toContain(
+      "Turn SFW off in the menu under your profile picture",
+    );
+    expect(refusal(started)?.querySelector("a")).toBeNull();
     expect(started.page.toggle().getAttribute("aria-pressed")).toBe("false");
   });
 
@@ -404,6 +405,18 @@ describe("a pick that is refused", () => {
     await click(started);
     expect(refusal(started)).toBeNull();
     expect(started.page.toggle().getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("Dismiss returns focus to the Pick button, so the keyboard keeps its place", async () => {
+    const started = await start({ localQuota: 1 });
+    await click(started);
+    const dismiss = refusal(started)?.querySelector("button");
+    dismiss?.focus();
+
+    dismiss?.click();
+    await settled(started.page);
+
+    expect(started.page.root("toggle").activeElement).toBe(started.page.toggle());
   });
 
   test("on an unpick the browser could not save keeps it picked and says so", async () => {

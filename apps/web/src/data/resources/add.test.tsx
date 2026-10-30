@@ -481,32 +481,17 @@ describe("pick intake", () => {
 });
 
 describe("pick failure copy", () => {
-  test("offers MFC's settings only for a page hidden by SFW mode", () => {
-    const sfw = pickFailureCopy(
-      {
-        kind: "rejected",
-        message: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
-      },
-      98_777,
-    );
-    const wrongItem = pickFailureCopy(
-      { kind: "rejected", message: "The page is for a different item" },
-      98_777,
-    );
-
-    expect(sfw).toEqual({
-      text: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
+  test.each([
+    "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
+    "The page is for a different item",
+  ])("offers Retry and the Item's MFC page when the server rejects with: %s", (message) => {
+    expect(pickFailureCopy({ kind: "rejected", message }, 98_777)).toEqual({
+      text: message,
       actions: [
         { kind: "retry" },
         { kind: "open", label: "Open on MFC", href: "https://myfigurecollection.net/item/98777" },
-        {
-          kind: "open",
-          label: "Open MFC settings",
-          href: "https://myfigurecollection.net/settings/",
-        },
       ],
     });
-    expect(wrongItem.actions).toEqual(sfw.actions.slice(0, 2));
   });
 
   test.each([

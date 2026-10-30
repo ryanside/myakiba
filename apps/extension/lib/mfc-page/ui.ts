@@ -1,4 +1,3 @@
-import { MFC_SETTINGS_URL } from "@myakiba/contracts/add/constants";
 import type { CaptureRefusal } from "../errors/capture-refused";
 
 export type PickRefusal = CaptureRefusal | "full" | "storage_failed" | "failed";
@@ -23,13 +22,12 @@ const FULL_LINK = "Review them in myakiba.";
 
 type RefusalCopy = {
   readonly text: string;
-  readonly link?: { readonly label: string; readonly to: "review" | "settings" };
+  readonly link?: string;
 };
 
 const REFUSAL_COPY = {
   sfw_hidden: {
     text: "MyFigureCollection hides this item while SFW mode is on. Turn SFW off in the menu under your profile picture, reload, and pick it again.",
-    link: { label: "Open MFC settings", to: "settings" },
   },
   not_an_item_page: {
     text: "This page does not read as an MFC item page, so nothing was picked. Reload it and try again.",
@@ -37,10 +35,10 @@ const REFUSAL_COPY = {
   wrong_item: {
     text: "This page shows a different item than its address, so nothing was picked. Reload it and try again.",
   },
-  full: { text: FULL_TEXT, link: { label: FULL_LINK, to: "review" } },
+  full: { text: FULL_TEXT, link: FULL_LINK },
   storage_failed: {
     text: "Your browser could not save this change. Try again, or review your picks to make room.",
-    link: { label: "Review in myakiba", to: "review" },
+    link: "Review in myakiba",
   },
   failed: { text: "Something went wrong, so nothing changed. Reload this page and try again." },
 } as const satisfies Record<PickRefusal, RefusalCopy>;
@@ -140,14 +138,6 @@ export function createPickUi(
     return link;
   };
 
-  const settings = (label: string) => {
-    const link = element(doc, "a", "", label);
-    link.href = MFC_SETTINGS_URL;
-    link.target = "_blank";
-    link.rel = "noopener";
-    return link;
-  };
-
   const { host: toggle, root: toggleRoot } = shadowHost(window, "toggle", TOGGLE_CSS);
   const button = element(doc, "button", "toggle");
   button.type = "button";
@@ -187,13 +177,15 @@ export function createPickUi(
     const copy: RefusalCopy = REFUSAL_COPY[refusal];
     const node = element(doc, "p", "refusal", copy.text);
     node.setAttribute("role", "alert");
-    if (copy.link) {
-      node.append(copy.link.to === "review" ? review(copy.link.label) : settings(copy.link.label));
-    }
+    if (copy.link) node.append(review(copy.link));
     const dismiss = element(doc, "button", "dismiss", "×");
     dismiss.type = "button";
     dismiss.setAttribute("aria-label", "Dismiss");
-    dismiss.addEventListener("click", deps.onDismiss);
+    dismiss.addEventListener("click", () => {
+      deps.onDismiss();
+      // Dismiss has just left the page, and the keyboard's place would go with it.
+      button.focus();
+    });
     node.append(dismiss);
     toggleRoot.append(node);
     shownRefusal = { refusal, node };

@@ -4,7 +4,7 @@ import path from "node:path";
 import { chromium } from "playwright";
 import type { BrowserContext, CDPSession, Page, Worker } from "playwright";
 import { checkManifest, manifestSchema } from "../lib/manifest-policy";
-import { GATED_ID, E2E_ORIGINS, PICTURE_SHA256, PUBLIC_ID, startMocks } from "./mock-mfc";
+import { GATED_ID, E2E_ORIGINS, PICTURE_SHA256, PUBLIC_ID, SFW_ID, startMocks } from "./mock-mfc";
 
 const EXTENSION = path.join(import.meta.dir, "../.output/chrome-mv3-e2e");
 const MFC = E2E_ORIGINS.WXT_MFC_ORIGIN;
@@ -284,6 +284,31 @@ describe("picking on a mock MFC Item page", () => {
       await waitForNode(session, "button", /^Pick for myakiba$/);
       expect(await findNode(session, "link", /Review in myakiba/)).toBeNull();
       expect(await storedKeys(worker)).not.toContain(storedPickKey(GATED_ID));
+    },
+    SCENARIO_TIMEOUT_MS,
+  );
+
+  test(
+    "the keyboard stays on Pick through an SFW refusal, reaches Dismiss with Tab and returns to Pick",
+    async () => {
+      await launch();
+      const { page, session } = await openItem(SFW_ID);
+      const toggle = await waitForNode(session, "button", /^Pick for myakiba$/);
+      await session.send("DOM.focus", { backendNodeId: toggle.backendDOMNodeId });
+
+      await page.keyboard.press("Enter");
+      await waitForNode(session, "alert", /^/);
+      const stayed = await waitForNode(session, "button", /^Pick for myakiba$/);
+      expect(propertyOf(stayed, "focused")).toBe(true);
+
+      await page.keyboard.press("Tab");
+      const dismiss = await waitForNode(session, "button", /^Dismiss$/);
+      expect(propertyOf(dismiss, "focused")).toBe(true);
+
+      await page.keyboard.press("Enter");
+      expect(await findNode(session, "alert", /^/)).toBeNull();
+      const back = await waitForNode(session, "button", /^Pick for myakiba$/);
+      expect(propertyOf(back, "focused")).toBe(true);
     },
     SCENARIO_TIMEOUT_MS,
   );

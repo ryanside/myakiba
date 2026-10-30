@@ -174,19 +174,6 @@ test("a rejected pick shows the server's reason, Retry, Discard and a link to MF
   expect(calls.discarded).toEqual([98_777]);
 });
 
-test("a pick hidden by SFW mode also links to MFC's settings", async () => {
-  renderRows({
-    picks: [
-      failed({
-        kind: "rejected",
-        message: "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
-      }),
-    ],
-  });
-  const settings = await screen.findByRole("link", { name: "Open MFC settings" });
-  expect(settings.getAttribute("href")).toBe("https://myfigurecollection.net/settings/");
-});
-
 test("a pick waiting for a verified email has no Retry, since the notice holds the resend", async () => {
   renderRows({ picks: [failed({ kind: "unverified" })] });
   await screen.findByText("Verify your email to add these.");

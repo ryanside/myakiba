@@ -14,6 +14,7 @@ export const PUBLIC_ID = 98_778;
 export const MOVED_PICTURE_ID = 98_779;
 export const NO_CONTENT_PICTURE_ID = 98_780;
 export const ELSEWHERE_PICTURE_ID = 98_781;
+export const SFW_ID = 98_782;
 
 const fixtures = path.join(import.meta.dir, "../../../packages/mfc/fixtures");
 const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
@@ -32,6 +33,15 @@ const derivedItems = new Map(
     `/item/${id}`,
     publicFixture.replaceAll("98777", String(id)),
   ]),
+);
+derivedItems.set(
+  `/item/${SFW_ID}`,
+  publicFixture
+    .replaceAll("98777", String(SFW_ID))
+    .replace(
+      /(<meta property="og:image" content=")[^"]+/u,
+      "$1https://static.myfigurecollection.net/ressources/icons/nsfw.png",
+    ),
 );
 const picturePath = (id: number) => `/upload/items/1/${id}-a1b2c.jpg`;
 const publicPicturePath = picturePath(PUBLIC_ID);

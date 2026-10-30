@@ -22,7 +22,7 @@ type ItemError = MfcItemFetchFailed["code"];
 const ITEM_ERROR_MESSAGE = {
   mfc_signed_out: "Sign in to MyFigureCollection to refresh this item",
   hidden_or_missing:
-    "MyFigureCollection hides this item. Check your MyFigureCollection content settings",
+    "MyFigureCollection did not find this item. It may be gone, or your Content level in MyFigureCollection's Settings > Account may hide it",
   challenge_unsolved: "The MyFigureCollection security check was not completed",
   rate_limited: "MyFigureCollection asked us to slow down. Try again later",
   timeout: "MyFigureCollection took too long to answer",
