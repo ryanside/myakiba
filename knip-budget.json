@@ -121,7 +121,6 @@
     "packages/contracts/src/orders/schema.ts editedOrderSchema",
     "packages/contracts/src/orders/schema.ts orderFiltersSchema",
     "packages/contracts/src/search/schema.ts itemDatabaseItemSchema",
-    "packages/contracts/src/search/schema.ts itemDatabaseSearchResponseSchema",
     "packages/contracts/src/search/schema.ts searchCommandCollectionResultSchema",
     "packages/contracts/src/search/schema.ts searchCommandDataSchema",
     "packages/contracts/src/search/schema.ts searchCommandOrderResultSchema",

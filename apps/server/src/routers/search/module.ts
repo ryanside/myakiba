@@ -17,6 +17,7 @@ import type {
   SearchOrdersQuery,
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { itemSummaryColumns } from "@/lib/item-summaries";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result } from "better-result";
 import { paginateBy, prepared, query } from "@/domain/kernel";
@@ -195,6 +196,7 @@ export const Search = {
         releaseDate: latestRelease.date,
         releasePrice: latestRelease.price,
         releasePriceCurrency: latestRelease.priceCurrency,
+        ...itemSummaryColumns(scope.tx, scope.viewer.userId),
       };
       const rows = (fields: typeof select) =>
         scope.tx
@@ -236,6 +238,8 @@ export const Search = {
                 priceCurrency: row.releasePriceCurrency,
               }
             : null,
+          collectionCount: row.collectionCount,
+          wishlisted: row.wishlisted,
         })),
         totalCount: page.totalCount,
       };

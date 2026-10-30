@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import { itemDatabaseSearchResponseSchema } from "@myakiba/contracts/search/schema";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 
-const { collection, entry, entry_to_item, item, item_release, order } = figureSchema;
+const { collection, entry, entry_to_item, item, item_release, order, wishlistItem } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -102,6 +103,8 @@ describe("each search route answers as before", () => {
           image: null,
           category: null,
           latestRelease: { date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
+          collectionCount: 1,
+          wishlisted: false,
         },
         {
           itemId: "item-2",
@@ -110,6 +113,8 @@ describe("each search route answers as before", () => {
           image: null,
           category: null,
           latestRelease: null,
+          collectionCount: 0,
+          wishlisted: false,
         },
       ],
       totalCount: 2,
@@ -117,6 +122,34 @@ describe("each search route answers as before", () => {
     expect(await call("/items?query=artist")).toMatchObject({
       status: 200,
       body: { items: [{ itemId: "item-3" }] },
+    });
+  });
+
+  test("item database search badges count only the viewer's Collection Items and Wishlist", async () => {
+    await db.insert(collection).values([
+      { id: "c-2", userId, itemId: "item-1", status: "Ordered" },
+      { id: "c-other-2", userId: "user-2", itemId: "item-1" },
+    ]);
+    await db.insert(wishlistItem).values([
+      { userId, itemId: "item-2" },
+      { userId: "user-2", itemId: "item-1" },
+    ]);
+
+    const { status, body } = await call("/items?query=miku");
+
+    expect(status).toBe(200);
+    const badges = Object.fromEntries(
+      itemDatabaseSearchResponseSchema
+        .parse(body)
+        .items.map((found) => [
+          found.itemId,
+          { collectionCount: found.collectionCount, wishlisted: found.wishlisted },
+        ]),
+    );
+    expect(badges).toEqual({
+      "item-1": { collectionCount: 2, wishlisted: false },
+      "item-2": { collectionCount: 0, wishlisted: true },
+      "item-3": { collectionCount: 0, wishlisted: false },
     });
   });
 
