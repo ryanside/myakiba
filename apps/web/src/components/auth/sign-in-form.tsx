@@ -61,7 +61,11 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         () =>
           decodeAuth(() =>
             authClient.signIn.email(
-              { email: value.email, password: value.password },
+              {
+                email: value.email,
+                password: value.password,
+                callbackURL: getAuthRedirectUrl(redirectTo),
+              },
               { headers: { "x-captcha-response": value.turnstileToken } },
             ),
           ),

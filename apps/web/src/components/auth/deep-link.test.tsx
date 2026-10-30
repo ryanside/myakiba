@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import type { RouterAppContext } from "@/routes/__root";
-import { answerAuth, resetAuthAnswers, type } from "../../../test/better-auth";
+import { answerAuth, refuse, resetAuthAnswers, type } from "../../../test/better-auth";
 import { Toaster } from "@/components/ui/toast";
 
 await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: () => null }));
@@ -120,23 +120,39 @@ test("registering from a protected deep link preserves its email verification de
   expect(router.state.location.search.redirect).toBe(destination);
 });
 
+test("the verification email sent at sign-in returns to the deep link", async () => {
+  const destination = "/add?from=mfc&to=collection#details";
+  const requests = answerAuth(() => refuse(403, "Forbidden"));
+  await open(destination);
+  type("Email", "collector@example.com");
+  type("Password", "correct horse");
+  fireEvent.click(screen.getByRole("button", { name: "Login" }));
+  await waitFor(() =>
+    expect(requests.find(({ path }) => path === "/sign-in/email")?.body).toMatchObject({
+      callbackURL: `http://localhost:3001${destination}`,
+    }),
+  );
+});
+
 test("auth forms refuse external and non-relative return destinations", async () => {
   const assign = spyOn(window.location, "assign").mockImplementation(() => {});
   answerAuth(() => Response.json({ redirect: false, token: "token", user: { id: "collector" } }));
   try {
-    for (const destination of [
-      "//evil.example",
-      "https://evil.example",
-      "dashboard",
-      "data:text/html,evil",
-    ]) {
+    for (const [destination, landing] of [
+      ["//evil.example", "/dashboard"],
+      ["/\\evil.example", "/dashboard"],
+      ["https://evil.example", "/dashboard"],
+      ["dashboard", "/dashboard"],
+      ["data:text/html,evil", "/dashboard"],
+      ["/%2F/evil.example", "/%2F/evil.example"],
+    ] as const) {
       assign.mockClear();
       await open(`/login?redirect=${encodeURIComponent(destination)}`);
       type("Email", "collector@example.com");
       type("Password", "correct horse");
       fireEvent.click(screen.getByRole("button", { name: "Login" }));
       await waitFor(() =>
-        expect(assign).toHaveBeenLastCalledWith("http://localhost:3001/dashboard"),
+        expect(assign).toHaveBeenLastCalledWith(`http://localhost:3001${landing}`),
       );
       cleanup();
     }
