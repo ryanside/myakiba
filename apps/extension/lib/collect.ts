@@ -107,7 +107,7 @@ const pictureFailureSummarySchema = z.strictObject({
   message: z.string(),
 });
 
-/** A picture failure as it reaches the background, which only logs it: the item imports without its picture. */
+/** A picture failure as it reaches the background, which only logs it: the item refreshes without its picture. */
 export type PictureFailureSummary = z.output<typeof pictureFailureSummarySchema>;
 
 /**

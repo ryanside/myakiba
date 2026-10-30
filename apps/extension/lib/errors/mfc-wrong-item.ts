@@ -9,7 +9,7 @@ export class MfcWrongItem extends tagged("MfcWrongItem")<{
   constructor(args: { expected: MfcItemId; found: MfcItemId }) {
     super({
       ...args,
-      message: `MFC answered item ${args.expected} with item ${args.found}'s page. The item was not imported. Check the page's canonical link parsing.`,
+      message: `MFC answered item ${args.expected} with item ${args.found}'s page. The item was not refreshed. Check the page's canonical link parsing.`,
     });
   }
 }

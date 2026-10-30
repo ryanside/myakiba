@@ -16,7 +16,7 @@ export class MfcChallengeUnsolved extends tagged("MfcChallengeUnsolved")<{
     super({
       ...args,
       cause: args.cause,
-      message: `MFC's challenge for item ${args.mfcItemId} went unsolved because ${what}. Every open run fails its items, so nobody is asked again. Start the import again to get a new challenge.`,
+      message: `MFC's challenge for item ${args.mfcItemId} went unsolved because ${what}. Every open run fails its items, so nobody is asked again. Start the refresh again to get a new challenge.`,
     });
   }
 }

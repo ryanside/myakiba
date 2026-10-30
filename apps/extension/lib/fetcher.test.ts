@@ -2207,7 +2207,7 @@ describe("the developer log", () => {
     expect(error).not.toHaveBeenCalled();
   });
 
-  test("stays quiet for an item that imports, a rate limit it backs off from and a cancelled item", async () => {
+  test("stays quiet for an item that refreshes, a rate limit it backs off from and a cancelled item", async () => {
     let limited = false;
     const extension = fakeExtension({
       pages: ({ mfcItemId }) => {

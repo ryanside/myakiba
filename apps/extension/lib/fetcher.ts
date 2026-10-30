@@ -264,7 +264,7 @@ export function createFetcher(deps: FetcherDeps) {
     );
   }
 
-  /** A picture is optional, so an item whose picture fails imports without one, and the failure is only logged. */
+  /** A picture is optional, so an item whose picture fails refreshes without one, and the failure is only logged. */
   async function itemPage(
     page: CollectedPage,
     ogImage: MfcOgImage,

@@ -7,7 +7,7 @@ export class PictureTimedOut extends tagged("PictureTimedOut")<{
   constructor(args: { timeoutMs: number }) {
     super({
       ...args,
-      message: `The picture did not arrive within ${args.timeoutMs} ms, so the collector stopped its fetch. The item imports without its picture. Check MFC's latency.`,
+      message: `The picture did not arrive within ${args.timeoutMs} ms, so the collector stopped its fetch. The item refreshes without its picture. Check MFC's latency.`,
     });
   }
 }

@@ -19,7 +19,7 @@ export class PictureRejected extends tagged("PictureRejected")<{
     const size = args.bytes === null ? "" : ` and ${args.bytes} bytes`;
     super({
       ...args,
-      message: `The collector dropped the picture as ${args.reason}, because ${WHY[args.reason]}. It was answered with status ${args.status}${size}. The item imports without its picture. Open the picture's URL to see what MFC serves.`,
+      message: `The collector dropped the picture as ${args.reason}, because ${WHY[args.reason]}. It was answered with status ${args.status}${size}. The item refreshes without its picture. Open the picture's URL to see what MFC serves.`,
     });
   }
 }

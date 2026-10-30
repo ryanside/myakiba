@@ -4,5 +4,5 @@ import type { CollectRequest } from "../collect";
 export function afterCollectorFailure(kind: CollectRequest["kind"]): string {
   return kind === "page"
     ? "An item page the extension asked for in its own tab closes that tab, and one asked for in a borrowed tab is tried once more in a tab of its own."
-    : "The item imports without its picture.";
+    : "The item refreshes without its picture.";
 }

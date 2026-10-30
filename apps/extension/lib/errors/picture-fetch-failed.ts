@@ -8,7 +8,7 @@ export class PictureFetchFailed extends tagged("PictureFetchFailed")<{
   constructor(args: { cause: ErrorSummary }) {
     super({
       ...args,
-      message: `The collector's fetch of the picture failed with ${args.cause.name}: ${args.cause.message}. The item imports without its picture. Check the network and MFC's availability.`,
+      message: `The collector's fetch of the picture failed with ${args.cause.name}: ${args.cause.message}. The item refreshes without its picture. Check the network and MFC's availability.`,
     });
   }
 }

@@ -8,7 +8,7 @@ export class MfcItemHiddenOrMissing extends tagged("MfcItemHiddenOrMissing")<{
   constructor(args: { mfcItemId: MfcItemId }) {
     super({
       ...args,
-      message: `MFC answered item ${args.mfcItemId} as not found to a signed-in session, so the item is hidden or deleted. The item was not imported. Check the id on MFC.`,
+      message: `MFC answered item ${args.mfcItemId} as not found to a signed-in session, so the item is hidden or deleted. The item was not refreshed. Check the id on MFC.`,
     });
   }
 }
