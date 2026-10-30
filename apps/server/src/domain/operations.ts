@@ -1,4 +1,3 @@
-import type { ExecutionFailed } from "./kernel";
 import { TaggedError } from "better-result";
 import type {
   Panic,
@@ -63,11 +62,8 @@ export function isFailure(error: Leftover): error is AnyFailure {
 /** The public failure an Err stands for, after a commit or not. */
 export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailure ? E : never;
 
-/** An Err the client never sees: it exists for `retry` and `recover`. */
+/** An Err the client never sees. */
 type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
-
-/** What `retry` and `recover` receive: an internal Err, or a value that was thrown. */
-type Recoverable<E> = InternalOf<E> | UnhandledException;
 
 export type ReadScope = {
   readonly viewer: Viewer;
@@ -99,19 +95,6 @@ export type CommandScope = Omit<ReadScope, "tx"> & {
   readonly failAfterCommit: <F extends AnyFailure>(failure: F) => Err<never, Committed<F>>;
 };
 
-export type RecoveryScope = Pick<ReadScope, "viewer" | "log"> & {
-  /**
-   * Runs a fresh operation. A Failure comes back as an Err; an unanswerable child
-   * outcome comes back as ExecutionFailed, which passes through Result.gen.
-   * A defect raised here always wins: once `recover` settles, the kernel answers with
-   * it even if `recover` ignored its Err, so a recovery can never hide a broken invariant.
-   */
-  readonly execute: <I, T, F extends AnyFailure, M extends string>(
-    op: Op<I, T, F, M>,
-    input: NoInfer<I>,
-  ) => Promise<Result<T, F | ExecutionFailed>>;
-};
-
 /**
  * A tagged error class an operation lists in `operational`: an outage it has no answer
  * for, such as Redis not answering. It is never a Failure, which the client sees.
@@ -141,11 +124,11 @@ type OperationalOf<O extends Operational> = Exclude<
 type OpConfig<M extends string, O extends Operational = Operational> = {
   /** The wide event's `action`, such as "orders.delete_item". */
   readonly action: string;
-  /** The 500 body for a defect, an unrecovered throw or an unrecovered operational error. */
+  /** The 500 body for a defect, a throw or an operational error. */
   readonly failure: M;
   /**
-   * Internal errors the operation answers with its logged 500, as if they were thrown:
-   * `retry` and `recover` still see them, and the log carries the error and its cause.
+   * Internal errors the operation answers with its logged 500, as if they were thrown.
+   * The log carries the error and its cause.
    */
   readonly operational?: O & Listable<O>;
 };
@@ -153,31 +136,6 @@ type OpConfig<M extends string, O extends Operational = Operational> = {
 type QueryConfig<M extends string, O extends Operational> = OpConfig<M, O> & {
   /** Reads every statement from one snapshot, for a body whose reads must agree with each other. */
   readonly snapshot?: true;
-};
-
-/**
- * What a command does with what its body leaves behind. It is the third argument, after
- * the body, so that TS infers the body first and types `error` from it.
- */
-type Retrying<E> = {
-  /**
-   * Decides whether a rolled-back attempt runs again, starting at attempt 1. It sees an
-   * internal Err or a thrown value, never a Failure, a committed failure or a defect.
-   * `before` is not repeated. A predicate passed by name takes `error: unknown`, because a
-   * narrower parameter stops TS from inferring the body.
-   */
-  readonly retry?: (error: Recoverable<E>, attempt: number) => boolean;
-  readonly recover?: never;
-};
-
-/** Handlers with a recover. Its presence, not its answer type, lets an internal error through. */
-type Recovering<I, E, C> = Omit<Retrying<E>, "recover"> & {
-  /**
-   * Runs after rollback, for an internal Err or a throw from `before` or the last attempt.
-   * A defect never reaches it. It answers with a Failure or a fresh operation, or throws
-   * to answer 500; rethrowing `error` reports the value originally thrown.
-   */
-  readonly recover: (scope: RecoveryScope, input: I, error: Recoverable<E>) => Promise<C>;
 };
 
 /** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
@@ -207,13 +165,9 @@ type Literal<T> = [T] extends [never]
       : unknown;
 
 /** An internal Err with nowhere to go fails to compile at the body. */
-type Handled<E, Recovers extends boolean, D> = [Exclude<InternalOf<E>, D>] extends [never]
+type Handled<E, D> = [Exclude<InternalOf<E>, D>] extends [never]
   ? unknown
-  : Recovers extends true
-    ? unknown
-    : {
-        readonly fix: "an internal error needs recover or a class in operational, or must be a Failure";
-      };
+  : { readonly fix: "an internal error needs a class in operational, or must be a Failure" };
 
 /** A defect is thrown with `panic(...)`, so that no hook can mistake it for an expected failure. */
 type NoPanic<E> = [Extract<E, Panic>] extends [never]
@@ -224,19 +178,11 @@ type NoPanic<E> = [Extract<E, Panic>] extends [never]
  * A body's return type is `R & Checked<…>`: TS infers R from the body, then checks the
  * body against the intersection. A failed check names its fix as a missing `fix` property.
  */
-type Checked<Answer, E, Recovers extends boolean, D = never> = Literal<InferOk<Answer>> &
-  Handled<E, Recovers, D> &
-  NoPanic<E>;
+type Checked<Answer, E, D> = Literal<InferOk<Answer>> & Handled<E, D> & NoPanic<E>;
 
 export type AnyOp = Op<never, unknown, AnyFailure, string>;
 type Body = (scope: never, input: never) => Promise<AnyResult>;
 type Hook = (scope: BeforeScope, input: never) => Promise<AnyResult>;
-type Retry = (error: AnyTaggedError, attempt: number) => boolean;
-export type Recover = (
-  scope: RecoveryScope,
-  input: never,
-  error: AnyTaggedError,
-) => Promise<AnyResult>;
 
 export const bodies = new WeakMap<AnyOp, Body>();
 export const poolBodies = new WeakMap<
@@ -244,8 +190,6 @@ export const poolBodies = new WeakMap<
   (scope: PoolScope, input: never) => Promise<AnyResult>
 >();
 export const befores = new WeakMap<AnyOp, Hook>();
-export const retries = new WeakMap<AnyOp, Retry>();
-export const recoveries = new WeakMap<AnyOp, Recover>();
 export const operationals = new WeakMap<AnyOp, Operational>();
 
 export const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
@@ -266,7 +210,7 @@ export function query<
   body: (
     scope: S extends true ? ReadScope : PoolScope,
     input: I,
-  ) => Promise<R & Checked<R, InferErr<R>, false, OperationalOf<O>>>,
+  ) => Promise<R & Checked<R, InferErr<R>, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M> {
   const op = { action: config.action, failure: config.failure };
   if (config.snapshot) {
@@ -294,53 +238,23 @@ type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
  * the body with `value`, or a Result that answers without opening a transaction. A row
  * it read can change before the body runs, so the body must re-check inside the
  * transaction anything it writes against. Its effects outside the database, such as a
- * stored file, are never rolled back. `handlers.retry` reruns a rolled-back attempt
- * without repeating `before`. `handlers.recover` handles what `before` or the last
- * attempt left internal or threw, through fresh operations after rollback. Without a
- * recover, an internal error must be listed in `operational`. Commit effects run
- * afterwards; their errors never retry or recover committed writes.
+ * stored file, are never rolled back. An internal error must be listed in
+ * `operational`. Commit effects run afterwards, and their errors never change the answer.
  */
 export function command<
   I,
   B extends AnyResult,
   R extends AnyResult,
   const M extends string,
-  C extends Result<unknown, AnyFailure | ExecutionFailed> = never,
   const O extends Operational = [],
 >(
   config: OpConfig<M, O> & { readonly before: Before<I, B> },
   body: (
     scope: CommandScope,
     input: HandoffOf<B>,
-  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, true>>,
-  handlers: Recovering<I, InferErr<B | R>, C>,
-): Op<I, InferOk<AnswerOf<B> | R | C>, PublicOf<InferErr<B | R | C>>, M>;
-export function command<
-  I,
-  B extends AnyResult,
-  R extends AnyResult,
-  const M extends string,
-  const O extends Operational = [],
->(
-  config: OpConfig<M, O> & { readonly before: Before<I, B> },
-  body: (
-    scope: CommandScope,
-    input: HandoffOf<B>,
-  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, false, OperationalOf<O>>>,
-  handlers?: Retrying<InferErr<B | R>>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, OperationalOf<O>>>,
 ): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | R>>, M>;
-// Only the overloads above take a `before`: it reads the pool, so it can never be handed a Tx.
-export function command<
-  I,
-  R extends AnyResult,
-  const M extends string,
-  C extends Result<unknown, AnyFailure | ExecutionFailed> = never,
-  const O extends Operational = [],
->(
-  config: OpConfig<M, O> & { readonly before?: never },
-  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, true>>,
-  handlers: Recovering<I, InferErr<R>, C>,
-): Op<I, InferOk<R | C>, PublicOf<InferErr<R | C>>, M>;
+// Only the overload above takes a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
   R extends AnyResult,
@@ -348,22 +262,15 @@ export function command<
   const O extends Operational = [],
 >(
   config: OpConfig<M, O> & { readonly before?: never },
-  body: (
-    scope: CommandScope,
-    input: I,
-  ) => Promise<R & Checked<R, InferErr<R>, false, OperationalOf<O>>>,
-  handlers?: Retrying<InferErr<R>>,
+  body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M>;
 export function command(
   config: OpConfig<string> & { readonly before?: Before<never, AnyResult> },
   body: (scope: CommandScope, input: never) => Promise<AnyResult>,
-  handlers?: Retrying<never> | Recovering<never, never, AnyResult>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body as Body);
   if (config.before) befores.set(op, config.before);
-  if (handlers?.retry) retries.set(op, handlers.retry as Retry);
-  if (handlers?.recover) recoveries.set(op, handlers.recover as Recover);
   if (config.operational) operationals.set(op, config.operational);
   return op;
 }

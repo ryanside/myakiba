@@ -12,7 +12,6 @@ import type { ReadTx } from "@myakiba/db/tx";
 import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
 import type { AnyFailure, Category } from "./failure";
 import type { Viewer } from "./viewer";
-import { tagged } from "./tagged";
 
 import {
   FAILURE_STATUS,
@@ -22,8 +21,6 @@ import {
   bodies,
   poolBodies,
   befores,
-  retries,
-  recoveries,
   operationals,
   SNAPSHOT,
   snapshots,
@@ -35,48 +32,15 @@ import type {
   ReadScope,
   AnyResult,
   AnyOp,
-  RecoveryScope,
   CommandScope,
   Leftover,
   Op,
   Prepared,
   Placeholders,
-  Recover,
 } from "./operations";
 
 export { query, command } from "./operations";
 export type { Op, CommandScope, InputOf } from "./operations";
-
-/** An unanswerable child outcome travels through Result combinators without throwing. */
-const executionIdentity = Symbol("kernel execution outcome");
-const ExecutionFailure = tagged("ExecutionFailed")<{
-  readonly cause: Panic | AnyTaggedError;
-  readonly childAction: string;
-}>;
-
-export interface ExecutionFailed extends InstanceType<typeof ExecutionFailure> {
-  readonly [executionIdentity]: true;
-}
-const executionOutcomes = new WeakSet<object>();
-function isExecutionFailed(
-  error: Parameters<typeof ExecutionFailure.is>[0],
-): error is ExecutionFailed {
-  return ExecutionFailure.is(error) && executionOutcomes.has(error);
-}
-const executionFailedGuard = Object.freeze({ is: isExecutionFailed });
-export { executionFailedGuard as ExecutionFailed };
-
-/** Only this module can construct and brand an outcome. Its trusted metadata is immutable. */
-function executionFailed(
-  props: ConstructorParameters<typeof ExecutionFailure>[0],
-): ExecutionFailed {
-  const failure: ExecutionFailed = Object.assign(new ExecutionFailure(props), {
-    [executionIdentity]: true as const,
-  });
-  executionOutcomes.add(failure);
-  Object.freeze(failure);
-  return failure;
-}
 
 /**
  * The one way a route reads or writes user data. A domain module exports
@@ -85,11 +49,9 @@ function executionFailed(
  *
  * A body returns a better-result `Result`. Every error a client may see is a
  * `Failure`, a class that carries its own category and literal message. Any other
- * Err is internal, and only a command's `recover` may see it, unless the operation
- * lists its class in `operational`. A deliberate `panic` is a defect: it is never
- * retried or recovered and answers a logged 500. Any other throw also answers that
- * 500, after `retry` and `recover` see it as an `UnhandledException`, and so does an
- * operational error that nothing recovered.
+ * Err is internal, and the operation must list its class in `operational`. A
+ * deliberate `panic` is a defect: it answers a logged 500. Any other throw also
+ * answers that 500, and so does an operational error.
  *
  * A command runs in one transaction. Any Err or throw rolls it back;
  * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
@@ -141,36 +103,24 @@ class Stop {
 /** How an operation ended, before `run` turns it into a Result or a throw. */
 type Settled =
   | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
-  /** A deliberate `panic` or `unwrap`, possibly wrapped: never retried or recovered. */
-  | { readonly kind: "defect"; readonly panic: Panic; readonly childAction?: string }
-  /** An internal Err or a thrown value, which `retry` and `recover` may handle. */
-  | { readonly kind: "left"; readonly error: AnyTaggedError; readonly childAction?: string };
+  /** A deliberate `panic` or `unwrap`. */
+  | { readonly kind: "defect"; readonly panic: Panic }
+  /** An internal Err or a thrown value. */
+  | { readonly kind: "left"; readonly error: AnyTaggedError };
 
 function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
-  if (isExecutionFailed(cause)) {
-    return { ...classify(cause.cause), childAction: cause.childAction };
-  }
   if (Panic.is(cause)) return { kind: "defect", panic: cause };
   if (UnhandledException.is(cause)) return { kind: "left", error: cause };
   return { kind: "left", error: new UnhandledException({ cause }) };
 }
 
-/** Sorts what a body, `before` or `recover` returned. A returned Panic is a defect. */
+/** Sorts what a body or `before` returned. A returned Panic is a defect. */
 function settle(result: AnyResult): Settled {
   if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
   const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
-  if (isExecutionFailed(error)) return classify(error);
   if (Panic.is(error)) return { kind: "defect", panic: error };
   if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
   return { kind: "left", error };
-}
-
-async function guarded(step: () => Promise<Settled>): Promise<Settled> {
-  try {
-    return await step();
-  } catch (error) {
-    return classify(error);
-  }
 }
 
 function bodyOf(op: AnyOp) {
@@ -220,13 +170,15 @@ async function runEffects(
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = poolBodies.get(op);
   if (!body) panic(`${op.action} has no pool query body to run`);
-  return guarded(async () =>
-    settle(await body({ viewer, tx: pool, read: readPrepared, log }, input)),
-  );
+  try {
+    return settle(await body({ viewer, tx: pool, read: readPrepared, log }, input));
+  } catch (error) {
+    return classify(error);
+  }
 }
 
-/** Runs `before` and every attempt of a command, retrying what `retry` accepts. */
-async function attempts(
+/** Runs `before`, if any, then the body in one transaction. */
+async function runInTransaction(
   op: AnyOp,
   viewer: Viewer,
   input: never,
@@ -254,73 +206,33 @@ async function attempts(
     handoff = first.value["~proceed"];
   }
   const body = bodyOf(op);
-  const retry = retries.get(op);
-  for (let attempt = 1; ; attempt += 1) {
-    const attemptEffects: Effect[] = [];
-    let settled: Settled;
-    try {
-      const result = await db.transaction(
-        async (tx) => {
-          const scope: CommandScope = {
-            viewer,
-            tx,
-            log,
-            afterCommit: (effect) => {
-              attemptEffects.push(effect);
-            },
-            failAfterCommit: (failure) => Result.err(committed(failure)),
-          };
-          const answered = await body(scope as never, handoff as never);
-          if (answered.isErr() && !keepsWrites(answered.error))
-            throw new Stop({ kind: "rollback", result: answered });
-          return answered;
-        },
-        snapshots.has(op) ? SNAPSHOT : undefined,
-      );
-      await runEffects(op, attemptEffects, viewer, log);
-      settled = settle(result);
-    } catch (error) {
-      settled =
-        error instanceof Stop && error.outcome.kind === "rollback"
-          ? settle(error.outcome.result)
-          : classify(error);
-    }
-    if (settled.kind !== "left" || !retry) return settled;
-    let again: boolean;
-    try {
-      again = retry(settled.error, attempt);
-    } catch (error) {
-      return classify(error);
-    }
-    if (!again) return settled;
+  const effects: Effect[] = [];
+  try {
+    const result = await db.transaction(
+      async (tx) => {
+        const scope: CommandScope = {
+          viewer,
+          tx,
+          log,
+          afterCommit: (effect) => {
+            effects.push(effect);
+          },
+          failAfterCommit: (failure) => Result.err(committed(failure)),
+        };
+        const answered = await body(scope as never, handoff as never);
+        if (answered.isErr() && !keepsWrites(answered.error))
+          throw new Stop({ kind: "rollback", result: answered });
+        return answered;
+      },
+      snapshots.has(op) ? SNAPSHOT : undefined,
+    );
+    await runEffects(op, effects, viewer, log);
+    return settle(result);
+  } catch (error) {
+    return error instanceof Stop && error.outcome.kind === "rollback"
+      ? settle(error.outcome.result)
+      : classify(error);
   }
-}
-
-/** Runs `recover` with fresh operations, and answers with any defect they raised. */
-async function recovered(
-  recover: Recover,
-  viewer: Viewer,
-  input: never,
-  left: AnyTaggedError,
-  log: RequestLogger,
-): Promise<Settled> {
-  let defect: Settled | undefined;
-  const execute: RecoveryScope["execute"] = async (next, value) => {
-    const child = await evaluate(next as AnyOp, viewer, value as never, log);
-    if (child.kind === "answer") return child.result as never;
-    const childAction = child.childAction ?? next.action;
-    if (child.kind === "defect") defect ??= { ...child, childAction };
-    return Result.err(
-      executionFailed({
-        cause: child.kind === "defect" ? child.panic : child.error,
-        childAction,
-      }),
-    ) as never;
-  };
-  const settled = await guarded(async () =>
-    settle(await recover({ viewer, log, execute }, input, left)),
-  );
-  return defect ?? settled;
 }
 
 async function evaluate(
@@ -329,18 +241,9 @@ async function evaluate(
   input: never,
   log: RequestLogger,
 ): Promise<Settled> {
-  let settled: Settled;
-  if (poolBodies.has(op)) {
-    settled = await readPool(op, viewer, input, log);
-  } else {
-    settled = await attempts(op, viewer, input, log);
-    const recover = recoveries.get(op);
-    if (settled.kind === "left" && recover) {
-      settled = await recovered(recover, viewer, input, settled.error, log);
-    }
-  }
-  // A child's outcome was checked when the child settled, so its parent only re-owns it.
-  if (settled.kind === "answer" || settled.childAction) return settled;
+  const settled = poolBodies.has(op)
+    ? await readPool(op, viewer, input, log)
+    : await runInTransaction(op, viewer, input, log);
   if (
     settled.kind === "left" &&
     !UnhandledException.is(settled.error) &&
@@ -349,7 +252,7 @@ async function evaluate(
     return {
       kind: "defect",
       panic: new Panic({
-        message: `${op.action} answered an internal error that no recover handled; only a public failure may reach serve`,
+        message: `${op.action} answered an internal error it does not list in operational; only a public failure may reach serve`,
         cause: settled.error,
       }),
     };
@@ -367,9 +270,8 @@ function answer(settled: Settled): Result<unknown, AnyFailure> {
 /**
  * Runs `op` and returns its Result. Routes call `serve`; tests call this.
  *
- * Expected failures come back as Err. A defect throws its Panic. A throw nobody
- * recovered throws the value originally thrown, including one that `recover` rethrew,
- * and an operational error nobody recovered throws itself.
+ * Expected failures come back as Err. A defect throws its Panic, a throw throws the
+ * value originally thrown, and an operational error throws itself.
  */
 export async function run<I, T, F extends AnyFailure, M extends string>(
   viewer: Viewer,
@@ -411,13 +313,8 @@ function errorCauses(error: Error) {
 }
 
 /** Logs an operation failure, including the driver diagnostics in its cause chain. */
-function logOperationError(
-  log: RequestLogger,
-  action: string,
-  error: Error,
-  childAction?: string,
-): void {
-  log.error(error, { step: action, ...(childAction && { childAction }) });
+function logOperationError(log: RequestLogger, action: string, error: Error): void {
+  log.error(error, { step: action });
   const causes = errorCauses(error);
   if (causes.length > 0) log.set({ errorCauses: causes });
   log.set({ outcome: "error" });
@@ -438,11 +335,8 @@ export async function serve<I, T, F extends AnyFailure, M extends string>(
     action: caller.log.getContext().action ?? op.action,
     user: { id: caller.viewer.userId },
   });
-  let childAction: string | undefined;
   try {
-    const settled = await evaluate(op as AnyOp, caller.viewer, input as never, caller.log);
-    if (settled.kind !== "answer") childAction = settled.childAction;
-    const result = answer(settled) as Result<T, F>;
+    const result = await run(caller.viewer, op, input, caller.log);
     if (result.isOk()) {
       // An operation may name its own outcome in place of "success".
       caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
@@ -458,7 +352,6 @@ export async function serve<I, T, F extends AnyFailure, M extends string>(
       caller.log,
       op.action,
       error instanceof Error ? error : new Error(String(error)),
-      childAction,
     );
     return status(500, op.failure) as ElysiaCustomStatusResponse<500, M>;
   }

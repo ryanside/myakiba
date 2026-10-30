@@ -1033,7 +1033,14 @@
         "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
       ],
       "testAt": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions.",
+      "head": [
+        {
+          "test": "apps/server/src/domain/kernel.test.ts",
+          "fixed": ["failed commit effects keep the committed response and run later effects"],
+          "reason": "Recovery is gone, so only the case for the committed answer and later effects remains."
+        }
+      ]
     },
     {
       "fix": "26af6e8beb3be0cbccb6ed253dd6408e102e59b4",
@@ -1922,7 +1929,19 @@
         "throwing Result callbacks are defects > tagged error match never reaches retry or recover",
         "throwing Result callbacks are defects > catch handler never reaches retry or recover"
       ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
+      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions.",
+      "head": [
+        {
+          "test": "apps/server/src/domain/kernel.test.ts",
+          "fixed": [
+            "throwing Result callbacks are defects > generator reaches the caller as a Panic and rolls back",
+            "throwing Result callbacks are defects > combinator reaches the caller as a Panic and rolls back",
+            "throwing Result callbacks are defects > tagged error match reaches the caller as a Panic and rolls back",
+            "throwing Result callbacks are defects > catch handler reaches the caller as a Panic and rolls back"
+          ],
+          "reason": "Retry and recover are gone, so these cases pin that the callback's Panic reaches the caller and rolls back."
+        }
+      ]
     },
     {
       "fix": "2d6dc59dd652e44c18943c7587fb9257f415163b",
@@ -2141,27 +2160,6 @@
       ]
     },
     {
-      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
-      "bug": "recoveries forwarded child failures outside the parent operation wire contract",
-      "test": "apps/server/src/domain/execute.test.ts",
-      "fixed": [
-        "recover owns a child's throw with parent failure and child diagnostics",
-        "recover gen owns a child's throw with parent failure and child diagnostics",
-        "recover owns a child's operational with parent failure and child diagnostics",
-        "recover gen owns a child's operational with parent failure and child diagnostics",
-        "recover owns a child's panic with parent failure and child diagnostics",
-        "recover gen owns a child's panic with parent failure and child diagnostics"
-      ]
-    },
-    {
-      "fix": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
-      "testAt": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
-      "reason": "1dffa82d added a kernel export assertion to this file that also fails at the parent; preserve the original single-flip harness.",
-      "bug": "Only kernel-created execution failures may forward a child outcome; cloned lookalikes must become an internal defect.",
-      "test": "apps/server/src/domain/execution-failed.test.ts",
-      "fixed": ["only kernel-created execution failures can forward an outcome"]
-    },
-    {
       "fix": "d8aaa3ddddab742b581423a044657d8dc1bd6cf6",
       "bug": "Skipped or pending registrations and their suites do not cover pinned replay names.",
       "test": "scripts/replay-names.test.ts",
@@ -2173,27 +2171,6 @@
           "test": "scripts/replay-reports.test.ts",
           "fixed": ["Bun reports count only passed cases with their real file and suite names"],
           "reason": "The source parser was deleted; passed, skipped, todo and failed JUnit cases now exercise the coverage boundary."
-        }
-      ]
-    },
-    {
-      "fix": "fc29f5e65ef05f840e594c5b81ecaaa51c734930",
-      "bug": "An exported factory and mutable branded metadata let operation bodies forge an undeclared 500 response.",
-      "test": "apps/server/src/domain/execution-failed.test.ts",
-      "fixed": [
-        "operation bodies cannot import an execution failure factory",
-        "a real execution failure cannot have its trusted metadata replaced"
-      ],
-      "testAt": "bdac66d6d4922506b78a224e649faacc1bb37ff6",
-      "reason": "Preserve the historical operations-module factory probe; construction now lives privately in the kernel and is checked through its exact public exports.",
-      "head": [
-        {
-          "test": "apps/server/src/domain/execution-failed.test.ts",
-          "fixed": [
-            "kernel exports only its public operation API and execution guard",
-            "a real execution failure cannot have its trusted metadata replaced"
-          ],
-          "reason": "The export assertion now checks the actual kernel module and its guard; immutable outcome metadata remains covered."
         }
       ]
     },
@@ -2567,7 +2544,7 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a recovery that reaches a transaction, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error with no recover from a query, a command body and a before, a recover match that skips an error, a recover that answers an internal error, a returned Panic from a body and a recover, a Failure given another message, a message function called without its props, an internal error that a query or a recover-less command does not list in operational, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it, and a self-made execution outcome without private kernel identity",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error from a query, a command body or a before that it does not list in operational, a returned Panic from a body, a Failure given another message, a message function called without its props, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [

@@ -7,7 +7,6 @@ import { Elysia, status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
 import type { Treaty } from "@elysiajs/eden";
 import { Panic, Result, UnhandledException } from "better-result";
-import type { TaggedErrorInstance } from "better-result";
 import { evlog } from "evlog/elysia";
 import { createRequestLogger } from "evlog";
 import { order } from "@myakiba/db/schema/figure";
@@ -18,7 +17,7 @@ import { privateApi } from "@/boundary/private-api";
 import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
-import { command, paginate, query, serve, ExecutionFailed } from "./kernel";
+import { command, paginate, query, serve } from "./kernel";
 import { tagged } from "./tagged";
 
 const config = { action: "probe", failure: "Probe failed" };
@@ -153,26 +152,6 @@ command(config, async (scope) => {
   return Result.ok(1);
 });
 
-const RecoveryFailed = Failure("RecoveryFailed", "not_found", "Recovery failed");
-const WriteFailed = Failure("WriteFailed", "conflict", "Write failed");
-const recovered = command(
-  config,
-  async (_scope, input: { readonly found: boolean }) =>
-    input.found ? Result.ok("written" as const) : Result.err(new WriteFailed()),
-  {
-    recover: async (scope, input) => {
-      // @ts-expect-error recovery cannot reach a rolled-back transaction
-      await scope.tx.delete(order);
-      return input.found ? Result.ok(false) : Result.err(new RecoveryFailed());
-    },
-  },
-);
-void (true satisfies Equal<ValuesOf<typeof recovered>, "written" | boolean>);
-void (true satisfies Equal<
-  FailuresOf<typeof recovered>,
-  InstanceType<typeof RecoveryFailed> | InstanceType<typeof WriteFailed>
->);
-
 const SavedFailure = Failure("SavedFailure", "conflict", "Saved failure");
 query(config, async (scope) =>
   // @ts-expect-error only a command body can request a failure after commit
@@ -188,11 +167,6 @@ command(
   async () => Result.ok(1),
 );
 
-command(config, async () => Result.ok(1), {
-  // @ts-expect-error recovery runs fresh operations and cannot request a commit itself
-  recover: async (scope) => scope.failAfterCommit(new SavedFailure()),
-});
-
 const committedFailure = command(config, async (scope, input: { readonly found: boolean }) =>
   input.found ? Result.ok(1) : scope.failAfterCommit(new SavedFailure()),
 );
@@ -206,57 +180,27 @@ void Failure("Unexpected", "internal_error", "Unexpected failure");
 query(config, async () => Result.err(new UnhandledException({ cause: "boom" })));
 
 const Absent = tagged("Absent");
-type AbsentError = TaggedErrorInstance<"Absent", { retryable: boolean; message: string }>;
 
-// @ts-expect-error an internal error with no recover would reach serve as a 500 nobody chose
-query(config, async () => Result.err(new Absent({ retryable: false, message: "gone" })));
+// @ts-expect-error an internal error it does not list would reach serve as a 500 nobody chose
+query(config, async () => Result.err(new Absent({ message: "gone" })));
 
-// @ts-expect-error a command's internal error needs a recover to handle it
+// @ts-expect-error a command's internal error must be listed in operational
 command(config, async (_scope, input: { readonly gone: boolean }) =>
-  input.gone ? Result.err(new Absent({ retryable: false, message: "gone" })) : Result.ok(1),
+  input.gone ? Result.err(new Absent({ message: "gone" })) : Result.ok(1),
 );
 
 command(
   {
     ...config,
-    // @ts-expect-error an internal error from before needs a recover to handle it
+    // @ts-expect-error an internal error from before must be listed in operational
     before: async (scope, input: number) =>
-      input > 0
-        ? scope.proceed(input)
-        : Result.err(new Absent({ retryable: false, message: "gone" })),
+      input > 0 ? scope.proceed(input) : Result.err(new Absent({ message: "gone" })),
   },
   async (_scope, input) => Result.ok(input),
 );
 
-command(
-  config,
-  async (_scope, input: { readonly gone: boolean }) =>
-    input.gone ? Result.err(new Absent({ retryable: true, message: "gone" })) : Result.ok(1),
-  {
-    retry: (error, attempt) => {
-      void (true satisfies Equal<typeof error, AbsentError | UnhandledException>);
-      return error._tag === "Absent" && error.retryable && attempt < 3;
-    },
-    recover: async (_scope, _input, error) => {
-      // @ts-expect-error recover's match must name every error it can receive
-      error.match({ Absent: () => true });
-      return Result.ok(error.match({ Absent: () => 0, UnhandledException: () => 1 }));
-    },
-  },
-);
-
-command(config, async () => Result.ok(1), {
-  // @ts-expect-error recovery answers only with Failures, which the client may see
-  recover: async () => Result.err(new Absent({ retryable: false, message: "gone" })),
-});
-
 // @ts-expect-error a defect is thrown with panic(...); a body never returns a Panic as an Err
 command(config, async () => Result.err(new Panic({ message: "defect" })));
-
-command(config, async () => Result.ok(1), {
-  // @ts-expect-error a defect is thrown with panic(...); recover never returns a Panic as an Err
-  recover: async () => Result.err(new Panic({ message: "defect" })),
-});
 
 const handoff = command(
   {
@@ -276,15 +220,14 @@ void (true satisfies Equal<
   { saved: "existing" } | { saved: "created"; length: number }
 >);
 
-declare function helper(): Promise<Result<number, InstanceType<typeof NoId> | AbsentError>>;
-const composed = command(
-  config,
-  async () =>
-    Result.gen(async function* () {
-      const value = yield* Result.await(helper());
-      return Result.ok(value);
-    }),
-  { retry: (error) => Absent.is(error), recover: async () => Result.ok(0) },
+declare function helper(): Promise<
+  Result<number, InstanceType<typeof NoId> | DependencyUnavailable>
+>;
+const composed = command({ ...config, operational: [DependencyUnavailable] }, async () =>
+  Result.gen(async function* () {
+    const value = yield* Result.await(helper());
+    return Result.ok(value);
+  }),
 );
 void (true satisfies Equal<FailuresOf<typeof composed>, InstanceType<typeof NoId>>);
 
@@ -339,18 +282,6 @@ void (true satisfies Equal<ProbeData, "saved">);
 type PlainError = ErrorOf<ReturnType<typeof client.plain.get>>;
 void (true satisfies Equal<Extract<PlainError, { status: 404 }>, never>);
 
-// A recover that only rethrows still handles an internal error: rethrowing answers the 500.
-command(
-  config,
-  async (_scope, input: { readonly gone: boolean }) =>
-    input.gone ? Result.err(new Absent({ retryable: false, message: "gone" })) : Result.ok(1),
-  {
-    recover: async (_scope, _input, error) => {
-      throw error;
-    },
-  },
-);
-
 const unreachable = () => new DependencyUnavailable({ dependency: "redis", reason: "down" });
 
 // An operation that lists an internal error's class answers it with its logged 500.
@@ -359,15 +290,8 @@ const outage = query(
   async (_scope, input: number) => (input > 0 ? Result.ok(input) : Result.err(unreachable())),
 );
 void (true satisfies Equal<FailuresOf<typeof outage>, never>);
-command(
-  { ...config, operational: [DependencyUnavailable] },
-  async (_scope, input: number) => (input > 0 ? Result.ok(input) : Result.err(unreachable())),
-  {
-    retry: (error) => {
-      void (true satisfies Equal<typeof error, DependencyUnavailable | UnhandledException>);
-      return false;
-    },
-  },
+command({ ...config, operational: [DependencyUnavailable] }, async (_scope, input: number) =>
+  input > 0 ? Result.ok(input) : Result.err(unreachable()),
 );
 command(
   {
@@ -381,16 +305,14 @@ command(
 
 // @ts-expect-error an operation answers with its 500 only the internal errors it lists
 query({ ...config, operational: [DependencyUnavailable] }, async (_scope, input: number) =>
-  input > 0
-    ? Result.err(unreachable())
-    : Result.err(new Absent({ retryable: false, message: "gone" })),
+  input > 0 ? Result.err(unreachable()) : Result.err(new Absent({ message: "gone" })),
 );
 
 command(
   { ...config, operational: [DependencyUnavailable] },
-  // @ts-expect-error a command without recover answers with its 500 only the errors it lists
+  // @ts-expect-error a command answers with its 500 only the errors it lists
   async (_scope, input: number) =>
-    input > 0 ? Result.ok(input) : Result.err(new Absent({ retryable: false, message: "gone" })),
+    input > 0 ? Result.ok(input) : Result.err(new Absent({ message: "gone" })),
 );
 
 // @ts-expect-error a Failure answers its own status, so it is never listed as operational
@@ -408,38 +330,3 @@ query({ ...config, operational: [UnhandledException] }, async () =>
 
 // @ts-expect-error a bare tagged class reads as any to TS, which would list every internal error
 query({ ...config, operational: [Absent] }, async () => Result.ok(1));
-
-const recoveryChild = query({ action: "types.child", failure: "Child failed" }, async () => {
-  throw new Error("child unavailable");
-});
-const recoveryParent = command(
-  { action: "types.recovery", failure: "Recovery failed" },
-  async () => {
-    throw new Error("recover me");
-  },
-  { recover: (scope) => scope.execute(recoveryChild, {}) },
-);
-const recoveryAnswer = () => serve(caller, recoveryParent, {});
-void (true satisfies Equal<
-  Awaited<ReturnType<typeof recoveryAnswer>>,
-  ElysiaCustomStatusResponse<500, "Recovery failed">
->);
-
-type CanConstruct<T> = T extends abstract new (...args: never[]) => object ? true : false;
-void (false satisfies CanConstruct<typeof ExecutionFailed>);
-
-const SelfMadeExecutionFailure = tagged("ExecutionFailed")<{
-  readonly cause: UnhandledException;
-  readonly childAction: string;
-}>;
-const selfMadeExecutionFailure = new SelfMadeExecutionFailure({
-  cause: new UnhandledException({ cause: new Error("forged") }),
-  childAction: "forged",
-});
-// @ts-expect-error a self-made outcome has no private kernel identity
-void (selfMadeExecutionFailure satisfies ExecutionFailed);
-
-const executionFailureProbe = new Error("unanswerable child");
-if (ExecutionFailed.is(executionFailureProbe)) {
-  void (executionFailureProbe.childAction satisfies string);
-}

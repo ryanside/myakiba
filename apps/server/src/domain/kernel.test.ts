@@ -1,5 +1,5 @@
-import { describe, expect, mock, spyOn, test } from "bun:test";
-import { Panic, Result, UnhandledException, panic } from "better-result";
+import { describe, expect, spyOn, test } from "bun:test";
+import { Panic, Result, panic } from "better-result";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
@@ -293,7 +293,7 @@ describe("serve answers with the outcome", () => {
   });
 });
 
-describe("command commit hooks and recovery", () => {
+describe("command commit hooks", () => {
   test("effects observe committed rows and disappear on fail or throw", async () => {
     const observed: string[] = [];
     const operation = (ending: "ok" | "fail" | "throw") =>
@@ -315,132 +315,6 @@ describe("command commit hooks and recovery", () => {
     expect(observed).toEqual(["effect-committed"]);
     expect(await userExists("effect-failed")).toBe(false);
     expect(await userExists("effect-thrown")).toBe(false);
-  });
-
-  test("a retry rolls back its writes and effects and retains the before handoff", async () => {
-    let preparations = 0;
-    let attempts = 0;
-    const effects: number[] = [];
-    const operation = command(
-      {
-        ...config,
-        before: async (scope, id: string) => {
-          preparations += 1;
-          return scope.proceed(id);
-        },
-      },
-      async (scope, id) => {
-        attempts += 1;
-        const attempt = attempts;
-        await scope.tx.insert(user).values(newUser(id));
-        scope.afterCommit(async () => {
-          effects.push(attempt);
-        });
-        if (attempt < 3) throw new Error("retry");
-        return Result.ok({ id });
-      },
-      {
-        retry: (error, attempt) =>
-          error.cause instanceof Error && error.cause.message === "retry" && attempt < 3,
-      },
-    );
-    expect(await valueOf(run(viewer, operation, "retried-write", log))).toEqual({
-      id: "retried-write",
-    });
-    expect({ preparations, attempts, effects }).toEqual({
-      preparations: 1,
-      attempts: 3,
-      effects: [3],
-    });
-  });
-
-  test("an internal Err rolls back and drives retry like a throw", async () => {
-    let attempts = 0;
-    const operation = command(
-      config,
-      async (scope, id: string) => {
-        attempts += 1;
-        await scope.tx.insert(user).values(newUser(`${id}-${attempts}`));
-        if (attempts < 3) return Result.err(new Contended({ message: "the row was locked" }));
-        return Result.ok(attempts);
-      },
-      {
-        retry: (error, attempt) => Contended.is(error) && attempt < 3,
-        recover: async () => Result.err(new Rejected()),
-      },
-    );
-
-    expect(await valueOf(run(viewer, operation, "contended", log))).toBe(3);
-    expect(await userExists("contended-1")).toBe(false);
-    expect(await userExists("contended-2")).toBe(false);
-    expect(await userExists("contended-3")).toBe(true);
-  });
-
-  test("recovery runs after rollback and commits a fresh operation", async () => {
-    let attempts = 0;
-    const original = new Error("original write failed");
-    const operation = command(
-      config,
-      async (scope, id: string) => {
-        attempts += 1;
-        await scope.tx.insert(user).values(newUser(id));
-        throw original;
-      },
-      {
-        retry: (_error, attempt) => attempt < 2,
-        recover: async (scope, id, error) => {
-          expect(error).toBeInstanceOf(UnhandledException);
-          expect(error.cause).toBe(original);
-          expect(await userExists(id)).toBe(false);
-          return scope.execute(writeThen("ok"), { id });
-        },
-      },
-    );
-    expect(await valueOf(run(viewer, operation, "recovered-write", log))).toBe("written");
-    expect(attempts).toBe(2);
-    expect(await userExists("recovered-write")).toBe(true);
-  });
-
-  test("recovery also handles preparation failures, and cannot run for committed effect failures", async () => {
-    let recoveries = 0;
-    const recover = async () => {
-      recoveries += 1;
-      return Result.ok("recovered" as const);
-    };
-    const beforeThrows = command(
-      {
-        ...config,
-        before: async () => {
-          throw new Error("preparation");
-        },
-      },
-      async () => Result.ok("unused" as const),
-      { recover },
-    );
-    expect(await valueOf(run(viewer, beforeThrows, undefined, log))).toBe("recovered");
-    const effectThrows = command(
-      config,
-      async (scope) => {
-        scope.afterCommit(async () => {
-          throw new Error("effect");
-        });
-        return Result.ok("committed" as const);
-      },
-      { recover },
-    );
-    expect(await valueOf(run(viewer, effectThrows, undefined, log))).toBe("committed");
-    expect(recoveries).toBe(1);
-  });
-
-  test("a rethrown error reaches the caller as the value originally thrown", async () => {
-    const original = new Error("original persistence error");
-    const operation = command(config, async () => rejected(original), {
-      recover: async (_scope, _input, error) => {
-        throw error;
-      },
-    });
-
-    await expect(run(viewer, operation, undefined, log)).rejects.toBe(original);
   });
 });
 
@@ -482,30 +356,16 @@ test("failed commit effects keep the committed response and run later effects", 
 describe("a committed failure saves its writes and effects before answering its status", () => {
   test.each(["returned", "yielded inside Result.gen"] as const)("when %s", async (how) => {
     let effects = 0;
-    let retries = 0;
-    let recoveries = 0;
-    const operation = command(
-      config,
-      async (scope, id: string) =>
-        Result.gen(async function* () {
-          await scope.tx.insert(user).values(newUser(id));
-          scope.afterCommit(async () => {
-            effects += 1;
-          });
-          if (how === "returned") return scope.failAfterCommit(new LeaseExpired());
-          yield* scope.failAfterCommit(new LeaseExpired());
-          return Result.ok(1);
-        }),
-      {
-        retry: (_error, attempt) => {
-          retries += 1;
-          return attempt < 2;
-        },
-        recover: async () => {
-          recoveries += 1;
-          return Result.ok(0);
-        },
-      },
+    const operation = command(config, async (scope, id: string) =>
+      Result.gen(async function* () {
+        await scope.tx.insert(user).values(newUser(id));
+        scope.afterCommit(async () => {
+          effects += 1;
+        });
+        if (how === "returned") return scope.failAfterCommit(new LeaseExpired());
+        yield* scope.failAfterCommit(new LeaseExpired());
+        return Result.ok(1);
+      }),
     );
 
     const outcome = await run(viewer, operation, `committed-${how}`, log);
@@ -516,7 +376,7 @@ describe("a committed failure saves its writes and effects before answering its 
     });
     expect(await userExists(`committed-${how}`)).toBe(true);
     expect(await userExists(`served-${how}`)).toBe(true);
-    expect({ effects, retries, recoveries }).toEqual({ effects: 2, retries: 0, recoveries: 0 });
+    expect(effects).toBe(2);
   });
 });
 
@@ -580,7 +440,7 @@ test("a failing DB write logs the underlying Postgres message and diagnostics", 
   }
 });
 
-describe("a defect is never retried or recovered", () => {
+describe("a defect", () => {
   const defects = {
     "a panic": async (): Promise<Result<number, never>> => panic("the row must exist"),
     "a panic inside Result.gen": async () =>
@@ -600,26 +460,11 @@ describe("a defect is never retried or recovered", () => {
   test.each(Object.entries(defects))(
     "%s rolls back and answers a logged 500",
     async (name, end) => {
-      let retries = 0;
-      let recoveries = 0;
       const id = `defect-${Object.keys(defects).indexOf(name)}`;
-      const operation = command(
-        config,
-        async (scope, input: string) => {
-          await scope.tx.insert(user).values(newUser(input));
-          return end();
-        },
-        {
-          retry: () => {
-            retries += 1;
-            return true;
-          },
-          recover: async () => {
-            recoveries += 1;
-            return Result.ok(0);
-          },
-        },
-      );
+      const operation = command(config, async (scope, input: string) => {
+        await scope.tx.insert(user).values(newUser(input));
+        return end();
+      });
       const caller = { viewer, log: createRequestLogger() };
       const logged = spyOn(caller.log, "error");
 
@@ -628,83 +473,27 @@ describe("a defect is never retried or recovered", () => {
         response: "Failed to write",
       });
       expect(logged.mock.lastCall?.[0]).toBeInstanceOf(Panic);
-      expect({ retries, recoveries }).toEqual({ retries: 0, recoveries: 0 });
       expect(await userExists(id)).toBe(false);
     },
   );
 
-  test.each(["body", "before", "recover"] as const)(
-    "a Panic returned as an Err from %s is refused before any hook",
-    async (from) => {
-      const defect = new Panic({ message: "returned instead of thrown" });
-      let retries = 0;
-      const returned = () => Result.err(defect) as Result<number, never>;
-      const operation = command(
-        {
-          ...config,
-          before: async (scope, input: string) =>
-            from === "before" ? returned() : scope.proceed(input),
-        },
-        async (scope, input) => {
-          await scope.tx.insert(user).values(newUser(`returned-${from}`));
-          if (from === "body") return returned();
-          throw new Error(input);
-        },
-        {
-          retry: () => {
-            retries += 1;
-            return false;
-          },
-          recover: async () => returned(),
-        },
-      );
-
-      await expect(run(viewer, operation, "go", log)).rejects.toBe(defect);
-      expect(retries).toBe(from === "recover" ? 1 : 0);
-      expect(await userExists(`returned-${from}`)).toBe(false);
-    },
-  );
-});
-
-describe("a defect raised while recovering always answers", () => {
-  const broken = command({ ...config, action: "test.broken" }, async () =>
-    panic("a recovery operation found a broken invariant"),
-  );
-  test("even when recover ignores its Err and answers ok", async () => {
+  test.each(["body", "before"] as const)("a Panic returned as an Err from %s", async (from) => {
+    const defect = new Panic({ message: "returned instead of thrown" });
+    const returned = () => Result.err(defect) as Result<number, never>;
     const operation = command(
-      config,
-      async () => {
-        throw new Error("persistence failed");
-      },
       {
-        recover: async (scope) => {
-          const result = await scope.execute(broken, {});
-          expect(result.isErr()).toBe(true);
-          return Result.ok("hidden" as const);
-        },
+        ...config,
+        before: async (scope, input: string) =>
+          from === "before" ? returned() : scope.proceed(input),
+      },
+      async (scope) => {
+        await scope.tx.insert(user).values(newUser(`returned-${from}`));
+        return returned();
       },
     );
 
-    await expect(run(viewer, operation, undefined, log)).rejects.toThrow(
-      "a recovery operation found a broken invariant",
-    );
-  });
-
-  test("and when recover forwards its Err", async () => {
-    const operation = command(
-      config,
-      async () => {
-        throw new Error("persistence failed");
-      },
-      {
-        recover: (scope) => scope.execute(broken, {}),
-      },
-    );
-    const caller = { viewer, log: createRequestLogger() };
-    const logged = spyOn(caller.log, "error");
-
-    expect(await serve(caller, operation, {})).toMatchObject({ code: 500 });
-    expect(logged.mock.lastCall?.[0]).toBeInstanceOf(Panic);
+    await expect(run(viewer, operation, "go", log)).rejects.toBe(defect);
+    expect(await userExists(`returned-${from}`)).toBe(false);
   });
 });
 
@@ -724,22 +513,14 @@ describe("throwing Result callbacks are defects", () => {
     "catch handler": () => Result.try({ try: throwing, catch: throwing }),
   };
   test.each(Object.entries(producers))(
-    "%s never reaches retry or recover",
+    "%s reaches the caller as a Panic and rolls back",
     async (_name, produce) => {
-      const retry = mock(() => false);
-      const recover = mock(async () => Result.ok(0));
-      const operation = command(
-        config,
-        async (scope) => {
-          await scope.tx.insert(user).values(newUser("callback-defect"));
-          produce();
-          return Result.ok(1);
-        },
-        { retry, recover },
-      );
+      const operation = command(config, async (scope) => {
+        await scope.tx.insert(user).values(newUser("callback-defect"));
+        produce();
+        return Result.ok(1);
+      });
       await expect(run(viewer, operation, undefined, log)).rejects.toBeInstanceOf(Panic);
-      expect(retry).not.toHaveBeenCalled();
-      expect(recover).not.toHaveBeenCalled();
       expect(await userExists("callback-defect")).toBe(false);
     },
   );
@@ -776,40 +557,17 @@ describe("an operational error the operation lists answers the 500 a throw answe
     });
   });
 
-  test("after its command rolls back, and retry still sees it", async () => {
-    const seen: unknown[] = [];
+  test("after its command rolls back", async () => {
     const operation = command(
       { ...config, operational: [Unreachable] },
       async (scope, id: string) => {
         await scope.tx.insert(user).values(newUser(id));
         return Result.err(outage);
       },
-      {
-        retry: (error, attempt) => {
-          seen.push(error);
-          return attempt < 2;
-        },
-      },
     );
 
     await expect(run(viewer, operation, "operational-write", log)).rejects.toBe(outage);
-    expect(seen).toEqual([outage, outage]);
     expect(await userExists("operational-write")).toBe(false);
-  });
-
-  test("unless a recover answers it", async () => {
-    const operation = command(
-      { ...config, operational: [Unreachable] },
-      async () => Result.err(outage),
-      {
-        recover: async (_scope, _input, error) => {
-          expect(error).toBe(outage);
-          return Result.ok("recovered" as const);
-        },
-      },
-    );
-
-    expect(await valueOf(run(viewer, operation, undefined, log))).toBe("recovered");
   });
 
   test("and an internal Err the operation does not list stays a defect", async () => {
