@@ -1,5 +1,13 @@
 const defaultRedirectPath = "/dashboard";
 
+export function resolvePostAuthRedirect(redirectTo: string | undefined): string {
+  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
+    return defaultRedirectPath;
+  }
+
+  return redirectTo;
+}
+
 export function getAuthRedirectUrl(path: string): string {
   const url = new URL(path, window.location.origin);
 

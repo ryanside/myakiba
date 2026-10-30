@@ -25,6 +25,23 @@
       "fixed": ["a row warns about copies the user already has, in the Collection and on order"]
     },
     {
+      "fix": "34a4b720e6db668f6017bd3a0ea61d93acd294bd",
+      "bug": "The verification email sent at sign-in lost the protected deep link and returned to the site root.",
+      "test": "apps/web/src/components/auth/deep-link.test.tsx",
+      "fixed": ["the verification email sent at sign-in returns to the deep link"]
+    },
+    {
+      "fix": "cf4c7e622d56e3484022fe22e62d2767aaf3eb2f",
+      "bug": "Signing in or registering from a protected deep link lost its query and hash.",
+      "test": "apps/web/src/components/auth/deep-link.test.tsx",
+      "fixed": [
+        "signing in restores a protected deep link's query and hash exactly",
+        "registering from a protected deep link preserves its email verification destination",
+        "signed-in login and signup visitors keep relative destinations and refuse external ones",
+        "Google login and signup callbacks preserve safe deep links"
+      ]
+    },
+    {
       "fix": "f74b261547a6796ae7983514763ac9932c5f5bb1",
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",

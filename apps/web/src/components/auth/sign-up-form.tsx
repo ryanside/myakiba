@@ -37,14 +37,14 @@ function GoogleIcon() {
   );
 }
 
-export default function SignUpForm() {
+export default function SignUpForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
     const started = await decodeAuth(() =>
       authClient.signIn.social({
         provider: "google",
-        callbackURL: getAuthRedirectUrl("/dashboard"),
+        callbackURL: getAuthRedirectUrl(redirectTo),
       }),
     );
     if (started.isErr()) {
@@ -70,7 +70,7 @@ export default function SignUpForm() {
                 password: value.password,
                 name: value.username,
                 username: value.username,
-                callbackURL: getAuthRedirectUrl("/dashboard"),
+                callbackURL: getAuthRedirectUrl(redirectTo),
               },
               { headers: { "x-captcha-response": value.turnstileToken } },
             ),
@@ -83,7 +83,7 @@ export default function SignUpForm() {
       }
       navigate({
         to: "/login",
-        search: { view: "verify-email", email: value.email },
+        search: { view: "verify-email", email: value.email, redirect: redirectTo },
       });
     },
     validators: {
@@ -108,7 +108,7 @@ export default function SignUpForm() {
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" className="text-foreground underline">
+          <Link to="/login" search={{ redirect: redirectTo }} className="text-foreground underline">
             Login
           </Link>
         </div>
