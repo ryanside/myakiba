@@ -10,12 +10,14 @@
     "verify-sources": "bash scripts/verify-sources.sh",
     "check-types": "tsc --noEmit",
     "test": "bun test lib/",
-    "e2e": "bun test e2e/"
+    "e2e": "bun test e2e/",
+    "check-manifest": "bun scripts/check-manifest.ts"
   },
   "dependencies": {
     "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
     "@myakiba/mfc": "workspace:*",
+    "@myakiba/utils": "workspace:*",
     "better-result": "catalog:",
     "zod": "catalog:"
   },

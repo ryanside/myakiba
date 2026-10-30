@@ -19,7 +19,10 @@ import { createFetcher } from "../lib/fetcher";
 import type { Fetcher } from "../lib/fetcher";
 import type { Origins } from "../lib/origins";
 import type { OwnedTab } from "../lib/owned-tab";
+import type { PickArea } from "../lib/picks";
 import { pictureToRead } from "../lib/picture";
+import { storedBytes } from "../lib/stored-bytes";
+import type { Stored } from "../lib/stored-bytes";
 import type { Tab, TabsApi, WindowsApi } from "../lib/tabs";
 import type { Requester, RunKey, TabContext } from "../lib/queue";
 import type { SessionValue } from "../lib/session-value";
@@ -123,6 +126,64 @@ export function memoryValue<T>(initial: T): SessionValue<T> & { readonly peek: (
       return Result.ok();
     },
     peek: () => value,
+  };
+}
+
+export async function ok<T, E>(pending: Promise<Result<T, E>>): Promise<T> {
+  const result = await pending;
+  return result.unwrap();
+}
+
+/**
+ * A `browser.storage` area. Each call takes a turn of the event loop, as the browser's do, and a write that would take
+ * it over `quotaBytes`, counted as Chrome counts `storage.local`, rejects and keeps nothing, as Chrome's does. `refuse`
+ * makes the next call of one kind reject and change nothing, as a browser that fails the call or a worker stopped
+ * before it would.
+ */
+export function fakeStorageArea(quotaBytes = Number.POSITIVE_INFINITY) {
+  const items = new Map<string, Stored>();
+  const refused = new Set<"set" | "remove">();
+  const refuseOnce = (op: "set" | "remove") => {
+    if (refused.delete(op)) throw new Error(`storage ${op} failed`);
+  };
+  const later = () =>
+    new Promise((resolve) => {
+      setImmediate(resolve);
+    });
+  const size = (entries: Iterable<[string, Stored]>) =>
+    [...entries].reduce((sum, [key, value]) => sum + storedBytes(key, value), 0);
+  const area: PickArea = {
+    get: async (keys) => {
+      await later();
+      return Object.fromEntries(
+        (keys ?? [...items.keys()])
+          .filter((key) => items.has(key))
+          .map((key) => [key, structuredClone(items.get(key))]),
+      );
+    },
+    set: async (written) => {
+      await later();
+      refuseOnce("set");
+      const next = new Map([...items, ...Object.entries(written)]);
+      if (size(next) > quotaBytes) throw new Error("Resource::kQuotaBytes quota exceeded");
+      for (const [key, value] of Object.entries(written)) items.set(key, structuredClone(value));
+    },
+    remove: async (keys) => {
+      await later();
+      refuseOnce("remove");
+      for (const key of keys) items.delete(key);
+    },
+  };
+  return {
+    area,
+    keys: () => [...items.keys()].toSorted(),
+    bytes: () => size(items),
+    refuse: (op: "set" | "remove") => {
+      refused.add(op);
+    },
+    put: (key: string, value: Stored) => {
+      items.set(key, value);
+    },
   };
 }
 

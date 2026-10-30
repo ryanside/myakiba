@@ -50,7 +50,7 @@ export function startPageBridge(deps: {
   readonly repeat: (ms: number, tick: () => void) => () => void;
 }): void {
   const { page, origin, runtime } = deps;
-  const openRuns = new Set<string>();
+  const openRequests = new Set<string>();
   let port: BridgePort | null = null;
   let stopKeepalive: (() => void) | null = null;
   let detached = false;
@@ -64,15 +64,15 @@ export function startPageBridge(deps: {
   }
 
   function stopKeepaliveIfIdle(): void {
-    if (openRuns.size > 0) return;
+    if (openRequests.size > 0) return;
     stopKeepalive?.();
     stopKeepalive = null;
   }
 
   function interruptAll(): void {
     port = null;
-    const interrupted = [...openRuns];
-    openRuns.clear();
+    const interrupted = [...openRequests];
+    openRequests.clear();
     stopKeepaliveIfIdle();
     for (const requestId of interrupted) interrupt(requestId);
   }
@@ -104,12 +104,24 @@ export function startPageBridge(deps: {
   }
 
   function relay({ requestId, event }: PortEvent): void {
-    if (event.type === "done") {
-      openRuns.delete(requestId);
+    if (event.type === "done" || event.type === "picks") {
+      openRequests.delete(requestId);
       stopKeepaliveIfIdle();
     }
-    // No background sends picks yet; relaying them means turning each picture's base64 into transferred bytes.
-    if (event.type === "picks") return;
+    if (event.type === "picks") {
+      const picks = event.picks.map((pick) => ({
+        ...pick,
+        picture: pick.picture && {
+          bytes: Uint8Array.fromBase64(pick.picture.base64).buffer,
+          contentType: pick.picture.contentType,
+        },
+      }));
+      post(
+        { channel: BRIDGE_CHANNEL, requestId, event: { type: "picks", picks } },
+        picks.flatMap((pick) => (pick.picture ? [pick.picture.bytes] : [])),
+      );
+      return;
+    }
     if (event.type !== "item") {
       post({ channel: BRIDGE_CHANNEL, requestId, event });
       return;
@@ -182,7 +194,7 @@ export function startPageBridge(deps: {
           interrupt(requestId);
           return;
         }
-        openRuns.add(requestId);
+        openRequests.add(requestId);
         stopKeepalive ??= deps.repeat(KEEPALIVE_MS, () => {
           send({ type: "keepalive" });
         });
@@ -190,6 +202,16 @@ export function startPageBridge(deps: {
         return;
       case "cancel":
         if (!detached) send({ type: "cancel", targetRequestId: request.targetRequestId });
+        return;
+      case "take-picks":
+      case "picks-saved":
+      case "picks-discarded":
+        if (detached) {
+          interrupt(requestId);
+          return;
+        }
+        openRequests.add(requestId);
+        send({ ...request, requestId });
     }
   });
   announce(null);

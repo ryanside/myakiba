@@ -329,3 +329,104 @@ describe("relaying the background's events", () => {
     expect(bridge.posted).toEqual([]);
   });
 });
+
+describe("relaying picks", () => {
+  test("passes each pick request to the background with its request id", () => {
+    const bridge = start();
+    bridge.send({ type: "take-picks" });
+    bridge.send({ type: "picks-saved", mfcItemIds: [1, 2] }, OTHER_REQUEST_ID);
+    bridge.send({ type: "picks-discarded", mfcItemIds: [3] });
+
+    expect<readonly unknown[]>(bridge.extension.sent).toEqual([
+      { type: "take-picks", requestId: REQUEST_ID },
+      { type: "picks-saved", requestId: OTHER_REQUEST_ID, mfcItemIds: [1, 2] },
+      { type: "picks-discarded", requestId: REQUEST_ID, mfcItemIds: [3] },
+    ]);
+    expect(bridge.extension.ticks).toEqual([]);
+  });
+
+  test("relays a saved acknowledgement of any number of picks", () => {
+    const bridge = start();
+    const many = Array.from({ length: 1500 }, (_, index) => index + 1);
+    bridge.send({ type: "picks-saved", mfcItemIds: many });
+
+    expect<readonly unknown[]>(bridge.extension.sent).toEqual([
+      { type: "picks-saved", requestId: REQUEST_ID, mfcItemIds: many },
+    ]);
+  });
+
+  test("hands the page its picks with each picture's base64 turned into bytes it transfers", () => {
+    const bridge = start();
+    bridge.send({ type: "take-picks" });
+    bridge.posted.length = 0;
+    bridge.transfers.length = 0;
+    const pick = (id: number, picture: Json) => ({
+      mfcItemId: id,
+      title: null,
+      pickedAt: 5,
+      html: `<html>${id}</html>`,
+      picture,
+    });
+    bridge.extension.receive({
+      requestId: REQUEST_ID,
+      event: {
+        type: "picks",
+        picks: [
+          pick(1, { base64: "/9j/2Q==", contentType: "image/jpeg" }),
+          pick(2, null),
+          pick(3, { base64: "iVBO", contentType: "image/png" }),
+        ],
+      },
+    });
+
+    const [message] = bridge.posted;
+    if (message?.event.type !== "picks") throw new Error("expected the picks to reach the page");
+    const [first, second, third] = message.event.picks;
+    expect(message.requestId).toBe(REQUEST_ID);
+    expect(first?.html).toBe("<html>1</html>");
+    expect(first?.picture?.contentType).toBe("image/jpeg");
+    expect(new Uint8Array(first?.picture?.bytes ?? new ArrayBuffer(0))).toEqual(
+      new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    );
+    expect(second?.picture).toBeNull();
+    expect<readonly unknown[]>(bridge.transfers).toEqual([
+      [first?.picture?.bytes, third?.picture?.bytes],
+    ]);
+  });
+
+  test("drops a picks event the port should not carry", () => {
+    const bridge = start();
+    bridge.send({ type: "take-picks" });
+    bridge.posted.length = 0;
+    bridge.extension.receive({
+      requestId: REQUEST_ID,
+      event: { type: "picks", picks: [{ mfcItemId: 1, html: "<html>1</html>" }] },
+    });
+
+    expect(bridge.posted).toEqual([]);
+  });
+
+  test("a restarted worker interrupts an open pick request, and an answered one is not", () => {
+    const bridge = start();
+    bridge.send({ type: "take-picks" });
+    bridge.send({ type: "picks-saved", mfcItemIds: [1] }, OTHER_REQUEST_ID);
+    bridge.extension.receive({ requestId: REQUEST_ID, event: { type: "picks", picks: [] } });
+    bridge.posted.length = 0;
+
+    bridge.extension.disconnect();
+
+    expect(bridge.posted).toEqual([interrupted(OTHER_REQUEST_ID)]);
+  });
+
+  test("a reloaded extension answers a pick request as interrupted", () => {
+    const bridge = start();
+    bridge.extension.invalidate();
+    bridge.send({ type: "take-picks" });
+    bridge.send({ type: "picks-discarded", mfcItemIds: [1] }, OTHER_REQUEST_ID);
+
+    expect(bridge.posted.slice(1)).toEqual([
+      interrupted(REQUEST_ID),
+      interrupted(OTHER_REQUEST_ID),
+    ]);
+  });
+});

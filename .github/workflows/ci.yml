@@ -107,6 +107,10 @@ jobs:
         working-directory: apps/extension
         run: bun run zip
 
+      - name: Check the manifests ask for what STORE.md lists
+        working-directory: apps/extension
+        run: bun run check-manifest
+
       - name: Rebuild from the sources zip and compare
         working-directory: apps/extension
         run: bun run verify-sources

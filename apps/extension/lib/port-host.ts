@@ -1,6 +1,8 @@
 import { portItemCodec, portRequestSchema } from "@myakiba/mfc/bridge";
 import type { PortEvent, PortPicture, PortRequest, RunEvent } from "@myakiba/mfc/bridge";
+import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Fetcher } from "./fetcher";
+import type { Picks } from "./picks";
 import type { Requester, RunKey } from "./queue";
 
 export type PortSender = {
@@ -49,6 +51,7 @@ function toPort(event: RunEvent<PortPicture>): PortEvent["event"] {
 export function servePort(
   port: BridgePort,
   fetcher: Pick<Fetcher, "submit" | "cancel">,
+  picks: Pick<Picks, "read" | "remove">,
   expected: { readonly extensionId: string; readonly webOrigin: string },
 ): void {
   const requester = trustedRequester(port.sender, expected);
@@ -60,12 +63,35 @@ export function servePort(
   const runKey = (requestId: string) => `${portKey}/${requestId}` as RunKey;
   const openRuns = new Set<RunKey>();
   let connected = true;
+  const answer = (event: PortEvent) => {
+    if (connected) port.postMessage(event);
+  };
+
+  /** Hands the requester's context its picks. A store that will not read answers nothing, which the page reads as no picks. */
+  const handOver = async (requestId: string): Promise<void> => {
+    const read = await picks.read(requester.context);
+    if (read.isErr()) {
+      console.warn(`${read.error._tag}: ${read.error.message}`);
+      return;
+    }
+    answer({ requestId, event: { type: "picks", picks: read.value } });
+  };
+
+  /** Deletes the picks the page saved or discarded. A delete that fails keeps them, so the page meets them again. */
+  const forget = async (requestId: string, mfcItemIds: readonly MfcItemId[]): Promise<void> => {
+    const removed = await picks.remove(requester.context, mfcItemIds);
+    if (removed.isErr()) console.warn(`${removed.error._tag}: ${removed.error.message}`);
+    answer({
+      requestId,
+      event: { type: "done", reason: removed.isOk() ? "complete" : "interrupted" },
+    });
+  };
 
   port.onDisconnect.addListener(() => {
     connected = false;
     for (const key of openRuns) fetcher.cancel(key);
   });
-  port.onMessage.addListener((message) => {
+  port.onMessage.addListener(async (message) => {
     const parsed = portRequestSchema.safeParse(message);
     if (!parsed.success) return;
     const request = parsed.data;
@@ -79,7 +105,7 @@ export function servePort(
           mfcItemIds: request.mfcItemIds,
           emit: (event) => {
             if (event.type === "done") openRuns.delete(key);
-            if (connected) port.postMessage({ requestId: request.requestId, event: toPort(event) });
+            answer({ requestId: request.requestId, event: toPort(event) });
           },
         });
         break;
@@ -88,6 +114,13 @@ export function servePort(
         fetcher.cancel(runKey(request.targetRequestId));
         break;
       case "keepalive":
+        break;
+      case "take-picks":
+        await handOver(request.requestId);
+        break;
+      case "picks-saved":
+      case "picks-discarded":
+        await forget(request.requestId, request.mfcItemIds);
         break;
     }
   });

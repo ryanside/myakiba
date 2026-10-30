@@ -24,6 +24,7 @@
         "@myakiba/contracts": "workspace:*",
         "@myakiba/env": "workspace:*",
         "@myakiba/mfc": "workspace:*",
+        "@myakiba/utils": "workspace:*",
         "better-result": "catalog:",
         "zod": "catalog:",
       },

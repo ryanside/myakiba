@@ -15,6 +15,8 @@ import { ORIGINS } from "../lib/config";
 import { CollectorInjectionFailed } from "../lib/errors/collector-injection-failed";
 import { createFetcher } from "../lib/fetcher";
 import { ownedTabSchema } from "../lib/owned-tab";
+import { pickListener } from "../lib/pick-host";
+import { createPicks, forgetPrivatePicksOnceClosed } from "../lib/picks";
 import { servePort } from "../lib/port-host";
 import { sessionValue } from "../lib/session-value";
 import { throttleStateSchema } from "../lib/throttle";
@@ -86,8 +88,27 @@ export default defineBackground(() => {
       notFocused(error);
     }
   });
+  const picks = createPicks({
+    local: browser.storage.local,
+    session: browser.storage.session,
+    clock: systemClock,
+  });
+  browser.runtime.onMessage.addListener(
+    pickListener(picks, { extensionId: browser.runtime.id, mfcOrigin: ORIGINS.mfc }),
+  );
+  browser.windows.onRemoved.addListener(async () => {
+    const notForgotten = (cause: unknown) => {
+      console.error("could not forget the private windows' picks", cause);
+    };
+    try {
+      const forgotten = await forgetPrivatePicksOnceClosed(browser.windows, picks);
+      forgotten.tapError(notForgotten);
+    } catch (error) {
+      notForgotten(error);
+    }
+  });
   browser.runtime.onConnect.addListener((port) => {
-    servePort(port, fetcher, { extensionId: browser.runtime.id, webOrigin: ORIGINS.web });
+    servePort(port, fetcher, picks, { extensionId: browser.runtime.id, webOrigin: ORIGINS.web });
   });
   fetcher.resume();
 });
