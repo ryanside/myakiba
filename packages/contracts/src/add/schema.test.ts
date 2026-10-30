@@ -246,6 +246,7 @@ describe("the items query", () => {
     category: null,
     latestRelease: { id: "release-1", date: "2026-01-31", price: 1200, priceCurrency: "JPY" },
     collectionCount: 2,
+    onOrderCount: 1,
     wishlisted: true,
   };
 
@@ -265,6 +266,8 @@ describe("the items query", () => {
   test.each([
     ["no Collection count", { collectionCount: undefined }],
     ["a negative Collection count", { collectionCount: -1 }],
+    ["no on-order count", { onOrderCount: undefined }],
+    ["a negative on-order count", { onOrderCount: -1 }],
     ["no Wishlist badge", { wishlisted: undefined }],
   ])("an Item with %s is refused", (_, overrides) => {
     expect(addItemSchema.safeParse({ ...item, ...overrides }).success).toBe(false);

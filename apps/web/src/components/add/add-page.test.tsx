@@ -116,6 +116,8 @@ test("search shows badges, marks a row already added and links to MFC's search",
   seedItems(
     item("owned0000001", { title: "Owned figure", collectionCount: 2, wishlisted: true }),
     item("single000001", { title: "Single figure", collectionCount: 1 }),
+    item("ordered00001", { title: "Ordered figure", onOrderCount: 1 }),
+    item("both00000001", { title: "Both figure", collectionCount: 1, onOrderCount: 2 }),
   );
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}`);
@@ -128,6 +130,14 @@ test("search shows badges, marks a row already added and links to MFC's search",
   const single = screen.getByRole("option", { name: /Single figure/u });
   expect(single.textContent).toContain("In your collection");
   expect(single.textContent).not.toContain("(1)");
+  expect(single.textContent).not.toContain("On order");
+  const ordered = screen.getByRole("option", { name: /Ordered figure/u });
+  expect(ordered.textContent).toContain("On order");
+  expect(ordered.textContent).not.toContain("(1)");
+  expect(ordered.textContent).not.toContain("In your collection");
+  const both = screen.getByRole("option", { name: /Both figure/u });
+  expect(both.textContent).toContain("In your collection");
+  expect(both.textContent).toContain("On order (2)");
 
   const link = screen.getByRole("link", { name: "Not here? Search MFC for ‘figure’" });
   expect(link.getAttribute("href")).toBe(

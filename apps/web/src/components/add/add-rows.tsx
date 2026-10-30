@@ -311,7 +311,7 @@ function ItemRow({
                   MFC #{externalId}
                 </a>
               )}
-              <ItemBadges collectionCount={item.collectionCount} wishlisted={item.wishlisted} />
+              <ItemBadges item={item} />
               <span className="tabular-nums @2xl/rows:hidden">
                 <ReleaseText date={releaseDate} price={releasePrice} />
               </span>

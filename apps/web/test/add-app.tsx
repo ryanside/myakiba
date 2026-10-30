@@ -166,6 +166,7 @@ export const item = (itemId: string, overrides: Partial<AddItem> = {}): AddItem 
     priceCurrency: "USD",
   },
   collectionCount: 0,
+  onOrderCount: 0,
   wishlisted: false,
   ...overrides,
 });

@@ -128,10 +128,7 @@ export function AddSearch({
                       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground tabular-nums">
                         {date ? <span>{date}</span> : null}
                         {price ? <span>{price}</span> : null}
-                        <ItemBadges
-                          collectionCount={item.collectionCount}
-                          wishlisted={item.wishlisted}
-                        />
+                        <ItemBadges item={item} />
                       </span>
                     </span>
                     {added ? (

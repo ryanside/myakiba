@@ -104,6 +104,7 @@ describe("each search route answers as before", () => {
           category: null,
           latestRelease: { date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
           collectionCount: 1,
+          onOrderCount: 0,
           wishlisted: false,
         },
         {
@@ -114,6 +115,7 @@ describe("each search route answers as before", () => {
           category: null,
           latestRelease: null,
           collectionCount: 0,
+          onOrderCount: 0,
           wishlisted: false,
         },
       ],
@@ -127,8 +129,12 @@ describe("each search route answers as before", () => {
 
   test("item database search badges count only the viewer's Collection Items and Wishlist", async () => {
     await db.insert(collection).values([
-      { id: "c-2", userId, itemId: "item-1", status: "Ordered" },
-      { id: "c-other-2", userId: "user-2", itemId: "item-1" },
+      { id: "c-plain", userId, itemId: "item-1" },
+      { id: "c-ordered", userId, itemId: "item-2", orderId: "order-2", status: "Ordered" },
+      { id: "c-paid", userId, itemId: "item-3", status: "Paid" },
+      { id: "c-shipped", userId, itemId: "item-3", status: "Shipped" },
+      { id: "c-other-2", userId: "user-2", itemId: "item-1", status: "Ordered" },
+      { id: "c-other-3", userId: "user-2", itemId: "item-3" },
     ]);
     await db.insert(wishlistItem).values([
       { userId, itemId: "item-2" },
@@ -139,17 +145,19 @@ describe("each search route answers as before", () => {
 
     expect(status).toBe(200);
     const badges = Object.fromEntries(
-      itemDatabaseSearchResponseSchema
-        .parse(body)
-        .items.map((found) => [
-          found.itemId,
-          { collectionCount: found.collectionCount, wishlisted: found.wishlisted },
-        ]),
+      itemDatabaseSearchResponseSchema.parse(body).items.map((found) => [
+        found.itemId,
+        {
+          collectionCount: found.collectionCount,
+          onOrderCount: found.onOrderCount,
+          wishlisted: found.wishlisted,
+        },
+      ]),
     );
     expect(badges).toEqual({
-      "item-1": { collectionCount: 2, wishlisted: false },
-      "item-2": { collectionCount: 0, wishlisted: true },
-      "item-3": { collectionCount: 0, wishlisted: false },
+      "item-1": { collectionCount: 2, onOrderCount: 0, wishlisted: false },
+      "item-2": { collectionCount: 0, onOrderCount: 1, wishlisted: true },
+      "item-3": { collectionCount: 0, onOrderCount: 2, wishlisted: false },
     });
   });
 

@@ -51,6 +51,7 @@ export const Add = {
                     priceCurrency: row.releasePriceCurrency,
                   },
             collectionCount: row.collectionCount,
+            onOrderCount: row.onOrderCount,
             wishlisted: row.wishlisted,
           },
         ];

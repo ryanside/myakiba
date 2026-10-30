@@ -68,6 +68,29 @@ test("the price placeholder shows the release price only when its currency is th
   expect(screen.getByText("¥25,000")).toBeDefined();
 });
 
+test("a row warns about copies the user already has, in the Collection and on order", async () => {
+  renderRows({
+    items: [
+      item("owned0000001", { title: "Owned", collectionCount: 2 }),
+      item("ordered00001", { title: "Ordered", onOrderCount: 1 }),
+      item("both00000001", { title: "Both", collectionCount: 1, onOrderCount: 2 }),
+      item("fresh0000001", { title: "Fresh" }),
+    ],
+  });
+  await screen.findByRole("checkbox", { name: "Select Owned" });
+  const row = (title: string) =>
+    screen.getByRole("checkbox", { name: `Select ${title}` }).closest("tr")?.textContent;
+
+  expect(row("Owned")).toContain("In your collection (2)");
+  expect(row("Owned")).not.toContain("On order");
+  expect(row("Ordered")).toContain("On order");
+  expect(row("Ordered")).not.toContain("In your collection");
+  expect(row("Both")).toContain("In your collection");
+  expect(row("Both")).toContain("On order (2)");
+  expect(row("Fresh")).not.toContain("In your collection");
+  expect(row("Fresh")).not.toContain("On order");
+});
+
 test("every row control is named after its Item", async () => {
   const user = userEvent.setup();
   const calls = renderRows({ items: [item("miku00000001", { title: "Miku" })] });

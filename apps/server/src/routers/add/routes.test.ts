@@ -85,6 +85,7 @@ test("items answers each known id in request order with its latest release and t
           category: null,
           latestRelease: null,
           collectionCount: 0,
+          onOrderCount: 0,
           wishlisted: true,
         },
         {
@@ -99,7 +100,8 @@ test("items answers each known id in request order with its latest release and t
             price: 4500,
             priceCurrency: "JPY",
           },
-          collectionCount: 2,
+          collectionCount: 1,
+          onOrderCount: 1,
           wishlisted: false,
         },
       ],

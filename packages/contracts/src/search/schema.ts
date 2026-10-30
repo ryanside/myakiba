@@ -91,6 +91,7 @@ export const itemDatabaseItemSchema = z.object({
   category: z.enum(CATEGORIES).nullable(),
   latestRelease: itemDatabaseReleaseSummarySchema.nullable(),
   collectionCount: z.number().int().nonnegative(),
+  onOrderCount: z.number().int().nonnegative(),
   wishlisted: z.boolean(),
 });
 

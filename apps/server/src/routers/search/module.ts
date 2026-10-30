@@ -239,6 +239,7 @@ export const Search = {
               }
             : null,
           collectionCount: row.collectionCount,
+          onOrderCount: row.onOrderCount,
           wishlisted: row.wishlisted,
         })),
         totalCount: page.totalCount,

@@ -16,6 +16,7 @@ export const addItemSchema = z.object({
   category: z.enum(CATEGORIES).nullable(),
   latestRelease: itemDatabaseReleaseSummarySchema.extend({ id: z.string() }).nullable(),
   collectionCount: z.number().int().nonnegative(),
+  onOrderCount: z.number().int().nonnegative(),
   wishlisted: z.boolean(),
 });
 
