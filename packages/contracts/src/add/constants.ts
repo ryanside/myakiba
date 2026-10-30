@@ -7,7 +7,7 @@ export const MAX_PICK_TITLE = 300;
 const MFC_ORIGIN = "https://myfigurecollection.net";
 
 export const MFC_SIGN_IN_URL = `${MFC_ORIGIN}/session/signin/`;
-// The user menu links here; that this page holds the SFW switch is unverified.
+// The SFW switch is in the user menu of every MFC page, this one included, and has no address. This page adds the Content level.
 export const MFC_SETTINGS_URL = `${MFC_ORIGIN}/settings/`;
 export const mfcSearchUrl = (query: string) =>
   `${MFC_ORIGIN}/?_tb=item&keywords=${encodeURIComponent(query)}`;

@@ -16,7 +16,7 @@ const {
 } = PRODUCTION_EXTENSION_ORIGINS;
 
 const HOSTS = [`${MFC}/*`, `${MFC_STATIC}/*`];
-const CONTENT_SCRIPTS = [`${WEB}/*`];
+const CONTENT_SCRIPTS = [`${WEB}/*`, `${MFC}/item/*`];
 
 /**
  * What a release build may ask the browser for, as `STORE.md` lists it for the store forms. Adding an entry here needs

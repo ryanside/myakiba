@@ -76,6 +76,30 @@
         });
       });
     },
+    takePicks() {
+      return new Promise((resolve) => {
+        const requestId = send({ type: "take-picks" });
+        runs.set(requestId, (event) => {
+          if (event.type !== "picks") return;
+          resolve(
+            event.picks.map((pick) => ({
+              mfcItemId: pick.mfcItemId,
+              title: pick.title,
+              html: pick.html,
+              pictureBytes: pick.picture && pick.picture.bytes.byteLength,
+            })),
+          );
+        });
+      });
+    },
+    picksSaved(mfcItemIds) {
+      return new Promise((resolve) => {
+        const requestId = send({ type: "picks-saved", mfcItemIds });
+        runs.set(requestId, (event) => {
+          if (event.type === "done") resolve(event.reason);
+        });
+      });
+    },
     async rogue(waitMs) {
       const requestId = crypto.randomUUID();
       window.postMessage(

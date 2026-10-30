@@ -33,6 +33,10 @@ type PageItem = {
     readonly sha256: string;
   } | null;
 };
+type TakenPick = {
+  readonly mfcItemId: number;
+  readonly pictureBytes: number | null;
+};
 type PageRun = { readonly items: readonly PageItem[]; readonly reason: string };
 type Bridge = {
   readonly statuses: readonly { readonly state: string }[];
@@ -45,15 +49,26 @@ type Bridge = {
   readonly hello: (timeoutMs: number) => Promise<{ readonly type: string } | null>;
   readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
   readonly rogue: (waitMs: number) => Promise<number>;
+  readonly takePicks: () => Promise<readonly TakenPick[]>;
+  readonly picksSaved: (ids: readonly number[]) => Promise<string>;
 };
 type WorkerTabs = {
   readonly query: (filter: {
     readonly url: string;
   }) => Promise<readonly { readonly status?: string }[]>;
 };
+type StoredPick = {
+  readonly html: string;
+  readonly title: string | null;
+  readonly picture: { readonly base64: string; readonly contentType: string } | null;
+};
+type WorkerStorage = {
+  readonly get: (key: string | null) => Promise<Readonly<Record<string, StoredPick | undefined>>>;
+};
 declare global {
   var bridge: Bridge;
-  var chrome: { readonly tabs: WorkerTabs };
+  var chrome: { readonly tabs: WorkerTabs; readonly storage: { readonly local: WorkerStorage } };
+  var messagesToPage: unknown[];
 }
 
 const mocks = startMocks();

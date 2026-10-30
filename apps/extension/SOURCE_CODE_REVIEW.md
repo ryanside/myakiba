@@ -21,11 +21,12 @@ The Firefox package is `apps/extension/.output/myakiba-1.0.0-firefox.zip`, and i
 
 ## What the build changes
 
-WXT bundles and minifies three entry points with Vite:
+WXT bundles and minifies four entry points with Vite:
 
 - `entrypoints/background.ts` becomes `background.js`.
 - `entrypoints/collector.ts` becomes `collector.js`, the script the extension runs in its MyFigureCollection tab.
 - `entrypoints/myakiba.content.ts` becomes `content-scripts/myakiba.js`, the content script on myakiba.app.
+- `entrypoints/mfc.ts` becomes `mfc.js`, the Pick button and note on MyFigureCollection item pages. `wxt.config.ts` declares it as a content script.
 
 The icons in `public/` are copied as they are. `scripts/icons.ts` draws them from the myakiba logo, and the build does not run it.
 

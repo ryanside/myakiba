@@ -1,9 +1,9 @@
-import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type * as z from "zod";
 import { PickStoreFull } from "./errors/pick-store-full";
 import { fromMfcPageSchema } from "./messages";
 import type { mfcPageStateSchema } from "./messages";
+import { itemIdOfPath } from "./mfc-page/item-page";
 import type { Picks } from "./picks";
 import type { PortSender } from "./port-host";
 import type { TabContext } from "./queue";
@@ -14,8 +14,6 @@ export type MfcPageRequest = z.output<typeof fromMfcPageSchema>;
 
 type ItemPageSender = { readonly mfcItemId: MfcItemId; readonly context: TabContext };
 
-const ITEM_PATH = /^\/item\/(\d+)\/?$/;
-
 /** The top frame of an MFC Item page in a tab of known browsing context, or null for any other sender. */
 function itemPageSender(
   sender: PortSender,
@@ -25,13 +23,11 @@ function itemPageSender(
   const url = URL.parse(sender.url ?? "");
   // Firefox gives no sender.origin.
   const origin = sender.origin ?? url?.origin;
-  const id = url?.pathname.match(ITEM_PATH)?.[1];
+  const page = url ? itemIdOfPath(url.pathname) : null;
   const tab = sender.tab;
-  if (origin !== expected.mfcOrigin || id === undefined || tab?.incognito === undefined) {
+  if (origin !== expected.mfcOrigin || page === null || tab?.incognito === undefined) {
     return null;
   }
-  const page = mfcItemId(Number(id));
-  if (page === null) return null;
   return {
     mfcItemId: page,
     context: { incognito: tab.incognito, cookieStoreId: tab.cookieStoreId ?? null },

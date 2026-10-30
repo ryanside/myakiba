@@ -18,7 +18,12 @@ export const ELSEWHERE_PICTURE_ID = 98_781;
 const fixtures = path.join(import.meta.dir, "../../../packages/mfc/fixtures");
 const fixture = (name: string) => Bun.file(path.join(fixtures, name)).text();
 
-const signedInItem = await fixture("item-98777.html");
+// A panel MFC's scripts could add after load, as a live page has, holding the user's name and a profile link.
+const signedInFixture = await fixture("item-98777.html");
+const signedInItem = signedInFixture.replace(
+  "</body>",
+  '<div class="notifications"><a href="/profile/fixture_user">fixture_user, you have mail</a></div></body>',
+);
 const signedOutNotFound = await fixture("derived-not-found-signed-out.html");
 // Derived from derived-public-item.html: the same page as item 98778, so two ids differ.
 const publicFixture = await fixture("derived-public-item.html");
@@ -108,8 +113,9 @@ export function startMocks() {
     const cookie = request.headers.get("cookie") ?? "";
     const session = cookie.includes("mfc_session=ok");
     if (url.pathname === "/" && url.searchParams.get("_tb") === "commit") {
-      const ours = url.searchParams.get("objectId") === String(GATED_ID);
-      return session && ours ? jpeg(gatedPicture) : html("", 404);
+      const id = url.searchParams.get("objectId");
+      if (id === String(PUBLIC_ID)) return jpeg(publicPicture);
+      return session && id === String(GATED_ID) ? jpeg(gatedPicture) : html("", 404);
     }
     if (url.pathname === "/") {
       const headers: Record<string, string> = scenario.signedIn

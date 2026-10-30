@@ -13,11 +13,19 @@ export default defineConfig({
     return {
       name: "myakiba",
       description:
-        "Brings MyFigureCollection items into myakiba with your MyFigureCollection session.",
+        "Pick the MyFigureCollection item you are viewing for myakiba, and refresh an item's details on request.",
       homepage_url: env.WXT_WEB_ORIGIN,
       // Firefox needs "cookies" to open the MFC tab in the requesting tab's container.
       permissions: firefox ? ["scripting", "storage", "cookies"] : ["scripting", "storage"],
       host_permissions: [`${env.WXT_MFC_ORIGIN}/*`, `${env.WXT_MFC_STATIC_ORIGIN}/*`],
+      content_scripts: [
+        {
+          matches: [`${env.WXT_MFC_ORIGIN}/item/*`],
+          js: ["mfc.js"],
+          run_at: "document_idle",
+          all_frames: false,
+        },
+      ],
       // Uint8Array.fromBase64 and toBase64 need Chrome 140. Firefox 140 also shows the data consent declared here.
       ...(firefox
         ? {

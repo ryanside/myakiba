@@ -50,7 +50,7 @@ function PrivacyPolicy() {
           <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
             Privacy policy
           </h1>
-          <p className="text-muted-foreground">Last updated October 26, 2026.</p>
+          <p className="text-muted-foreground">Last updated October 30, 2026.</p>
           <p>
             This policy covers the myakiba browser extension for Chrome and Firefox. It says what
             the extension reads, where that data goes, and what myakiba keeps.
@@ -59,17 +59,22 @@ function PrivacyPolicy() {
 
         <Section title="What the extension does">
           <p>
-            The extension does one thing. It gets MyFigureCollection (MFC) items for myakiba. When
-            you add an MFC item to myakiba, import an MFC CSV or a myakiba export, or refresh an
-            item&apos;s details, the myakiba page at myakiba.app asks the extension for those items.
-            For each item, the extension opens an MFC tab or reuses one you already have open, reads
-            the item&apos;s page with your own MFC sign-in, and passes the page and the item&apos;s
-            main picture back to the myakiba page.
+            The extension brings MyFigureCollection (MFC) items into myakiba. When you click Pick
+            for myakiba on an MFC item page, it keeps that page and the item&apos;s picture in your
+            browser until myakiba&apos;s Add page collects them. Click the button again to unpick.
+          </p>
+          <p>
+            When you add an MFC item to myakiba, import an MFC CSV or a myakiba export, or refresh
+            an item&apos;s details, the myakiba page at myakiba.app asks the extension for those
+            items. For each item, the extension opens an MFC tab or reuses one you already have
+            open, reads the item&apos;s page with your own MFC sign-in, and passes the page and the
+            item&apos;s main picture back to the myakiba page.
           </p>
         </Section>
 
         <Section title="What it reads">
           <ul>
+            <li>The MFC item page you click Pick for myakiba on, when you click it.</li>
             <li>The MFC item pages that myakiba asks for, and no other MFC pages.</li>
             <li>The main picture of each of those items, from myfigurecollection.net.</li>
             <li>
@@ -78,9 +83,13 @@ function PrivacyPolicy() {
             </li>
           </ul>
           <p>
-            Before a page leaves the MFC tab, the extension removes its scripts, forms, MFC profile
-            links, account menu and most metadata. The page it passes on does not contain your MFC
-            username.
+            When an MFC item page opens, the extension reads only its address, its canonical link
+            and the item&apos;s title, to show the button, and sends nothing.
+          </p>
+          <p>
+            Before it keeps or passes on a page, the extension removes its scripts, forms, MFC
+            profile links, account menu and most metadata. The page it keeps or passes on does not
+            contain your MFC username.
           </p>
         </Section>
 
@@ -104,9 +113,16 @@ function PrivacyPolicy() {
             nothing to anyone else, and it contains no analytics, ads or trackers.
           </p>
           <p>
-            The extension keeps a small amount of state in the browser&apos;s session storage: which
-            MFC tabs it opened and how fast it may load the next page. The browser clears it when it
-            closes.
+            A click on Pick for myakiba makes one request, to MFC, for that item&apos;s picture. The
+            picked page and picture stay in the browser&apos;s local storage until myakiba&apos;s
+            Add page collects them, and for at most 14 days. Picks made in a private window stay in
+            session storage only, for as long as a private window is open. Neither leaves your
+            browser before the Add page asks for it.
+          </p>
+          <p>
+            The extension also keeps a small amount of state in the browser&apos;s session storage:
+            which MFC tabs it opened and how fast it may load the next page. The browser clears it
+            when it closes.
           </p>
         </Section>
 
@@ -140,9 +156,10 @@ function PrivacyPolicy() {
 
         <Section title="Your choices">
           <p>
-            The extension reads MFC pages only while myakiba adds, imports or refreshes items you
-            asked for. You can remove it from your browser at any time. The browser then deletes its
-            session storage.
+            The extension reads an MFC page only when you click Pick for myakiba on it, or while
+            myakiba adds, imports or refreshes items you asked for. Click the button again to unpick
+            an item and delete what the extension kept for it. You can remove the extension from
+            your browser at any time. The browser then deletes its storage, picks included.
           </p>
         </Section>
 

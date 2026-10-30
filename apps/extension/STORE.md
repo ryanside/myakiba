@@ -23,22 +23,22 @@ The version comes from `apps/extension/package.json`. Each upload to either stor
 Use the same text in both stores.
 
 - **Name.** myakiba
-- **Summary.** Brings MyFigureCollection items into myakiba with your MyFigureCollection session.
+- **Summary.** Pick the MyFigureCollection item you are viewing for myakiba, and refresh an item's details on request.
 
-  This is the manifest's `description`, 82 characters. Chrome allows 132 and AMO allows 250.
+  This is the manifest's `description`, 103 characters. Chrome allows 132 and AMO allows 250.
 
 - **Description.**
 
   ```text
-  myakiba (https://myakiba.app) is a collection manager for Japanese pop-culture collectibles. This extension lets myakiba add items from MyFigureCollection (MFC).
+  myakiba (https://myakiba.app) is a collection manager for Japanese pop-culture collectibles. This extension lets you pick items while you browse MyFigureCollection (MFC) and add them to myakiba.
 
-  When you add an MFC item to myakiba, import an MFC CSV or a myakiba export, or refresh an item's details, myakiba asks the extension for those items. The extension opens each item's MFC page in a tab with your own MFC sign-in, reads the item's details and main picture, and passes them to myakiba. It loads one page every few seconds, so it does not overload MFC.
+  On an MFC item page, click "Pick for myakiba" next to MFC's own buttons. Click it again to unpick. A small note shows how many items you picked. Click "Review in myakiba" to open myakiba's Add page, choose where they go (your collection, an order, your wishlist or a list) and add them.
 
-  What it sends: the MFC item pages and pictures that myakiba asked for, to myakiba only. It removes your MFC username and profile links from each page first. It does not read your MFC password or cookies, other websites, or your browsing history.
+  The extension sends nothing when you open an MFC page. It reads an item page only when you click Pick on it, and keeps the page and the item's picture in your browser until myakiba's Add page collects them. It removes your MFC username and profile links from the page first. It does not read your MFC password or cookies, other websites, or your browsing history.
 
-  You need a myakiba account. Items that MFC shows only to signed-in members also need you to be signed in to MFC. The extension has no settings and no toolbar button. You use it from myakiba.
+  When you ask myakiba to refresh an item's details, the extension reads that one MFC item page in a tab with your own MFC sign-in, at a pace that does not overload MFC.
 
-  myakiba is not affiliated with MyFigureCollection.
+  You need a myakiba account. Items that MFC shows only to signed-in members need you signed in to MFC. myakiba is not affiliated with MyFigureCollection.
 
   Privacy policy: https://myakiba.app/privacy
   ```
@@ -51,19 +51,20 @@ Use the same text in both stores.
 ## Single purpose
 
 ```text
-The extension gets MyFigureCollection item pages and pictures that the myakiba web app asks for, with the user's own MyFigureCollection sign-in, and passes them to myakiba.
+The extension brings MyFigureCollection items into myakiba. When the user clicks "Pick for myakiba" on the MyFigureCollection item page they are viewing, it keeps that page and the item's picture in the browser until the myakiba web app collects them. When the user asks myakiba to refresh an item's details, it reads that one item page with the user's own MyFigureCollection sign-in and passes it to myakiba.
 ```
 
 ## Permissions
 
-| Permission                                | Browsers        | Justification for the form                                                                                                                                  | Code                                                                                                                      |
-| ----------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `scripting`                               | Chrome, Firefox | Runs the extension's packaged collector script in the MyFigureCollection tab it uses, to read the requested item page and picture with the user's sign-in.  | `apps/extension/entrypoints/background.ts` (`browser.scripting.executeScript`), `apps/extension/entrypoints/collector.ts` |
-| `storage`                                 | Chrome, Firefox | Keeps, in session storage only, which MyFigureCollection tabs the extension opened and its page-load pacing, so a restarted background worker can carry on. | `apps/extension/entrypoints/background.ts` (`browser.storage.session`), `apps/extension/lib/session-value.ts`             |
-| `cookies`                                 | Firefox only    | Opens the MyFigureCollection tab in the same container as the myakiba tab, so it uses the MFC sign-in from that container. The extension reads no cookies.  | `apps/extension/lib/owned-tab.ts` (`cookieStoreId` on `tabs.create`)                                                      |
-| `https://myfigurecollection.net/*`        | Chrome, Firefox | Finds or opens a MyFigureCollection tab, runs the collector in it, and fetches the requested item pages and members-only pictures with the user's sign-in.  | `apps/extension/lib/mfc-tab.ts` (`tabs.query`), `apps/extension/entrypoints/collector.ts` (`fetch`)                       |
-| `https://static.myfigurecollection.net/*` | Chrome, Firefox | Loads a requested item's public picture in a tab on MFC's image host and reads it there.                                                                    | `apps/extension/lib/fetcher.ts` (`pictureTab`), `apps/extension/lib/picture.ts` (`pictureToRead`)                         |
-| Content script on `https://myakiba.app/*` | Chrome, Firefox | Receives item requests from the myakiba web app and passes results back. It runs only on myakiba.app.                                                       | `apps/extension/entrypoints/myakiba.content.ts`, `apps/extension/lib/page-bridge.ts`                                      |
+| Permission                                                | Browsers        | Justification for the form                                                                                                                                                                                                                                                                                              | Code                                                                                                                      |
+| --------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `scripting`                                               | Chrome, Firefox | Runs the packaged collector script in the MFC tab it uses to refresh an item the user asked to refresh.                                                                                                                                                                                                                 | `apps/extension/entrypoints/background.ts` (`browser.scripting.executeScript`), `apps/extension/entrypoints/collector.ts` |
+| `storage`                                                 | Chrome, Firefox | Keeps the items the user picked (MFC item number, title, the cleaned page and its picture) in local storage until myakiba's Add page collects them, at most 8 MiB and at most 14 days; private-window picks only in session storage. Also keeps, in session storage, which MFC tabs it opened and its page-load pacing. | `apps/extension/lib/picks.ts`, `apps/extension/lib/session-value.ts`                                                      |
+| `cookies`                                                 | Firefox only    | Opens the refresh's MFC tab in the same container as the myakiba tab. No cookie is read.                                                                                                                                                                                                                                | `apps/extension/lib/owned-tab.ts` (`cookieStoreId` on `tabs.create`)                                                      |
+| `https://myfigurecollection.net/*`                        | Chrome, Firefox | Finds or opens the MFC tab for a refresh, runs the collector in it, fetches the item page and members-only picture with the user's sign-in.                                                                                                                                                                             | `apps/extension/lib/mfc-tab.ts` (`tabs.query`), `apps/extension/entrypoints/collector.ts` (`fetch`)                       |
+| `https://static.myfigurecollection.net/*`                 | Chrome, Firefox | Loads and reads a refreshed item's public picture.                                                                                                                                                                                                                                                                      | `apps/extension/lib/fetcher.ts` (`pictureTab`), `apps/extension/lib/picture.ts` (`pictureToRead`)                         |
+| Content script on `https://myfigurecollection.net/item/*` | Chrome, Firefox | Shows the "Pick for myakiba" button and the picks note on MFC item pages. It sends nothing when a page loads; on a click it reads that page and fetches that item's picture from MFC.                                                                                                                                   | `apps/extension/entrypoints/mfc.ts`, `apps/extension/lib/mfc-page/`                                                       |
+| Content script on `https://myakiba.app/*`                 | Chrome, Firefox | Receives requests from the myakiba web app: item refreshes, and handing over the user's picks when the Add page asks.                                                                                                                                                                                                   | `apps/extension/entrypoints/myakiba.content.ts`, `apps/extension/lib/page-bridge.ts`                                      |
 
 The extension does not use the `tabs` permission. A host permission is enough to query and read MyFigureCollection tabs.
 
@@ -72,10 +73,10 @@ The extension does not use the `tabs` permission. A host permission is enough to
 - **Single purpose description.** Paste the single purpose text above.
 - **Permission justification.** Paste each Chrome row from the table above. Chrome lists `scripting`, `storage` and the host permissions.
 - **Are you using remote code?** No, I am not using remote code. Every script is in the package, and the extension runs only its own files (`entrypoints/background.ts`, `executeScript` with `files: ["/collector.js"]`).
-- **Data usage. What user data do you plan to collect?** Check only **Website content**. The extension sends the requested MFC item pages and pictures to myakiba. Leave every other type unchecked:
+- **Data usage. What user data do you plan to collect?** Check only **Website content**. The extension sends the MFC item pages and pictures the user picked or asked to refresh to myakiba. Leave every other type unchecked:
   - It sends no personally identifiable information. `packages/mfc/src/capture.ts` (`scrubMfcPage`) removes the MFC account menu and profile links before a page leaves the MFC tab.
   - It reads no authentication information. The browser attaches MFC cookies to the requests, and the extension never reads or sends them.
-  - It records no web history and no user activity. It reads only the URL and title of MFC tabs, and keeps them in the browser.
+  - It records no web history and no user activity. It reads an MFC item page only after the user clicks Pick on it, and sends it only to the myakiba page when that page asks. It keeps the items the user chose, not the pages they viewed. For a refresh, it reads only the URL and title of MFC tabs, and keeps them in the browser.
 - **Certifications.** Check all three. They state that the data is not sold or transferred to third parties outside the approved uses, not used for anything unrelated to the single purpose, and not used to decide creditworthiness or lending. The privacy page says the same and states compliance with the Limited Use requirements, which Chrome's Limited Use policy asks for.
 - **Privacy policy URL.** https://myakiba.app/privacy
 
@@ -99,7 +100,7 @@ Paste this into Chrome's **Test instructions** tab and AMO's **Notes to Reviewer
 
 ```text
 What it does
-The myakiba web app (https://myakiba.app) asks this extension for MyFigureCollection (MFC) items. For each item, the extension opens or reuses an MFC tab, runs its packaged collector script there to read the item page and main picture with the user's own MFC sign-in, and passes them back to the myakiba page through a content script. The myakiba server reads the item details from the page. The extension has no popup, options page or toolbar button.
+The user picks MyFigureCollection (MFC) items on MFC's item pages, then decides in the myakiba web app (https://myakiba.app) where they go. The extension shows a "Pick for myakiba" button on MFC item pages and a small note with the number of picks. It sends nothing when a page loads. A click reads that page and the item's picture and keeps them in the browser; myakiba's Add page collects them through the extension's content script on myakiba.app. The extension never calls myakiba's server itself. Separately, when the user asks myakiba to refresh an item's details, the extension reads that one MFC item page in a tab with the user's sign-in. The extension has no popup, options page or toolbar button.
 
 Test account
 myakiba: sign in at https://myakiba.app/login
@@ -108,22 +109,23 @@ myakiba: sign in at https://myakiba.app/login
 No MyFigureCollection account is needed. Public MFC items cover the whole flow.
 
 How to test
-1. Install the extension and sign in to myakiba. Until a store lists the extension, myakiba tells visitors without it that it is under review. With the extension installed, imports start as they will after release.
-2. Click Add at the top right, then choose Item Database.
-3. Paste one or two MFC item links, such as https://myfigurecollection.net/item/<id>, and submit. Use items that are not in myakiba yet: myakiba does not ask the extension for an item it already has.
-4. An MFC tab opens in the background, loads each item page, and closes when the import ends. The import's progress and the new items appear in myakiba.
-5. To fetch an item again, open any MFC item in myakiba and click "Refresh item details".
+1. Install the extension and sign in to myakiba.
+2. Open an MFC item page, for example https://myfigurecollection.net/item/<id>. Click "Pick for myakiba" next to MFC's "Add to my collection". A note "1 picked · Review in myakiba" appears at the bottom right. Pick one or two more items the same way.
+3. Click "Review in myakiba". myakiba's Add page opens and lists the picked items with their pictures.
+4. Choose "Not owned" and "Wishlist", then click "Add 3 to Wishlist". Or choose "Collection" to add them to the test account's collection.
+5. To refresh an item, open it in myakiba and click "Refresh item details".
 
 Permissions
-- scripting: runs the packaged collector script (collector.js) in the MFC tab.
-- storage: session storage for the MFC tabs the extension opened and its page-load pacing.
+- scripting: runs the packaged collector script (collector.js) in the MFC tab used for a refresh.
+- storage: local storage of the user's picks until myakiba's Add page collects them, at most 14 days, and session storage for private-window picks, the MFC tabs the extension opened and its page-load pacing.
 - cookies (Firefox only): opens the MFC tab in the myakiba tab's container. No cookie is read.
-- https://myfigurecollection.net/*: finds or opens the MFC tab and fetches item pages and members-only pictures with the user's sign-in.
-- https://static.myfigurecollection.net/*: loads and reads an item's public picture.
-- Content script on https://myakiba.app/*: receives requests from the myakiba web app.
+- https://myfigurecollection.net/*: finds or opens the MFC tab for a refresh and fetches item pages and members-only pictures with the user's sign-in.
+- https://static.myfigurecollection.net/*: loads and reads a refreshed item's public picture.
+- Content script on https://myfigurecollection.net/item/*: shows the Pick button; reads a page only on a click.
+- Content script on https://myakiba.app/*: receives requests from the myakiba web app and hands over picks when the Add page asks.
 
 Data
-The extension sends the requested MFC item pages and pictures only to the myakiba page, which uploads them to myakiba's server. It removes the MFC username and profile links from each page first. Privacy policy: https://myakiba.app/privacy
+The extension sends picked or refreshed MFC item pages and pictures only to the myakiba page, which uploads them to myakiba's server. It removes the MFC username and profile links from each page first. Privacy policy: https://myakiba.app/privacy
 ```
 
 For AMO, add this paragraph:
@@ -134,12 +136,13 @@ Source code: the add-on is bundled and minified by WXT (Vite). The sources zip c
 
 ## Screenshots
 
-The Chrome Web Store needs at least one screenshot, up to five, each 1280x800 or 640x400, with square corners and no padding. AMO recommends 1280x800 too. The extension has no screen of its own, so each screenshot shows myakiba while it uses the extension. Capture them in Chrome at a 1280x800 window size, signed in with a real account:
+The Chrome Web Store needs at least one screenshot, up to five, each 1280x800 or 640x400, with square corners and no padding. AMO recommends 1280x800 too. Capture them in Chrome at a 1280x800 window size, signed in with a real account:
 
-1. The Add menu open, with Item Database and the field for MFC item links.
-2. An import in progress, showing its progress while the extension reads the items.
-3. The finished import, with the new items and their pictures.
-4. Optional: an item's page after "Refresh item details".
+1. An MFC item page with "✓ Picked" next to MFC's buttons and the note.
+2. The Add page with three picked rows, pictures and prices.
+3. The destination bar set to a new Order and a List.
+4. The commit toast over the collection filtered to the new items.
+5. An item page after "Refresh item details".
 
 The repo's end-to-end tests run against a mock myakiba page and a mock MFC site with made-up pictures, so they cannot produce honest screenshots.
 
@@ -148,8 +151,8 @@ The small promo tile (440x280) and the marquee tile (1400x560) are optional. Chr
 ## Release checklist
 
 1. Make sure https://myakiba.app/privacy is live in production.
-2. In `apps/extension`, run `bun run zip`, then `bun run verify-sources`.
-3. Optionally, lint the Firefox zip from a temporary directory: `bunx addons-linter apps/extension/.output/myakiba-1.0.0-firefox.zip`. Expect 0 errors and the 4 warnings that `SOURCE_CODE_REVIEW.md` explains.
+2. In `apps/extension`, run `bun run zip`, then `bun run check-manifest`, then `bun run verify-sources`.
+3. Optionally, lint the Firefox zip from a temporary directory: `bunx addons-linter apps/extension/.output/myakiba-1.0.0-firefox.zip`. Expect 0 errors and the 5 warnings that `SOURCE_CODE_REVIEW.md` explains.
 4. Chrome Web Store, at https://chrome.google.com/webstore/devconsole:
    1. Register as a developer and pay the one-time registration fee.
    2. Choose **New item** and upload `myakiba-1.0.0-chrome.zip`.

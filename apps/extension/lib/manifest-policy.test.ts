@@ -69,7 +69,7 @@ describe("the manifest policy", () => {
           host_permissions: ["https://myfigurecollection.net/*"],
           optional_host_permissions: ["<all_urls>"],
           content_scripts: [
-            { matches: ["https://myakiba.app/*"] },
+            { matches: ["https://myakiba.app/*", "https://myfigurecollection.net/item/*"] },
             { matches: ["https://myfigurecollection.net/*"] },
           ],
         },

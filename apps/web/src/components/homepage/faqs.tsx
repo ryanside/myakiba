@@ -21,7 +21,7 @@ const STORE_BROWSERS = {
 } as const satisfies Record<ExtensionStore, string>;
 
 const EXTENSION_USES =
-  "You need the extension on a computer to add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details.";
+  "You need the extension on a computer to pick MFC items, add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details.";
 
 function ExtensionInstallAnswer() {
   const reviewing = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] === null);
@@ -68,7 +68,7 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you add an MFC item that isn't in myakiba yet, the myakiba browser extension opens its page with your MFC sign-in and imports the item details. It loads one page every few seconds so it never hammers their site. Imported items are shared, so an item imported once never needs importing again.",
+      "Yes. When you add an MFC item that isn't in myakiba yet, the myakiba browser extension opens its page with your MFC sign-in and imports the item details. It loads one page every few seconds so it never hammers their site. Imported items are shared, so an item imported once never needs importing again. You can also click Pick for myakiba on an MFC item page: the extension keeps that page in your browser until you review it in myakiba.",
   },
   {
     id: EXTENSION_FAQ_ID,
