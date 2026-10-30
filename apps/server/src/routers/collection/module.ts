@@ -32,6 +32,7 @@ export const Collection = {
         input.scale ? inArray(item.scale, input.scale) : undefined,
         input.tags ? arrayContains(collection.tags, input.tags) : undefined,
         input.condition ? inArray(collection.condition, input.condition) : undefined,
+        input.ids ? inArray(collection.id, input.ids) : undefined,
         input.relDateStart ? gte(item_release.date, input.relDateStart) : undefined,
         input.relDateEnd ? lte(item_release.date, input.relDateEnd) : undefined,
         input.relPriceMin === undefined ? undefined : gte(item_release.price, input.relPriceMin),

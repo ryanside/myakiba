@@ -1,6 +1,7 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia, ElysiaCustomStatusResponse } from "elysia";
 import { createRequestLogger, initLogger } from "evlog";
+import * as z from "zod";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
@@ -174,4 +175,38 @@ test("a bulk delete of an empty list answers 404 and deletes nothing", async () 
 
   expect(await bulkDelete([])).toEqual({ status: 404, body: "Collection item(s) not found" });
   expect(await db.select().from(collection)).toEqual(before);
+});
+
+test("a list by ids answers only the viewer's Collection Items among them", async () => {
+  await db
+    .insert(authSchema.user)
+    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await db.insert(collection).values([
+    { id: "c-2", userId, itemId: "item-1", status: "Owned" },
+    { id: "c-3", userId, itemId: "item-1", status: "Owned" },
+    { id: "c-other", userId: "user-2", itemId: "item-1", status: "Owned" },
+  ]);
+
+  const response = await app.handle(
+    new Request("http://localhost/api/collection?ids=c-1,c-3,c-other,c-missing", {
+      headers: { "x-test-user": userId },
+    }),
+  );
+  const body = z
+    .object({ items: z.array(z.object({ id: z.string() })), totalCount: z.number() })
+    .parse(await response.json());
+
+  expect(response.status).toBe(200);
+  expect(body.items.map((row) => row.id).toSorted()).toEqual(["c-1", "c-3"]);
+  expect(body.totalCount).toBe(2);
+});
+
+test("a list by more than 100 ids answers 422", async () => {
+  const ids = Array.from({ length: 101 }, (_, index) => `c-${index}`).join(",");
+  const response = await app.handle(
+    new Request(`http://localhost/api/collection?ids=${ids}`, {
+      headers: { "x-test-user": userId },
+    }),
+  );
+  expect(response.status).toBe(422);
 });
