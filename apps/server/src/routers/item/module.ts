@@ -22,7 +22,7 @@ import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { EntryCategoryMismatch } from "./errors/entry-category-mismatch";
 import { EntryNotFound } from "./errors/entry-not-found";
-import { ItemNotFound } from "./errors/item-not-found";
+import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { ResyncCooldownActive } from "./errors/resync-cooldown-active";

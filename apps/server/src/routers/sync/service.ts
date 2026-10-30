@@ -8,7 +8,7 @@ import {
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
-import { latestReleases } from "@/lib/latest-release";
+import { latestRelease } from "@/lib/latest-release";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   item as itemTable,
@@ -157,29 +157,24 @@ class SyncService {
       return [];
     }
 
-    const items = await database
-      .select({ id: itemTable.id, externalId: itemTable.externalId, title: itemTable.title })
+    const release = latestRelease(database);
+    const existingItems = await database
+      .select({
+        id: itemTable.id,
+        externalId: itemTable.externalId,
+        title: itemTable.title,
+        releaseId: release.id,
+        releaseDate: release.date,
+      })
       .from(itemTable)
+      .leftJoinLateral(release, sql`TRUE`)
       .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
       .orderBy(itemTable.id);
-    const releases = await latestReleases(
-      database,
-      items.map((existingItem) => existingItem.id),
-    );
 
-    return items.flatMap(({ id, externalId, title }) => {
-      if (externalId === null) return [];
-      const release = releases.get(id);
-      return [
-        {
-          id,
-          externalId,
-          title,
-          releaseId: release?.id ?? null,
-          releaseDate: release?.date ?? null,
-        },
-      ];
-    });
+    return existingItems.filter(
+      (existingItem): existingItem is ExistingItemWithLatestRelease =>
+        existingItem.externalId !== null,
+    );
   }
 
   async getOrderByIdForUser(orderId: string, userId: string, db: ReadTx) {

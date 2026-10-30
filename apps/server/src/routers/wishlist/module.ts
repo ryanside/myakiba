@@ -5,7 +5,6 @@ import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/positio
 import { appendToWishlist, lockWishlist } from "@/lib/wishlist-append";
 import { Result } from "better-result";
 import { command, query } from "@/domain/kernel";
-import { ItemNotFound } from "@/routers/item/errors/item-not-found";
 import { WishlistItemNotFound } from "./errors/wishlist-item-not-found";
 import type { WishlistPageQuery } from "./model";
 
@@ -136,16 +135,11 @@ export const Wishlist = {
     { action: "wishlist.items.add", failure: "Failed to add to Wishlist" },
     async (scope, input: { readonly itemId: string }) => {
       scope.log.set({ item: { id: input.itemId } });
-      const itemRows = await scope.tx
-        .select({ id: item.id })
-        .from(item)
-        .where(eq(item.id, input.itemId))
-        .limit(1);
-      if (itemRows.length === 0) return Result.err(new ItemNotFound());
+      const added = await appendToWishlist(scope.tx, scope.viewer.userId, [input.itemId]);
+      if (added.isErr()) return added;
 
-      const addedCount = await appendToWishlist(scope.tx, scope.viewer.userId, [input.itemId]);
-      scope.log.set({ addedCount });
-      return Result.ok({ addedCount });
+      scope.log.set({ addedCount: added.value });
+      return Result.ok({ addedCount: added.value });
     },
   ),
 
