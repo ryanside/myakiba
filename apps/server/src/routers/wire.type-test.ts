@@ -8,6 +8,7 @@ import type { InputOf } from "@/domain/kernel";
 
 import type { ElysiaCustomStatusResponse as S } from "elysia";
 import { serve } from "@/domain/kernel";
+import { Add } from "@/routers/add/module";
 import { Analytics } from "@/routers/analytics/module";
 import { Calendar } from "@/routers/calendar/module";
 import { Collection } from "@/routers/collection/module";
@@ -37,6 +38,25 @@ type Bodies<A, C extends number> = A extends S<C, infer T, infer _S> ? T : never
 
 declare const caller: Parameters<typeof serve>[0];
 declare function inputOf<O>(op: O): InputOf<O>;
+
+// Add
+const addItems = () => serve(caller, Add.items, inputOf(Add.items));
+const addCommit = () => serve(caller, Add.commit, inputOf(Add.commit));
+void (true satisfies Equal<
+  {
+    items: Failures<typeof addItems>;
+    commit: Failures<typeof addCommit>;
+  },
+  {
+    items: S<500, "Failed to load the items to add">;
+    commit:
+      | S<404, "Some items are no longer in the item database">
+      | S<404, "Order not found">
+      | S<404, "List or selection not found">
+      | S<409, "These items were already added with different choices">
+      | S<500, "Failed to add the items">;
+  }
+>);
 
 // Analytics
 const analyticsOverview = () => serve(caller, Analytics.overview, inputOf(Analytics.overview));

@@ -213,17 +213,26 @@ describe("the items query", () => {
     expect(addItemsQuerySchema.parse({ ids: "a,b,c" })).toEqual({ ids: ["a", "b", "c"] });
   });
 
+  test("takes the array Elysia splits ids into, and repeated ids, as the same unique ids", () => {
+    expect(addItemsQuerySchema.parse({ ids: ["a", "b", "a"] })).toEqual({ ids: ["a", "b"] });
+    expect(addItemsQuerySchema.parse({ ids: ["a,b", "c"] })).toEqual({ ids: ["a", "b", "c"] });
+    expect(addItemsQuerySchema.parse({ ids: "a,b,a" })).toEqual({ ids: ["a", "b"] });
+  });
+
   test("takes up to the row cap of ids", () => {
     expect(addItemsQuerySchema.safeParse({ ids: ids(MAX_ADD_ROWS).join(",") }).success).toBe(true);
     expect(addItemsQuerySchema.safeParse({ ids: ids(MAX_ADD_ROWS + 1).join(",") }).success).toBe(
       false,
     );
+    expect(addItemsQuerySchema.safeParse({ ids: ids(MAX_ADD_ROWS + 1) }).success).toBe(false);
   });
 
   test.each([
     ["no ids", ""],
     ["an empty id", "a,,b"],
     ["an id over 64 characters", "x".repeat(65)],
+    ["an empty array", []],
+    ["an empty id in an array", ["a", ""]],
   ])("refuses %s", (_, query) => {
     expect(addItemsQuerySchema.safeParse({ ids: query }).success).toBe(false);
   });

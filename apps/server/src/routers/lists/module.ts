@@ -3,7 +3,7 @@ import { collection, item, list, listMember, order } from "@myakiba/db/schema/fi
 import type { Tx } from "@myakiba/db/tx";
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { addListMembers, splitTargets, canTarget } from "@/lib/list-members";
+import { addListMembers, lockOwnedLists, splitTargets, canTarget } from "@/lib/list-members";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 import { Result, panic } from "better-result";
@@ -165,12 +165,18 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ listCount: movedIds.length });
       await lockLists(scope.tx, userId);
+      // Rows lock in id order, as every route that locks several Lists does.
+      await scope.tx
+        .select({ id: list.id })
+        .from(list)
+        .where(eq(list.userId, userId))
+        .orderBy(asc(list.id))
+        .for("update");
       const currentLists = await scope.tx
         .select({ id: list.id, position: list.position })
         .from(list)
         .where(eq(list.userId, userId))
-        .orderBy(...listOrder)
-        .for("update");
+        .orderBy(...listOrder);
 
       const plan = planPositionOrderMove(currentLists, movedIds, anchorId, placement);
       if (plan.kind === "not_found") return Result.err(new ListNotFound());
@@ -327,6 +333,7 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ listCount: input.listIds.length });
       await lockLists(scope.tx, userId);
+      await lockOwnedLists(scope.tx, userId, input.listIds);
       const deleted = await scope.tx
         .delete(list)
         .where(and(eq(list.userId, userId), inArray(list.id, input.listIds)))

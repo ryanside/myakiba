@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { privateApi } from "./boundary/private-api";
 import { publicRoutes } from "./boundary/public-routes";
+import addRouter from "./routers/add";
 import analyticsRouter from "./routers/analytics";
 import calendarRouter from "./routers/calendar";
 import collectionRouter from "./routers/collection";
@@ -20,6 +21,7 @@ export const routes = new Elysia()
   .use(publicRoutes)
   .use(
     privateApi("/api")
+      .use(addRouter)
       .use(analyticsRouter)
       .use(calendarRouter)
       .use(collectionRouter)

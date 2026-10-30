@@ -38,6 +38,7 @@ import type {
   DataTransferImportReport,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { JobData } from "@myakiba/contracts/sync/schema";
+import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 
 export const item = pgTable(
   "item",
@@ -337,6 +338,21 @@ export const wishlistItem = pgTable(
     ),
     index("wishlist_item_item_id_idx").on(t.itemId),
   ],
+);
+
+/** One Add commit's answer, written in the commit's own transaction, so it exists only if the commit does. */
+export const addCommit = pgTable(
+  "add_commit",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    commitId: uuid("commit_id").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    answer: jsonb("answer").$type<AddCommitResponse>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.commitId] })],
 );
 
 export const dataTransferImport = pgTable("data_transfer_import", {

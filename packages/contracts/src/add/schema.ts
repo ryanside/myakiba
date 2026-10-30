@@ -19,11 +19,13 @@ export const addItemSchema = z.object({
   wishlisted: z.boolean(),
 });
 
+const idsParam = z.string().max((MAX_ITEM_ID_LENGTH + 1) * MAX_ADD_ROWS);
+
+/** `ids=a,b` arrives as a string from a URL and as an array from Elysia, which splits it on commas. */
 export const addItemsQuerySchema = z.object({
   ids: z
-    .string()
-    .max((MAX_ITEM_ID_LENGTH + 1) * MAX_ADD_ROWS)
-    .transform((value) => value.split(","))
+    .union([idsParam, z.array(idsParam).max(MAX_ADD_ROWS)])
+    .transform((value) => [...new Set([value].flat().flatMap((ids) => ids.split(",")))])
     .pipe(z.array(itemIdField).min(1).max(MAX_ADD_ROWS)),
 });
 
@@ -124,6 +126,8 @@ export const addCommitResponseSchema = z.object({
   wishlistAdded: z.number().int().nonnegative(),
   listIds: z.array(z.string()),
 });
+
+export type AddCommitResponse = z.output<typeof addCommitResponseSchema>;
 
 /** The price a row gets when the user leaves it blank, in the user's currency's minor units. */
 export function releasePriceDefault(

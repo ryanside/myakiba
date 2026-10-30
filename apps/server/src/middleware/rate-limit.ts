@@ -96,6 +96,12 @@ const rateLimitConfigs = {
     keyPrefix: "rl:mfc-lookup",
     strategy: "userId",
   },
+  addCommit: {
+    maxRequests: 120,
+    windowSeconds: 3600,
+    keyPrefix: "rl:add-commit",
+    strategy: "userId",
+  },
 } as const satisfies Record<string, RateLimitConfig>;
 
 type RateLimitName = keyof typeof rateLimitConfigs;

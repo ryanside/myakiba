@@ -46,22 +46,28 @@ export async function canTarget(
   );
 }
 
+/** Locks the viewer's Lists in id order, answering whether the viewer owns every one. */
+export async function lockOwnedLists(tx: Tx, userId: string, listIds: readonly string[]) {
+  const owned = await tx
+    .select({ id: list.id })
+    .from(list)
+    .where(and(eq(list.userId, userId), inArray(list.id, listIds)))
+    .orderBy(asc(list.id))
+    .for("update");
+  return owned.length === listIds.length;
+}
+
 export async function addListMembers(
   tx: Tx,
   userId: string,
   targets: readonly ListTarget[],
   listIds: readonly string[],
 ): Promise<Result<{ addedCount: number }, ListOrSelectionNotFound>> {
-  const [found, ownedLists] = await Promise.all([
+  const [found, ownsLists] = await Promise.all([
     canTarget(tx, userId, splitTargets(targets)),
-    tx
-      .select({ id: list.id })
-      .from(list)
-      .where(and(eq(list.userId, userId), inArray(list.id, listIds)))
-      .orderBy(asc(list.id))
-      .for("update"),
+    lockOwnedLists(tx, userId, listIds),
   ]);
-  if (!found || ownedLists.length !== listIds.length) {
+  if (!found || !ownsLists) {
     return Result.err(new ListOrSelectionNotFound());
   }
 

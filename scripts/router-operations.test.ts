@@ -138,18 +138,22 @@ test("router operation check accepts direct answers and rejects missing or repea
   ).toBeGreaterThan(0);
 });
 
-test("routers return their domain operation and every sync entry point serves exactly once", async () => {
+const SERVE_ONCE = new Set([
+  "apps/server/src/routers/sync/index.ts",
+  "apps/server/src/routers/add/index.ts",
+]);
+
+test("routers return their domain operation and every sync and Add entry point serves exactly once", async () => {
   const root = path.resolve(import.meta.dir, "..");
   const hits: string[] = [];
+  const checked: string[] = [];
   for await (const file of new Glob("apps/server/src/routers/**/*.ts").scan(root)) {
     if (/\.(?:type-)?test\.ts$/u.test(file)) continue;
+    if (SERVE_ONCE.has(file)) checked.push(file);
     hits.push(
-      ...violations(
-        file,
-        await Bun.file(path.join(root, file)).text(),
-        file === "apps/server/src/routers/sync/index.ts",
-      ),
+      ...violations(file, await Bun.file(path.join(root, file)).text(), SERVE_ONCE.has(file)),
     );
   }
   expect(hits).toEqual([]);
+  expect(checked.toSorted()).toEqual([...SERVE_ONCE].toSorted());
 });
