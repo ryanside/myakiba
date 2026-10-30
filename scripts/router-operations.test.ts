@@ -47,9 +47,6 @@ function violations(file: string, source: string, oncePerHandler = false) {
     ArrowFunctionExpression(node) {
       if (node.body.type !== "BlockStatement") markReturned(node.body);
     },
-    YieldExpression(node) {
-      if (node.delegate && node.argument) markReturned(node.argument);
-    },
     CallExpression(node) {
       calls.push(node);
     },
@@ -109,7 +106,7 @@ test("router operation check accepts direct answers and rejects missing or repea
   expect(
     violations(
       "fixture.ts",
-      `${imported} router.get("/status", async function* (ctx) { yield* serve(ctx, stream, {}); });`,
+      `${imported} router.get("/status", async (ctx) => { return await serve(ctx, op, {}); });`,
       true,
     ),
   ).toEqual([]);

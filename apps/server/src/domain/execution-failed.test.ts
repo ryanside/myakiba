@@ -72,7 +72,6 @@ test("kernel exports only its public operation API and execution guard", async (
     "query",
     "run",
     "serve",
-    "stream",
   ]);
   expect(Object.keys(ExecutionFailed)).toEqual(["is"]);
 });

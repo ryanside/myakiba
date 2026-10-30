@@ -18,7 +18,7 @@ import { privateApi } from "@/boundary/private-api";
 import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 import { Orders } from "@/routers/orders/module";
 import { Failure } from "./failure";
-import { command, compose, paginate, query, serve, stream, ExecutionFailed } from "./kernel";
+import { command, compose, paginate, query, serve, ExecutionFailed } from "./kernel";
 import { tagged } from "./tagged";
 
 const config = { action: "probe", failure: "Probe failed" };
@@ -430,18 +430,6 @@ void (true satisfies Equal<
   | ElysiaCustomStatusResponse<400, "No id">
   | ElysiaCustomStatusResponse<500, "Plan failed" | "Step failed">
 >);
-const eventStream = stream(
-  { action: "types.stream", failure: "Stream failed", onError: () => 0 },
-  async function* (_scope, input: { readonly count: number }) {
-    yield input.count;
-  },
-);
-const servedStream = () => serve(caller, eventStream, { count: 1 });
-void (true satisfies Equal<
-  ReturnType<typeof servedStream>,
-  AsyncGenerator<number, ReturnType<() => void> | ElysiaCustomStatusResponse<500, "Stream failed">>
->);
-
 const recoveryChild = query({ action: "types.child", failure: "Child failed" }, async () => {
   throw new Error("child unavailable");
 });

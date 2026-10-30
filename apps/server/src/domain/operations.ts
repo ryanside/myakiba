@@ -1,7 +1,8 @@
 import type { ExecutionFailed } from "./kernel";
-import { Result, TaggedError, panic } from "better-result";
+import { TaggedError, panic } from "better-result";
 import type {
   Panic,
+  Result,
   AnyTaggedError,
   Err,
   InferErr,
@@ -275,45 +276,6 @@ export function query<
     poolBodies.set(op, body);
   }
   if (config.operational) operationals.set(op, config.operational);
-  return op;
-}
-
-export type StreamOp<I, T, M extends string> = Op<I, AsyncGenerator<T, void>, never, M> & {
-  readonly "~stream": true;
-};
-export const streams = new WeakMap<
-  AnyOp,
-  {
-    readonly body: (scope: StreamScope, input: never) => AsyncGenerator<unknown, void>;
-    readonly onError: (message: string, last: never) => Ok<unknown, never>;
-  }
->();
-
-export type StreamScope = PoolScope & {
-  /** Returns public failures as Err. Throws an unanswerable read outcome to the stream boundary, preserving its original error. */
-  readonly readOrThrow: <I, T, F extends AnyFailure, M extends string>(
-    op: Op<I, T, F, M>,
-    input: NoInfer<I>,
-  ) => Promise<Result<T, F>>;
-  /** Runs polling reads through the operation's hooks; Panics throw, other unhandled outcomes log and return an Err for the next poll. */
-  readonly poll: <I, T, F extends AnyFailure, M extends string>(
-    op: Op<I, T, F, M>,
-    input: NoInfer<I>,
-  ) => Promise<Result<T, F | ExecutionFailed>>;
-};
-
-/** An event stream whose route delegates with yield* serve(...), keeping the framework's generator lifecycle. */
-export function stream<I, T, const M extends string>(
-  config: OpConfig<M> & {
-    readonly onError: (message: string, last: T) => T;
-  },
-  body: (scope: StreamScope, input: I) => AsyncGenerator<T, void>,
-): StreamOp<I, T, M> {
-  const op = { action: config.action, failure: config.failure, "~stream": true as const };
-  streams.set(op, {
-    body,
-    onError: (message, last) => Result.ok(config.onError(message, last)),
-  });
   return op;
 }
 

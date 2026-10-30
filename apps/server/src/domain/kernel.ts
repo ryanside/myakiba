@@ -1,6 +1,6 @@
-import { ElysiaCustomStatusResponse, status } from "elysia";
+import { status } from "elysia";
+import type { ElysiaCustomStatusResponse } from "elysia";
 import * as z from "zod";
-import { createLogger } from "evlog";
 import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
@@ -27,7 +27,6 @@ import {
   operationals,
   SNAPSHOT,
   snapshots,
-  streams,
   compositions,
   proceeding,
   committed,
@@ -45,12 +44,10 @@ import type {
   Prepared,
   Placeholders,
   CompositionScope,
-  StreamOp,
-  StreamScope,
   Recover,
 } from "./operations";
 
-export { query, command, compose, stream } from "./operations";
+export { query, command, compose } from "./operations";
 export type { Op, CommandScope, InputOf, CompositionScope } from "./operations";
 
 /** An unanswerable child outcome travels through Result combinators without throwing. */
@@ -96,7 +93,7 @@ function executionFailed(
 
 /**
  * The one way a route reads or writes user data. A domain module exports
- * operations built with `query`, `command`, `compose` or `stream`, and a route answers with
+ * operations built with `query`, `command` or `compose`, and a route answers with
  * `serve(ctx, Module.op, input)`.
  *
  * A body returns a better-result `Result`. Every error a client may see is a
@@ -260,82 +257,6 @@ async function readPool(invocation: Invocation, viewer: Viewer, input: never, lo
   );
 }
 
-async function streamStep<I, T, F extends AnyFailure, M extends string>(
-  receiver: Invocation,
-  viewer: Viewer,
-  op: Op<I, T, F, M>,
-  input: I,
-  log: RequestLogger,
-): Promise<Result<T, F | ExecutionFailed>> {
-  if (receiver.op.action === op.action)
-    panic(`${receiver.op.action} stream read ${op.action} must use a distinct action`);
-  return executionResult(
-    await evaluate(op as AnyOp, viewer, input as never, log),
-    op,
-    receiver,
-  ) as Result<T, F | ExecutionFailed>;
-}
-
-/** Only a stream receives throwing reads and resumable polling reads. */
-async function openStream(
-  invocation: Invocation,
-  viewer: Viewer,
-  input: never,
-  log: RequestLogger,
-) {
-  const op = invocation.op;
-  const registration = streams.get(op);
-  if (!registration) panic(`${op.action} has no stream body to run`);
-  const scope: StreamScope = {
-    viewer,
-    tx: pool,
-    read: readPrepared,
-    log,
-    readOrThrow: async (next, value) => {
-      const result = await streamStep(invocation, viewer, next, value, log);
-      if (result.isErr()) {
-        if (isExecutionFailed(result.error)) throw result.error;
-        log.set({ outcome: result.error.category });
-        return Result.err(result.error);
-      }
-      return Result.ok(result.value);
-    },
-    poll: async (next, value) => {
-      const result = await streamStep(invocation, viewer, next, value, log);
-      if (result.isOk()) return result;
-      if (isExecutionFailed(result.error)) {
-        const error = result.error;
-        if (Panic.is(error.cause)) throw error;
-        const cause = UnhandledException.is(error.cause) ? error.cause.cause : error.cause;
-        const original = cause instanceof Error ? cause : new Error(String(cause));
-        const childAction = error.childAction ?? error.operation.action;
-        logOperationError(log, op.action, original, childAction);
-        log.set({
-          pollingErrors: [
-            {
-              step: op.action,
-              childAction,
-              error: {
-                name: original.name,
-                message: original.message,
-                stack: original.stack,
-                cause: original.cause,
-              },
-              errorCauses: errorCauses(original),
-            },
-          ],
-        });
-      } else {
-        log.set({ outcome: result.error.category });
-      }
-      return result;
-    },
-  };
-  return guarded(invocation, async () =>
-    settle(Result.ok(registration.body(scope, input)), invocation),
-  );
-}
-
 /** Runs `before` and every attempt of a command, retrying what `retry` accepts. */
 async function attempts(
   invocation: Invocation,
@@ -467,8 +388,6 @@ async function evaluate(
       settle(await composition(scope, input), invocation),
     );
     if (defect) settled = defect;
-  } else if (streams.has(op)) {
-    settled = await openStream(invocation, viewer, input, log);
   } else if (poolBodies.has(op)) {
     settled = await readPool(invocation, viewer, input, log);
   } else {
@@ -572,81 +491,12 @@ function logOperationError(
 
 type Caller = { readonly viewer: Viewer; readonly log: RequestLogger };
 
-type StreamValue<T> = T extends AsyncGenerator<infer V, void> ? V : never;
-
 /**
  * Runs `op` for the signed-in caller and answers with its value, its failure's
  * status and message, or a 500. Eden sees one entry per Failure class.
  */
-export function serve<I, T, M extends string>(
+export async function serve<I, T, F extends AnyFailure, M extends string>(
   caller: Caller,
-  op: StreamOp<I, T, M>,
-  input: NoInfer<I>,
-): AsyncGenerator<T, ReturnType<() => void> | ElysiaCustomStatusResponse<500, M>>;
-export function serve<I, T, F extends AnyFailure, M extends string>(
-  caller: Caller,
-  op: Op<I, T, F, M>,
-  input: NoInfer<I>,
-): Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>;
-export function serve<I, T, F extends AnyFailure, M extends string>(
-  caller: Caller,
-  op: Op<I, T, F, M>,
-  input: NoInfer<I>,
-):
-  | Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>>
-  | AsyncGenerator<StreamValue<T>, ReturnType<() => void> | ElysiaCustomStatusResponse<500, M>> {
-  const terminal = streams.get(op as AnyOp);
-  if (!terminal) return serveResult(caller, op, input);
-  return (async function* () {
-    // Keep the logger object held by stream bodies and reads, but hand its methods
-    // to a standalone event before Elysia emits the request at the first yield.
-    const log = { ...caller.log };
-    const endLog = createLogger();
-    const response = await serveResult({ viewer: caller.viewer, log }, op, input);
-    if (response instanceof ElysiaCustomStatusResponse)
-      return response as ElysiaCustomStatusResponse<500, M>;
-    let last: IteratorYieldResult<StreamValue<T>> | undefined;
-    let ended = false;
-    try {
-      for await (const value of response as T & AsyncGenerator<StreamValue<T>, void>) {
-        if (!last) {
-          endLog.set({
-            ...structuredClone(log.getContext()),
-            action: op.action,
-            event: "stream.end",
-          });
-          Object.assign(log, endLog);
-        }
-        last = { done: false, value };
-        yield value;
-      }
-      ended = true;
-    } catch (error) {
-      const childAction = isExecutionFailed(error)
-        ? (error.childAction ?? error.operation.action)
-        : undefined;
-      const cause = isExecutionFailed(error) ? error.cause : error;
-      const logged = UnhandledException.is(cause) ? cause.cause : cause;
-      logOperationError(
-        log,
-        op.action,
-        logged instanceof Error ? logged : new Error(String(logged)),
-        childAction,
-      );
-      if (!last) return status(500, op.failure) as ElysiaCustomStatusResponse<500, M>;
-      ended = true;
-      yield terminal.onError(op.failure, last.value as never).value as StreamValue<T>;
-    } finally {
-      if (last) {
-        if (!ended) log.set({ outcome: "aborted" });
-        endLog.emit();
-      }
-    }
-  })();
-}
-
-async function serveResult<I, T, F extends AnyFailure, M extends string>(
-  caller: { readonly viewer: Viewer; readonly log: RequestLogger },
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
 ): Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>> {
@@ -664,7 +514,7 @@ async function serveResult<I, T, F extends AnyFailure, M extends string>(
     }
     const result = answer(settled) as Result<T, F>;
     if (result.isOk()) {
-      // An operation may name its own outcome, such as "imported", in place of "success".
+      // An operation may name its own outcome in place of "success".
       caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
       return result.value;
     }

@@ -2108,64 +2108,6 @@
       "reason": "Recovery forwarding was deliberately replaced by parent ownership to match its declared 500 type. Composition forwarding remains live here; the recovery contract and child diagnostics are protected by f08ae5fc2ab9e54cf149462b819d7176d40ea71c."
     },
     {
-      "fix": "e6ac0f701cad494bf6317127656562e54f2b706e",
-      "bug": "stream factories and iteration bypassed safe failure handling and stream reads retried defects",
-      "test": "apps/server/src/domain/stream-failure.test.ts",
-      "fixed": [
-        "a stream panic in factory logs once and answers safely",
-        "a stream throw in factory logs once and answers safely",
-        "a stream panic in first next logs once and answers safely",
-        "a stream throw in first next logs once and answers safely",
-        "a stream panic in after event logs once and answers safely",
-        "a stream throw in after event logs once and answers safely",
-        "a sync read panic terminates without another poll",
-        "a data transfer read panic terminates without another poll",
-        "a sync first read panic answers a logged safe 500",
-        "a sync first read throw answers a logged safe 500",
-        "a data transfer first read panic answers a logged safe 500",
-        "a data transfer first read throw answers a logged safe 500"
-      ],
-      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
-      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics.",
-      "head": [
-        {
-          "test": "apps/server/src/domain/stream-failure.test.ts",
-          "fixed": [
-            "a stream panic in factory logs once and answers safely",
-            "a stream throw in factory logs once and answers safely",
-            "a stream panic in first next logs once and answers safely",
-            "a stream throw in first next logs once and answers safely",
-            "a stream panic in after event logs once and answers safely",
-            "a stream throw in after event logs once and answers safely",
-            "a polling stream first read panic answers a logged safe 500",
-            "a polling stream read panic terminates without another poll",
-            "a polling stream first read throw answers a logged safe 500"
-          ],
-          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; a synthetic polling stream now covers the same kernel behavior."
-        }
-      ]
-    },
-    {
-      "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
-      "bug": "plain throws on heartbeat polling reads were treated as terminal defects instead of retaining status and retrying",
-      "test": "apps/server/src/domain/stream-failure.test.ts",
-      "fixed": [
-        "a sync polling read throw retries with the last status and recovers",
-        "a data transfer polling read throw retries with the last status and recovers"
-      ],
-      "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
-      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics.",
-      "head": [
-        {
-          "test": "apps/server/src/domain/stream-failure.test.ts",
-          "fixed": [
-            "a polling stream polling read throw retries with the last status and recovers"
-          ],
-          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; a synthetic polling stream now covers the same kernel behavior."
-        }
-      ]
-    },
-    {
       "fix": "9dfbaef5bc463d7302c6f659dcde9c39063f47a2",
       "bug": "the outdated extension's How to update it link opened the install answer, which said nothing about updating while every store reviewed",
       "test": "apps/web/src/components/extension/extension-notice.test.tsx",
@@ -2212,48 +2154,12 @@
       ]
     },
     {
-      "fix": "f08ae5fc2ab9e54cf149462b819d7176d40ea71c",
-      "bug": "stream read outcomes used the child failure text and step instead of the stream owner",
-      "test": "apps/server/src/domain/stream-boundary.test.ts",
-      "fixed": [
-        "a stream owns its distinct child's throw in first",
-        "a stream owns its distinct child's panic in first",
-        "a stream owns its distinct child's throw in after event",
-        "a stream owns its distinct child's panic in after event",
-        "a stream owns its distinct child's throw in poll",
-        "a stream owns its distinct child's panic in poll"
-      ]
-    },
-    {
       "fix": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
       "testAt": "7e82b5f7581c061fa38353a749cf35cc5d8862a7",
       "reason": "1dffa82d added a kernel export assertion to this file that also fails at the parent; preserve the original single-flip harness.",
       "bug": "Only kernel-created execution failures may forward a child outcome; cloned lookalikes must become an internal defect.",
       "test": "apps/server/src/domain/execution-failed.test.ts",
       "fixed": ["only kernel-created execution failures can forward an outcome"]
-    },
-    {
-      "fix": "b6b00aca6ad5d36338167c5f2ba5b7db70a7b944",
-      "bug": "Missing sync jobs record their not_found category on initial, replay and polling reads instead of leaving a successful outcome.",
-      "test": "apps/server/src/domain/stream-failure.test.ts",
-      "fixed": [
-        "a missing sync job in initial records the not_found outcome",
-        "a missing sync job in replay records the not_found outcome",
-        "a missing sync job in polling records the not_found outcome"
-      ],
-      "testAt": "61afe2804c0803510352920e1b9c57bfd28d0530",
-      "reason": "Keep the harness from before R2, because it runs the fix through the retired sync job status stream or wording.",
-      "head": [
-        {
-          "test": "apps/server/src/domain/stream-failure.test.ts",
-          "fixed": [
-            "a missing status in initial records the not_found outcome",
-            "a missing status in replay records the not_found outcome",
-            "a missing status in polling records the not_found outcome"
-          ],
-          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; a synthetic polling stream now covers the same kernel behavior."
-        }
-      ]
     },
     {
       "fix": "d8aaa3ddddab742b581423a044657d8dc1bd6cf6",
@@ -2319,50 +2225,12 @@
       ]
     },
     {
-      "fix": "38860bf58c1dea356bb1aa244aec97b027f21324",
-      "bug": "Stream failures logged the same action as their read operations, making childAction redundant.",
-      "test": "apps/server/src/domain/stream-failure.test.ts",
-      "fixed": [
-        "a sync first read panic answers a logged safe 500",
-        "a sync read panic terminates without another poll",
-        "a sync first read throw answers a logged safe 500",
-        "a sync polling read throw retries with the last status and recovers",
-        "a data transfer first read panic answers a logged safe 500",
-        "a data transfer read panic terminates without another poll",
-        "a data transfer first read throw answers a logged safe 500",
-        "a data transfer polling read throw retries with the last status and recovers"
-      ],
-      "head": [
-        {
-          "test": "apps/server/src/domain/stream-failure.test.ts",
-          "fixed": [
-            "a polling stream first read panic answers a logged safe 500",
-            "a polling stream read panic terminates without another poll",
-            "a polling stream first read throw answers a logged safe 500",
-            "a polling stream polling read throw retries with the last status and recovers"
-          ],
-          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; a synthetic polling stream now covers the same kernel behavior."
-        }
-      ],
-      "testAt": "61afe2804c0803510352920e1b9c57bfd28d0530",
-      "reason": "Keep the harness from before Data Transfer was retired, because the historical flip names its cases."
-    },
-    {
       "fix": "8a5a450e134461f0781a8c607a7abf3c7fc32d13",
       "bug": "An unrelated composition forwarded a stashed genuine child outcome outside its declared failure type.",
       "test": "apps/server/src/domain/execution-scope.test.ts",
       "fixed": [
         "a stashed real outcome belongs to the returning compose",
         "a stashed real outcome belongs to the returning compose before"
-      ]
-    },
-    {
-      "fix": "51ced5cdf2dec9d6d13e75ce1db958992430b9d6",
-      "bug": "A stream could reuse its read action, making descendant diagnostics ambiguous.",
-      "test": "apps/server/src/domain/stream-boundary.test.ts",
-      "fixed": [
-        "a stream rejects its own action in readOrThrow before executing the read",
-        "a stream rejects its own action in poll before executing the read"
       ]
     },
     {
@@ -2557,23 +2425,6 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
-      ]
-    },
-    {
-      "fix": "f531372430dae6b585940d6651851a1d09d0ce8b",
-      "bug": "Elysia emitted the request wide event at a generator stream's first yield, dropping terminal outcomes and later failures, info and warnings.",
-      "test": "apps/server/src/domain/stream-logging.test.ts",
-      "fixed": [
-        "a drained stream end records success after request emission",
-        "a drained stream end records timeout after request emission",
-        "a drained stream end records aborted after request emission",
-        "a drained stream end records not_found after request emission",
-        "a drained post-event Panic keeps its stream step, child action and original error",
-        "a drained stream retains a polling failure it survives",
-        "a drained stream retains every polling failure before it completes",
-        "a drained stream keeps post-event info and warn messages",
-        "a drained stream end records an unrecovered polling failure when the body ends",
-        "closing an Elysia generator drains one aborted end event after cleanup"
       ]
     },
     {
@@ -2774,7 +2625,7 @@
         "src/domain/kernel.type-test.ts(401,3): error TS2322",
         "src/domain/kernel.type-test.ts(406,3): error TS2322",
         "src/domain/kernel.type-test.ts(410,34): error TS2322",
-        "src/domain/kernel.type-test.ts(473,32): error TS1360"
+        "src/domain/kernel.type-test.ts(461,32): error TS1360"
       ]
     }
   ]
