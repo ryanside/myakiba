@@ -3,7 +3,6 @@ import type {
   Panic,
   Result,
   AnyTaggedError,
-  Err,
   InferErr,
   InferOk,
   Ok,
@@ -23,34 +22,25 @@ export const FAILURE_STATUS = {
   too_many_requests: 429,
 } as const satisfies Record<Category, number>;
 
-/** A failure that answers after the command commits. Only `CommandScope.failAfterCommit` makes one. */
-export type Committed<F extends AnyFailure> = { readonly "~committed": F };
-
 /** A `before` that hands its value to the body. Only `BeforeScope.proceed` makes one. */
 type Proceed<P> = { readonly "~proceed": P };
 
-/** The brands the kernel made, so that a lookalike object is never read as one. */
-const brands = new WeakSet<object>();
+/** The handoffs the kernel made, so that a lookalike object is never read as one. */
+const handoffs = new WeakSet<object>();
 
-function brand<T extends object>(value: T): T {
-  brands.add(value);
-  return value;
-}
+export const proceeding = <P>(value: P): Proceed<P> => {
+  const handoff = { "~proceed": value };
+  handoffs.add(handoff);
+  return handoff;
+};
 
-export const committed = <F extends AnyFailure>(failure: F): Committed<F> =>
-  brand({ "~committed": failure });
-export const proceeding = <P>(value: P): Proceed<P> => brand({ "~proceed": value });
-
-export const isCommitted = (error: Leftover): error is Committed<AnyFailure> =>
-  brands.has(error) && "~committed" in error;
-export const isProceed = (result: AnyResult): result is Ok<Proceed<unknown>, Leftover> =>
+export const isProceed = (result: AnyResult): result is Ok<Proceed<unknown>, AnyTaggedError> =>
   result.isOk() &&
   typeof result.value === "object" &&
   result.value !== null &&
-  brands.has(result.value) &&
-  "~proceed" in result.value;
+  handoffs.has(result.value);
 
-export function isFailure(error: Leftover): error is AnyFailure {
+export function isFailure(error: AnyTaggedError): error is AnyFailure {
   return (
     TaggedError.is(error) &&
     "category" in error &&
@@ -59,11 +49,11 @@ export function isFailure(error: Leftover): error is AnyFailure {
   );
 }
 
-/** The public failure an Err stands for, after a commit or not. */
-export type PublicOf<E> = E extends Committed<infer F> ? F : E extends AnyFailure ? E : never;
+/** The failures among an Err's errors, which the client may see. */
+export type PublicOf<E> = E extends AnyFailure ? E : never;
 
 /** An Err the client never sees. */
-type InternalOf<E> = E extends AnyFailure | Committed<AnyFailure> ? never : E;
+type InternalOf<E> = E extends AnyFailure ? never : E;
 
 export type ReadScope = {
   readonly viewer: Viewer;
@@ -89,8 +79,6 @@ type BeforeScope = PoolScope & {
 
 export type CommandScope = Omit<ReadScope, "tx"> & {
   readonly tx: Tx;
-  /** Commits this command's writes, then answers with `failure`. Return it, or yield it inside `Result.gen`. */
-  readonly failAfterCommit: <F extends AnyFailure>(failure: F) => Err<never, Committed<F>>;
 };
 
 /**
@@ -146,9 +134,8 @@ export type Op<I, T, F extends AnyFailure, M extends string> = OpConfig<M> & {
   };
 };
 
-/** What an Err holds: a Failure, an internal tagged error, a Panic, or a committed failure. */
-export type Leftover = AnyTaggedError | Committed<AnyFailure>;
-export type AnyResult = Result<unknown, Leftover>;
+/** An Err holds a Failure, an internal tagged error or a Panic. */
+export type AnyResult = Result<unknown, AnyTaggedError>;
 
 /**
  * better-result widens `Result.ok("Saved")` to `Ok<string>`, which would hide a message
@@ -230,8 +217,7 @@ type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 
 /**
  * A write. Everything the body does through `scope.tx` commits together or not at all:
- * any Err or throw rolls it back, and only `scope.failAfterCommit(failure)`
- * keeps the writes. `before` runs first, for work such as parsing or a network call,
+ * any Err or throw rolls it back. `before` runs first, for work such as parsing or a network call,
  * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
  * the body with `value`, or a Result that answers without opening a transaction. A row
  * it read can change before the body runs, so the body must re-check inside the

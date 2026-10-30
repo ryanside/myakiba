@@ -2518,7 +2518,7 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error from a query, a command body or a before that it does not list in operational, a returned Panic from a body, a Failure given another message, a message function called without its props, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, the removed internal_error category, a returned UnhandledException, an internal error from a query, a command body or a before that it does not list in operational, a returned Panic from a body, a Failure given another message, a message function called without its props, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
@@ -2535,23 +2535,20 @@
         "src/domain/kernel.type-test.ts(95,30): error TS2339",
         "src/domain/kernel.type-test.ts(104,22): error TS2339",
         "src/domain/kernel.type-test.ts(122,9): error TS2769",
-        "src/domain/kernel.type-test.ts(150,9): error TS2339",
-        "src/domain/kernel.type-test.ts(157,5): error TS2769",
-        "src/domain/kernel.type-test.ts(157,20): error TS7006",
-        "src/domain/kernel.type-test.ts(169,28): error TS2345",
-        "src/domain/kernel.type-test.ts(172,27): error TS2322",
-        "src/domain/kernel.type-test.ts(177,27): error TS2322",
-        "src/domain/kernel.type-test.ts(180,17): error TS2769",
-        "src/domain/kernel.type-test.ts(188,5): error TS2769",
-        "src/domain/kernel.type-test.ts(195,29): error TS2769",
-        "src/domain/kernel.type-test.ts(227,17): error TS2322",
-        "src/domain/kernel.type-test.ts(240,6): error TS2554",
-        "src/domain/kernel.type-test.ts(299,60): error TS2345",
-        "src/domain/kernel.type-test.ts(306,3): error TS2769",
-        "src/domain/kernel.type-test.ts(311,34): error TS2322",
-        "src/domain/kernel.type-test.ts(315,3): error TS2322",
-        "src/domain/kernel.type-test.ts(320,3): error TS2322",
-        "src/domain/kernel.type-test.ts(324,34): error TS2322"
+        "src/domain/kernel.type-test.ts(148,28): error TS2345",
+        "src/domain/kernel.type-test.ts(151,27): error TS2322",
+        "src/domain/kernel.type-test.ts(156,27): error TS2322",
+        "src/domain/kernel.type-test.ts(159,17): error TS2769",
+        "src/domain/kernel.type-test.ts(167,5): error TS2769",
+        "src/domain/kernel.type-test.ts(174,29): error TS2769",
+        "src/domain/kernel.type-test.ts(206,17): error TS2322",
+        "src/domain/kernel.type-test.ts(219,6): error TS2554",
+        "src/domain/kernel.type-test.ts(278,60): error TS2345",
+        "src/domain/kernel.type-test.ts(285,3): error TS2769",
+        "src/domain/kernel.type-test.ts(290,34): error TS2322",
+        "src/domain/kernel.type-test.ts(294,3): error TS2322",
+        "src/domain/kernel.type-test.ts(299,3): error TS2322",
+        "src/domain/kernel.type-test.ts(303,34): error TS2322"
       ]
     }
   ]

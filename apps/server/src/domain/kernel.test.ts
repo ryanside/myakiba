@@ -18,7 +18,6 @@ const NothingToWrite = Failure("NothingToWrite", "not_found", "Nothing to write"
 const NoSuchUser = Failure("NoSuchUser", "not_found", "No such user");
 const NotThisOne = Failure("NotThisOne", "bad_request", "Not this one");
 const PickAnotherSection = Failure("PickAnotherSection", "bad_request", "Pick another section");
-const LeaseExpired = Failure("LeaseExpired", "conflict", "The saved lease has expired");
 const Contended = tagged("Contended");
 
 const viewer = Viewer.fromSession({ user: { id: "viewer-1" } });
@@ -289,28 +288,6 @@ describe("serve answers with the outcome", () => {
       response: "Failed to write",
     });
     expect(await userExists("served-throw")).toBe(false);
-  });
-});
-
-describe("a committed failure saves its writes before answering its status", () => {
-  test.each(["returned", "yielded inside Result.gen"] as const)("when %s", async (how) => {
-    const operation = command(config, async (scope, id: string) =>
-      Result.gen(async function* () {
-        await scope.tx.insert(user).values(newUser(id));
-        if (how === "returned") return scope.failAfterCommit(new LeaseExpired());
-        yield* scope.failAfterCommit(new LeaseExpired());
-        return Result.ok(1);
-      }),
-    );
-
-    const outcome = await run(viewer, operation, `committed-${how}`, log);
-    expect(outcome.isErr() && outcome.error).toBeInstanceOf(LeaseExpired);
-    expect(await serve({ viewer, log }, operation, `served-${how}`)).toMatchObject({
-      code: 409,
-      response: "The saved lease has expired",
-    });
-    expect(await userExists(`committed-${how}`)).toBe(true);
-    expect(await userExists(`served-${how}`)).toBe(true);
   });
 });
 

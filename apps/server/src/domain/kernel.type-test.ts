@@ -144,27 +144,6 @@ const mayFail = command(
 void (true satisfies Equal<ValuesOf<typeof mayFail>, number>);
 void (true satisfies Equal<FailuresOf<typeof mayFail>, InstanceType<typeof NoId>>);
 
-const SavedFailure = Failure("SavedFailure", "conflict", "Saved failure");
-query(config, async (scope) =>
-  // @ts-expect-error only a command body can request a failure after commit
-  scope.failAfterCommit(new SavedFailure()),
-);
-
-command(
-  {
-    ...config,
-    // @ts-expect-error before runs outside a transaction and cannot request a commit
-    before: async (scope) => scope.failAfterCommit(new SavedFailure()),
-  },
-  async () => Result.ok(1),
-);
-
-const committedFailure = command(config, async (scope, input: { readonly found: boolean }) =>
-  input.found ? Result.ok(1) : scope.failAfterCommit(new SavedFailure()),
-);
-void (true satisfies Equal<ValuesOf<typeof committedFailure>, number>);
-void (true satisfies Equal<FailuresOf<typeof committedFailure>, InstanceType<typeof SavedFailure>>);
-
 // @ts-expect-error an unexpected 500 is always a throw, never an expected failure
 void Failure("Unexpected", "internal_error", "Unexpected failure");
 

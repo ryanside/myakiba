@@ -15,7 +15,6 @@ import type { Viewer } from "./viewer";
 
 import {
   FAILURE_STATUS,
-  isCommitted,
   isProceed,
   isFailure,
   bodies,
@@ -25,14 +24,12 @@ import {
   SNAPSHOT,
   snapshots,
   proceeding,
-  committed,
 } from "./operations";
 import type {
   Statement,
   AnyResult,
   AnyOp,
   CommandScope,
-  Leftover,
   Op,
   Prepared,
   Placeholders,
@@ -52,8 +49,7 @@ export type { Op, CommandScope, InputOf } from "./operations";
  * deliberate `panic` is a defect: it answers a logged 500. Any other throw also
  * answers that 500, and so does an operational error.
  *
- * A command runs in one transaction. Any Err or throw rolls it back;
- * `scope.failAfterCommit(failure)` saves its writes before answering the failure.
+ * A command runs in one transaction. Any Err or throw rolls it back.
  * A query reads from the pool, so its parallel reads run on separate connections
  * and may see different commits; a query whose reads must agree sets
  * `snapshot: true` and reads one snapshot in one transaction. A command whose slow
@@ -89,13 +85,12 @@ type FailureResponse<F> = F extends {
   ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
   : never;
 
-type Stopped = { readonly kind: "rollback"; readonly result: Err<unknown, Leftover> };
-
+/** Carries an Err out of the transaction callback, so that the transaction rolls back. */
 class Stop {
-  readonly outcome: Stopped;
+  readonly result: Err<unknown, AnyTaggedError>;
 
-  constructor(outcome: Stopped) {
-    this.outcome = outcome;
+  constructor(result: Err<unknown, AnyTaggedError>) {
+    this.result = result;
   }
 }
 
@@ -116,10 +111,9 @@ function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }>
 /** Sorts what a body or `before` returned. A returned Panic is a defect. */
 function settle(result: AnyResult): Settled {
   if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
-  const error = isCommitted(result.error) ? result.error["~committed"] : result.error;
-  if (Panic.is(error)) return { kind: "defect", panic: error };
-  if (isFailure(error)) return { kind: "answer", result: Result.err(error) };
-  return { kind: "left", error };
+  if (Panic.is(result.error)) return { kind: "defect", panic: result.error };
+  if (isFailure(result.error)) return { kind: "answer", result: Result.err(result.error) };
+  return { kind: "left", error: result.error };
 }
 
 function bodyOf(op: AnyOp) {
@@ -127,9 +121,6 @@ function bodyOf(op: AnyOp) {
   if (!body) panic(`${op.action} was not built by query() or command(), so it has no body to run`);
   return body;
 }
-
-/** A committed failure keeps the attempt's writes. */
-const keepsWrites = (error: Leftover) => isCommitted(error);
 
 /** Runs a query that reads the pool, one autocommit statement at a time. */
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
@@ -174,24 +165,16 @@ async function runInTransaction(
   try {
     const result = await db.transaction(
       async (tx) => {
-        const scope: CommandScope = {
-          viewer,
-          tx,
-          log,
-          failAfterCommit: (failure) => Result.err(committed(failure)),
-        };
+        const scope: CommandScope = { viewer, tx, log };
         const answered = await body(scope as never, handoff as never);
-        if (answered.isErr() && !keepsWrites(answered.error))
-          throw new Stop({ kind: "rollback", result: answered });
+        if (answered.isErr()) throw new Stop(answered);
         return answered;
       },
       snapshots.has(op) ? SNAPSHOT : undefined,
     );
     return settle(result);
   } catch (error) {
-    return error instanceof Stop && error.outcome.kind === "rollback"
-      ? settle(error.outcome.result)
-      : classify(error);
+    return error instanceof Stop ? settle(error.result) : classify(error);
   }
 }
 
