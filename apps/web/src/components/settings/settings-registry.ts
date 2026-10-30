@@ -1,5 +1,4 @@
 import {
-  ArrowDataTransferHorizontalIcon,
   InformationCircleIcon,
   LayoutGridIcon,
   PaintBoardIcon,
@@ -11,7 +10,7 @@ import type { IconSvgElement } from "@hugeicons/react";
 
 export const SETTINGS_NAV_GROUPS = [
   { label: null, sections: ["preferences", "appearance", "layout"] },
-  { label: "Account", sections: ["profile", "account", "data-transfer"] },
+  { label: "Account", sections: ["profile", "account"] },
   { label: null, sections: ["about"] },
 ] as const satisfies readonly {
   readonly label: string | null;
@@ -57,11 +56,6 @@ export const SETTINGS_SECTIONS = {
     description: "Your email, how you sign in, and the devices signed in to your account.",
     icon: SquareLockPasswordIcon,
   },
-  "data-transfer": {
-    label: "Data Transfer",
-    description: "Move your orders and collection in and out of myakiba.",
-    icon: ArrowDataTransferHorizontalIcon,
-  },
   about: {
     label: "About",
     description: "The version you are using, what changed, and where to find help.",
@@ -74,8 +68,6 @@ type SettingEntry = {
   readonly title: string;
   readonly description: string;
   readonly keywords: readonly string[];
-  /** Search opens the section, because the setting has no row to jump to. */
-  readonly target?: "section";
 };
 
 /** Every setting a row shows and search finds. A row reads its title and description from here. */
@@ -200,20 +192,6 @@ export const SETTINGS = {
     description: "Permanently delete your account and all associated data.",
     keywords: ["remove", "close", "erase", "danger"],
   },
-  export: {
-    section: "data-transfer",
-    title: "Export",
-    description: "Download your orders and collection records as a JSON file.",
-    keywords: ["backup", "download", "json", "save"],
-    target: "section",
-  },
-  import: {
-    section: "data-transfer",
-    title: "Import",
-    description: "Add the records from a myakiba JSON export to your account.",
-    keywords: ["restore", "upload", "json", "migrate"],
-    target: "section",
-  },
   version: {
     section: "about",
     title: "Version",
@@ -246,12 +224,8 @@ export const SETTINGS = {
   },
 } as const satisfies Record<string, SettingEntry>;
 
-type SettingKey = keyof typeof SETTINGS;
-type Setting = (typeof SETTINGS)[SettingKey];
-/** A setting with a row of its own. */
-export type SettingId = {
-  [Id in SettingKey]: (typeof SETTINGS)[Id] extends { readonly target: "section" } ? never : Id;
-}[SettingKey];
+export type SettingId = keyof typeof SETTINGS;
+type Setting = (typeof SETTINGS)[SettingId];
 
 /**
  * The row's DOM id and the URL hash that jumps to it. The prefix keeps it clear of form
@@ -261,18 +235,9 @@ export function settingAnchor(id: SettingId): string {
   return `setting-${id}`;
 }
 
-function hasRow(id: SettingKey): id is SettingId {
-  return !("target" in SETTINGS[id]);
-}
-
-/** The hash a search result jumps to, or none when the setting has no row of its own. */
-export function settingHash(id: SettingKey): string | undefined {
-  return hasRow(id) ? settingAnchor(id) : undefined;
-}
-
 export type SettingsSearchGroup = {
   readonly section: SettingsSectionId;
-  readonly settings: readonly SettingKey[];
+  readonly settings: readonly SettingId[];
 };
 
 export function searchTerms(query: string): readonly string[] {
@@ -310,7 +275,7 @@ function score(setting: Setting, terms: readonly string[]): number {
 export function searchSettings(query: string): readonly SettingsSearchGroup[] {
   const terms = searchTerms(query);
   if (terms.length === 0) return [];
-  const matches = (Object.keys(SETTINGS) as SettingKey[])
+  const matches = (Object.keys(SETTINGS) as SettingId[])
     .map((id) => ({ id, score: score(SETTINGS[id], terms) }))
     .filter((match) => match.score > 0);
   return SETTINGS_SECTION_IDS.flatMap((section) => {

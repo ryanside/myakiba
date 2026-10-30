@@ -132,10 +132,10 @@ export function ExtensionLink({
 
 /** Says how to get the extension where it is needed, only while it is not installed. */
 export function MissingExtensionNotice({
-  copyOf = missingExtensionCopy,
+  copyOf,
   className,
 }: {
-  readonly copyOf?: (availability: ExtensionAvailability) => ExtensionNoticeCopy;
+  readonly copyOf: (availability: ExtensionAvailability) => ExtensionNoticeCopy;
   readonly className?: string;
 }) {
   const status = useExtensionStatus();

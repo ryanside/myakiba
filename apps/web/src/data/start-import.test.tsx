@@ -14,7 +14,6 @@ const { ExtensionRequiredDialog } =
   await import("@/components/extension/extension-required-dialog");
 const { dismissMissingExtension } = await import("@/lib/extension-gate");
 const { syncSends, useRetrySyncSession, useSyncSubmit } = await import("./resources/sync");
-const { useRetryImport, useStartImport } = await import("./resources/data-transfer");
 const { useRefreshItem } = await import("./resources/item");
 
 const realFetch = globalThis.fetch;
@@ -28,7 +27,6 @@ afterEach(() => {
 });
 
 const noFeedback = { onSaved: () => {}, onFailed: () => {} };
-const archive = { orders: [], collectionItems: [] } as never;
 
 type Send = (typeof syncSends)[keyof typeof syncSends];
 type StartsImport = () => () => Promise<Result<object, WriteFailed | ExtensionMissing>>;
@@ -45,15 +43,6 @@ function useSessionRetry() {
   return () => run("ss-1");
 }
 
-function useSettingsImport() {
-  const { run } = useStartImport(() => {});
-  return () => run({ fileName: "myakiba-export.json", archive });
-}
-
-function useSettingsImportRetry() {
-  return useRetryImport(() => {}).run;
-}
-
 function useItemRefresh() {
   const { run } = useRefreshItem();
   return () => run(98_777);
@@ -66,8 +55,6 @@ const writes = {
   "an order item sync": sending(syncSends.orderItem),
   "a collection sync": sending(syncSends.collection),
   "an import's retry": useSessionRetry,
-  "a settings import": useSettingsImport,
-  "a settings import's retry": useSettingsImportRetry,
   "an Item Refresh": useItemRefresh,
 } satisfies Record<string, StartsImport>;
 

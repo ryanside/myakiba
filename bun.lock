@@ -59,7 +59,6 @@
         "elysia": "catalog:",
         "evlog": "catalog:",
         "ioredis": "catalog:",
-        "uuid": "catalog:",
         "web": "workspace:*",
         "zod": "catalog:",
       },

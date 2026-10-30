@@ -5,7 +5,6 @@ import addRouter from "./routers/add";
 import analyticsRouter from "./routers/analytics";
 import calendarRouter from "./routers/calendar";
 import collectionRouter from "./routers/collection";
-import dataTransferRouter from "./routers/data-transfer";
 import dashboardRouter from "./routers/dashboard";
 import expensesRouter from "./routers/expenses";
 import itemRouter from "./routers/item";
@@ -25,7 +24,6 @@ export const routes = new Elysia()
       .use(analyticsRouter)
       .use(calendarRouter)
       .use(collectionRouter)
-      .use(dataTransferRouter)
       .use(dashboardRouter)
       .use(expensesRouter)
       .use(itemRouter)

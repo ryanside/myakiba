@@ -74,85 +74,76 @@ const readCases = [
   ["throw", 3, "polling read throw retries with the last status and recovers"],
 ] as const;
 
-for (const kind of ["sync", "data transfer"] as const) {
-  for (const [defect, failAt, description] of readCases) {
-    test(`a ${kind} ${description}`, async () => {
-      const { jobStatusSubscriptionRegistry } =
-        await import("@/lib/job-status-subscription-registry");
-      const timing = await import("@/lib/job-status-stream");
-      const unsubscribe = mock(async () => {});
-      spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
-        next: () => new Promise(() => {}),
-        unsubscribe,
-      });
-      spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
-      let now = Date.now();
-      spyOn(Date, "now").mockImplementation(() => {
-        now += 31_000;
-        return now;
-      });
-      let reads = 0;
-      const original = new Error("internal read failure");
-      const read = () => {
-        reads += 1;
-        if (reads === failAt) {
-          if (defect === "panic") panic("internal read defect");
-          throw original;
-        }
-        if (failAt === 3 && reads > failAt)
-          return {
-            ...status,
-            phase: "completed" as const,
-            terminalState: "success" as const,
-            statusMessage: "Recovered",
-          };
-        return status;
-      };
-      const { default: syncService } = await import("@/routers/sync/service");
-      const { SyncRequests } = await import("@/routers/sync/module");
-      const { default: DataTransferService } = await import("@/routers/data-transfer/service");
-      const { DataTransfer } = await import("@/routers/data-transfer/module");
-      spyOn(syncService, "getJobStatus").mockImplementation(async () => Result.ok(read()));
-      spyOn(DataTransferService, "getImportJobStatus").mockImplementation(async () => read());
-      const log = createRequestLogger();
-      const logged = spyOn(log, "error");
-      const app = new Elysia().get("/", async function* (ctx) {
-        if (kind === "sync")
-          return yield* serve({ viewer, log }, SyncRequests.stream, {
-            jobId: status.jobId,
-            signal: ctx.request.signal,
-          });
-        return yield* serve({ viewer, log }, DataTransfer.stream, { signal: ctx.request.signal });
-      });
-      const response = await app.handle(new Request("http://localhost/"));
-      const body = await response.text();
-      expect(response.status).toBe(failAt === 1 ? 500 : 200);
-      if (failAt === 3 && defect === "throw") {
-        expect(body).toContain('"terminalState":"success"');
-        expect(body).toContain('"statusMessage":"Recovered"');
-        const events = body.split("\n\n").filter(Boolean);
-        expect(events).toHaveLength(3);
-        expect(events[1]).toBe(events[0]);
-        expect(reads).toBe(4);
-      } else {
-        if (failAt === 3) expect(body).toContain('"terminalState":"error"');
-        expect(body).toContain(
-          kind === "sync" ? "Error fetching job status" : "Failed to check import status.",
-        );
-        expect(reads).toBe(failAt);
+for (const [defect, failAt, description] of readCases) {
+  test(`a sync ${description}`, async () => {
+    const { jobStatusSubscriptionRegistry } =
+      await import("@/lib/job-status-subscription-registry");
+    const timing = await import("@/lib/job-status-stream");
+    const unsubscribe = mock(async () => {});
+    spyOn(jobStatusSubscriptionRegistry, "subscribe").mockResolvedValue({
+      next: () => new Promise(() => {}),
+      unsubscribe,
+    });
+    spyOn(timing, "waitForNextJobStatusEvent").mockResolvedValue({ kind: "heartbeat" });
+    let now = Date.now();
+    spyOn(Date, "now").mockImplementation(() => {
+      now += 31_000;
+      return now;
+    });
+    let reads = 0;
+    const original = new Error("internal read failure");
+    const read = () => {
+      reads += 1;
+      if (reads === failAt) {
+        if (defect === "panic") panic("internal read defect");
+        throw original;
       }
-      expect(body).not.toContain("internal read defect");
-      expect(body).not.toContain(original.message);
-      expect(unsubscribe).toHaveBeenCalledTimes(failAt === 1 ? 0 : 1);
-      expect(logged).toHaveBeenCalledTimes(1);
-      if (defect === "panic") expect(logged.mock.calls[0]?.[0]).toBeInstanceOf(Panic);
-      else expect(logged.mock.calls[0]?.[0]).toBe(original);
-      expect(logged.mock.calls[0]?.[1]).toEqual({
-        step: kind === "sync" ? "sync.jobStatusStream" : "dataTransfer.importStatusStream",
-        childAction: kind === "sync" ? "sync.jobStatus" : "dataTransfer.importStatus",
+      if (failAt === 3 && reads > failAt)
+        return {
+          ...status,
+          phase: "completed" as const,
+          terminalState: "success" as const,
+          statusMessage: "Recovered",
+        };
+      return status;
+    };
+    const { default: syncService } = await import("@/routers/sync/service");
+    const { SyncRequests } = await import("@/routers/sync/module");
+    spyOn(syncService, "getJobStatus").mockImplementation(async () => Result.ok(read()));
+    const log = createRequestLogger();
+    const logged = spyOn(log, "error");
+    const app = new Elysia().get("/", async function* (ctx) {
+      return yield* serve({ viewer, log }, SyncRequests.stream, {
+        jobId: status.jobId,
+        signal: ctx.request.signal,
       });
     });
-  }
+    const response = await app.handle(new Request("http://localhost/"));
+    const body = await response.text();
+    expect(response.status).toBe(failAt === 1 ? 500 : 200);
+    if (failAt === 3 && defect === "throw") {
+      expect(body).toContain('"terminalState":"success"');
+      expect(body).toContain('"statusMessage":"Recovered"');
+      const events = body.split("\n\n").filter(Boolean);
+      expect(events).toHaveLength(3);
+      expect(events[1]).toBe(events[0]);
+      expect(reads).toBe(4);
+    } else {
+      if (failAt === 3) expect(body).toContain('"terminalState":"error"');
+      expect(body).toContain("Error fetching job status");
+      expect(reads).toBe(failAt);
+    }
+    expect(body).not.toContain("internal read defect");
+    expect(body).not.toContain(original.message);
+    expect(unsubscribe).toHaveBeenCalledTimes(failAt === 1 ? 0 : 1);
+    expect(logged).toHaveBeenCalledTimes(1);
+    if (defect === "panic") expect(logged.mock.calls[0]?.[0]).toBeInstanceOf(Panic);
+    else expect(logged.mock.calls[0]?.[0]).toBe(original);
+    expect(logged.mock.calls[0]?.[1]).toEqual({
+      step: "sync.jobStatusStream",
+      childAction: "sync.jobStatus",
+    });
+  });
 }
 
 for (const [phase, missingAt] of [

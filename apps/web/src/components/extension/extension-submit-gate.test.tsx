@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
-import { configure, screen, waitFor, within } from "@testing-library/react";
+import { configure, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SUPPORTED_BROWSERS, listIn, browseWith } from "../../../test/extension-browser";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
-const { FORMS, currentExtension, loadExtension, noop, renderWithDialog, resetEntryPoints, sent } =
+const { FORMS, currentExtension, loadExtension, renderWithDialog, resetEntryPoints, sent } =
   await import("../../../test/extension-entry-points");
-const { DataTransferView } = await import("@/components/settings/data-transfer");
 
 const [CHROME] = SUPPORTED_BROWSERS;
 browseWith(CHROME.userAgent);
@@ -47,48 +46,4 @@ describe.each(FORMS.map((form) => [form.name, form] as const))("%s", (_name, for
 
     await waitFor(() => expect(sent).toEqual([form.sends]));
   });
-});
-
-test("the import confirmation sends nothing when the extension went away while it was open", async () => {
-  loadExtension({ installed: true });
-  const user = userEvent.setup();
-  let confirmed = 0;
-  renderWithDialog(
-    <DataTransferView
-      actions={{
-        handleExport: noop,
-        handleReconnectImportStatus: noop,
-        handleRetryCurrentImportLoad: noop,
-        onFile: noop,
-        handleFileError: noop,
-        handleConfirmImport: async () => {
-          confirmed += 1;
-        },
-        handleRetryCurrentImport: noop,
-        handleDeleteCurrentImport: async () => {},
-      }}
-      state={{
-        export: { kind: "idle" },
-        import: {
-          current: { kind: "ready", current: { kind: "none" } },
-          delete: { kind: "idle" },
-          prepared: {
-            kind: "ready",
-            file: new File(["{}"], "myakiba-export.json"),
-            preview: { orders: 1, collectionItems: 2 },
-          },
-          start: { kind: "idle" },
-        },
-      }}
-    />,
-  );
-  await user.click(screen.getByRole("button", { name: "Import data" }));
-  const confirmation = await screen.findByRole("dialog", { name: "Import this export?" });
-
-  currentExtension().setInstalled(false);
-  await user.click(within(confirmation).getByRole("button", { name: "Import data" }));
-
-  await screen.findByRole("dialog", { name: "Install the myakiba extension first" });
-  expect(confirmed).toBe(0);
-  expect(screen.getByText("myakiba-export.json")).toBeDefined();
 });

@@ -1,9 +1,8 @@
 import { afterEach, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
-import { cleanup, configure, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { RunOutcome } from "@/data/extension-run";
 import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
 import { Result } from "better-result";
@@ -27,15 +26,10 @@ const settle = async () => {
   return outcome;
 };
 const syncRuns: Parameters<typeof realRun.importSyncItems>[0][] = [];
-const importRuns: Parameters<typeof realRun.importDataTransferItems>[0][] = [];
 await mock.module("@/data/extension-run", () => ({
   ...realRun,
   importSyncItems: async (run: (typeof syncRuns)[number]) => {
     syncRuns.push(run);
-    return settle();
-  },
-  importDataTransferItems: async (run: (typeof importRuns)[number]) => {
-    importRuns.push(run);
     return settle();
   },
 }));
@@ -67,46 +61,12 @@ await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
   useNavigate: () => async () => {},
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
-  // Settings rows read the URL hash for search results; these screens render without a router.
-  useLocation: () => {},
-}));
-
-const partialImport: DataTransferImport = {
-  id: "imp-1",
-  fileName: "myakiba-export.json",
-  status: "partial",
-  importedOrders: 1,
-  importedCollectionItems: 1,
-  failedCollectionItems: 2,
-  report: null,
-  error: null,
-};
-let currentImport: DataTransferImport | null = null;
-const realDataTransfer = await import("@/queries/data-transfer");
-await mock.module("@/queries/data-transfer", () => ({
-  ...realDataTransfer,
-  getCurrentDataTransferImport: async () => Result.ok(currentImport),
-  startDataTransferImport: async () =>
-    Result.ok({ ...partialImport, id: "imp-2", status: "running", missingMfcItemIds: [21, 22] }),
-  retryCurrentDataTransferImport: async () =>
-    Result.ok({ ...partialImport, status: "running", missingMfcItemIds: [31] }),
-}));
-const realStatus = await import("@/hooks/use-data-transfer-import-status-query");
-await mock.module("@/hooks/use-data-transfer-import-status-query", () => ({
-  ...realStatus,
-  useDataTransferImportStatusQuery: () => ({ isError: false, data: null, refetch: async () => {} }),
-}));
-const realFile = await import("@/lib/data-transfer");
-await mock.module("@/lib/data-transfer", () => ({
-  ...realFile,
-  readDataTransferFile: async () => Result.ok({ orders: [{}], collectionItems: [{}, {}] }),
 }));
 
 const { toast } = await import("@/components/ui/toast");
 const toastAdd = spyOn(toast, "add");
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
 const { SyncActionSheet } = await import("@/components/sync/sync-launcher");
-const { DataTransfer } = await import("@/components/settings/data-transfer");
 
 function renderWithQueries(ui: ReactElement) {
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
@@ -115,8 +75,6 @@ function renderWithQueries(ui: ReactElement) {
 afterEach(() => {
   cleanup();
   syncRuns.length = 0;
-  importRuns.length = 0;
-  currentImport = null;
   syncAnswer = accepted(1, [98_777]);
   syncsSent = 0;
   outcome = ENDED;
@@ -171,27 +129,6 @@ async function retrySession() {
   await user.click(screen.getByRole("button", { name: "Retry failed item results" }));
 }
 
-async function startImport() {
-  const user = userEvent.setup();
-  renderWithQueries(<DataTransfer />);
-  const input = await waitFor(() => {
-    const found = document.querySelector<HTMLInputElement>('input[type="file"]');
-    if (found === null) throw new Error("no file input yet");
-    return found;
-  });
-  await user.upload(input, new File(["{}"], "myakiba-export.json", { type: "application/json" }));
-  await user.click(await screen.findByRole("button", { name: "Import data" }));
-  const confirmation = await screen.findByRole("dialog", { name: "Import this export?" });
-  await user.click(within(confirmation).getByRole("button", { name: "Import data" }));
-}
-
-async function retryImport() {
-  currentImport = partialImport;
-  const user = userEvent.setup();
-  renderWithQueries(<DataTransfer />);
-  await user.click(await screen.findByRole("button", { name: "Retry failed items" }));
-}
-
 test("a session retry fetches the items it returned under the retry's job", async () => {
   await retrySession();
 
@@ -200,23 +137,9 @@ test("a session retry fetches the items it returned under the retry's job", asyn
   );
 });
 
-test("an Import/Export import fetches the items it is missing", async () => {
-  await startImport();
-
-  await waitFor(() => expect(importRuns).toEqual([{ importId: "imp-2", mfcItemIds: [21, 22] }]));
-});
-
-test("an Import/Export retry fetches the items it is missing", async () => {
-  await retryImport();
-
-  await waitFor(() => expect(importRuns).toEqual([{ importId: "imp-1", mfcItemIds: [31] }]));
-});
-
 const FLOWS = [
   ["a sync form", () => submitForm("item", "Add")],
   ["a session retry", retrySession],
-  ["an Import/Export import", startImport],
-  ["an Import/Export retry", retryImport],
 ] as const;
 
 test.each(FLOWS)("%s says the hourly import limit stopped its run", async (_flow, start) => {

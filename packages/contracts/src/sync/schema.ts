@@ -72,7 +72,7 @@ const syncItemFailureEntrySchema = z.strictObject({
   error: syncItemFetchErrorSchema,
 });
 
-export const syncItemFailureBatchSchema = z.strictObject({
+const syncItemFailureBatchSchema = z.strictObject({
   jobId: z.string().min(1),
   failures: z.array(syncItemFailureEntrySchema).min(1).max(MAX_ITEM_FAILURES_PER_REPORT),
 });

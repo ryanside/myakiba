@@ -5,12 +5,10 @@ import { PageHeader } from "@/components/page-header";
 import { About } from "@/components/settings/about";
 import { Account } from "@/components/settings/account";
 import { Appearance } from "@/components/settings/appearance";
-import { DataTransfer } from "@/components/settings/data-transfer";
 import { Layout } from "@/components/settings/layout";
 import { Preferences } from "@/components/settings/preferences";
 import { Profile } from "@/components/settings/profile";
 import { SettingsContent } from "@/components/settings/settings-content";
-import { SettingsGroup } from "@/components/settings/settings-group";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { SETTINGS_SECTION_IDS, SETTINGS_SECTIONS } from "@/components/settings/settings-registry";
 import type { SettingsSectionId } from "@/components/settings/settings-registry";
@@ -62,11 +60,6 @@ const SECTION_CONTENT = {
   layout: () => <Layout />,
   profile: ({ user }) => <Profile user={user} />,
   account: ({ user }) => <Account user={user} />,
-  "data-transfer": () => (
-    <SettingsGroup title="Your records" variant="cards">
-      <DataTransfer />
-    </SettingsGroup>
-  ),
   about: () => <About />,
 } as const satisfies Record<SettingsSectionId, (session: NonNullable<Session>) => ReactNode>;
 

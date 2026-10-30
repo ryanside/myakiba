@@ -21,7 +21,7 @@ const STORE_BROWSERS = {
 } as const satisfies Record<ExtensionStore, string>;
 
 const EXTENSION_USES =
-  "You need the extension on a computer to pick MFC items, add MFC items, import an MFC CSV or a myakiba export, and refresh an item's details.";
+  "You need the extension on a computer to pick MFC items, add MFC items, import an MFC CSV, and refresh an item's details.";
 
 function ExtensionInstallAnswer() {
   const reviewing = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] === null);

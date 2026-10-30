@@ -4,7 +4,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
-import type { DataTransferImport } from "@myakiba/contracts/data-transfer/schema";
 import type { ExtensionBridge } from "@/lib/extension-bridge";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
 import { Result } from "better-result";
@@ -24,8 +23,6 @@ await mock.module("@tanstack/react-router", () => ({
   useNavigate: () => async () => {},
   useRouter: () => ({ invalidate: async () => {} }),
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
-  // Settings rows read the URL hash for search results; these screens render without a router.
-  useLocation: () => {},
 }));
 
 /** The syncs the server was sent, by type. */
@@ -67,7 +64,6 @@ const { default: SyncOrderItemForm } = await import("@/components/sync/sync-orde
 const { useSyncMutations } = await import("@/hooks/use-sync-mutations");
 const { ItemResyncButton } = await import("@/components/item/item-resync-button");
 const { RetrySyncSessionButton } = await import("@/components/sync/retry-sync-session-button");
-const { DataTransferView } = await import("@/components/settings/data-transfer");
 const { OnboardingDialog } = await import("@/components/onboarding/onboarding-dialog");
 const { SYNC_OPTION_META } = await import("@/lib/sync");
 
@@ -110,28 +106,6 @@ export type EntryPoint = {
 const sheetOpened = (title: string) => () => screen.queryByRole("dialog", { name: title }) !== null;
 const called = (calls: number) => calls > 0;
 
-const failedImport: DataTransferImport = {
-  id: "import-1",
-  fileName: "myakiba-export.json",
-  status: "partial",
-  importedOrders: 1,
-  importedCollectionItems: 1,
-  failedCollectionItems: 1,
-  report: null,
-  error: null,
-};
-
-export const importActions = (proceed: () => void) => ({
-  handleExport: noop,
-  handleReconnectImportStatus: noop,
-  handleRetryCurrentImportLoad: noop,
-  onFile: noop,
-  handleFileError: noop,
-  handleConfirmImport: async () => {},
-  handleRetryCurrentImport: proceed,
-  handleDeleteCurrentImport: async () => {},
-});
-
 export const ADD_STEP_TITLE = "Pick your first items.";
 export const csvChoice = new RegExp(`^${SYNC_OPTION_META.csv.title}`, "u");
 
@@ -156,38 +130,6 @@ export async function openAddStep(user: User) {
   await openOnboardingStep(user, 3);
   await screen.findByRole("dialog", { name: ADD_STEP_TITLE });
 }
-
-export const settingsImport = (
-  current: Parameters<typeof DataTransferView>[0]["state"]["import"]["current"],
-  prepared: Parameters<typeof DataTransferView>[0]["state"]["import"]["prepared"],
-) =>
-  function SettingsImport({ actions }: { readonly actions: ReturnType<typeof importActions> }) {
-    return (
-      <DataTransferView
-        actions={actions}
-        state={{
-          export: { kind: "idle" },
-          import: { current, delete: { kind: "idle" }, prepared, start: { kind: "idle" } },
-        }}
-      />
-    );
-  };
-
-const PreparedImport = settingsImport(
-  { kind: "ready", current: { kind: "none" } },
-  {
-    kind: "ready",
-    file: new File(["{}"], "myakiba-export.json"),
-    preview: { orders: 1, collectionItems: 2 },
-  },
-);
-const FailedImport = settingsImport(
-  {
-    kind: "ready",
-    current: { kind: "retryable", currentImport: failedImport, retry: { kind: "idle" } },
-  },
-  { kind: "idle" },
-);
 
 export const ENTRY_POINTS: readonly EntryPoint[] = [
   {
@@ -225,18 +167,6 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     ),
     start: click("Retry failed item results"),
     proceeded: () => retriedSessions.length > 0,
-  },
-  {
-    name: "the settings import",
-    render: (proceed) => <PreparedImport actions={importActions(proceed)} />,
-    start: click("Import data"),
-    proceeded: sheetOpened("Import this export?"),
-  },
-  {
-    name: "the settings import's retry",
-    render: (proceed) => <FailedImport actions={importActions(proceed)} />,
-    start: click("Retry failed items"),
-    proceeded: called,
   },
 ];
 

@@ -1,6 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
 import * as sync from "@/queries/sync";
-import * as transfer from "@/queries/data-transfer";
 import { getResyncStatus, requestResync } from "@/queries/item";
 
 const realFetch = globalThis.fetch;
@@ -26,16 +25,6 @@ const order = {
   shippingDate: null,
   collectionDate: null,
 } satisfies Parameters<typeof sync.sendOrder>[0];
-const archive = {
-  format: "myakiba-data-transfer",
-  version: 1,
-  exportId: "export",
-  exportedAt: "2026-10-24T00:00:00Z",
-  source: { application: "myakiba" },
-  orders: [],
-  collectionItems: [],
-} satisfies Parameters<typeof transfer.startDataTransferImport>[0]["archive"];
-
 const callers = [
   ["CSV sync", () => sync.sendItems([]), "Failed to submit MyFigureCollection CSV"],
   ["item sync", () => sync.sendItemSync({ items: [1] }), "Failed to submit item database items"],
@@ -49,19 +38,6 @@ const callers = [
   ["import history", () => sync.fetchSyncSessions({}), "Failed to load import history"],
   ["import details", () => sync.fetchSyncSessionDetail("session"), "Failed to load import details"],
   ["sync retry", () => sync.retrySyncSession("session"), "Failed to retry failed item results"],
-  ["data export", transfer.exportDataTransfer, "Failed to export your data"],
-  ["import status", transfer.getCurrentDataTransferImport, "Failed to check import status"],
-  [
-    "start import",
-    () => transfer.startDataTransferImport({ fileName: "backup.json", archive }),
-    "Failed to start import",
-  ],
-  ["retry import", transfer.retryCurrentDataTransferImport, "Failed to retry import"],
-  [
-    "delete import",
-    transfer.deleteCurrentDataTransferImport,
-    "Failed to delete the import session",
-  ],
   ["refresh status", () => getResyncStatus(1), "Failed to check item refresh status"],
   [
     "refresh item",

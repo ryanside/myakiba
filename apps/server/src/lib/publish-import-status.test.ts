@@ -33,7 +33,7 @@ test("a slow load cannot write after publication has already answered its deadli
   let answered = false;
   const publication = publishImportStatus({
     load: () => loaded.promise,
-    action: "dataTransfer.publishStatus",
+    action: "sync.jobStatusCache",
   }).then(() => {
     answered = true;
   });

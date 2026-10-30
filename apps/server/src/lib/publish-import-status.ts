@@ -15,7 +15,7 @@ export async function publishImportStatus({
   userId,
 }: {
   readonly load: () => Promise<SyncJobStatus | null>;
-  readonly action: "sync.jobStatusCache" | "dataTransfer.publishStatus";
+  readonly action: "sync.jobStatusCache";
   readonly jobId?: string;
   readonly syncSessionId?: string;
   readonly userId?: string;

@@ -21,7 +21,7 @@ await mock.module("@/lib/extension-bridge", () => ({
   extensionBridge: delegatingBridge(() => bridge),
 }));
 
-const { createExtensionRunner, importRun, refreshFailureText, refreshItemWithExtension, syncRun } =
+const { createExtensionRunner, refreshFailureText, refreshItemWithExtension, syncRun } =
   await import("./extension-run");
 const { ExtensionPromptNotice } = await import("@/components/extension/extension-prompt-notice");
 
@@ -89,7 +89,7 @@ const brokenOff = () =>
   );
 const imported = () => Response.json({ outcome: "imported", reason: null });
 const SESSION = "/api/sync/sessions/ss-1";
-const CURRENT = "/api/data-transfer/imports/current";
+const LATER_SESSION = "/api/sync/sessions/ss-2";
 
 function loadExtension(onFetch: (run: FakeRun) => void) {
   extension = fakeExtension({ onFetch });
@@ -132,6 +132,8 @@ function runner({
 
 const sync = (...mfcItemIds: number[]) =>
   syncRun({ sessionId: "ss-1", jobId: "job-1", mfcItemIds });
+const laterSync = (...mfcItemIds: number[]) =>
+  syncRun({ sessionId: "ss-2", jobId: "job-2", mfcItemIds });
 
 afterEach(() => {
   cleanup();
@@ -521,10 +523,7 @@ describe("the upload cap", () => {
     const { run } = runner();
     const uploads = () => sent.filter((request) => request.path.endsWith("/items")).length;
 
-    const running = Promise.all([
-      run(sync(1, 2, 3)),
-      run(importRun({ importId: "imp-1", mfcItemIds: [4, 5, 6] })),
-    ]);
+    const running = Promise.all([run(sync(1, 2, 3)), run(laterSync(4, 5, 6))]);
     while (uploads() < 6) {
       await waitFor(() => expect(releases.length).toBeGreaterThan(0));
       releases.shift()?.();
@@ -565,44 +564,20 @@ describe("the upload cap", () => {
   });
 });
 
-test.each([
-  ["a sync run", SESSION, sync, { active: false }],
-  [
-    "an Import/Export run",
-    CURRENT,
-    (...mfcItemIds: number[]) => importRun({ importId: "imp-1", mfcItemIds }),
-    { running: false },
-  ],
-] as const)("%s stops when the server says it is over", async (_run, path, start, over) => {
+test("a sync run stops when the server says it is over", async () => {
   fakeFetch();
   answer = (request) =>
-    request.path.endsWith("/heartbeat") ? Response.json(over) : Response.json({});
+    request.path.endsWith("/heartbeat") ? Response.json({ active: false }) : Response.json({});
   loadExtension((fetch) => {
     fetch.item(1);
     setTimeout(() => fetch.item(2), 200);
   });
 
-  await runner({ heartbeatMs: 20 }).run(start(1, 2));
+  await runner({ heartbeatMs: 20 }).run(sync(1, 2));
 
   expect(extension.cancelled).toEqual([extension.runs[0]?.requestId ?? ""]);
-  expect(posted(`${path}/items`).map((request) => request.fields.mfcItemId)).toEqual([1]);
-  expect(posted(`${path}/interrupt`)).toEqual([]);
-});
-
-test("an Import/Export run reports to the import's endpoints", async () => {
-  fakeFetch();
-  loadExtension((fetch) => {
-    fetch.item(1);
-    fetch.fail(2, "hidden_or_missing");
-    fetch.done("complete");
-  });
-
-  await runner().run(importRun({ importId: "imp-1", mfcItemIds: [1, 2] }));
-
-  expect(posted(`${CURRENT}/items`)[0]?.fields).toEqual({ jobId: "imp-1", mfcItemId: 1 });
-  expect(posted(`${CURRENT}/items/failure`).map((request) => request.fields)).toEqual([
-    { jobId: "imp-1", failures: [{ mfcItemId: 2, error: "hidden_or_missing" }] },
-  ]);
+  expect(posted(`${SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([1]);
+  expect(posted(`${SESSION}/interrupt`)).toEqual([]);
 });
 
 describe("an answer that breaks off after its headers", () => {
@@ -618,11 +593,13 @@ describe("an answer that breaks off after its headers", () => {
 
     const outcome = await run(sync(1, 2));
     breakOff = false;
-    await run(importRun({ importId: "imp-1", mfcItemIds: [3] }));
+    await run(laterSync(3));
 
     expect(outcome).toEqual({ kind: "ended" });
     expect(posted(`${SESSION}/interrupt`)).toMatchObject([{ keepalive: false }]);
-    expect(posted(`${CURRENT}/items`).map((request) => request.fields.mfcItemId)).toEqual([3]);
+    expect(posted(`${LATER_SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([
+      3,
+    ]);
   });
 
   test("counts a failure report as failed and still ends the run with an interrupt", async () => {
@@ -727,11 +704,13 @@ describe("an upload waiting out a Retry-After", () => {
     await waitFor(() => expect(posted(`${SESSION}/items`)).toHaveLength(1));
     if (stop === "the page goes away") page.hide();
     await running;
-    await run(importRun({ importId: "imp-1", mfcItemIds: [2] }));
+    await run(laterSync(2));
     await sleep(400);
 
     expect(posted(`${SESSION}/items`)).toHaveLength(1);
-    expect(posted(`${CURRENT}/items`).map((request) => request.fields.mfcItemId)).toEqual([2]);
+    expect(posted(`${LATER_SESSION}/items`).map((request) => request.fields.mfcItemId)).toEqual([
+      2,
+    ]);
   });
 });
 

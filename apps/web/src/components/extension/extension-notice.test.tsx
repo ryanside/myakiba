@@ -15,21 +15,18 @@ setDefaultTimeout(30_000);
 
 const {
   ADD_STEP_TITLE,
-  importActions,
   loadExtension,
   onboardingDialog,
   openOnboardingStep,
   openAddStep,
   renderWithDialog,
   resetEntryPoints,
-  settingsImport,
 } = await import("../../../test/extension-entry-points");
 const { default: FAQsSection } = await import("@/components/homepage/faqs");
 
 afterEach(resetEntryPoints);
 
 const UNDER_REVIEW = "The myakiba browser extension is under review";
-const UNSUPPORTED = "Importing needs desktop Chrome or Firefox";
 const PICK_UNSUPPORTED = "Picking needs desktop Chrome or Firefox";
 const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
 
@@ -53,13 +50,9 @@ function expectPickReviewNotice(text: string | null | undefined, storeName: stri
 const installLink = (browser: SupportedBrowser) =>
   screen.queryByRole("link", { name: `Install from ${browser.storeName} (opens in a new tab)` });
 
-const IdleImport = settingsImport({ kind: "ready", current: { kind: "none" } }, { kind: "idle" });
-
 const SURFACES = [
   {
     name: "onboarding's extension step",
-    expectReview: expectPickReviewNotice,
-    unsupported: PICK_UNSUPPORTED,
     open: async () => {
       const user = userEvent.setup();
       renderWithDialog(onboardingDialog());
@@ -69,22 +62,11 @@ const SURFACES = [
   },
   {
     name: "onboarding's sync step",
-    expectReview: expectPickReviewNotice,
-    unsupported: PICK_UNSUPPORTED,
     open: async () => {
       const user = userEvent.setup();
       renderWithDialog(onboardingDialog());
       await openAddStep(user);
       return screen.getByRole("dialog", { name: ADD_STEP_TITLE });
-    },
-  },
-  {
-    name: "the settings import",
-    expectReview: expectReviewNotice,
-    unsupported: UNSUPPORTED,
-    open: async () => {
-      renderWithDialog(<IdleImport actions={importActions(() => {})} />);
-      return document.body;
     },
   },
 ] as const;
@@ -116,7 +98,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
           const container = await surface.open();
 
           await screen.findByText(UNDER_REVIEW);
-          surface.expectReview(container.textContent, browser.storeName);
+          expectPickReviewNotice(container.textContent, browser.storeName);
           expect(installLink(browser)).toBeNull();
         });
 
@@ -143,7 +125,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
 
       await surface.open();
 
-      expect(await screen.findByText(surface.unsupported)).toBeDefined();
+      expect(await screen.findByText(PICK_UNSUPPORTED)).toBeDefined();
       expect(screen.queryByRole("link", { name: /^Install from/u })).toBeNull();
     });
   },

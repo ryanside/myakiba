@@ -30,7 +30,7 @@ test("a write must name the cataloged families it refreshes", () => {
   // @ts-expect-error -- only cataloged families exist.
   defineCommand({ invalidates: ["wishlists"], persist, failureToast });
 
-  defineCommand({ invalidates: ["currentImport"], persist, failureToast });
+  defineCommand({ invalidates: ["usernameAvailability"], persist, failureToast });
 
   defineCommand({ invalidates: "nothing", persist });
 

@@ -109,7 +109,7 @@ const failureBody = (jobId: string, failures: readonly ItemFailure[]): FailureBo
 
 type ExtensionRun = {
   readonly jobId: string;
-  readonly sessionId: string | null;
+  readonly sessionId: string;
   readonly mfcItemIds: readonly number[];
   readonly complete: (item: ItemPage) => Promise<ServerAnswer>;
   readonly report: (failures: readonly ItemFailure[], delivery: Delivery) => Promise<ServerAnswer>;
@@ -140,28 +140,6 @@ export function syncRun(run: {
       ),
     interrupt: ({ keepalive }) =>
       answerOf(session.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
-  };
-}
-
-export function importRun(run: {
-  readonly importId: string;
-  readonly mfcItemIds: readonly number[];
-}): ExtensionRun {
-  const jobId = run.importId;
-  const current = app.api["data-transfer"].imports.current;
-  return {
-    jobId,
-    sessionId: null,
-    mfcItemIds: run.mfcItemIds,
-    complete: (item) => answerOf(current.items.post({ jobId, ...item })),
-    report: (failures, { keepalive }) =>
-      answerOf(current.items.failure.post(failureBody(jobId, failures), { fetch: { keepalive } })),
-    heartbeat: () =>
-      answerOf(current.heartbeat.post(runBody(jobId)), (data) =>
-        data.running ? Result.ok() : ended(),
-      ),
-    interrupt: ({ keepalive }) =>
-      answerOf(current.interrupt.post(runBody(jobId), { fetch: { keepalive } })),
   };
 }
 
@@ -441,10 +419,6 @@ const runWithExtension = createExtensionRunner({
 
 export function importSyncItems(run: Parameters<typeof syncRun>[0]): Promise<RunOutcome> {
   return runWithExtension(syncRun(run));
-}
-
-export function importDataTransferItems(run: Parameters<typeof importRun>[0]): Promise<RunOutcome> {
-  return runWithExtension(importRun(run));
 }
 
 type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;

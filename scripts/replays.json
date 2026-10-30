@@ -644,7 +644,20 @@
         "the import confirmation sends nothing when the extension went away while it was open"
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-submit-gate.test.tsx",
+          "fixed": [
+            "the Add to item database form > sends nothing when the extension went away while it was open, and keeps its values",
+            "the Add to collection form > sends nothing when the extension went away while it was open, and keeps its values",
+            "the Create order form > sends nothing when the extension went away while it was open, and keeps its values",
+            "the order page's add items form > sends nothing when the extension went away while it was open, and keeps its values",
+            "the CSV form > sends nothing when the extension went away while it was open, and keeps its values"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
@@ -707,12 +720,10 @@
             "the command palette's MyFigureCollection CSV action > links to the store listing instead when the extension is not installed",
             "the item page's resync button > links to the store listing instead when the extension is not installed",
             "the import's retry > links to the store listing instead when the extension is not installed",
-            "the settings import > links to the store listing instead when the extension is not installed",
-            "the settings import's retry > links to the store listing instead when the extension is not installed",
             "closing the dialog keeps its copy while it closes and returns focus to the button",
             "a gated button shows it is checking and ignores a second click until the check ends"
           ],
-          "reason": "The Add page replaced the launcher, sheet, onboarding and item page entry points, which no longer gate on the extension; the entry points that still do remain."
+          "reason": "The Add page replaced the launcher, sheet, onboarding and item page entry points, which no longer gate on the extension; the entry points that still do remain. Data Transfer was retired in R1; the cases that do not use it remain."
         }
       ],
       "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
@@ -727,7 +738,17 @@
         "an Import/Export run stops when the server says it is over"
       ],
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/data/extension-run.test.tsx",
+          "fixed": [
+            "a sync run > stops driving the extension once the page enters the back-forward cache",
+            "a sync run stops when the server says it is over"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "90682bd953fa8b5ddbd5519cdade2075f40311c6",
@@ -761,7 +782,17 @@
         "an Import/Export retry says the hourly import limit stopped its run"
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
+          "fixed": [
+            "a sync form says the hourly import limit stopped its run",
+            "a session retry says the hourly import limit stopped its run"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "d5ed21c8e5fa3216fd4e2d7729290c0054c6e542",
@@ -811,7 +842,21 @@
         "an Import/Export run reports to the import's endpoints"
       ],
       "testAt": "90906d964cbedd1d47d642eaedf1e51aa9be0e63",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/data/extension-run.test.tsx",
+          "fixed": [
+            "a sync run > uploads each fetched page and reports each failure with the extension's code",
+            "failure reports > report the failures that arrive close together in one request",
+            "failure reports > hold at most 1000 failures in one request",
+            "failure reports > report an unsolved security check for every open item at once",
+            "failure reports > stop the run on a busy answer, like an upload does",
+            "failure reports > still go out after a busy upload, and are answered before the final interrupt"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "35c7296c12bb87bc242be9d4fd6ecc08f8915714",
@@ -851,17 +896,6 @@
       "fixed": ["Redis atomically keeps and publishes only the latest committed revision"],
       "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
       "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
-      "fix": "c2ff4dbb811c628558625d2f1ea553f299d0955f",
-      "bug": "Import status reads and payload or lease lifecycle diverged across retries",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "imported payloads are cleared while failed rows remain available for retry",
-        "complete uploads renew the import lease",
-        "fail uploads renew the import lease",
-        "status reads stay in one snapshot when a retry commits between reads"
-      ]
     },
     {
       "fix": "7bdad8ef71a55473bf6a99bd0c9bfa608b2326c7",
@@ -908,17 +942,6 @@
         }
       ],
       "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
-    },
-    {
-      "fix": "8c19d2088de705335017ea933100f1f00078e19e",
-      "bug": "Import preparation failures left pending items and polling errors closed the progress stream",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "an S3 preparation timeout records a retryable import item failure",
-        "import polling keeps its last status through a database blip and retries"
-      ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "e8c106e9a06b9e6b2c1ea026f3fe8d344f8f201f",
@@ -985,20 +1008,6 @@
         }
       ],
       "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
-    },
-    {
-      "fix": "19a50bb700da7f7b17d6bf2e3ab8f5b4ec8f0a0f",
-      "bug": "Import completion exceptions left items pending, and the failure route did not accept batches",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "completion records persistence failure from item RAISE EXCEPTION 'item persistence unavailable';",
-        "completion records persistence failure from item RETURN NULL;",
-        "completion records persistence failure from collection RAISE EXCEPTION 'collection persistence unavailable';",
-        "a 1000-item import failure batch uses one transaction and rate-limit unit",
-        "a mixed import failure batch preserves imported Items and ignores a stale job"
-      ],
-      "testAt": "9063d7c6fd5c77174e081207db3edffad1178665",
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "258770eb267ed1dd85f0ce70765a9cd97c75c90b",
@@ -1156,7 +1165,17 @@
         "an Import/Export retry says its run stopped when the run breaks off"
       ],
       "testAt": "68f12fa80f90662f7b77c4d1c4ebc98751684809",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-run-flows.test.tsx",
+          "fixed": [
+            "a sync form says its run stopped when the run breaks off",
+            "a session retry says its run stopped when the run breaks off"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "b6c069dc5e4ff79bae5752f8ccf48b3a858ae599",
@@ -1316,7 +1335,25 @@
         "refresh item hides server, validator and network details"
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
+      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip.",
+      "head": [
+        {
+          "test": "apps/web/src/data/legacy-wording.test.ts",
+          "fixed": [
+            "CSV sync hides server, validator and network details",
+            "item sync hides server, validator and network details",
+            "order sync hides server, validator and network details",
+            "order item sync hides server, validator and network details",
+            "collection sync hides server, validator and network details",
+            "import history hides server, validator and network details",
+            "import details hides server, validator and network details",
+            "sync retry hides server, validator and network details",
+            "refresh status hides server, validator and network details",
+            "refresh item hides server, validator and network details"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "ff8199cb790afb4d03ee53f9374ed4a0aabc0e30",
@@ -2193,15 +2230,6 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
-      "fix": "9600a085a9b473b076cf80f7595e222765568e58",
-      "bug": "the data-transfer screen showed a defect's message beside the export button and the parser's error for an unreadable current import",
-      "test": "apps/web/src/components/settings/data-transfer/data-transfer-writes.test.tsx",
-      "fixed": [
-        "a defect while the export downloads shows the safe text beside the button, never its message",
-        "a current import the page cannot read shows its own text, not the parser's"
-      ]
-    },
-    {
       "fix": "b0b8f82aa37e260f41f76bf178e3ae4f1b932c5f",
       "testAt": "b0b8f82aa37e260f41f76bf178e3ae4f1b932c5f",
       "bug": "an MFC run whose only or last item could not book its answer never ended, and an earlier item was fetched twice",
@@ -2272,29 +2300,6 @@
       "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
-      "fix": "a4982e051e30ae25606de2f61be3046cf42f7c8a",
-      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
-      "bug": "data-transfer imports could write during review and unsolicited uploads stored pictures",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "extension release gate > in review refuses start without writing",
-        "extension release gate > in review refuses complete without writing",
-        "extension release gate > in review refuses retry without writing",
-        "extension release gate > in review refuses failure without writing",
-        "extension release gate > in review refuses heartbeat without writing",
-        "extension release gate > in review refuses interrupt without writing",
-        "an upload without a current import stores no picture or catalog item"
-      ],
-      "head": [
-        {
-          "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-          "fixed": ["an upload without a current import stores no picture or catalog item"],
-          "reason": "Server-side extension-store review gates were removed intentionally. Unsolicited-upload protection remains covered."
-        }
-      ],
-      "reason": "Keep the historical names and assertions in the flip; the head groups explain their current coverage."
-    },
-    {
       "fix": "25f42bee257c1930005088734df5a23fccb3394c",
       "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
       "bug": "committed import publication could hang and used error-level diagnostics",
@@ -2302,17 +2307,6 @@
       "fixed": [
         "committed sync publication > a reconnecting cache skips publication and answers the committed start",
         "committed sync publication > a cache that never settles cannot hang the committed start"
-      ],
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
-      "fix": "25f42bee257c1930005088734df5a23fccb3394c",
-      "testAt": "a686833ce815903a78b69573d67fca59f7fe0a8d",
-      "bug": "committed import publication could hang and used error-level diagnostics",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "committed data-transfer publication > a reconnecting cache skips publication and answers the committed start",
-        "committed data-transfer publication > a cache that never settles cannot hang the committed start"
       ],
       "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
@@ -2352,27 +2346,6 @@
       ]
     },
     {
-      "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",
-      "bug": "data-transfer item uploads stored pictures and Items without matching a running job and pending item",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "items fetched through the extension > the same item uploaded twice writes once",
-        "items fetched through the extension > a failure from an earlier run is ignored, and a late success is refused",
-        "upload ownership > before preparation refuses finished import",
-        "upload ownership > before preparation refuses wrong job",
-        "upload ownership > before preparation refuses failed item",
-        "upload ownership > before preparation refuses imported item",
-        "upload ownership > before preparation refuses missing item",
-        "upload ownership > after preparation refuses finished import",
-        "upload ownership > after preparation refuses wrong job",
-        "upload ownership > after preparation refuses failed item",
-        "upload ownership > after preparation refuses imported item",
-        "upload ownership > after preparation refuses missing item"
-      ],
-      "testAt": "07e0499babfa7bf49d88e0a5f9ae28c9ce1948d0",
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
       "fix": "312b66b966b8b1e2ec85e8bba80a538bfc4bf9b6",
       "bug": "a slow status load outlived the publication deadline and started a Redis write after the caller had answered",
       "test": "apps/server/src/lib/publish-import-status.test.ts",
@@ -2405,29 +2378,6 @@
       "test": "apps/server/src/domain/kernel.test.ts",
       "fixed": ["a failing DB write logs the underlying Postgres message and diagnostics"],
       "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
-    },
-    {
-      "fix": "7c37a7369bc50ce58e08cbc403bf0799c1f55d2b",
-      "testAt": "ba67fad0e1e4d913913a55062d4488f9bba8a191",
-      "bug": "problem pages for non-pending import items must answer the upload ownership 409",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": [
-        "items fetched through the extension > the same item uploaded twice writes once",
-        "items fetched through the extension > a failure from an earlier run is ignored, and a late success is refused",
-        "upload ownership > before preparation refuses finished import",
-        "upload ownership > before preparation refuses wrong job",
-        "upload ownership > before preparation refuses failed item",
-        "upload ownership > before preparation refuses imported item",
-        "upload ownership > before preparation refuses missing item",
-        "upload ownership > after preparation refuses finished import",
-        "upload ownership > after preparation refuses wrong job",
-        "upload ownership > after preparation refuses failed item",
-        "upload ownership > after preparation refuses imported item",
-        "upload ownership > after preparation refuses missing item",
-        "items fetched through the extension > a problem page for an already failed item answers 409 without changing the import",
-        "items fetched through the extension > a problem page for an already imported item answers 409 without changing the import"
-      ],
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "4a1c3bf6c85fa5cba8ceb722bbafbf4d916684be",
@@ -2584,12 +2534,6 @@
             "the import's retry > goes ahead when the extension is ready, even while no store lists it",
             "the import's retry > links to the store listing instead when the extension is not installed",
             "the import's retry > asks for an update when the extension is too old",
-            "the settings import > goes ahead when the extension is ready, even while no store lists it",
-            "the settings import > links to the store listing instead when the extension is not installed",
-            "the settings import > asks for an update when the extension is too old",
-            "the settings import's retry > goes ahead when the extension is ready, even while no store lists it",
-            "the settings import's retry > links to the store listing instead when the extension is not installed",
-            "the settings import's retry > asks for an update when the extension is too old",
             "in Chrome > an import starts when the extension is ready, whichever stores list it",
             "in Chrome > a missing extension links to this browser's store listing",
             "in Chrome > a missing extension is under review while this browser's store has no listing",
@@ -2606,7 +2550,7 @@
             "a gated button shows it is checking and ignores a second click until the check ends",
             "a gate whose check throws stops checking and can check again"
           ],
-          "reason": "The Add page replaced the launcher, sheet, onboarding and item page entry points, which no longer gate on the extension; the entry points that still do remain."
+          "reason": "The Add page replaced the launcher, sheet, onboarding and item page entry points, which no longer gate on the extension; the entry points that still do remain. Data Transfer was retired in R1; the cases that do not use it remain."
         }
       ]
     },
@@ -2640,7 +2584,35 @@
         "the FAQ says the extension is under review while no store lists it",
         "the FAQ links each listed store and says which are still reviewing",
         "the FAQ links both stores once both list the extension"
-      ]
+      ],
+      "head": [
+        {
+          "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+          "fixed": [
+            "onboarding's extension step > in Chrome > links to this browser's store listing while the extension is missing",
+            "onboarding's extension step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+            "onboarding's extension step > in Chrome > shows no notice once the extension is installed, even with no listing",
+            "onboarding's extension step > in Firefox > links to this browser's store listing while the extension is missing",
+            "onboarding's extension step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+            "onboarding's extension step > in Firefox > shows no notice once the extension is installed, even with no listing",
+            "onboarding's extension step > says the extension needs desktop Chrome or Firefox in another browser",
+            "onboarding's sync step > in Chrome > links to this browser's store listing while the extension is missing",
+            "onboarding's sync step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+            "onboarding's sync step > in Chrome > shows no notice once the extension is installed, even with no listing",
+            "onboarding's sync step > in Firefox > links to this browser's store listing while the extension is missing",
+            "onboarding's sync step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+            "onboarding's sync step > in Firefox > shows no notice once the extension is installed, even with no listing",
+            "onboarding's sync step > says the extension needs desktop Chrome or Firefox in another browser",
+            "onboarding's extension step reads as connected once the extension is installed",
+            "the FAQ says the extension is under review while no store lists it",
+            "the FAQ links each listed store and says which are still reviewing",
+            "the FAQ links both stores once both list the extension"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ],
+      "testAt": "c95e15cfe5b0f6bbb2e5377c88b8013803e69c95",
+      "reason": "Keep the test from the fix; the Add flow later rewrote the onboarding notices and this surface list, so its copy no longer passes against this historical flip."
     },
     {
       "fix": "e3a64c3fc1367914b60c94042437ccc8ff7f56a3",
@@ -2671,13 +2643,24 @@
         "a data transfer first read throw answers a logged safe 500"
       ],
       "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
-      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
-    },
-    {
-      "fix": "56e83defa6d635d07a606bba4e8f39f2d7ac894f",
-      "bug": "recovery callers treated execute Results as thrown failures and lost the original persistence error",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": ["a failed persistence fallback warns and rethrows the original error"]
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics.",
+      "head": [
+        {
+          "test": "apps/server/src/domain/stream-failure.test.ts",
+          "fixed": [
+            "a stream panic in factory logs once and answers safely",
+            "a stream throw in factory logs once and answers safely",
+            "a stream panic in first next logs once and answers safely",
+            "a stream throw in first next logs once and answers safely",
+            "a stream panic in after event logs once and answers safely",
+            "a stream throw in after event logs once and answers safely",
+            "a sync read panic terminates without another poll",
+            "a sync first read panic answers a logged safe 500",
+            "a sync first read throw answers a logged safe 500"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "18410a5423ff544a37befd28fe7bf7442545c8fe",
@@ -2698,13 +2681,14 @@
         "a data transfer polling read throw retries with the last status and recovers"
       ],
       "testAt": "2f0aef1bbb2352dd349f40b5cc421e5b19929626",
-      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics."
-    },
-    {
-      "fix": "0eed12debb1ccbc05d40aad1eae86a2045ae2b58",
-      "bug": "the data-transfer stream closed on a database blip instead of keeping its last status and polling again",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": ["import polling keeps its last status through a database blip and retries"]
+      "reason": "Use the pre-ownership harness for historical log metadata. Current stream behavior still covers every fixed name, with parent-owned step and childAction diagnostics.",
+      "head": [
+        {
+          "test": "apps/server/src/domain/stream-failure.test.ts",
+          "fixed": ["a sync polling read throw retries with the last status and recovers"],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ]
     },
     {
       "fix": "9dfbaef5bc463d7302c6f659dcde9c39063f47a2",
@@ -2885,7 +2869,21 @@
         "a data transfer read panic terminates without another poll",
         "a data transfer first read throw answers a logged safe 500",
         "a data transfer polling read throw retries with the last status and recovers"
-      ]
+      ],
+      "head": [
+        {
+          "test": "apps/server/src/domain/stream-failure.test.ts",
+          "fixed": [
+            "a sync first read panic answers a logged safe 500",
+            "a sync read panic terminates without another poll",
+            "a sync first read throw answers a logged safe 500",
+            "a sync polling read throw retries with the last status and recovers"
+          ],
+          "reason": "Data Transfer was retired in R1; the cases that do not use it remain."
+        }
+      ],
+      "testAt": "61afe2804c0803510352920e1b9c57bfd28d0530",
+      "reason": "Keep the harness from before Data Transfer was retired, because the historical flip names its cases."
     },
     {
       "fix": "8a5a450e134461f0781a8c607a7abf3c7fc32d13",
@@ -3133,12 +3131,6 @@
       "bug": "The sync status stream lost the original read error after its first event because the request wide event had already been emitted.",
       "test": "apps/server/src/routers/sync/routes.test.ts",
       "fixed": ["sync SSE read 2 records the original error"]
-    },
-    {
-      "fix": "f531372430dae6b585940d6651851a1d09d0ce8b",
-      "bug": "The data-transfer status stream lost the original read error after its first event because the request wide event had already been emitted.",
-      "test": "apps/server/src/routers/data-transfer/routes.test.ts",
-      "fixed": ["data-transfer SSE read 2 records the original error"]
     },
     {
       "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",

@@ -13,7 +13,6 @@ import { Analytics } from "@/routers/analytics/module";
 import { Calendar } from "@/routers/calendar/module";
 import { Collection } from "@/routers/collection/module";
 import { Dashboard } from "@/routers/dashboard/module";
-import { DataTransfer } from "@/routers/data-transfer/module";
 import { Expenses } from "@/routers/expenses/module";
 import { Items } from "@/routers/item/module";
 import { Lists } from "@/routers/lists/module";
@@ -33,8 +32,6 @@ type Failures<F> =
   Answer<F> extends infer A ? (A extends S<infer _C, infer _T, infer _S> ? A : never) : never;
 /** A string answer: a message body Eden must see as its literal. */
 type Strings<F> = Extract<Answer<F>, string>;
-type Codes<A> = A extends S<infer C, infer _T, infer _S> ? C : never;
-type Bodies<A, C extends number> = A extends S<C, infer T, infer _S> ? T : never;
 
 declare const caller: Parameters<typeof serve>[0];
 declare function inputOf<O>(op: O): InputOf<O>;
@@ -147,73 +144,6 @@ void (true satisfies Equal<
     monthly: S<500, "Failed to get monthly dashboard data">;
   }
 >);
-
-// DataTransfer
-const dataTransferExport = () => serve(caller, DataTransfer.export, inputOf(DataTransfer.export));
-const dataTransferCurrent = () =>
-  serve(caller, DataTransfer.current, inputOf(DataTransfer.current));
-const dataTransferStatus = () => serve(caller, DataTransfer.status, inputOf(DataTransfer.status));
-const dataTransferRemove = () => serve(caller, DataTransfer.remove, inputOf(DataTransfer.remove));
-const dataTransferStart = () => serve(caller, DataTransfer.start, inputOf(DataTransfer.start));
-const dataTransferRetry = () => serve(caller, DataTransfer.retry, inputOf(DataTransfer.retry));
-const dataTransferComplete = () =>
-  serve(caller, DataTransfer.complete, inputOf(DataTransfer.complete));
-const dataTransferFailure = () =>
-  serve(caller, DataTransfer.failure, inputOf(DataTransfer.failure));
-const dataTransferInterrupt = () =>
-  serve(caller, DataTransfer.interrupt, inputOf(DataTransfer.interrupt));
-const dataTransferHeartbeat = () =>
-  serve(caller, DataTransfer.heartbeat, inputOf(DataTransfer.heartbeat));
-void (true satisfies Equal<
-  {
-    export: Failures<typeof dataTransferExport>;
-    current: Failures<typeof dataTransferCurrent>;
-    status: Failures<typeof dataTransferStatus>;
-    remove: Failures<typeof dataTransferRemove>;
-    start: Failures<typeof dataTransferStart>;
-    retry: Failures<typeof dataTransferRetry>;
-    failure: Failures<typeof dataTransferFailure>;
-    interrupt: Failures<typeof dataTransferInterrupt>;
-    heartbeat: Failures<typeof dataTransferHeartbeat>;
-  },
-  {
-    export:
-      | S<409, "Data transfer only supports MyFigureCollection-backed collection items.">
-      | S<409, "There is no data to export.">
-      | S<413, "The export exceeds the 100000 record limit.">
-      | S<413, "The export exceeds the 50 MiB limit.">
-      | S<500, "Failed to export data.">;
-    current: S<500, "Failed to check import status.">;
-    status: S<500, "Failed to check import status.">;
-    remove:
-      | S<409, "An active import cannot be deleted.">
-      | S<404, "No inactive import session was found.">
-      | S<500, "Failed to delete the import session.">;
-    start:
-      | S<409, "Another data import is already active.">
-      | S<413, "The import archive exceeds the 50 MiB limit.">
-      | S<500, "Failed to start import.">;
-    retry:
-      | S<409, "The import does not exist or cannot be retried in its current state.">
-      | S<500, "Failed to retry import.">;
-    failure: S<500, "Failed to record the item failure.">;
-    interrupt: S<500, "Failed to interrupt the import.">;
-    heartbeat: S<500, "Failed to extend the import.">;
-  }
->);
-// The 400 is one of the MFC page messages, typed as string before better-result. The
-// migration may narrow it to their literals, the one Eden type it may change; the wire stays.
-void (true satisfies Equal<Codes<Failures<typeof dataTransferComplete>>, 400 | 409 | 500>);
-void (true satisfies Equal<
-  Bodies<Failures<typeof dataTransferComplete>, 500>,
-  "Failed to import the item."
->);
-void (true satisfies Bodies<Failures<typeof dataTransferComplete>, 400> extends string
-  ? true
-  : false);
-void (true satisfies [Bodies<Failures<typeof dataTransferComplete>, 400>] extends [never]
-  ? false
-  : true);
 
 // Expenses
 const expensesFilterOptions = () =>

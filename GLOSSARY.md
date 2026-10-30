@@ -227,10 +227,3 @@ _Avoid_: Plugin, add-on
 **Extension Listing**:
 A store's public page for the Browser Extension: the Chrome Web Store for Chromium browsers, and Firefox Add-ons for Firefox. Each store reviews and lists it on its own; until a store has an Extension Listing, visitors whose browser uses that store are told the extension is under review.
 _Avoid_: Release state, released when a store is meant
-
-**Data Transfer Archive**:
-A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Import History.
-_Avoid_: Backup, all your data
-
-**Data Transfer Import**:
-Each new Data Transfer Import reuses or adds the needed Items and creates new Orders and Collection Items without changing existing ones. Importing the same archive again can create duplicates, and myakiba may replace a missing Selected Item Release with another Item Release or leave it unselected.

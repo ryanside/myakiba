@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { exportDataTransfer } from "./data-transfer";
 import { requestResync } from "./item";
 import { retrySyncSession } from "./sync";
 
@@ -20,7 +19,6 @@ const calls = [
     "Failed to request item refresh",
   ],
   ["an import retry", () => retrySyncSession("session-1"), "Failed to retry failed item results"],
-  ["a data export", () => exportDataTransfer(), "Failed to export your data"],
 ] as const;
 
 describe.each(calls)("%s uses safe error text", (_name, call, fallback) => {
