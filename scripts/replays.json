@@ -698,7 +698,9 @@
         "probe > a late answer to an earlier probe does not answer a fresh one",
         "probe > an unprompted announce updates the status but does not answer a probe",
         "probe > an outdated extension that goes silent after its update stays outdated"
-      ]
+      ],
+      "testAt": "95e0582eb92797fdfcdce8d1ce734286a8b1d48b",
+      "reason": "9bd5513a made this test import ./errors/extension-stopped, which the fix does not have; keep the harness from the fix. The same cases run at HEAD."
     },
     {
       "fix": "91743a3878280b1286152240b5071f158118258b",
