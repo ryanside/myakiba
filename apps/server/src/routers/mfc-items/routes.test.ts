@@ -518,7 +518,7 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
       status: 500,
-      body: "Failed to import item",
+      body: "Failed to save item",
     });
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });
@@ -532,7 +532,7 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
     try {
       expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
         status: 500,
-        body: "Failed to import item",
+        body: "Failed to save item",
       });
       expect(budget.mock.calls.map(([ms]) => ms)).toContain(5000);
     } finally {

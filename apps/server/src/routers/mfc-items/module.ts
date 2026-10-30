@@ -21,7 +21,7 @@ export const MfcItems = {
   ingest: command(
     {
       action: "mfc_items.ingest",
-      failure: "Failed to import item",
+      failure: "Failed to save item",
       // Neither failure has a fallback, so each answers the logged 500.
       operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {

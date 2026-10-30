@@ -294,7 +294,7 @@ void (true satisfies Equal<
           | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
           400
         >
-      | S<500, "Failed to import item">;
+      | S<500, "Failed to save item">;
   }
 >);
 
