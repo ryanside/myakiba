@@ -1,6 +1,12 @@
 {
   "test": [
     {
+      "fix": "34a4b720e6db668f6017bd3a0ea61d93acd294bd",
+      "bug": "The verification email sent at sign-in lost the protected deep link and returned to the site root.",
+      "test": "apps/web/src/components/auth/deep-link.test.tsx",
+      "fixed": ["the verification email sent at sign-in returns to the deep link"]
+    },
+    {
       "fix": "cf4c7e622d56e3484022fe22e62d2767aaf3eb2f",
       "bug": "Signing in or registering from a protected deep link lost its query and hash.",
       "test": "apps/web/src/components/auth/deep-link.test.tsx",
