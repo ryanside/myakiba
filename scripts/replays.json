@@ -1,6 +1,21 @@
 {
   "test": [
     {
+      "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
+      "bug": "An Item only on an Ordered Order read \"In your collection\" in the Add page's search results.",
+      "test": "apps/server/src/routers/search/routes.test.ts",
+      "fixed": [
+        "each search route answers as before > item database search ranks an exact id before a prefix, then a title, then an entry",
+        "each search route answers as before > item database search badges count only the viewer's Collection Items and Wishlist"
+      ]
+    },
+    {
+      "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
+      "bug": "An Add page row had no badge for copies the user already has on order.",
+      "test": "apps/web/src/components/add/add-rows.test.tsx",
+      "fixed": ["a row warns about copies the user already has, in the Collection and on order"]
+    },
+    {
       "fix": "f74b261547a6796ae7983514763ac9932c5f5bb1",
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",
