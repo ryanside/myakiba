@@ -1,4 +1,4 @@
-import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
 import type { PortPicture, RunEvent } from "@myakiba/mfc/bridge";
 import { isCloudflareChallenge, readMfcEnvelope } from "@myakiba/mfc/page";
 import type { MfcItemId, MfcOgImage } from "@myakiba/mfc/page";

@@ -1,5 +1,5 @@
-import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/sync/constants";
-import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/mfc-items/fetch-errors";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { Result } from "better-result";
 import type { SerializedResult, StandardSchemaV1 } from "better-result";
 import * as z from "zod";

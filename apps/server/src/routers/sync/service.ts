@@ -8,17 +8,17 @@ import {
 import { Result } from "better-result";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { paginateBy } from "@/domain/kernel";
+import { latestReleases } from "@/lib/latest-release";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import {
   item as itemTable,
   collection as collectionTable,
-  item_release,
   order as orderTable,
   syncSession,
   syncSessionItem,
 } from "@myakiba/db/schema/figure";
 import type { DbEnrichedSyncSessionItemRow } from "@myakiba/db/schema/figure";
-import { and, inArray, eq, desc, getTableColumns, sql } from "drizzle-orm";
+import { and, inArray, eq, getTableColumns, sql } from "drizzle-orm";
 import type { JobData, SyncJobProgress } from "@myakiba/contracts/sync/schema";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionRow, SyncSessionDetail } from "@myakiba/contracts/sync/types";
@@ -157,28 +157,29 @@ class SyncService {
       return [];
     }
 
-    const existingItems = await database
-      .selectDistinctOn([itemTable.id], {
-        id: itemTable.id,
-        externalId: itemTable.externalId,
-        title: itemTable.title,
-        releaseId: item_release.id,
-        releaseDate: item_release.date,
-      })
+    const items = await database
+      .select({ id: itemTable.id, externalId: itemTable.externalId, title: itemTable.title })
       .from(itemTable)
-      .leftJoin(item_release, eq(item_release.itemId, itemTable.id))
       .where(and(eq(itemTable.source, "mfc"), inArray(itemTable.externalId, [...externalIds])))
-      .orderBy(
-        itemTable.id,
-        desc(item_release.date),
-        desc(item_release.createdAt),
-        desc(item_release.id),
-      );
-
-    return existingItems.filter(
-      (existingItem): existingItem is ExistingItemWithLatestRelease =>
-        existingItem.externalId !== null,
+      .orderBy(itemTable.id);
+    const releases = await latestReleases(
+      database,
+      items.map((existingItem) => existingItem.id),
     );
+
+    return items.flatMap(({ id, externalId, title }) => {
+      if (externalId === null) return [];
+      const release = releases.get(id);
+      return [
+        {
+          id,
+          externalId,
+          title,
+          releaseId: release?.id ?? null,
+          releaseDate: release?.date ?? null,
+        },
+      ];
+    });
   }
 
   async getOrderByIdForUser(orderId: string, userId: string, db: ReadTx) {

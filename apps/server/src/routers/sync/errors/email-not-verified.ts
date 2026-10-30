@@ -1,8 +1,8 @@
-import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import { Failure } from "@/domain/failure";
 
 export class EmailNotVerified extends Failure(
   "EmailNotVerified",
   "forbidden",
-  SYNC_STATUS_MESSAGES.requireEmailVerification,
+  EMAIL_VERIFICATION_REQUIRED,
 ) {}

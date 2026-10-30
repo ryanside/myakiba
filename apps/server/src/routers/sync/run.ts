@@ -15,7 +15,8 @@ import {
   ACTIVE_SYNC_SESSION_STATUS_SET,
   SYNC_SESSION_RETRY_WINDOW_MS,
 } from "@myakiba/contracts/sync/constants";
-import { ITEM_FETCH_ERROR_MESSAGE, SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/mfc-items/fetch-errors";
+import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
 import { sessionStatusToPhase, sessionStatusToTerminalState } from "@myakiba/contracts/sync/schema";
 import type { JobData, SyncJobRecentItem } from "@myakiba/contracts/sync/schema";
 import type { SyncSessionItemStatus } from "@myakiba/contracts/shared/types";

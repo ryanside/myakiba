@@ -1,32 +1,21 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { collection, item, list, listMember, order } from "@myakiba/db/schema/figure";
-import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { Tx } from "@myakiba/db/tx";
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
+import { addListMembers, splitTargets, canTarget } from "@/lib/list-members";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
 import { Result, panic } from "better-result";
 import { command, query } from "@/domain/kernel";
+import { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
 import { ListNotFound } from "./errors/list-not-found";
-import { ListOrSelectionNotFound } from "./errors/list-or-selection-not-found";
 import { SelectionNotFound } from "./errors/selection-not-found";
-
-const LIST_MEMBER_INSERT_CHUNK_SIZE = 5000;
 
 const listOrder = [asc(list.position), asc(list.createdAt), asc(list.id)];
 
 function lockLists(tx: Tx, userId: string) {
   return tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`lists:${userId}`}, 0))`);
-}
-
-function splitTargets(targets: readonly ListTarget[]) {
-  return {
-    itemIds: targets.flatMap((target) => (target.type === "item" ? [target.id] : [])),
-    collectionIds: targets.flatMap((target) =>
-      target.type === "collectionItem" ? [target.id] : [],
-    ),
-    orderIds: targets.flatMap((target) => (target.type === "order" ? [target.id] : [])),
-  };
 }
 
 function memberTargetFilter({ itemIds, collectionIds, orderIds }: ReturnType<typeof splitTargets>) {
@@ -37,36 +26,6 @@ function memberTargetFilter({ itemIds, collectionIds, orderIds }: ReturnType<typ
   ].filter((filter) => filter !== null);
   if (!first) return null;
   return or(first, ...rest) ?? first;
-}
-
-/** Whether every target exists and the caller owns each Collection Item and Order. */
-async function targetsExist(
-  tx: ReadTx,
-  userId: string,
-  { itemIds, collectionIds, orderIds }: ReturnType<typeof splitTargets>,
-) {
-  const [itemRows, collectionRows, orderRows] = await Promise.all([
-    itemIds.length > 0
-      ? tx.select({ id: item.id }).from(item).where(inArray(item.id, itemIds))
-      : Promise.resolve([]),
-    collectionIds.length > 0
-      ? tx
-          .select({ id: collection.id })
-          .from(collection)
-          .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
-      : Promise.resolve([]),
-    orderIds.length > 0
-      ? tx
-          .select({ id: order.id })
-          .from(order)
-          .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
-      : Promise.resolve([]),
-  ]);
-  return (
-    itemRows.length === itemIds.length &&
-    collectionRows.length === collectionIds.length &&
-    orderRows.length === orderIds.length
-  );
 }
 
 async function ownedListForUpdate(tx: Tx, userId: string, listId: string) {
@@ -246,7 +205,7 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ targetCount: input.targets.length });
       const targets = splitTargets(input.targets);
-      if (!(await targetsExist(scope.tx, userId, targets))) {
+      if (!(await canTarget(scope.tx, userId, targets))) {
         return Result.err(new SelectionNotFound());
       }
       const targetFilter = memberTargetFilter(targets);
@@ -279,51 +238,10 @@ export const Lists = {
       const { targets, listIds } = input;
       scope.log.set({ targetCount: targets.length, listCount: listIds.length });
 
-      const [found, ownedLists] = await Promise.all([
-        targetsExist(scope.tx, userId, splitTargets(targets)),
-        scope.tx
-          .select({ id: list.id })
-          .from(list)
-          .where(and(eq(list.userId, userId), inArray(list.id, listIds)))
-          .orderBy(asc(list.id))
-          .for("update"),
-      ]);
-      if (!found || ownedLists.length !== listIds.length) {
-        return Result.err(new ListOrSelectionNotFound());
-      }
+      const added = await addListMembers(scope.tx, userId, targets, listIds);
+      if (added.isErr()) return added;
 
-      const maxPositions = await scope.tx
-        .select({
-          listId: listMember.listId,
-          position: sql<number>`COALESCE(MAX(${listMember.position}), -1)::integer`,
-        })
-        .from(listMember)
-        .where(inArray(listMember.listId, listIds))
-        .groupBy(listMember.listId);
-      const maxPositionByListId = new Map(
-        maxPositions.map((position) => [position.listId, position.position]),
-      );
-      const membersToInsert = listIds.flatMap((listId) => {
-        const maxPosition = maxPositionByListId.get(listId) ?? -1;
-        return targets.map((target, index) => ({
-          listId,
-          itemId: target.type === "item" ? target.id : null,
-          collectionId: target.type === "collectionItem" ? target.id : null,
-          orderId: target.type === "order" ? target.id : null,
-          position: maxPosition + index + 1,
-        }));
-      });
-      let addedCount = 0;
-      for (let index = 0; index < membersToInsert.length; index += LIST_MEMBER_INSERT_CHUNK_SIZE) {
-        const members = membersToInsert.slice(index, index + LIST_MEMBER_INSERT_CHUNK_SIZE);
-        const addedMembers = await scope.tx
-          .insert(listMember)
-          .values(members)
-          .onConflictDoNothing()
-          .returning({ id: listMember.id });
-        addedCount += addedMembers.length;
-      }
-
+      const { addedCount } = added.value;
       scope.log.set({ addedCount });
       return Result.ok({ listIds: [...listIds], addedCount });
     },

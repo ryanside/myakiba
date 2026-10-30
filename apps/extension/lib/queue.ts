@@ -1,4 +1,4 @@
-import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
 import type {
   ItemFailure,
   ItemPage as FetchedPage,

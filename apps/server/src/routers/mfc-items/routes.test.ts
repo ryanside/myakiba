@@ -5,7 +5,7 @@ import path from "node:path";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
-import { SYNC_STATUS_MESSAGES } from "@myakiba/contracts/sync/messages";
+import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { mfcItemId } from "@myakiba/mfc/page";
@@ -512,11 +512,11 @@ describe("both routes need a verified email and have their own rate limit", () =
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, headers: unverified })).toEqual({
       status: 403,
-      body: SYNC_STATUS_MESSAGES.requireEmailVerification,
+      body: EMAIL_VERIFICATION_REQUIRED,
     });
     expect(await lookup([98_777], unverified)).toEqual({
       status: 403,
-      body: SYNC_STATUS_MESSAGES.requireEmailVerification,
+      body: EMAIL_VERIFICATION_REQUIRED,
     });
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });

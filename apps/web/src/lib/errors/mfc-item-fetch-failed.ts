@@ -1,4 +1,4 @@
-import type { ItemFetchErrorCode } from "@myakiba/contracts/sync/constants";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { tagged } from "./tagged";
 
 export class MfcItemFetchFailed extends tagged("MfcItemFetchFailed")<{

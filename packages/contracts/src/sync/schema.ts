@@ -16,7 +16,8 @@ import {
 } from "../shared/constants";
 import type { SyncSessionStatus } from "../shared/types";
 import { paginationLimitSchema, paginationPageSchema } from "../shared/pagination";
-import { ITEM_FETCH_ERROR_CODES, MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
+import { ITEM_FETCH_ERROR_CODES } from "../mfc-items/fetch-errors";
+import { MAX_ITEM_SYNC_ITEMS, SYNC_CSV_ITEM_STATUSES } from "./constants";
 
 const MFC_ITEM_URL_PATTERN =
   /^(?:https?:\/\/)?(?:(?:www|de|es|fi|fr|it|ja|nl|no|pl|pt|ru|sv|zh)\.)?myfigurecollection\.net\/item\/(\d+)(?:[/?#].*)?$/i;

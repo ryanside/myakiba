@@ -14,7 +14,7 @@ import {
   portRequestSchema,
 } from "./bridge";
 import type { BridgeEventMessage, PortEvent } from "./bridge";
-import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/sync/constants";
+import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { itemId } from "../test/fixtures";
 
 const REQUEST_ID = "6f1c1f43-1e5b-4c39-9df5-5b0c2a3e8b11";

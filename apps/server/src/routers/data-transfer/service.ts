@@ -31,7 +31,7 @@ import type {
   DataTransferImportRun,
 } from "@myakiba/contracts/data-transfer/schema";
 import type { SyncJobStatus } from "@myakiba/contracts/sync/schema";
-import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/sync/messages";
+import { ITEM_FETCH_ERROR_MESSAGE } from "@myakiba/contracts/mfc-items/fetch-errors";
 import { ensureMfcItem } from "@/lib/mfc-item-ingest";
 import type { prepareMfcItem } from "@/lib/mfc-item-ingest";
 import { PROBLEM_MESSAGE } from "@/lib/errors/mfc-page-rejected";
