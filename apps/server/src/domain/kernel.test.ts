@@ -18,7 +18,6 @@ const NothingToWrite = Failure("NothingToWrite", "not_found", "Nothing to write"
 const NoSuchUser = Failure("NoSuchUser", "not_found", "No such user");
 const NotThisOne = Failure("NotThisOne", "bad_request", "Not this one");
 const PickAnotherSection = Failure("PickAnotherSection", "bad_request", "Pick another section");
-const Rejected = Failure("Rejected", "bad_request", "Rejected");
 const LeaseExpired = Failure("LeaseExpired", "conflict", "The saved lease has expired");
 const Contended = tagged("Contended");
 
@@ -293,75 +292,11 @@ describe("serve answers with the outcome", () => {
   });
 });
 
-describe("command commit hooks", () => {
-  test("effects observe committed rows and disappear on fail or throw", async () => {
-    const observed: string[] = [];
-    const operation = (ending: "ok" | "fail" | "throw") =>
-      command(config, async (scope, id: string) => {
-        await scope.tx.insert(user).values(newUser(id));
-        scope.afterCommit(async (committed) => {
-          const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
-          for (const row of rows) observed.push(row.id);
-        });
-        if (ending === "fail") return Result.err(new Rejected());
-        if (ending === "throw") throw new Error("rolled back");
-        return Result.ok({ id });
-      });
-    await run(viewer, operation("ok"), "effect-committed", log);
-    await run(viewer, operation("fail"), "effect-failed", log);
-    await expect(run(viewer, operation("throw"), "effect-thrown", log)).rejects.toThrow(
-      "rolled back",
-    );
-    expect(observed).toEqual(["effect-committed"]);
-    expect(await userExists("effect-failed")).toBe(false);
-    expect(await userExists("effect-thrown")).toBe(false);
-  });
-});
-
-test("failed commit effects keep the committed response and run later effects", async () => {
-  initLogger({ enabled: true });
-  const caller = { viewer, log: createRequestLogger() };
-  initLogger({ enabled: false });
-  const original = new Error("original recovered error");
-  caller.log.error(original);
-  const logged = spyOn(caller.log, "error");
-  const warnings = spyOn(caller.log, "warn");
-  const observed: string[] = [];
-  const operation = command(config, async (scope, id: string) => {
-    await scope.tx.insert(user).values(newUser(id));
-    for (const message of ["first effect failed", "second effect failed"]) {
-      scope.afterCommit(async () => {
-        throw new Error(message);
-      });
-    }
-    scope.afterCommit(async (committed) => {
-      const rows = await committed.tx.select({ id: user.id }).from(user).where(eq(user.id, id));
-      for (const row of rows) observed.push(row.id);
-    });
-    return Result.ok("committed" as const);
-  });
-
-  expect(await serve(caller, operation, "failed-effects")).toBe("committed");
-  expect(await userExists("failed-effects")).toBe(true);
-  expect(observed).toEqual(["failed-effects"]);
-  expect(warnings).toHaveBeenCalledTimes(2);
-  expect(logged).not.toHaveBeenCalled();
-  expect(caller.log.getContext()).toMatchObject({
-    error: { message: original.message },
-    outcome: "success",
-    afterCommitErrors: [{ message: "first effect failed" }, { message: "second effect failed" }],
-  });
-});
-
-describe("a committed failure saves its writes and effects before answering its status", () => {
+describe("a committed failure saves its writes before answering its status", () => {
   test.each(["returned", "yielded inside Result.gen"] as const)("when %s", async (how) => {
-    let effects = 0;
     const operation = command(config, async (scope, id: string) =>
       Result.gen(async function* () {
         await scope.tx.insert(user).values(newUser(id));
-        scope.afterCommit(async () => {
-          effects += 1;
-        });
         if (how === "returned") return scope.failAfterCommit(new LeaseExpired());
         yield* scope.failAfterCommit(new LeaseExpired());
         return Result.ok(1);
@@ -376,7 +311,6 @@ describe("a committed failure saves its writes and effects before answering its 
     });
     expect(await userExists(`committed-${how}`)).toBe(true);
     expect(await userExists(`served-${how}`)).toBe(true);
-    expect(effects).toBe(2);
   });
 });
 
@@ -579,22 +513,4 @@ describe("an operational error the operation lists answers the 500 a throw answe
 
     await expect(run(viewer, operation, undefined, log)).rejects.toBeInstanceOf(Panic);
   });
-});
-
-test("a Panic in a commit effect logs at error level and keeps the response", async () => {
-  initLogger({ enabled: true });
-  const caller = { viewer, log: createRequestLogger() };
-  initLogger({ enabled: false });
-  const errors = spyOn(caller.log, "error");
-  const operation = command(config, async (scope, id: string) => {
-    await scope.tx.insert(user).values(newUser(id));
-    scope.afterCommit(async () => {
-      panic("committed effect invariant failed");
-    });
-    return Result.ok("committed" as const);
-  });
-  expect(await serve(caller, operation, "panic-effect")).toBe("committed");
-  expect(await userExists("panic-effect")).toBe(true);
-  expect(errors).toHaveBeenCalledTimes(1);
-  expect(errors.mock.lastCall?.[0]).toBeInstanceOf(Panic);
 });

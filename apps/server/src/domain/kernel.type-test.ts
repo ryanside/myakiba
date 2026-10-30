@@ -144,14 +144,6 @@ const mayFail = command(
 void (true satisfies Equal<ValuesOf<typeof mayFail>, number>);
 void (true satisfies Equal<FailuresOf<typeof mayFail>, InstanceType<typeof NoId>>);
 
-command(config, async (scope) => {
-  scope.afterCommit(async (committed) => {
-    // @ts-expect-error commit effects read the pool, never a transaction that can write
-    await committed.tx.delete(order);
-  });
-  return Result.ok(1);
-});
-
 const SavedFailure = Failure("SavedFailure", "conflict", "Saved failure");
 query(config, async (scope) =>
   // @ts-expect-error only a command body can request a failure after commit

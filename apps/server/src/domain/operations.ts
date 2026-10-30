@@ -89,9 +89,7 @@ type BeforeScope = PoolScope & {
 
 export type CommandScope = Omit<ReadScope, "tx"> & {
   readonly tx: Tx;
-  /** Runs only after this attempt commits, reading the pool. A rollback discards its callbacks. */
-  readonly afterCommit: (effect: (scope: ReadScope) => Promise<void>) => void;
-  /** Commits this attempt's writes and effects, then answers with `failure`. Return it, or yield it inside `Result.gen`. */
+  /** Commits this command's writes, then answers with `failure`. Return it, or yield it inside `Result.gen`. */
   readonly failAfterCommit: <F extends AnyFailure>(failure: F) => Err<never, Committed<F>>;
 };
 
@@ -232,14 +230,13 @@ type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 
 /**
  * A write. Everything the body does through `scope.tx` commits together or not at all:
- * any Err or throw rolls the attempt back, and only `scope.failAfterCommit(failure)`
+ * any Err or throw rolls it back, and only `scope.failAfterCommit(failure)`
  * keeps the writes. `before` runs first, for work such as parsing or a network call,
  * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
  * the body with `value`, or a Result that answers without opening a transaction. A row
  * it read can change before the body runs, so the body must re-check inside the
  * transaction anything it writes against. Its effects outside the database, such as a
- * stored file, are never rolled back. An internal error must be listed in
- * `operational`. Commit effects run afterwards, and their errors never change the answer.
+ * stored file, are never rolled back. An internal error must be listed in `operational`.
  */
 export function command<
   I,

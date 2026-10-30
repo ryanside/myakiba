@@ -29,7 +29,6 @@ import {
 } from "./operations";
 import type {
   Statement,
-  ReadScope,
   AnyResult,
   AnyOp,
   CommandScope,
@@ -132,40 +131,6 @@ function bodyOf(op: AnyOp) {
 /** A committed failure keeps the attempt's writes. */
 const keepsWrites = (error: Leftover) => isCommitted(error);
 
-type Effect = (scope: ReadScope) => Promise<void>;
-
-async function runEffects(
-  op: AnyOp,
-  effects: readonly Effect[],
-  viewer: Viewer,
-  log: RequestLogger,
-) {
-  for (const effect of effects) {
-    try {
-      await effect({ viewer, tx: pool, log });
-    } catch (error) {
-      const failure = error instanceof Error ? error : new Error(String(error));
-      const details = {
-        afterCommitErrors: [
-          {
-            step: op.action,
-            name: failure.name,
-            message: failure.message,
-            stack: failure.stack,
-            cause: failure.cause,
-          },
-        ],
-      };
-      if (Panic.is(error)) {
-        log.set(details);
-        log.error(error);
-      } else {
-        log.warn(failure.message, details);
-      }
-    }
-  }
-}
-
 /** Runs a query that reads the pool, one autocommit statement at a time. */
 async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
   const body = poolBodies.get(op);
@@ -206,7 +171,6 @@ async function runInTransaction(
     handoff = first.value["~proceed"];
   }
   const body = bodyOf(op);
-  const effects: Effect[] = [];
   try {
     const result = await db.transaction(
       async (tx) => {
@@ -214,9 +178,6 @@ async function runInTransaction(
           viewer,
           tx,
           log,
-          afterCommit: (effect) => {
-            effects.push(effect);
-          },
           failAfterCommit: (failure) => Result.err(committed(failure)),
         };
         const answered = await body(scope as never, handoff as never);
@@ -226,7 +187,6 @@ async function runInTransaction(
       },
       snapshots.has(op) ? SNAPSHOT : undefined,
     );
-    await runEffects(op, effects, viewer, log);
     return settle(result);
   } catch (error) {
     return error instanceof Stop && error.outcome.kind === "rollback"

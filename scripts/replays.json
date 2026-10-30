@@ -1025,24 +1025,6 @@
       "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
-      "fix": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
-      "bug": "a post-commit effect that threw turned a committed write into a 500 and skipped the effects after it",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": [
-        "failed commit effects keep the committed response and run later effects",
-        "command commit hooks and recovery > recovery also handles preparation failures, and cannot run for committed effect failures"
-      ],
-      "testAt": "39f38f0952386e3b7d06f4bea66bba992080e0ba",
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions.",
-      "head": [
-        {
-          "test": "apps/server/src/domain/kernel.test.ts",
-          "fixed": ["failed commit effects keep the committed response and run later effects"],
-          "reason": "Recovery is gone, so only the case for the committed answer and later effects remains."
-        }
-      ]
-    },
-    {
       "fix": "26af6e8beb3be0cbccb6ed253dd6408e102e59b4",
       "bug": "W-F2: legacy API callers expose server and network details",
       "test": "apps/web/src/data/legacy-wording.test.ts",
@@ -1181,14 +1163,6 @@
         "hanging cooldown status settles within its deadline",
         "hanging cooldown guard settles within its deadline"
       ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
-    },
-    {
-      "fix": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
-      "testAt": "c7ea62563d2cfca960b1a53ef69c283c06d8a027",
-      "bug": "commit effect Panics were logged only at warning level",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": ["a Panic in a commit effect logs at error level and keeps the response"],
       "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
@@ -2544,47 +2518,40 @@
   "fixtures": [
     {
       "name": "kernel",
-      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a commit effect that writes, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error from a query, a command body or a before that it does not list in operational, a returned Panic from a body, a Failure given another message, a message function called without its props, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
+      "bug": "kernel fixtures for 58a5d423, 87ebc2a0, b14fda39, 5a51f519, a1f6ff78, a widened string answer, a CTE write in a read, a write in a command's before step, a writing before held in a variable, a committed failure outside a command, the removed internal_error category, a returned UnhandledException, an internal error from a query, a command body or a before that it does not list in operational, a returned Panic from a body, a Failure given another message, a message function called without its props, a Failure or a bare tagged class listed as operational, and a Panic or an UnhandledException answered by an operation that lists it",
       "package": "apps/server",
       "file": "apps/server/src/domain/kernel.type-test.ts",
       "errors": [
-        "src/domain/kernel.type-test.ts(27,15): error TS2345",
-        "src/domain/kernel.type-test.ts(27,22): error TS7006",
-        "src/domain/kernel.type-test.ts(31,18): error TS2339",
-        "src/domain/kernel.type-test.ts(36,29): error TS2769",
-        "src/domain/kernel.type-test.ts(39,28): error TS2345",
-        "src/domain/kernel.type-test.ts(46,11): error TS2741",
-        "src/domain/kernel.type-test.ts(51,7): error TS2741",
-        "src/domain/kernel.type-test.ts(63,55): error TS2322",
-        "src/domain/kernel.type-test.ts(69,5): error TS2741",
-        "src/domain/kernel.type-test.ts(91,29): error TS2769",
-        "src/domain/kernel.type-test.ts(96,30): error TS2339",
-        "src/domain/kernel.type-test.ts(105,22): error TS2339",
-        "src/domain/kernel.type-test.ts(123,9): error TS2769",
-        "src/domain/kernel.type-test.ts(151,24): error TS2339",
-        "src/domain/kernel.type-test.ts(165,19): error TS2339",
-        "src/domain/kernel.type-test.ts(179,9): error TS2339",
-        "src/domain/kernel.type-test.ts(186,5): error TS2769",
-        "src/domain/kernel.type-test.ts(186,20): error TS7006",
-        "src/domain/kernel.type-test.ts(193,35): error TS2339",
-        "src/domain/kernel.type-test.ts(203,28): error TS2345",
-        "src/domain/kernel.type-test.ts(206,27): error TS2322",
-        "src/domain/kernel.type-test.ts(212,27): error TS2322",
-        "src/domain/kernel.type-test.ts(215,17): error TS2769",
-        "src/domain/kernel.type-test.ts(223,5): error TS2769",
-        "src/domain/kernel.type-test.ts(242,19): error TS2769",
-        "src/domain/kernel.type-test.ts(250,3): error TS2769",
-        "src/domain/kernel.type-test.ts(254,29): error TS2769",
-        "src/domain/kernel.type-test.ts(258,3): error TS2769",
-        "src/domain/kernel.type-test.ts(292,17): error TS2322",
-        "src/domain/kernel.type-test.ts(305,6): error TS2554",
-        "src/domain/kernel.type-test.ts(383,60): error TS2345",
-        "src/domain/kernel.type-test.ts(392,3): error TS2769",
-        "src/domain/kernel.type-test.ts(397,34): error TS2322",
-        "src/domain/kernel.type-test.ts(401,3): error TS2322",
-        "src/domain/kernel.type-test.ts(406,3): error TS2322",
-        "src/domain/kernel.type-test.ts(410,34): error TS2322",
-        "src/domain/kernel.type-test.ts(440,32): error TS1360"
+        "src/domain/kernel.type-test.ts(26,15): error TS2345",
+        "src/domain/kernel.type-test.ts(26,22): error TS7006",
+        "src/domain/kernel.type-test.ts(30,18): error TS2339",
+        "src/domain/kernel.type-test.ts(35,29): error TS2769",
+        "src/domain/kernel.type-test.ts(38,28): error TS2345",
+        "src/domain/kernel.type-test.ts(45,11): error TS2741",
+        "src/domain/kernel.type-test.ts(50,7): error TS2741",
+        "src/domain/kernel.type-test.ts(62,55): error TS2322",
+        "src/domain/kernel.type-test.ts(68,5): error TS2741",
+        "src/domain/kernel.type-test.ts(90,29): error TS2769",
+        "src/domain/kernel.type-test.ts(95,30): error TS2339",
+        "src/domain/kernel.type-test.ts(104,22): error TS2339",
+        "src/domain/kernel.type-test.ts(122,9): error TS2769",
+        "src/domain/kernel.type-test.ts(150,9): error TS2339",
+        "src/domain/kernel.type-test.ts(157,5): error TS2769",
+        "src/domain/kernel.type-test.ts(157,20): error TS7006",
+        "src/domain/kernel.type-test.ts(169,28): error TS2345",
+        "src/domain/kernel.type-test.ts(172,27): error TS2322",
+        "src/domain/kernel.type-test.ts(177,27): error TS2322",
+        "src/domain/kernel.type-test.ts(180,17): error TS2769",
+        "src/domain/kernel.type-test.ts(188,5): error TS2769",
+        "src/domain/kernel.type-test.ts(195,29): error TS2769",
+        "src/domain/kernel.type-test.ts(227,17): error TS2322",
+        "src/domain/kernel.type-test.ts(240,6): error TS2554",
+        "src/domain/kernel.type-test.ts(299,60): error TS2345",
+        "src/domain/kernel.type-test.ts(306,3): error TS2769",
+        "src/domain/kernel.type-test.ts(311,34): error TS2322",
+        "src/domain/kernel.type-test.ts(315,3): error TS2322",
+        "src/domain/kernel.type-test.ts(320,3): error TS2322",
+        "src/domain/kernel.type-test.ts(324,34): error TS2322"
       ]
     }
   ]
