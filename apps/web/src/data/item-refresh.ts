@@ -10,7 +10,7 @@ import { requireExtension } from "@/lib/extension-gate";
 import type { ExtensionFetchEvent, ItemFetchFailure } from "@/lib/extension-bridge";
 import { setExtensionPrompt } from "@/lib/extension-prompt";
 import type { ExtensionPrompt } from "@/lib/extension-prompt";
-import { requestResync } from "@/queries/item";
+import { requestRefresh } from "@/queries/item";
 import type { ApiFailure } from "./api";
 import { inUploadSlot } from "./upload-slots";
 
@@ -57,7 +57,7 @@ async function fetchPageShowingPrompts(
   signal: AbortSignal,
   onResponse: () => void,
 ): Promise<Result<ItemPage, ItemFetchFailure>> {
-  const refreshId = `resync:${id}`;
+  const refreshId = `refresh:${id}`;
   let queuedPromptTimer: ReturnType<typeof setTimeout> | undefined;
   const show = (prompt: ExtensionPrompt | null) => {
     clearTimeout(queuedPromptTimer);
@@ -90,7 +90,7 @@ async function fetchPageShowingPrompts(
 
 type RefreshFailure = InvalidMfcItemId | ItemFetchFailure;
 
-type Resynced = InferOk<Awaited<ReturnType<typeof requestResync>>>;
+type Refreshed = InferOk<Awaited<ReturnType<typeof requestRefresh>>>;
 
 /** The text an Item Refresh shows for its failure. A server answer shows its own message. */
 export function refreshFailureText(failure: RefreshFailure | ApiFailure): string {
@@ -142,9 +142,9 @@ async function fetchForRefresh(
 export async function refreshItemWithExtension(
   externalId: number,
   { clock = refreshClock }: { readonly clock?: RefreshClock } = {},
-): Promise<Result<Resynced, RefreshFailure | ApiFailure>> {
+): Promise<Result<Refreshed, RefreshFailure | ApiFailure>> {
   const fetched = await fetchForRefresh(externalId, clock);
   if (fetched.isErr()) return Result.err(fetched.error);
   const { page, picture } = fetched.value;
-  return inUploadSlot(() => requestResync(externalId, picture ? { page, picture } : { page }));
+  return inUploadSlot(() => requestRefresh(externalId, picture ? { page, picture } : { page }));
 }

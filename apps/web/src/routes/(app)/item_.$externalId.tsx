@@ -38,7 +38,7 @@ function RouteComponent(): ReactNode {
 
   const isNotFound = data === null;
 
-  const { data: resyncStatusData } = useRead(items.resyncStatus, externalId, {
+  const { data: refreshStatusData } = useRead(items.refreshStatus, externalId, {
     enabled: data != null,
   });
 
@@ -90,10 +90,10 @@ function RouteComponent(): ReactNode {
         item={item}
         isLoading={isPending}
         externalId={externalId}
-        resyncStatus={resyncStatusData?.status ?? "idle"}
-        cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
-        isResyncPending={refresh.isPending}
-        onRequestResync={() => refresh.run(externalId)}
+        refreshStatus={refreshStatusData?.status ?? "idle"}
+        cooldownExpiresAt={refreshStatusData?.cooldownExpiresAt ?? null}
+        isRefreshPending={refresh.isPending}
+        onRequestRefresh={() => refresh.run(externalId)}
         isWishlisted={data?.isWishlisted ?? false}
       />
 

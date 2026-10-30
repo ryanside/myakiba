@@ -1,14 +1,15 @@
+import { Result } from "better-result";
+import { requireExtension } from "@/lib/extension-gate";
 import {
   getItem,
   getItemRelatedCollection,
   getItemRelatedOrders,
   getItemReleases,
-  getResyncStatus,
+  getRefreshStatus,
 } from "@/queries/item";
 import { refreshResultFamilies } from "../catalog";
 import { defineCommand, rootedRead, useResourceMutation } from "../client";
-import { refreshFailureText, refreshItemWithExtension } from "../extension-run";
-import { startImport } from "../start-import";
+import { refreshFailureText, refreshItemWithExtension } from "../item-refresh";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -33,9 +34,9 @@ export const items = {
     load: getItemReleases,
     ...cache,
   }),
-  resyncStatus: rootedRead("item", {
-    key: (externalId: number) => ["item", externalId, "resyncStatus"] as const,
-    load: getResyncStatus,
+  refreshStatus: rootedRead("item", {
+    key: (externalId: number) => ["item", externalId, "refreshStatus"] as const,
+    load: getRefreshStatus,
     staleTime: 1000 * 30,
     retry: false,
   }),
@@ -44,7 +45,7 @@ export const items = {
 export const refreshItemCommand = defineCommand({
   invalidates: refreshResultFamilies,
   failureRefetchKeys: (externalId: number) => [
-    { queryKey: items.resyncStatus.key(externalId), exact: true },
+    { queryKey: items.refreshStatus.key(externalId), exact: true },
   ],
   persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) =>
@@ -55,9 +56,13 @@ export const refreshItemCommand = defineCommand({
   }),
 });
 
-/** Refreshes an item through `startImport`, so a refused refresh asks the extension for nothing. */
+/** Asks for the extension first, so a refused refresh writes nothing and shows the notice that says why. */
 export function useRefreshItem() {
   const refresh = useResourceMutation(refreshItemCommand);
-  const run = (externalId: number) => startImport(() => refresh.run(externalId));
+  const run = async (externalId: number) => {
+    const ready = await requireExtension();
+    if (ready.isErr()) return Result.err(ready.error);
+    return refresh.run(externalId);
+  };
   return { run, isPending: refresh.isPending } as const;
 }

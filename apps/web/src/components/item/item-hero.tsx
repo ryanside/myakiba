@@ -4,9 +4,9 @@ import { FolderAddIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
-import { ItemResyncButton } from "@/components/item/item-resync-button";
+import { ItemRefreshButton } from "@/components/item/item-refresh-button";
 import { ItemImageInspector } from "@/components/item/item-image-inspector";
-import type { ItemDetail, ResyncStatus } from "@/components/item/types";
+import type { ItemDetail, RefreshStatus } from "@/components/item/types";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { WishlistToggleButton } from "@/components/wishlist/wishlist-toggle-button";
 
@@ -14,19 +14,19 @@ export function ItemHero({
   item,
   isLoading,
   externalId,
-  resyncStatus,
+  refreshStatus,
   cooldownExpiresAt,
-  isResyncPending,
-  onRequestResync,
+  isRefreshPending,
+  onRequestRefresh,
   isWishlisted,
 }: {
   readonly item: ItemDetail | undefined;
   readonly isLoading: boolean;
   readonly externalId: number;
-  readonly resyncStatus: ResyncStatus;
+  readonly refreshStatus: RefreshStatus;
   readonly cooldownExpiresAt: string | null;
-  readonly isResyncPending: boolean;
-  readonly onRequestResync: () => void;
+  readonly isRefreshPending: boolean;
+  readonly onRequestRefresh: () => void;
   readonly isWishlisted: boolean;
 }): ReactNode {
   if (!item && !isLoading) return null;
@@ -69,11 +69,11 @@ export function ItemHero({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <ItemResyncButton
-            status={resyncStatus}
-            isPending={isResyncPending}
+          <ItemRefreshButton
+            status={refreshStatus}
+            isPending={isRefreshPending}
             cooldownExpiresAt={cooldownExpiresAt}
-            onRequest={onRequestResync}
+            onRequest={onRequestRefresh}
             disabled={isLoading}
           />
           <WishlistToggleButton

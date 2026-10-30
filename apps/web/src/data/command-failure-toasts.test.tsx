@@ -8,9 +8,9 @@ import { ApiRejected } from "@/lib/errors/api-rejected";
 const COOLDOWN_TEXT = "Item details were recently refreshed";
 const refresh = async () =>
   Result.err(new ApiRejected({ status: 429, body: COOLDOWN_TEXT, message: COOLDOWN_TEXT }));
-const realRun = await import("@/data/extension-run");
-await mock.module("@/data/extension-run", () => ({
-  ...realRun,
+const realRefresh = await import("@/data/item-refresh");
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
   refreshItemWithExtension: () => refresh(),
 }));
 const realOrders = await import("@/queries/orders");

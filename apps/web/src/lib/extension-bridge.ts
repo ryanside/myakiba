@@ -3,7 +3,6 @@ import { Result, ResultDeserializationError } from "better-result";
 import {
   BRIDGE_CHANNEL,
   BRIDGE_PROTOCOL,
-  MAX_ITEMS_PER_REQUEST,
   bridgeEventSchema,
   pageItemCodec,
 } from "@myakiba/mfc/bridge";
@@ -102,14 +101,6 @@ function statusFromAnnounce(
     : { kind: "outdated", extensionVersion };
 }
 
-function chunk<T>(values: readonly T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let start = 0; start < values.length; start += size) {
-    chunks.push(values.slice(start, start + size));
-  }
-  return chunks;
-}
-
 type PicksEvent = Extract<ReceivedEvent, { type: "picks" }>;
 
 function takenPick({ mfcItemId, title, pickedAt, html, picture }: PicksEvent["picks"][number]) {
@@ -206,9 +197,9 @@ export function createExtensionBridge(
     return result;
   }
 
-  async function* fetchBatch(
+  async function* fetchItems(
     mfcItemIds: readonly MfcItemId[],
-    signal: AbortSignal,
+    { signal }: { readonly signal: AbortSignal },
   ): AsyncGenerator<ExtensionFetchEvent> {
     const unanswered = new Set(mfcItemIds);
     const inbox: RunEvent[] = [];
@@ -233,7 +224,7 @@ export function createExtensionBridge(
     };
     signal.addEventListener("abort", onAbort, { once: true });
     try {
-      if (!signal.aborted) post(requestId, { type: "fetch-items", mfcItemIds: [...mfcItemIds] });
+      if (!signal.aborted) post(requestId, { type: "fetch-items", mfcItemIds: [...unanswered] });
       while (unanswered.size > 0 && !signal.aborted) {
         const event = await nextEvent();
         if (event === undefined) continue;
@@ -298,11 +289,7 @@ export function createExtensionBridge(
       return () => listeners.delete(listener);
     },
     probe,
-    async *fetchItems(mfcItemIds, { signal }) {
-      for (const batch of chunk([...new Set(mfcItemIds)], MAX_ITEMS_PER_REQUEST)) {
-        yield* fetchBatch(batch, signal);
-      }
-    },
+    fetchItems,
     takePicks: () =>
       ask(
         { type: "take-picks" },

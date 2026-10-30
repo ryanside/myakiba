@@ -10,7 +10,7 @@ await mock.module("@/lib/auth-client", () => ({
   },
 }));
 const { getReleaseCalendar } = await import("@/queries/dashboard");
-const { getItem, requestResync } = await import("@/queries/item");
+const { getItem, requestRefresh } = await import("@/queries/item");
 const { getOrder, moveItem } = await import("@/queries/orders");
 const { getVersion } = await import("@/queries/version");
 const { call } = await import("@/data/api");
@@ -148,7 +148,7 @@ describe.each(Object.entries(cases))("%s", (_name, { answer, tag, safe, version 
 
   test("a write shows safe server text or its own fallback", async () => {
     answerWith(answer);
-    expect(await requestResync(98_777, { page: "<html></html>" })).toMatchObject({
+    expect(await requestRefresh(98_777, { page: "<html></html>" })).toMatchObject({
       status: "error",
       error: {
         _tag: tag,
@@ -213,7 +213,7 @@ describe("a read that requires data", () => {
 
   test("a write without that check passes an empty 2xx through", async () => {
     answerWith(body(200, "", "text/plain"));
-    expect(await requestResync(98_777, { page: "<html></html>" })).toMatchObject({
+    expect(await requestRefresh(98_777, { page: "<html></html>" })).toMatchObject({
       status: "ok",
       value: "",
     });

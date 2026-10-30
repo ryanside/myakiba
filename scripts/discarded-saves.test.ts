@@ -12,7 +12,7 @@ const WRITE =
   /^(?:on[A-Z]\w*|callbackFn|run|move|send|handle(?!Submit$)[A-Z]\w*|(?:create|update|delete|remove|add)[A-Z]\w*)$/u;
 
 const SKIPPED =
-  /\.test\.tsx?$|^apps\/web\/src\/components\/(?:ui|reui|evilcharts|kibo-ui|extension)\/|^apps\/web\/src\/data\/extension-run\.ts$|^apps\/web\/src\/lib\/extension-(?:bridge|gate)\.ts$/u;
+  /\.test\.tsx?$|^apps\/web\/src\/components\/(?:ui|reui|evilcharts|kibo-ui|extension)\/|^apps\/web\/src\/data\/item-refresh\.ts$|^apps\/web\/src\/lib\/extension-(?:bridge|gate)\.ts$/u;
 
 /** Callers that carry on whichever way the write settled, and why that is right. */
 const SETTLED_EITHER_WAY = new Set([

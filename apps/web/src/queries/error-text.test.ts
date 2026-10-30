@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { requestResync } from "./item";
+import { requestRefresh } from "./item";
 
 const realFetch = globalThis.fetch;
 
@@ -14,7 +14,7 @@ function answerWith(respond: () => Promise<Response>) {
 const calls = [
   [
     "an item refresh request",
-    () => requestResync(1001, { page: "<html></html>" }),
+    () => requestRefresh(1001, { page: "<html></html>" }),
     "Failed to request item refresh",
   ],
 ] as const;

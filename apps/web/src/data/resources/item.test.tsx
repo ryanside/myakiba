@@ -11,9 +11,9 @@ const COOLDOWN = { status: "cooldown", cooldownExpiresAt: "2026-10-25T00:00:00.0
 type Refreshed = Result<typeof COOLDOWN & { readonly saved: "refreshed" }, ApiRejected>;
 const refreshed = async (): Promise<Refreshed> => Result.ok({ ...COOLDOWN, saved: "refreshed" });
 let refresh = refreshed;
-const realRun = await import("@/data/extension-run");
-await mock.module("@/data/extension-run", () => ({
-  ...realRun,
+const realRefresh = await import("@/data/item-refresh");
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
   refreshItemWithExtension: () => refresh(),
 }));
 
@@ -39,7 +39,7 @@ test("an Item Refresh refetches the item, its releases, and the collection, orde
   const queryClient = new QueryClient();
   const shown = [
     ["item", 98_777],
-    ["item", 98_777, "resyncStatus"],
+    ["item", 98_777, "refreshStatus"],
     ["itemReleases", "item-1"],
     ["collection", { search: "" }],
     ["order", "od-1"],
@@ -89,14 +89,14 @@ test("an Item Refresh refetches the dashboard, analytics, searches, Wishlist, li
 test("a refresh refused during the item's cooldown shows the cooldown at once", async () => {
   const queryClient = new QueryClient();
   const idle = { status: "idle", cooldownExpiresAt: null } as const;
-  let resyncStatus: typeof idle | typeof COOLDOWN = idle;
+  let refreshStatus: typeof idle | typeof COOLDOWN = idle;
   const shown = new QueryObserver(queryClient, {
-    queryKey: itemResource.items.resyncStatus.key(98_777),
-    queryFn: async () => resyncStatus,
+    queryKey: itemResource.items.refreshStatus.key(98_777),
+    queryFn: async () => refreshStatus,
   });
   const stop = shown.subscribe(() => {});
-  await queryClient.refetchQueries({ queryKey: itemResource.items.resyncStatus.key(98_777) });
-  resyncStatus = COOLDOWN;
+  await queryClient.refetchQueries({ queryKey: itemResource.items.refreshStatus.key(98_777) });
+  refreshStatus = COOLDOWN;
   const text = "Item details were recently refreshed";
   refresh = async () => Result.err(new ApiRejected({ status: 429, body: text, message: text }));
   const { result } = renderRefresh(queryClient);

@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { Refresh01Icon } from "@hugeicons/core-free-icons";
 import { GatedButton } from "@/components/extension/gated-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ResyncStatus } from "@/components/item/types";
+import type { RefreshStatus } from "@/components/item/types";
 
-const RESYNC_LABELS = {
+const REFRESH_LABELS = {
   idle: "Refresh item details",
   cooldown: "Recently refreshed",
-} satisfies Readonly<Record<ResyncStatus, string>>;
+} satisfies Readonly<Record<RefreshStatus, string>>;
 
 function formatCooldownRemaining(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
@@ -23,21 +23,21 @@ function formatCooldownRemaining(expiresAt: string): string {
   return `${minutes}m`;
 }
 
-export function ItemResyncButton({
+export function ItemRefreshButton({
   status,
   isPending,
   cooldownExpiresAt,
   onRequest,
   disabled = false,
 }: {
-  readonly status: ResyncStatus;
+  readonly status: RefreshStatus;
   readonly isPending: boolean;
   readonly cooldownExpiresAt: string | null;
   readonly onRequest: () => void;
   readonly disabled?: boolean;
 }): ReactNode {
   const isDisabled = disabled || status !== "idle" || isPending;
-  const buttonLabel = isPending ? "Requesting..." : RESYNC_LABELS[status];
+  const buttonLabel = isPending ? "Requesting..." : REFRESH_LABELS[status];
   const showCooldownTooltip = status === "cooldown" && cooldownExpiresAt !== null;
   const cooldownRemaining = cooldownExpiresAt ? formatCooldownRemaining(cooldownExpiresAt) : "";
 
@@ -59,7 +59,7 @@ export function ItemResyncButton({
       <Tooltip>
         <TooltipTrigger render={<span className="inline-flex cursor-default">{button}</span>} />
         <TooltipContent>
-          {cooldownRemaining ? `Available again in ${cooldownRemaining}` : RESYNC_LABELS.cooldown}
+          {cooldownRemaining ? `Available again in ${cooldownRemaining}` : REFRESH_LABELS.cooldown}
         </TooltipContent>
       </Tooltip>
     );

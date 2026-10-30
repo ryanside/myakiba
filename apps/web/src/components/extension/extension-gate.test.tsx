@@ -27,7 +27,7 @@ const { click, currentExtension, loadExtension, noop, resetEntryPoints, useBridg
 const { createExtensionBridge } = await import("@/lib/extension-bridge");
 const { ExtensionRequiredDialog } = await import("./extension-required-dialog");
 const { dismissMissingExtension, useExtensionGate } = await import("@/lib/extension-gate");
-const { ItemResyncButton } = await import("@/components/item/item-resync-button");
+const { ItemRefreshButton } = await import("@/components/item/item-refresh-button");
 
 const [CHROME] = SUPPORTED_BROWSERS;
 const UNDER_REVIEW = "The myakiba browser extension is under review";
@@ -38,11 +38,11 @@ beforeEach(() => {
 });
 afterEach(resetEntryPoints);
 
-function renderResyncButton() {
+function renderRefreshButton() {
   let calls = 0;
   render(
     <>
-      <ItemResyncButton
+      <ItemRefreshButton
         status="idle"
         isPending={false}
         cooldownExpiresAt={null}
@@ -61,7 +61,7 @@ describe("the item page's resync button", () => {
     listIn();
     loadExtension({ installed: true });
     const user = userEvent.setup();
-    const { calls } = renderResyncButton();
+    const { calls } = renderRefreshButton();
 
     await click("Refresh item details")(user);
 
@@ -72,7 +72,7 @@ describe("the item page's resync button", () => {
   test("links to the store listing instead when the extension is not installed", async () => {
     loadExtension({ installed: false });
     const user = userEvent.setup();
-    const { calls } = renderResyncButton();
+    const { calls } = renderRefreshButton();
 
     await click("Refresh item details")(user);
 
@@ -88,7 +88,7 @@ describe("the item page's resync button", () => {
   test("asks for an update when the extension is too old", async () => {
     loadExtension({ protocols: { min: 0, max: 0 } });
     const user = userEvent.setup();
-    const { calls } = renderResyncButton();
+    const { calls } = renderRefreshButton();
 
     await click("Refresh item details")(user);
 
@@ -112,7 +112,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
         listIn(...stores);
         loadExtension({ installed: true });
         const user = userEvent.setup();
-        const { calls } = renderResyncButton();
+        const { calls } = renderRefreshButton();
 
         await click("Refresh item details")(user);
 
@@ -126,7 +126,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       listIn(browser.store);
       loadExtension({ installed: false });
       const user = userEvent.setup();
-      const { calls } = renderResyncButton();
+      const { calls } = renderRefreshButton();
 
       await click("Refresh item details")(user);
 
@@ -150,7 +150,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       );
       loadExtension({ installed: false });
       const user = userEvent.setup();
-      const { calls } = renderResyncButton();
+      const { calls } = renderRefreshButton();
 
       await click("Refresh item details")(user);
 
@@ -166,7 +166,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       listIn();
       loadExtension({ protocols: { min: 0, max: 0 } });
       const user = userEvent.setup();
-      const { calls } = renderResyncButton();
+      const { calls } = renderRefreshButton();
 
       await click("Refresh item details")(user);
 
@@ -181,7 +181,7 @@ test("another browser is told the extension needs desktop Chrome or Firefox", as
   listIn(...SUPPORTED_BROWSERS.map(({ store }) => store));
   loadExtension({ installed: false });
   const user = userEvent.setup();
-  const { calls } = renderResyncButton();
+  const { calls } = renderRefreshButton();
 
   await click("Refresh item details")(user);
 
@@ -198,7 +198,7 @@ test("an extension that answers ready in another browser still starts the refres
   listIn();
   loadExtension({ installed: true });
   const user = userEvent.setup();
-  const { calls } = renderResyncButton();
+  const { calls } = renderRefreshButton();
 
   await click("Refresh item details")(user);
 
@@ -211,7 +211,7 @@ test("the dialog closes, and the next try probes again", async () => {
   let calls = 0;
   render(
     <>
-      <ItemResyncButton
+      <ItemRefreshButton
         status="idle"
         isPending={false}
         cooldownExpiresAt={null}
@@ -239,7 +239,12 @@ test("closing the dialog keeps its copy while it closes and returns focus to the
   const user = userEvent.setup();
   render(
     <>
-      <ItemResyncButton status="idle" isPending={false} cooldownExpiresAt={null} onRequest={noop} />
+      <ItemRefreshButton
+        status="idle"
+        isPending={false}
+        cooldownExpiresAt={null}
+        onRequest={noop}
+      />
       <ExtensionRequiredDialog />
     </>,
   );
@@ -260,7 +265,7 @@ test("a gated button shows it is checking and ignores a second click until the c
   let calls = 0;
   render(
     <>
-      <ItemResyncButton
+      <ItemRefreshButton
         status="idle"
         isPending={false}
         cooldownExpiresAt={null}

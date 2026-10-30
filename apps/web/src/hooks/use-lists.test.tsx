@@ -146,9 +146,9 @@ await mock.module("@/lib/treaty-client", () => ({
   getErrorMessage,
   getUserErrorMessage: getErrorMessage,
 }));
-const realRun = await import("@/data/extension-run");
-await mock.module("@/data/extension-run", () => ({
-  ...realRun,
+const realRefresh = await import("@/data/item-refresh");
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
   refreshItemWithExtension: () =>
     new Promise((resolve) => {
       server.finishRefresh = () =>

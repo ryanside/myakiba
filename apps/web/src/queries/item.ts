@@ -33,13 +33,13 @@ export function getItemRelatedCollection(externalId: number) {
   });
 }
 
-export function getResyncStatus(externalId: number) {
+export function getRefreshStatus(externalId: number) {
   return call(app.api.item({ id: externalId })["resync-status"].get(), {
     fallback: "Failed to check item refresh status",
   });
 }
 
-export function requestResync(externalId: number, upload: ItemRefresh) {
+export function requestRefresh(externalId: number, upload: ItemRefresh) {
   return call(app.api.item({ id: externalId }).resync.post(upload), {
     fallback: "Failed to request item refresh",
   });

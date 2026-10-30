@@ -35,10 +35,10 @@ await mock.module("@/lib/extension-bridge", () => ({
     fetchItems: (...args: Parameters<typeof bridge.fetchItems>) => bridge.fetchItems(...args),
   },
 }));
-const realRun = await import("./extension-run");
-const refreshReal = realRun.refreshItemWithExtension;
-await mock.module("@/data/extension-run", () => ({
-  ...realRun,
+const realRefresh = await import("./item-refresh");
+const refreshReal = realRefresh.refreshItemWithExtension;
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
   refreshItemWithExtension: (id: number) => refreshReal(id, { clock }),
 }));
 const { refreshItemCommand } = await import("./resources/item");

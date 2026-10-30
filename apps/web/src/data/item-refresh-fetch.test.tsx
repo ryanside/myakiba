@@ -22,7 +22,7 @@ await mock.module("@/lib/extension-bridge", () => ({
   extensionBridge: delegatingBridge(() => bridge),
 }));
 
-const { refreshFailureText, refreshItemWithExtension } = await import("./extension-run");
+const { refreshFailureText, refreshItemWithExtension } = await import("./item-refresh");
 const { ExtensionPromptNotice } = await import("@/components/extension/extension-prompt-notice");
 
 const runFields = z.object({
@@ -111,9 +111,9 @@ describe("refreshing an item", () => {
       cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
       saved: "refreshed",
     });
-    const [resync] = posted("/api/item/98777/resync");
-    expect(resync?.formKeys).toEqual(["page"]);
-    expect(await resync?.page?.text()).toBe("<html>fresh</html>");
+    const [refresh] = posted("/api/item/98777/resync");
+    expect(refresh?.formKeys).toEqual(["page"]);
+    expect(await refresh?.page?.text()).toBe("<html>fresh</html>");
   });
 
   test("reads a refresh in cooldown as the server's message", async () => {
