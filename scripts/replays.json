@@ -1,6 +1,18 @@
 {
   "test": [
     {
+      "fix": "WORKTREE",
+      "base": "7793e2b13004cda90cc6612f1c1eff6d85796a71",
+      "bug": "Signing in or registering from a protected deep link lost its query and hash.",
+      "test": "apps/web/src/components/auth/deep-link.test.tsx",
+      "fixed": [
+        "signing in restores a protected deep link's query and hash exactly",
+        "registering from a protected deep link preserves its email verification destination",
+        "signed-in login and signup visitors keep relative destinations and refuse external ones",
+        "Google login and signup callbacks preserve safe deep links"
+      ]
+    },
+    {
       "fix": "f74b261547a6796ae7983514763ac9932c5f5bb1",
       "bug": "the date normalizer dropped MM/DD/YYYY dates",
       "test": "packages/utils/src/date-only.test.ts",

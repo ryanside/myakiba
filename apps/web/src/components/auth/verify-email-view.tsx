@@ -6,9 +6,10 @@ import { MyAkibaLogo } from "@/components/myakiba-logo";
 
 type VerifyEmailViewProps = {
   readonly email?: string;
+  readonly redirectTo: string;
 };
 
-export function VerifyEmailView({ email }: VerifyEmailViewProps) {
+export function VerifyEmailView({ email, redirectTo }: VerifyEmailViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center justify-center gap-2">
@@ -44,7 +45,11 @@ export function VerifyEmailView({ email }: VerifyEmailViewProps) {
       </div>
 
       <div className="flex justify-center">
-        <BackLink to="/login" text="Back to Login" font="sans" />
+        <BackLink
+          to={`/login?redirect=${encodeURIComponent(redirectTo)}`}
+          text="Back to Login"
+          font="sans"
+        />
       </div>
     </div>
   );

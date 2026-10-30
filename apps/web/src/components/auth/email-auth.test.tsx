@@ -125,7 +125,10 @@ test("a sign-up asks to verify the email", async () => {
 
   await waitFor(() =>
     expect(navigations).toEqual([
-      { to: "/login", search: { view: "verify-email", email: "collector@example.com" } },
+      {
+        to: "/login",
+        search: { view: "verify-email", email: "collector@example.com", redirect: "/dashboard" },
+      },
     ]),
   );
   expect(requests.map(({ path }) => path)).toContain("/sign-up/email");

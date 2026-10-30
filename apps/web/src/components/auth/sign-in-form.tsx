@@ -97,7 +97,11 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link to="/signup" className="text-foreground underline">
+          <Link
+            to="/signup"
+            search={{ redirect: redirectTo }}
+            className="text-foreground underline"
+          >
             Register
           </Link>
         </div>
