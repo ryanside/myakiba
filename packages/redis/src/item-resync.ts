@@ -48,7 +48,7 @@ export async function setResyncCooldown(
 
 type ResyncCooldown = {
   readonly expiresAt: string;
-  /** Null for a cooldown the worker set, which it set after its commit. */
+  /** Null for a cooldown set without a transaction id, which was set after its commit. */
   readonly transactionId: string | null;
 };
 

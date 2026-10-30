@@ -31,12 +31,6 @@
       "cache": false,
       "persistent": true
     },
-    "worker#dev": {
-      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
-      "with": ["@myakiba/db#db:studio"],
-      "cache": false,
-      "persistent": true
-    },
     "stop": {
       "cache": false
     },

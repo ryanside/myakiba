@@ -79,8 +79,6 @@ const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/s
 const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
 const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
-// The worker's nightly sync history cleanup imports the db client directly.
-const worker = ["apps/worker/**"];
 
 const otherTypeAwareRules = [
   "typescript/await-thenable",
@@ -212,7 +210,7 @@ export default defineConfig({
     },
     {
       files: ["**"],
-      excludeFiles: [...serverTests, ...worker],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": [
           "error",
@@ -232,15 +230,10 @@ export default defineConfig({
     },
     {
       files: testCode,
-      excludeFiles: [...serverTests, ...worker],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": ["error", { paths: [dbClientBan], patterns: [dbSourcePath] }],
       },
-    },
-    {
-      files: worker,
-      excludeFiles: testCode,
-      rules: { "no-restricted-imports": ["error", { patterns: testImports }] },
     },
     {
       files: dbClientOwners,
@@ -288,7 +281,7 @@ export default defineConfig({
     },
     {
       files: ["apps/server/src/routers/**"],
-      excludeFiles: [...serverTests, ...worker],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": [
           "error",

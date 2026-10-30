@@ -48,7 +48,7 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 - **Elysia and Bun**
 - **Better Auth**
 - **PostgreSQL and Drizzle ORM**
-- **Redis and BullMQ**
+- **Redis**
 - **AWS S3**
 - **Turborepo**
 
@@ -146,18 +146,15 @@ bun install
 ```bash
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
-cp apps/worker/.env.example apps/worker/.env
 ```
 
 Use these values for the services that run locally:
 
 ```dotenv
-# apps/server/.env and apps/worker/.env
+# apps/server/.env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba
 REDIS_HOST=localhost
 REDIS_PORT=6379
-
-# apps/server/.env
 CORS_ORIGIN=http://localhost:3001
 BETTER_AUTH_URL=http://localhost:3000
 
@@ -192,7 +189,7 @@ Run `bun stop` when you want to stop the Postgres and Redis containers.
 ### Run the full stack with Docker Compose
 
 The root `docker-compose.yml` runs Postgres, Redis, the schema push, the server and bundled web
-app, and the worker.
+app.
 
 1. Create the Compose environment file:
 
@@ -248,8 +245,7 @@ Use the Postgres username, password, and database name from your `.env` file. Th
 myakiba/
 ├── apps/
 │   ├── web/            # Frontend (Vite + React + TanStack Router)
-│   ├── server/         # API and production web server (Elysia + Bun)
-│   └── worker/         # Nightly sync history cleanup (BullMQ)
+│   └── server/         # API and production web server (Elysia + Bun)
 ├── packages/
 │   ├── auth/           # Better Auth configuration
 │   ├── config/         # Shared TypeScript configuration

@@ -9,10 +9,6 @@ export const databaseSchema = {
   DATABASE_URL: z.url(),
 } as const;
 
-export const nodeEnvSchema = {
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-} as const;
-
 export const itemPictureBucketSchema = {
   AWS_BUCKET_REGION: z.string().min(1),
   AWS_BUCKET_NAME: z.string().min(1),

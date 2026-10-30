@@ -1108,19 +1108,6 @@
       "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
-      "fix": "619a9044e76ed5bdb1de1050e4923f8ef6639c5a",
-      "bug": "worker shutdown exited zero on a thrown health stop and hung on stuck stages or rejected flush",
-      "test": "apps/worker/shutdown.test.ts",
-      "fixed": [
-        "worker shutdown exits nonzero without hanging when health throw",
-        "worker shutdown exits nonzero without hanging when health stuck",
-        "worker shutdown exits nonzero without hanging when consumers throw",
-        "worker shutdown exits nonzero without hanging when consumers stuck",
-        "worker shutdown exits nonzero without hanging when flush throw",
-        "worker shutdown exits nonzero without hanging when flush stuck"
-      ]
-    },
-    {
       "fix": "bba418eae667673676c4758ba667e80830fbcce8",
       "bug": "Redis connection error events bypassed evlog",
       "test": "packages/redis/src/client.test.ts",
@@ -1182,19 +1169,6 @@
         "hanging cooldown write settles within its deadline",
         "hanging cooldown status settles within its deadline",
         "hanging cooldown guard settles within its deadline"
-      ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
-    },
-    {
-      "fix": "8cf8fe63234b69491a8baa4bd17d3e816dda94b9",
-      "testAt": "8cf8fe63234b69491a8baa4bd17d3e816dda94b9",
-      "bug": "worker fatal handlers were installed after awaited boot",
-      "test": "apps/worker/fatal-errors.test.ts",
-      "fixed": [
-        "worker logs and exits for uncaughtException during boot with success flush",
-        "worker logs and exits for unhandledRejection during boot with success flush",
-        "worker logs and exits for unhandledRejection during boot with reject flush",
-        "worker logs and exits for unhandledRejection during boot with stuck flush"
       ],
       "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
@@ -1310,14 +1284,6 @@
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
-      "fix": "8b75fff1bc69442851f30a3a1d549cee37d0c0bf",
-      "testAt": "a835ad684a0a86a9c3d4c0f5797fd8892ab0d120",
-      "bug": "worker boot failures were logged and flushed twice through the fatal handler",
-      "test": "apps/worker/boot-failure.test.ts",
-      "fixed": ["a worker boot failure logs one boot error, flushes once and exits 1"],
-      "reason": "Keep the recorded worker startup harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",

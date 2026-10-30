@@ -6,7 +6,6 @@
   "exports": {
     "./server": "./src/server.ts",
     "./web": "./src/web.ts",
-    "./worker": "./src/worker.ts",
     "./shared": "./src/shared.ts",
     "./redis": "./src/redis.ts",
     "./extension": "./src/extension.ts"

@@ -84,29 +84,6 @@ services:
       retries: 3
       start_period: 40s
 
-  worker1:
-    image: ghcr.io/ryanside/myakiba-worker:${MYAKIBA_IMAGE_TAG:-main}
-    pull_policy: always
-    restart: unless-stopped
-    depends_on:
-      db-push:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
-    healthcheck:
-      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://127.0.0.1:3002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
 volumes:
   postgres_data:
   redis_data:

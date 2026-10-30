@@ -36,12 +36,6 @@ test.each([
   ["shared", () => import("./shared"), { DATABASE_URL: SECRET }, "DATABASE_URL"],
   ["redis", () => import("./redis"), { ...validRedis, REDIS_PORT: SECRET }, "REDIS_PORT"],
   [
-    "worker",
-    () => import("./worker"),
-    { ...validRedis, NODE_ENV: SECRET, REDIS_HOST: "" },
-    "REDIS_HOST, NODE_ENV",
-  ],
-  [
     "server",
     () => import("./server"),
     { ...validServer, S3_ENDPOINT_URL: "http://127.0.0.1:9000" },

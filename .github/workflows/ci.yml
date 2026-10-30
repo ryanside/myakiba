@@ -130,10 +130,6 @@ jobs:
               VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid
               VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke
             smoke: db-push=myakiba-db-push:ci server=myakiba-server:ci
-          - image: worker
-            dockerfile: apps/worker/Dockerfile
-            build_args: ""
-            smoke: ""
           - image: db-push
             dockerfile: packages/db/Dockerfile
             build_args: ""
