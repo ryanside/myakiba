@@ -292,7 +292,6 @@ export function useAddController(search: AddSearchParams) {
     stopped: intake.stopped,
     failedPicks,
     unverifiedPick,
-    hasRows: rows.length > 0 || intake.rows.length > 0,
     mfc: search.mfc,
 
     /** Spread onto `<AddSearch />`. */

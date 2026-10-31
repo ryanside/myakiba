@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
-import { cleanup, configure, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PickRow } from "@/data/picks";
 import {
@@ -9,6 +9,7 @@ import {
   renderInApp,
   resetServer,
   seedItems,
+  server,
 } from "../../../test/add-app";
 
 const { PickStatus } = await import("./pick-status");
@@ -182,6 +183,132 @@ test("with nothing chosen, details wait and say why, and Item Database hides the
   expect(screen.queryByRole("textbox", { name: "Price for Miku" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Details for Miku" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Fill all" })).toBeNull();
+});
+
+const rowOrder = () =>
+  [...document.querySelectorAll<HTMLElement>("tbody tr[data-row]")].map(
+    ({ dataset }) => dataset.row,
+  );
+
+const sortBy = async (user: ReturnType<typeof userEvent.setup>, name: string) =>
+  user.click(screen.getByRole("button", { name }));
+
+test("a header sorts its column both ways, then returns to the draft's order", async () => {
+  seedItems(item("rem000000001", { title: "Rem" }), item("aqua00000001", { title: "Aqua" }));
+  draft("miku00000001", "rem000000001", "aqua00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  expect(rowOrder()).toEqual(["miku00000001", "rem000000001", "aqua00000001"]);
+
+  await sortBy(user, "Item");
+  expect(rowOrder()).toEqual(["aqua00000001", "miku00000001", "rem000000001"]);
+  await sortBy(user, "Item");
+  expect(rowOrder()).toEqual(["rem000000001", "miku00000001", "aqua00000001"]);
+  await sortBy(user, "Item");
+  expect(rowOrder()).toEqual(["miku00000001", "rem000000001", "aqua00000001"]);
+});
+
+test("Price sorts by what each row will save, and a row with no fields stays on top", async () => {
+  seedItems(item("rem000000001", { title: "Rem" }));
+  sessionStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify([
+      { itemId: "miku00000001", overrides: { price: "9000" }, selected: true },
+      { itemId: "gone00000001", overrides: {}, selected: true },
+      { itemId: "rem000000001", overrides: {}, selected: true },
+    ]),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByText("No longer in the item database");
+
+  await sortBy(user, "Price");
+  expect(rowOrder()).toEqual(["gone00000001", "rem000000001", "miku00000001"]);
+  await sortBy(user, "Price");
+  expect(rowOrder()).toEqual(["gone00000001", "miku00000001", "rem000000001"]);
+});
+
+test("an edit under a sort keeps the row where it is, with focus in it", async () => {
+  seedItems(item("rem000000001", { title: "Rem" }));
+  draft("miku00000001", "rem000000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  await sortBy(user, "Count");
+  const order = rowOrder();
+
+  const count = screen.getByRole("spinbutton", { name: "Count for Rem" });
+  await user.click(count);
+  await user.keyboard("9");
+  expect(rowOrder()).toEqual(order);
+  expect(document.activeElement).toBe(count);
+
+  await sortBy(user, "Count");
+  expect(rowOrder()).toEqual(["rem000000001", "miku00000001"]);
+});
+
+test("the headers only sort, with no menu to hide, move or pin a column", async () => {
+  draft("miku00000001");
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  for (const name of ["Item", "Price", "Count", "Condition"]) {
+    expect(screen.getByRole("button", { name }).hasAttribute("aria-haspopup")).toBe(false);
+  }
+});
+
+test("a selected row is the grid's selected row, and an unselected one is not dimmed", async () => {
+  sessionStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify([
+      { itemId: "miku00000001", overrides: {}, selected: true },
+      { itemId: "rem000000001", overrides: {}, selected: false },
+    ]),
+  );
+  seedItems(item("rem000000001", { title: "Rem" }));
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  const row = (id: string) => document.querySelector<HTMLElement>(`tr[data-row="${id}"]`);
+  expect(row("miku00000001")?.dataset.state).toBe("selected");
+  expect(row("rem000000001")?.dataset.state).toBeUndefined();
+  expect(row("rem000000001")?.querySelector(".opacity-50")).toBeNull();
+});
+
+test("a row loading has its selection's tint and its place from the first paint", async () => {
+  let answer = () => {};
+  server.itemsGate = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  draft("miku00000001");
+  openAddPage("/add?to=collection");
+  await waitFor(() =>
+    expect(document.querySelector<HTMLElement>('tr[data-row="miku00000001"]')?.dataset.state).toBe(
+      "selected",
+    ),
+  );
+  const row = document.querySelector('tr[data-row="miku00000001"]');
+  const cells = () => row?.querySelectorAll("td").length;
+  expect(cells()).toBe(6);
+  await act(async () => answer());
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  expect(document.querySelector('tr[data-row="miku00000001"]')).toBe(row);
+  expect(cells()).toBe(6);
+});
+
+test("a row's details close when the destination stops being owned, and come back with it", async () => {
+  draft("miku00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await user.click(await screen.findByRole("button", { name: "Details for Miku" }));
+  expect(screen.getByRole("group", { name: "Details for Miku" })).toBeDefined();
+
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Item Database" }));
+  expect(screen.queryByRole("group", { name: "Details for Miku" })).toBeNull();
+
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Collection" }));
+  expect(screen.getByRole("group", { name: "Details for Miku" })).toBeDefined();
 });
 
 test("a saving pick shows its MFC title and spinner, with nothing to click", async () => {

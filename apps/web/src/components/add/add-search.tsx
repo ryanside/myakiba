@@ -84,6 +84,7 @@ export function AddSearch({
             setOpen(true);
           }}
           placeholder="Search by title, MFC ID, or entry"
+          className="text-ellipsis"
         />
         {showPanel ? (
           <div
@@ -117,7 +118,7 @@ export function AddSearch({
                       setText("");
                     }}
                     className={cn(
-                      "items-start gap-3 rounded-lg py-2 data-[disabled=true]:opacity-60",
+                      "gap-3 rounded-lg py-2 data-[disabled=true]:opacity-60",
                       stale && "opacity-60",
                     )}
                   >
