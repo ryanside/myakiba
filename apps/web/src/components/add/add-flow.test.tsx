@@ -60,7 +60,7 @@ const chooseOption = async (user: User, field: string, option: string) => {
   await user.click(screen.getByRole("combobox", { name: field }));
   await user.click(await screen.findByRole("option", { name: option }));
 };
-const destination = (user: User, name: string) => user.click(screen.getByRole("radio", { name }));
+const destination = (user: User, name: string) => chooseOption(user, "Where these go", name);
 const pause = (ms: number) =>
   act(async () => {
     await new Promise((resolve) => {
@@ -99,16 +99,17 @@ test("the destination menu is exactly Collection, New Order, Existing Order and 
   const user = userEvent.setup();
   openAddPage();
   await rowsLoaded();
-  const group = screen.getByRole("radiogroup", { name: "Where these go" });
-  expect(
-    within(group)
-      .getAllByRole("radio")
-      .map(({ textContent }) => textContent),
-  ).toEqual(["Collection", "New Order", "Existing Order", "Item Database"]);
-  await user.click(within(group).getByRole("radio", { name: "New Order" }));
-  expect(within(group).getByRole("radio", { name: "New Order" }).getAttribute("aria-checked")).toBe(
-    "true",
-  );
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+
+  const options = await screen.findAllByRole("option");
+  expect(options.map(({ textContent }) => textContent)).toEqual([
+    "Collection",
+    "New Order",
+    "Existing Order",
+    "Item Database",
+  ]);
+  await user.click(screen.getByRole("option", { name: "New Order" }));
+  expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe("New Order");
 });
 
 test("clicking a row's empty space opens its details, and its controls do not", async () => {
@@ -196,21 +197,6 @@ test("trying another destination keeps what was typed, New and Existing Order in
 
   await destination(user, "Existing Order");
   await destination(user, "New Order");
-  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
-});
-
-test("arrow keys through the destinations leave a New Order's fields as typed", async () => {
-  draft(ITEM_ID);
-  const user = userEvent.setup();
-  openAddPage("/add?to=order-new");
-  await rowsLoaded();
-  await user.type(screen.getByRole("textbox", { name: "Shop" }), "AmiAmi");
-
-  screen.getByRole("radio", { name: "New Order" }).focus();
-  await user.keyboard("{ArrowRight}{ArrowRight}{ArrowLeft}{ArrowLeft}");
-  expect(screen.getByRole("radio", { name: "New Order" }).getAttribute("aria-checked")).toBe(
-    "true",
-  );
   expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
 });
 
@@ -1099,7 +1085,7 @@ test("nothing on the page can change while a commit is in flight, and its answer
     box,
     screen.getByRole("checkbox", { name: "Select Hatsune Miku" }),
     screen.getByRole("textbox", { name: "Price for Hatsune Miku" }),
-    screen.getByRole("radio", { name: "Collection" }),
+    screen.getByRole("combobox", { name: "Where these go" }),
     screen.getByRole("button", { name: "Remove Hatsune Miku" }),
   ]) {
     expect(control.closest("[inert]")).not.toBeNull();
@@ -1220,11 +1206,9 @@ test("a commit resets the form to its preset, with issues gone", async () => {
 
   await screen.findByText("Added 1 to your collection");
   await waitFor(() =>
-    expect(
-      within(screen.getByRole("radiogroup", { name: "Where these go" })).queryAllByRole("radio", {
-        checked: true,
-      }),
-    ).toHaveLength(0),
+    expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe(
+      "choose where",
+    ),
   );
 });
 
@@ -1240,7 +1224,7 @@ test("rows live in sessionStorage, so another tab, like a closed one reopened, h
 
   sessionStorage.clear();
   openAddPage();
-  await screen.findByText("Open an item on MyFigureCollection");
+  await screen.findByText("Pick items on MyFigureCollection");
   expect(screen.queryByRole("checkbox", { name: "Select Hatsune Miku" })).toBeNull();
 });
 
@@ -1344,7 +1328,7 @@ test("a pick arrives on window focus and on the tab showing, and a hidden tab ta
   seedItems(item("item-98777", { title: "Picked Miku", externalId: 98_777 }));
   const extension = loadExtension({});
   openAddPage();
-  await screen.findByText("Open an item on MyFigureCollection");
+  await screen.findByText("Pick items on MyFigureCollection");
   const takes = () =>
     extension.posted.filter(({ message }) => message.request.type === "take-picks").length;
   await waitFor(() => expect(takes()).toBe(1));
@@ -1444,7 +1428,7 @@ test("picks list before rows, show with no rows, and the destination waits for a
   await screen.findByText("Saving…");
   expect(screen.queryByRole("region", { name: "Destination" })).toBeNull();
   expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
-  expect(screen.queryByText("Open an item on MyFigureCollection")).toBeNull();
+  expect(screen.queryByText("Pick items on MyFigureCollection")).toBeNull();
   cleanup();
 
   draft(ITEM_ID);

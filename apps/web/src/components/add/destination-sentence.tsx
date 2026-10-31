@@ -1,13 +1,17 @@
 import { DatabaseIcon, LibraryIcon, PackageAddIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
-import { Radio as RadioPrimitive } from "@base-ui/react/radio";
-import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
-import { motion } from "motion/react";
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useMotionPreference } from "@/hooks/use-appearance";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { DEFAULT_ORDER_FIELDS } from "./commit-input";
@@ -37,7 +41,7 @@ function choose(form: DestinationForm, choice: Choice): DestinationForm {
     case "collection":
     case "none":
       return { ...form, kind: choice };
-    // Arrow keys choose as they move, so passing through a choice must not cost the other's fields.
+    // Trying the other kind of Order must not cost this one's fields.
     case "order-new":
       if (form.order.kind === "new") return { ...form, kind: "order" };
       return {
@@ -64,56 +68,59 @@ function itemsPhrase(selected: number, total: number, loading: boolean): string 
   return selected === total ? `${selected} ${noun}` : `${selected} of ${total} ${noun}`;
 }
 
-/**
- * Where the rows go: every choice in view, one press away, with one surface that travels to the
- * chosen one. With nothing chosen the whole control carries the ring, as the page's next step.
- */
-function DestinationChoices({ controller: c }: { readonly controller: AddController }) {
-  const surfaceId = useId();
-  const reduce = useMotionPreference().reduce;
+/** The sentence's choice. The menu separates what the rows are from where they only get recorded. */
+function DestinationSelect({ controller: c }: { readonly controller: AddController }) {
   const form = c.resolvedForm;
   const choice = choiceOf(form);
+  const chosen = CHOICES.find(({ value }) => value === choice);
   return (
-    <RadioGroupPrimitive
-      aria-label="Where these go"
+    <Select
+      items={CHOICES}
       value={choice}
       onValueChange={(next) => {
-        const chosen = CHOICES.find(({ value }) => value === next);
-        if (chosen) c.setForm(choose(form, chosen.value));
+        if (next !== null) c.setForm(choose(form, next));
       }}
-      className={cn(
-        "grid grid-cols-2 gap-1 rounded-xl bg-card p-1 ring-1 ring-foreground/10 @2xl/add:grid-cols-4",
-        choice === null && "ring-2 ring-primary",
-      )}
     >
-      {CHOICES.map(({ value, label, icon }) => (
-        <RadioPrimitive.Root
-          key={value}
-          value={value}
-          className={cn(
-            "relative flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 text-sm font-medium whitespace-nowrap transition-[color,scale] duration-150 ease-out outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] motion-reduce:active:scale-100",
-            value === choice
-              ? "text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {value === choice ? (
-            <motion.span
-              layoutId={surfaceId}
-              aria-hidden="true"
-              className="absolute inset-0 rounded-lg bg-primary shadow-xs"
-              transition={reduce ? { duration: 0 } : { type: "spring", duration: 0.3, bounce: 0 }}
-            />
-          ) : null}
-          <HugeiconsIcon icon={icon} className="relative size-4 shrink-0" aria-hidden="true" />
-          <span className="relative">{label}</span>
-        </RadioPrimitive.Root>
-      ))}
-    </RadioGroupPrimitive>
+      <SelectTrigger
+        aria-label="Where these go"
+        className={cn(
+          "gap-2 font-medium",
+          chosen && "pl-2",
+          choice === null &&
+            "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
+        )}
+      >
+        {chosen ? (
+          <HugeiconsIcon
+            icon={chosen.icon}
+            className="size-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+        ) : null}
+        <SelectValue placeholder="choose where" />
+      </SelectTrigger>
+      <SelectContent alignItemWithTrigger={false} align="start" className="w-52 max-w-[90vw] p-1">
+        {CHOICES.map(({ value, label, icon }) => (
+          <Fragment key={value}>
+            {value === "order-new" || value === "none" ? <SelectSeparator /> : null}
+            <SelectItem value={value} className="py-1.5">
+              <span className="flex items-center gap-2">
+                <HugeiconsIcon
+                  icon={icon}
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                {label}
+              </span>
+            </SelectItem>
+          </Fragment>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
-/** The destination: what is going where, the choice, and what else it goes on. */
+/** The destination, as one sentence. */
 export function DestinationSentence({ controller: c }: { readonly controller: AddController }) {
   const baseId = useId();
   const form = c.resolvedForm;
@@ -122,28 +129,29 @@ export function DestinationSentence({ controller: c }: { readonly controller: Ad
   const phrase = itemsPhrase(c.commitRows.length, total, c.itemsLoading);
 
   return (
-    <section aria-label="Destination" className="flex flex-col gap-2.5 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <span className="font-medium tabular-nums">
-          {choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`}
+    <section
+      aria-label="Destination"
+      className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm"
+    >
+      <span className="font-medium tabular-nums">
+        {choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`}
+      </span>
+      <DestinationSelect controller={c} />
+      <span className="flex flex-wrap items-center gap-2 @2xl/add:ms-2">
+        <span className="text-foreground/80">also on</span>
+        <span className="flex items-center gap-2">
+          <Checkbox
+            id={`${baseId}-wishlist`}
+            checked={form.wishlist}
+            onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
+          />
+          <Label htmlFor={`${baseId}-wishlist`} className="cursor-pointer font-normal">
+            Wishlist
+          </Label>
         </span>
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="text-foreground/80">also on</span>
-          <span className="flex items-center gap-2">
-            <Checkbox
-              id={`${baseId}-wishlist`}
-              checked={form.wishlist}
-              onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
-            />
-            <Label htmlFor={`${baseId}-wishlist`} className="cursor-pointer font-normal">
-              Wishlist
-            </Label>
-          </span>
-          <span className="text-foreground/80">and</span>
-          <ListsPicker chosen={form.lists} onChange={(lists) => c.setForm({ ...form, lists })} />
-        </span>
-      </div>
-      <DestinationChoices controller={c} />
+        <span className="text-foreground/80">and</span>
+        <ListsPicker chosen={form.lists} onChange={(lists) => c.setForm({ ...form, lists })} />
+      </span>
     </section>
   );
 }

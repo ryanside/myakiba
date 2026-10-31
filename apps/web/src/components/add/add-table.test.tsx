@@ -121,7 +121,7 @@ test("every row control is named after its Item", async () => {
   );
 
   await user.click(screen.getByRole("button", { name: "Remove Miku" }));
-  await screen.findByText("Open an item on MyFigureCollection");
+  await screen.findByText("Pick items on MyFigureCollection");
 });
 
 test("details open inline and depend on the destination", async () => {
@@ -176,7 +176,8 @@ test("with nothing chosen, details wait and say why, and Item Database hides the
   expect(screen.getByRole("spinbutton", { name: "Count for Miku" })).toBeDefined();
   expect(screen.getByRole("combobox", { name: "Condition for Miku" })).toBeDefined();
 
-  await user.click(screen.getByRole("radio", { name: "Item Database" }));
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Item Database" }));
   await screen.findByRole("button", { name: "Done" });
   expect(screen.queryByRole("textbox", { name: "Price for Miku" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Details for Miku" })).toBeNull();

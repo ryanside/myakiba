@@ -36,12 +36,14 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const searchBox = () => screen.getByRole("combobox", { name: "Search the Item Database" });
+const destination = () => screen.findByRole("combobox", { name: "Where these go" });
 const chosenDestination = async () => {
-  await screen.findByRole("radiogroup", { name: "Where these go" });
-  return screen.queryByRole("radio", { checked: true })?.textContent ?? null;
+  const trigger = await destination();
+  return trigger.textContent;
 };
 const choose = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
-  await user.click(await screen.findByRole("radio", { name }));
+  await user.click(await destination());
+  await user.click(await screen.findByRole("option", { name }));
 };
 const pageReady = () => screen.findByRole("combobox", { name: "Search the Item Database" });
 
@@ -221,7 +223,7 @@ test("nothing is chosen without `to`, and an earlier commit's choice is not reme
   openAddPage(`/add?item=${ITEM_ID}`);
   const blocked = await screen.findByRole("button", { name: "Choose where these go" });
   expect(blocked.hasAttribute("disabled")).toBe(true);
-  expect(await chosenDestination()).toBeNull();
+  expect(await chosenDestination()).toBe("choose where");
 
   await choose(user, "Collection");
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
@@ -230,7 +232,7 @@ test("nothing is chosen without `to`, and an earlier commit's choice is not reme
 
   openAddPage(`/add?item=${OTHER_ID}`);
   await screen.findByRole("button", { name: "Choose where these go" });
-  expect(await chosenDestination()).toBeNull();
+  expect(await chosenDestination()).toBe("choose where");
   expect(localStorage.length).toBe(0);
 });
 
@@ -250,7 +252,8 @@ test("`mfc` shows a hint linking to the item on MFC", async () => {
 test("the empty state says how picking works and links to MFC's search", async () => {
   openAddPage();
   await screen.findByRole("heading", { name: "Add items" });
-  expect(screen.getByText("Open an item on MyFigureCollection")).toBeDefined();
+  expect(screen.getByText("Pick items on MyFigureCollection")).toBeDefined();
+  expect(screen.getByText(/Click Pick for myakiba/u)).toBeDefined();
   expect(
     screen.getByRole("link", { name: /Search MyFigureCollection/u }).getAttribute("href"),
   ).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
@@ -260,7 +263,6 @@ test("the empty state tells someone without the extension where to get it", asyn
   loadExtension({ installed: false });
   openAddPage();
   await screen.findByText(/under review|Install the myakiba extension|needs desktop Chrome/u);
-  expect(screen.getByText(/Click Pick for myakiba/u)).toBeDefined();
 });
 
 test.each([
@@ -416,7 +418,7 @@ test("a row the Item Database no longer has says so and cannot be committed", as
     true,
   );
   await user.click(screen.getByRole("button", { name: "Remove this row" }));
-  await screen.findByText("Open an item on MyFigureCollection");
+  await screen.findByText("Pick items on MyFigureCollection");
 });
 
 test("a failed read of the rows' Items says so, never that they are gone, and Retry recovers them", async () => {
@@ -558,7 +560,7 @@ test("the page says the extension stopped, with rows or without, and stops sayin
   openAddPage();
   const empty = await screen.findByRole("alert");
   expect(empty.textContent).toBe(STOPPED_NOTICE);
-  expect(screen.getByText("Open an item on MyFigureCollection")).toBeDefined();
+  expect(screen.getByText("Pick items on MyFigureCollection")).toBeDefined();
 });
 
 test("an extension that was never there is not called stopped", async () => {
