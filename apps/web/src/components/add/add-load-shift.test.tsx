@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
-import { act, cleanup, configure, screen } from "@testing-library/react";
+import { act, cleanup, configure, screen, waitFor } from "@testing-library/react";
 import {
   item,
   loadExtension,
@@ -108,4 +108,24 @@ test("a row whose Item turned out to be gone leaves the count once the read answ
   await screen.findByRole("checkbox", { name: "Select Miku" });
   expect(sentence()).toContain("Add 1 item to");
   expect(screen.getByRole("button", { name: "Add 1 to collection" })).toBeDefined();
+});
+
+test("an empty page's words hold their room until the extension answers, with no card popping in", async () => {
+  loadExtension({ installed: false });
+  openAddPage();
+  const title = await screen.findByText("No items yet");
+  const row = title.closest("td");
+  expect(row).not.toBeNull();
+  const hidden = title.nextElementSibling;
+  expect(hidden?.getAttribute("class")).toContain("opacity-0");
+  expect(hidden?.hasAttribute("inert")).toBe(true);
+  const held = hidden?.querySelectorAll("p");
+  expect(held?.length).toBe(2);
+
+  await waitFor(() => expect(hidden?.getAttribute("class")).not.toContain("opacity-0"), {
+    timeout: 2000,
+  });
+  expect(title.nextElementSibling).toBe(hidden);
+  expect(hidden?.querySelectorAll("p").length).toBe(2);
+  expect(row?.querySelector("[class*='bg-muted']")).toBeNull();
 });

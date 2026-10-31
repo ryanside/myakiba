@@ -252,17 +252,17 @@ test("`mfc` shows a hint linking to the item on MFC", async () => {
 test("the empty state says how picking works and links to MFC's search", async () => {
   openAddPage();
   await screen.findByRole("heading", { name: "Add items" });
-  expect(screen.getByText("Pick items on MyFigureCollection")).toBeDefined();
-  expect(screen.getByText(/Click Pick for myakiba/u)).toBeDefined();
+  expect(screen.getByText("No items yet")).toBeDefined();
+  expect(await screen.findByText(/Click Pick for myakiba/u)).toBeDefined();
   expect(
     screen.getByRole("link", { name: /Search MyFigureCollection/u }).getAttribute("href"),
   ).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
 });
 
-test("an empty page keeps its shape, with only search and the steps working", async () => {
+test("an empty page keeps its shape, with only search and the one action working", async () => {
   openAddPage();
   await screen.findByRole("heading", { name: "Add items" });
-  await screen.findByText("Pick items on MyFigureCollection");
+  await screen.findByText("No items yet");
 
   expect(screen.getByRole("region", { name: "Destination" })).toBeDefined();
   expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
@@ -275,27 +275,23 @@ test("an empty page keeps its shape, with only search and the steps working", as
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
   expect(searchBox().hasAttribute("disabled")).toBe(false);
-});
-
-test("the empty state tells someone without the extension where to get it", async () => {
-  loadExtension({ installed: false });
-  openAddPage();
-  await screen.findByText(/under review|Install the myakiba extension|needs desktop Chrome/u);
+  expect(
+    screen.getByRole("checkbox", { name: "Select all items" }).getAttribute("aria-disabled"),
+  ).toBe("true");
+  for (const name of ["Item", "Price", "Count", "Condition"]) {
+    expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
+  }
+  expect(screen.getByRole("columnheader", { name: "Item" })).toBeDefined();
 });
 
 test.each([
   [
-    "under review",
+    "in review",
     () => {
       browseWith(CHROME.userAgent);
       listIn();
     },
-    "The myakiba browser extension is under review",
-    [
-      "It is in review at the Chrome Web Store now",
-      "Until it is listed, new items can't be picked.",
-      "Items already in the Item Database can still be added.",
-    ],
+    /in review at the Chrome Web Store/u,
   ],
   [
     "listed",
@@ -303,12 +299,7 @@ test.each([
       browseWith(CHROME.userAgent);
       listIn(CHROME.store);
     },
-    "Install the myakiba extension to pick items",
-    [
-      "Picking needs the myakiba browser extension",
-      "Install it from the Chrome Web Store",
-      "Items already in the Item Database can still be added",
-    ],
+    /Anything already in the Item Database can be added without it/u,
   ],
   [
     "in a browser it does not run in",
@@ -316,23 +307,31 @@ test.each([
       browseWith(SAFARI);
       listIn(CHROME.store);
     },
-    "Picking needs desktop Chrome or Firefox",
-    ["to pick items", "Items already in the Item Database can still be added"],
+    /on desktop Chrome or Firefox/u,
   ],
-])(
-  "the notice while the extension is %s speaks of picking",
-  async (_name, arrange, title, body) => {
-    arrange();
-    loadExtension({ installed: false });
-    openAddPage();
+])("the one message while the extension is %s speaks of picking", async (_name, arrange, body) => {
+  arrange();
+  loadExtension({ installed: false });
+  openAddPage();
 
-    const heading = await screen.findByText(title);
-    const notice = heading.parentElement?.textContent;
+  const message = await screen.findByText(body);
+  const cell = message.closest("td");
+  await waitFor(() =>
+    expect(message.parentElement?.parentElement?.className).not.toContain("opacity-0"),
+  );
+  expect(cell?.textContent).not.toMatch(/import|discord|sideload|unpacked/iu);
+  expect(screen.queryByText(/under review/u)).toBeNull();
+});
 
-    for (const line of body) expect(notice).toContain(line);
-    expect(notice).not.toMatch(/import|discord|sideload|unpacked/iu);
-  },
-);
+test("while the extension is in review, the one action goes to the page's search", async () => {
+  browseWith(CHROME.userAgent);
+  listIn();
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  openAddPage();
+  await user.click(await screen.findByRole("button", { name: "Search the Item Database" }));
+  expect(document.activeElement).toBe(searchBox());
+});
 
 test("from=mfc reads as reviewing picks", async () => {
   openAddPage("/add?from=mfc");
@@ -436,7 +435,7 @@ test("a row the Item Database no longer has says so and cannot be committed", as
     true,
   );
   await user.click(screen.getByRole("button", { name: "Remove this row" }));
-  await screen.findByText("Pick items on MyFigureCollection");
+  await screen.findByText("No items yet");
 });
 
 test("a failed read of the rows' Items says so, never that they are gone, and Retry recovers them", async () => {
@@ -578,7 +577,7 @@ test("the page says the extension stopped, with rows or without, and stops sayin
   openAddPage();
   const empty = await screen.findByRole("alert");
   expect(empty.textContent).toBe(STOPPED_NOTICE);
-  expect(screen.getByText("Pick items on MyFigureCollection")).toBeDefined();
+  expect(screen.getByText("No items yet")).toBeDefined();
 });
 
 test("an extension that was never there is not called stopped", async () => {

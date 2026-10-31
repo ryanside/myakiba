@@ -121,7 +121,7 @@ test("every row control is named after its Item", async () => {
   );
 
   await user.click(screen.getByRole("button", { name: "Remove Miku" }));
-  await screen.findByText("Pick items on MyFigureCollection");
+  await screen.findByText("No items yet");
 });
 
 test("details open inline and depend on the destination", async () => {

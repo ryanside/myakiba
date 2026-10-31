@@ -32,10 +32,10 @@ import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
-import { EmptyState } from "./add-notices";
 import { AddSearch } from "./add-search";
 import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
+import { EmptyState } from "./empty-state";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
 import { FIELD, FieldGroup, fieldsFor, plannedPrice, RowField, THUMBNAIL } from "./row-fields";
@@ -694,7 +694,7 @@ export function AddItems({
           <DataGrid
             table={table}
             recordCount={data.length}
-            emptyMessage={<EmptyState />}
+            emptyMessage={<EmptyState onSearch={() => c.searchInput.current?.focus()} />}
             fullWidthRow={fullWidthRow}
             onRowPointerClick={(row, event) => {
               if (owned && row.kind === "item" && isEmptySpace(event)) {
