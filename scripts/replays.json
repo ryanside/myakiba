@@ -1382,7 +1382,9 @@
       "fix": "1632b158c6a6c53750c82590f59f18aa89e65934",
       "bug": "a panicking throttle reservation left every later MFC load waiting",
       "test": "apps/extension/lib/throttle.test.ts",
-      "fixed": ["a throttle turn > whose reservation panics lets the next load run"]
+      "fixed": ["a throttle turn > whose reservation panics lets the next load run"],
+      "testAt": "1632b158c6a6c53750c82590f59f18aa89e65934",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     },
     {
       "fix": "31e985a6419eb728040f07f7f2bd584469c9b48a",
@@ -1390,7 +1392,9 @@
       "test": "apps/extension/lib/collector.test.ts",
       "fixed": [
         "the collector reading a picture in its tab > hands a defect while it reads the picture to the background as a Panic"
-      ]
+      ],
+      "testAt": "31e985a6419eb728040f07f7f2bd584469c9b48a",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     },
     {
       "fix": "de69a35ba1a3c4e6a608793998d0201c9b50f343",
@@ -1421,7 +1425,9 @@
       "test": "apps/extension/lib/throttle.test.ts",
       "fixed": [
         "a throttle turn > whose end of turn panics while it is booked reports it once and lets the next loads run"
-      ]
+      ],
+      "testAt": "9a6f9f3fcf5e9181d2c05e17547d95c61fa04d9f",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     },
     {
       "fix": "46e1e09109d39fd0213348378dc0d889478816f4",
@@ -1449,7 +1455,9 @@
       "fixed": [
         "a defect in the collector's tab > keeps the message of the Panic it hit while it read a picture",
         "a defect in the collector's tab > while it reads a fetched page crosses to the background as a Panic with its message"
-      ]
+      ],
+      "testAt": "010683336822df38cd0b7ba018ff916bc7bab9af",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     },
     {
       "fix": "2261bfc9286d75e9178460e0b5db590d94f844ed",
@@ -2048,7 +2056,9 @@
         "the throttle's books > when storage fails > an answer that cannot be booked keeps its fetched page, is logged, and the queue goes on",
         "the throttle's books > when storage fails > an answer that cannot be booked for the only item of a run keeps its page, ends the run and closes the MFC tab",
         "the throttle's books > when storage fails > an answer that cannot be booked for the last item of a run keeps its page, ends the run and closes the MFC tab"
-      ]
+      ],
+      "testAt": "08232759cd28453eee2dbd8a1fb6e9b0cd95aefb",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     },
     {
       "fix": "f28d3e1e6648d759c261c13a90a1e24ece7da0cf",
@@ -2549,7 +2559,9 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
-      ]
+      ],
+      "testAt": "0511bc129c7302a1670f8125297bcce3067cea83",
+      "reason": "The server's test at the head uses code that came after this fix, so it cannot run against it."
     },
     {
       "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
@@ -2576,7 +2588,9 @@
         "a challenge > solved into a signed-out 404 answers at once and leaves the rest of the queue running",
         "item results > a 404 is signed out with MFC's guest menu and hidden or missing with a signed-in menu",
         "the developer log > names each failed item's error and id once, without the page"
-      ]
+      ],
+      "testAt": "a4e8b2a28121837aa51b25d92124300af7c6d908",
+      "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
     }
   ],
   "lint": [
