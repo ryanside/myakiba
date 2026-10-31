@@ -1,6 +1,44 @@
 {
   "test": [
     {
+      "fix": "ac4a551cf628a2efcb7515fa2752c701a2f5d9e3",
+      "bug": "The app shell's overflow-x-hidden made every page wrapper a scroll container, so nothing on a page could stick to the window.",
+      "test": "apps/web/src/components/app-shell.test.ts",
+      "fixed": ["no wrapper around a page turns into a scroll container"]
+    },
+    {
+      "fix": "3845603139910f1e94a650969e0398b599cce5b9",
+      "bug": "An action bar wider than half a phone's screen ran off both of its edges, so its first and last actions could not be clicked.",
+      "test": "apps/web/src/components/ui/action-bar.test.tsx",
+      "fixed": ["a bar wider than half a phone's screen stays on the screen"]
+    },
+    {
+      "fix": "4424d2c743e1558d011ccff2864dbc2c7f37fbaf",
+      "bug": "InlineTextCell's h-auto made its preview and input 30px against every other control's 32px.",
+      "test": "apps/web/src/components/cells/inline-text-cell.test.tsx",
+      "fixed": ["the preview and the input are the app's 32px controls, with no size of their own"]
+    },
+    {
+      "fix": "98b4cc7656193373eaa8294da7fbfa81c7fcde30",
+      "bug": "The Add page counted its rows from their loaded Items, so its sentence, commit label, summary and Total changed size when the Items arrived.",
+      "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+      "fixed": [
+        "the sentence says how many before the Items load, and the same after",
+        "the sentence counts an unselected row as unselected before the Items load",
+        "the commit's label and summary say how many before the Items load",
+        "the Total holds its place while the Items load",
+        "a row whose Item turned out to be gone leaves the count once the read answers"
+      ]
+    },
+    {
+      "fix": "f7cd741c1f500da3d98457d209cfba7ba4f15944",
+      "bug": "An empty Add page popped a card in half a second late, once the extension's absence was known, and that moved the page.",
+      "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+      "fixed": [
+        "an empty page's words hold their room until the extension answers, with no card popping in"
+      ]
+    },
+    {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
       "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
@@ -9,7 +47,16 @@
         "arrow keys through the destinations leave a New Order's fields as typed"
       ],
       "testAt": "941b87a9d6dc120c60822f09b1a5771197255fe1",
-      "reason": "This fix was made on the radio destinations, which the select with icons replaced, and its test drives those radios."
+      "reason": "This fix was made on the radio destinations, which the select with icons replaced, and its test drives those radios.",
+      "head": [
+        {
+          "test": "apps/web/src/components/add/add-flow.test.tsx",
+          "fixed": [
+            "trying another destination keeps what was typed, New and Existing Order included"
+          ],
+          "reason": "The select with icons has no arrow keys that change the destination, so only this case still runs at the head."
+        }
+      ]
     },
     {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
