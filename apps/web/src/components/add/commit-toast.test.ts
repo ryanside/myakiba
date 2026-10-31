@@ -108,6 +108,15 @@ test("the description says where else the rows went", () => {
     "Also on your Wishlist and in ‘Display shelf’.",
   );
   expect(commitToastDescription(outcome({ ownership: OWNED }))).toBeUndefined();
+  expect(
+    commitToastDescription(
+      outcome({
+        ownership: { kind: "order", order: { kind: "new", fields: DEFAULT_ORDER_FIELDS } },
+        orderTitle: "Spring",
+        wishlist: true,
+      }),
+    ),
+  ).toBe("Spring\nAlso on your Wishlist.");
 });
 
 test("the title says what happened", () => {
@@ -119,7 +128,7 @@ test("the title says what happened", () => {
         orderTitle: "Spring",
       }),
     ),
-  ).toBe("Created order ‘Spring’");
+  ).toBe("Created order");
   expect(
     commitToastTitle(
       outcome({
@@ -127,7 +136,7 @@ test("the title says what happened", () => {
         orderTitle: "Spring",
       }),
     ),
-  ).toBe("Added 2 to ‘Spring’");
+  ).toBe("Added 2 to order");
   expect(commitToastTitle(outcome({ ownership: NOT_OWNED, wishlist: true, lists: [LIST] }))).toBe(
     "Added 2 to your Wishlist and ‘Display shelf’",
   );

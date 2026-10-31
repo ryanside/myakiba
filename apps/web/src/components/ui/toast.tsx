@@ -224,24 +224,30 @@ function ToastList() {
     const { media, secondaryAction }: ToastExtras = toastItem.data ?? {};
     return (
       <Toast key={toastItem.id} toast={toastItem}>
-        <ToastContent className={media ? "flex-wrap" : undefined}>
+        <ToastContent className={media ? "p-3" : undefined}>
           {media ?? <ToastIcon type={toastItem.type} />}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <ToastTitle />
-            <ToastDescription />
+            <ToastDescription
+              className={
+                media
+                  ? "line-clamp-3 text-xs [overflow-wrap:anywhere] whitespace-pre-line"
+                  : undefined
+              }
+            />
+            {secondaryAction ? (
+              <Button
+                variant="link"
+                size="xs"
+                className="w-fit px-0"
+                onClick={() => secondaryAction.onClick()}
+              >
+                {secondaryAction.label}
+              </Button>
+            ) : null}
           </div>
-          {media ? null : <ToastAction />}
+          <ToastAction />
           <ToastClose />
-          {media ? (
-            <div className="flex basis-full justify-end gap-2">
-              {secondaryAction ? (
-                <Button variant="ghost" size="sm" onClick={() => secondaryAction.onClick()}>
-                  {secondaryAction.label}
-                </Button>
-              ) : null}
-              <ToastAction />
-            </div>
-          ) : null}
         </ToastContent>
       </Toast>
     );

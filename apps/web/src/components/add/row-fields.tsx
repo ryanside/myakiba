@@ -21,7 +21,7 @@ import type { AddController } from "./add-controller";
 import type { DraftRow, RowOverrides } from "./add-draft";
 import { LabeledField, TagsField } from "./add-fields";
 import { priceFieldId } from "./commit-input";
-import type { AddItem, CommitIssue, DestinationForm, SharedFields } from "./commit-input";
+import type { AddItem, CommitIssue, DestinationForm } from "./commit-input";
 
 type RowDate = "orderDate" | "paymentDate" | "shippingDate" | "collectionDate";
 
@@ -95,7 +95,7 @@ export function FieldGroup({
       aria-labelledby={id}
       className="grid gap-x-3 gap-y-2.5 @4xl:grid-cols-[5.5rem_minmax(0,1fr)]"
     >
-      <p id={id} className="text-xs font-medium">
+      <p id={id} className="text-xs text-muted-foreground">
         {title}
       </p>
       <div className={cn("grid grid-cols-2 items-start gap-3", className)}>{children}</div>
@@ -145,45 +145,6 @@ export function hasOwnValue(row: DraftRow, field: FieldId): boolean {
       return overrides.shippingMethod !== undefined;
   }
 }
-
-function effectiveValue(row: DraftRow, field: FieldId, shared: SharedFields | null): string | null {
-  const { overrides } = row;
-  switch (field) {
-    case "price":
-      return overrides.price ?? "";
-    case "count":
-      return String(overrides.count ?? shared?.count ?? 1);
-    case "condition":
-      return overrides.condition ?? shared?.condition ?? "New";
-    default:
-      return null;
-  }
-}
-
-/** The selected rows whose value differs from the one most of the column holds. */
-export function differingRows(c: AddController, field: FieldId): ReadonlySet<string> {
-  const form = c.resolvedForm;
-  const shared = form.kind === "collection" ? form.shared : null;
-  const tally = new Map<string, number>();
-  const values = new Map<string, string>();
-  for (const { row } of c.commitRows) {
-    const value = effectiveValue(row, field, shared);
-    if (value === null) return new Set();
-    values.set(row.itemId, value);
-    tally.set(value, (tally.get(value) ?? 0) + 1);
-  }
-  const [common, times] = [...tally].reduce<[string, number]>(
-    (best, entry) => (entry[1] > best[1] ? entry : best),
-    ["", 0],
-  );
-  // One row with its own price among blank rows has nothing to differ from.
-  if (tally.size < 2 || times < 2 || common === "") return new Set();
-  return new Set([...values].filter(([, value]) => value !== common).map(([itemId]) => itemId));
-}
-
-// A value this row set reads heavier than one it would inherit, which stays dim.
-export const SET_VALUE = "font-medium";
-export const DEFAULT_VALUE = "text-muted-foreground";
 
 /**
  * One field of one row. A field with a column sits under its header, so its label is only for screen
@@ -245,7 +206,7 @@ export function RowField({
             invalid={issue !== undefined}
             aria-describedby={issue ? `${id}-error` : undefined}
             inputMode="decimal"
-            className={cn("tabular-nums @3xl/rows:text-end", SET_VALUE)}
+            className="tabular-nums @3xl/rows:text-end"
             value={overrides.price ?? ""}
             onValueChange={(_masked, unmasked) => onEdit({ price: unmasked })}
           />
@@ -261,10 +222,7 @@ export function RowField({
             inputMode="numeric"
             min={1}
             max={999}
-            className={cn(
-              "tabular-nums [appearance:textfield] @3xl/rows:text-end [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-              SET_VALUE,
-            )}
+            className="tabular-nums [appearance:textfield] @3xl/rows:text-end [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             value={overrides.count ?? ""}
             placeholder={String(shared?.count ?? 1)}
             onChange={(event) => onEdit({ count: readCount(event.target.value) })}
@@ -280,13 +238,7 @@ export function RowField({
               if (next !== null) onEdit({ condition: next });
             }}
           >
-            <SelectTrigger
-              id={id}
-              className={cn(
-                "w-full",
-                overrides.condition === undefined ? DEFAULT_VALUE : SET_VALUE,
-              )}
-            >
+            <SelectTrigger id={id} className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -308,7 +260,6 @@ export function RowField({
             placeholder={shared?.shop || "e.g., AmiAmi"}
             title={overrides.shop || shared?.shop || undefined}
             maxLength={200}
-            className={SET_VALUE}
             onChange={(event) => onEdit({ shop: event.target.value })}
           />
         </LabeledField>
@@ -337,7 +288,6 @@ export function RowField({
                 : overrides.collectionDate
             }
             placeholder="No date"
-            className={cn(overrides.collectionDate === undefined && DEFAULT_VALUE)}
             onChange={(collectionDate) => onEdit({ collectionDate })}
           />
         </LabeledField>
@@ -345,7 +295,7 @@ export function RowField({
     case "score":
       return (
         <div className="grid gap-1.5">
-          <span className="text-xs text-muted-foreground">{field.label}</span>
+          <span className="text-sm leading-none font-medium">{field.label}</span>
           <div className="flex min-h-8 items-center">
             <Rating
               rating={overrides.score ?? 0}
@@ -376,6 +326,7 @@ export function RowField({
             id={id}
             value={overrides.notes ?? ""}
             maxLength={5000}
+            placeholder="Add any notes..."
             onChange={(event) => onEdit({ notes: event.target.value })}
           />
         </LabeledField>
@@ -389,13 +340,7 @@ export function RowField({
               if (next !== null) onEdit({ shippingMethod: next });
             }}
           >
-            <SelectTrigger
-              id={id}
-              className={cn(
-                "w-full",
-                overrides.shippingMethod === undefined ? DEFAULT_VALUE : SET_VALUE,
-              )}
-            >
+            <SelectTrigger id={id} className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

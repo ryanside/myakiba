@@ -251,7 +251,8 @@ test("typing on the prefilled Order title replaces it, and a cleared one falls b
 
   await user.clear(title);
   await click(user, "Create order with 2");
-  await screen.findByText("Created order ‘Hatsune Miku + 1 more’");
+  await screen.findByText("Created order");
+  await screen.findByText("Hatsune Miku + 1 more");
   expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Hatsune Miku + 1 more");
 });
 
@@ -277,7 +278,8 @@ test("New Order's fees and title reach the commit", async () => {
   await user.type(screen.getByRole("textbox", { name: "Taxes" }), "12.50");
   await screen.findByText("Fees $12.50");
   await click(user, "Create order with 1");
-  await screen.findByText("Created order ‘Hatsune Miku’");
+  await screen.findByText("Created order");
+  await screen.findByText("Hatsune Miku");
 
   const fields = server.commits[0]?.ownership.order?.fields ?? {};
   expect(fields.taxes).toBe(1250);
@@ -359,7 +361,7 @@ test("an Existing Order search picks the Order, shows its picture, and a preset 
   expect(option.querySelector("img")?.getAttribute("src")).toBe("/images/spring.jpg");
   await user.click(option);
   await waitFor(() => expect(picker.textContent).toContain("Spring order"));
-  expect(screen.getByRole("heading", { name: "Spring order" })).toBeDefined();
+  expect(screen.getByRole("combobox", { name: "Order" }).textContent).toContain("Spring order");
   await click(user, "Add 1 to order Spring order");
   await waitFor(() => expect(server.commits).toHaveLength(1));
   expect<unknown>(server.commits[0]?.ownership).toEqual({

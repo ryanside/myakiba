@@ -18,7 +18,7 @@ import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
-import { differingRows, FIELD, FieldGroup, fieldsFor, RowField, THUMBNAIL } from "./row-fields";
+import { FIELD, FieldGroup, fieldsFor, RowField, THUMBNAIL } from "./row-fields";
 import type { Field } from "./row-fields";
 import { ReleaseField } from "./row-release";
 
@@ -369,10 +369,7 @@ function MissingItemRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className="size-14 shrink-0 rounded-lg bg-muted outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-        aria-hidden="true"
-      />
+      <div className={cn(THUMBNAIL, "bg-muted")} aria-hidden="true" />
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         {lookup === "failed" ? "Could not load this item" : "No longer in the item database"}
       </p>
@@ -380,7 +377,8 @@ function MissingItemRow({
         type="button"
         id={removeButtonId(itemId)}
         variant="ghost"
-        size="icon"
+        size="icon-sm"
+        className="text-muted-foreground"
         aria-label="Remove this row"
         onClick={() => onRemove(itemId)}
       >
@@ -495,26 +493,14 @@ function ItemRow({
             column.id === "price" && "@max-3xl/rows:col-span-2",
           )}
         >
-          <div className="relative">
-            {differingRows(c, column.id).has(itemId) ? (
-              <>
-                <span
-                  aria-hidden="true"
-                  title="Differs from the rest of this column"
-                  className="absolute end-1.5 top-1.5 z-1 size-1.5 rounded-full bg-foreground/70"
-                />
-                <span className="sr-only">Differs from the rest of this column.</span>
-              </>
-            ) : null}
-            <RowField
-              field={column}
-              row={row}
-              item={item}
-              release={release}
-              c={c}
-              issues={c.issues}
-            />
-          </div>
+          <RowField
+            field={column}
+            row={row}
+            item={item}
+            release={release}
+            c={c}
+            issues={c.issues}
+          />
         </td>
       ))}
       <td
@@ -535,7 +521,7 @@ function ItemRow({
               aria-label={`Details for ${title}`}
               aria-expanded={open}
               aria-controls={open ? detailsId : undefined}
-              className="@max-3xl/rows:-ms-2"
+              className="text-muted-foreground @max-3xl/rows:-ms-2"
               onClick={onToggleDetails}
             >
               <HugeiconsIcon
@@ -557,7 +543,7 @@ function ItemRow({
             variant="ghost"
             size="sm"
             aria-label={`Remove ${title}`}
-            className="@max-3xl/rows:ms-auto @max-3xl/rows:-me-2"
+            className="text-muted-foreground @max-3xl/rows:ms-auto @max-3xl/rows:-me-2"
             onClick={() => c.handleRemove(itemId)}
           >
             <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
@@ -594,13 +580,17 @@ function DetailsPanel({
       className="grid gap-5 p-3 motion-safe:animate-[data-in_160ms_ease-out_both] @3xl/rows:ps-25 @4xl/rows:pe-25.5"
     >
       <FieldGroup title="Purchase" className="@4xl:grid-cols-4">
-        <div className="col-span-2 min-w-0">
+        <div className="col-span-full min-w-0">
           <ReleaseField row={row} item={item} release={release} c={c} />
         </div>
         {isCollection ? (
           <>
-            <RowField field={FIELD.shop} {...shared} />
-            <RowField field={FIELD.shipping} {...shared} />
+            <div className="@4xl:col-span-2">
+              <RowField field={FIELD.shop} {...shared} />
+            </div>
+            <div className="@4xl:col-span-2">
+              <RowField field={FIELD.shipping} {...shared} />
+            </div>
           </>
         ) : null}
       </FieldGroup>

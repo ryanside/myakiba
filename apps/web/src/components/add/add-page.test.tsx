@@ -469,6 +469,7 @@ test("removing a row moves focus to the next row's remove button", async () => {
 });
 
 test("the toast shows the added Items' pictures and its View opens the filtered Collection", async () => {
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", image: "/images/miku.jpg" }));
   const user = userEvent.setup();
   const router = openAddPage(`/add?item=${ITEM_ID}&to=collection`);
 
@@ -476,7 +477,7 @@ test("the toast shows the added Items' pictures and its View opens the filtered 
 
   await screen.findByText("Added 1 to your collection");
   const notifications = screen.getByRole("region", { name: /Notifications/u });
-  expect(within(notifications).getByText("Hatsune Miku")).toBeDefined();
+  expect(notifications.querySelector("img")?.getAttribute("src")).toBe("/images/miku.jpg");
   await user.click(within(notifications).getByRole("button", { name: "View" }));
   await waitFor(() => {
     expect(router.state.location.pathname).toBe("/collection");

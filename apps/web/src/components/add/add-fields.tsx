@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getCurrencyLocale } from "@/lib/locale";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { cn } from "@/lib/utils";
-import type { Currency } from "@myakiba/contracts/shared/types";
+import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import type { Currency, OrderStatus } from "@myakiba/contracts/shared/types";
 
 export const MAX_TAGS = 20;
 const MAX_TAG_LENGTH = 50;
@@ -38,9 +40,7 @@ export function LabeledField({
 }) {
   return (
     <div className={cn("grid gap-1.5", className)}>
-      <Label htmlFor={id} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
+      <Label htmlFor={id}>{label}</Label>
       {children}
       {error ? (
         <FieldError id={`${id}-error`} className="text-xs">
@@ -113,6 +113,46 @@ export function AmountInput({
       value={value}
       onValueChange={(_masked, unmasked) => onChange(unmasked)}
     />
+  );
+}
+
+/** Order Status, with the dot it has in the Order form. */
+export function OrderStatusSelect({
+  id,
+  value,
+  onChange,
+}: {
+  readonly id: string;
+  readonly value: OrderStatus;
+  readonly onChange: (value: OrderStatus) => void;
+}) {
+  const named = (status: OrderStatus) => (
+    <span className="flex items-center gap-2">
+      <span
+        className={cn("size-1.5 shrink-0 rounded-full", ORDER_STATUS_COLORS[status])}
+        aria-hidden="true"
+      />
+      {status}
+    </span>
+  );
+  return (
+    <Select
+      value={value}
+      onValueChange={(next) => {
+        if (next !== null) onChange(next);
+      }}
+    >
+      <SelectTrigger id={id} className="w-full">
+        <SelectValue>{named(value)}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {ORDER_STATUSES.map((status) => (
+          <SelectItem key={status} value={status}>
+            {named(status)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

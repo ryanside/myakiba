@@ -264,7 +264,7 @@ function FillEditor({
     case "score":
       return (
         <div className="grid gap-1.5">
-          <span className="text-xs text-muted-foreground">Score</span>
+          <span className="text-sm leading-none font-medium">Score</span>
           <Rating
             rating={draft.score}
             maxRating={10}

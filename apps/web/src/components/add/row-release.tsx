@@ -11,12 +11,10 @@ import { useRead, useReads } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
-import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
 import { LabeledField } from "./add-fields";
 import type { AddItem } from "./commit-input";
-import { DEFAULT_VALUE, SET_VALUE } from "./row-fields";
 
 type Release = NonNullable<AddItem["latestRelease"]>;
 
@@ -61,7 +59,7 @@ export function ReleaseField({
   readonly release: AddItem["latestRelease"];
   readonly c: AddController;
 }) {
-  const { itemId, overrides } = row;
+  const { itemId } = row;
   const id = `add-release-${itemId}`;
   const [opened, setOpened] = useState(false);
   const { data, isLoading, error } = useRead(items.releases, itemId, { enabled: opened });
@@ -91,22 +89,17 @@ export function ReleaseField({
         <SelectTrigger
           id={id}
           title={release ? releaseFacts(release, c).join(", ") : undefined}
-          className={cn("w-full", release === null && DEFAULT_VALUE)}
+          className="w-full"
         >
           <SelectValue placeholder="No release">
             {release ? (
-              <span className="flex min-w-0 items-center gap-2 text-muted-foreground tabular-nums @max-3xl/rows:gap-1.5 @max-3xl/rows:text-xs">
-                <span
-                  className={cn(
-                    "shrink-0",
-                    overrides.releaseId === undefined ? DEFAULT_VALUE : SET_VALUE,
-                  )}
-                >
+              <span className="flex w-full min-w-0 items-center gap-3 text-muted-foreground tabular-nums @max-3xl/rows:gap-1.5 @max-3xl/rows:text-xs">
+                <span className="shrink-0 font-medium text-foreground">
                   {formatDateOnlyForDisplay(release.date, c.dateFormat)}
                 </span>
                 {release.type ? <span className="truncate">{release.type}</span> : null}
-                {release.barcode ? <span className="shrink-0">{release.barcode}</span> : null}
-                {price(release) ? <span className="shrink-0">{price(release)}</span> : null}
+                {release.barcode ? <span className="shrink-0">#{release.barcode}</span> : null}
+                {price(release) ? <span className="ms-auto shrink-0">{price(release)}</span> : null}
               </span>
             ) : null}
           </SelectValue>
@@ -114,7 +107,7 @@ export function ReleaseField({
         <SelectContent
           alignItemWithTrigger={false}
           align="start"
-          className="w-auto max-w-[calc(100vw-2rem)] min-w-64"
+          className="w-auto max-w-[calc(100vw-2rem)] min-w-(--anchor-width)"
         >
           {isLoading ? (
             <div className="flex items-center justify-center gap-2 px-3 py-4 text-sm text-muted-foreground">
@@ -124,27 +117,32 @@ export function ReleaseField({
           ) : null}
           {error ? <div className="p-3 text-sm text-destructive">{error.message}</div> : null}
           {data?.releases.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              <span className="flex flex-col gap-0.5">
+            <SelectItem key={option.id} value={option.id} className="py-2.5">
+              <span className="flex flex-col gap-1">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">
                     {formatDateOnlyForDisplay(option.date, c.dateFormat)}
                   </span>
                   {option.type ? (
-                    <span className="rounded bg-muted/60 px-1.5 py-px text-xs text-muted-foreground">
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       {option.type}
                     </span>
                   ) : null}
                 </span>
                 {option.barcode || price(option) ? (
                   <span className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular-nums">
-                    {option.barcode ? <span>{option.barcode}</span> : null}
                     {price(option) ? <span>{price(option)}</span> : null}
+                    {option.barcode ? <span>#{option.barcode}</span> : null}
                   </span>
                 ) : null}
               </span>
             </SelectItem>
           ))}
+          {data?.releases.length === 0 ? (
+            <div className="px-3 py-4 text-center text-sm text-muted-foreground">
+              No releases found
+            </div>
+          ) : null}
         </SelectContent>
       </Select>
     </LabeledField>

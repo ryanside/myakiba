@@ -1,6 +1,6 @@
 import { ArrowUpDownIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
+import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
@@ -20,7 +20,7 @@ import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
-import { AmountInput, DateField, EnumSelect, LabeledField } from "./add-fields";
+import { AmountInput, DateField, EnumSelect, LabeledField, OrderStatusSelect } from "./add-fields";
 import { orderFieldId } from "./commit-input";
 import type { OrderFields } from "./commit-input";
 import { FieldGroup, THUMBNAIL } from "./row-fields";
@@ -74,7 +74,7 @@ const OrderIcon = () => (
 
 // One line of it is the height of an Input, and more lines grow from there.
 const TITLE_TEXT =
-  "col-start-1 row-start-1 min-h-8 px-2 py-1 text-base font-medium [overflow-wrap:anywhere] md:py-1.5 md:text-sm";
+  "col-start-1 row-start-1 min-h-8 rounded-lg border border-transparent px-2.5 py-1 text-base font-medium [overflow-wrap:anywhere] md:py-1.25 md:text-sm";
 
 /**
  * The Order's title, edited in place. It wraps, so it is a text area, and it stays one paragraph.
@@ -91,7 +91,7 @@ function OrderTitle({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <div className="-ms-2 grid min-w-0 flex-1">
+    <div className="-ms-2.75 grid min-w-0 flex-1">
       <span aria-hidden="true" className={cn(TITLE_TEXT, "invisible whitespace-pre-wrap")}>
         {`${value || placeholder} `}
       </span>
@@ -103,7 +103,7 @@ function OrderTitle({
         placeholder={placeholder}
         className={cn(
           TITLE_TEXT,
-          "resize-none overflow-hidden rounded-lg bg-transparent outline-none placeholder:text-muted-foreground hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50",
+          "resize-none overflow-hidden bg-transparent transition-colors outline-none placeholder:text-muted-foreground hover:border-control-edge hover:bg-control focus-visible:border-ring focus-visible:bg-control focus-visible:ring-3 focus-visible:ring-ring/50",
         )}
         onKeyDown={(event) => {
           if (event.key === "Enter") event.preventDefault();
@@ -128,22 +128,16 @@ export function OrderDetails({ controller: c }: { readonly controller: AddContro
 }
 
 function ExistingOrder({ controller: c }: { readonly controller: AddController }) {
-  const id = useId();
   const form = c.resolvedForm;
   const chosen = form.order.kind === "existing" ? form.order.order : null;
   const { data: order } = useRead(orders.detail, chosen?.id ?? "", { enabled: chosen !== null });
   if (form.order.kind !== "existing") return null;
   return (
-    <section aria-labelledby={id} className={SECTION}>
+    <section aria-label="Existing Order" className={SECTION}>
       <SectionHeading
         images={order?.images ?? []}
         title={
-          <h2 id={id} className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
-            {chosen?.title ?? "Existing Order"}
-          </h2>
-        }
-        aside={
-          <div className="w-full @2xl/add:w-80">
+          <div className="min-w-0 flex-1">
             <ExistingOrderPicker
               order={chosen}
               issue={c.issues.find((issue) => issue.fieldId === orderFieldId("existing"))?.message}
@@ -191,10 +185,9 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
       />
       <FieldGroup title="Basics" className="@4xl:grid-cols-5">
         <LabeledField id={`${id}-status`} label="Status">
-          <EnumSelect
+          <OrderStatusSelect
             id={`${id}-status`}
             value={fields.status}
-            options={ORDER_STATUSES}
             onChange={(status) => set({ status })}
           />
         </LabeledField>
@@ -284,6 +277,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
       <FieldGroup title="Notes" className="grid-cols-1">
         <Textarea
           aria-label="Notes"
+          placeholder="Add any notes..."
           value={fields.notes}
           onChange={(event) => set({ notes: event.target.value })}
         />

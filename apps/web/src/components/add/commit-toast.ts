@@ -1,11 +1,13 @@
-import { createElement } from "react";
+import { Image01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { NavigateOptions } from "@tanstack/react-router";
+import { createElement } from "react";
+import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { toast } from "@/components/ui/toast";
 import { itemDestination } from "@/lib/item-destination";
 import type { CommitAnswer } from "./commit-button";
 import { namedTargets, quoted } from "./commit-input";
 import type { ChosenList, Ownership } from "./commit-input";
-import { StackedThumbnails } from "./stacked-thumbnails";
 
 type Navigate = (target: NavigateOptions) => void | Promise<void>;
 
@@ -64,17 +66,13 @@ export function commitListView(outcome: CommitOutcome): ViewAction | null {
 }
 
 export function commitToastTitle(outcome: CommitOutcome): string {
-  const { ownership, orderTitle, wishlist, lists, answer } = outcome;
+  const { ownership, wishlist, lists, answer } = outcome;
   const count = answer.committed.length;
   switch (ownership.kind) {
     case "collection":
       return `Added ${count} to your collection`;
-    case "order": {
-      const title = orderTitle ?? "your Order";
-      return ownership.order.kind === "new"
-        ? `Created order ${quoted(title)}`
-        : `Added ${count} to ${quoted(title)}`;
-    }
+    case "order":
+      return ownership.order.kind === "new" ? "Created order" : `Added ${count} to order`;
     case "none": {
       const targets = namedTargets(wishlist ? "your Wishlist" : null, lists);
       if (targets !== null) return `Added ${count} to ${targets}`;
@@ -85,8 +83,9 @@ export function commitToastTitle(outcome: CommitOutcome): string {
   }
 }
 
+/** The Order's name, then anywhere else the Items went, each on its own line. */
 export function commitToastDescription(outcome: CommitOutcome): string | undefined {
-  const { ownership, wishlist, lists } = outcome;
+  const { ownership, orderTitle, wishlist, lists } = outcome;
   if (ownership.kind === "none") return undefined;
   const targets = [
     wishlist ? "on your Wishlist" : null,
@@ -94,7 +93,11 @@ export function commitToastDescription(outcome: CommitOutcome): string | undefin
   ]
     .filter((target) => target !== null)
     .join(" and ");
-  return targets === "" ? undefined : `Also ${targets}.`;
+  const lines = [
+    ownership.kind === "order" ? orderTitle : null,
+    targets === "" ? null : `Also ${targets}.`,
+  ].filter((line) => line !== null);
+  return lines.length === 0 ? undefined : lines.join("\n");
 }
 
 export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {
@@ -111,7 +114,19 @@ export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {
     timeout: 0,
     actionProps: { children: view.label, onClick: go(view.target) },
     data: {
-      media: createElement(StackedThumbnails, { items: outcome.answer.committed }),
+      media: createElement(ImageThumbnail, {
+        images: outcome.answer.committed.flatMap(({ image }) => (image ? [image] : [])),
+        title: commitToastTitle(outcome),
+        decorative: true,
+        showRemainingCount: true,
+        className:
+          "size-12 shrink-0 rounded-lg outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10",
+        fallbackIcon: createElement(HugeiconsIcon, {
+          icon: outcome.ownership.kind === "order" ? PackageIcon : Image01Icon,
+          className: "size-5 text-muted-foreground",
+          "aria-hidden": true,
+        }),
+      }),
       ...(list && { secondaryAction: { label: list.label, onClick: go(list.target) } }),
     },
   });

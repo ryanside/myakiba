@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { PickRow } from "@/data/picks";
 import { pickFailureCopy } from "@/lib/pick-failure";
+import { cn } from "@/lib/utils";
+import { THUMBNAIL } from "./row-fields";
 
 /** A pick's status and actions, layout-free. */
 export function PickStatus({
@@ -20,7 +22,7 @@ export function PickStatus({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div
-        className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-muted outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+        className={cn(THUMBNAIL, "flex items-center justify-center bg-muted")}
         aria-hidden="true"
       >
         {copy ? (
