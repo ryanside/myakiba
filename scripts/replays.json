@@ -1,6 +1,53 @@
 {
   "test": [
     {
+      "fix": "e4e2e1e6c41670da39b0e8c14e6021d6c3aeb09a",
+      "bug": "Pressing F6 twice with a toast open saved the toast as where focus returns to, so Tab could not leave it.",
+      "test": "apps/web/src/components/ui/toast.test.tsx",
+      "fixed": ["F6 twice still lets Shift+Tab return to where the keyboard was"]
+    },
+    {
+      "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
+      "bug": "A tag's remove, a failed commit's message, the Add page's popups, the toast's Close and Fill's tag-limit error each lost keyboard or assistive technology users: focus fell to the body, the error dismissed itself, popups had no name, Close was hidden, and the limit error was not tied to its input.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "removing a tag keeps focus in the Tags field",
+        "a failed commit's message stays until it's dismissed",
+        "every popup is named, and so is the Order search",
+        "the commit toast's View and Close are both there for assistive technology",
+        "Fill all refuses tags that would take a row past 20, and says so"
+      ]
+    },
+    {
+      "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
+      "bug": "Escape from the search panel's footer closed the panel and left focus on the body.",
+      "test": "apps/web/src/components/add/add-search.test.tsx",
+      "fixed": ["Escape from the panel's footer closes it and puts focus back in the search"]
+    },
+    {
+      "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
+      "bug": "Returning to the page an Add link came from left focus on the body.",
+      "test": "apps/web/src/components/add/add-return.test.tsx",
+      "fixed": ["returning puts focus on the page it returned to"]
+    },
+    {
+      "fix": "a67af3a909522d28819e4455a999c8313f153921",
+      "bug": "The commit toast stayed until closed, unlike the app's other toasts.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": ["the toast of a commit dismisses itself"]
+    },
+    {
+      "fix": "944fc7744f95efe7c46e5cb7a03dc885d242d690",
+      "bug": "Fill selected changed unselected Collection rows through the shared value, and Fill could take a row past 20 tags, which blocked the commit.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "Fill selected leaves an unselected row's values alone",
+        "Fill all refuses tags that would take a row past 20, and says so"
+      ],
+      "testAt": "944fc7744f95efe7c46e5cb7a03dc885d242d690",
+      "reason": "The tag test now also expects its error tied to the input, added in a later commit, so its harness stays at this fix."
+    },
+    {
       "fix": "4ecb9a9e829a23540f1423910487820ff59093b6",
       "bug": "The first letter typed after an Add row arrived was lost, because the search measured its room in the capture phase and React rendered before the input's listener.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
@@ -10,7 +57,9 @@
       "fix": "4c2862563b5d4ec1a2d51939a9520a9bf778d34c",
       "bug": "Clicking the Add page's prefilled Order title and typing inserted into it, so a save named the Order with both.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
-      "fixed": ["typing on the prefilled Order title replaces it, and a cleared one falls back"]
+      "fixed": ["typing on the prefilled Order title replaces it, and a cleared one falls back"],
+      "testAt": "1e6e08095c7d073210534c7c4582adc7fec8eb0f",
+      "reason": "Its test now also expects the toast's later wording, which this fix never had, so its harness stays at the build before that change."
     },
     {
       "fix": "326d3db7612f4efe33263daf9d90331f6b0b5a84",

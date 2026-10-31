@@ -900,12 +900,10 @@ test("removing a tag keeps focus in the Tags field", async () => {
   openAddPage("/add?to=collection");
   await rowsLoaded();
   await openDetails(user, "Hatsune Miku");
+  const field = screen.getByRole("textbox", { name: "Tags for Hatsune Miku" });
   await user.click(screen.getByRole("button", { name: "Remove tag old" }));
-  await waitFor(() =>
-    expect(document.activeElement).toBe(
-      screen.getByRole("textbox", { name: "Tags for Hatsune Miku" }),
-    ),
-  );
+  // A comparison of booleans, because a failing comparison of elements prints the whole page.
+  await waitFor(() => expect(document.activeElement === field).toBe(true));
 });
 
 test("the commit toast's View and Close are both there for assistive technology", async () => {
