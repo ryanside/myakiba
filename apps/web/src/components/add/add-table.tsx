@@ -602,12 +602,7 @@ function DetailsPanel({
             <RowField field={FIELD.shop} {...shared} />
             <RowField field={FIELD.shipping} {...shared} />
           </>
-        ) : (
-          // It sits level with the Release control, so it reads as that row's other half.
-          <p className="col-span-2 flex items-center text-xs text-pretty text-muted-foreground @4xl:mt-5.5 @4xl:min-h-8">
-            Order Items take their Shop, dates and Shipping Method from the Order.
-          </p>
-        )}
+        ) : null}
       </FieldGroup>
       {isCollection ? (
         <FieldGroup title="Dates" className="@4xl:grid-cols-4">

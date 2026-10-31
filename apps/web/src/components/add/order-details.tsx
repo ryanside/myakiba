@@ -138,14 +138,9 @@ function ExistingOrder({ controller: c }: { readonly controller: AddController }
       <SectionHeading
         images={order?.images ?? []}
         title={
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 id={id} className="text-sm font-medium [overflow-wrap:anywhere]">
-              {chosen?.title ?? "Existing Order"}
-            </h2>
-            <p className="text-xs text-pretty text-muted-foreground">
-              These items take their Shop, dates and Shipping Method from the Order.
-            </p>
-          </div>
+          <h2 id={id} className="min-w-0 text-sm font-medium [overflow-wrap:anywhere]">
+            {chosen?.title ?? "Existing Order"}
+          </h2>
         }
         aside={
           <div className="w-full @2xl/add:w-80">

@@ -5,13 +5,14 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
+import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import type { AddController } from "./add-controller";
 import type { RowOverrides } from "./add-draft";
-import { AmountInput, EnumSelect, LabeledField, TagsField } from "./add-fields";
+import { AmountInput, EnumSelect, LabeledField, MAX_TAGS, TagsField } from "./add-fields";
 import type { SharedFields } from "./commit-input";
 import { hasOwnValue, readCount } from "./row-fields";
 import type { Field, FieldId } from "./row-fields";
@@ -79,8 +80,11 @@ function initialDraft(c: AddController, field: FieldId): FillDraft {
 function writeFill(c: AddController, field: FieldId, draft: FillDraft) {
   const form = c.resolvedForm;
   const ids = c.commitRows.map(({ row }) => row.itemId);
+  // Only a fill of every row may become the shared value, which rows without their own value read.
   const setShared = (patch: Partial<SharedFields>) => {
-    if (form.kind === "collection") c.setForm({ ...form, shared: { ...form.shared, ...patch } });
+    if (form.kind === "collection" && ids.length === c.rows.length) {
+      c.setForm({ ...form, shared: { ...form.shared, ...patch } });
+    }
   };
   switch (field) {
     case "price":
@@ -141,6 +145,12 @@ function FillForm({
   const rows = `${count} selected`;
   const own = c.commitRows.filter(({ row }) => hasOwnValue(row, field.id)).length;
   const id = `add-fill-${field.id}`;
+  const overfull =
+    field.id === "tags"
+      ? c.commitRows.filter(
+          ({ row }) => new Set([...(row.overrides.tags ?? []), ...draft.tags]).size > MAX_TAGS,
+        ).length
+      : 0;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -159,7 +169,12 @@ function FillForm({
     <form onSubmit={submit} className="grid gap-2.5">
       <FillEditor field={field} id={id} draft={draft} c={c} set={set} />
       {note ? <p className="text-xs text-pretty text-muted-foreground">{note}</p> : null}
-      <Button type="submit" size="sm" className="w-full">
+      {overfull > 0 ? (
+        <FieldError className="text-xs">
+          {overfull === 1 ? "1 row" : `${overfull} rows`} would have more than {MAX_TAGS} tags.
+        </FieldError>
+      ) : null}
+      <Button type="submit" size="sm" className="w-full" disabled={overfull > 0}>
         {`Fill ${rows}`}
       </Button>
     </form>

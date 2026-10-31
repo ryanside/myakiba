@@ -395,9 +395,6 @@ test("an Order's Item details leave out what the Order gives, and say so", async
   expect(details.queryByRole("textbox", { name: /^Shop/u })).toBeNull();
   expect(details.queryByRole("button", { name: /Date/u })).toBeNull();
   expect(details.getByRole("textbox", { name: "Notes for Hatsune Miku" })).toBeDefined();
-  expect(
-    details.getByText("Order Items take their Shop, dates and Shipping Method from the Order."),
-  ).toBeDefined();
 });
 
 // -------------------------------------------------------------------------------------- Releases
@@ -711,6 +708,8 @@ test("a row still loading is a skeleton, and the commit waits for it", async () 
 async function fill(user: User, field: string) {
   await click(user, "Fill all");
   await click(user, field);
+  // The popup holds focus for a moment before the field takes it, and keys typed then are lost.
+  await waitFor(() => expect(document.activeElement?.id.startsWith("add-fill-")).toBe(true));
 }
 
 test("Fill all writes one value to every selected row, and the shared value too", async () => {
@@ -798,6 +797,63 @@ test("Fill all adds tags to what each row has, and says when it replaces values"
   const rows = server.commits[0]?.rows ?? [];
   expect(rows.find(({ itemId }) => itemId === ITEM_ID)?.tags).toEqual(["old", "new"]);
   expect(rows.find(({ itemId }) => itemId === OTHER_ID)?.tags).toEqual(["new"]);
+});
+
+test("Fill selected leaves an unselected row's values alone", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
+
+  await fill(user, "Count");
+  fireEvent.change(await screen.findByRole("spinbutton", { name: "Count" }), {
+    target: { value: "3" },
+  });
+  await click(user, "Fill 1 selected");
+  await fill(user, "Shop");
+  await user.type(await screen.findByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await click(user, "Fill 1 selected");
+
+  await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
+  await click(user, "Add 2 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  const shared = server.commits[0]?.ownership.shared;
+  expect(shared?.count).toBe(1);
+  expect(shared?.shop).toBe("");
+  const rows = server.commits[0]?.rows ?? [];
+  const filled = rows.find(({ itemId }) => itemId === OTHER_ID);
+  const left = rows.find(({ itemId }) => itemId === ITEM_ID);
+  expect(filled?.count).toBe(3);
+  expect(filled?.shop).toBe("AmiAmi");
+  expect(left?.count).toBeUndefined();
+  expect(left?.shop).toBeUndefined();
+});
+
+test("Fill all refuses tags that would take a row past 20, and says so", async () => {
+  const tags = Array.from({ length: 20 }, (_, index) => `tag-${index}`);
+  sessionStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify([
+      { itemId: ITEM_ID, overrides: { tags }, selected: true },
+      { itemId: OTHER_ID, overrides: {}, selected: true },
+    ]),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+
+  await fill(user, "Tags");
+  const field = await screen.findByRole("textbox", { name: "Tags" });
+  await user.type(field, "tag-0{Enter}");
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Fill 2 selected" }).disabled).toBe(
+    false,
+  );
+  await user.type(field, "extra{Enter}");
+  expect(screen.getByText("1 row would have more than 20 tags.")).toBeDefined();
+  expect(screen.getByRole<HTMLButtonElement>("button", { name: "Fill 2 selected" }).disabled).toBe(
+    true,
+  );
 });
 
 test("Fill all asks for a selection before it offers a field", async () => {

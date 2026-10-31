@@ -162,7 +162,6 @@ test("an Order Item's details leave out what the Order gives it", async () => {
   expect(details.queryByRole("combobox", { name: /^Shipping Method/u })).toBeNull();
   expect(details.queryByRole("button", { name: /Date/u })).toBeNull();
   expect(details.getByRole("textbox", { name: "Notes for Miku" })).toBeDefined();
-  expect(details.getByText(/take their Shop, dates and Shipping Method/u)).toBeDefined();
 });
 
 test("with nothing chosen, details wait and say why, and Item Database hides the purchase fields", async () => {

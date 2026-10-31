@@ -20,7 +20,7 @@ import { getCurrencyLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@myakiba/contracts/shared/types";
 
-const MAX_TAGS = 20;
+export const MAX_TAGS = 20;
 const MAX_TAG_LENGTH = 50;
 
 export function LabeledField({
@@ -176,7 +176,6 @@ export function TagsField({
                     type="button"
                     variant="ghost"
                     size="icon-xs"
-                    className="size-5"
                     aria-label={`Remove tag ${tag}`}
                     onClick={() => onChange(tags.filter((other) => other !== tag))}
                   >
