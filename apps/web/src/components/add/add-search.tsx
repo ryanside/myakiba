@@ -5,8 +5,9 @@ import { DEFAULT_PAGE_SIZE } from "@myakiba/contracts/shared/constants";
 import { useEffect, useRef, useState } from "react";
 import type { Ref } from "react";
 import { Badge } from "@/components/reui/badge";
-import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandItem, CommandList, CommandPageInput } from "@/components/ui/command";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { POPOVER_SURFACE_CLASS_NAME } from "@/components/ui/popover";
 import { useRead } from "@/data/client";
 import { add } from "@/data/resources/add";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -54,7 +55,7 @@ export function AddSearch({
   return (
     <search
       ref={container}
-      className="relative w-full max-w-2xl"
+      className="relative w-full min-w-0 sm:max-w-sm"
       onFocus={() => setOpen(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
@@ -75,19 +76,21 @@ export function AddSearch({
           setOpen(false);
         }}
       >
-        <CommandInput
+        <CommandPageInput
           ref={inputRef}
           value={text}
           onValueChange={(next) => {
             setText(next);
             setOpen(true);
           }}
-          placeholder="Search myakiba by title, MFC ID, or entry"
-          className="text-base md:text-sm"
+          placeholder="Search by title, MFC ID, or entry"
         />
         {showPanel ? (
           <div
-            className="absolute inset-x-0 top-full z-30 mt-1 flex max-h-[min(26rem,55dvh)] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10"
+            className={cn(
+              POPOVER_SURFACE_CLASS_NAME,
+              "absolute inset-x-0 top-full z-30 mt-1 flex max-h-[min(26rem,55dvh)] flex-col overflow-hidden",
+            )}
             role="presentation"
             // Keeps focus in the input when a result or the footer is clicked.
             onMouseDown={(event) => event.preventDefault()}
@@ -122,7 +125,7 @@ export function AddSearch({
                       images={item.image ? [item.image] : []}
                       title={item.title}
                       decorative
-                      className="size-12 shrink-0 rounded-md outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                      className="size-8 shrink-0 rounded-md"
                       fallbackIcon={null}
                     />
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
