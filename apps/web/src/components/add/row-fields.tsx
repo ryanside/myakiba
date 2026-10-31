@@ -6,6 +6,7 @@ import type { FocusEvent, ReactNode } from "react";
 import { SelectCell } from "@/components/cells/select-cell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";
 import {
@@ -263,7 +264,7 @@ export function RowField({
           <Input
             id={id}
             value={overrides.shop ?? ""}
-            placeholder={shared?.shop || "e.g., AmiAmi"}
+            placeholder={shared?.shop || "Enter shop name"}
             title={overrides.shop || shared?.shop || undefined}
             maxLength={200}
             onChange={(event) => onEdit({ shop: event.target.value })}
@@ -278,7 +279,7 @@ export function RowField({
           <DatePicker
             id={id}
             value={overrides[field.id] ?? null}
-            placeholder="No date"
+            placeholder="Select date"
             onChange={(value) => onEdit({ [field.id]: value })}
           />
         </LabeledField>
@@ -293,7 +294,7 @@ export function RowField({
                 ? shared?.collectionDate
                 : overrides.collectionDate
             }
-            placeholder="No date"
+            placeholder="Select date"
             onChange={(collectionDate) => onEdit({ collectionDate })}
           />
         </LabeledField>
@@ -301,7 +302,7 @@ export function RowField({
     case "score":
       return (
         <div className="grid gap-1.5">
-          <span className="text-sm leading-none font-medium">{field.label}</span>
+          <Label htmlFor={id}>{field.label}</Label>
           <div className="flex min-h-8 items-center">
             <Rating
               rating={overrides.score ?? 0}
@@ -309,7 +310,6 @@ export function RowField({
               size="md"
               editable
               showValue
-              starClassName="w-7 tabular-nums"
               aria-label={`Score for ${title}`}
               onRatingChange={(score) => onEdit({ score: score === overrides.score ? 0 : score })}
             />

@@ -677,7 +677,7 @@ test("the Shop and Notes fields hold to their limits, and a blank one sends noth
   await openDetails(user, "Hatsune Miku");
   const shop = screen.getByRole("textbox", { name: "Shop for Hatsune Miku" }) as HTMLInputElement;
   expect(shop.maxLength).toBe(200);
-  expect(shop.placeholder).toBe("e.g., AmiAmi");
+  expect(shop.placeholder).toBe("Enter shop name");
   expect(
     (screen.getByRole("textbox", { name: "Notes for Hatsune Miku" }) as HTMLTextAreaElement)
       .maxLength,
@@ -1557,7 +1557,7 @@ test("New Order's own fields hold to their limits and defaults", async () => {
   await rowsLoaded();
   const shop = screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement;
   expect(shop.maxLength).toBe(200);
-  expect(shop.placeholder).toBe("e.g., AmiAmi");
+  expect(shop.placeholder).toBe("Enter shop name");
   expect(screen.getByRole("combobox", { name: "Status" }).textContent).toBe("Ordered");
   expect(screen.getByRole("combobox", { name: "Shipping Method" }).textContent).toBe("n/a");
   for (const fee of ["Shipping Fee", "Taxes", "Duties", "Tariffs", "Miscellaneous Fees"]) {

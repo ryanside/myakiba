@@ -55,7 +55,8 @@ export function ListsPicker({
               <HugeiconsIcon
                 icon={UnfoldMoreIcon}
                 data-icon="inline-end"
-                className="shrink-0 opacity-50"
+                strokeWidth={2}
+                className="shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
             </Button>
@@ -65,7 +66,6 @@ export function ListsPicker({
           aria-label="Lists"
           className="w-72 max-w-[calc(100vw-2rem)] gap-0 p-1"
           align="end"
-          side="top"
         >
           <fieldset className="contents">
             <legend className="sr-only">Lists to add these to</legend>
@@ -77,7 +77,7 @@ export function ListsPicker({
                   <label
                     key={list.id}
                     htmlFor={checkboxId}
-                    className="flex min-h-9 cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50"
+                    className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50"
                   >
                     <Checkbox
                       id={checkboxId}

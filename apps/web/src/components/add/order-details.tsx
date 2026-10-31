@@ -88,7 +88,7 @@ const OrderIcon = () => (
   <HugeiconsIcon icon={PackageIcon} className="size-5 text-muted-foreground" aria-hidden="true" />
 );
 
-const SECTION = "flex flex-col gap-5";
+const SECTION = "flex flex-col gap-3";
 
 /** The Order the sentence names: a new one's fields, or the existing one to join. */
 export function OrderDetails({ controller: c }: { readonly controller: AddController }) {
@@ -157,7 +157,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
         }
         aside={
           fees > 0 ? (
-            <span className="text-sm text-foreground/80 tabular-nums">
+            <span className="text-sm text-muted-foreground tabular-nums">
               Fees {formatCurrencyFromMinorUnits(fees, c.currency, getCurrencyLocale(c.currency))}
             </span>
           ) : null
@@ -176,7 +176,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             id={`${id}-shop`}
             value={fields.shop}
             maxLength={200}
-            placeholder="e.g., AmiAmi"
+            placeholder="Enter shop name"
             title={fields.shop || undefined}
             onChange={(event) => set({ shop: event.target.value })}
           />
@@ -203,7 +203,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             value={fields.releaseDate}
             placeholder={
               latestRelease === ""
-                ? "No date"
+                ? "Select date"
                 : formatDateOnlyForDisplay(latestRelease, c.dateFormat)
             }
             onChange={(releaseDate) => set({ releaseDate })}
@@ -299,13 +299,10 @@ function ExistingOrderPicker({
               aria-controls={listId}
               aria-invalid={issue === undefined ? undefined : true}
               aria-describedby={issue === undefined ? undefined : `${fieldId}-error`}
-              className="w-full max-w-md min-w-0 justify-between font-medium"
+              className="w-full max-w-md min-w-0 justify-between font-normal"
             >
               <span
-                className={cn(
-                  "min-w-0 truncate",
-                  order === null && "font-normal text-muted-foreground",
-                )}
+                className={cn("min-w-0 truncate", order === null && "text-muted-foreground")}
                 title={order?.title ?? undefined}
               >
                 {order ? (order.title ?? "Loading the Order…") : "Choose an Order"}
@@ -347,7 +344,7 @@ function ExistingOrderPicker({
                     images={result.images}
                     title={result.title}
                     decorative
-                    className="size-8 shrink-0 rounded-md outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                    className={THUMBNAIL}
                     fallbackIcon={<OrderIcon />}
                   />
                   <span className="min-w-0 [overflow-wrap:anywhere]">{result.title}</span>

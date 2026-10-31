@@ -249,7 +249,7 @@ function FillEditor({
             id={id}
             value={draft.text}
             maxLength={200}
-            placeholder="e.g., AmiAmi"
+            placeholder="Enter shop name"
             onChange={(event) => set({ text: event.target.value })}
           />
         </LabeledField>
@@ -263,7 +263,7 @@ function FillEditor({
           <DatePicker
             id={id}
             value={draft.date}
-            placeholder="No date"
+            placeholder="Select date"
             onChange={(date) => set({ date })}
           />
         </LabeledField>

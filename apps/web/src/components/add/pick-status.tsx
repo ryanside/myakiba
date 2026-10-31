@@ -1,6 +1,6 @@
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { PickRow } from "@/data/picks";
 import { pickFailureCopy } from "@/lib/pick-failure";
@@ -21,14 +21,11 @@ export function PickStatus({
   const copy = pick.state === "failed" ? pickFailureCopy(pick.reason, pick.mfcItemId) : null;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <div
-        className={cn(THUMBNAIL, "flex items-center justify-center bg-muted")}
-        aria-hidden="true"
-      >
+      <div className={cn(THUMBNAIL, "flex items-center justify-center")} aria-hidden="true">
         {copy ? (
-          <HugeiconsIcon icon={Alert02Icon} className="size-5 text-warning" />
+          <HugeiconsIcon icon={Alert02Icon} className="size-4 text-warning-foreground" />
         ) : (
-          <Spinner className="size-5 text-muted-foreground" />
+          <Spinner className="size-4 text-muted-foreground" />
         )}
       </div>
       <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
@@ -63,7 +60,7 @@ export function PickStatus({
                   href={action.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-sm px-1.5 text-xs font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className={buttonVariants({ variant: "link", size: "xs" })}
                 >
                   {action.label}
                 </a>

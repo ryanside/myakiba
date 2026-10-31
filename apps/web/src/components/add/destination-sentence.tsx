@@ -90,7 +90,7 @@ function DestinationSelect({
       <SelectTrigger
         aria-label="Where these go"
         className={cn(
-          "gap-2 font-medium",
+          "gap-2",
           chosen && "pl-2",
           choice === null &&
             !disabled &&
@@ -110,7 +110,7 @@ function DestinationSelect({
         {CHOICES.map(({ value, label, icon }) => (
           <Fragment key={value}>
             {value === "order-new" || value === "none" ? <SelectSeparator /> : null}
-            <SelectItem value={value} className="py-1.5">
+            <SelectItem value={value}>
               <span className="flex items-center gap-2">
                 <HugeiconsIcon
                   icon={icon}
@@ -151,7 +151,7 @@ export function DestinationSentence({
       </span>
       <DestinationSelect controller={c} disabled={disabled} />
       <span className="flex flex-wrap items-center gap-2 @2xl/add:ms-2">
-        <span className="text-foreground/80">also on</span>
+        <span className="text-muted-foreground">also on</span>
         <span className="flex items-center gap-2">
           <Checkbox
             id={`${baseId}-wishlist`}
@@ -166,7 +166,7 @@ export function DestinationSentence({
             Wishlist
           </Label>
         </span>
-        <span className="text-foreground/80">and</span>
+        <span className="text-muted-foreground">and</span>
         <ListsPicker
           chosen={form.lists}
           disabled={disabled}

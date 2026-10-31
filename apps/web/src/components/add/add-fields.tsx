@@ -169,7 +169,7 @@ export function DateField({
 }) {
   return (
     <LabeledField id={id} label={label}>
-      <DatePicker id={id} value={value} onChange={onChange} placeholder="No date" />
+      <DatePicker id={id} value={value} onChange={onChange} placeholder="Select date" />
     </LabeledField>
   );
 }
@@ -193,25 +193,6 @@ export function TagsField({
   return (
     <LabeledField id={id} label={label} error={error}>
       <div className="grid gap-2">
-        <Input
-          ref={input}
-          id={id}
-          value={text}
-          aria-invalid={error === undefined ? undefined : true}
-          aria-describedby={error === undefined ? undefined : `${id}-error`}
-          placeholder="Type a tag and press Enter"
-          maxLength={MAX_TAG_LENGTH}
-          disabled={tags.length >= MAX_TAGS}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            const tag = text.trim();
-            if (tag === "") return;
-            if (!tags.includes(tag)) onChange([...tags, tag]);
-            setText("");
-          }}
-        />
         {tags.length > 0 ? (
           <ul className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
@@ -236,6 +217,25 @@ export function TagsField({
             ))}
           </ul>
         ) : null}
+        <Input
+          ref={input}
+          id={id}
+          value={text}
+          aria-invalid={error === undefined ? undefined : true}
+          aria-describedby={error === undefined ? undefined : `${id}-error`}
+          placeholder="Type a tag and press Enter"
+          maxLength={MAX_TAG_LENGTH}
+          disabled={tags.length >= MAX_TAGS}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            const tag = text.trim();
+            if (tag === "") return;
+            if (!tags.includes(tag)) onChange([...tags, tag]);
+            setText("");
+          }}
+        />
       </div>
     </LabeledField>
   );
