@@ -112,6 +112,30 @@ test("the destination menu is exactly Collection, New Order, Existing Order and 
   expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe("New Order");
 });
 
+test("typing in Price and Count holds focus and every character", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+
+  const price = screen.getByRole<HTMLInputElement>("textbox", { name: "Price for Hatsune Miku" });
+  await user.click(price);
+  for (const digit of "1234") {
+    await user.keyboard(digit);
+    expect(document.activeElement).toBe(price);
+    expect(price.isConnected).toBe(true);
+  }
+  expect(price.value).toBe("$1,234");
+
+  const count = screen.getByRole<HTMLInputElement>("spinbutton", {
+    name: "Count for Hatsune Miku",
+  });
+  await user.click(count);
+  await user.keyboard("12");
+  expect(document.activeElement).toBe(count);
+  expect(count.value).toBe("12");
+});
+
 test("clicking a row's empty space opens its details, and its controls do not", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
