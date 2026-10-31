@@ -34,7 +34,8 @@ export function useAddController(search: AddSearchParams) {
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
   const { rows, full, dispatch } = useAddDraft(search.item);
-  const searchInput = useRef<HTMLInputElement>(null);
+  const searchTrigger = useRef<HTMLButtonElement>(null);
+  const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
   const [issues, setIssues] = useState<readonly CommitIssue[]>([]);
   const [announcement, setAnnouncement] = useState("");
@@ -124,7 +125,7 @@ export function useAddController(search: AddSearchParams) {
 
   const retryItems = async () => {
     // The read hides this button while it runs, so focus moves before the button goes.
-    searchInput.current?.focus();
+    searchTrigger.current?.focus();
     await refetchItems();
   };
 
@@ -150,7 +151,7 @@ export function useAddController(search: AddSearchParams) {
     const next = buttons[index + 1] ?? buttons[index - 1];
     // The removed button had focus, so focus moves once the row is gone, not to the page's start.
     flushSync(() => dispatch({ type: "remove", itemIds: [itemId] }));
-    (next ?? searchInput.current)?.focus();
+    (next ?? searchTrigger.current)?.focus();
     setAnnouncement(`Removed ${items.get(itemId)?.title ?? "the row"}`);
   };
 
@@ -186,7 +187,7 @@ export function useAddController(search: AddSearchParams) {
       void goBack(search.returnTo);
       return;
     }
-    searchInput.current?.focus();
+    searchTrigger.current?.focus();
   });
 
   const committed = (answer: CommitAnswer) => {
@@ -295,9 +296,7 @@ export function useAddController(search: AddSearchParams) {
     done,
     reportIssues,
 
-    searchInput,
-    addFromSearch,
-    draftItemIds,
+    handleOpenSearch: () => setSearchOpen(true),
 
     full,
     stopped: intake.stopped,
@@ -309,7 +308,9 @@ export function useAddController(search: AddSearchParams) {
     searchProps: {
       initialQuery: search.q ?? "",
       draftItemIds,
-      inputRef: searchInput,
+      open: searchOpen,
+      triggerRef: searchTrigger,
+      onOpenChange: setSearchOpen,
       onAdd: addFromSearch,
     },
     /** Spread onto `<CommitButton />`. */

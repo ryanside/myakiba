@@ -46,10 +46,18 @@ const choose = async (user: ReturnType<typeof userEvent.setup>, name: string) =>
   await user.click(await destination());
   await user.click(await screen.findByRole("option", { name }));
 };
-const pageReady = () => screen.findByRole("combobox", { name: "Search the Item Database" });
+const searchButton = () => screen.getByRole("button", { name: "Add from Item Database" });
+const pageReady = () => screen.findByRole("button", { name: "Add from Item Database" });
+const openSearch = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(searchButton());
+  return screen.findByRole("combobox", { name: "Search the Item Database" });
+};
 
 async function searchAndAdd(user: ReturnType<typeof userEvent.setup>, text: string, title: string) {
-  await user.type(searchBox(), text);
+  const box =
+    screen.queryByRole("combobox", { name: "Search the Item Database" }) ??
+    (await openSearch(user));
+  await user.type(box, text);
   await screen.findByRole("option", { name: new RegExp(title, "u") });
   await user.keyboard("{Enter}");
   await screen.findByRole("checkbox", { name: `Select ${title}` });
@@ -90,7 +98,7 @@ test("search adds the row on click and keeps focus", async () => {
   const user = userEvent.setup();
   openAddPage();
   await pageReady();
-  await user.type(searchBox(), "miku");
+  await user.type(await openSearch(user), "miku");
 
   await user.click(await screen.findByRole("option", { name: /Hatsune Miku/u }));
 
@@ -102,7 +110,7 @@ test("Enter after typing on never adds a result of the earlier words", async () 
   const user = userEvent.setup();
   openAddPage();
   await pageReady();
-  await user.type(searchBox(), "miku");
+  await user.type(await openSearch(user), "miku");
   await screen.findByRole("option", { name: /Hatsune Miku/u });
 
   await user.clear(searchBox());
@@ -128,7 +136,7 @@ test("search shows badges, marks a row already added and links to MFC's search",
   openAddPage(`/add?item=${ITEM_ID}`);
   await screen.findByRole("checkbox", { name: "Select Hatsune Miku" });
 
-  await user.type(searchBox(), "figure");
+  await user.type(await openSearch(user), "figure");
   const owned = await screen.findByRole("option", { name: /Owned figure/u });
   expect(owned.textContent).toContain("In your collection (2)");
   expect(owned.textContent).toContain("On your Wishlist");
@@ -162,7 +170,7 @@ test("text that looks like an MFC link is searched as text", async () => {
   const user = userEvent.setup();
   openAddPage();
   await pageReady();
-  await user.type(searchBox(), "https://myfigurecollection.net/item/98777");
+  await user.type(await openSearch(user), "https://myfigurecollection.net/item/98777");
   await waitFor(() =>
     expect(server.searches).toContain("https://myfigurecollection.net/item/98777"),
   );
@@ -279,7 +287,7 @@ test("an empty page keeps its shape, with only search and the one action working
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
   expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
-  expect(searchBox().hasAttribute("disabled")).toBe(false);
+  expect(searchButton().hasAttribute("disabled")).toBe(false);
   expect(
     screen.getByRole("checkbox", { name: "Select all items" }).getAttribute("aria-disabled"),
   ).toBe("true");
@@ -335,7 +343,7 @@ test("while the extension is in review, the one action goes to the page's search
   const user = userEvent.setup();
   openAddPage();
   await user.click(await screen.findByRole("button", { name: "Search the Item Database" }));
-  expect(document.activeElement).toBe(searchBox());
+  await waitFor(() => expect(document.activeElement).toBe(searchBox()));
 });
 
 test("from=mfc reads as reviewing picks", async () => {
@@ -423,7 +431,7 @@ test("a reload keeps the rows, and a commit clears only the rows it added", asyn
   );
   expect(server.commits[0]?.rows.map(({ itemId }) => itemId)).toEqual([ITEM_ID]);
   expect(screen.getByRole("checkbox", { name: "Select Rem" })).toBeDefined();
-  expect(document.activeElement).toBe(searchBox());
+  expect(document.activeElement).toBe(searchButton());
 });
 
 test("a row the Item Database no longer has says so and cannot be committed", async () => {
@@ -459,7 +467,7 @@ test("a failed read of the rows' Items says so, never that they are gone, and Re
 
   await user.click(screen.getByRole("button", { name: "Retry" }));
   await screen.findByRole("alert");
-  expect(document.activeElement).toBe(searchBox());
+  expect(document.activeElement).toBe(searchButton());
   expect(screen.queryByText(MISSING_ROW)).toBeNull();
 
   server.itemsFailure = null;

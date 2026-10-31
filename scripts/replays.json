@@ -180,7 +180,16 @@
       "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
       "bug": "Escape from the search panel's footer closed the panel and left focus on the body.",
       "test": "apps/web/src/components/add/add-search.test.tsx",
-      "fixed": ["Escape from the panel's footer closes it and puts focus back in the search"]
+      "fixed": ["Escape from the panel's footer closes it and puts focus back in the search"],
+      "testAt": "6bae8e34359e72cf86ca8cf882c4e5002b035534",
+      "reason": "The search has since moved into a popover behind a button, which this fix never had, so its harness stays at the build before that change.",
+      "head": [
+        {
+          "test": "apps/web/src/components/add/add-search.test.tsx",
+          "fixed": ["Escape from the panel's footer closes it and puts focus on its button"],
+          "reason": "The input now lives in the popover, so Escape returns focus to the button that opened it."
+        }
+      ]
     },
     {
       "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
@@ -209,7 +218,9 @@
       "fix": "4ecb9a9e829a23540f1423910487820ff59093b6",
       "bug": "The first letter typed after an Add row arrived was lost, because the search measured its room in the capture phase and React rendered before the input's listener.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
-      "fixed": ["a letter typed as the search's room changes is kept"]
+      "fixed": ["a letter typed as the search's room changes is kept"],
+      "testAt": "6bae8e34359e72cf86ca8cf882c4e5002b035534",
+      "reason": "The search has since moved into a popover behind a button, which this fix never had, so its harness stays at the build before that change."
     },
     {
       "fix": "4c2862563b5d4ec1a2d51939a9520a9bf778d34c",
@@ -223,7 +234,9 @@
       "fix": "326d3db7612f4efe33263daf9d90331f6b0b5a84",
       "bug": "The Add page's first search read aria-busy=\"false\" while its request was in flight, beside \"Searching…\".",
       "test": "apps/web/src/components/add/add-search.test.tsx",
-      "fixed": ["the first search says Searching… and its list is busy until the answer"]
+      "fixed": ["the first search says Searching… and its list is busy until the answer"],
+      "testAt": "6bae8e34359e72cf86ca8cf882c4e5002b035534",
+      "reason": "The search has since moved into a popover whose props this fix's build never had, so its harness stays at the build before that change."
     },
     {
       "fix": "8e2f46bcdbf7e018f7137f1b29f3304d8efc7cf6",

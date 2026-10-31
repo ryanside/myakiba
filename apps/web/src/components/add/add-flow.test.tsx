@@ -1103,14 +1103,14 @@ test("nothing on the page can change while a commit is in flight, and its answer
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
-  const box = screen.getByRole("combobox", { name: "Search the Item Database" });
-  expect(box.closest("[inert]")).toBeNull();
+  const searchButton = screen.getByRole("button", { name: "Add from Item Database" });
+  expect(searchButton.closest("[inert]")).toBeNull();
 
   await click(user, "Add 1 to collection");
   await waitFor(() => expect(server.commits).toHaveLength(1));
 
   for (const control of [
-    box,
+    searchButton,
     screen.getByRole("checkbox", { name: "Select Hatsune Miku" }),
     screen.getByRole("textbox", { name: "Price for Hatsune Miku" }),
     screen.getByRole("combobox", { name: "Where these go" }),
@@ -1124,9 +1124,7 @@ test("nothing on the page can change while a commit is in flight, and its answer
   await release();
   await screen.findByText("Added 1 to your collection");
   expect(document.querySelector("[inert]")).toBeNull();
-  expect(document.activeElement).toBe(
-    screen.getByRole("combobox", { name: "Search the Item Database" }),
-  );
+  expect(document.activeElement).toBe(searchButton);
 });
 
 test("a failed commit lets go of the page, and a retry keeps its commitId", async () => {
@@ -1227,7 +1225,11 @@ test("an Item added again after its commit is kept in the draft", async () => {
   await click(user, "Add 1 to collection");
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
 
-  await user.type(screen.getByRole("combobox", { name: "Search the Item Database" }), "Hatsune");
+  await click(user, "Add from Item Database");
+  await user.type(
+    await screen.findByRole("combobox", { name: "Search the Item Database" }),
+    "Hatsune",
+  );
   await user.click(await screen.findByRole("option", { name: /Hatsune Miku/u }));
 
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toContain(ITEM_ID));
@@ -1278,6 +1280,7 @@ test("a letter typed as the search's room changes is kept", async () => {
   try {
     const user = userEvent.setup();
     openAddPage();
+    await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
     const box = (await screen.findByRole("combobox", {
       name: "Search the Item Database",
     })) as HTMLInputElement;
@@ -1291,10 +1294,11 @@ test("a letter typed as the search's room changes is kept", async () => {
   }
 });
 
-test("?q= starts the search", async () => {
+test("?q= opens the search with its words, and focus in it", async () => {
   openAddPage("/add?q=miku");
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   expect((box as HTMLInputElement).value).toBe("miku");
+  await waitFor(() => expect(document.activeElement).toBe(box));
 });
 
 test("a full page says so, in a status region too, and removing a row clears it", async () => {
@@ -1310,11 +1314,13 @@ test("a full page says so, in a status region too, and removing a row clears it"
   );
   const user = userEvent.setup();
   openAddPage();
+  await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   await user.type(box, "miku");
   await screen.findByRole("option", { name: /Hatsune Miku/u });
   await waitFor(() => expect(screen.getByRole("listbox").getAttribute("aria-busy")).toBe("false"));
   await user.keyboard("{Enter}");
+  await user.keyboard("{Escape}");
 
   await screen.findByText(/This page holds 100 items at a time\. Add these first/u);
   expect(
@@ -1330,6 +1336,7 @@ test("a full page says so, in a status region too, and removing a row clears it"
 test("the search says how many it found, and aria-expanded follows the panel", async () => {
   const user = userEvent.setup();
   openAddPage();
+  await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   expect(box.getAttribute("aria-expanded")).toBe("false");
 
@@ -1342,7 +1349,7 @@ test("the search says how many it found, and aria-expanded follows the panel", a
     ).toBe(true),
   );
 
-  await user.keyboard("{Escape}");
+  await user.clear(box);
   await waitFor(() => expect(box.getAttribute("aria-expanded")).toBe("false"));
   expect(screen.queryByRole("listbox")).toBeNull();
 });
@@ -1501,10 +1508,12 @@ test("what changes on the page is announced", async () => {
   await screen.findByRole("checkbox", { name: "Select Picked Miku" });
   await announced("A picked item is ready to add");
 
-  const box = screen.getByRole("combobox", { name: "Search the Item Database" });
+  await click(user, "Add from Item Database");
+  const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   await user.type(box, "Rem");
   await user.click(await screen.findByRole("option", { name: /^Rem/u }));
   await announced("Added Rem");
+  await user.keyboard("{Escape}");
 
   await click(user, "Remove Rem");
   await announced("Removed Rem");
@@ -1513,7 +1522,7 @@ test("what changes on the page is announced", async () => {
   await click(user, "Remove Picked Miku");
   await announced("Removed Picked Miku");
   expect(document.activeElement).toBe(
-    screen.getByRole("combobox", { name: "Search the Item Database" }),
+    screen.getByRole("button", { name: "Add from Item Database" }),
   );
 });
 

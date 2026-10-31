@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 
 type EmptyAction =
   | { readonly kind: "external"; readonly label: string; readonly href: string }
-  | { readonly kind: "focus-search"; readonly label: string };
+  | { readonly kind: "open-search"; readonly label: string };
 
 type EmptyMessage = { readonly body: string; readonly action: EmptyAction };
 
 const SEARCH_THE_DATABASE: EmptyAction = {
-  kind: "focus-search",
+  kind: "open-search",
   label: "Search the Item Database",
 };
 

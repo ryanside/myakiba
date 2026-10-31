@@ -31,14 +31,14 @@ describe("what an empty Add page says", () => {
   test("without it, while a store reviews it, what still works", () => {
     expect(emptyMessage("absent", IN_REVIEW)).toEqual({
       body: "The myakiba extension is in review at the Chrome Web Store, so new items can't be picked yet. Anything already in the Item Database can be added now.",
-      action: { kind: "focus-search", label: "Search the Item Database" },
+      action: { kind: "open-search", label: "Search the Item Database" },
     });
   });
 
   test("without it, in a browser it does not run in, which ones it does", () => {
     expect(emptyMessage("absent", UNSUPPORTED)).toEqual({
       body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Anything already in the Item Database can be added here.",
-      action: { kind: "focus-search", label: "Search the Item Database" },
+      action: { kind: "open-search", label: "Search the Item Database" },
     });
   });
 });

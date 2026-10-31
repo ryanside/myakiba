@@ -719,7 +719,7 @@ export function AddItems({
 
   return (
     <>
-      <div className="relative z-30 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <AddSearch {...c.searchProps} />
         {fields.length > 0 ? <FillMenu fields={fields} c={c} onFilled={onAnnounce} /> : null}
       </div>
@@ -738,7 +738,7 @@ export function AddItems({
             table={table}
             recordCount={data.length}
             tableAria={{ "aria-label": "Items to add", "aria-describedby": hintId }}
-            emptyMessage={<EmptyState onSearch={() => c.searchInput.current?.focus()} />}
+            emptyMessage={<EmptyState onSearch={c.handleOpenSearch} />}
             fullWidthRow={fullWidthRow}
             onRowPointerClick={(row, event) => {
               if (owned && row.kind === "item" && isEmptySpace(event)) {
