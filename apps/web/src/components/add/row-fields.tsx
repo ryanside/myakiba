@@ -1,8 +1,7 @@
 import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { useId } from "react";
-import type { ReactNode } from "react";
+import type { FocusEvent, ReactNode } from "react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -43,8 +42,6 @@ export type Field = {
   readonly kinds: readonly DestinationForm["kind"][];
   /** Tailwind width of its table field. A field without one lives in the open row. */
   readonly width?: string;
-  /** Reads right-aligned, so its digits line up down the field. */
-  readonly numeric?: boolean;
 };
 
 const COLLECTION_ONLY = ["collection"] as const;
@@ -52,8 +49,8 @@ const OWNED = ["collection", "order"] as const;
 const ALWAYS = ["collection", "order", null] as const;
 
 export const FIELD = {
-  price: { id: "price", label: "Price", width: "w-36 min-w-36", kinds: ALWAYS, numeric: true },
-  count: { id: "count", label: "Count", width: "w-24 min-w-24", kinds: ALWAYS, numeric: true },
+  price: { id: "price", label: "Price", width: "w-32 min-w-32", kinds: ALWAYS },
+  count: { id: "count", label: "Count", width: "w-20 min-w-20", kinds: ALWAYS },
   condition: { id: "condition", label: "Condition", width: "w-36 min-w-36", kinds: ALWAYS },
   shop: { id: "shop", label: "Shop", kinds: COLLECTION_ONLY },
   shipping: { id: "shipping", label: "Shipping Method", kinds: COLLECTION_ONLY },
@@ -73,12 +70,18 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
 }
 
 export const THUMBNAIL =
-  "size-12 shrink-0 rounded-lg outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10";
+  "size-8 shrink-0 rounded-md outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10";
 
-/**
- * A named run of fields, used by the Order section and the open row. Its name sits in a gutter when
- * the nearest container has the room, and above the fields when it does not.
- */
+// A cell of the Collection and Orders grids: plain text that takes a surface when it is hovered or
+// edited. It stays an input throughout, so the table's keys and an issue's focus always find it. The
+// surface reaches past the text, which stays on the column's edge. A touch screen has no hover, so
+// there it always shows its edge.
+const INLINE_CELL =
+  "-ms-2 w-[calc(100%+0.5rem)] border-transparent bg-transparent ps-2 text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control dark:bg-transparent [@media(hover:none)]:ms-0 [@media(hover:none)]:w-full [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control";
+
+const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
+
+/** A named run of fields, for the Order section and the open row. The name is for screen readers. */
 export function FieldGroup({
   title,
   className,
@@ -88,17 +91,13 @@ export function FieldGroup({
   readonly className?: string;
   readonly children: ReactNode;
 }) {
-  const id = useId();
   return (
     <div
       role="group"
-      aria-labelledby={id}
-      className="grid gap-x-3 gap-y-2.5 @4xl:grid-cols-[5.5rem_minmax(0,1fr)]"
+      aria-label={title}
+      className={cn("grid grid-cols-2 items-start gap-3", className)}
     >
-      <p id={id} className="text-xs text-muted-foreground">
-        {title}
-      </p>
-      <div className={cn("grid grid-cols-2 items-start gap-3", className)}>{children}</div>
+      {children}
     </div>
   );
 }
@@ -191,12 +190,7 @@ export function RowField({
     case "price": {
       const issue = issues.find((candidate) => candidate.fieldId === id);
       return (
-        <LabeledField
-          id={id}
-          label={cellLabel}
-          error={issue?.message}
-          className={cn(cellGap, "@3xl/rows:text-end")}
-        >
+        <LabeledField id={id} label={cellLabel} error={issue?.message} className={cellGap}>
           <MaskInput
             id={id}
             mask="currency"
@@ -206,7 +200,12 @@ export function RowField({
             invalid={issue !== undefined}
             aria-describedby={issue ? `${id}-error` : undefined}
             inputMode="decimal"
-            className="tabular-nums @3xl/rows:text-end"
+            className={cn(
+              INLINE_CELL,
+              "tabular-nums",
+              releasePriceDefault(release, c.currency) === 0 && "placeholder:text-muted-foreground",
+            )}
+            onFocus={selectAll}
             value={overrides.price ?? ""}
             onValueChange={(_masked, unmasked) => onEdit({ price: unmasked })}
           />
@@ -222,7 +221,11 @@ export function RowField({
             inputMode="numeric"
             min={1}
             max={999}
-            className="tabular-nums [appearance:textfield] @3xl/rows:text-end [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className={cn(
+              INLINE_CELL,
+              "tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+            )}
+            onFocus={selectAll}
             value={overrides.count ?? ""}
             placeholder={String(shared?.count ?? 1)}
             onChange={(event) => onEdit({ count: readCount(event.target.value) })}

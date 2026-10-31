@@ -231,9 +231,10 @@ test("a new Order's title sits beside its picture in place of a heading, and wra
   expect(order.queryByText("Order details")).toBeNull();
   expect(order.queryByText(/Optional, and they apply/u)).toBeNull();
   expect(order.queryByText("Title")).toBeNull();
-  expect(order.getByRole("textbox", { name: "Order title" }).tagName).toBe("TEXTAREA");
-  for (const group of ["Basics", "Dates", "Costs", "Notes"]) {
+  expect(order.getByRole("button", { name: "Edit Order title" })).toBeDefined();
+  for (const group of ["Basics", "Dates", "Costs"]) {
     expect(order.getByRole("group", { name: group })).toBeDefined();
+    expect(order.queryByText(group)).toBeNull();
   }
 });
 
@@ -242,32 +243,39 @@ test("typing on the prefilled Order title replaces it, and a cleared one falls b
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  const title = screen.getByRole("textbox", { name: "Order title" }) as HTMLTextAreaElement;
-  expect(title.placeholder).toBe("Hatsune Miku + 1 more");
+  const preview = screen.getByRole("button", { name: "Edit Order title" });
+  expect(preview.textContent).toBe("Hatsune Miku + 1 more");
 
-  await user.click(title);
-  await user.keyboard("Spring preorders");
-  expect(title.value).toBe("Spring preorders");
+  await user.click(preview);
+  await user.keyboard("Spring preorders{Enter}");
+  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe(
+    "Spring preorders",
+  );
 
-  await user.clear(title);
+  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.clear(screen.getByRole("textbox", { name: "Order title" }));
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe(
+    "Hatsune Miku + 1 more",
+  );
   await click(user, "Create order with 2");
   await screen.findByText("Created order");
-  await screen.findByText("Hatsune Miku + 1 more");
   expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Hatsune Miku + 1 more");
 });
 
-test("Enter and a pasted line break keep the title to one paragraph", async () => {
+test("the Order title saves when focus leaves it, and Escape keeps the one it had", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  const title = screen.getByRole("textbox", { name: "Order title" }) as HTMLTextAreaElement;
-  fireEvent.change(title, { target: { value: "Spring\n  preorders" } });
-  expect(title.value).toBe("Spring preorders");
-
-  await user.click(title);
-  await user.keyboard("{Enter}");
-  expect(title.value).not.toContain("\n");
+  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.keyboard("Discarded{Escape}");
+  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe("Hatsune Miku");
+  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.keyboard("Spring");
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Spring");
 });
 
 test("New Order's fees and title reach the commit", async () => {

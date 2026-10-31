@@ -4,7 +4,7 @@ import { MAX_ADD_ROWS, mfcItemUrl, mfcSearchUrl } from "@myakiba/contracts/add/c
 import type { ReactNode } from "react";
 import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
 import { formatCount } from "@/components/page-header";
-import { STATE_ICON_CLASS_NAME } from "@/components/page-states";
+import { STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
@@ -14,6 +14,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { cn } from "@/lib/utils";
 import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import type { AddController } from "./add-controller";
 import { VerifyEmailNotice } from "./verify-email-notice";
@@ -102,35 +103,35 @@ function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
 }
 
 const PICK_STEPS = [
-  "Open an item on MyFigureCollection.",
-  "Click Pick for myakiba, next to MFC's own buttons.",
-  "Come back here and choose where it goes.",
+  "Open an item on MyFigureCollection",
+  "Click Pick for myakiba beside MFC's own buttons",
+  "Come back and choose where it goes",
 ] as const;
 
 export function EmptyState() {
   return (
-    <Empty className="min-h-0 flex-1 justify-start overflow-y-auto border bg-background/70 pt-16 backdrop-blur-sm dark:bg-background/60">
+    <Empty className={cn(STATE_PANEL_CLASS_NAME, "min-h-0 flex-1 gap-6 overflow-y-auto")}>
       <EmptyHeader className="max-w-md">
         <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
           <HugeiconsIcon icon={PackageSearchIcon} className="size-5" aria-hidden="true" />
         </EmptyMedia>
         <EmptyTitle>Pick items on MyFigureCollection</EmptyTitle>
         <EmptyDescription className="text-pretty">
-          Picked items wait here until you choose where they go. Or search myakiba above for items
-          already in the Item Database.
+          Picked items wait here until you choose where they go. Search above for items already in
+          myakiba.
         </EmptyDescription>
       </EmptyHeader>
-      <EmptyContent className="max-w-md gap-4">
-        <ol className="grid w-full list-none gap-2 text-start text-sm">
+      <EmptyContent className="@container/steps max-w-2xl gap-6">
+        <ol className="grid w-full list-none gap-3 text-start text-sm @xl/steps:grid-cols-3 @xl/steps:gap-6 @xl/steps:text-center">
           {PICK_STEPS.map((step, index) => (
-            <li key={step} className="flex items-baseline gap-2.5">
+            <li key={step} className="flex items-center gap-2.5 @xl/steps:flex-col @xl/steps:gap-2">
               <span
-                className="flex size-5 shrink-0 translate-y-0.5 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums"
+                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums"
                 aria-hidden="true"
               >
                 {index + 1}
               </span>
-              <span className="min-w-0 text-pretty">{step}</span>
+              <span className="min-w-0 text-pretty text-muted-foreground">{step}</span>
             </li>
           ))}
         </ol>
@@ -143,7 +144,7 @@ export function EmptyState() {
           Search MyFigureCollection
           <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
         </a>
-        <MissingExtensionNotice copyOf={pickExtensionCopy} className="w-full text-start" />
+        <MissingExtensionNotice copyOf={pickExtensionCopy} className="w-full max-w-md text-start" />
       </EmptyContent>
     </Empty>
   );

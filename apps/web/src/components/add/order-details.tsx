@@ -2,8 +2,10 @@ import { ArrowUpDownIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { Result } from "better-result";
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
+import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import { DebouncedInput } from "@/components/debounced-input";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command";
@@ -18,7 +20,6 @@ import { searches } from "@/data/resources/search";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
-import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { AmountInput, DateField, EnumSelect, LabeledField, OrderStatusSelect } from "./add-fields";
 import { orderFieldId } from "./commit-input";
@@ -71,48 +72,6 @@ function SectionHeading({
 const OrderIcon = () => (
   <HugeiconsIcon icon={PackageIcon} className="size-5 text-muted-foreground" aria-hidden="true" />
 );
-
-// One line of it is the height of an Input, and more lines grow from there.
-const TITLE_TEXT =
-  "col-start-1 row-start-1 min-h-8 rounded-lg border border-transparent px-2.5 py-1 text-base font-medium [overflow-wrap:anywhere] md:py-1.25 md:text-sm";
-
-/**
- * The Order's title, edited in place. It wraps, so it is a text area, and it stays one paragraph.
- * The hidden copy behind it sets the height, in every browser. The written title is a placeholder,
- * so typing replaces it and a cleared title goes back to it.
- */
-function OrderTitle({
-  value,
-  placeholder,
-  onChange,
-}: {
-  readonly value: string;
-  readonly placeholder: string;
-  readonly onChange: (value: string) => void;
-}) {
-  return (
-    <div className="-ms-2.75 grid min-w-0 flex-1">
-      <span aria-hidden="true" className={cn(TITLE_TEXT, "invisible whitespace-pre-wrap")}>
-        {`${value || placeholder} `}
-      </span>
-      <textarea
-        id={orderFieldId("title")}
-        aria-label="Order title"
-        rows={1}
-        value={value}
-        placeholder={placeholder}
-        className={cn(
-          TITLE_TEXT,
-          "resize-none overflow-hidden bg-transparent transition-colors outline-none placeholder:text-muted-foreground hover:border-control-edge hover:bg-control focus-visible:border-ring focus-visible:bg-control focus-visible:ring-3 focus-visible:ring-ring/50",
-        )}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.preventDefault();
-        }}
-        onChange={(event) => onChange(event.target.value.replaceAll(/\s*[\r\n]+\s*/gu, " "))}
-      />
-    </div>
-  );
-}
 
 // The table's own surface, so the Order reads as a section beside it and apart from the sentence.
 const SECTION = "flex flex-col gap-5 rounded-xl bg-card p-3 ring-1 ring-foreground/10";
@@ -169,11 +128,17 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
       <SectionHeading
         images={c.selectedRows.flatMap(({ item }) => (item.image ? [item.image] : []))}
         title={
-          <OrderTitle
-            value={fields.title ?? ""}
-            placeholder={c.newOrderTitle}
-            onChange={(title) => set({ title })}
-          />
+          <div className="min-w-0 flex-1">
+            <InlineTextCell
+              label="Order title"
+              value={fields.title?.trim() || c.newOrderTitle}
+              previewClassName="text-sm font-medium"
+              onSubmit={async (title) => {
+                set({ title });
+                return Result.ok();
+              }}
+            />
+          </div>
         }
         aside={
           fees > 0 ? (
@@ -274,14 +239,14 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
           );
         })}
       </FieldGroup>
-      <FieldGroup title="Notes" className="grid-cols-1">
+      <LabeledField id={`${id}-notes`} label="Notes">
         <Textarea
-          aria-label="Notes"
+          id={`${id}-notes`}
           placeholder="Add any notes..."
           value={fields.notes}
           onChange={(event) => set({ notes: event.target.value })}
         />
-      </FieldGroup>
+      </LabeledField>
     </section>
   );
 }

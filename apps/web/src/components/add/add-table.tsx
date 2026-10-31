@@ -220,7 +220,7 @@ export function AddItems({
         <div className="@container/rows isolate overflow-clip rounded-xl bg-card ring-1 ring-foreground/10">
           <table
             onKeyDownCapture={onTableKeys}
-            className="w-full border-separate border-spacing-0 text-sm @max-3xl/rows:block"
+            className="w-full border-separate border-spacing-0 text-sm @3xl/rows:table-fixed @max-3xl/rows:block"
           >
             <caption className="sr-only">
               Items to add. Arrow keys move between cells, Enter moves on, Space opens a menu.
@@ -236,7 +236,7 @@ export function AddItems({
                     data-add-col="item"
                     className={cn(
                       HEAD_CELL,
-                      "z-20 min-w-72 px-3 text-start @3xl/rows:sticky @3xl/rows:-top-1 @4xl/rows:min-w-96 @max-3xl/rows:block @max-3xl/rows:h-auto @max-3xl/rows:min-w-0 @max-3xl/rows:bg-transparent @max-3xl/rows:bg-none @max-3xl/rows:px-0",
+                      "z-20 px-3 text-start @3xl/rows:sticky @3xl/rows:-top-1 @max-3xl/rows:block @max-3xl/rows:h-auto @max-3xl/rows:bg-transparent @max-3xl/rows:bg-none @max-3xl/rows:px-0",
                     )}
                   >
                     <span className="flex items-center gap-3">
@@ -260,8 +260,7 @@ export function AddItems({
                       data-add-col={column.id}
                       className={cn(
                         HEAD_CELL,
-                        "sticky -top-1 z-20 px-4 @max-3xl/rows:hidden",
-                        column.numeric ? "text-end" : "text-start",
+                        "sticky -top-1 z-20 px-3 text-start @max-3xl/rows:hidden",
                         column.width,
                       )}
                     >
@@ -454,12 +453,12 @@ function ItemRow({
               }
             />
           </Link>
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-px">
             <Link
               {...itemDestination(itemId, externalId)}
               title={title}
               className={cn(
-                "line-clamp-2 rounded-sm font-medium [overflow-wrap:anywhere] outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+                "truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 @max-3xl/rows:line-clamp-2 @max-3xl/rows:whitespace-normal @max-3xl/rows:[overflow-wrap:anywhere]",
                 !selected && "text-muted-foreground",
               )}
             >
@@ -489,7 +488,7 @@ function ItemRow({
           data-add-cell=""
           className={cn(
             ROW_LINE,
-            "px-1.5 py-2 align-middle @max-3xl/rows:block @max-3xl/rows:p-0",
+            "px-3 py-2 align-middle @max-3xl/rows:block @max-3xl/rows:p-0",
             column.id === "price" && "@max-3xl/rows:col-span-2",
           )}
         >
@@ -577,7 +576,7 @@ function DetailsPanel({
       aria-label={`Details for ${item.title}`}
       // Its edges are the title's start and the Condition field's end: the row's padding, the
       // checkbox, the thumbnail and two gaps, then the actions column and the cell's padding.
-      className="grid gap-5 p-3 motion-safe:animate-[data-in_160ms_ease-out_both] @3xl/rows:ps-25 @4xl/rows:pe-25.5"
+      className="grid gap-5 p-3 motion-safe:animate-[data-in_160ms_ease-out_both] @3xl/rows:ps-21 @3xl/rows:pe-27"
     >
       <FieldGroup title="Purchase" className="@4xl:grid-cols-4">
         <div className="col-span-full min-w-0">
@@ -634,7 +633,7 @@ function LoadingRow({ columns }: { readonly columns: readonly Field[] }) {
         </div>
       </td>
       {columns.map((column) => (
-        <td key={column.id} className={cn(ROW_LINE, "px-1.5 py-2 @max-3xl/rows:hidden")}>
+        <td key={column.id} className={cn(ROW_LINE, "px-3 py-2 @max-3xl/rows:hidden")}>
           <Skeleton className="h-8 w-full" />
         </td>
       ))}
