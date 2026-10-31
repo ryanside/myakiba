@@ -37,19 +37,22 @@ function choose(form: DestinationForm, choice: Choice): DestinationForm {
     case "collection":
     case "none":
       return { ...form, kind: choice };
-    // Switching between new and existing restarts that side, as the production toggle does.
+    // Arrow keys choose as they move, so passing through a choice must not cost the other's fields.
     case "order-new":
+      if (form.order.kind === "new") return { ...form, kind: "order" };
       return {
         ...form,
         kind: "order",
-        order:
-          form.order.kind === "new" ? form.order : { kind: "new", fields: DEFAULT_ORDER_FIELDS },
+        order: form.otherOrder ?? { kind: "new", fields: DEFAULT_ORDER_FIELDS },
+        otherOrder: form.order,
       };
     case "order-existing":
+      if (form.order.kind === "existing") return { ...form, kind: "order" };
       return {
         ...form,
         kind: "order",
-        order: form.order.kind === "existing" ? form.order : { kind: "existing", order: null },
+        order: form.otherOrder ?? { kind: "existing", order: null },
+        otherOrder: form.order,
       };
   }
 }
@@ -125,7 +128,7 @@ export function DestinationSentence({ controller: c }: { readonly controller: Ad
           {choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`}
         </span>
         <span className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground">also on</span>
+          <span className="text-foreground/80">also on</span>
           <span className="flex items-center gap-2">
             <Checkbox
               id={`${baseId}-wishlist`}
@@ -136,7 +139,7 @@ export function DestinationSentence({ controller: c }: { readonly controller: Ad
               Wishlist
             </Label>
           </span>
-          <span className="text-muted-foreground">and</span>
+          <span className="text-foreground/80">and</span>
           <ListsPicker chosen={form.lists} onChange={(lists) => c.setForm({ ...form, lists })} />
         </span>
       </div>

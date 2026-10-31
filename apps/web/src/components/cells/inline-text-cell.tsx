@@ -30,9 +30,12 @@ export function InlineTextCell({
   // Enter and Escape remove the focused input, so focus returns to the preview, without editing.
   const returningFocus = useRef(false);
 
+  // A save can disable the preview for a moment, so this waits. By then focus may have moved on.
   useEffect(() => {
-    if (!isEditing && returningFocus.current) preview.current?.focus();
-  }, [isEditing]);
+    if (isEditing || disabled || !returningFocus.current) return;
+    if (document.activeElement === document.body) preview.current?.focus();
+    else returningFocus.current = false;
+  }, [isEditing, disabled]);
 
   const handleEdit = () => {
     setEditingValue(displayValue);

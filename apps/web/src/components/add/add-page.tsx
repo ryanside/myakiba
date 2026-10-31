@@ -94,7 +94,14 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
       >
         <PageHeader
           title={search.from === "mfc" ? "Review your picks" : "Add items"}
-          meta={hasDraft ? formatCount(c.rows.length, "Item", "Items") : null}
+          // The page's background runs behind this, and it is darker than other pages'.
+          meta={
+            hasDraft ? (
+              <span className="text-foreground/80">
+                {formatCount(c.rows.length, "Item", "Items")}
+              </span>
+            ) : null
+          }
         />
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />

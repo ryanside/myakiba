@@ -183,7 +183,7 @@ test("the summary reads Item Database with nothing else named, and no mid dot an
   expect(document.body.textContent).not.toContain("·");
 });
 
-test("trying another kind keeps what was typed, and switching New and Existing restarts them", async () => {
+test("trying another destination keeps what was typed, New and Existing Order included", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
@@ -194,6 +194,39 @@ test("trying another kind keeps what was typed, and switching New and Existing r
   await destination(user, "New Order");
   expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
 
+  await destination(user, "Existing Order");
+  await destination(user, "New Order");
+  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
+});
+
+test("arrow keys through the destinations leave a New Order's fields as typed", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  await user.type(screen.getByRole("textbox", { name: "Shop" }), "AmiAmi");
+
+  screen.getByRole("radio", { name: "New Order" }).focus();
+  await user.keyboard("{ArrowRight}{ArrowRight}{ArrowLeft}{ArrowLeft}");
+  expect(screen.getByRole("radio", { name: "New Order" }).getAttribute("aria-checked")).toBe(
+    "true",
+  );
+  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
+});
+
+test("a commit starts the next Order clean, whichever kind was tried before it", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  await user.type(screen.getByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await user.click(screen.getByRole("checkbox", { name: "Select Rem" }));
+  await click(user, "Create order with 1");
+  await screen.findByText("Created order");
+  await user.click(await screen.findByRole("checkbox", { name: "Select Rem" }));
+  await waitFor(() =>
+    expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe(""),
+  );
   await destination(user, "Existing Order");
   await destination(user, "New Order");
   expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("");

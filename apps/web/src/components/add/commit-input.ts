@@ -69,6 +69,8 @@ export type DestinationForm = {
   readonly kind: Ownership["kind"] | null;
   readonly shared: SharedFields;
   readonly order: OrderChoice;
+  /** The other of New and Existing Order, kept while that one is chosen. It is never saved. */
+  readonly otherOrder?: OrderChoice;
   readonly wishlist: boolean;
   readonly lists: readonly ChosenList[];
 };
