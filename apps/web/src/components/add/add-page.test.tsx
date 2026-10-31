@@ -196,7 +196,7 @@ test("Collection asks for a Collection Date, never a status, and sends none", as
   await user.click(screen.getByRole("button", { name: "Details for Hatsune Miku" }));
   expect(screen.getByRole("button", { name: "Collection Date for Hatsune Miku" })).toBeDefined();
   expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
-  expect(screen.getByText("1 new Collection Item")).toBeDefined();
+  expect(screen.getByText("1 item to your Collection")).toBeDefined();
 
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
   await waitFor(() => expect(server.commits).toHaveLength(1));

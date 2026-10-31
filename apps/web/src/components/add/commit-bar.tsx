@@ -1,53 +1,20 @@
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { AnimatePresence, motion } from "motion/react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useGlide } from "@/hooks/use-glide";
-import { getCurrencyLocale } from "@/lib/locale";
 import type { AddController } from "./add-controller";
 import { CommitButton } from "./commit-button";
 import { commitSummary } from "./commit-input";
-import { feeTotal } from "./order-details";
-import { plannedPrice } from "./row-fields";
 
 const ENTER = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const AWAY = { opacity: 0, transform: "translateY(8px)" };
 const IN_PLACE = { opacity: 1, transform: "translateY(0px)" };
 
-/**
- * What the selected rows and a new Order's fees will save, or null when a typed price cannot be
- * read. A blank row saves what the contract defaults it to.
- */
-function plannedTotal(c: AddController): number | null {
-  const { order, kind } = c.resolvedForm;
-  let total = kind === "order" && order.kind === "new" ? feeTotal(order.fields) : 0;
-  for (const { row, item } of c.selectedRows) {
-    const price = plannedPrice(row, c.releaseOf(row, item), c.currency);
-    if (price === null) return null;
-    total += price;
-  }
-  return total;
-}
-
-function totalText(c: AddController): string | null {
-  if (c.pending) return null;
-  const total = plannedTotal(c);
-  // A price the page cannot read keeps the slot, so fixing it moves nothing.
-  return total === null
-    ? "—"
-    : formatCurrencyFromMinorUnits(total, c.currency, getCurrencyLocale(c.currency));
-}
-
 function Bar({ controller: c }: { readonly controller: AddController }) {
-  const ownership = c.destination.ownership;
-  const showsTotal = ownership !== null && ownership.kind !== "none" && c.selectedCount > 0;
-  const text = showsTotal ? totalText(c) : null;
   const summary = commitSummary(c.destination, c.selectedCount) ?? [
     "Choose Collection, Order or Item Database.",
   ];
   const summaryText = summary.join(", ");
-  const glideTotal = useGlide<HTMLDivElement>(`${showsTotal} ${text}`, { fade: true });
-  // Only a phone's wrapped bar changes height, when its Total comes or goes.
-  const glideBar = useGlide<HTMLElement>(`${showsTotal} ${summaryText}`, { axis: "height" });
+  // Only a phone's wrapped bar changes height, when its summary takes another line.
+  const glideBar = useGlide<HTMLElement>(summaryText, { axis: "height" });
   return (
     <motion.section
       ref={glideBar}
@@ -69,14 +36,6 @@ function Bar({ controller: c }: { readonly controller: AddController }) {
           <li key={part}>{part}</li>
         ))}
       </ul>
-      <div
-        ref={glideTotal}
-        className="shrink-0 text-sm whitespace-nowrap tabular-nums empty:hidden"
-      >
-        {showsTotal ? (
-          <>Total {text ?? <Skeleton className="inline-block h-4 w-16 align-middle" />}</>
-        ) : null}
-      </div>
       <CommitButton {...c.commitProps} />
     </motion.section>
   );

@@ -325,33 +325,26 @@ export function commitPlan(
   }
 }
 
-const plural = (count: number, singular: string, several: string) =>
-  `${count} ${count === 1 ? singular : several}`;
-
-function ownershipSummary(ownership: Ownership, count: number): string | null {
+function ownershipSummary(ownership: Ownership): string | null {
   switch (ownership.kind) {
     case "collection":
-      return plural(count, "new Collection Item", "new Collection Items");
-    case "order": {
-      const { order } = ownership;
-      if (order.kind === "new") {
-        return `New Order with ${plural(count, "Order Item", "Order Items")} (${order.fields.status})`;
-      }
-      return plural(count, "new Order Item", "new Order Items");
-    }
+      return "to your Collection";
+    case "order":
+      return ownership.order.kind === "new" ? "to a new Order" : "to an existing Order";
     case "none":
       return null;
   }
 }
 
-/** What the commit will write, in the Add page's own words, one fact per part. */
+/** Where the commit will put the rows, in the Add page's own words, one place per part. */
 export function commitSummary(destination: Destination, count: number): readonly string[] | null {
   const { ownership, wishlist, lists } = destination;
   if (ownership === null) return null;
-  const parts = [
-    ownershipSummary(ownership, count),
+  const places = [
+    ownershipSummary(ownership),
     wishlist ? "on your Wishlist" : null,
     ...lists.map((list) => `in ${quoted(list.title)}`),
-  ].filter((part) => part !== null);
-  return parts.length > 0 ? parts : ["Item Database"];
+  ].filter((place) => place !== null);
+  const [first = "in the Item Database", ...rest] = places;
+  return [`${count} ${count === 1 ? "item" : "items"} ${first}`, ...rest];
 }

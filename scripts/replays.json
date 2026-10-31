@@ -28,6 +28,20 @@
         "the commit's label and summary say how many before the Items load",
         "the Total holds its place while the Items load",
         "a row whose Item turned out to be gone leaves the count once the read answers"
+      ],
+      "testAt": "6bae8e34359e72cf86ca8cf882c4e5002b035534",
+      "reason": "The footer has since lost its Total and words its summary as where the items go, which this fix never had, so its harness stays at the build before that change.",
+      "head": [
+        {
+          "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+          "fixed": [
+            "the sentence says how many before the Items load, and the same after",
+            "the sentence counts an unselected row as unselected before the Items load",
+            "the commit's label and summary say how many before the Items load",
+            "a row whose Item turned out to be gone leaves the count once the read answers"
+          ],
+          "reason": "The Total is gone from the footer by the owner's choice, so its case no longer runs at the head."
+        }
       ]
     },
     {
@@ -72,7 +86,9 @@
       "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
       "bug": "An Existing Order's title joined the commit's summary once the Order loaded, which moved everything near it.",
       "test": "apps/web/src/components/add/commit-input.test.ts",
-      "fixed": ["the summary of an existing Order leaves its title to the picker"]
+      "fixed": ["the summary of an existing Order leaves its title to the picker"],
+      "testAt": "6bae8e34359e72cf86ca8cf882c4e5002b035534",
+      "reason": "The summary has since been reworded as where the items go, which this fix never had, so its harness stays at the build before that change."
     },
     {
       "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",

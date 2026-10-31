@@ -36,7 +36,7 @@ const FEES = [
   { field: "miscFees", label: "Miscellaneous Fees" },
 ] as const;
 
-export function feeTotal(fields: OrderFields): number {
+function feeTotal(fields: OrderFields): number {
   return FEES.reduce((sum, { field }) => {
     const parsed = parseMoneyInputToMinorUnits(fields[field]);
     return parsed.isOk() ? sum + parsed.value : sum;

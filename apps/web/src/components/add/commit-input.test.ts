@@ -250,9 +250,15 @@ test("the summary names every place the rows will go", () => {
       to(COLLECTION, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
       4,
     ),
-  ).toEqual(["4 new Collection Items", "on your Wishlist", "in ‘Display shelf’"]);
-  expect(commitSummary(to(NEW_ORDER), 1)).toEqual(["New Order with 1 Order Item (Ordered)"]);
-  expect(commitSummary(to({ kind: "none" }), 1)).toEqual(["Item Database"]);
+  ).toEqual(["4 items to your Collection", "on your Wishlist", "in ‘Display shelf’"]);
+  expect(commitSummary(to(NEW_ORDER), 1)).toEqual(["1 item to a new Order"]);
+  expect(commitSummary(to({ kind: "none" }), 3)).toEqual(["3 items in the Item Database"]);
+  expect(
+    commitSummary(
+      to({ kind: "none" }, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
+      3,
+    ),
+  ).toEqual(["3 items on your Wishlist", "in ‘Display shelf’"]);
   expect(commitSummary(to(null), 1)).toBeNull();
 });
 
@@ -269,5 +275,5 @@ test("the summary of an existing Order leaves its title to the picker", () => {
       },
       2,
     ),
-  ).toEqual(["2 new Order Items"]);
+  ).toEqual(["2 items to an existing Order"]);
 });

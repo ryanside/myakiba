@@ -74,26 +74,14 @@ test("the commit's label and summary say how many before the Items load", async 
   openAddPage("/add?to=collection");
   const commit = await screen.findByRole("button", { name: "Add 2 to collection" });
   expect(commit.hasAttribute("disabled")).toBe(true);
-  expect(screen.getByText("2 new Collection Items")).toBeDefined();
+  expect(screen.getByText("2 items to your Collection")).toBeDefined();
 
   await act(async () => release());
   await screen.findByRole("checkbox", { name: "Select Miku" });
   expect(screen.getByRole("button", { name: "Add 2 to collection" }).hasAttribute("disabled")).toBe(
     false,
   );
-  expect(screen.getByText("2 new Collection Items")).toBeDefined();
-});
-
-test("the Total holds its place while the Items load", async () => {
-  draft([[MIKU, true]]);
-  openAddPage("/add?to=collection");
-  const total = await screen.findByText(/^Total/u);
-  expect(total.textContent).toBe("Total ");
-
-  await act(async () => release());
-  await screen.findByRole("checkbox", { name: "Select Miku" });
-  expect(total.isConnected).toBe(true);
-  expect(total.textContent).toBe("Total $5,000.00");
+  expect(screen.getByText("2 items to your Collection")).toBeDefined();
 });
 
 test("a row whose Item turned out to be gone leaves the count once the read answers", async () => {

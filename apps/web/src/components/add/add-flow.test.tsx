@@ -196,14 +196,14 @@ test("the summary reads Item Database with nothing else named, and no mid dot an
   openAddPage("/add?to=none");
   await rowsLoaded();
   const bar = () => within(screen.getByRole("region", { name: "Commit" }));
-  expect(bar().getByText("Item Database")).toBeDefined();
+  expect(bar().getByText("1 item in the Item Database")).toBeDefined();
   expect(screen.queryByText(/nothing to save/u)).toBeNull();
 
   await user.click(screen.getByRole("checkbox", { name: "Wishlist" }));
   await user.click(screen.getByRole("button", { name: "Lists" }));
   await user.click(await screen.findByRole("checkbox", { name: "Display shelf" }));
   await user.keyboard("{Escape}");
-  expect(bar().getByText("on your Wishlist")).toBeDefined();
+  expect(bar().getByText("1 item on your Wishlist")).toBeDefined();
   expect(bar().getByText("in ‘Display shelf’")).toBeDefined();
   expect(document.body.textContent).not.toContain("·");
 });
@@ -574,7 +574,7 @@ test("the Release control and its menu show date, type, barcode and price in the
   expect(server.commits[0]?.rows[0]?.releaseId).toBe(FIRST_RELEASE);
 });
 
-test("the total counts what will be saved, and a release in another currency adds nothing", async () => {
+test("a release in another currency says nothing about converting it", async () => {
   seedItems(
     item("yen000000001", {
       title: "Yen",
@@ -592,18 +592,14 @@ test("the total counts what will be saved, and a release in another currency add
   openAddPage("/add?to=collection");
   await rowsLoaded();
 
-  const bar = within(screen.getByRole("region", { name: "Commit" }));
-  await waitFor(() => expect(bar.getByText(/^Total/u).textContent).toBe("Total $5,000.00"));
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 });
 
-test("a price the page cannot read keeps the total's place with no number, and a commit points at it", async () => {
+test("a commit points at a price the page cannot read", async () => {
   draftWith(ITEM_ID, { price: "1.234" });
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
-  const total = await screen.findByText(/^Total/u);
-  expect(total.textContent).toBe("Total —");
 
   await click(user, "Add 1 to collection");
 
