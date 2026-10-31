@@ -19,7 +19,7 @@ import {
   removeButtonId,
 } from "./commit-input";
 import type { AddItem, CommitIssue, CommitRow, Destination, DestinationForm } from "./commit-input";
-import { showCommitToast } from "./commit-toast";
+import { focusMain, showCommitToast } from "./commit-toast";
 import { useRowReleases } from "./row-release";
 
 const appRouteApi = getRouteApi("/(app)");
@@ -170,7 +170,11 @@ export function useAddController(search: AddSearchParams) {
     if (!settling.current) return;
     settling.current = false;
     if (search.returnTo !== undefined && rows.length === 0 && intake.rows.length === 0) {
-      void navigate({ href: search.returnTo, replace: true });
+      const goBack = async (href: string) => {
+        await navigate({ href, replace: true });
+        focusMain();
+      };
+      void goBack(search.returnTo);
       return;
     }
     searchInput.current?.focus();

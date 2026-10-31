@@ -97,8 +97,10 @@ export function ReleaseField({
                 <span className="shrink-0 font-medium text-foreground">
                   {formatDateOnlyForDisplay(release.date, c.dateFormat)}
                 </span>
-                {release.type ? <span className="truncate">{release.type}</span> : null}
-                {release.barcode ? <span className="shrink-0">#{release.barcode}</span> : null}
+                {release.type ? <span className="min-w-0 truncate">{release.type}</span> : null}
+                {release.barcode ? (
+                  <span className="min-w-0 truncate">#{release.barcode}</span>
+                ) : null}
                 {price(release) ? <span className="ms-auto shrink-0">{price(release)}</span> : null}
               </span>
             ) : null}
@@ -118,7 +120,7 @@ export function ReleaseField({
           {error ? <div className="p-3 text-sm text-destructive">{error.message}</div> : null}
           {data?.releases.map((option) => (
             <SelectItem key={option.id} value={option.id} className="py-2.5">
-              <span className="flex flex-col gap-1">
+              <span className="flex min-w-0 flex-col gap-1 [overflow-wrap:anywhere] whitespace-normal">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium tabular-nums">
                     {formatDateOnlyForDisplay(option.date, c.dateFormat)}

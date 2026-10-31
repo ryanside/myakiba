@@ -5,7 +5,6 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "@/components/ui/rating";
@@ -167,13 +166,19 @@ function FillForm({
 
   return (
     <form onSubmit={submit} className="grid gap-2.5">
-      <FillEditor field={field} id={id} draft={draft} c={c} set={set} />
+      <FillEditor
+        field={field}
+        id={id}
+        draft={draft}
+        c={c}
+        set={set}
+        tagsError={
+          overfull > 0
+            ? `${overfull === 1 ? "1 row" : `${overfull} rows`} would have more than ${MAX_TAGS} tags.`
+            : undefined
+        }
+      />
       {note ? <p className="text-xs text-pretty text-muted-foreground">{note}</p> : null}
-      {overfull > 0 ? (
-        <FieldError className="text-xs">
-          {overfull === 1 ? "1 row" : `${overfull} rows`} would have more than {MAX_TAGS} tags.
-        </FieldError>
-      ) : null}
       <Button type="submit" size="sm" className="w-full" disabled={overfull > 0}>
         {`Fill ${rows}`}
       </Button>
@@ -187,12 +192,14 @@ function FillEditor({
   draft,
   c,
   set,
+  tagsError,
 }: {
   readonly field: Field;
   readonly id: string;
   readonly draft: FillDraft;
   readonly c: AddController;
   readonly set: (patch: Partial<FillDraft>) => void;
+  readonly tagsError: string | undefined;
 }) {
   switch (field.id) {
     case "price":
@@ -272,6 +279,7 @@ function FillEditor({
             editable
             showValue
             starClassName="w-7 tabular-nums"
+            className="flex-wrap"
             aria-label="Score for every selected row"
             onRatingChange={(score) => set({ score: score === draft.score ? 0 : score })}
           />
@@ -279,7 +287,13 @@ function FillEditor({
       );
     case "tags":
       return (
-        <TagsField id={id} label="Tags" tags={draft.tags} onChange={(tags) => set({ tags })} />
+        <TagsField
+          id={id}
+          label="Tags"
+          tags={draft.tags}
+          error={tagsError}
+          onChange={(tags) => set({ tags })}
+        />
       );
     case "notes":
       return (
@@ -336,7 +350,11 @@ export function FillMenu({
           </Button>
         }
       />
-      <PopoverContent className="w-76 max-w-[calc(100vw-2rem)]" align="end">
+      <PopoverContent
+        aria-label="Fill all"
+        className="max-h-(--available-height) w-76 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain"
+        align="end"
+      >
         {chosen ? (
           <div className="grid gap-2">
             <Button

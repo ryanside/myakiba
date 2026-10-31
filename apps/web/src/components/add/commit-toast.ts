@@ -100,12 +100,18 @@ export function commitToastDescription(outcome: CommitOutcome): string | undefin
   return lines.length === 0 ? undefined : lines.join("\n");
 }
 
+/** After a route change, so the next Tab starts in the new page and not at the document's top. */
+export function focusMain() {
+  document.querySelector<HTMLElement>("main")?.focus({ preventScroll: true });
+}
+
 export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {
   const view = commitView(outcome);
   const list = commitListView(outcome);
-  const go = (target: NavigateOptions) => () => {
+  const go = (target: NavigateOptions) => async () => {
     toast.close(id);
-    void navigate(target);
+    await navigate(target);
+    focusMain();
   };
   const id = toast.add({
     type: "success",

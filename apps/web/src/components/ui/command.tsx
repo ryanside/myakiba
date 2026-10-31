@@ -70,6 +70,8 @@ function CommandInput({
       <InputGroup
         className={cn(
           "h-8! rounded-lg! border-border/40 bg-background/90 shadow-none! *:data-[slot=input-group-addon]:pl-2!",
+          "has-[[data-slot=command-input]:focus-visible]:border-ring has-[[data-slot=command-input]:focus-visible]:ring-3 has-[[data-slot=command-input]:focus-visible]:ring-ring/50",
+          "in-data-[slot=dialog-content]:has-[[data-slot=command-input]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=command-input]:focus-visible]:ring-0",
           "in-data-[slot=dialog-content]:h-12! in-data-[slot=dialog-content]:rounded-none! in-data-[slot=dialog-content]:border-0 in-data-[slot=dialog-content]:border-b in-data-[slot=dialog-content]:border-foreground/10 in-data-[slot=dialog-content]:bg-transparent! in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:ring-0 in-data-[slot=dialog-content]:*:data-[slot=input-group-addon]:pl-4!",
         )}
       >

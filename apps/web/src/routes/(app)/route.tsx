@@ -93,7 +93,7 @@ function RouteComponent() {
       <SidebarProvider className="flex flex-col">
         <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
           <AppSidebar />
-          <SidebarInset className="page-background-surface">
+          <SidebarInset tabIndex={-1} className="page-background-surface outline-none">
             <PageBackground />
             <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
               <div className="flex items-center">

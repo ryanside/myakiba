@@ -853,9 +853,71 @@ test("Fill all refuses tags that would take a row past 20, and says so", async (
   );
   await user.type(field, "extra{Enter}");
   expect(screen.getByText("1 row would have more than 20 tags.")).toBeDefined();
+  expect(field.getAttribute("aria-invalid")).toBe("true");
+  expect(field.getAttribute("aria-describedby")).toBe(
+    screen.getByText("1 row would have more than 20 tags.").id,
+  );
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Fill 2 selected" }).disabled).toBe(
     true,
   );
+});
+
+test("a failed commit's message stays until it's dismissed", async () => {
+  draft(ITEM_ID);
+  server.commitAnswer = async () => refused(503, "down");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Add 1 to collection");
+  await screen.findByText("Failed to add the items");
+  await pause(5600);
+  expect(screen.getByText("Failed to add the items")).toBeDefined();
+});
+
+test("every popup is named, and so is the Order search", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Fill all");
+  expect(await screen.findByRole("dialog", { name: "Fill all" })).toBeDefined();
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: /^Lists/u }));
+  expect(await screen.findByRole("dialog", { name: "Lists" })).toBeDefined();
+  await user.keyboard("{Escape}");
+  await destination(user, "Existing Order");
+  await user.click(await screen.findByRole("combobox", { name: "Order" }));
+  expect(await screen.findByRole("dialog", { name: "Choose an Order" })).toBeDefined();
+  expect(await screen.findByRole("combobox", { name: "Search Orders by title" })).toBeDefined();
+});
+
+test("removing a tag keeps focus in the Tags field", async () => {
+  sessionStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify([{ itemId: ITEM_ID, overrides: { tags: ["old"] }, selected: true }]),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await openDetails(user, "Hatsune Miku");
+  await user.click(screen.getByRole("button", { name: "Remove tag old" }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Tags for Hatsune Miku" }),
+    ),
+  );
+});
+
+test("the commit toast's View and Close are both there for assistive technology", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Add 1 to collection");
+  await screen.findByText("Added 1 to your collection");
+  const notifications = within(screen.getByRole("region", { name: /Notifications/u }));
+  expect(notifications.getByRole("button", { name: "View" })).toBeDefined();
+  expect(notifications.getByRole("button", { name: "Close toast" })).toBeDefined();
 });
 
 test("Fill all asks for a selection before it offers a field", async () => {

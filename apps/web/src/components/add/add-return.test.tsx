@@ -298,3 +298,14 @@ test.each([
   await screen.findByText("The new row");
   expect(screen.getByText("An earlier row")).toBeDefined();
 });
+
+test("returning puts focus on the page it returned to", async () => {
+  server.pages.set("/collection", () => <main tabIndex={-1}>The Collection</main>);
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  const router = openAddPage(addTo("/collection", "collection"));
+  await rowsLoaded();
+  await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/collection"));
+  await waitFor(() => expect(document.activeElement?.tagName).toBe("MAIN"));
+});

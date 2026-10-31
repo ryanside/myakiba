@@ -166,3 +166,16 @@ test("the next search after an add keeps every letter typed", async () => {
   await user.keyboard("mi");
   expect(box.value).toBe("mi");
 });
+
+test("Escape from the panel's footer closes it and puts focus back in the search", async () => {
+  renderSearch();
+  const user = userEvent.setup();
+  const box = await searchBox();
+  await user.click(box);
+  await user.keyboard("figure");
+  const footer = await screen.findByRole("link", { name: /Not here\? Search MFC/u });
+  footer.focus();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("link", { name: /Not here/u })).toBeNull());
+  expect(document.activeElement).toBe(box);
+});

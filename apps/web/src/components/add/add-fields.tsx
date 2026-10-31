@@ -1,6 +1,6 @@
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
@@ -179,20 +179,26 @@ export function TagsField({
   id,
   label,
   tags,
+  error,
   onChange,
 }: {
   readonly id: string;
   readonly label: ReactNode;
   readonly tags: readonly string[];
+  readonly error?: string | undefined;
   readonly onChange: (tags: string[]) => void;
 }) {
   const [text, setText] = useState("");
+  const input = useRef<HTMLInputElement>(null);
   return (
-    <LabeledField id={id} label={label}>
+    <LabeledField id={id} label={label} error={error}>
       <div className="grid gap-2">
         <Input
+          ref={input}
           id={id}
           value={text}
+          aria-invalid={error === undefined ? undefined : true}
+          aria-describedby={error === undefined ? undefined : `${id}-error`}
           placeholder="Type a tag and press Enter"
           maxLength={MAX_TAG_LENGTH}
           disabled={tags.length >= MAX_TAGS}
@@ -217,7 +223,11 @@ export function TagsField({
                     variant="ghost"
                     size="icon-xs"
                     aria-label={`Remove tag ${tag}`}
-                    onClick={() => onChange(tags.filter((other) => other !== tag))}
+                    onClick={() => {
+                      onChange(tags.filter((other) => other !== tag));
+                      // The button is gone next render, and the input may only then be enabled.
+                      requestAnimationFrame(() => input.current?.focus());
+                    }}
                   >
                     <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
                   </Button>

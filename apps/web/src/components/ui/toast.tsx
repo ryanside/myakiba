@@ -26,10 +26,16 @@ function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
   return <ToastPrimitive.Portal data-slot="toast-portal" {...props} />;
 }
 
-function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
+function ToastViewport({ className, onFocus, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
+      // F6 focuses this viewport, which has no height of its own, so focus goes on to the toast.
+      onFocus={(event) => {
+        onFocus?.(event);
+        if (event.target !== event.currentTarget) return;
+        event.currentTarget.querySelector<HTMLElement>('[data-slot="toast"]')?.focus();
+      }}
       className={cn(
         "pointer-events-none fixed inset-x-4 top-4 mx-auto w-auto max-w-sm outline-none sm:w-full",
         className,
@@ -126,6 +132,8 @@ function ToastClose({
     <ToastPrimitive.Close
       data-slot="toast-close"
       aria-label="Close toast"
+      // The primitive hides Close from assistive technology, though Tab still reaches it.
+      aria-hidden={false}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",

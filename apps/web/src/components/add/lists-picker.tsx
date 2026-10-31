@@ -54,7 +54,12 @@ export function ListsPicker({
             </Button>
           }
         />
-        <PopoverContent className="w-72 max-w-[calc(100vw-2rem)] gap-0 p-1" align="end" side="top">
+        <PopoverContent
+          aria-label="Lists"
+          className="w-72 max-w-[calc(100vw-2rem)] gap-0 p-1"
+          align="end"
+          side="top"
+        >
           <fieldset className="contents">
             <legend className="sr-only">Lists to add these to</legend>
             <div className="max-h-64 overflow-y-auto overscroll-contain">

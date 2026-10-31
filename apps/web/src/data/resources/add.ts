@@ -51,6 +51,8 @@ const commitAddCommand = defineCommand({
     }),
   failureToast: (_commit, failure) => ({
     title: "Failed to add the items",
+    // The rows wait on this page for a retry, so what went wrong stays until it's dismissed.
+    timeout: 0,
     ...(failure && { description: commitFailureText(failure) }),
   }),
 });

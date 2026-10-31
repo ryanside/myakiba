@@ -306,6 +306,7 @@ describe("an Add commit", () => {
     expect(toastAdd).toHaveBeenCalledWith({
       type: "error",
       title: "Failed to add the items",
+      timeout: 0,
       description,
     });
   });

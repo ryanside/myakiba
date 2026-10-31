@@ -69,7 +69,10 @@ export function AddSearch({
         label="Search the Item Database"
         className="overflow-visible bg-transparent p-0"
         onKeyDown={(event) => {
-          if (event.key === "Escape") setOpen(false);
+          if (event.key !== "Escape") return;
+          // Closing removes whatever in the panel holds focus. Focusing first lets the close win.
+          container.current?.querySelector("input")?.focus();
+          setOpen(false);
         }}
       >
         <CommandInput

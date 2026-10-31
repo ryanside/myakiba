@@ -331,8 +331,12 @@ function ExistingOrderPicker({
             </Button>
           }
         />
-        <PopoverContent className="w-(--anchor-width) min-w-64 p-0" align="start">
-          <Command shouldFilter={false}>
+        <PopoverContent
+          aria-label="Choose an Order"
+          className="w-(--anchor-width) min-w-64 p-0"
+          align="start"
+        >
+          <Command label="Search Orders by title" shouldFilter={false}>
             <DebouncedInput
               value={title}
               onChange={(value) => setTitle(value.toString())}

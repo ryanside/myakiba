@@ -304,6 +304,7 @@ export function RowField({
               editable
               showValue
               starClassName="w-7 tabular-nums"
+              className="flex-wrap"
               aria-label={`Score for ${title}`}
               onRatingChange={(score) => onEdit({ score: score === overrides.score ? 0 : score })}
             />

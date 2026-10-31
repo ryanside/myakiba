@@ -270,7 +270,12 @@ function invalidateFamilies(queryClient: QueryClient, families: readonly Family[
 
 type Rollback = () => void;
 
-export type FailureToast = { readonly title: string; readonly description?: string };
+export type FailureToast = {
+  readonly title: string;
+  readonly description?: string;
+  /** In milliseconds. 0 keeps it until it is dismissed. */
+  readonly timeout?: number;
+};
 
 /** A failure toast titled `title` that shows a declared failure's message as its title or under it. */
 export function messageAs<Input>(place: "title" | "description", title: (input: Input) => string) {
