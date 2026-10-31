@@ -204,8 +204,8 @@ export function AddItems({
               ? undefined
               : ({ "--search-room": `${search.room}px` } as CSSProperties)
           }
-          onFocusCapture={(event) => search.measure(event.currentTarget)}
-          onInputCapture={(event) => search.measure(event.currentTarget)}
+          onFocus={(event) => search.measure(event.currentTarget)}
+          onInput={(event) => search.measure(event.currentTarget)}
         >
           <AddSearch {...c.searchProps} />
         </div>

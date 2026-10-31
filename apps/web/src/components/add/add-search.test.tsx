@@ -152,3 +152,17 @@ test("the panel closes on Escape and when focus leaves", async () => {
   act(() => box.blur());
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
 });
+
+test("the next search after an add keeps every letter typed", async () => {
+  const user = userEvent.setup();
+  renderSearch();
+  const box = (await searchBox()) as HTMLInputElement;
+  await user.type(box, "rem");
+  await screen.findByRole("option", { name: /^Rem/u });
+  await waitFor(() => expect(screen.getByRole("listbox").getAttribute("aria-busy")).toBe("false"));
+  await user.keyboard("{Enter}");
+  await waitFor(() => expect(box.value).toBe(""));
+
+  await user.keyboard("mi");
+  expect(box.value).toBe("mi");
+});

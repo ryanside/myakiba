@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { flushSync } from "react-dom";
 import { MONEY_INPUT_HINT } from "@/lib/money-input";
 import type { RowOverrides } from "./add-draft";
 import { fakePick } from "../../../test/fake-extension";
@@ -1026,6 +1027,31 @@ test("rows live in sessionStorage, so another tab, like a closed one reopened, h
   openAddPage();
   await screen.findByText("Pick items on MyFigureCollection");
   expect(screen.queryByRole("checkbox", { name: "Select Hatsune Miku" })).toBeNull();
+});
+
+test("a letter typed as the search's room changes is kept", async () => {
+  const realRect = HTMLElement.prototype.getBoundingClientRect;
+  let bottom = 900;
+  HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
+    const rect = realRect.call(this);
+    if (this.dataset.addPane === undefined) return rect;
+    bottom += 50;
+    return { ...rect.toJSON(), bottom };
+  };
+  try {
+    const user = userEvent.setup();
+    openAddPage();
+    const box = (await screen.findByRole("combobox", {
+      name: "Search the Item Database",
+    })) as HTMLInputElement;
+    // A browser runs microtasks between a typed event's listeners, so React renders what an earlier
+    // listener set before the input's own. A test's event runs them in one go, so this does it.
+    box.parentElement?.addEventListener("input", () => flushSync(() => {}), { capture: true });
+    await user.type(box, "stark");
+    expect(box.value).toBe("stark");
+  } finally {
+    HTMLElement.prototype.getBoundingClientRect = realRect;
+  }
 });
 
 test("?q= starts the search", async () => {
