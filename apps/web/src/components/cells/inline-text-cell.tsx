@@ -89,7 +89,7 @@ export function InlineTextCell({
               void handleSubmit(editingValue);
             }
           }}
-          className="h-auto rounded-sm px-0 shadow-xs focus-visible:border-input focus-visible:ring-1 focus-visible:ring-ring disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent"
+          className="rounded-sm px-0 shadow-xs focus-visible:border-input focus-visible:ring-1 focus-visible:ring-ring disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent"
         />
       ) : (
         <Button
@@ -107,7 +107,7 @@ export function InlineTextCell({
             else handleEdit();
           }}
           className={cn(
-            "h-auto min-h-7 w-full cursor-text justify-start truncate rounded-sm px-0 py-1 text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
+            "w-full cursor-text justify-start truncate rounded-sm px-0 text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
             previewClassName,
           )}
         >

@@ -76,3 +76,14 @@ test("focus that moved on during a save stays where it went", async () => {
   );
   expect(document.activeElement === elsewhere).toBe(true);
 });
+
+test("the preview and the input are the app's 32px controls, with no size of their own", async () => {
+  render(<InlineTextCell label="Title" value="Spring" onSubmit={async () => Result.ok()} />);
+  const preview = screen.getByRole("button", { name: "Edit Title" });
+  const sizes = (element: Element) =>
+    element.className.split(/\s+/u).filter((name) => /^(?:h|min-h|py)-/u.test(name));
+  expect(sizes(preview)).toEqual(["h-8"]);
+
+  await userEvent.setup().click(preview);
+  expect(sizes(screen.getByRole("textbox"))).toEqual(["h-8", "py-1"]);
+});
