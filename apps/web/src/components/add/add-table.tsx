@@ -702,7 +702,12 @@ export function AddItems({
               }
             }}
             tableLayout={{ dense: true, headerSticky: true, columnsResizable: true }}
-            tableClassNames={{ bodyRow: cn("animate-none", owned && "cursor-pointer") }}
+            tableClassNames={{
+              // Rows are there from the first paint, so an entrance would only move them on load.
+              bodyRow: cn("animate-none", owned && "cursor-pointer"),
+              // An empty page keeps its header's look, with only search and its one action working.
+              header: cn(data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none"),
+            }}
           >
             <DataGridContainer className="@5xl/grid:overflow-clip">
               <ScrollArea

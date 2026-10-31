@@ -357,7 +357,7 @@ export function FillMenu({
       <PopoverContent
         aria-label="Fill all"
         className="max-h-(--available-height) w-76 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain"
-        align="end"
+        align="start"
       >
         {chosen ? (
           <div className="grid gap-2">
