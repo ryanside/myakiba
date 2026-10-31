@@ -194,7 +194,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
           ) : null
         }
       />
-      <FieldGroup title="Basics" className="@4xl:grid-cols-3">
+      <FieldGroup title="Basics" className="@4xl:grid-cols-5">
         <LabeledField id={`${id}-status`} label="Status">
           <EnumSelect
             id={`${id}-status`}
@@ -203,7 +203,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             onChange={(status) => set({ status })}
           />
         </LabeledField>
-        <LabeledField id={`${id}-shop`} label="Shop">
+        <LabeledField id={`${id}-shop`} label="Shop" className="@4xl:col-span-2">
           <Input
             id={`${id}-shop`}
             value={fields.shop}
@@ -213,11 +213,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             onChange={(event) => set({ shop: event.target.value })}
           />
         </LabeledField>
-        <LabeledField
-          id={`${id}-shipping`}
-          label="Shipping Method"
-          className="col-span-2 @4xl:col-span-1"
-        >
+        <LabeledField id={`${id}-shipping`} label="Shipping Method" className="col-span-2">
           <EnumSelect
             id={`${id}-shipping`}
             value={fields.shippingMethod}

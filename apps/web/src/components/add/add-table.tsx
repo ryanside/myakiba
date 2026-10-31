@@ -594,7 +594,7 @@ function DetailsPanel({
       className="grid gap-5 p-3 motion-safe:animate-[data-in_160ms_ease-out_both] @3xl/rows:ps-25 @4xl/rows:pe-25.5"
     >
       <FieldGroup title="Purchase" className="@4xl:grid-cols-4">
-        <div className="col-span-2">
+        <div className="col-span-2 min-w-0">
           <ReleaseField row={row} item={item} release={release} c={c} />
         </div>
         {isCollection ? (

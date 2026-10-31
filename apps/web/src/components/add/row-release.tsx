@@ -40,6 +40,15 @@ export function useRowReleases(rows: readonly DraftRow[]) {
     loaded.get(row.itemId) ?? item.latestRelease;
 }
 
+function releaseFacts(release: Release, c: AddController): readonly string[] {
+  return [
+    formatDateOnlyForDisplay(release.date, c.dateFormat),
+    release.type,
+    release.barcode,
+    formatReleasePrice(release.price, release.priceCurrency, c.currency),
+  ].filter((fact): fact is string => Boolean(fact));
+}
+
 /** A row's release, in the release's own currency. Its options load when the menu first opens. */
 export function ReleaseField({
   row,
@@ -62,6 +71,7 @@ export function ReleaseField({
   return (
     <LabeledField
       id={id}
+      className="grid-cols-[minmax(0,1fr)]"
       label={
         <>
           Release<span className="sr-only"> for {item.title}</span>
@@ -78,10 +88,14 @@ export function ReleaseField({
           if (next) c.edit(itemId, { releaseId: next });
         }}
       >
-        <SelectTrigger id={id} className={cn("w-full", release === null && DEFAULT_VALUE)}>
+        <SelectTrigger
+          id={id}
+          title={release ? releaseFacts(release, c).join(", ") : undefined}
+          className={cn("w-full", release === null && DEFAULT_VALUE)}
+        >
           <SelectValue placeholder="No release">
             {release ? (
-              <span className="flex min-w-0 items-center gap-2 text-muted-foreground tabular-nums">
+              <span className="flex min-w-0 items-center gap-2 text-muted-foreground tabular-nums @max-3xl/rows:gap-1.5 @max-3xl/rows:text-xs">
                 <span
                   className={cn(
                     "shrink-0",
