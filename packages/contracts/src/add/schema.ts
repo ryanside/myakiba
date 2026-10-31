@@ -14,7 +14,9 @@ export const addItemSchema = z.object({
   title: z.string(),
   image: z.string().nullable(),
   category: z.enum(CATEGORIES).nullable(),
-  latestRelease: itemDatabaseReleaseSummarySchema.extend({ id: z.string() }).nullable(),
+  latestRelease: itemDatabaseReleaseSummarySchema
+    .extend({ id: z.string(), type: z.string().nullable(), barcode: z.string().nullable() })
+    .nullable(),
   collectionCount: z.number().int().nonnegative(),
   onOrderCount: z.number().int().nonnegative(),
   wishlisted: z.boolean(),
@@ -52,6 +54,8 @@ const addRowSchema = z.strictObject({
   paymentDate: dateOrNull.optional(),
   shippingDate: dateOrNull.optional(),
   collectionDate: dateOrNull.optional(),
+  shippingMethod: z.enum(SHIPPING_METHODS).optional(),
+  releaseId: z.uuid().optional(),
 });
 
 const BARE_ROW_FIELDS: ReadonlySet<string> = new Set(["itemId", "price"]);

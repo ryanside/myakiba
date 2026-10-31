@@ -7,6 +7,8 @@ export function latestRelease(tx: ReadTx) {
     .select({
       id: item_release.id,
       date: item_release.date,
+      type: item_release.type,
+      barcode: item_release.barcode,
       price: item_release.price,
       priceCurrency: item_release.priceCurrency,
     })

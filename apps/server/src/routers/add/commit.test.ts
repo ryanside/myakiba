@@ -378,6 +378,174 @@ test("a blank price takes the latest release price only in the user's currency",
   ]);
 });
 
+const EARLY_RELEASE = "00000000-0000-4000-8000-000000000001";
+const LATE_RELEASE = "00000000-0000-4000-8000-000000000002";
+const OTHER_ITEMS_RELEASE = "00000000-0000-4000-8000-000000000003";
+const MID_RELEASE = "00000000-0000-4000-8000-000000000004";
+
+test("a row's chosen release is saved, and a blank price takes that release's", async () => {
+  await db.insert(item_release).values({
+    id: MID_RELEASE,
+    itemId: "item-1",
+    date: "2026-03-01",
+    price: 3200,
+    priceCurrency: "JPY",
+  });
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId: MID_RELEASE }, ...bare("item-2")],
+      ownership: toCollection(),
+    }),
+  );
+
+  expect(sent.status).toBe(200);
+  const rows = await ownedRows();
+  expect(rows.map(({ itemId, price, releaseId }) => ({ itemId, price, releaseId }))).toEqual([
+    { itemId: "item-1", price: 3200, releaseId: MID_RELEASE },
+    { itemId: "item-2", price: 0, releaseId: OTHER_ITEMS_RELEASE },
+  ]);
+});
+
+test("a chosen release in another currency saves no price, and a typed price wins", async () => {
+  await db.insert(item_release).values({
+    id: MID_RELEASE,
+    itemId: "item-1",
+    date: "2026-03-01",
+    price: 3200,
+    priceCurrency: "USD",
+  });
+  const blank = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId: MID_RELEASE }],
+      ownership: toCollection(),
+    }),
+  );
+  const typed = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: 1000, releaseId: MID_RELEASE }],
+      ownership: toCollection(),
+    }),
+  );
+
+  expect([blank.status, typed.status]).toEqual([200, 200]);
+  const rows = await ownedRows();
+  const prices = rows.map(({ price, releaseId }) => ({ price, releaseId }));
+  expect(prices).toEqual(
+    expect.arrayContaining([
+      { price: 0, releaseId: MID_RELEASE },
+      { price: 1000, releaseId: MID_RELEASE },
+    ]),
+  );
+});
+
+test.each([
+  ["another Item's release", OTHER_ITEMS_RELEASE],
+  ["a release that is gone", "00000000-0000-4000-8000-00000000dead"],
+])("%s answers 404 and writes nothing", async (_name, releaseId) => {
+  const sent = await commit(
+    request({
+      rows: [...bare("item-2"), { itemId: "item-1", price: null, releaseId }],
+      ownership: newOrder({ title: "Must not exist" }),
+    }),
+  );
+
+  expect(sent).toMatchObject({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
+  expect(await written()).toEqual(untouched);
+  expect(await records()).toEqual([]);
+});
+
+test("a row's Shipping Method applies to that Collection Item alone", async () => {
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, shippingMethod: "EMS" }, ...bare("item-2")],
+      ownership: toCollection({ shippingMethod: "SAL" }),
+    }),
+  );
+
+  expect(sent.status).toBe(200);
+  expect(await ownedRows()).toMatchObject([
+    { itemId: "item-1", shippingMethod: "EMS" },
+    { itemId: "item-2", shippingMethod: "SAL" },
+  ]);
+});
+
+test("an Order Item keeps its Order's Shipping Method, whatever its row sends", async () => {
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, shippingMethod: "EMS" }],
+      ownership: newOrder({ shippingMethod: "DHL" }),
+    }),
+  );
+
+  expect(sent.status).toBe(200);
+  expect(await ownedRows()).toMatchObject([{ itemId: "item-1", shippingMethod: "DHL" }]);
+});
+
+test.each([
+  ["moves forward to a later chosen release", "2026-01-15", LATE_RELEASE, "2026-06-01"],
+  ["stays when it is the later date", "2027-01-01", LATE_RELEASE, "2027-01-01"],
+  ["never moves back to an earlier chosen release", "2026-03-01", EARLY_RELEASE, "2026-03-01"],
+])("a typed Order Release Date %s", async (_name, typed, releaseId, saved) => {
+  const sent = await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId }],
+      ownership: newOrder({ title: "Typed date", releaseDate: typed }),
+    }),
+  );
+
+  expect(sent.status).toBe(200);
+  const [created] = await db.select().from(order).where(eq(order.title, "Typed date"));
+  expect(created?.releaseDate).toBe(saved);
+  expect(await ownedRows()).toMatchObject([{ releaseId }]);
+});
+
+test("an existing Order's Release Date follows a chosen release, and only forward", async () => {
+  const existing = {
+    kind: "order",
+    order: { kind: "existing", orderId: "order-existing" },
+  } as const;
+  const releaseDate = async () => {
+    const [found] = await db.select().from(order).where(eq(order.id, "order-existing"));
+    return found?.releaseDate;
+  };
+
+  await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId: EARLY_RELEASE }],
+      ownership: existing,
+    }),
+  );
+  expect(await releaseDate()).toBe("2026-02-15");
+
+  await commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId: LATE_RELEASE }],
+      ownership: existing,
+    }),
+  );
+  expect(await releaseDate()).toBe("2026-06-01");
+});
+
+test("a commit id reused with another release answers 409", async () => {
+  const body = request({
+    rows: [{ itemId: "item-1", price: null, releaseId: EARLY_RELEASE }],
+    ownership: toCollection(),
+  });
+  const first = await commit(body);
+  expect(first.status).toBe(200);
+
+  const reused = await commit({
+    ...body,
+    rows: [{ itemId: "item-1", price: null, releaseId: LATE_RELEASE }],
+  });
+
+  expect(reused.status).toBe(409);
+  expect(await ownedRows()).toHaveLength(1);
+});
+
 test("a new Order's items take its status, shop, dates and shipping and advance its release date", async () => {
   const sent = await commit(
     request({

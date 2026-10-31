@@ -125,6 +125,7 @@ export const searchOrdersQuerySchema = z.object({
 export const searchOrderIdAndTitleSchema = z.object({
   id: z.string(),
   title: z.string(),
+  images: z.array(z.string()),
 });
 
 export const searchOrdersResponseSchema = z.object({

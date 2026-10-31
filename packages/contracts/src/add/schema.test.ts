@@ -94,6 +94,23 @@ describe("an Add commit", () => {
     expect(parsed.rows[0]?.score).toBe("9.5");
   });
 
+  test("a row may name its Shipping Method and release", () => {
+    const row = {
+      ...bareRow("item-1"),
+      shippingMethod: "EMS",
+      releaseId: "0b6f3f8e-7d1c-4a55-9d3e-2f6b8c1a4e77",
+    };
+    expect(addCommitSchema.safeParse(commit({ rows: [row] })).success).toBe(true);
+  });
+
+  test.each([
+    ["a release id that is not a uuid", { releaseId: "release-1" }],
+    ["an unknown Shipping Method", { shippingMethod: "Teleport" }],
+  ])("refuses %s", (_, detail) => {
+    const row = { ...bareRow("item-1"), ...detail };
+    expect(addCommitSchema.safeParse(commit({ rows: [row] })).success).toBe(false);
+  });
+
   test.each([
     ["a new Order", { kind: "order", order: { kind: "new", fields: newOrder } }],
     ["an existing Order", { kind: "order", order: { kind: "existing", orderId: "order-1" } }],
@@ -121,6 +138,8 @@ describe("an Add commit", () => {
     ["a count", { count: 2 }],
     ["a date", { orderDate: null }],
     ["tags", { tags: ["shelf"] }],
+    ["a Shipping Method", { shippingMethod: "EMS" }],
+    ["a release", { releaseId: "0b6f3f8e-7d1c-4a55-9d3e-2f6b8c1a4e77" }],
   ])("not owned refuses rows that carry %s", (_, detail) => {
     const parsed = addCommitSchema.safeParse(
       commit({
@@ -243,7 +262,14 @@ describe("the items query", () => {
     title: "Custom Rem",
     image: null,
     category: null,
-    latestRelease: { id: "release-1", date: "2026-01-31", price: 1200, priceCurrency: "JPY" },
+    latestRelease: {
+      id: "release-1",
+      date: "2026-01-31",
+      type: "Limited",
+      barcode: "4580590174562",
+      price: 1200,
+      priceCurrency: "JPY",
+    },
     collectionCount: 2,
     onOrderCount: 1,
     wishlisted: true,

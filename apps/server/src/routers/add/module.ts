@@ -22,6 +22,8 @@ export const Add = {
           category: item.category,
           releaseId: release.id,
           releaseDate: release.date,
+          releaseType: release.type,
+          releaseBarcode: release.barcode,
           releasePrice: release.price,
           releasePriceCurrency: release.priceCurrency,
           ...itemSummaryColumns(scope.tx, scope.viewer.userId),
@@ -47,6 +49,8 @@ export const Add = {
                 : {
                     id: row.releaseId,
                     date: row.releaseDate,
+                    type: row.releaseType,
+                    barcode: row.releaseBarcode,
                     price: row.releasePrice,
                     priceCurrency: row.releasePriceCurrency,
                   },

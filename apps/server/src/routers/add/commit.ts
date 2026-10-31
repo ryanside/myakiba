@@ -5,7 +5,7 @@ import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 import type { ListTarget } from "@myakiba/contracts/lists/schema";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
-import { collection, item, order } from "@myakiba/db/schema/figure";
+import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
 import { latestRelease } from "@/lib/latest-release";
@@ -13,6 +13,7 @@ import { addListMembers, lockOwnedLists } from "@/lib/list-members";
 import { appendToWishlist } from "@/lib/wishlist-append";
 import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { ItemsMissing } from "./errors/items-missing";
+import { ReleaseNotOfItem } from "./errors/release-not-of-item";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
 
 type CollectionInsert = typeof collection.$inferInsert;
@@ -77,7 +78,7 @@ async function placementOf(
           // A row's own date wins even when it is null, which clears the shared date for that row.
           collectionDate:
             row.collectionDate === undefined ? shared.collectionDate : row.collectionDate,
-          shippingMethod: shared.shippingMethod,
+          shippingMethod: row.shippingMethod ?? shared.shippingMethod,
           condition: row.condition ?? shared.condition,
           count: row.count ?? shared.count,
         }),
@@ -105,7 +106,12 @@ export async function writeCommit(
   userId: string,
   choices: AddChoices,
   currency: string,
-): Promise<Result<AddCommitResponse, ItemsMissing | OrderNotFound | ListOrSelectionNotFound>> {
+): Promise<
+  Result<
+    AddCommitResponse,
+    ItemsMissing | ReleaseNotOfItem | OrderNotFound | ListOrSelectionNotFound
+  >
+> {
   const itemIds = choices.rows.map((row) => row.itemId);
   const release = latestRelease(tx);
   // KEY SHARE makes a concurrent delete of these items wait for this commit.
@@ -124,11 +130,27 @@ export async function writeCommit(
     .where(inArray(item.id, itemIds))
     .for("key share", { of: item });
   const itemById = new Map(found.map((row) => [row.id, row]));
+  const chosenIds = choices.rows.flatMap(({ releaseId }) => (releaseId ? [releaseId] : []));
+  const chosenReleases =
+    chosenIds.length === 0
+      ? []
+      : await tx
+          .select({
+            id: item_release.id,
+            itemId: item_release.itemId,
+            price: item_release.price,
+            priceCurrency: item_release.priceCurrency,
+          })
+          .from(item_release)
+          .where(inArray(item_release.id, chosenIds));
+  const chosenById = new Map(chosenReleases.map((chosen) => [chosen.id, chosen]));
   const picked = [];
   for (const row of choices.rows) {
     const summary = itemById.get(row.itemId);
     if (!summary) return Result.err(new ItemsMissing());
-    picked.push({ row, summary });
+    const chosen = row.releaseId ? chosenById.get(row.releaseId) : undefined;
+    if (row.releaseId && chosen?.itemId !== row.itemId) return Result.err(new ReleaseNotOfItem());
+    picked.push({ row, summary, chosen });
   }
 
   // Lists lock before the Order, as Lists.addTargets locks Lists before its members' Orders.
@@ -139,7 +161,7 @@ export async function writeCommit(
   if (placement.isErr()) return placement;
   const place = placement.value;
 
-  const entries = picked.map(({ row, summary }) => ({
+  const entries = picked.map(({ row, summary, chosen }) => ({
     summary,
     collectionItem: place
       ? {
@@ -147,11 +169,11 @@ export async function writeCommit(
           id: createId(),
           userId,
           itemId: summary.id,
-          releaseId: summary.releaseId,
+          releaseId: chosen?.id ?? summary.releaseId,
           price:
             row.price ??
             releasePriceDefault(
-              { price: summary.releasePrice, priceCurrency: summary.releaseCurrency },
+              chosen ?? { price: summary.releasePrice, priceCurrency: summary.releaseCurrency },
               currency,
             ),
           score: row.score,

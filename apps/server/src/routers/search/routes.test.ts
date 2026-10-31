@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import { itemDatabaseSearchResponseSchema } from "@myakiba/contracts/search/schema";
@@ -192,13 +193,23 @@ describe("each search route answers as before", () => {
     expect(all).toMatchObject({ status: 200, body: { orderIdsAndTitles: [{}, {}] } });
     expect(all.body).toEqual({
       orderIdsAndTitles: expect.arrayContaining([
-        { id: "order-1", title: "Miku preorder" },
-        { id: "order-2", title: "Rin preorder" },
+        { id: "order-1", title: "Miku preorder", images: [] },
+        { id: "order-2", title: "Rin preorder", images: [] },
       ]),
     });
     expect(await call("/orders?title=miku")).toEqual({
       status: 200,
-      body: { orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder" }] },
+      body: { orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder", images: [] }] },
+    });
+  });
+
+  test("order search gives each Order its Items' pictures", async () => {
+    await db.update(item).set({ image: "miku.jpg" }).where(eq(item.id, "item-1"));
+    expect(await call("/orders?title=miku")).toEqual({
+      status: 200,
+      body: {
+        orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder", images: ["miku.jpg"] }],
+      },
     });
   });
 });

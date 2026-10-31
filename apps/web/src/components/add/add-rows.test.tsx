@@ -57,7 +57,14 @@ test("the price placeholder shows the release price only when its currency is th
       item("usd000000001", { title: "Dollars" }),
       item("jpy000000001", {
         title: "Yen",
-        latestRelease: { id: "r", date: "2027-02-01", price: 2_500_000, priceCurrency: "JPY" },
+        latestRelease: {
+          id: "r",
+          date: "2027-02-01",
+          type: null,
+          barcode: null,
+          price: 2_500_000,
+          priceCurrency: "JPY",
+        },
       }),
     ],
   });

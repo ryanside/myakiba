@@ -11,7 +11,7 @@ import { WriteFailed } from "@/lib/errors/write-failed";
 type Answered = Awaited<Saving>;
 
 const realSearch = await import("@/queries/search");
-const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] };
+const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order", images: [] }] };
 await mock.module("@/queries/search", () => ({
   ...realSearch,
   searchOrders: async () => Result.ok(targets),

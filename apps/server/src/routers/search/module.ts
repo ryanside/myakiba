@@ -278,7 +278,11 @@ export const Search = {
       const { title, limit = DEFAULT_LIMIT, offset = 0 } = input;
       scope.log.set({ query: { title: input.title, limit: input.limit, offset: input.offset } });
       const orderIdsAndTitles: SearchOrderIdAndTitle[] = await scope.tx
-        .select({ id: order.id, title: order.title })
+        .select({
+          id: order.id,
+          title: order.title,
+          images: sql<string[]>`(${orderPreviewImagesSql})[1:4]`,
+        })
         .from(order)
         .where(
           and(

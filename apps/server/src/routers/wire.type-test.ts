@@ -49,6 +49,7 @@ void (true satisfies Equal<
     items: S<500, "Failed to load the items to add">;
     commit:
       | S<404, "Some items are no longer in the item database">
+      | S<404, "A chosen release is not a release of its item">
       | S<404, "Order not found">
       | S<404, "List or selection not found">
       | S<409, "These items were already added with different choices">

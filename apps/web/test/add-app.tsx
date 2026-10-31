@@ -167,6 +167,8 @@ export const item = (itemId: string, overrides: Partial<AddItem> = {}): AddItem 
   latestRelease: {
     id: `release-${itemId}`,
     date: "2027-01-15",
+    type: "Standard",
+    barcode: null,
     price: 500_000,
     priceCurrency: "USD",
   },

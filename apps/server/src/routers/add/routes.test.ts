@@ -48,6 +48,8 @@ beforeEach(async () => {
       id: "00000000-0000-4000-8000-000000000002",
       itemId: "item-1",
       date: "2026-06-01",
+      type: "Limited",
+      barcode: "4580590174562",
       price: 4500,
       priceCurrency: "JPY",
     },
@@ -97,6 +99,8 @@ test("items answers each known id in request order with its latest release and t
           latestRelease: {
             id: "00000000-0000-4000-8000-000000000002",
             date: "2026-06-01",
+            type: "Limited",
+            barcode: "4580590174562",
             price: 4500,
             priceCurrency: "JPY",
           },
