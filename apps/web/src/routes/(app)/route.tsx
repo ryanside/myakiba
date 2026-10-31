@@ -89,9 +89,9 @@ function RouteComponent() {
   }, [versionData]);
 
   return (
-    <div className="[--header-height:calc(--spacing(14))] max-w-full overflow-x-hidden">
+    <div className="[--header-height:calc(--spacing(14))] w-full min-w-0 max-w-full overflow-x-clip">
       <SidebarProvider className="flex flex-col">
-        <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
+        <div className="flex min-w-0 max-w-full flex-1 overflow-x-clip">
           <AppSidebar />
           <SidebarInset tabIndex={-1} className="page-background-surface outline-none">
             <PageBackground />
@@ -109,7 +109,7 @@ function RouteComponent() {
                 <UserMenu session={session} />
               </div>
             </header>
-            <div className="h-full w-full min-w-0 max-w-full overflow-x-hidden p-6">
+            <div className="h-full w-full min-w-0 max-w-full overflow-x-clip p-6">
               <Outlet />
             </div>
           </SidebarInset>
