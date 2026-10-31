@@ -259,6 +259,25 @@ test("the empty state says how picking works and links to MFC's search", async (
   ).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
 });
 
+test("an empty page keeps its shape, with only search and the steps working", async () => {
+  openAddPage();
+  await screen.findByRole("heading", { name: "Add items" });
+  await screen.findByText("Pick items on MyFigureCollection");
+
+  expect(screen.getByRole("region", { name: "Destination" })).toBeDefined();
+  expect(screen.getByText("No items yet.")).toBeDefined();
+  expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+  expect(screen.getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-disabled")).toBe(
+    "true",
+  );
+  for (const name of ["Lists", "Fill all", "Select items to add"]) {
+    expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
+  }
+  expect(searchBox().hasAttribute("disabled")).toBe(false);
+});
+
 test("the empty state tells someone without the extension where to get it", async () => {
   loadExtension({ installed: false });
   openAddPage();

@@ -13,9 +13,11 @@ import type { ChosenList } from "./commit-input";
 /** Several Lists at once. "New list…" opens the existing form and chooses the List it creates. */
 export function ListsPicker({
   chosen,
+  disabled,
   onChange,
 }: {
   readonly chosen: readonly ChosenList[];
+  readonly disabled?: boolean;
   readonly onChange: (lists: readonly ChosenList[]) => void;
 }) {
   const baseId = useId();
@@ -41,7 +43,12 @@ export function ListsPicker({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button type="button" variant="outline" className="min-w-0 max-w-56 justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              className="min-w-0 max-w-56 justify-between"
+            >
               <span className="min-w-0 truncate" title={chosen.map((l) => l.title).join(", ")}>
                 {triggerLabel(chosen)}
               </span>

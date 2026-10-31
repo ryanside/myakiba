@@ -110,7 +110,7 @@ const PICK_STEPS = [
 
 export function EmptyState() {
   return (
-    <Empty className={cn(STATE_PANEL_CLASS_NAME, "min-h-0 flex-1 gap-6 overflow-y-auto")}>
+    <Empty className={cn(STATE_PANEL_CLASS_NAME, "flex-1 gap-6 py-8")}>
       <EmptyHeader className="max-w-md">
         <EmptyMedia>
           <HugeiconsIcon

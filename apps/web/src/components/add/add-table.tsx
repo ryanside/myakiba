@@ -209,7 +209,7 @@ export function AddItems({
         >
           <AddSearch {...c.searchProps} />
         </div>
-        {c.rows.length > 0 && fields.length > 0 ? (
+        {fields.length > 0 ? (
           <div className="ms-auto flex items-center gap-2 @max-2xl/add:ms-0 @max-2xl/add:w-full">
             <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
           </div>

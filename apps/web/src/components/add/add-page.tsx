@@ -43,9 +43,10 @@ function CommitBar({ controller: c }: { readonly controller: AddController }) {
   const count = c.commitRows.length;
   const ownership = c.destination.ownership;
   const total = ownership && ownership.kind !== "none" && count > 0 ? plannedTotal(c) : null;
-  const summary = commitSummary(c.destination, count) ?? [
-    "Choose Collection, Order or Item Database.",
-  ];
+  const summary =
+    c.rows.length === 0
+      ? ["No items yet."]
+      : (commitSummary(c.destination, count) ?? ["Choose Collection, Order or Item Database."]);
   return (
     <section
       aria-label="Commit"
@@ -96,25 +97,21 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
           title={search.from === "mfc" ? "Review your picks" : "Add items"}
           // The page's background runs behind this, and it is darker than other pages'.
           meta={
-            hasDraft ? (
-              <span className="text-foreground/80">
-                {formatCount(c.rows.length, "Item", "Items")}
-              </span>
-            ) : null
+            <span className="text-foreground/80">
+              {formatCount(c.rows.length, "Item", "Items")}
+            </span>
           }
         />
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />
         </div>
-        {hasDraft ? (
-          <div className="flex flex-col gap-4">
-            <DestinationSentence controller={c} />
-            {kind === "order" ? <OrderDetails controller={c} /> : null}
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-4">
+          <DestinationSentence controller={c} disabled={!hasDraft} />
+          {hasDraft && kind === "order" ? <OrderDetails controller={c} /> : null}
+        </div>
         <AddItems controller={c} onAnnounce={setFilled} />
       </div>
-      {hasDraft ? <CommitBar controller={c} /> : null}
+      <CommitBar controller={c} />
     </div>
   );
 }

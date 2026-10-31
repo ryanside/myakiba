@@ -43,33 +43,40 @@ export function feeTotal(fields: OrderFields): number {
   }, 0);
 }
 
+function OrderPicture({ images }: { readonly images: readonly string[] }) {
+  if (images.length === 0) {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center">
+        <OrderIcon />
+      </span>
+    );
+  }
+  return (
+    <ImageThumbnail
+      images={images}
+      title="This Order"
+      decorative
+      showRemainingCount
+      className={THUMBNAIL}
+      fallbackIcon={<OrderIcon />}
+    />
+  );
+}
+
 /** The Order's picture and title, in the shape of a table row's picture and title. */
 function SectionHeading({
   images,
   title,
   aside,
 }: {
-  readonly images: readonly string[];
+  readonly images: readonly string[] | null;
   readonly title: ReactNode;
   readonly aside?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
-        {images.length === 0 ? (
-          <span className="flex size-8 shrink-0 items-center justify-center">
-            <OrderIcon />
-          </span>
-        ) : (
-          <ImageThumbnail
-            images={images}
-            title="This Order"
-            decorative
-            showRemainingCount
-            className={THUMBNAIL}
-            fallbackIcon={<OrderIcon />}
-          />
-        )}
+        {images === null ? null : <OrderPicture images={images} />}
         {title}
       </div>
       {aside}
@@ -81,8 +88,7 @@ const OrderIcon = () => (
   <HugeiconsIcon icon={PackageIcon} className="size-5 text-muted-foreground" aria-hidden="true" />
 );
 
-// The table's own surface, so the Order reads as a section beside it and apart from the sentence.
-const SECTION = "flex flex-col gap-5 rounded-xl bg-card p-3 ring-1 ring-foreground/10";
+const SECTION = "flex flex-col gap-5";
 
 /** The Order the sentence names: a new one's fields, or the existing one to join. */
 export function OrderDetails({ controller: c }: { readonly controller: AddController }) {
@@ -102,7 +108,8 @@ function ExistingOrder({ controller: c }: { readonly controller: AddController }
   return (
     <section aria-label="Existing Order" className={SECTION}>
       <SectionHeading
-        images={order?.images ?? []}
+        // Until an Order is chosen, the sentence's own icon above says what this is.
+        images={chosen === null ? null : (order?.images ?? [])}
         title={
           <div className="min-w-0 flex-1">
             <ExistingOrderPicker
@@ -150,7 +157,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
         }
         aside={
           fees > 0 ? (
-            <span className="text-sm text-muted-foreground tabular-nums">
+            <span className="text-sm text-foreground/80 tabular-nums">
               Fees {formatCurrencyFromMinorUnits(fees, c.currency, getCurrencyLocale(c.currency))}
             </span>
           ) : null
@@ -285,14 +292,14 @@ function ExistingOrderPicker({
             <Button
               id={fieldId}
               type="button"
-              variant="ghost"
+              variant="outline"
               role="combobox"
               aria-label="Order"
               aria-expanded={open}
               aria-controls={listId}
               aria-invalid={issue === undefined ? undefined : true}
               aria-describedby={issue === undefined ? undefined : `${fieldId}-error`}
-              className="w-full min-w-0 justify-between pl-0 font-medium"
+              className="w-full max-w-md min-w-0 justify-between font-medium"
             >
               <span
                 className={cn(
@@ -315,7 +322,7 @@ function ExistingOrderPicker({
         />
         <PopoverContent
           aria-label="Choose an Order"
-          className="w-(--anchor-width) max-w-md min-w-64 p-0"
+          className="w-(--anchor-width) p-0"
           align="start"
         >
           <Command label="Search Orders by title" shouldFilter={false}>

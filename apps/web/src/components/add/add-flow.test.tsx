@@ -1143,9 +1143,9 @@ test("the toast of a commit dismisses itself", async () => {
   await click(user, "Add 1 to collection");
   await screen.findByText("Added 1 to your collection");
 
-  await waitFor(() => expect(screen.queryByText("Added 1 to your collection")).toBeNull(), {
-    timeout: 8000,
-  });
+  // waitFor's check on every DOM change starves this with the commit button's animation running.
+  await pause(6500);
+  expect(screen.queryByText("Added 1 to your collection")).toBeNull();
 });
 
 test("a pick saved after a commit answers cannot bring its rows back on a reload", async () => {
@@ -1426,8 +1426,12 @@ test("picks list before rows, show with no rows, and the destination waits for a
   openAddPage();
 
   await screen.findByText("Saving…");
-  expect(screen.queryByRole("region", { name: "Destination" })).toBeNull();
-  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
+    true,
+  );
+  expect(screen.getByRole("button", { name: "Select items to add" }).hasAttribute("disabled")).toBe(
+    true,
+  );
   expect(screen.queryByText("Pick items on MyFigureCollection")).toBeNull();
   cleanup();
 

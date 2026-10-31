@@ -69,7 +69,13 @@ function itemsPhrase(selected: number, total: number, loading: boolean): string 
 }
 
 /** The sentence's choice. The menu separates what the rows are from where they only get recorded. */
-function DestinationSelect({ controller: c }: { readonly controller: AddController }) {
+function DestinationSelect({
+  controller: c,
+  disabled,
+}: {
+  readonly controller: AddController;
+  readonly disabled: boolean;
+}) {
   const form = c.resolvedForm;
   const choice = choiceOf(form);
   const chosen = CHOICES.find(({ value }) => value === choice);
@@ -77,6 +83,7 @@ function DestinationSelect({ controller: c }: { readonly controller: AddControll
     <Select
       items={CHOICES}
       value={choice}
+      disabled={disabled}
       onValueChange={(next) => {
         if (next !== null) c.setForm(choose(form, next));
       }}
@@ -87,6 +94,7 @@ function DestinationSelect({ controller: c }: { readonly controller: AddControll
           "gap-2 font-medium",
           chosen && "pl-2",
           choice === null &&
+            !disabled &&
             "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
         )}
       >
@@ -121,7 +129,14 @@ function DestinationSelect({ controller: c }: { readonly controller: AddControll
 }
 
 /** The destination, as one sentence. */
-export function DestinationSentence({ controller: c }: { readonly controller: AddController }) {
+export function DestinationSentence({
+  controller: c,
+  disabled,
+}: {
+  readonly controller: AddController;
+  /** No rows yet: the page keeps its shape, with nothing to choose for. */
+  readonly disabled: boolean;
+}) {
   const baseId = useId();
   const form = c.resolvedForm;
   const choice = choiceOf(form);
@@ -136,21 +151,29 @@ export function DestinationSentence({ controller: c }: { readonly controller: Ad
       <span className="font-medium tabular-nums">
         {choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`}
       </span>
-      <DestinationSelect controller={c} />
+      <DestinationSelect controller={c} disabled={disabled} />
       <span className="flex flex-wrap items-center gap-2 @2xl/add:ms-2">
         <span className="text-foreground/80">also on</span>
         <span className="flex items-center gap-2">
           <Checkbox
             id={`${baseId}-wishlist`}
             checked={form.wishlist}
+            disabled={disabled}
             onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
           />
-          <Label htmlFor={`${baseId}-wishlist`} className="cursor-pointer font-normal">
+          <Label
+            htmlFor={`${baseId}-wishlist`}
+            className={cn("font-normal", disabled ? "opacity-50" : "cursor-pointer")}
+          >
             Wishlist
           </Label>
         </span>
         <span className="text-foreground/80">and</span>
-        <ListsPicker chosen={form.lists} onChange={(lists) => c.setForm({ ...form, lists })} />
+        <ListsPicker
+          chosen={form.lists}
+          disabled={disabled}
+          onChange={(lists) => c.setForm({ ...form, lists })}
+        />
       </span>
     </section>
   );

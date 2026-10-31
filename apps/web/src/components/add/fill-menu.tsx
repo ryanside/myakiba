@@ -343,7 +343,7 @@ export function FillMenu({
     >
       <PopoverTrigger
         render={
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" disabled={c.rows.length === 0}>
             <HugeiconsIcon icon={PaintBucketIcon} data-icon="inline-start" aria-hidden="true" />
             Fill all
           </Button>
