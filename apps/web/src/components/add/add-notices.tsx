@@ -1,20 +1,12 @@
-import { Alert02Icon, ArrowUpRight01Icon, PackageSearchIcon } from "@hugeicons/core-free-icons";
+import { Alert02Icon, ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_ADD_ROWS, mfcItemUrl, mfcSearchUrl } from "@myakiba/contracts/add/constants";
 import type { ReactNode } from "react";
-import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
+import { ExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
 import { formatCount } from "@/components/page-header";
-import { STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import { cn } from "@/lib/utils";
+import { extensionAvailability } from "@/lib/extension-availability";
+import { useExtensionStatus } from "@/lib/extension-gate";
 import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import type { AddController } from "./add-controller";
 import { VerifyEmailNotice } from "./verify-email-notice";
@@ -102,50 +94,31 @@ function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
   );
 }
 
-const PICK_STEPS = [
-  "Open an item on MyFigureCollection",
-  "Click Pick for myakiba beside MFC's own buttons",
-  "Come back and choose where it goes",
-] as const;
+const EMPTY_TEXT = "Click Pick for myakiba on a MyFigureCollection item and it waits here.";
 
+/** One line where the rows will be, or, with no extension to pick with, what to do about that. */
 export function EmptyState() {
+  const status = useExtensionStatus();
+  if (status.kind === "absent") {
+    return (
+      <ExtensionNotice
+        copy={pickExtensionCopy(extensionAvailability())}
+        className="rounded-xl bg-card ring-foreground/10"
+      />
+    );
+  }
   return (
-    <Empty className={cn(STATE_PANEL_CLASS_NAME, "min-h-0 flex-1 gap-6 overflow-y-auto")}>
-      <EmptyHeader className="max-w-md">
-        <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
-          <HugeiconsIcon icon={PackageSearchIcon} className="size-5" aria-hidden="true" />
-        </EmptyMedia>
-        <EmptyTitle>Pick items on MyFigureCollection</EmptyTitle>
-        <EmptyDescription className="text-pretty">
-          Picked items wait here until you choose where they go. Search above for items already in
-          myakiba.
-        </EmptyDescription>
-      </EmptyHeader>
-      <EmptyContent className="@container/steps max-w-2xl gap-6">
-        <ol className="grid w-full list-none gap-3 text-start text-sm @xl/steps:grid-cols-3 @xl/steps:gap-6 @xl/steps:text-center">
-          {PICK_STEPS.map((step, index) => (
-            <li key={step} className="flex items-center gap-2.5 @xl/steps:flex-col @xl/steps:gap-2">
-              <span
-                className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums"
-                aria-hidden="true"
-              >
-                {index + 1}
-              </span>
-              <span className="min-w-0 text-pretty text-muted-foreground">{step}</span>
-            </li>
-          ))}
-        </ol>
-        <a
-          href={mfcSearchUrl("")}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          Search MyFigureCollection
-          <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
-        </a>
-        <MissingExtensionNotice copyOf={pickExtensionCopy} className="w-full max-w-md text-start" />
-      </EmptyContent>
-    </Empty>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-card px-3 py-2.5 text-sm ring-1 ring-foreground/10">
+      <p className="min-w-0 flex-1 basis-56 text-pretty">{EMPTY_TEXT}</p>
+      <a
+        href={mfcSearchUrl("")}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={buttonVariants({ variant: "outline" })}
+      >
+        Search MyFigureCollection
+        <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
+      </a>
+    </div>
   );
 }

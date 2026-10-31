@@ -274,7 +274,7 @@ export function AddItems({
                     data-add-col="actions"
                     className={cn(
                       HEAD_CELL,
-                      "z-20 w-24 min-w-24 @3xl/rows:sticky @3xl/rows:-top-1 @max-3xl/rows:hidden",
+                      "z-20 w-34 min-w-34 @3xl/rows:sticky @3xl/rows:-top-1 @max-3xl/rows:hidden",
                     )}
                   >
                     <span className="sr-only">Actions</span>
@@ -538,17 +538,16 @@ function ItemRow({
               className="text-muted-foreground @max-3xl/rows:-ms-2"
               onClick={onToggleDetails}
             >
+              Details
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
+                data-icon="inline-end"
                 className={cn(
                   "transition-transform duration-150 ease-out motion-reduce:transition-none",
                   open && "rotate-180",
                 )}
                 aria-hidden="true"
               />
-              <span className="@3xl/rows:hidden" aria-hidden="true">
-                Details
-              </span>
             </Button>
           ) : null}
           <Button

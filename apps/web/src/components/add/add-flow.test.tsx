@@ -1240,7 +1240,7 @@ test("rows live in sessionStorage, so another tab, like a closed one reopened, h
 
   sessionStorage.clear();
   openAddPage();
-  await screen.findByText("Pick items on MyFigureCollection");
+  await screen.findByText("Click Pick for myakiba on a MyFigureCollection item and it waits here.");
   expect(screen.queryByRole("checkbox", { name: "Select Hatsune Miku" })).toBeNull();
 });
 
@@ -1344,7 +1344,7 @@ test("a pick arrives on window focus and on the tab showing, and a hidden tab ta
   seedItems(item("item-98777", { title: "Picked Miku", externalId: 98_777 }));
   const extension = loadExtension({});
   openAddPage();
-  await screen.findByText("Pick items on MyFigureCollection");
+  await screen.findByText("Click Pick for myakiba on a MyFigureCollection item and it waits here.");
   const takes = () =>
     extension.posted.filter(({ message }) => message.request.type === "take-picks").length;
   await waitFor(() => expect(takes()).toBe(1));
@@ -1444,7 +1444,9 @@ test("picks list before rows, show with no rows, and the destination waits for a
   await screen.findByText("Saving…");
   expect(screen.queryByRole("region", { name: "Destination" })).toBeNull();
   expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
-  expect(screen.queryByText("Pick items on MyFigureCollection")).toBeNull();
+  expect(
+    screen.queryByText("Click Pick for myakiba on a MyFigureCollection item and it waits here."),
+  ).toBeNull();
   cleanup();
 
   draft(ITEM_ID);
