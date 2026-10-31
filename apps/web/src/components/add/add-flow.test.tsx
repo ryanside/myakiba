@@ -1412,3 +1412,37 @@ test("the Lists picker names what it holds, and says when there are none or it c
   await user.click(screen.getByRole("button", { name: "Lists" }));
   await screen.findByText("Couldn't load your Lists. Try again.");
 });
+
+test("Fill all writes Price, Score and a row's date to the selected rows only", async () => {
+  sessionStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify([
+      { itemId: ITEM_ID, overrides: {}, selected: true },
+      { itemId: OTHER_ID, overrides: {}, selected: false },
+    ]),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+
+  await fill(user, "Price");
+  await user.type(await screen.findByRole("textbox", { name: "Price" }), "12.50");
+  await click(user, "Fill 1 selected");
+
+  await fill(user, "Score");
+  const stars = within(await screen.findByRole("group", { name: "Score for every selected row" }));
+  await user.click(stars.getAllByRole("button")[7] as HTMLElement);
+  await click(user, "Fill 1 selected");
+
+  await fill(user, "Order Date");
+  await pickDay(user, "Order Date");
+  await click(user, "Fill 1 selected");
+
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  const rows = server.commits[0]?.rows ?? [];
+  expect(rows.map(({ itemId }) => itemId)).toEqual([ITEM_ID]);
+  expect(rows[0]?.price).toBe(1250);
+  expect(Number(rows[0]?.score)).toBeGreaterThan(0);
+  expect(rows[0]?.orderDate).toMatch(/^\d{4}-\d{2}-15$/u);
+});
