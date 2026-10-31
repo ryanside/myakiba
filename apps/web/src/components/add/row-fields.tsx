@@ -49,7 +49,7 @@ const OWNED = ["collection", "order"] as const;
 const ALWAYS = ["collection", "order", null] as const;
 
 export const FIELD = {
-  price: { id: "price", label: "Price", width: "w-32 min-w-32", kinds: ALWAYS },
+  price: { id: "price", label: "Price", width: "w-36 min-w-36", kinds: ALWAYS },
   count: { id: "count", label: "Count", width: "w-20 min-w-20", kinds: ALWAYS },
   condition: { id: "condition", label: "Condition", width: "w-36 min-w-36", kinds: ALWAYS },
   shop: { id: "shop", label: "Shop", kinds: COLLECTION_ONLY },
@@ -76,7 +76,7 @@ export const THUMBNAIL =
 // the app's Input while typing. It stays an input throughout, so the table's keys and an issue's focus
 // always find it. A touch screen has no hover, so there it always shows its edge.
 const INLINE_CELL =
-  "cursor-text border-transparent bg-transparent pl-0 text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
+  "cursor-text border-transparent bg-transparent pl-0 text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
 
 const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
 

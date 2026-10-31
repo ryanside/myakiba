@@ -263,6 +263,28 @@ test("typing on the prefilled Order title replaces it, and a cleared one falls b
   expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Hatsune Miku + 1 more");
 });
 
+test("Enter and Escape in the Order title keep focus on it, without reopening it", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  const focusedOnPreview = () =>
+    document.activeElement === screen.queryByRole("button", { name: "Edit Order title" });
+
+  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.keyboard("Spring{Enter}");
+  await waitFor(() => expect(focusedOnPreview()).toBe(true));
+  expect(screen.queryByRole("textbox", { name: "Order title" })).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.keyboard("Discarded{Escape}");
+  await waitFor(() => expect(focusedOnPreview()).toBe(true));
+  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe("Spring");
+
+  await user.keyboard("{Enter}");
+  expect(await screen.findByRole("textbox", { name: "Order title" })).toBeDefined();
+});
+
 test("the Order title saves when focus leaves it, and Escape keeps the one it had", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();

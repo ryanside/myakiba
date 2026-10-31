@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,13 @@ export function InlineTextCell({
   const [isEditing, setIsEditing] = useState(false);
   const [editingValue, setEditingValue] = useState("");
   const [displayValue, submit] = usePendingValue(value, onSubmit);
+  const preview = useRef<HTMLButtonElement>(null);
+  // Enter and Escape remove the focused input, so focus returns to the preview, without editing.
+  const returningFocus = useRef(false);
+
+  useEffect(() => {
+    if (!isEditing && returningFocus.current) preview.current?.focus();
+  }, [isEditing]);
 
   const handleEdit = () => {
     setEditingValue(displayValue);
@@ -70,8 +77,12 @@ export function InlineTextCell({
           }}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
+              returningFocus.current = true;
               handleCancel();
             } else if (event.key === "Enter") {
+              // Focus is on the preview by the key's next event, which would click it open again.
+              event.preventDefault();
+              returningFocus.current = true;
               void handleSubmit(editingValue);
             }
           }}
@@ -79,12 +90,19 @@ export function InlineTextCell({
         />
       ) : (
         <Button
+          ref={preview}
           type="button"
           variant="ghost"
           aria-label={`Edit ${label}`}
           disabled={disabled}
-          onClick={(event) => event.stopPropagation()}
-          onFocus={handleEdit}
+          onClick={(event) => {
+            event.stopPropagation();
+            handleEdit();
+          }}
+          onFocus={() => {
+            if (returningFocus.current) returningFocus.current = false;
+            else handleEdit();
+          }}
           className={cn(
             "h-auto min-h-7 w-full cursor-text justify-start truncate rounded-sm px-0 py-1 text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
             previewClassName,
