@@ -995,7 +995,7 @@ test("a commit that answers after 6.5 s still lands, with no timeout", async () 
   expect(server.commits).toHaveLength(1);
 });
 
-test("the toast of a commit does not time out", async () => {
+test("the toast of a commit dismisses itself", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
@@ -1003,8 +1003,9 @@ test("the toast of a commit does not time out", async () => {
   await click(user, "Add 1 to collection");
   await screen.findByText("Added 1 to your collection");
 
-  await pause(6600);
-  expect(screen.getByText("Added 1 to your collection")).toBeDefined();
+  await waitFor(() => expect(screen.queryByText("Added 1 to your collection")).toBeNull(), {
+    timeout: 8000,
+  });
 });
 
 test("a pick saved after a commit answers cannot bring its rows back on a reload", async () => {

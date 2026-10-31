@@ -111,7 +111,6 @@ export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {
     type: "success",
     title: commitToastTitle(outcome),
     description: commitToastDescription(outcome),
-    timeout: 0,
     actionProps: { children: view.label, onClick: go(view.target) },
     data: {
       media: createElement(ImageThumbnail, {
