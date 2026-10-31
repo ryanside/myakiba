@@ -187,7 +187,7 @@ function ActionBar(props: ActionBarProps) {
             "data-[side=bottom]:slide-in-from-bottom-4 data-[side=top]:slide-in-from-top-4",
             "motion-reduce:animate-none motion-reduce:transition-none",
             orientation === "horizontal"
-              ? "flex flex-row items-center gap-2 px-2 py-1.5"
+              ? "flex w-max max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-center gap-2 px-2 py-1.5"
               : "flex flex-col items-start gap-2 px-1.5 py-2",
             className,
           )}
