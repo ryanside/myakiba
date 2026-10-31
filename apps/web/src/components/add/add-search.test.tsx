@@ -124,3 +124,31 @@ test("a failed search says so, in the panel and in the status region", async () 
     regions.some(({ textContent }) => textContent === "Couldn't search the Item Database."),
   ).toBe(true);
 });
+
+test("a result shows its picture, title, release date and release price", async () => {
+  seedItems(item("pictured0001", { title: "Pictured", image: "/images/pictured.jpg" }));
+  const user = userEvent.setup();
+  renderSearch();
+  await user.type(await searchBox(), "pictured");
+
+  const result = await screen.findByRole("option", { name: /Pictured/u });
+  expect(result.querySelector("img")?.getAttribute("src")).toBe("/images/pictured.jpg");
+  expect(result.textContent).toContain("01/15/2027");
+  expect(result.textContent).toContain("$5,000.00");
+});
+
+test("the panel closes on Escape and when focus leaves", async () => {
+  const user = userEvent.setup();
+  renderSearch();
+  const box = await searchBox();
+  await user.type(box, "rem");
+  await screen.findByRole("option", { name: /^Rem/u });
+
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+
+  await user.type(box, "e");
+  await screen.findByRole("listbox");
+  act(() => box.blur());
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+});

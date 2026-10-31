@@ -1,6 +1,12 @@
 {
   "test": [
     {
+      "fix": "4c2862563b5d4ec1a2d51939a9520a9bf778d34c",
+      "bug": "Clicking the Add page's prefilled Order title and typing inserted into it, so a save named the Order with both.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": ["typing on the prefilled Order title replaces it, and a cleared one falls back"]
+    },
+    {
       "fix": "326d3db7612f4efe33263daf9d90331f6b0b5a84",
       "bug": "The Add page's first search read aria-busy=\"false\" while its request was in flight, beside \"Searching…\".",
       "test": "apps/web/src/components/add/add-search.test.tsx",

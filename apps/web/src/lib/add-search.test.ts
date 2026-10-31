@@ -19,3 +19,25 @@ test.each([{ to: "elsewhere" }, { to: "order:NOPE" }, { item: "x" }, { mfc: "-1"
     expect(addSearchSchema.safeParse(search).success).toBe(false);
   },
 );
+
+test("keeps a path on this site to return to", () => {
+  expect(addSearchSchema.parse({ returnTo: "/collection?page=2" }).returnTo).toBe(
+    "/collection?page=2",
+  );
+});
+
+test.each([
+  "https://evil.example",
+  "//evil.example",
+  "/\\evil.example",
+  "\\\\evil.example",
+  "/\t/evil.example",
+  "data:text/html,evil",
+  `/${"a".repeat(2048)}`,
+  5,
+])("drops the return target %j and keeps the rest of the link", (returnTo) => {
+  expect(addSearchSchema.parse({ to: "collection", returnTo })).toEqual({
+    to: "collection",
+    returnTo: undefined,
+  });
+});

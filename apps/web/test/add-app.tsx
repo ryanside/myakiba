@@ -94,6 +94,10 @@ export const server = {
     ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId }),
   orders: new Map<string, string>(),
   orderImages: new Map<string, readonly string[]>(),
+  /** Holds every read of one Order until it resolves. */
+  orderGate: null as Promise<void> | null,
+  ordersFailure: null as Answer | null,
+  listsFailure: null as Answer | null,
   lists: [] as { readonly id: string; readonly title: string }[],
   createdLists: [] as string[],
 };
@@ -113,6 +117,9 @@ export function resetServer() {
     ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId });
   server.orders.clear();
   server.orderImages.clear();
+  server.orderGate = null;
+  server.ordersFailure = null;
+  server.listsFailure = null;
   server.lists.length = 0;
   server.createdLists.length = 0;
 }
@@ -150,18 +157,22 @@ await mock.module("@/lib/treaty-client", () => ({
           },
         },
         orders: {
-          get: async () =>
+          get: async ({ query }: { readonly query: { readonly offset: number } }) =>
+            server.ordersFailure ??
             ok({
-              orderIdsAndTitles: [...server.orders].map(([id, title]) => ({
-                id,
-                title,
-                images: server.orderImages.get(id) ?? [],
-              })),
+              orderIdsAndTitles: [...server.orders]
+                .slice(query.offset, query.offset + 20)
+                .map(([id, title]) => ({
+                  id,
+                  title,
+                  images: server.orderImages.get(id) ?? [],
+                })),
             }),
         },
       },
       orders: ({ orderId }: { readonly orderId: string }) => ({
         get: async () => {
+          await server.orderGate;
           const title = server.orders.get(orderId);
           return title === undefined
             ? refused(404, "Order not found")
@@ -179,7 +190,8 @@ await mock.module("@/lib/treaty-client", () => ({
         },
       }),
       lists: {
-        get: async () => ok({ items: server.lists, totalCount: server.lists.length }),
+        get: async () =>
+          server.listsFailure ?? ok({ items: server.lists, totalCount: server.lists.length }),
         post: async ({ title }: { readonly title: string }) => {
           server.createdLists.push(title);
           return ok({ id: `created-${server.createdLists.length}`, title });

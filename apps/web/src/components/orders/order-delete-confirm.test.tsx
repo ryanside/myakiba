@@ -13,6 +13,7 @@ await mock.module("@tanstack/react-router", () => ({
     navigations.push(to);
   },
   useRouter: () => ({ history: { canGoBack: () => false, back: () => {} } }),
+  useLocation: () => "/orders/od-alpha",
   getRouteApi: () => ({
     useRouteContext: () => ({ session: { user: { currency: "USD", dateFormat: "MM/DD/YYYY" } } }),
   }),

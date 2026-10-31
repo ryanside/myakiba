@@ -10,6 +10,7 @@ await mock.module("@tanstack/react-router", () => ({
   useParams: () => ({ id: "od-alpha" }),
   useNavigate: () => async () => {},
   useRouter: () => ({ history: { canGoBack: () => false, back: () => {} } }),
+  useLocation: () => "/orders/od-alpha",
   getRouteApi: () => ({
     useRouteContext: () => ({ session: { user: { currency: "USD", dateFormat: "MM/DD/YYYY" } } }),
   }),

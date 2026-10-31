@@ -1,6 +1,6 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import type { AddSearch } from "@/lib/add-search";
@@ -24,7 +24,7 @@ export function AddLink({
   readonly icon?: boolean;
   readonly children?: ReactNode;
 }) {
-  const returnTo = useRouterState({ select: ({ location }) => location.href });
+  const returnTo = useLocation({ select: ({ href }) => href });
   return (
     <Link
       to="/add"

@@ -139,8 +139,8 @@ Source code: the add-on is bundled and minified by WXT (Vite). The sources zip c
 The Chrome Web Store needs at least one screenshot, up to five, each 1280x800 or 640x400, with square corners and no padding. AMO recommends 1280x800 too. Capture them in Chrome at a 1280x800 window size, signed in with a real account:
 
 1. An MFC item page with "✓ Picked" next to MFC's buttons and the note.
-2. The Add page with three picked rows, pictures and prices.
-3. The destination bar set to a new Order and a List.
+2. The Add page with three picked rows, pictures and prices in one table.
+3. The sentence above the table set to New Order and a List, with the Order's title and fields.
 4. The commit toast over the collection filtered to the new items.
 5. An item page after "Refresh item details".
 

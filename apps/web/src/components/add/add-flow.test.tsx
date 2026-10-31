@@ -1172,3 +1172,217 @@ test("a pick with no title reads as its MFC item, and a failed Discard says so i
     ).toBeDefined(),
   );
 });
+
+test("a failed retry shows its new reason on the row, and Discard removes the pick", async () => {
+  server.uploadAnswer = async () => refused(503, "down");
+  const extension = loadExtension({ picks: [fakePick(98_777, "Picked Miku")] });
+  const user = userEvent.setup();
+  openAddPage();
+  await screen.findByText("myakiba could not save this item.");
+
+  server.uploadAnswer = async () => refused(429, "slow down");
+  await click(user, "Retry Picked Miku");
+  await screen.findByText(/added a lot of items this hour/u);
+
+  await click(user, "Discard Picked Miku");
+  await waitFor(() => expect(screen.queryByText("Picked Miku")).toBeNull());
+  expect(extension.acknowledged).toEqual([{ type: "picks-discarded", mfcItemIds: [98_777] }]);
+});
+
+test("picks list before rows, show with no rows, and the destination waits for a row", async () => {
+  const held: (() => void)[] = [];
+  server.uploadAnswer = async () => {
+    await new Promise<void>((resolve) => {
+      held.push(resolve);
+    });
+    return refused(503, "down");
+  };
+  loadExtension({ picks: [fakePick(98_777, "Picked Miku")] });
+  openAddPage();
+
+  await screen.findByText("Saving…");
+  expect(screen.queryByRole("region", { name: "Destination" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
+  expect(screen.queryByText("Pick items on MyFigureCollection")).toBeNull();
+  cleanup();
+
+  draft(ITEM_ID);
+  loadExtension({ picks: [fakePick(112_233, "Another pick")] });
+  openAddPage();
+  await screen.findByText("Another pick");
+  await rowsLoaded();
+  const [first, second] = document.querySelectorAll("tbody tr");
+  expect(first?.textContent).toContain("Another pick");
+  expect(second?.textContent).toContain("Hatsune Miku");
+  await act(async () => {
+    for (const release of held) release();
+  });
+});
+
+const announced = (text: string) =>
+  waitFor(() =>
+    expect(screen.getAllByRole("status").some(({ textContent }) => textContent === text)).toBe(
+      true,
+    ),
+  );
+
+test("what changes on the page is announced", async () => {
+  seedItems(item("item-98777", { title: "Picked Miku", externalId: 98_777 }));
+  loadExtension({ picks: [fakePick(98_777, "Picked Miku")] });
+  const user = userEvent.setup();
+  openAddPage();
+  await screen.findByRole("checkbox", { name: "Select Picked Miku" });
+  await announced("A picked item is ready to add");
+
+  const box = screen.getByRole("combobox", { name: "Search the Item Database" });
+  await user.type(box, "Rem");
+  await user.click(await screen.findByRole("option", { name: /^Rem/u }));
+  await announced("Added Rem");
+
+  await click(user, "Remove Rem");
+  await announced("Removed Rem");
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove Picked Miku" }));
+
+  await click(user, "Remove Picked Miku");
+  await announced("Removed Picked Miku");
+  expect(document.activeElement).toBe(
+    screen.getByRole("combobox", { name: "Search the Item Database" }),
+  );
+});
+
+test("a row's title links to its Item, and its picture skips the tab order", async () => {
+  draft(ITEM_ID);
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+
+  const title = screen.getByRole("link", { name: "Hatsune Miku" });
+  expect(title.getAttribute("href")).toBe("/item/98777");
+  expect(title.getAttribute("title")).toBe("Hatsune Miku");
+  const picture = document.querySelector('a[tabindex="-1"][aria-hidden="true"]');
+  expect(picture?.getAttribute("href")).toBe("/item/98777");
+});
+
+test("a typed zero differs from a blank price, and Not owned sends bare rows", async () => {
+  draftWith(ITEM_ID, { price: "0" });
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect(server.commits[0]?.rows[0]?.price).toBe(0);
+  cleanup();
+
+  draftWith(ITEM_ID, { price: "12.50", count: 4, shop: "AmiAmi", shippingMethod: "EMS" });
+  openAddPage("/add?to=wishlist");
+  await rowsLoaded();
+  await click(user, "Add 1 to Wishlist");
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  expect(server.commits[1]?.rows).toEqual([{ itemId: ITEM_ID, price: null }]);
+});
+
+test("the commit's label is the plan, with the whole of it in its title", async () => {
+  server.orders.set("spring000001", "Spring order");
+  draft(ITEM_ID);
+  openAddPage("/add?to=order:spring000001");
+  await rowsLoaded();
+  const button = await screen.findByRole("button", { name: "Add 1 to order Spring order" });
+  const label = button.querySelector('[title="Add 1 to order Spring order"]');
+  expect(label?.className.split(/\s+/u)).toContain("truncate");
+});
+
+test("New Order's own fields hold to their limits and defaults", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  const shop = screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement;
+  expect(shop.maxLength).toBe(200);
+  expect(shop.placeholder).toBe("e.g., AmiAmi");
+  expect(screen.getByRole("combobox", { name: "Status" }).textContent).toBe("Ordered");
+  expect(screen.getByRole("combobox", { name: "Shipping Method" }).textContent).toBe("n/a");
+  for (const fee of ["Shipping Fee", "Taxes", "Duties", "Tariffs", "Miscellaneous Fees"]) {
+    expect(screen.getByRole("textbox", { name: fee }).getAttribute("placeholder")).toBe("0.00");
+  }
+  await user.type(screen.getByRole("textbox", { name: "Notes" }), "Bundle");
+  await click(user, "Create order with 1");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  const fields = server.commits[0]?.ownership.order?.fields ?? {};
+  expect(fields.notes).toBe("Bundle");
+  expect(fields.shippingFee).toBe(0);
+  expect(fields.miscFees).toBe(0);
+});
+
+test("the Order picker reads Loading while a preset's title loads, and says when it cannot search", async () => {
+  server.orders.set("spring000001", "Spring order");
+  let answer = () => {};
+  server.orderGate = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order:spring000001");
+  const picker = await screen.findByRole("combobox", { name: "Order" });
+  expect(picker.textContent).toContain("Loading the Order…");
+  await act(async () => answer());
+  await waitFor(() => expect(picker.textContent).toContain("Spring order"));
+  cleanup();
+
+  server.ordersFailure = refused(503, "down");
+  draft(ITEM_ID);
+  openAddPage("/add?to=order:missing00001");
+  const failing = await screen.findByRole("combobox", { name: "Order" });
+  await user.click(failing);
+  await screen.findByText("Couldn't load your Orders. Try again.");
+});
+
+test("Show more Orders pages, and a chosen Order closes the picker", async () => {
+  for (let index = 0; index < 21; index += 1) {
+    server.orders.set(`order${String(index).padStart(7, "0")}`, `Order ${index}`);
+  }
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await destination(user, "Existing Order");
+  await user.click(screen.getByRole("combobox", { name: "Order" }));
+
+  await screen.findByRole("option", { name: "Order 19" });
+  expect(screen.queryByRole("option", { name: "Order 20" })).toBeNull();
+  await user.click(screen.getByRole("option", { name: "Show more Orders" }));
+  await user.click(await screen.findByRole("option", { name: "Order 20" }));
+
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  await screen.findByRole("button", { name: "Add 1 to order Order 20" });
+});
+
+test("the Lists picker names what it holds, and says when there are none or it cannot read them", async () => {
+  draft(ITEM_ID);
+  server.lists.push(
+    { id: "shelf0000001", title: "Display shelf" },
+    { id: "favs00000001", title: "Favorites" },
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+  await rowsLoaded();
+  await user.click(screen.getByRole("button", { name: "Lists" }));
+  await user.click(await screen.findByRole("checkbox", { name: "Display shelf" }));
+  await screen.findByRole("button", { name: "Display shelf" });
+  await user.click(await screen.findByRole("checkbox", { name: "Favorites" }));
+  await screen.findByRole("button", { name: "2 Lists" });
+  cleanup();
+
+  server.lists.length = 0;
+  draft(ITEM_ID);
+  openAddPage("/add?to=none");
+  await rowsLoaded();
+  await user.click(screen.getByRole("button", { name: "Lists" }));
+  await screen.findByText("No Lists yet.");
+  cleanup();
+
+  server.listsFailure = refused(503, "down");
+  draft(ITEM_ID);
+  openAddPage("/add?to=none");
+  await rowsLoaded();
+  await user.click(screen.getByRole("button", { name: "Lists" }));
+  await screen.findByText("Couldn't load your Lists. Try again.");
+});
