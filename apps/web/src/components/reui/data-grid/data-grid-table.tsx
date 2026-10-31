@@ -1,5 +1,5 @@
-import { Fragment } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, Column, Header, HeaderGroup, Row } from "@tanstack/react-table";
@@ -74,11 +74,35 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * A header at rest shows the page behind it, as every other grid's does. Stuck, rows pass under it,
+ * so it needs a background. Its top edge is cut only when it sits at the window's top.
+ */
+function useIsStuck(sticky: boolean | undefined) {
+  const head = useRef<HTMLTableSectionElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (!sticky || !head.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry) setStuck(entry.intersectionRatio < 1 && entry.boundingClientRect.top <= 0);
+      },
+      { rootMargin: "-1px 0px 0px 0px", threshold: 1 },
+    );
+    observer.observe(head.current);
+    return () => observer.disconnect();
+  }, [sticky]);
+  return { head, stuck };
+}
+
 function DataGridTableHead({ children }: { children: ReactNode }) {
   const { props } = useDataGrid();
+  const { head, stuck } = useIsStuck(props.tableLayout?.headerSticky);
 
   return (
     <thead
+      ref={head}
+      data-stuck={stuck ? "" : undefined}
       className={cn(
         props.tableClassNames?.header,
         props.tableLayout?.headerSticky && props.tableClassNames?.headerSticky,
@@ -101,6 +125,7 @@ function DataGridTableHeadRow<TData>({
   return (
     <tr
       key={headerGroup.id}
+      data-row="head"
       className={cn(
         "bg-muted/40",
         props.tableLayout?.headerBorder && "[&>th]:border-b",
@@ -147,6 +172,7 @@ function DataGridTableHeadRowCell<TData>({
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
         ...dndStyle,
       }}
+      data-col={column.id}
       data-pinned={isPinned || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
@@ -279,6 +305,7 @@ function DataGridTableBodyRow<TData>({
     <tr
       ref={dndRef}
       style={dndStyle ?? undefined}
+      data-row={row.id}
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
       onClick={onRowClick ? () => onRowClick(row.original) : undefined}
       onKeyDown={
@@ -327,6 +354,40 @@ function DataGridTableBodyRowExpandded<TData>({ row }: { row: Row<TData> }) {
   );
 }
 
+/** The tinted panel under an expanded row. A click or a key in it stays out of the row. */
+function DataGridExpandedPanel({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      {...props}
+      className={cn("space-y-2.5 bg-muted/30 p-4", className)}
+    />
+  );
+}
+
+function DataGridTableBodyRowFullWidth<TData>({
+  row,
+  children,
+}: {
+  row: Row<TData>;
+  children: ReactNode;
+}) {
+  const { props } = useDataGrid();
+  const bodyCellSpacing = bodyCellSpacingVariants({
+    size: props.tableLayout?.dense ? "dense" : "default",
+  });
+
+  return (
+    <DataGridTableBodyRow row={row}>
+      <td colSpan={row.getVisibleCells().length} className={cn("align-middle", bodyCellSpacing)}>
+        {children}
+      </td>
+    </DataGridTableBodyRow>
+  );
+}
+
 function DataGridTableBodyRowCell<TData>({
   children,
   cell,
@@ -360,6 +421,7 @@ function DataGridTableBodyRowCell<TData>({
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
         ...dndStyle,
       }}
+      data-col={column.id}
       data-pinned={isPinned || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
@@ -546,20 +608,29 @@ function DataGridTable<TData>() {
           if (!table.getRowModel().rows.length) {
             return <DataGridTableEmpty />;
           }
-          return table.getRowModel().rows.map((row: Row<TData>) => (
-            <Fragment key={row.id}>
-              <DataGridTableBodyRow row={row}>
-                {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
-                  return (
-                    <DataGridTableBodyRowCell cell={cell} key={colIndex}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </DataGridTableBodyRowCell>
-                  );
-                })}
-              </DataGridTableBodyRow>
-              {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
-            </Fragment>
-          ));
+          return table.getRowModel().rows.map((row: Row<TData>) => {
+            const fullWidth = props.fullWidthRow?.(row.original);
+            return (
+              <Fragment key={row.id}>
+                {fullWidth ? (
+                  <DataGridTableBodyRowFullWidth row={row}>
+                    {fullWidth}
+                  </DataGridTableBodyRowFullWidth>
+                ) : (
+                  <DataGridTableBodyRow row={row}>
+                    {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
+                      return (
+                        <DataGridTableBodyRowCell cell={cell} key={colIndex}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </DataGridTableBodyRowCell>
+                      );
+                    })}
+                  </DataGridTableBodyRow>
+                )}
+                {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+              </Fragment>
+            );
+          });
         })()}
       </DataGridTableBody>
     </DataGridTableBase>
@@ -567,6 +638,7 @@ function DataGridTable<TData>() {
 }
 
 export {
+  DataGridExpandedPanel,
   DataGridTable,
   DataGridTableBase,
   DataGridTableBody,

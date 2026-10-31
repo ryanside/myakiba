@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { DragDropVerticalIcon } from "@hugeicons/core-free-icons";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -260,14 +260,5 @@ export function OrderItemSubDataGrid({
 
   if (!wrapped) return content;
 
-  return (
-    <div
-      className="space-y-2.5 bg-muted/30 p-4"
-      role="presentation"
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
-      {content}
-    </div>
-  );
+  return <DataGridExpandedPanel>{content}</DataGridExpandedPanel>;
 }

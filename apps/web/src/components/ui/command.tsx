@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SearchIcon, Tick02Icon } from "@hugeicons/core-free-icons";
@@ -93,6 +94,18 @@ function CommandInput({
         </InputGroupAddon>
       </InputGroup>
     </div>
+  );
+}
+
+/** The command's keys and filtering on the app's ordinary Input, for a command on a page. */
+function CommandPageInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  return (
+    <CommandPrimitive.Input asChild data-slot="command-input" {...props}>
+      <Input className={className} />
+    </CommandPrimitive.Input>
   );
 }
 
@@ -250,6 +263,7 @@ export {
   Command,
   CommandDialog,
   CommandInput,
+  CommandPageInput,
   CommandList,
   CommandEmpty,
   CommandGroup,

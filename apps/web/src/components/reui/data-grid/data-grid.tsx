@@ -58,6 +58,8 @@ export interface DataGridProps<TData extends object> {
   skeletonRowCount?: number;
   loadingMessage?: ReactNode | string;
   emptyMessage?: ReactNode | string;
+  /** A row that has no cells to show, such as one with no record behind it, spans the table. */
+  fullWidthRow?: (row: TData) => ReactNode;
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;
@@ -142,7 +144,7 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       base: "",
       header: "",
       headerRow: "",
-      headerSticky: "sticky top-0 z-10 bg-background/90 backdrop-blur-xs",
+      headerSticky: "sticky top-0 z-10 data-stuck:bg-background/90 data-stuck:backdrop-blur-xs",
       body: "",
       bodyRow: "",
       footer: "",
