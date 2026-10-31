@@ -17,7 +17,7 @@ const pending = async () => ({ isOk: () => true }) as never;
 test("the missing item page links to the Add page with the MFC hint", async () => {
   renderInApp(<ItemNotFound externalId={98_777} />);
   const link = await screen.findByRole("link", { name: "Add this item" });
-  expect(link.getAttribute("href")).toBe("/add?mfc=98777");
+  expect(link.getAttribute("href")).toBe("/add?mfc=98777&returnTo=%2Fadd");
 });
 
 test("an item page offers the Add page with that Item as a row, preset from context", async () => {
@@ -38,19 +38,21 @@ test("an item page offers the Add page with that Item as a row, preset from cont
     />,
   );
   const collection = await screen.findByRole("link", { name: "Add to collection" });
-  expect(collection.getAttribute("href")).toBe("/add?item=itemalpha0001&to=collection");
+  expect(collection.getAttribute("href")).toBe(
+    "/add?item=itemalpha0001&to=collection&returnTo=%2Fadd",
+  );
   expect(screen.getByRole("link", { name: "Add to an order" }).getAttribute("href")).toBe(
-    "/add?item=itemalpha0001&to=order-new",
+    "/add?item=itemalpha0001&to=order-new&returnTo=%2Fadd",
   );
 });
 
 test.each([
-  [{ to: "collection" }, "/add?to=collection"],
-  [{ to: "order-new" }, "/add?to=order-new"],
-  [{ to: "order:orderid12345" }, "/add?to=order%3Aorderid12345"],
-  [{ to: "wishlist" }, "/add?to=wishlist"],
-  [{ to: "none" }, "/add?to=none"],
-  [undefined, "/add"],
+  [{ to: "collection" }, "/add?to=collection&returnTo=%2Fadd"],
+  [{ to: "order-new" }, "/add?to=order-new&returnTo=%2Fadd"],
+  [{ to: "order:orderid12345" }, "/add?to=order%3Aorderid12345&returnTo=%2Fadd"],
+  [{ to: "wishlist" }, "/add?to=wishlist&returnTo=%2Fadd"],
+  [{ to: "none" }, "/add?to=none&returnTo=%2Fadd"],
+  [undefined, "/add?returnTo=%2Fadd"],
 ])("a page's Add link with %j goes to %s", async (search, href) => {
   renderInApp(<AddLink search={search} />);
   const link = await screen.findByRole("link", { name: "Add" });

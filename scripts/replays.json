@@ -28,7 +28,16 @@
       "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
       "bug": "An Add page row had no badge for copies the user already has on order.",
       "test": "apps/web/src/components/add/add-rows.test.tsx",
-      "fixed": ["a row warns about copies the user already has, in the Collection and on order"]
+      "fixed": ["a row warns about copies the user already has, in the Collection and on order"],
+      "testAt": "f664dbe7dabe7761830d3ee0ee0fc667828e8db0",
+      "head": [
+        {
+          "test": "apps/web/src/components/add/add-page.test.tsx",
+          "fixed": ["search shows badges, marks a row already added and links to MFC's search"],
+          "reason": "Rows carry no badges by the owner's choice, so search results hold these cases now."
+        }
+      ],
+      "reason": "The Ledger page replaced AddRows, so only the harness from before it can run against the fix."
     },
     {
       "fix": "34a4b720e6db668f6017bd3a0ea61d93acd294bd",

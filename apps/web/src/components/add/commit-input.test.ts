@@ -133,7 +133,7 @@ describe("buildCommitChoices", () => {
       }
       return choices.ownership.order.fields;
     };
-    expect(fields(NEW_ORDER).title).toBe("Order · Title a + 2 more");
+    expect(fields(NEW_ORDER).title).toBe("Title a + 2 more");
     expect(
       fields({
         kind: "order",
@@ -196,8 +196,8 @@ describe("presetDestination", () => {
 
 test("defaultOrderTitle names the first Item and counts the rest", () => {
   expect(defaultOrderTitle([])).toBe("New Order");
-  expect(defaultOrderTitle(["Miku"])).toBe("Order · Miku");
-  expect(defaultOrderTitle(["Miku", "Rem"])).toBe("Order · Miku + 1 more");
+  expect(defaultOrderTitle(["Miku"])).toBe("Miku");
+  expect(defaultOrderTitle(["Miku", "Rem"])).toBe("Miku + 1 more");
 });
 
 describe("commitPlan", () => {
@@ -250,7 +250,8 @@ test("the summary names every place the rows will go", () => {
       to(COLLECTION, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
       4,
     ),
-  ).toBe("4 new Collection Items · on your Wishlist · in ‘Display shelf’");
-  expect(commitSummary(to(NEW_ORDER), 1)).toBe("New Order with 1 Order Item (Ordered)");
+  ).toEqual(["4 new Collection Items", "on your Wishlist", "in ‘Display shelf’"]);
+  expect(commitSummary(to(NEW_ORDER), 1)).toEqual(["New Order with 1 Order Item (Ordered)"]);
+  expect(commitSummary(to({ kind: "none" }), 1)).toEqual(["Item Database"]);
   expect(commitSummary(to(null), 1)).toBeNull();
 });

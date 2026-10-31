@@ -36,10 +36,14 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const searchBox = () => screen.getByRole("combobox", { name: "Search the Item Database" });
-const radio = (name: string) => screen.findByRole("radio", { name });
-const radioChecked = async (name: string) => {
-  const found = await radio(name);
-  return found.getAttribute("aria-checked");
+const destination = () => screen.findByRole("combobox", { name: "Where these go" });
+const chosenDestination = async () => {
+  const trigger = await destination();
+  return trigger.textContent;
+};
+const choose = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+  await user.click(await destination());
+  await user.click(await screen.findByRole("option", { name }));
 };
 const pageReady = () => screen.findByRole("combobox", { name: "Search the Item Database" });
 
@@ -167,9 +171,9 @@ test("text that looks like an MFC link is searched as text", async () => {
 
 test.each([
   ["/add?to=collection", "Collection", false],
-  ["/add?to=order-new", "Order", false],
-  ["/add?to=none", "Not owned", false],
-  ["/add?to=wishlist", "Not owned", true],
+  ["/add?to=order-new", "New Order", false],
+  ["/add?to=none", "Item Database", false],
+  ["/add?to=wishlist", "Item Database", true],
 ])("%s presets %s", async (entry, kind, wishlist) => {
   seedItems(item("preset000001", { title: "Preset" }));
   sessionStorage.setItem(
@@ -177,7 +181,7 @@ test.each([
     JSON.stringify([{ itemId: "preset000001", overrides: {}, selected: true }]),
   );
   openAddPage(entry);
-  expect(await radioChecked(kind)).toBe("true");
+  expect(await chosenDestination()).toBe(kind);
   expect(screen.getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-checked")).toBe(
     String(wishlist),
   );
@@ -188,7 +192,8 @@ test("Collection asks for a Collection Date, never a status, and sends none", as
   openAddPage(`/add?item=${ITEM_ID}&to=collection`);
 
   await screen.findByRole("button", { name: "Add 1 to collection" });
-  expect(screen.getByText("Collection Date")).toBeDefined();
+  await user.click(screen.getByRole("button", { name: "Details for Hatsune Miku" }));
+  expect(screen.getByRole("button", { name: "Collection Date for Hatsune Miku" })).toBeDefined();
   expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
   expect(screen.getByText("1 new Collection Item")).toBeDefined();
 
@@ -210,26 +215,24 @@ test("a link to an order presets that Order and reads its title", async () => {
   server.orders.set("spring000001", "Spring order");
   openAddPage(`/add?item=${ITEM_ID}&to=order:spring000001`);
   await screen.findByRole("button", { name: "Add 1 to order Spring order" });
-  expect(await radioChecked("Order")).toBe("true");
+  expect(await chosenDestination()).toBe("Existing Order");
 });
 
 test("nothing is chosen without `to`, and an earlier commit's choice is not remembered", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}`);
-  const choose = await screen.findByRole("button", { name: "Choose where these go" });
-  expect(choose.hasAttribute("disabled")).toBe(true);
-  for (const kind of ["Collection", "Order", "Not owned"]) {
-    expect(await radioChecked(kind)).toBe("false");
-  }
+  const blocked = await screen.findByRole("button", { name: "Choose where these go" });
+  expect(blocked.hasAttribute("disabled")).toBe(true);
+  expect(await chosenDestination()).toBe("choose where");
 
-  await user.click(await radio("Collection"));
+  await choose(user, "Collection");
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
   await waitFor(() => expect(server.commits).toHaveLength(1));
   cleanup();
 
   openAddPage(`/add?item=${OTHER_ID}`);
   await screen.findByRole("button", { name: "Choose where these go" });
-  expect(await radioChecked("Collection")).toBe("false");
+  expect(await chosenDestination()).toBe("choose where");
   expect(localStorage.length).toBe(0);
 });
 
@@ -483,7 +486,7 @@ test("the toast shows the added Items' pictures and its View opens the filtered 
   });
 });
 
-test("Done on Not owned alone clears the rows with no request and says where they are", async () => {
+test("Done on Item Database alone clears the rows with no request and says where they are", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=none`);
 
@@ -494,20 +497,38 @@ test("Done on Not owned alone clears the rows with no request and says where the
   expect(screen.queryByRole("checkbox", { name: "Select Hatsune Miku" })).toBeNull();
 });
 
-test("the narrow bar's fields fold behind a control, and open for a field the commit needs", async () => {
+test("every Order field is on screen, with nothing to open first", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=collection`);
-  const toggle = await screen.findByRole("button", { name: "Collection details" });
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  await choose(user, "New Order");
 
-  await user.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(screen.queryByRole("button", { name: /Order details/u })).toBeNull();
+  for (const name of ["Status", "Shipping Method"]) {
+    expect(screen.getByRole("combobox", { name })).toBeDefined();
+  }
+  for (const name of [
+    "Order Date",
+    "Release Date",
+    "Payment Date",
+    "Shipping Date",
+    "Collection Date",
+  ]) {
+    expect(screen.getByRole("button", { name })).toBeDefined();
+  }
+  for (const name of [
+    "Shop",
+    "Shipping Fee",
+    "Taxes",
+    "Duties",
+    "Tariffs",
+    "Miscellaneous Fees",
+    "Notes",
+  ]) {
+    expect(screen.getByRole("textbox", { name })).toBeDefined();
+  }
 
-  await user.click(await radio("Order"));
-  await user.click(screen.getByRole("button", { name: "Existing Order" }));
-  expect(screen.getByRole("button", { name: "Order details" }).getAttribute("aria-expanded")).toBe(
-    "true",
-  );
+  await choose(user, "Existing Order");
+  expect(screen.getByRole("combobox", { name: "Order" })).toBeDefined();
   expect(screen.getByRole("button", { name: "Choose an Order" }).hasAttribute("disabled")).toBe(
     true,
   );

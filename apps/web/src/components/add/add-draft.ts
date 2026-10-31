@@ -1,5 +1,5 @@
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
-import { CONDITIONS } from "@myakiba/contracts/shared/constants";
+import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { parseJson } from "@myakiba/utils/parse-json";
 import { useEffect, useReducer } from "react";
 import * as z from "zod";
@@ -20,6 +20,9 @@ const rowOverridesSchema = z.object({
   shippingDate: dateOverride,
   /** A row's date wins over the shared date, and null clears the shared date for that row. */
   collectionDate: dateOverride,
+  shippingMethod: z.enum(SHIPPING_METHODS).optional(),
+  /** The release this row saves with. Unset means the Item's latest release. */
+  releaseId: z.string().optional(),
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
 });

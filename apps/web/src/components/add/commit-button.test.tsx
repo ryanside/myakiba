@@ -35,6 +35,8 @@ function renderButton({
   const calls = {
     committed: 0,
     done: 0,
+    sending: 0,
+    failed: 0,
     issues: [] as (readonly CommitIssue[])[],
   };
   render(
@@ -45,6 +47,12 @@ function renderButton({
         emailVerified={emailVerified}
         loading={loading}
         onIssues={(issues) => calls.issues.push(issues)}
+        onSending={() => {
+          calls.sending += 1;
+        }}
+        onFailed={() => {
+          calls.failed += 1;
+        }}
         onCommitted={() => {
           calls.committed += 1;
         }}
@@ -63,6 +71,8 @@ test("the label states what the click does, and a click commits", async () => {
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
   await waitFor(() => expect(calls.committed).toBe(1));
   expect(server.commits).toHaveLength(1);
+  expect(calls.sending).toBe(1);
+  expect(calls.failed).toBe(0);
 });
 
 test("Done clears without a request", async () => {
@@ -124,6 +134,7 @@ test("a failed commit keeps the rows, and retrying the same click reuses its com
   await waitFor(() => expect(server.commits).toHaveLength(1));
   await waitFor(() => expect(button.getAttribute("aria-busy")).toBeNull());
   expect(calls.committed).toBe(0);
+  expect(calls.failed).toBe(1);
 
   await user.click(button);
   await waitFor(() => expect(server.commits).toHaveLength(2));

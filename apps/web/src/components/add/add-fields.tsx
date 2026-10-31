@@ -1,6 +1,12 @@
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { useState } from "react";
 import type { ReactNode } from "react";
+import { Badge } from "@/components/reui/badge";
+import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
@@ -13,6 +19,9 @@ import {
 import { getCurrencyLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import type { Currency } from "@myakiba/contracts/shared/types";
+
+const MAX_TAGS = 20;
+const MAX_TAG_LENGTH = 50;
 
 export function LabeledField({
   id,
@@ -121,6 +130,64 @@ export function DateField({
   return (
     <LabeledField id={id} label={label}>
       <DatePicker id={id} value={value} onChange={onChange} placeholder="No date" />
+    </LabeledField>
+  );
+}
+
+/** Enter adds a trimmed, unique tag, up to 20. */
+export function TagsField({
+  id,
+  label,
+  tags,
+  onChange,
+}: {
+  readonly id: string;
+  readonly label: ReactNode;
+  readonly tags: readonly string[];
+  readonly onChange: (tags: string[]) => void;
+}) {
+  const [text, setText] = useState("");
+  return (
+    <LabeledField id={id} label={label}>
+      <div className="grid gap-2">
+        <Input
+          id={id}
+          value={text}
+          placeholder="Type a tag and press Enter"
+          maxLength={MAX_TAG_LENGTH}
+          disabled={tags.length >= MAX_TAGS}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            const tag = text.trim();
+            if (tag === "") return;
+            if (!tags.includes(tag)) onChange([...tags, tag]);
+            setText("");
+          }}
+        />
+        {tags.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <li key={tag}>
+                <Badge variant="outline" className="h-6 gap-0.5 pr-0.5 pl-1.5">
+                  <span className="[overflow-wrap:anywhere] whitespace-normal">{tag}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="size-5"
+                    aria-label={`Remove tag ${tag}`}
+                    onClick={() => onChange(tags.filter((other) => other !== tag))}
+                  >
+                    <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
+                  </Button>
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </LabeledField>
   );
 }

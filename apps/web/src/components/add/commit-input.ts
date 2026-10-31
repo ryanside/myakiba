@@ -43,7 +43,7 @@ export type OrderFields = {
   readonly notes: string;
 };
 
-export type OrderChoice =
+type OrderChoice =
   | { readonly kind: "new"; readonly fields: OrderFields }
   | {
       readonly kind: "existing";
@@ -64,7 +64,7 @@ export type Destination = {
   readonly lists: readonly ChosenList[];
 };
 
-/** The destination bar's state. Trying another kind keeps what was typed for the first one. */
+/** The destination's state. Trying another kind keeps what was typed for the first one. */
 export type DestinationForm = {
   readonly kind: Ownership["kind"] | null;
   readonly shared: SharedFields;
@@ -122,7 +122,7 @@ export const DEFAULT_ORDER_FIELDS: OrderFields = {
   notes: "",
 };
 
-/** The bar a link's `to` presets. Only the URL presets anything. */
+/** The form a link's `to` presets. Only the URL presets anything. */
 export function presetDestination(to?: AddSearch["to"]): DestinationForm {
   const base: DestinationForm = {
     kind: null,
@@ -154,7 +154,7 @@ export function presetDestination(to?: AddSearch["to"]): DestinationForm {
 export function defaultOrderTitle(titles: readonly string[]): string {
   const [first, ...rest] = titles;
   if (first === undefined) return "New Order";
-  return rest.length === 0 ? `Order · ${first}` : `Order · ${first} + ${rest.length} more`;
+  return rest.length === 0 ? first : `${first} + ${rest.length} more`;
 }
 
 /** A value `buildCommitChoices` could not send, with the id of the field that holds it. */
@@ -162,6 +162,7 @@ export type CommitIssue = { readonly fieldId: string; readonly message: string }
 
 export const priceFieldId = (itemId: string) => `add-price-${itemId}`;
 export const orderFieldId = (field: string) => `add-order-${field}`;
+export const removeButtonId = (itemId: string) => `add-remove-${itemId}`;
 
 const FEE_FIELDS = ["shippingFee", "taxes", "duties", "tariffs", "miscFees"] as const;
 
@@ -175,7 +176,7 @@ function readAmount(text: string, fieldId: string, issues: CommitIssue[]): numbe
 
 /** The details a row always carries when it becomes a Collection Item. */
 function ownedRow({ itemId, overrides }: DraftRow, issues: CommitIssue[]) {
-  const { count, condition, score, tags, notes, price = "" } = overrides;
+  const { count, condition, score, tags, notes, releaseId, price = "" } = overrides;
   return {
     itemId,
     price: readAmount(price, priceFieldId(itemId), issues),
@@ -184,11 +185,13 @@ function ownedRow({ itemId, overrides }: DraftRow, issues: CommitIssue[]) {
     ...(score !== undefined && score > 0 && { score: String(score) }),
     ...(tags !== undefined && tags.length > 0 && { tags }),
     ...(notes !== undefined && notes !== "" && { notes }),
+    ...(releaseId !== undefined && { releaseId }),
   };
 }
 
 function collectionRow(row: DraftRow, issues: CommitIssue[]) {
-  const { shop, orderDate, paymentDate, shippingDate, collectionDate } = row.overrides;
+  const { shop, orderDate, paymentDate, shippingDate, collectionDate, shippingMethod } =
+    row.overrides;
   return {
     ...ownedRow(row, issues),
     ...(shop !== undefined && shop.trim() !== "" && { shop: shop.trim() }),
@@ -196,6 +199,7 @@ function collectionRow(row: DraftRow, issues: CommitIssue[]) {
     ...(paymentDate !== undefined && { paymentDate }),
     ...(shippingDate !== undefined && { shippingDate }),
     ...(collectionDate !== undefined && { collectionDate }),
+    ...(shippingMethod !== undefined && { shippingMethod }),
   };
 }
 
@@ -273,7 +277,7 @@ export function buildCommitChoices(
 export type CommitPlan =
   /** The button cannot act yet, and its label says why. */
   | { readonly kind: "blocked"; readonly label: string }
-  /** Not owned alone: saving the pick already put the Item in the Item Database. */
+  /** Item Database alone: saving the pick already put the Item there. */
   | { readonly kind: "done"; readonly label: "Done" }
   | { readonly kind: "commit"; readonly label: string };
 
@@ -343,8 +347,8 @@ function ownershipSummary(ownership: Ownership, count: number): string | null {
   }
 }
 
-/** What the commit will write, in the Add page's own words. */
-export function commitSummary(destination: Destination, count: number): string | null {
+/** What the commit will write, in the Add page's own words, one fact per part. */
+export function commitSummary(destination: Destination, count: number): readonly string[] | null {
   const { ownership, wishlist, lists } = destination;
   if (ownership === null) return null;
   const parts = [
@@ -352,5 +356,5 @@ export function commitSummary(destination: Destination, count: number): string |
     wishlist ? "on your Wishlist" : null,
     ...lists.map((list) => `in ${quoted(list.title)}`),
   ].filter((part) => part !== null);
-  return parts.length > 0 ? parts.join(" · ") : "Already in the Item Database, so nothing to save";
+  return parts.length > 0 ? parts : ["Item Database"];
 }

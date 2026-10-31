@@ -13,6 +13,8 @@ export function CommitButton({
   emailVerified,
   loading,
   onIssues,
+  onSending,
+  onFailed,
   onCommitted,
   onDone,
 }: {
@@ -22,6 +24,8 @@ export function CommitButton({
   /** Some selected rows have no summary yet, so the commit would leave them out. */
   readonly loading: boolean;
   readonly onIssues: (issues: readonly CommitIssue[]) => void;
+  readonly onSending: () => void;
+  readonly onFailed: () => void;
   readonly onCommitted: (answer: CommitAnswer) => void;
   readonly onDone: () => void;
 }) {
@@ -40,18 +44,21 @@ export function CommitButton({
       return;
     }
     onIssues([]);
+    onSending();
     const committed = await run(
       () => commit.run(choices.value),
       (result) => result.isOk(),
     );
-    if (committed.isErr()) return;
+    if (committed.isErr()) {
+      onFailed();
+      return;
+    }
     onCommitted(committed.value);
   };
 
   return (
     <StatusButton
       type="button"
-      size="lg"
       status={status}
       disabled={plan.kind === "blocked" || loading}
       className="max-w-full min-w-0 @max-xl/bar:w-full"

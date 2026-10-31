@@ -11,6 +11,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import type { ItemRelease } from "@myakiba/contracts/item/schema";
 import type { AddItem } from "@/components/add/commit-input";
 import { Toaster } from "@/components/ui/toast";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
@@ -27,8 +28,27 @@ export const refused = (status: number, value: string): Answer => ({
 
 type CommitBody = {
   readonly commitId: string;
-  readonly rows: readonly { readonly itemId: string; readonly price: number | null }[];
-  readonly ownership: { readonly kind: string };
+  readonly rows: readonly {
+    readonly itemId: string;
+    readonly price: number | null;
+    readonly releaseId?: string;
+    readonly shippingMethod?: string;
+    readonly shop?: string;
+    readonly score?: string;
+    readonly count?: number;
+    readonly condition?: string;
+    readonly notes?: string;
+    readonly tags?: readonly string[];
+    readonly orderDate?: string | null;
+    readonly paymentDate?: string | null;
+    readonly shippingDate?: string | null;
+    readonly collectionDate?: string | null;
+  }[];
+  readonly ownership: {
+    readonly kind: string;
+    readonly shared?: Readonly<Record<string, string | number | null>>;
+    readonly order?: { readonly fields?: Readonly<Record<string, string | number | null>> };
+  };
   readonly wishlist: boolean;
   readonly listIds: readonly string[];
 };
@@ -58,8 +78,13 @@ const answerOf = (body: CommitBody) =>
   });
 
 export const server = {
+  releases: new Map<string, readonly ItemRelease[]>(),
+  /** What a stub page shows under its heading, by its path. */
+  pages: new Map<string, () => ReactNode>(),
   items: new Map<string, AddItem>(),
   itemsFailure: null as Answer | null,
+  /** Holds every read of the rows' Items until it resolves. */
+  itemsGate: null as Promise<void> | null,
   searches: [] as string[],
   search: async (text: string): Promise<Answer> => searchAnswer(text),
   commits: [] as CommitBody[],
@@ -68,12 +93,17 @@ export const server = {
   uploadAnswer: async (mfcItemId: number): Promise<Answer> =>
     ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId }),
   orders: new Map<string, string>(),
+  orderImages: new Map<string, readonly string[]>(),
   lists: [] as { readonly id: string; readonly title: string }[],
+  createdLists: [] as string[],
 };
 
 export function resetServer() {
+  server.releases.clear();
+  server.pages.clear();
   server.items.clear();
   server.itemsFailure = null;
+  server.itemsGate = null;
   server.searches.length = 0;
   server.search = async (text) => searchAnswer(text);
   server.commits.length = 0;
@@ -82,7 +112,9 @@ export function resetServer() {
   server.uploadAnswer = async (mfcItemId) =>
     ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId });
   server.orders.clear();
+  server.orderImages.clear();
   server.lists.length = 0;
+  server.createdLists.length = 0;
 }
 
 await mock.module("@/lib/treaty-client", () => ({
@@ -90,14 +122,18 @@ await mock.module("@/lib/treaty-client", () => ({
     api: {
       add: {
         items: {
-          get: async ({ query }: { readonly query: { readonly ids: readonly string[] } }) =>
-            server.itemsFailure ??
-            ok({
-              items: query.ids.flatMap((id) => {
-                const item = server.items.get(id);
-                return item ? [item] : [];
-              }),
-            }),
+          get: async ({ query }: { readonly query: { readonly ids: readonly string[] } }) => {
+            await server.itemsGate;
+            return (
+              server.itemsFailure ??
+              ok({
+                items: query.ids.flatMap((id) => {
+                  const item = server.items.get(id);
+                  return item ? [item] : [];
+                }),
+              })
+            );
+          },
         },
         commit: {
           post: async (body: CommitBody) => {
@@ -116,7 +152,11 @@ await mock.module("@/lib/treaty-client", () => ({
         orders: {
           get: async () =>
             ok({
-              orderIdsAndTitles: [...server.orders].map(([id, title]) => ({ id, title })),
+              orderIdsAndTitles: [...server.orders].map(([id, title]) => ({
+                id,
+                title,
+                images: server.orderImages.get(id) ?? [],
+              })),
             }),
         },
       },
@@ -125,11 +165,25 @@ await mock.module("@/lib/treaty-client", () => ({
           const title = server.orders.get(orderId);
           return title === undefined
             ? refused(404, "Order not found")
-            : ok({ orderId, title, status: "Ordered" });
+            : ok({
+                orderId,
+                title,
+                status: "Ordered",
+                images: server.orderImages.get(orderId) ?? [],
+              });
+        },
+      }),
+      item: ({ id }: { readonly id: string }) => ({
+        releases: {
+          get: async () => ok({ releases: server.releases.get(id) ?? [] }),
         },
       }),
       lists: {
         get: async () => ok({ items: server.lists, totalCount: server.lists.length }),
+        post: async ({ title }: { readonly title: string }) => {
+          server.createdLists.push(title);
+          return ok({ id: `created-${server.createdLists.length}`, title });
+        },
       },
       "mfc-items": {
         post: async ({ mfcItemId }: { readonly mfcItemId: number }) => {
@@ -200,7 +254,16 @@ function appRouter(entry: string, user: typeof USER, content: () => ReactNode) {
     component: Outlet,
   });
   const stub = (path: string) =>
-    createRoute({ getParentRoute: () => app, path, component: () => <h1>{path}</h1> });
+    createRoute({
+      getParentRoute: () => app,
+      path,
+      component: () => (
+        <>
+          <h1>{path}</h1>
+          {server.pages.get(path)?.()}
+        </>
+      ),
+    });
   const add = createRoute({
     getParentRoute: () => app,
     path: "/add",

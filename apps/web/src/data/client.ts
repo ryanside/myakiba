@@ -5,6 +5,7 @@ import {
   queryOptions,
   useInfiniteQuery,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -193,6 +194,14 @@ export function useRead<F extends Family, Input, Data, Failure>(
 ) {
   const enabled = readSwitch?.enabled;
   return useQuery({ ...read.options(input as Input), ...(enabled !== undefined && { enabled }) });
+}
+
+/** One read per input, for a list whose length changes. Each input shares its read's cache. */
+export function useReads<F extends Family, Input, Data, Failure>(
+  read: RootedRead<F, Input, Data, Failure>,
+  inputs: readonly Input[],
+) {
+  return useQueries({ queries: inputs.map((input) => read.options(input)) });
 }
 
 type RootedInfiniteReadSpec<F extends Family, Input, Page, Failure> = {
