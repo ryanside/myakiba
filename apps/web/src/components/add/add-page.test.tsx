@@ -509,11 +509,11 @@ test("the toast shows the added Items' pictures and its View opens the filtered 
   });
 });
 
-test("Done on Item Database alone clears the rows with no request and says where they are", async () => {
+test("Keep on Item Database alone clears the rows with no request and says where they are", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=none`);
 
-  await user.click(await screen.findByRole("button", { name: "Done" }));
+  await user.click(await screen.findByRole("button", { name: "Keep 1 in Item Database" }));
 
   await screen.findByText("This item is in the Item Database");
   expect(server.commits).toEqual([]);

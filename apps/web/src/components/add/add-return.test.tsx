@@ -86,13 +86,13 @@ test("the way back leaves no Add page behind it", async () => {
   expect(router.history.length).toBe(before);
 });
 
-test("Done goes back too, since saving the pick already added the Item", async () => {
+test("Keep in Item Database goes back too, since saving the pick already added the Item", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   const router = openAddPage(addTo("/items", "none"));
   await rowsLoaded();
 
-  await user.click(screen.getByRole("button", { name: "Done" }));
+  await user.click(screen.getByRole("button", { name: "Keep 1 in Item Database" }));
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/items"));
   await screen.findByText("This item is in the Item Database");

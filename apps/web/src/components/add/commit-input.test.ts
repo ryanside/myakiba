@@ -224,8 +224,11 @@ describe("commitPlan", () => {
     expect(commitPlan(destination, 4, verified)).toEqual({ kind: "commit", label });
   });
 
-  test("Not owned alone is Done", () => {
-    expect(commitPlan(to({ kind: "none" }), 4, verified)).toEqual({ kind: "done", label: "Done" });
+  test("Not owned alone keeps them in Item Database", () => {
+    expect(commitPlan(to({ kind: "none" }), 4, verified)).toEqual({
+      kind: "done",
+      label: "Keep 4 in Item Database",
+    });
   });
 
   test("it waits for a choice with an effect", () => {

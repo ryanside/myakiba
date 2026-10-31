@@ -1347,12 +1347,12 @@ test("the search says how many it found, and aria-expanded follows the panel", a
   expect(screen.queryByRole("listbox")).toBeNull();
 });
 
-test("View on a single Done Item opens that Item's page", async () => {
+test("View on a single kept Item opens that Item's page", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   const router = openAddPage("/add?to=none");
   await rowsLoaded();
-  await click(user, "Done");
+  await click(user, "Keep 1 in Item Database");
 
   await screen.findByText("This item is in the Item Database");
   const notifications = screen.getByRole("region", { name: /Notifications/u });

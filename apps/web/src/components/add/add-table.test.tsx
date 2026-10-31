@@ -187,7 +187,7 @@ test("with nothing chosen, details wait and say why, and Item Database hides the
 
   await user.click(screen.getByRole("combobox", { name: "Where these go" }));
   await user.click(await screen.findByRole("option", { name: "Item Database" }));
-  await screen.findByRole("button", { name: "Done" });
+  await screen.findByRole("button", { name: "Keep 1 in Item Database" });
   expect(screen.queryByRole("textbox", { name: "Price for Miku" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Details for Miku" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Fill all" })).toBeNull();

@@ -280,7 +280,7 @@ export type CommitPlan =
   /** The button cannot act yet, and its label says why. */
   | { readonly kind: "blocked"; readonly label: string }
   /** Item Database alone: saving the pick already put the Item there. */
-  | { readonly kind: "done"; readonly label: "Done" }
+  | { readonly kind: "done"; readonly label: string }
   | { readonly kind: "commit"; readonly label: string };
 
 export const quoted = (text: string) => `‘${text}’`;
@@ -321,7 +321,7 @@ export function commitPlan(
             kind: "commit",
             label: `Add ${count} to ${namedTargets(wishlist ? "Wishlist" : null, lists)}`,
           }
-        : { kind: "done", label: "Done" };
+        : { kind: "done", label: `Keep ${count} in Item Database` };
   }
 }
 

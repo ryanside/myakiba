@@ -76,10 +76,10 @@ test("the label states what the click does, and a click commits", async () => {
   expect(calls.failed).toBe(0);
 });
 
-test("Done clears without a request", async () => {
+test("Keep in Item Database clears without a request", async () => {
   const user = userEvent.setup();
   const calls = renderButton({ destination: NOT_OWNED });
-  await user.click(screen.getByRole("button", { name: "Done" }));
+  await user.click(screen.getByRole("button", { name: "Keep 1 in Item Database" }));
   expect(calls.done).toBe(1);
   expect(server.commits).toEqual([]);
 });
