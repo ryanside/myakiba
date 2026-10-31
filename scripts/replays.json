@@ -1,6 +1,12 @@
 {
   "test": [
     {
+      "fix": "4ecb9a9e829a23540f1423910487820ff59093b6",
+      "bug": "The first letter typed after an Add row arrived was lost, because the search measured its room in the capture phase and React rendered before the input's listener.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": ["a letter typed as the search's room changes is kept"]
+    },
+    {
       "fix": "4c2862563b5d4ec1a2d51939a9520a9bf778d34c",
       "bug": "Clicking the Add page's prefilled Order title and typing inserted into it, so a save named the Order with both.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
