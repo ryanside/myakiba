@@ -1,4 +1,4 @@
-import { ArrowUpDownIcon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -10,6 +10,7 @@ import { DebouncedInput } from "@/components/debounced-input";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command";
 import { DatePicker } from "@/components/ui/date-picker";
+import { FieldError } from "@/components/ui/field";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -20,6 +21,7 @@ import { searches } from "@/data/resources/search";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
+import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { AmountInput, DateField, EnumSelect, LabeledField, OrderStatusSelect } from "./add-fields";
 import { orderFieldId } from "./commit-input";
@@ -270,27 +272,36 @@ function ExistingOrderPicker({
   const results = data?.pages.flatMap((page) => page.orderIdsAndTitles) ?? [];
 
   return (
-    <LabeledField id={fieldId} label="Order" error={issue} className="max-w-md">
+    <div className="grid gap-1">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
             <Button
               id={fieldId}
               type="button"
-              variant="outline"
+              variant="ghost"
               role="combobox"
+              aria-label="Order"
               aria-expanded={open}
               aria-controls={listId}
               aria-invalid={issue === undefined ? undefined : true}
-              className="w-full min-w-0 justify-between font-normal"
+              aria-describedby={issue === undefined ? undefined : `${fieldId}-error`}
+              className="w-full min-w-0 justify-between pl-0 font-medium"
             >
-              <span className="min-w-0 truncate" title={order?.title ?? undefined}>
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  order === null && "font-normal text-muted-foreground",
+                )}
+                title={order?.title ?? undefined}
+              >
                 {order ? (order.title ?? "Loading the Order…") : "Choose an Order"}
               </span>
               <HugeiconsIcon
-                icon={ArrowUpDownIcon}
+                icon={UnfoldMoreIcon}
                 data-icon="inline-end"
-                className="shrink-0 opacity-50"
+                strokeWidth={2}
+                className="shrink-0 text-muted-foreground"
                 aria-hidden="true"
               />
             </Button>
@@ -298,7 +309,7 @@ function ExistingOrderPicker({
         />
         <PopoverContent
           aria-label="Choose an Order"
-          className="w-(--anchor-width) min-w-64 p-0"
+          className="w-(--anchor-width) max-w-md min-w-64 p-0"
           align="start"
         >
           <Command label="Search Orders by title" shouldFilter={false}>
@@ -348,6 +359,11 @@ function ExistingOrderPicker({
           </Command>
         </PopoverContent>
       </Popover>
-    </LabeledField>
+      {issue === undefined ? null : (
+        <FieldError id={`${fieldId}-error`} className="text-xs">
+          {issue}
+        </FieldError>
+      )}
+    </div>
   );
 }

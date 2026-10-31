@@ -72,12 +72,11 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
 export const THUMBNAIL =
   "size-8 shrink-0 rounded-md outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10";
 
-// A cell of the Collection and Orders grids: plain text that takes a surface when it is hovered or
-// edited. It stays an input throughout, so the table's keys and an issue's focus always find it. The
-// surface reaches past the text, which stays on the column's edge. A touch screen has no hover, so
-// there it always shows its edge.
+// Reads and edits as the Collection grid's Price and Count cells do: plain text, a surface on hover,
+// the app's Input while typing. It stays an input throughout, so the table's keys and an issue's focus
+// always find it. A touch screen has no hover, so there it always shows its edge.
 const INLINE_CELL =
-  "-ms-2 w-[calc(100%+0.5rem)] border-transparent bg-transparent ps-2 text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control dark:bg-transparent [@media(hover:none)]:ms-0 [@media(hover:none)]:w-full [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control";
+  "cursor-text border-transparent bg-transparent pl-0 text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
 
 const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
 
@@ -223,7 +222,8 @@ export function RowField({
             max={999}
             className={cn(
               INLINE_CELL,
-              "tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+              // The stepper shows only once the cell is in use, as it does in the grid.
+              "tabular-nums [appearance:textfield] hover:[appearance:auto] focus-visible:[appearance:auto]",
             )}
             onFocus={selectAll}
             value={overrides.count ?? ""}

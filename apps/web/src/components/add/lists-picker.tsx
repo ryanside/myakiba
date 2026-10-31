@@ -1,4 +1,4 @@
-import { Add01Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_COMMIT_LISTS } from "@myakiba/contracts/add/constants";
 import { useId, useState } from "react";
@@ -46,7 +46,7 @@ export function ListsPicker({
                 {triggerLabel(chosen)}
               </span>
               <HugeiconsIcon
-                icon={ArrowUpDownIcon}
+                icon={UnfoldMoreIcon}
                 data-icon="inline-end"
                 className="shrink-0 opacity-50"
                 aria-hidden="true"
