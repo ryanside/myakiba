@@ -236,6 +236,24 @@ test("a new Order's title sits beside its picture in place of a heading, and wra
   }
 });
 
+test("typing on the prefilled Order title replaces it, and a cleared one falls back", async () => {
+  draft(ITEM_ID, OTHER_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=order-new");
+  await rowsLoaded();
+  const title = screen.getByRole("textbox", { name: "Order title" }) as HTMLTextAreaElement;
+  expect(title.placeholder).toBe("Hatsune Miku + 1 more");
+
+  await user.click(title);
+  await user.keyboard("Spring preorders");
+  expect(title.value).toBe("Spring preorders");
+
+  await user.clear(title);
+  await click(user, "Create order with 2");
+  await screen.findByText("Created order ‘Hatsune Miku + 1 more’");
+  expect(server.commits[0]?.ownership.order?.fields?.title).toBe("Hatsune Miku + 1 more");
+});
+
 test("Enter and a pasted line break keep the title to one paragraph", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();

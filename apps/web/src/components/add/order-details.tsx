@@ -78,25 +78,29 @@ const TITLE_TEXT =
 
 /**
  * The Order's title, edited in place. It wraps, so it is a text area, and it stays one paragraph.
- * The hidden copy behind it sets the height, in every browser.
+ * The hidden copy behind it sets the height, in every browser. The written title is a placeholder,
+ * so typing replaces it and a cleared title goes back to it.
  */
 function OrderTitle({
   value,
+  placeholder,
   onChange,
 }: {
   readonly value: string;
+  readonly placeholder: string;
   readonly onChange: (value: string) => void;
 }) {
   return (
     <div className="-ms-2 grid min-w-0 flex-1">
       <span aria-hidden="true" className={cn(TITLE_TEXT, "invisible whitespace-pre-wrap")}>
-        {`${value} `}
+        {`${value || placeholder} `}
       </span>
       <textarea
         id={orderFieldId("title")}
         aria-label="Order title"
         rows={1}
         value={value}
+        placeholder={placeholder}
         className={cn(
           TITLE_TEXT,
           "resize-none overflow-hidden rounded-lg bg-transparent outline-none placeholder:text-muted-foreground hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -177,7 +181,8 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
         images={c.selectedRows.flatMap(({ item }) => (item.image ? [item.image] : []))}
         title={
           <OrderTitle
-            value={fields.title ?? c.newOrderTitle}
+            value={fields.title ?? ""}
+            placeholder={c.newOrderTitle}
             onChange={(title) => set({ title })}
           />
         }
