@@ -43,7 +43,7 @@ export function LabeledField({
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error ? (
-        <FieldError id={`${id}-error`} className="text-xs">
+        <FieldError id={`${id}-error`} className="text-xs whitespace-normal">
           {error}
         </FieldError>
       ) : null}

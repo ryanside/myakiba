@@ -2,9 +2,7 @@ import { useState } from "react";
 import { PageHeader, formatCount } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrencyLocale } from "@/lib/locale";
-import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
-import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useAddController } from "./add-controller";
 import type { AddController } from "./add-controller";
@@ -14,6 +12,7 @@ import { CommitButton } from "./commit-button";
 import { commitSummary } from "./commit-input";
 import { DestinationSentence } from "./destination-sentence";
 import { feeTotal, OrderDetails } from "./order-details";
+import { plannedPrice } from "./row-fields";
 
 // The header and this page's padding take 6rem, and the inset sidebar's margin 1rem more. The page
 // scrolls inside this height, so only the bar stays in view. Below 36rem tall it flows as a whole.
@@ -28,14 +27,9 @@ function plannedTotal(c: AddController): number | null {
   const { order, kind } = c.resolvedForm;
   let total = kind === "order" && order.kind === "new" ? feeTotal(order.fields) : 0;
   for (const { row, item } of c.selectedRows) {
-    const text = (row.overrides.price ?? "").trim();
-    if (text === "") {
-      total += releasePriceDefault(c.releaseOf(row, item), c.currency);
-      continue;
-    }
-    const parsed = parseMoneyInputToMinorUnits(text);
-    if (parsed.isErr()) return null;
-    total += parsed.value;
+    const price = plannedPrice(row, c.releaseOf(row, item), c.currency);
+    if (price === null) return null;
+    total += price;
   }
   return total;
 }
@@ -66,16 +60,16 @@ function CommitBar({ controller: c }: { readonly controller: AddController }) {
         ))}
       </ul>
       {showsTotal && (c.itemsLoading || total !== null) ? (
-        <p className="text-sm tabular-nums">
+        <div className="text-sm tabular-nums">
           Total {/* Holds the room of an ordinary total, so the Items loading moves nothing. */}
-          <span className="inline-block min-w-20">
+          <div className="inline-block min-w-20">
             {total === null ? (
               <Skeleton className="inline-block h-4 w-16 align-middle" />
             ) : (
               formatCurrencyFromMinorUnits(total, c.currency, getCurrencyLocale(c.currency))
             )}
-          </span>
-        </p>
+          </div>
+        </div>
       ) : null}
       <CommitButton {...c.commitProps} />
     </section>

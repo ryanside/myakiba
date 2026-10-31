@@ -1,7 +1,9 @@
 import { releasePriceDefault } from "@myakiba/contracts/add/schema";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { Result } from "better-result";
 import type { FocusEvent, ReactNode } from "react";
+import { SelectCell } from "@/components/cells/select-cell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrencyLocale } from "@/lib/locale";
+import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow, RowOverrides } from "./add-draft";
@@ -40,8 +43,6 @@ export type Field = {
   readonly label: string;
   /** Which destinations this field means anything for. Null is "nothing chosen yet". */
   readonly kinds: readonly DestinationForm["kind"][];
-  /** Tailwind width of its table field. A field without one lives in the open row. */
-  readonly width?: string;
 };
 
 const COLLECTION_ONLY = ["collection"] as const;
@@ -49,9 +50,9 @@ const OWNED = ["collection", "order"] as const;
 const ALWAYS = ["collection", "order", null] as const;
 
 export const FIELD = {
-  price: { id: "price", label: "Price", width: "w-36 min-w-36", kinds: ALWAYS },
-  count: { id: "count", label: "Count", width: "w-20 min-w-20", kinds: ALWAYS },
-  condition: { id: "condition", label: "Condition", width: "w-36 min-w-36", kinds: ALWAYS },
+  price: { id: "price", label: "Price", kinds: ALWAYS },
+  count: { id: "count", label: "Count", kinds: ALWAYS },
+  condition: { id: "condition", label: "Condition", kinds: ALWAYS },
   shop: { id: "shop", label: "Shop", kinds: COLLECTION_ONLY },
   shipping: { id: "shipping", label: "Shipping Method", kinds: COLLECTION_ONLY },
   orderDate: { id: "orderDate", label: "Order Date", kinds: COLLECTION_ONLY },
@@ -69,14 +70,13 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
   return all.filter((field) => field.kinds.includes(kind));
 }
 
-export const THUMBNAIL =
-  "size-8 shrink-0 rounded-md outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10";
+export const THUMBNAIL = "size-8 shrink-0 rounded-md";
 
 // Reads and edits as the Collection grid's Price and Count cells do: plain text, a surface on hover,
 // the app's Input while typing. It stays an input throughout, so the table's keys and an issue's focus
 // always find it. A touch screen has no hover, so there it always shows its edge.
 const INLINE_CELL =
-  "cursor-text border-transparent bg-transparent pl-0 text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
+  "cursor-text border-transparent bg-transparent pl-0 font-medium text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control focus-visible:font-normal dark:hover:bg-muted/50 [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
 
 const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
 
@@ -107,6 +107,18 @@ const fieldId = (field: FieldId, itemId: string) =>
 export function readCount(text: string): number | undefined {
   const count = Number.parseInt(text, 10);
   return Number.isNaN(count) ? undefined : Math.min(Math.max(count, 1), 999);
+}
+
+/** What a row's Price will save, or null when the typed text cannot be read. */
+export function plannedPrice(
+  row: DraftRow,
+  release: AddItem["latestRelease"],
+  currency: AddController["currency"],
+): number | null {
+  const text = (row.overrides.price ?? "").trim();
+  if (text === "") return releasePriceDefault(release, currency);
+  const parsed = parseMoneyInputToMinorUnits(text);
+  return parsed.isOk() ? parsed.value : null;
 }
 
 /** What a blank Price saves. A release in another currency saves nothing, so it reads as no price. */
@@ -146,7 +158,7 @@ export function hasOwnValue(row: DraftRow, field: FieldId): boolean {
 
 /**
  * One field of one row. A field with a column sits under its header, so its label is only for screen
- * readers until the table reflows to cards. The others sit in the open row with a visible label.
+ * readers. The others sit in the open row with a visible label.
  */
 export function RowField({
   field,
@@ -171,10 +183,9 @@ export function RowField({
   const shared = form.kind === "collection" ? form.shared : null;
   const onEdit = (next: RowOverrides) => c.edit(itemId, next);
   const cellLabel = (
-    <>
-      <span className="@3xl/rows:sr-only">{field.label}</span>
-      <span className="sr-only"> for {title}</span>
-    </>
+    <span className="sr-only">
+      {field.label} for {title}
+    </span>
   );
   const openLabel = (
     <>
@@ -183,7 +194,7 @@ export function RowField({
     </>
   );
   // A label only screen readers get takes no room, so it leaves no gap above the field.
-  const cellGap = "@3xl/rows:gap-0";
+  const cellGap = "gap-0";
 
   switch (field.id) {
     case "price": {
@@ -235,23 +246,15 @@ export function RowField({
     case "condition":
       return (
         <LabeledField id={id} label={cellLabel} className={cellGap}>
-          <Select
+          <SelectCell
+            id={id}
             value={overrides.condition ?? shared?.condition ?? "New"}
-            onValueChange={(next) => {
-              if (next !== null) onEdit({ condition: next });
+            options={CONDITIONS}
+            onSubmit={async (condition) => {
+              onEdit({ condition });
+              return Result.ok();
             }}
-          >
-            <SelectTrigger id={id} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONDITIONS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </LabeledField>
       );
     case "shop":

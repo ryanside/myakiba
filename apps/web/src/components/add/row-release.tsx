@@ -93,7 +93,7 @@ export function ReleaseField({
         >
           <SelectValue placeholder="No release">
             {release ? (
-              <span className="flex w-full min-w-0 items-center gap-3 text-muted-foreground tabular-nums @max-3xl/rows:gap-1.5 @max-3xl/rows:text-xs">
+              <span className="flex w-full min-w-0 items-center gap-3 text-muted-foreground tabular-nums @max-3xl/grid:gap-1.5 @max-3xl/grid:text-xs">
                 <span className="shrink-0 font-medium text-foreground">
                   {formatDateOnlyForDisplay(release.date, c.dateFormat)}
                 </span>

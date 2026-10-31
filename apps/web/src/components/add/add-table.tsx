@@ -1,13 +1,33 @@
-import { ArrowDown01Icon, Cancel01Icon, Image01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcItemUrl } from "@myakiba/contracts/add/constants";
 import { Link } from "@tanstack/react-router";
-import { Fragment, useState } from "react";
-import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import {
+  functionalUpdate,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import type {
+  CellContext,
+  ColumnDef,
+  ColumnSizingState,
+  RowModel,
+  SortingState,
+  Table,
+  Updater,
+} from "@tanstack/react-table";
+import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
+import type { ComponentType, CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
+import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { PickRow } from "@/data/picks";
 import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
@@ -18,16 +38,82 @@ import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
-import { FIELD, FieldGroup, fieldsFor, RowField, THUMBNAIL } from "./row-fields";
+import { FIELD, FieldGroup, fieldsFor, plannedPrice, RowField, THUMBNAIL } from "./row-fields";
 import type { Field } from "./row-fields";
 import { ReleaseField } from "./row-release";
 
-// The Collection grid's header row. Its tint is a gradient so a sticky cell stays opaque. It sticks
-// at -top-1 because the page's scroller has 4px of padding that a sticky inset does not cross.
-const HEAD_CELL =
-  "h-9 bg-card bg-linear-to-r from-muted/40 to-muted/40 font-normal text-secondary-foreground/80";
+type ItemRow = {
+  readonly kind: "item";
+  readonly id: string;
+  readonly row: DraftRow;
+  readonly item: AddItem;
+  readonly release: AddItem["latestRelease"];
+  /** What its sortable columns sort by, which a blank field takes from its default. */
+  readonly price: number | undefined;
+  readonly count: number;
+  readonly condition: string;
+};
 
-const ROW_LINE = "border-t border-border/60 @max-3xl/rows:border-0";
+/** What one line of the table holds. Only an `item` has fields, so only it can be selected. */
+type AddRow =
+  | ItemRow
+  | { readonly kind: "loading"; readonly id: string; readonly row: DraftRow }
+  | {
+      readonly kind: "missing";
+      readonly id: string;
+      readonly lookup: Exclude<AddController["lookup"], "loading">;
+    }
+  | { readonly kind: "pick"; readonly id: string; readonly pick: PickRow };
+
+function tableRows(c: AddController): AddRow[] {
+  const form = c.resolvedForm;
+  const shared = form.kind === "collection" ? form.shared : null;
+  const picks = c.picks.map((pick): AddRow => ({
+    kind: "pick",
+    id: `pick-${pick.mfcItemId}`,
+    pick,
+  }));
+  const rows = c.rows.map((row): AddRow => {
+    const item = c.items.get(row.itemId);
+    if (item) {
+      const release = c.releaseOf(row, item);
+      return {
+        kind: "item",
+        id: row.itemId,
+        row,
+        item,
+        release,
+        price: plannedPrice(row, release, c.currency) ?? undefined,
+        count: row.overrides.count ?? shared?.count ?? 1,
+        condition: row.overrides.condition ?? shared?.condition ?? "New",
+      };
+    }
+    return c.lookup === "loading"
+      ? { kind: "loading", id: row.itemId, row }
+      : { kind: "missing", id: row.itemId, lookup: c.lookup };
+  });
+  return [...picks, ...rows];
+}
+
+type AddTableState = {
+  readonly c: AddController;
+  /** Details exist only where the rows become something the user owns. */
+  readonly owned: boolean;
+  readonly openRows: ReadonlySet<string>;
+  readonly toggleDetails: (itemId: string) => void;
+};
+
+// Columns are constants that read this, as a column array rebuilt per render would give every cell a
+// new component type, which remounts it and takes focus from the input on every keystroke.
+const AddTableContext = createContext<AddTableState | null>(null);
+
+function useAddTable(): AddTableState {
+  const state = useContext(AddTableContext);
+  if (state === null) throw new Error("A cell of the Add table rendered outside of it");
+  return state;
+}
+
+const EDITABLE_CELLS = '[data-col="price"], [data-col="count"], [data-col="condition"]';
 
 const isVisible = (element: HTMLElement) => element.checkVisibility();
 
@@ -66,17 +152,17 @@ function caretAtEdge(input: HTMLInputElement, key: "ArrowLeft" | "ArrowRight"): 
 
 function nextDataCell(from: HTMLElement): HTMLElement | undefined {
   const row = from.closest("tr");
-  const cell = from.closest("[data-add-cell]");
+  const cell = from.closest(EDITABLE_CELLS);
   if (!row || !cell) return undefined;
-  const inRow = [...row.querySelectorAll<HTMLElement>("[data-add-cell]")];
+  const inRow = [...row.querySelectorAll<HTMLElement>(EDITABLE_CELLS)];
   const later = inRow.slice(inRow.indexOf(cell as HTMLElement) + 1);
   for (const candidate of later) {
     const [first] = focusablesIn(candidate);
     if (first) return first;
   }
-  const rows = [...(row.parentElement?.querySelectorAll("tr[data-add-row]") ?? [])];
+  const rows = [...(row.parentElement?.querySelectorAll("tr[data-row]") ?? [])];
   for (const candidate of rows.slice(rows.indexOf(row) + 1)) {
-    for (const nextCell of candidate.querySelectorAll<HTMLElement>("[data-add-cell]")) {
+    for (const nextCell of candidate.querySelectorAll<HTMLElement>(EDITABLE_CELLS)) {
       const [first] = focusablesIn(nextCell);
       if (first) return first;
     }
@@ -89,12 +175,12 @@ function nextDataCell(from: HTMLElement): HTMLElement | undefined {
  * column, Enter moves on from an input or a closed select. Keys pressed in a portaled popup bubble
  * here through React but are not inside the table, so they stay the popup's.
  */
-function onTableKeys(event: KeyboardEvent<HTMLTableElement>) {
+function onTableKeys(event: KeyboardEvent<HTMLElement>) {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  const table = event.currentTarget;
+  const grid = event.currentTarget;
   const target = event.target as HTMLElement;
-  if (!table.contains(target)) return;
-  const row = target.closest<HTMLElement>("tr[data-add-row]");
+  if (!grid.contains(target)) return;
+  const row = target.closest<HTMLElement>("tr[data-row]");
   if (!row) return;
 
   const stop = () => {
@@ -115,12 +201,12 @@ function onTableKeys(event: KeyboardEvent<HTMLTableElement>) {
     case "ArrowUp":
     case "ArrowDown": {
       stop();
-      const column = target.closest<HTMLElement>("[data-add-col]")?.dataset.addCol;
+      const column = target.closest<HTMLElement>("[data-col]")?.dataset.col;
       if (column === undefined) return;
-      const rows = [...table.querySelectorAll<HTMLElement>("tr[data-add-row]")];
+      const rows = [...grid.querySelectorAll<HTMLElement>("tr[data-row]")];
       const step = event.key === "ArrowUp" ? -1 : 1;
       for (let index = rows.indexOf(row) + step; rows[index]; index += step) {
-        const cell = rows[index]?.querySelector(`[data-add-col="${column}"]`);
+        const cell = rows[index]?.querySelector(`[data-col="${column}"]`);
         const [first] = cell ? focusablesIn(cell) : [];
         if (first) {
           focusCell(first);
@@ -134,257 +220,11 @@ function onTableKeys(event: KeyboardEvent<HTMLTableElement>) {
         isTextEntry(target) ||
         (target.getAttribute("role") === "combobox" &&
           target.getAttribute("aria-expanded") !== "true");
-      if (!moves || !target.closest("[data-add-cell]")) return;
+      if (!moves || !target.closest(EDITABLE_CELLS)) return;
       stop();
       focusCell(nextDataCell(target));
     }
   }
-}
-
-/**
- * The search's panel drops from the toolbar, where the page's scroller would cut it or the phone's
- * fixed bar would cover it. So it gets the room below the input, after the page moves the input up
- * when that room is too small.
- */
-function useSearchRoom() {
-  const [room, setRoom] = useState<number | null>(null);
-  const measure = (wrapper: HTMLElement) => {
-    const pane = wrapper.closest("[data-add-pane]");
-    if (!pane) return;
-    const bar = document.querySelector('section[aria-label="Commit"]');
-    const paneScrolls = getComputedStyle(pane).overflowY !== "visible";
-    const limit = () => {
-      if (paneScrolls) return pane.getBoundingClientRect().bottom;
-      return bar && getComputedStyle(bar).position === "fixed"
-        ? bar.getBoundingClientRect().top
-        : window.innerHeight;
-    };
-    const below = () => limit() - wrapper.getBoundingClientRect().bottom;
-    if (below() < 288) wrapper.scrollIntoView({ block: "start" });
-    setRoom(Math.max(below() - 8, 160));
-  };
-  return { room, measure };
-}
-
-/** The toolbar and every row. The search lives here so it lines up with what it adds to. */
-export function AddItems({
-  controller: c,
-  onAnnounce,
-}: {
-  readonly controller: AddController;
-  readonly onAnnounce: (message: string) => void;
-}) {
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
-  const search = useSearchRoom();
-
-  const { kind } = c.resolvedForm;
-  const owned = kind === "collection" || kind === "order";
-  const fields = fieldsFor(kind);
-  const columns = fields.filter((field) => field.width !== undefined);
-  const selectable = c.rows.filter((row) => c.items.has(row.itemId));
-  const selectedCount = selectable.filter((row) => row.selected).length;
-  const span = columns.length + 2;
-
-  const toggleDetails = (itemId: string) => {
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (!next.delete(itemId)) next.add(itemId);
-      return next;
-    });
-  };
-
-  return (
-    <div className={cn("flex flex-col gap-2.5", !c.hasRows && "min-h-0 flex-1")}>
-      <div className="relative z-30 flex flex-wrap items-center gap-2">
-        {/* AddSearch insets its input by 4px, so this puts the input on the table's edge. */}
-        <div
-          className="-mt-1 -ms-1 w-full min-w-0 scroll-mt-2 @2xl/add:w-xs [&_[role=presentation]]:max-h-(--search-room) @2xl/add:[&_[role=presentation]]:end-auto @2xl/add:[&_[role=presentation]]:w-lg"
-          style={
-            search.room === null
-              ? undefined
-              : ({ "--search-room": `${search.room}px` } as CSSProperties)
-          }
-          onFocus={(event) => search.measure(event.currentTarget)}
-          onInput={(event) => search.measure(event.currentTarget)}
-        >
-          <AddSearch {...c.searchProps} />
-        </div>
-        {fields.length > 0 ? (
-          <div className="ms-auto flex items-center gap-2 @max-2xl/add:ms-0 @max-2xl/add:w-full">
-            <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
-          </div>
-        ) : null}
-      </div>
-
-      {c.hasRows ? (
-        <div className="@container/rows isolate overflow-clip rounded-xl bg-card ring-1 ring-foreground/10">
-          <table
-            onKeyDownCapture={onTableKeys}
-            className="w-full border-separate border-spacing-0 text-sm @3xl/rows:table-fixed @max-3xl/rows:block"
-          >
-            <caption className="sr-only">
-              Items to add. Arrow keys move between cells, Enter moves on, Space opens a menu.
-            </caption>
-            {c.rows.length > 0 ? (
-              <thead className="@max-3xl/rows:block">
-                <tr
-                  data-add-row="head"
-                  className="@max-3xl/rows:flex @max-3xl/rows:items-center @max-3xl/rows:bg-muted/40 @max-3xl/rows:px-3 @max-3xl/rows:py-2"
-                >
-                  <th
-                    scope="col"
-                    data-add-col="item"
-                    className={cn(
-                      HEAD_CELL,
-                      "z-20 px-3 text-start @3xl/rows:sticky @3xl/rows:-top-1 @max-3xl/rows:block @max-3xl/rows:h-auto @max-3xl/rows:bg-transparent @max-3xl/rows:bg-none @max-3xl/rows:px-0",
-                    )}
-                  >
-                    <span className="flex items-center gap-3">
-                      <Checkbox
-                        aria-label="Select all items"
-                        checked={selectable.length > 0 && selectedCount === selectable.length}
-                        indeterminate={selectedCount > 0 && selectedCount < selectable.length}
-                        disabled={selectable.length === 0}
-                        onCheckedChange={(checked) => c.selectAll(checked === true)}
-                      />
-                      <span aria-hidden="true" className="@3xl/rows:hidden">
-                        Select all
-                      </span>
-                      <span className="@max-3xl/rows:hidden">Item</span>
-                    </span>
-                  </th>
-                  {columns.map((column) => (
-                    <th
-                      key={column.id}
-                      scope="col"
-                      data-add-col={column.id}
-                      className={cn(
-                        HEAD_CELL,
-                        "sticky -top-1 z-20 px-3 text-start @max-3xl/rows:hidden",
-                        column.width,
-                      )}
-                    >
-                      <span className="block truncate" title={column.label}>
-                        {column.label}
-                      </span>
-                    </th>
-                  ))}
-                  <th
-                    scope="col"
-                    data-add-col="actions"
-                    className={cn(
-                      HEAD_CELL,
-                      "z-20 w-34 min-w-34 @3xl/rows:sticky @3xl/rows:-top-1 @max-3xl/rows:hidden",
-                    )}
-                  >
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-            ) : null}
-            <tbody className="@max-3xl/rows:block">
-              {c.picks.map((pick) => (
-                <WideRow key={pick.mfcItemId} span={span}>
-                  <PickStatus
-                    pick={pick}
-                    onRetry={c.handleRetryPick}
-                    onDiscard={c.handleDiscardPick}
-                  />
-                </WideRow>
-              ))}
-              {c.rows.map((row) => {
-                const item = c.items.get(row.itemId);
-                if (!item) {
-                  if (c.lookup === "loading") {
-                    return <LoadingRow key={row.itemId} columns={columns} />;
-                  }
-                  return (
-                    <WideRow key={row.itemId} span={span}>
-                      <MissingItemRow
-                        itemId={row.itemId}
-                        lookup={c.lookup}
-                        onRemove={c.handleRemove}
-                      />
-                    </WideRow>
-                  );
-                }
-                const isOpen = owned && expanded.has(row.itemId);
-                const release = c.releaseOf(row, item);
-                const detailsId = `add-details-${row.itemId}`;
-                return (
-                  <Fragment key={row.itemId}>
-                    <ItemRow
-                      row={row}
-                      item={item}
-                      release={release}
-                      c={c}
-                      columns={columns}
-                      open={isOpen}
-                      detailsId={detailsId}
-                      owned={owned}
-                      showsDetails={kind !== "none"}
-                      onToggleDetails={() => toggleDetails(row.itemId)}
-                    />
-                    {isOpen ? (
-                      <tr id={detailsId} className="@max-3xl/rows:block">
-                        <td colSpan={span} className="bg-muted/40 p-0 @max-3xl/rows:block">
-                          <DetailsPanel row={row} item={item} release={release} c={c} />
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <EmptyState />
-      )}
-    </div>
-  );
-}
-
-/** A row with no fields. */
-function WideRow({ span, children }: { readonly span: number; readonly children: ReactNode }) {
-  return (
-    <tr className="@max-3xl/rows:block">
-      <td colSpan={span} className={cn(ROW_LINE, "p-0 @max-3xl/rows:block @max-3xl/rows:border-t")}>
-        <div className="p-3 @3xl/rows:ps-10">{children}</div>
-      </td>
-    </tr>
-  );
-}
-
-/** A draft row whose Item could not be read, or is gone. */
-function MissingItemRow({
-  itemId,
-  lookup,
-  onRemove,
-}: {
-  readonly itemId: string;
-  readonly lookup: Exclude<AddController["lookup"], "loading">;
-  readonly onRemove: (itemId: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className={cn(THUMBNAIL, "bg-muted")} aria-hidden="true" />
-      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-        {lookup === "failed" ? "Could not load this item" : "No longer in the item database"}
-      </p>
-      <Button
-        type="button"
-        id={removeButtonId(itemId)}
-        variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground"
-        aria-label="Remove this row"
-        onClick={() => onRemove(itemId)}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-      </Button>
-    </div>
-  );
 }
 
 /** A click on the row itself: not on a control, not in a popup it opened, not ending a selection. */
@@ -397,200 +237,197 @@ function isEmptySpace(event: MouseEvent<HTMLTableRowElement>): boolean {
   );
 }
 
-function ItemRow({
-  row,
-  item,
-  release,
-  c,
-  columns,
-  open,
-  detailsId,
-  owned,
-  showsDetails,
-  onToggleDetails,
-}: {
-  readonly row: DraftRow;
-  readonly item: AddItem;
-  readonly release: AddItem["latestRelease"];
-  readonly c: AddController;
-  readonly columns: readonly Field[];
-  readonly open: boolean;
-  readonly detailsId: string;
-  readonly owned: boolean;
-  readonly showsDetails: boolean;
-  readonly onToggleDetails: () => void;
-}) {
-  const { itemId, selected } = row;
-  const { title, externalId, image } = item;
+/**
+ * Sorts when the sort or the set of rows changes, and not on an edit, or the row being typed in
+ * would move away from the caret. A row with no fields has nothing to sort by, so it stays on top.
+ */
+function heldSortedRowModel(table: Table<AddRow>): () => RowModel<AddRow> {
+  const sorted = getSortedRowModel<AddRow>()(table);
+  let held: { readonly key: string; readonly order: readonly string[] } | null = null;
+  return () => {
+    const model = sorted();
+    const { sorting } = table.getState();
+    if (sorting.length === 0) {
+      held = null;
+      return model;
+    }
+    const key = JSON.stringify([
+      sorting,
+      model.rows.map(({ id, original }) => `${id} ${original.kind}`).toSorted(),
+    ]);
+    if (held?.key !== key) {
+      const hasFields = ({ original }: (typeof model.rows)[number]) =>
+        original.kind === "item" || original.kind === "loading";
+      held = {
+        key,
+        order: [
+          ...model.rows.filter((row) => !hasFields(row)),
+          ...model.rows.filter(hasFields),
+        ].map(({ id }) => id),
+      };
+    }
+    const byId = new Map(model.rows.map((row) => [row.id, row]));
+    const rows = held.order.flatMap((id) => byId.get(id) ?? []);
+    return { ...model, rows, flatRows: rows };
+  };
+}
 
+/** A cell an `item` row fills in, and every other row holds its column's skeleton in. */
+function itemCell(Cell: ComponentType<{ readonly row: ItemRow }>) {
+  return ({ row, column }: CellContext<AddRow, unknown>) =>
+    row.original.kind === "item" ? <Cell row={row.original} /> : column.columnDef.meta?.skeleton;
+}
+
+function fieldCell(field: Field) {
+  return itemCell(({ row: { row, item, release } }) => {
+    const { c } = useAddTable();
+    return (
+      <RowField field={field} row={row} item={item} release={release} c={c} issues={c.issues} />
+    );
+  });
+}
+
+function SelectAll() {
+  const { c } = useAddTable();
+  const total = c.countedRows.length;
   return (
-    // A pointer shortcut for the Details button, which keyboards and screen readers use instead.
-    <tr
-      data-add-row={itemId}
-      onClick={(event) => {
-        if (owned && isEmptySpace(event)) onToggleDetails();
-      }}
-      className={cn(
-        owned && "cursor-pointer",
-        "motion-safe:animate-[data-in_160ms_ease-out_both] @max-3xl/rows:grid @max-3xl/rows:grid-cols-2 @max-3xl/rows:gap-x-3 @max-3xl/rows:gap-y-3 @max-3xl/rows:border-t @max-3xl/rows:border-border/60 @max-3xl/rows:p-3",
-      )}
-    >
-      <td
-        data-add-col="item"
-        className={cn(
-          ROW_LINE,
-          "px-3 py-2 align-middle @max-3xl/rows:col-span-2 @max-3xl/rows:block @max-3xl/rows:p-0",
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <Checkbox
-            aria-label={`Select ${title}`}
-            checked={selected}
-            onCheckedChange={(checked) => c.select(itemId, checked === true)}
-          />
-          <Link
-            {...itemDestination(itemId, externalId)}
-            className="shrink-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-            tabIndex={-1}
-            aria-hidden="true"
-          >
-            <ImageThumbnail
-              images={image ? [image] : []}
-              title={title}
-              decorative
-              className={cn(THUMBNAIL, !selected && "opacity-50")}
-              fallbackIcon={
-                <HugeiconsIcon
-                  icon={Image01Icon}
-                  className="size-5 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              }
-            />
-          </Link>
-          <div className="flex min-w-0 flex-1 flex-col gap-px">
-            <Link
-              {...itemDestination(itemId, externalId)}
-              title={title}
-              className={cn(
-                "w-fit max-w-full truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 @max-3xl/rows:line-clamp-2 @max-3xl/rows:whitespace-normal @max-3xl/rows:[overflow-wrap:anywhere]",
-                !selected && "text-muted-foreground",
-              )}
-            >
-              {title}
-            </Link>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-              {externalId === null ? (
-                <span>Custom item</span>
-              ) : (
-                <a
-                  href={mfcItemUrl(externalId)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-sm tabular-nums outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  MFC #{externalId}
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </td>
-      {columns.map((column) => (
-        <td
-          key={column.id}
-          data-add-col={column.id}
-          data-add-cell=""
-          className={cn(
-            ROW_LINE,
-            "px-3 py-2 align-middle @max-3xl/rows:block @max-3xl/rows:p-0",
-            column.id === "price" && "@max-3xl/rows:col-span-2",
-          )}
-        >
-          <RowField
-            field={column}
-            row={row}
-            item={item}
-            release={release}
-            c={c}
-            issues={c.issues}
-          />
-        </td>
-      ))}
-      <td
-        data-add-col="actions"
-        className={cn(
-          ROW_LINE,
-          "pe-2 align-middle @max-3xl/rows:col-span-2 @max-3xl/rows:block @max-3xl/rows:pe-0",
-        )}
-      >
-        <div className="flex items-center justify-end gap-0.5 @max-3xl/rows:justify-between">
-          {showsDetails ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={!owned}
-              title={owned ? undefined : "Choose where these go to add details"}
-              aria-label={`Details for ${title}`}
-              aria-expanded={open}
-              aria-controls={open ? detailsId : undefined}
-              className="text-muted-foreground @max-3xl/rows:-ms-2"
-              onClick={onToggleDetails}
-            >
-              Details
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                data-icon="inline-end"
-                className={cn(
-                  "transition-transform duration-150 ease-out motion-reduce:transition-none",
-                  open && "rotate-180",
-                )}
-                aria-hidden="true"
-              />
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            id={removeButtonId(itemId)}
-            variant="ghost"
-            size="sm"
-            aria-label={`Remove ${title}`}
-            className="text-muted-foreground @max-3xl/rows:ms-auto @max-3xl/rows:-me-2"
-            onClick={() => c.handleRemove(itemId)}
-          >
-            <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-            <span className="@3xl/rows:hidden" aria-hidden="true">
-              Remove
-            </span>
-          </Button>
-        </div>
-      </td>
-    </tr>
+    <Checkbox
+      aria-label="Select all items"
+      checked={total > 0 && c.selectedCount === total}
+      indeterminate={c.selectedCount > 0 && c.selectedCount < total}
+      disabled={total === 0}
+      onCheckedChange={(checked) => c.selectAll(checked === true)}
+      className="align-[inherit] mb-0.5 rounded-xs"
+    />
   );
 }
 
+function SelectRow({ row }: CellContext<AddRow, unknown>) {
+  const { c } = useAddTable();
+  const { original } = row;
+  return (
+    <>
+      <div
+        className={cn(
+          "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
+          row.getIsSelected() && "block",
+        )}
+      />
+      {original.kind === "item" ? (
+        <Checkbox
+          aria-label={`Select ${original.item.title}`}
+          checked={original.row.selected}
+          onCheckedChange={(checked) => c.select(original.id, checked === true)}
+          className="align-[inherit] mb-0.5 rounded-xs"
+        />
+      ) : (
+        <Skeleton className="size-4 rounded-xs" />
+      )}
+    </>
+  );
+}
+
+function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
+  const { title, externalId, image } = item;
+  return (
+    <div className="flex items-center gap-3">
+      <Link
+        {...itemDestination(id, externalId)}
+        className="shrink-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        tabIndex={-1}
+        aria-hidden="true"
+      >
+        <ImageThumbnail
+          images={image ? [image] : []}
+          title={title}
+          decorative
+          className={THUMBNAIL}
+          fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" aria-hidden="true" />}
+        />
+      </Link>
+      <div className="min-w-0 flex-1 space-y-px">
+        <Link
+          {...itemDestination(id, externalId)}
+          title={title}
+          className="block w-fit max-w-full truncate rounded-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {title}
+        </Link>
+        <div className="flex items-center gap-2 font-normal">
+          {externalId === null ? (
+            <span className="text-xs text-muted-foreground">Custom item</span>
+          ) : (
+            <a
+              href={mfcItemUrl(externalId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-sm text-xs text-muted-foreground tabular-nums outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              MFC #{externalId}
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
+  const { c, owned, openRows, toggleDetails } = useAddTable();
+  const open = owned && openRows.has(id);
+  return (
+    <div className="flex items-center justify-end gap-0.5">
+      {c.resolvedForm.kind === "none" ? null : (
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={!owned}
+          title={owned ? undefined : "Choose where these go to add details"}
+          aria-label={`Details for ${item.title}`}
+          aria-expanded={open}
+          aria-controls={open ? detailsPanelId(id) : undefined}
+          onClick={() => toggleDetails(id)}
+        >
+          Details
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            data-icon="inline-end"
+            className={cn(
+              "transition-transform duration-150 ease-out motion-reduce:transition-none",
+              open && "rotate-180",
+            )}
+            aria-hidden="true"
+          />
+        </Button>
+      )}
+      <Button
+        type="button"
+        id={removeButtonId(id)}
+        variant="ghost"
+        size="icon-sm"
+        aria-label={`Remove ${item.title}`}
+        className="text-muted-foreground"
+        onClick={() => c.handleRemove(id)}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+const detailsPanelId = (itemId: string) => `add-details-${itemId}`;
+
 /** Everything the row can hold that has no column: one layout, whatever the destination. */
-function DetailsPanel({
-  row,
-  item,
-  release,
-  c,
-}: {
-  readonly row: DraftRow;
-  readonly item: AddItem;
-  readonly release: AddItem["latestRelease"];
-  readonly c: AddController;
-}) {
+function DetailsPanel({ row: { id, row, item, release } }: { readonly row: ItemRow }) {
+  const { c } = useAddTable();
   const shared = { row, item, release, c, issues: c.issues };
   const isCollection = c.resolvedForm.kind === "collection";
   return (
-    <div
+    <DataGridExpandedPanel
+      id={detailsPanelId(id)}
       role="group"
       aria-label={`Details for ${item.title}`}
-      // Its edges are the title's start and the Condition field's end: the row's padding, the
-      // checkbox, the thumbnail and two gaps, then the actions column and the cell's padding.
-      className="grid gap-5 p-3 motion-safe:animate-[data-in_160ms_ease-out_both] @3xl/rows:ps-21 @3xl/rows:pe-27"
+      className={cn(FRAME_WIDTH, "grid gap-3 space-y-0")}
     >
       <FieldGroup title="Purchase" className="@4xl:grid-cols-4">
         <div className="col-span-full min-w-0">
@@ -626,34 +463,300 @@ function DetailsPanel({
           <RowField field={FIELD.notes} {...shared} />
         </div>
       </FieldGroup>
+    </DataGridExpandedPanel>
+  );
+}
+
+// A wide table scrolls sideways inside its frame, and what spans it stays in view. 100cqw is the
+// frame with its 1px borders, which this is inside of.
+const FRAME_WIDTH = "sticky start-0 w-[calc(100cqw-2px)]";
+const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem-2px)]";
+
+function MissingRow({
+  id,
+  lookup,
+}: {
+  readonly id: string;
+  readonly lookup: Exclude<AddController["lookup"], "loading">;
+}) {
+  const { c } = useAddTable();
+  return (
+    <div className={cn(FRAME_WIDTH_IN_CELL, "flex items-center gap-3")}>
+      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+        {lookup === "failed" ? "Could not load this item" : "No longer in the item database"}
+      </p>
+      <Button
+        type="button"
+        id={removeButtonId(id)}
+        variant="ghost"
+        size="icon-sm"
+        className="text-muted-foreground"
+        aria-label="Remove this row"
+        onClick={() => c.handleRemove(id)}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
+      </Button>
     </div>
   );
 }
 
-function LoadingRow({ columns }: { readonly columns: readonly Field[] }) {
+function PickLine({ pick }: { readonly pick: PickRow }) {
+  const { c } = useAddTable();
   return (
-    <tr
-      aria-hidden="true"
-      className="@max-3xl/rows:block @max-3xl/rows:border-t @max-3xl/rows:border-border/60 @max-3xl/rows:p-3"
-    >
-      <td className={cn(ROW_LINE, "px-3 py-2 @max-3xl/rows:block @max-3xl/rows:p-0")}>
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-4 rounded-sm" />
-          <Skeleton className={THUMBNAIL} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/3" />
-          </div>
+    <div className={FRAME_WIDTH_IN_CELL}>
+      <PickStatus pick={pick} onRetry={c.handleRetryPick} onDiscard={c.handleDiscardPick} />
+    </div>
+  );
+}
+
+function fullWidthRow(row: AddRow): ReactNode {
+  if (row.kind === "pick") return <PickLine pick={row.pick} />;
+  return row.kind === "missing" ? <MissingRow id={row.id} lookup={row.lookup} /> : null;
+}
+
+const FIELD_SKELETON = <Skeleton className="h-6" />;
+
+/** Its lines hold the title's and the MFC number's heights, so a row keeps its height on load. */
+const ITEM_SKELETON = (
+  <div className="flex items-center gap-3">
+    <Skeleton className={THUMBNAIL} />
+    <div className="min-w-0 flex-1 space-y-px">
+      <div className="flex h-5 items-center">
+        <Skeleton className="h-3.5 w-3/4" />
+      </div>
+      <div className="flex h-4 items-center">
+        <Skeleton className="h-3 w-16" />
+      </div>
+    </div>
+  </div>
+);
+
+const COLUMNS: ColumnDef<AddRow>[] = [
+  {
+    id: "select",
+    header: SelectAll,
+    cell: SelectRow,
+    size: 32,
+    enableSorting: false,
+    enableResizing: false,
+  },
+  {
+    id: "item",
+    accessorFn: (row) => (row.kind === "item" ? row.item.title : undefined),
+    header: ({ column }) => <DataGridColumnHeader title="Item" column={column} />,
+    cell: itemCell(ItemName),
+    sortingFn: "text",
+    size: 480,
+    minSize: 200,
+    meta: {
+      skeleton: ITEM_SKELETON,
+      expandedContent: (row) => (row.kind === "item" ? <DetailsPanel row={row} /> : null),
+    },
+  },
+  {
+    id: "price",
+    accessorFn: (row) => (row.kind === "item" ? row.price : undefined),
+    header: ({ column }) => <DataGridColumnHeader title="Price" column={column} />,
+    cell: fieldCell(FIELD.price),
+    sortingFn: "basic",
+    size: 144,
+    minSize: 96,
+    meta: { skeleton: FIELD_SKELETON },
+  },
+  {
+    id: "count",
+    accessorFn: (row) => (row.kind === "item" ? row.count : undefined),
+    header: ({ column }) => <DataGridColumnHeader title="Count" column={column} />,
+    cell: fieldCell(FIELD.count),
+    sortingFn: "basic",
+    size: 80,
+    minSize: 64,
+    meta: { skeleton: FIELD_SKELETON },
+  },
+  {
+    id: "condition",
+    accessorFn: (row) => (row.kind === "item" ? row.condition : undefined),
+    header: ({ column }) => <DataGridColumnHeader title="Condition" column={column} />,
+    cell: fieldCell(FIELD.condition),
+    sortingFn: "text",
+    size: 144,
+    minSize: 112,
+    meta: { skeleton: FIELD_SKELETON },
+  },
+  {
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: itemCell(RowActions),
+    size: 136,
+    enableSorting: false,
+    enableResizing: false,
+    meta: { skeleton: <Skeleton className="ms-auto h-6 w-24" /> },
+  },
+];
+
+const HIDDEN_WITHOUT_OWNERSHIP = { price: false, count: false, condition: false };
+const SHOW_ALL = {};
+
+// A frame this wide holds every column unless the user resizes them past it, so it can clip and let
+// the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
+const SCROLLS_BELOW = 1024;
+
+/**
+ * The search's panel drops from the toolbar, where the page's scroller would cut it or the phone's
+ * fixed bar would cover it. So it gets the room below the input, after the page moves the input up
+ * when that room is too small.
+ */
+function useSearchRoom() {
+  const [room, setRoom] = useState<number | null>(null);
+  const measure = (wrapper: HTMLElement) => {
+    const pane = wrapper.closest("[data-add-pane]");
+    if (!pane) return;
+    const bar = document.querySelector('section[aria-label="Commit"]');
+    const paneScrolls = getComputedStyle(pane).overflowY !== "visible";
+    const limit = () => {
+      if (paneScrolls) return pane.getBoundingClientRect().bottom;
+      return bar && getComputedStyle(bar).position === "fixed"
+        ? bar.getBoundingClientRect().top
+        : window.innerHeight;
+    };
+    const below = () => limit() - wrapper.getBoundingClientRect().bottom;
+    if (below() < 288) wrapper.scrollIntoView({ block: "start" });
+    setRoom(Math.max(below() - 8, 160));
+  };
+  return { room, measure };
+}
+
+/** The toolbar and every row. The search lives here so it lines up with what it adds to. */
+export function AddItems({
+  controller: c,
+  onAnnounce,
+}: {
+  readonly controller: AddController;
+  readonly onAnnounce: (message: string) => void;
+}) {
+  const hintId = useId();
+  const frame = useRef<HTMLDivElement>(null);
+  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set());
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const search = useSearchRoom();
+
+  const { kind } = c.resolvedForm;
+  const owned = kind === "collection" || kind === "order";
+  const fields = fieldsFor(kind);
+  const data = tableRows(c);
+
+  const tableState = useMemo(
+    () => ({
+      c,
+      owned,
+      openRows,
+      toggleDetails: (itemId: string) => {
+        setOpenRows((current) => {
+          const next = new Set(current);
+          if (!next.delete(itemId)) next.add(itemId);
+          return next;
+        });
+      },
+    }),
+    [c, owned, openRows],
+  );
+
+  const table = useReactTable<AddRow>({
+    columns: COLUMNS,
+    data,
+    getRowId: (row) => row.id,
+    getRowCanExpand: ({ original }) => original.kind === "item",
+    enableRowSelection: ({ original }) => original.kind === "item",
+    state: {
+      sorting,
+      columnSizing,
+      columnVisibility: kind === "none" ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
+      // A loading row has its tint from the first paint too, since the draft already knows.
+      rowSelection: Object.fromEntries(
+        c.rows.flatMap((row) => (row.selected ? [[row.itemId, true]] : [])),
+      ),
+      expanded: Object.fromEntries(
+        data.flatMap(({ id }) => (owned && openRows.has(id) ? [[id, true]] : [])),
+      ),
+    },
+    columnResizeMode: "onChange",
+    onSortingChange: setSorting,
+    onColumnSizingChange: (updater: Updater<ColumnSizingState>) => {
+      setColumnSizing((current) => {
+        const next = functionalUpdate(updater, current);
+        const width = frame.current?.clientWidth ?? 0;
+        const total = table
+          .getVisibleLeafColumns()
+          .reduce((sum, column) => sum + (next[column.id] ?? column.columnDef.size ?? 0), 0);
+        return width >= SCROLLS_BELOW && total > width ? current : next;
+      });
+    },
+    // The rows are new on every render, and resetting on that would render forever.
+    autoResetAll: false,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: heldSortedRowModel,
+  });
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="relative z-30 flex flex-wrap items-center gap-2">
+        {/* AddSearch insets its input by 4px, so this puts the input on the table's edge. */}
+        <div
+          className="-mt-1 -ms-1 w-full min-w-0 scroll-mt-2 @2xl/add:w-xs [&_[role=presentation]]:max-h-(--search-room) @2xl/add:[&_[role=presentation]]:end-auto @2xl/add:[&_[role=presentation]]:w-lg"
+          style={
+            search.room === null
+              ? undefined
+              : ({ "--search-room": `${search.room}px` } as CSSProperties)
+          }
+          onFocus={(event) => search.measure(event.currentTarget)}
+          onInput={(event) => search.measure(event.currentTarget)}
+        >
+          <AddSearch {...c.searchProps} />
         </div>
-      </td>
-      {columns.map((column) => (
-        <td key={column.id} className={cn(ROW_LINE, "px-3 py-2 @max-3xl/rows:hidden")}>
-          <Skeleton className="h-8 w-full" />
-        </td>
-      ))}
-      <td className={cn(ROW_LINE, "px-3 py-2 @max-3xl/rows:hidden")}>
-        <Skeleton className="ms-auto h-8 w-16" />
-      </td>
-    </tr>
+        {fields.length > 0 ? (
+          <div className="ms-auto flex items-center gap-2 @max-2xl/add:ms-0 @max-2xl/add:w-full">
+            <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
+          </div>
+        ) : null}
+      </div>
+
+      <AddTableContext value={tableState}>
+        <div
+          ref={frame}
+          role="group"
+          aria-label="Items to add"
+          aria-describedby={hintId}
+          className="@container/grid"
+          onKeyDownCapture={onTableKeys}
+        >
+          <p id={hintId} className="sr-only">
+            Arrow keys move between cells, Enter moves on, Space opens a menu.
+          </p>
+          <DataGrid
+            table={table}
+            recordCount={data.length}
+            emptyMessage={<EmptyState />}
+            fullWidthRow={fullWidthRow}
+            onRowPointerClick={(row, event) => {
+              if (owned && row.kind === "item" && isEmptySpace(event)) {
+                tableState.toggleDetails(row.id);
+              }
+            }}
+            tableLayout={{ dense: true, headerSticky: true, columnsResizable: true }}
+            tableClassNames={{ bodyRow: cn("animate-none", owned && "cursor-pointer") }}
+          >
+            <DataGridContainer className="@5xl/grid:overflow-clip">
+              <ScrollArea
+                horizontal
+                className="@5xl/grid:overflow-clip @5xl/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
+              >
+                <DataGridTable />
+              </ScrollArea>
+            </DataGridContainer>
+          </DataGrid>
+        </div>
+      </AddTableContext>
+    </div>
   );
 }

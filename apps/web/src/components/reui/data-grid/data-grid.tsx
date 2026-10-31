@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack/react-table";
 
 import { cn } from "@/lib/utils";
@@ -53,6 +53,8 @@ export interface DataGridProps<TData extends object> {
   recordCount: number;
   children?: ReactNode;
   onRowClick?: (row: TData) => void;
+  /** A pointer shortcut only: unlike `onRowClick`, the row stays out of the tab order. */
+  onRowPointerClick?: (row: TData, event: MouseEvent<HTMLTableRowElement>) => void;
   isLoading?: boolean;
   loadingMode?: "skeleton" | "spinner";
   skeletonRowCount?: number;

@@ -150,9 +150,9 @@ test("clicking a row's empty space opens its details, and its controls do not", 
   expect(details()).toBeNull();
 
   const row = screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).closest("tr");
-  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  await user.click(row?.querySelector('[data-col="item"]') as Element);
   expect(details()).not.toBeNull();
-  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  await user.click(row?.querySelector('[data-col="item"]') as Element);
   expect(details()).toBeNull();
 });
 
@@ -162,7 +162,7 @@ test("with nothing chosen, a row's empty space does nothing", async () => {
   openAddPage("/add");
   await rowsLoaded();
   const row = screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).closest("tr");
-  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  await user.click(row?.querySelector('[data-col="item"]') as Element);
   expect(screen.queryByRole("group", { name: "Details for Hatsune Miku" })).toBeNull();
 });
 
@@ -799,7 +799,9 @@ test("a row still loading is a skeleton, and the commit waits for it", async () 
   });
   openAddPage("/add?to=collection");
 
-  await waitFor(() => expect(document.querySelector('tr[aria-hidden="true"]')).not.toBeNull());
+  await waitFor(() =>
+    expect(document.querySelector('tbody [data-slot="skeleton"]')).not.toBeNull(),
+  );
   expect(screen.getByRole("button", { name: "Add 1 to collection" }).hasAttribute("disabled")).toBe(
     true,
   );
@@ -809,14 +811,16 @@ test("a row still loading is a skeleton, and the commit waits for it", async () 
   expect(screen.getByRole("button", { name: "Add 1 to collection" }).hasAttribute("disabled")).toBe(
     false,
   );
-  expect(document.querySelector('tr[aria-hidden="true"]')).toBeNull();
+  expect(document.querySelector('tbody [data-slot="skeleton"]')).toBeNull();
 });
 
 // ------------------------------------------------------------------------------------- Fill all
 
 async function fill(user: User, field: string) {
   await click(user, "Fill all");
-  await click(user, field);
+  await user.click(
+    within(screen.getByRole("dialog", { name: "Fill all" })).getByRole("button", { name: field }),
+  );
   // The popup holds focus for a moment before the field takes it, and keys typed then are lost.
   await waitFor(() => expect(document.activeElement?.id.startsWith("add-fill-")).toBe(true));
 }

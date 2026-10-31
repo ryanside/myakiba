@@ -298,7 +298,7 @@ function DataGridTableBodyRow<TData>({
   dndStyle?: CSSProperties;
 }) {
   const { props, table } = useDataGrid();
-  const onRowClick = props.onRowClick;
+  const { onRowClick, onRowPointerClick } = props;
   const isInteractive = Boolean(onRowClick);
 
   return (
@@ -307,7 +307,10 @@ function DataGridTableBodyRow<TData>({
       style={dndStyle ?? undefined}
       data-row={row.id}
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
-      onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+      onClick={(event) => {
+        onRowClick?.(row.original);
+        onRowPointerClick?.(row.original, event);
+      }}
       onKeyDown={
         onRowClick
           ? (event) => {
