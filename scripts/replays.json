@@ -16,7 +16,9 @@
         "every popup is named, and so is the Order search",
         "the commit toast's View and Close are both there for assistive technology",
         "Fill all refuses tags that would take a row past 20, and says so"
-      ]
+      ],
+      "testAt": "35699f167a79d530aaa0dd0fcceb48a017af08da",
+      "reason": "Its test now chooses a destination through the later radio group, which this fix never had, so its harness stays at the build before that change."
     },
     {
       "fix": "647c0633a07b47c67111e362a18c82ed5072dbd3",
