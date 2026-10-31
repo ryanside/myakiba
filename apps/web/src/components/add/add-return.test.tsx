@@ -143,14 +143,26 @@ test("a pick still saving keeps the user here", async () => {
     });
     return refused(503, "down");
   };
-  loadExtension({ picks: [fakePick(12_345, "Still saving")] });
+  let answer = () => {};
+  const { commitAnswer } = server;
+  server.commitAnswer = async (body) => {
+    await new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    return commitAnswer(body);
+  };
+  const extension = loadExtension({});
   draft(ITEM_ID);
   const user = userEvent.setup();
   const router = openAddPage(addTo("/collection", "collection"));
   await rowsLoaded();
+  await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  extension.setPicks([fakePick(12_345, "Still saving")]);
+  window.dispatchEvent(new Event("focus"));
   await screen.findByText("Saving…");
 
-  await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
+  answer();
 
   await screen.findByText("Added 1 to your collection");
   expect(router.state.location.pathname).toBe("/add");

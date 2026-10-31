@@ -51,6 +51,7 @@ export function createPickIntake(deps: PickIntakeDeps) {
   let rows: readonly PickRow[] = [];
   let pulling = false;
   let stopped = false;
+  let answered = false;
 
   const changed = () => {
     rows = [...held.values()].map(({ row }) => row);
@@ -97,8 +98,9 @@ export function createPickIntake(deps: PickIntakeDeps) {
   async function takeAndSave(context: PickContext): Promise<void> {
     if (!deps.visible()) return;
     const taken = await deps.bridge.takePicks();
-    if (stopped !== taken.isErr()) {
+    if (stopped !== taken.isErr() || !answered) {
       stopped = taken.isErr();
+      answered = true;
       changed();
     }
     // Taking deletes nothing, so picks a tab hid too late to upload wait for the tab now showing.
@@ -159,5 +161,7 @@ export function createPickIntake(deps: PickIntakeDeps) {
     rows: () => rows,
     /** Whether the extension's last answer to a take said it stopped. */
     stopped: () => stopped,
+    /** Whether the extension has answered a take yet, so the page knows what picks it holds. */
+    answered: () => answered,
   };
 }

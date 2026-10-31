@@ -143,9 +143,11 @@ export function usePickIntake({
   }, []);
   const rows = useSyncExternalStore(intake.subscribe, intake.rows);
   const stopped = useSyncExternalStore(intake.subscribe, intake.stopped);
+  const answered = useSyncExternalStore(intake.subscribe, intake.answered);
   return {
     rows,
     stopped,
+    answered,
     retry: (mfcItemId: MfcItemId) => intake.retry(mfcItemId, context),
     discard: intake.discard,
   } as const;

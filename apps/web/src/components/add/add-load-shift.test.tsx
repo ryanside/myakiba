@@ -8,6 +8,7 @@ import {
   seedItems,
   server,
 } from "../../../test/add-app";
+import { fakePick } from "../../../test/fake-extension";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -119,13 +120,78 @@ test("an empty page's words hold their room until the extension answers, with no
   const hidden = title.nextElementSibling;
   expect(hidden?.getAttribute("class")).toContain("opacity-0");
   expect(hidden?.hasAttribute("inert")).toBe(true);
-  const held = hidden?.querySelectorAll("p");
-  expect(held?.length).toBe(2);
 
   await waitFor(() => expect(hidden?.getAttribute("class")).not.toContain("opacity-0"), {
     timeout: 2000,
   });
   expect(title.nextElementSibling).toBe(hidden);
-  expect(hidden?.querySelectorAll("p").length).toBe(2);
   expect(row?.querySelector("[class*='bg-muted']")).toBeNull();
+});
+
+test("an empty page holds one message, with no room left for another", async () => {
+  openAddPage();
+  const title = await screen.findByText("No items yet");
+  expect(title.nextElementSibling?.querySelectorAll("p").length).toBe(1);
+});
+
+test("a saving pick counts in the sentence, the header and the commit from when it is known", async () => {
+  const held: (() => void)[] = [];
+  server.uploadAnswer = async () => {
+    await new Promise<void>((resolve) => {
+      held.push(resolve);
+    });
+    return { data: { saved: "created", itemId: MIKU, mfcItemId: 12_345 }, error: null };
+  };
+  loadExtension({ picks: [fakePick(12_345, "Miku"), fakePick(12_346, "Rem")] });
+  openAddPage("/add?from=mfc");
+  await screen.findAllByText("Saving…");
+
+  expect(sentence()).toContain("Add 2 items to");
+  expect(screen.getByText("2 Items")).toBeDefined();
+  const commit = screen.getByRole("button", { name: "Choose where these go" });
+  expect(commit.hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
+    false,
+  );
+  await act(async () => {
+    for (const finish of held) finish();
+  });
+});
+
+test("the commit waits for a saving pick its label already counts", async () => {
+  let finish = () => {};
+  server.uploadAnswer = async () => {
+    await new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    return { data: { saved: "created", itemId: REM, mfcItemId: 12_345 }, error: null };
+  };
+  draft([[MIKU, true]]);
+  await act(async () => release());
+  loadExtension({ picks: [fakePick(12_345, "Rem")] });
+  openAddPage("/add?to=collection");
+  await screen.findByText("Saving…");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  const commit = screen.getByRole("button", { name: "Add 2 to collection" });
+  expect(commit.hasAttribute("disabled")).toBe(true);
+
+  await act(async () => finish());
+  await screen.findByRole("checkbox", { name: "Select Rem" });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Add 2 to collection" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
+});
+
+test("the page a Pick sends the user to shows a skeleton row until the extension answers", async () => {
+  loadExtension({ answersPicks: false });
+  openAddPage("/add?from=mfc");
+  await screen.findByRole("heading", { name: "Review your picks" });
+  expect(screen.queryByText("No items yet")).toBeNull();
+  expect(document.querySelector('tr[data-row="awaiting-picks"]')).not.toBeNull();
+  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
+
+  await screen.findByText("No items yet");
+  expect(document.querySelector('tr[data-row="awaiting-picks"]')).toBeNull();
 });

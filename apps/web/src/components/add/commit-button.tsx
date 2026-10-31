@@ -1,5 +1,6 @@
 import type { InferOk } from "better-result";
 import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
+import { useGlide } from "@/hooks/use-glide";
 import { useCommitAdd } from "@/data/resources/add";
 import { buildCommitChoices, commitPlan } from "./commit-input";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
@@ -35,6 +36,7 @@ export function CommitButton({
   const commit = useCommitAdd();
   const { status, run } = useButtonStatus({ successDuration: 900 });
   const plan = commitPlan(destination, count, { emailVerified });
+  const glide = useGlide<HTMLDivElement>(plan.label);
 
   const handleCommit = async () => {
     if (plan.kind === "done") {
@@ -60,17 +62,18 @@ export function CommitButton({
   };
 
   return (
-    <StatusButton
-      type="button"
-      status={status}
-      size="sm"
-      disabled={plan.kind === "blocked" || loading}
-      className="max-w-full min-w-0 max-sm:w-full"
-      onClick={handleCommit}
-    >
-      <span className="block max-w-[min(70vw,26rem)] truncate" title={plan.label}>
-        {plan.label}
-      </span>
-    </StatusButton>
+    <div ref={glide} className="max-w-full min-w-0 @max-xl/bar:w-full">
+      <StatusButton
+        type="button"
+        status={status}
+        disabled={plan.kind === "blocked" || loading}
+        className="w-full min-w-0"
+        onClick={handleCommit}
+      >
+        <span className="block max-w-[min(70vw,26rem)] truncate" title={plan.label}>
+          {plan.label}
+        </span>
+      </StatusButton>
+    </div>
   );
 }

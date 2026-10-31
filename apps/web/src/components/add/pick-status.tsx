@@ -5,7 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import type { PickRow } from "@/data/picks";
 import { pickFailureCopy } from "@/lib/pick-failure";
 import { cn } from "@/lib/utils";
-import { THUMBNAIL } from "./row-fields";
+import { ROW_CONTENT, THUMBNAIL } from "./row-fields";
 
 /** A pick's status and actions, layout-free. */
 export function PickStatus({
@@ -20,7 +20,7 @@ export function PickStatus({
   const title = pick.title ?? `MFC item #${pick.mfcItemId}`;
   const copy = pick.state === "failed" ? pickFailureCopy(pick.reason, pick.mfcItemId) : null;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <div className={cn(ROW_CONTENT, "flex flex-wrap items-center gap-x-3 gap-y-2")}>
       <div className={cn(THUMBNAIL, "flex items-center justify-center")} aria-hidden="true">
         {copy ? (
           <HugeiconsIcon icon={Alert02Icon} className="size-4 text-warning-foreground" />
@@ -28,8 +28,10 @@ export function PickStatus({
           <Spinner className="size-4 text-muted-foreground" />
         )}
       </div>
-      <div className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
-        <span className="line-clamp-2 font-medium [overflow-wrap:anywhere]">{title}</span>
+      <div className="flex min-w-0 flex-1 basis-48 flex-col gap-px">
+        <span className="truncate font-medium" title={title}>
+          {title}
+        </span>
         {copy ? (
           <span className="text-xs text-pretty text-muted-foreground">{copy.text}</span>
         ) : (

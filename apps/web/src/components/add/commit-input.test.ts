@@ -207,7 +207,7 @@ describe("commitPlan", () => {
   test.each([
     ["collection", to(COLLECTION), "Add 4 to collection"],
     ["a new order", to(NEW_ORDER), "Create order with 4"],
-    ["an existing order", to(EXISTING), "Add 4 to order Spring order"],
+    ["an existing order", to(EXISTING), "Add 4 to order"],
     ["the Wishlist", to({ kind: "none" }, { wishlist: true }), "Add 4 to Wishlist"],
     ["a List", to({ kind: "none" }, { lists: [list] }), "Add 4 to ‘Display shelf’"],
     [
@@ -254,4 +254,20 @@ test("the summary names every place the rows will go", () => {
   expect(commitSummary(to(NEW_ORDER), 1)).toEqual(["New Order with 1 Order Item (Ordered)"]);
   expect(commitSummary(to({ kind: "none" }), 1)).toEqual(["Item Database"]);
   expect(commitSummary(to(null), 1)).toBeNull();
+});
+
+test("the summary of an existing Order leaves its title to the picker", () => {
+  expect(
+    commitSummary(
+      {
+        ownership: {
+          kind: "order",
+          order: { kind: "existing", order: { id: "o1", title: "Spring order" } },
+        },
+        wishlist: false,
+        lists: [],
+      },
+      2,
+    ),
+  ).toEqual(["2 new Order Items"]);
 });

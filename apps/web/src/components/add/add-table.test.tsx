@@ -368,3 +368,12 @@ test("a header says how its column is sorted, and the table has its name and its
   await user.click(screen.getByRole("button", { name: "Item" }));
   expect(header.getAttribute("aria-sort")).toBe("descending");
 });
+
+test("a row whose Item is gone is not selected, since it cannot be committed", async () => {
+  draft("miku00000001", "gone00000001");
+  openAddPage("/add?to=collection");
+  await screen.findByText("No longer in the item database");
+  const row = (id: string) => document.querySelector<HTMLElement>(`tr[data-row="${id}"]`);
+  expect(row("miku00000001")?.dataset.state).toBe("selected");
+  expect(row("gone00000001")?.dataset.state).toBeUndefined();
+});

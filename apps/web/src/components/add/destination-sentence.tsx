@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGlide } from "@/hooks/use-glide";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { DEFAULT_ORDER_FIELDS } from "./commit-input";
@@ -78,52 +79,56 @@ function DestinationSelect({
   const form = c.resolvedForm;
   const choice = choiceOf(form);
   const chosen = CHOICES.find(({ value }) => value === choice);
+  const glide = useGlide<HTMLDivElement>(choice);
   return (
-    <Select
-      items={CHOICES}
-      value={choice}
-      disabled={disabled}
-      onValueChange={(next) => {
-        if (next !== null) c.setForm(choose(form, next));
-      }}
-    >
-      <SelectTrigger
-        aria-label="Where these go"
-        className={cn(
-          "gap-2",
-          chosen && "pl-2",
-          choice === null &&
-            !disabled &&
-            "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
-        )}
+    <div ref={glide} className="max-w-full min-w-0">
+      <Select
+        items={CHOICES}
+        value={choice}
+        disabled={disabled}
+        onValueChange={(next) => {
+          if (next !== null) c.setForm(choose(form, next));
+        }}
       >
-        {chosen ? (
-          <HugeiconsIcon
-            icon={chosen.icon}
-            className="size-4 shrink-0 text-muted-foreground"
-            aria-hidden="true"
-          />
-        ) : null}
-        <SelectValue placeholder="choose where" />
-      </SelectTrigger>
-      <SelectContent alignItemWithTrigger={false} align="start" className="w-52 max-w-[90vw] p-1">
-        {CHOICES.map(({ value, label, icon }) => (
-          <Fragment key={value}>
-            {value === "order-new" || value === "none" ? <SelectSeparator /> : null}
-            <SelectItem value={value}>
-              <span className="flex items-center gap-2">
-                <HugeiconsIcon
-                  icon={icon}
-                  className="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                {label}
-              </span>
-            </SelectItem>
-          </Fragment>
-        ))}
-      </SelectContent>
-    </Select>
+        <SelectTrigger
+          aria-label="Where these go"
+          className={cn(
+            "gap-2",
+            chosen && "pl-2",
+            choice === null &&
+              !disabled &&
+              "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
+          )}
+        >
+          {chosen ? (
+            <HugeiconsIcon
+              icon={chosen.icon}
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          ) : null}
+          {/* Its own text, as the Select's reads the choice a render late, past what `useGlide` measures. */}
+          <SelectValue>{chosen?.label ?? "choose where"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent alignItemWithTrigger={false} align="start" className="w-52 max-w-[90vw] p-1">
+          {CHOICES.map(({ value, label, icon }) => (
+            <Fragment key={value}>
+              {value === "order-new" || value === "none" ? <SelectSeparator /> : null}
+              <SelectItem value={value}>
+                <span className="flex items-center gap-2">
+                  <HugeiconsIcon
+                    icon={icon}
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  {label}
+                </span>
+              </SelectItem>
+            </Fragment>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -139,15 +144,17 @@ export function DestinationSentence({
   const baseId = useId();
   const form = c.resolvedForm;
   const choice = choiceOf(form);
-  const phrase = itemsPhrase(c.selectedCount, c.countedRows.length);
+  const phrase = itemsPhrase(c.selectedCount, c.rowCount);
+  const lead = choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`;
+  const glide = useGlide<HTMLSpanElement>(lead, { fade: true });
 
   return (
     <section
       aria-label="Destination"
       className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm"
     >
-      <span className="font-medium tabular-nums">
-        {choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`}
+      <span ref={glide} className="shrink-0 font-medium whitespace-nowrap tabular-nums">
+        {lead}
       </span>
       <DestinationSelect controller={c} disabled={disabled} />
       <span className="flex flex-wrap items-center gap-2 @2xl/add:ms-2">

@@ -104,7 +104,13 @@ export function useAddController(search: AddSearchParams) {
   // The draft knows its rows from the first paint, so counting them moves nothing when the Items
   // load. Once the read answers, a row with no Item cannot be committed, so it stops counting.
   const countedRows = itemsLoading ? rows : rows.filter((row) => items.has(row.itemId));
-  const selectedCount = countedRows.filter((row) => row.selected).length;
+  // A saving pick lands as a selected row, so the page says so from the moment it knows of the pick.
+  const savingPicks = intake.rows.filter((pick) => pick.state === "saving").length;
+  const rowCount = countedRows.length + savingPicks;
+  const selectedCount = countedRows.filter((row) => row.selected).length + savingPicks;
+  const hasItems = rows.length + savingPicks > 0;
+  // The label counts what is still on its way, so a commit now would leave those out.
+  const pending = itemsLoading || savingPicks > 0;
   const commitRows: readonly CommitRow[] = selectedRows.map(({ row, item }) => ({
     row,
     title: item.title,
@@ -254,6 +260,10 @@ export function useAddController(search: AddSearchParams) {
 
     rows,
     picks: intake.rows,
+    /** The extension has yet to say what picks it holds, on the page a Pick sends the user to. */
+    awaitingPicks: search.from === "mfc" && !intake.answered && !hasItems,
+    hasItems,
+    pending,
     items,
     lookup,
     itemsLoading,
@@ -267,6 +277,8 @@ export function useAddController(search: AddSearchParams) {
     selectedRows,
     commitRows,
     countedRows,
+    savingPicks,
+    rowCount,
     selectedCount,
     releaseOf,
     newOrderTitle,
@@ -307,7 +319,7 @@ export function useAddController(search: AddSearchParams) {
       count: selectedCount,
       destination,
       emailVerified,
-      loading: itemsLoading,
+      loading: pending,
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),

@@ -339,7 +339,20 @@ describe("pulling picks", () => {
     await intake.pull();
 
     expect(intake.stopped()).toBe(false);
-    expect(seen).toEqual([true, false]);
+    expect(seen).toEqual([false, true, false]);
+  });
+
+  test("says once the extension has answered, whether with picks or not", async () => {
+    const { intake } = tab({ extension: picked() });
+    const seen: boolean[] = [];
+    intake.subscribe(() => seen.push(intake.answered()));
+    expect(intake.answered()).toBe(false);
+
+    await intake.pull();
+    await intake.pull();
+
+    expect(intake.answered()).toBe(true);
+    expect(seen).toEqual([true]);
   });
 
   test("tells subscribers each time the rows change", async () => {
@@ -351,7 +364,7 @@ describe("pulling picks", () => {
     await intake.pull();
     stop();
 
-    expect(seen).toEqual([1, 0]);
+    expect(seen).toEqual([0, 1, 0]);
   });
 });
 

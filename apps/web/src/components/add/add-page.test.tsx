@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
 import { act, cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MotionGlobalConfig } from "motion/react";
 import { SAFARI, SUPPORTED_BROWSERS, browseWith, listIn } from "../../../test/extension-browser";
 import { fakePick } from "../../../test/fake-extension";
 import {
@@ -214,8 +215,11 @@ test("Collection asks for a Collection Date, never a status, and sends none", as
 test("a link to an order presets that Order and reads its title", async () => {
   server.orders.set("spring000001", "Spring order");
   openAddPage(`/add?item=${ITEM_ID}&to=order:spring000001`);
-  await screen.findByRole("button", { name: "Add 1 to order Spring order" });
+  await screen.findByRole("button", { name: "Add 1 to order" });
   expect(await chosenDestination()).toBe("Existing Order");
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "Order" }).textContent).toContain("Spring order"),
+  );
 });
 
 test("nothing is chosen without `to`, and an earlier commit's choice is not remembered", async () => {
@@ -271,9 +275,10 @@ test("an empty page keeps its shape, with only search and the one action working
   expect(screen.getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-disabled")).toBe(
     "true",
   );
-  for (const name of ["Lists", "Fill all", "Select items to add"]) {
+  for (const name of ["Lists", "Fill all"]) {
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
+  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
   expect(searchBox().hasAttribute("disabled")).toBe(false);
   expect(
     screen.getByRole("checkbox", { name: "Select all items" }).getAttribute("aria-disabled"),
@@ -601,4 +606,27 @@ test("a failed pick is announced, and the announcement region is there before it
   await screen.findByText("myakiba could not save this item.");
   const regions = screen.getAllByRole("status");
   expect(regions.some((region) => region.textContent === "1 pick could not be saved")).toBe(true);
+});
+
+test("the commit bar shows only with something to commit, and a row with nothing selected keeps it", async () => {
+  // happy-dom runs no animation to its end, so the bar's way out would never finish.
+  MotionGlobalConfig.skipAnimations = true;
+  const user = userEvent.setup();
+  sessionStorage.setItem(
+    "myakiba:add-draft",
+    JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
+  );
+  openAddPage("/add?to=collection");
+  const bar = await screen.findByRole("region", { name: "Commit" });
+  await screen.findByRole("checkbox", { name: /^Select (?!all)/u });
+
+  await user.click(screen.getByRole("checkbox", { name: /^Select (?!all)/u }));
+  expect(
+    within(bar).getByRole("button", { name: "Select items to add" }).hasAttribute("disabled"),
+  ).toBe(true);
+
+  await user.click(screen.getByRole("button", { name: /^Remove /u }));
+  await screen.findByText("No items yet");
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Commit" })).toBeNull());
+  MotionGlobalConfig.skipAnimations = false;
 });

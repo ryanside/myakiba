@@ -313,11 +313,7 @@ export function commitPlan(
       const { order } = ownership;
       if (order.kind === "new") return { kind: "commit", label: `Create order with ${count}` };
       if (order.order === null) return { kind: "blocked", label: "Choose an Order" };
-      const title = order.order.title;
-      return {
-        kind: "commit",
-        label: title === null ? `Add ${count} to order` : `Add ${count} to order ${title}`,
-      };
+      return { kind: "commit", label: `Add ${count} to order` };
     }
     case "none":
       return wishlist || lists.length > 0
@@ -341,8 +337,7 @@ function ownershipSummary(ownership: Ownership, count: number): string | null {
       if (order.kind === "new") {
         return `New Order with ${plural(count, "Order Item", "Order Items")} (${order.fields.status})`;
       }
-      const items = plural(count, "new Order Item", "new Order Items");
-      return order.order?.title ? `${items} in ${quoted(order.order.title)}` : items;
+      return plural(count, "new Order Item", "new Order Items");
     }
     case "none":
       return null;

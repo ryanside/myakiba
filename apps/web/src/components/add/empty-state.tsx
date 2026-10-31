@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcSearchUrl } from "@myakiba/contracts/add/constants";
 import { STORE_NAMES } from "@/components/extension/extension-notice";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useGlide } from "@/hooks/use-glide";
 import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
@@ -59,39 +60,28 @@ export function emptyMessage(
 }
 
 /**
- * The body of an empty table. The extension takes a moment to answer, and which message that leads
- * to can be longer than the other, so the taller of the two holds its room from the first paint.
+ * The body of an empty table. Until the extension answers, the message for a missing one holds its
+ * room unseen, as most pages end there. An installed one's is shorter, so the block settles to it.
  */
 export function EmptyState({ onSearch }: { readonly onSearch: () => void }) {
   const status = useExtensionStatus().kind;
   const availability = extensionAvailability();
-  const message = emptyMessage(status, availability);
-  const bodies = [emptyMessage("ready", availability), emptyMessage("absent", availability)].map(
-    ({ body }) => body,
-  );
+  const { body, action } = emptyMessage(status, availability);
   const known = status !== "checking";
-  const { action } = message;
+  const glide = useGlide<HTMLDivElement>(body, { axis: "height" });
 
   return (
     <div className="sticky start-0 flex w-[calc(100cqw-2px)] flex-col items-center gap-1.5 px-4 py-6">
       <p className="font-medium text-foreground">No items yet</p>
       <div
+        ref={glide}
         inert={!known}
         className={cn(
-          "flex flex-col items-center gap-4 transition-opacity duration-150",
+          "flex flex-col items-center gap-4 transition-opacity duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
           !known && "opacity-0",
         )}
       >
-        <div className="grid max-w-[65ch]">
-          {bodies.map((body) => (
-            <p
-              key={body}
-              className={cn("text-pretty [grid-area:1/1]", body !== message.body && "invisible")}
-            >
-              {body}
-            </p>
-          ))}
-        </div>
+        <p className="max-w-[65ch] text-pretty">{body}</p>
         {action.kind === "external" ? (
           <a
             href={action.href}

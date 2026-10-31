@@ -38,7 +38,15 @@ import type { AddItem } from "./commit-input";
 import { EmptyState } from "./empty-state";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
-import { FIELD, FieldGroup, fieldsFor, plannedPrice, RowField, THUMBNAIL } from "./row-fields";
+import {
+  FIELD,
+  FieldGroup,
+  fieldsFor,
+  plannedPrice,
+  ROW_CONTENT,
+  RowField,
+  THUMBNAIL,
+} from "./row-fields";
 import type { Field } from "./row-fields";
 import { ReleaseField } from "./row-release";
 
@@ -57,7 +65,7 @@ type ItemRow = {
 /** What one line of the table holds. Only an `item` has fields, so only it can be selected. */
 type AddRow =
   | ItemRow
-  | { readonly kind: "loading"; readonly id: string; readonly row: DraftRow }
+  | { readonly kind: "loading"; readonly id: string; readonly selected: boolean }
   | {
       readonly kind: "missing";
       readonly id: string;
@@ -65,9 +73,13 @@ type AddRow =
     }
   | { readonly kind: "pick"; readonly id: string; readonly pick: PickRow };
 
+const isSelected = (row: AddRow): boolean =>
+  row.kind === "item" ? row.row.selected : row.kind === "loading" && row.selected;
+
 function tableRows(c: AddController): AddRow[] {
   const form = c.resolvedForm;
   const shared = form.kind === "collection" ? form.shared : null;
+  if (c.awaitingPicks) return [{ kind: "loading", id: "awaiting-picks", selected: false }];
   const picks = c.picks.map((pick): AddRow => ({
     kind: "pick",
     id: `pick-${pick.mfcItemId}`,
@@ -89,10 +101,11 @@ function tableRows(c: AddController): AddRow[] {
       };
     }
     return c.lookup === "loading"
-      ? { kind: "loading", id: row.itemId, row }
+      ? { kind: "loading", id: row.itemId, selected: row.selected }
       : { kind: "missing", id: row.itemId, lookup: c.lookup };
   });
-  return [...picks, ...rows];
+  // Picks go last, where a saved one's row lands, so saving one moves no other row.
+  return [...rows, ...picks];
 }
 
 type AddTableState = {
@@ -290,11 +303,12 @@ function fieldCell(field: Field) {
 function SelectAll() {
   const { c } = useAddTable();
   const total = c.countedRows.length;
+  const selected = c.countedRows.filter((row) => row.selected).length;
   return (
     <Checkbox
       aria-label="Select all items"
-      checked={total > 0 && c.selectedCount === total}
-      indeterminate={c.selectedCount > 0 && c.selectedCount < total}
+      checked={total > 0 && selected === total}
+      indeterminate={selected > 0 && selected < total}
       disabled={total === 0}
       onCheckedChange={(checked) => c.selectAll(checked === true)}
       className="align-[inherit] mb-0.5 rounded-xs"
@@ -470,7 +484,8 @@ function DetailsPanel({ row: { id, row, item, release } }: { readonly row: ItemR
 // A wide table scrolls sideways inside its frame, and what spans it stays in view. 100cqw is the
 // frame with its 1px borders, which this is inside of.
 const FRAME_WIDTH = "sticky start-0 w-[calc(100cqw-2px)]";
-const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem-2px)]";
+// Its content starts under the Item column's, so a row keeps its place when it becomes an Item.
+const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem-2px)] ps-8.5";
 
 function MissingRow({
   id,
@@ -481,7 +496,7 @@ function MissingRow({
 }) {
   const { c } = useAddTable();
   return (
-    <div className={cn(FRAME_WIDTH_IN_CELL, "flex items-center gap-3")}>
+    <div className={cn(FRAME_WIDTH_IN_CELL, ROW_CONTENT, "flex items-center gap-3")}>
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
         {lookup === "failed" ? "Could not load this item" : "No longer in the item database"}
       </p>
@@ -648,7 +663,7 @@ export function AddItems({
       columnVisibility: kind === "none" ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
       // A loading row has its tint from the first paint too, since the draft already knows.
       rowSelection: Object.fromEntries(
-        c.rows.flatMap((row) => (row.selected ? [[row.itemId, true]] : [])),
+        data.flatMap((row) => (isSelected(row) ? [[row.id, true]] : [])),
       ),
       expanded: Object.fromEntries(
         data.flatMap(({ id }) => (owned && openRows.has(id) ? [[id, true]] : [])),

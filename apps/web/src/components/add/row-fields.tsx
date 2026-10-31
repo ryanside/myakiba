@@ -72,6 +72,8 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
 }
 
 export const THUMBNAIL = "size-8 shrink-0 rounded-md";
+/** An Item's title and MFC number, which every other kind of row matches so none moves its rows. */
+export const ROW_CONTENT = "min-h-[37px]";
 
 // Reads and edits as the Collection grid's Price and Count cells do: plain text, a surface on hover,
 // the app's Input while typing. It stays an input throughout, so the table's keys and an issue's focus

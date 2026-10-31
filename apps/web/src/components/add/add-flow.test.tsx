@@ -195,7 +195,7 @@ test("the summary reads Item Database with nothing else named, and no mid dot an
   const user = userEvent.setup();
   openAddPage("/add?to=none");
   await rowsLoaded();
-  const bar = () => within(screen.getByRole("toolbar", { name: "Commit" }));
+  const bar = () => within(screen.getByRole("region", { name: "Commit" }));
   expect(bar().getByText("Item Database")).toBeDefined();
   expect(screen.queryByText(/nothing to save/u)).toBeNull();
 
@@ -466,7 +466,7 @@ test("an Existing Order search picks the Order, shows its picture, and a preset 
   await user.click(option);
   await waitFor(() => expect(picker.textContent).toContain("Spring order"));
   expect(screen.getByRole("combobox", { name: "Order" }).textContent).toContain("Spring order");
-  await click(user, "Add 1 to order Spring order");
+  await click(user, "Add 1 to order");
   await waitFor(() => expect(server.commits).toHaveLength(1));
   expect<unknown>(server.commits[0]?.ownership).toEqual({
     kind: "order",
@@ -592,17 +592,18 @@ test("the total counts what will be saved, and a release in another currency add
   openAddPage("/add?to=collection");
   await rowsLoaded();
 
-  const bar = within(screen.getByRole("toolbar", { name: "Commit" }));
+  const bar = within(screen.getByRole("region", { name: "Commit" }));
   await waitFor(() => expect(bar.getByText(/^Total/u).textContent).toBe("Total $5,000.00"));
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 });
 
-test("a price the page cannot read hides the total, and a commit points at it", async () => {
+test("a price the page cannot read keeps the total's place with no number, and a commit points at it", async () => {
   draftWith(ITEM_ID, { price: "1.234" });
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
-  expect(screen.queryByText(/^Total /u)).toBeNull();
+  const total = await screen.findByText(/^Total/u);
+  expect(total.textContent).toBe("Total —");
 
   await click(user, "Add 1 to collection");
 
@@ -1190,16 +1191,26 @@ test("a pick saved after a commit answers cannot bring its rows back on a reload
     });
     return { data: { saved: "created", itemId: "item-12345", mfcItemId: 12_345 }, error: null };
   };
+  let answer = () => {};
+  const { commitAnswer } = server;
+  server.commitAnswer = async (body) => {
+    await new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    return commitAnswer(body);
+  };
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
   extension.setPicks([fakePick(12_345)]);
   act(() => {
     window.dispatchEvent(new Event("focus"));
   });
   await waitFor(() => expect(server.uploads).toHaveLength(1));
 
-  await click(user, "Add 1 to collection");
+  await act(async () => answer());
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
 
   await act(async () => release());
@@ -1445,7 +1456,7 @@ test("a failed retry shows its new reason on the row, and Discard removes the pi
   expect(extension.acknowledged).toEqual([{ type: "picks-discarded", mfcItemIds: [98_777] }]);
 });
 
-test("picks list before rows, show with no rows, and the destination waits for a row", async () => {
+test("picks list after rows, where a saved one lands, and a saving one counts as a row", async () => {
   const held: (() => void)[] = [];
   server.uploadAnswer = async () => {
     await new Promise<void>((resolve) => {
@@ -1458,11 +1469,11 @@ test("picks list before rows, show with no rows, and the destination waits for a
 
   await screen.findByText("Saving…");
   expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
-    true,
+    false,
   );
-  expect(screen.getByRole("button", { name: "Select items to add" }).hasAttribute("disabled")).toBe(
-    true,
-  );
+  expect(
+    screen.getByRole("button", { name: "Choose where these go" }).hasAttribute("disabled"),
+  ).toBe(true);
   expect(screen.queryByText("No items yet")).toBeNull();
   cleanup();
 
@@ -1472,8 +1483,8 @@ test("picks list before rows, show with no rows, and the destination waits for a
   await screen.findByText("Another pick");
   await rowsLoaded();
   const [first, second] = document.querySelectorAll("tbody tr");
-  expect(first?.textContent).toContain("Another pick");
-  expect(second?.textContent).toContain("Hatsune Miku");
+  expect(first?.textContent).toContain("Hatsune Miku");
+  expect(second?.textContent).toContain("Another pick");
   await act(async () => {
     for (const release of held) release();
   });
@@ -1540,13 +1551,16 @@ test("a typed zero differs from a blank price, and Not owned sends bare rows", a
   expect(server.commits[1]?.rows).toEqual([{ itemId: ITEM_ID, price: null }]);
 });
 
-test("the commit's label is the plan, with the whole of it in its title", async () => {
+test("the commit's label is the plan, with the whole of it in its title, and no Order's title", async () => {
   server.orders.set("spring000001", "Spring order");
   draft(ITEM_ID);
   openAddPage("/add?to=order:spring000001");
   await rowsLoaded();
-  const button = await screen.findByRole("button", { name: "Add 1 to order Spring order" });
-  const label = button.querySelector('[title="Add 1 to order Spring order"]');
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "Order" }).textContent).toContain("Spring order"),
+  );
+  const button = screen.getByRole("button", { name: "Add 1 to order" });
+  const label = button.querySelector('[title="Add 1 to order"]');
   expect(label?.className.split(/\s+/u)).toContain("truncate");
 });
 
@@ -1612,7 +1626,10 @@ test("Show more Orders pages, and a chosen Order closes the picker", async () =>
   await user.click(await screen.findByRole("option", { name: "Order 20" }));
 
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
-  await screen.findByRole("button", { name: "Add 1 to order Order 20" });
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "Order" }).textContent).toContain("Order 20"),
+  );
+  await screen.findByRole("button", { name: "Add 1 to order" });
 });
 
 test("the Lists picker names what it holds, and says when there are none or it cannot read them", async () => {
