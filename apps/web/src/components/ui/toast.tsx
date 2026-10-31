@@ -26,18 +26,14 @@ function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
   return <ToastPrimitive.Portal data-slot="toast-portal" {...props} />;
 }
 
-function ToastViewport({ className, onFocus, ...props }: ToastPrimitive.Viewport.Props) {
+function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
   return (
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
-      // F6 focuses this viewport, which has no height of its own, so focus goes on to the toast.
-      onFocus={(event) => {
-        onFocus?.(event);
-        if (event.target !== event.currentTarget) return;
-        event.currentTarget.querySelector<HTMLElement>('[data-slot="toast"]')?.focus();
-      }}
       className={cn(
         "pointer-events-none fixed inset-x-4 top-4 mx-auto w-auto max-w-sm outline-none sm:w-full",
+        // F6 focuses this viewport, which has no height of its own, so its toasts show the focus.
+        "focus-visible:**:data-[slot=toast]:border-ring focus-visible:**:data-[slot=toast]:ring-[3px] focus-visible:**:data-[slot=toast]:ring-ring/50",
         className,
       )}
       style={{ zIndex: Z_INDEX.toast }}

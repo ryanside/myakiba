@@ -279,7 +279,6 @@ function FillEditor({
             editable
             showValue
             starClassName="w-7 tabular-nums"
-            className="flex-wrap"
             aria-label="Score for every selected row"
             onRatingChange={(score) => set({ score: score === draft.score ? 0 : score })}
           />

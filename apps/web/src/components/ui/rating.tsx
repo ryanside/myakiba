@@ -142,7 +142,7 @@ function Rating({
       aria-describedby={
         editable ? [ariaDescribedBy, valueId].filter(Boolean).join(" ") : ariaDescribedBy
       }
-      className={cn(ratingVariants({ size }), className)}
+      className={cn(ratingVariants({ size }), editable && "flex-wrap", className)}
       {...props}
     >
       <div className={cn("flex items-center", editable && "gap-1")}>{renderStars()}</div>
