@@ -75,7 +75,6 @@
     "apps/web/src/components/ui/select.tsx SelectLabel",
     "apps/web/src/components/ui/select.tsx SelectScrollDownButton",
     "apps/web/src/components/ui/select.tsx SelectScrollUpButton",
-    "apps/web/src/components/ui/select.tsx SelectSeparator",
     "apps/web/src/components/ui/sidebar.tsx SidebarGroupAction",
     "apps/web/src/components/ui/sidebar.tsx SidebarGroupLabel",
     "apps/web/src/components/ui/sidebar.tsx SidebarInput",

@@ -7,7 +7,9 @@
       "fixed": [
         "trying another destination keeps what was typed, New and Existing Order included",
         "arrow keys through the destinations leave a New Order's fields as typed"
-      ]
+      ],
+      "testAt": "941b87a9d6dc120c60822f09b1a5771197255fe1",
+      "reason": "This fix was made on the radio destinations, which the select with icons replaced, and its test drives those radios."
     },
     {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
