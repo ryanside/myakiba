@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { MouseEvent, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack/react-table";
 
 import { cn } from "@/lib/utils";
@@ -62,6 +62,8 @@ export interface DataGridProps<TData extends object> {
   emptyMessage?: ReactNode | string;
   /** A row that has no cells to show, such as one with no record behind it, spans the table. */
   fullWidthRow?: (row: TData) => ReactNode;
+  /** The table's accessible name, and what describes it. */
+  tableAria?: Pick<ComponentProps<"table">, "aria-label" | "aria-describedby">;
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;

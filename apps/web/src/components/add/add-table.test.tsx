@@ -350,3 +350,21 @@ test.each([
     expect(screen.getByRole("button", { name: "Discard Picked Miku" })).toBeDefined(),
   );
 });
+
+test("a header says how its column is sorted, and the table has its name and its keys", async () => {
+  seedItems(item("aaa000000001", { title: "A" }));
+  draft("miku00000001", "aaa000000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select A" });
+  const table = screen.getByRole("table", { name: "Items to add" });
+  const hint = document.querySelector(`[id="${table.getAttribute("aria-describedby")}"]`);
+  expect(hint?.textContent).toContain("Arrow keys");
+
+  const header = screen.getByRole("columnheader", { name: "Item" });
+  expect(header.getAttribute("aria-sort")).toBe("none");
+  await user.click(screen.getByRole("button", { name: "Item" }));
+  expect(header.getAttribute("aria-sort")).toBe("ascending");
+  await user.click(screen.getByRole("button", { name: "Item" }));
+  expect(header.getAttribute("aria-sort")).toBe("descending");
+});

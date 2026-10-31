@@ -682,9 +682,7 @@ export function AddItems({
       <AddTableContext value={tableState}>
         <div
           ref={frame}
-          role="group"
-          aria-label="Items to add"
-          aria-describedby={hintId}
+          role="presentation"
           className="@container/grid"
           onKeyDownCapture={onTableKeys}
         >
@@ -694,6 +692,7 @@ export function AddItems({
           <DataGrid
             table={table}
             recordCount={data.length}
+            tableAria={{ "aria-label": "Items to add", "aria-describedby": hintId }}
             emptyMessage={<EmptyState onSearch={() => c.searchInput.current?.focus()} />}
             fullWidthRow={fullWidthRow}
             onRowPointerClick={(row, event) => {

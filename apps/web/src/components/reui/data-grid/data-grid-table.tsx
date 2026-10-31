@@ -6,6 +6,7 @@ import type { Cell, Column, Header, HeaderGroup, Row } from "@tanstack/react-tab
 import { cva } from "class-variance-authority";
 
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
+import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -59,6 +60,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
 
   return (
     <table
+      {...props.tableAria}
       data-slot="data-grid-table"
       className={cn(
         "text-foreground text-sm w-full min-w-full caption-bottom text-left align-middle font-normal rtl:text-right",
@@ -172,6 +174,7 @@ function DataGridTableHeadRowCell<TData>({
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
         ...dndStyle,
       }}
+      aria-sort={getAriaSort(column)}
       data-col={column.id}
       data-pinned={isPinned || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}

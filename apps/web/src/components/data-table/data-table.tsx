@@ -1,9 +1,10 @@
 import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
-import type { Column, Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
@@ -86,16 +87,6 @@ function TableHeader<TData extends RowData>({
       ))}
     </thead>
   );
-}
-
-function getAriaSort<TData extends RowData>(
-  column: Column<TData>,
-): "ascending" | "descending" | "none" | undefined {
-  const sorted = column.getIsSorted();
-
-  if (sorted === "asc") return "ascending";
-  if (sorted === "desc") return "descending";
-  return column.getCanSort() ? "none" : undefined;
 }
 
 function TableBody<TData extends RowData>({
