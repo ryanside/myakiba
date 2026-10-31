@@ -369,7 +369,9 @@ function ActionBarGroup(props: DivProps) {
         ref={composedRef}
         className={cn(
           "flex gap-2 outline-none",
-          orientation === "horizontal" ? "items-center" : "w-full flex-col items-start",
+          orientation === "horizontal"
+            ? "max-w-full min-w-0 flex-wrap items-center"
+            : "w-full flex-col items-start",
           className,
         )}
         onBlur={onBlur}
