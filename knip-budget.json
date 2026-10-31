@@ -97,7 +97,6 @@
     "apps/web/src/components/ui/toast.tsx ToastProvider",
     "apps/web/src/components/ui/toast.tsx ToastTitle",
     "apps/web/src/components/ui/toast.tsx ToastViewport",
-    "apps/web/src/components/ui/toast.tsx createToastManager",
     "apps/web/src/components/ui/toast.tsx useToastManager",
     "apps/web/src/components/ui/toggle.tsx Toggle",
     "apps/web/src/lib/compose-refs.ts composeRefs",
