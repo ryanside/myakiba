@@ -61,9 +61,8 @@ function choose(form: DestinationForm, choice: Choice): DestinationForm {
   }
 }
 
-function itemsPhrase(selected: number, total: number, loading: boolean): string {
-  // Until the rows' Items are read, no count is true.
-  if (loading || total === 0) return "items";
+function itemsPhrase(selected: number, total: number): string {
+  if (total === 0) return "items";
   const noun = total === 1 ? "item" : "items";
   return selected === total ? `${selected} ${noun}` : `${selected} of ${total} ${noun}`;
 }
@@ -140,8 +139,7 @@ export function DestinationSentence({
   const baseId = useId();
   const form = c.resolvedForm;
   const choice = choiceOf(form);
-  const total = c.rows.filter((row) => c.items.has(row.itemId)).length;
-  const phrase = itemsPhrase(c.commitRows.length, total, c.itemsLoading);
+  const phrase = itemsPhrase(c.selectedCount, c.countedRows.length);
 
   return (
     <section

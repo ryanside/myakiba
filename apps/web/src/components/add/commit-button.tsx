@@ -9,6 +9,7 @@ export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommi
 /** The one Add button. Its label says what the click will do. */
 export function CommitButton({
   rows,
+  count,
   destination,
   emailVerified,
   loading,
@@ -19,6 +20,8 @@ export function CommitButton({
   onDone,
 }: {
   readonly rows: readonly CommitRow[];
+  /** How many rows it will add, known before `rows` have their Items. */
+  readonly count: number;
   readonly destination: Destination;
   readonly emailVerified: boolean;
   /** Some selected rows have no summary yet, so the commit would leave them out. */
@@ -31,7 +34,7 @@ export function CommitButton({
 }) {
   const commit = useCommitAdd();
   const { status, run } = useButtonStatus({ successDuration: 900 });
-  const plan = commitPlan(destination, rows.length, { emailVerified });
+  const plan = commitPlan(destination, count, { emailVerified });
 
   const handleCommit = async () => {
     if (plan.kind === "done") {

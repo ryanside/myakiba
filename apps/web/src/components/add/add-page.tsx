@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader, formatCount } from "@/components/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
@@ -40,9 +41,10 @@ function plannedTotal(c: AddController): number | null {
 }
 
 function CommitBar({ controller: c }: { readonly controller: AddController }) {
-  const count = c.commitRows.length;
+  const count = c.selectedCount;
   const ownership = c.destination.ownership;
-  const total = ownership && ownership.kind !== "none" && count > 0 ? plannedTotal(c) : null;
+  const showsTotal = ownership && ownership.kind !== "none" && count > 0;
+  const total = showsTotal && !c.itemsLoading ? plannedTotal(c) : null;
   const summary =
     c.rows.length === 0
       ? ["No items yet."]
@@ -63,11 +65,18 @@ function CommitBar({ controller: c }: { readonly controller: AddController }) {
           <li key={part}>{part}</li>
         ))}
       </ul>
-      {total === null ? null : (
+      {showsTotal && (c.itemsLoading || total !== null) ? (
         <p className="text-sm tabular-nums">
-          Total {formatCurrencyFromMinorUnits(total, c.currency, getCurrencyLocale(c.currency))}
+          Total {/* Holds the room of an ordinary total, so the Items loading moves nothing. */}
+          <span className="inline-block min-w-20">
+            {total === null ? (
+              <Skeleton className="inline-block h-4 w-16 align-middle" />
+            ) : (
+              formatCurrencyFromMinorUnits(total, c.currency, getCurrencyLocale(c.currency))
+            )}
+          </span>
         </p>
-      )}
+      ) : null}
       <CommitButton {...c.commitProps} />
     </section>
   );

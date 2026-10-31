@@ -569,7 +569,7 @@ test("the total counts what will be saved, and a release in another currency add
   await rowsLoaded();
 
   const bar = within(screen.getByRole("region", { name: "Commit" }));
-  await bar.findByText("Total $5,000.00");
+  await waitFor(() => expect(bar.getByText(/^Total/u).textContent).toBe("Total $5,000.00"));
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 });
 
@@ -776,12 +776,15 @@ test("a row still loading is a skeleton, and the commit waits for it", async () 
   openAddPage("/add?to=collection");
 
   await waitFor(() => expect(document.querySelector('tr[aria-hidden="true"]')).not.toBeNull());
-  expect(screen.getByRole("button", { name: "Select items to add" }).hasAttribute("disabled")).toBe(
+  expect(screen.getByRole("button", { name: "Add 1 to collection" }).hasAttribute("disabled")).toBe(
     true,
   );
 
   await act(async () => answer());
-  await screen.findByRole("button", { name: "Add 1 to collection" });
+  await screen.findByRole("checkbox", { name: "Select Hatsune Miku" });
+  expect(screen.getByRole("button", { name: "Add 1 to collection" }).hasAttribute("disabled")).toBe(
+    false,
+  );
   expect(document.querySelector('tr[aria-hidden="true"]')).toBeNull();
 });
 

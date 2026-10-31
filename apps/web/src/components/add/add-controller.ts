@@ -101,6 +101,10 @@ export function useAddController(search: AddSearchParams) {
     const item = items.get(row.itemId);
     return row.selected && item ? [{ row, item }] : [];
   });
+  // The draft knows its rows from the first paint, so counting them moves nothing when the Items
+  // load. Once the read answers, a row with no Item cannot be committed, so it stops counting.
+  const countedRows = itemsLoading ? rows : rows.filter((row) => items.has(row.itemId));
+  const selectedCount = countedRows.filter((row) => row.selected).length;
   const commitRows: readonly CommitRow[] = selectedRows.map(({ row, item }) => ({
     row,
     title: item.title,
@@ -262,6 +266,8 @@ export function useAddController(search: AddSearchParams) {
 
     selectedRows,
     commitRows,
+    countedRows,
+    selectedCount,
     releaseOf,
     newOrderTitle,
     issues,
@@ -299,6 +305,7 @@ export function useAddController(search: AddSearchParams) {
     /** Spread onto `<CommitButton />`. */
     commitProps: {
       rows: commitRows,
+      count: selectedCount,
       destination,
       emailVerified,
       loading: itemsLoading,

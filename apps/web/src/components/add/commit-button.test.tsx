@@ -43,6 +43,7 @@ function renderButton({
     <QueryClientProvider client={new QueryClient()}>
       <CommitButton
         rows={rows}
+        count={rows.length}
         destination={destination}
         emailVerified={emailVerified}
         loading={loading}
