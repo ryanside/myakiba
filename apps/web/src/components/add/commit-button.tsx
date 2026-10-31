@@ -63,8 +63,9 @@ export function CommitButton({
     <StatusButton
       type="button"
       status={status}
+      size="sm"
       disabled={plan.kind === "blocked" || loading}
-      className="max-w-full min-w-0 @max-xl/bar:w-full"
+      className="max-w-full min-w-0 max-sm:w-full"
       onClick={handleCommit}
     >
       <span className="block max-w-[min(70vw,26rem)] truncate" title={plan.label}>

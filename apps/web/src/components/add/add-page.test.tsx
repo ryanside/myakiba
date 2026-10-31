@@ -265,7 +265,6 @@ test("an empty page keeps its shape, with only search and the steps working", as
   await screen.findByText("Pick items on MyFigureCollection");
 
   expect(screen.getByRole("region", { name: "Destination" })).toBeDefined();
-  expect(screen.getByText("No items yet.")).toBeDefined();
   expect(screen.getByRole("combobox", { name: "Where these go" }).hasAttribute("disabled")).toBe(
     true,
   );

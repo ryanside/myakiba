@@ -18,7 +18,7 @@ import type {
   Updater,
 } from "@tanstack/react-table";
 import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
-import type { ComponentType, CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { ComponentType, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -601,31 +601,6 @@ const SHOW_ALL = {};
 // the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
 const SCROLLS_BELOW = 1024;
 
-/**
- * The search's panel drops from the toolbar, where the page's scroller would cut it or the phone's
- * fixed bar would cover it. So it gets the room below the input, after the page moves the input up
- * when that room is too small.
- */
-function useSearchRoom() {
-  const [room, setRoom] = useState<number | null>(null);
-  const measure = (wrapper: HTMLElement) => {
-    const pane = wrapper.closest("[data-add-pane]");
-    if (!pane) return;
-    const bar = document.querySelector('section[aria-label="Commit"]');
-    const paneScrolls = getComputedStyle(pane).overflowY !== "visible";
-    const limit = () => {
-      if (paneScrolls) return pane.getBoundingClientRect().bottom;
-      return bar && getComputedStyle(bar).position === "fixed"
-        ? bar.getBoundingClientRect().top
-        : window.innerHeight;
-    };
-    const below = () => limit() - wrapper.getBoundingClientRect().bottom;
-    if (below() < 288) wrapper.scrollIntoView({ block: "start" });
-    setRoom(Math.max(below() - 8, 160));
-  };
-  return { room, measure };
-}
-
 /** The toolbar and every row. The search lives here so it lines up with what it adds to. */
 export function AddItems({
   controller: c,
@@ -639,7 +614,6 @@ export function AddItems({
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
-  const search = useSearchRoom();
 
   const { kind } = c.resolvedForm;
   const owned = kind === "collection" || kind === "order";
@@ -699,26 +673,10 @@ export function AddItems({
   });
 
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="relative z-30 flex flex-wrap items-center gap-2">
-        {/* AddSearch insets its input by 4px, so this puts the input on the table's edge. */}
-        <div
-          className="-mt-1 -ms-1 w-full min-w-0 scroll-mt-2 @2xl/add:w-xs [&_[role=presentation]]:max-h-(--search-room) @2xl/add:[&_[role=presentation]]:end-auto @2xl/add:[&_[role=presentation]]:w-lg"
-          style={
-            search.room === null
-              ? undefined
-              : ({ "--search-room": `${search.room}px` } as CSSProperties)
-          }
-          onFocus={(event) => search.measure(event.currentTarget)}
-          onInput={(event) => search.measure(event.currentTarget)}
-        >
-          <AddSearch {...c.searchProps} />
-        </div>
-        {fields.length > 0 ? (
-          <div className="ms-auto flex items-center gap-2 @max-2xl/add:ms-0 @max-2xl/add:w-full">
-            <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
-          </div>
-        ) : null}
+    <>
+      <div className="relative z-30 flex items-center gap-2">
+        <AddSearch {...c.searchProps} />
+        {fields.length > 0 ? <FillMenu fields={fields} c={c} onFilled={onAnnounce} /> : null}
       </div>
 
       <AddTableContext value={tableState}>
@@ -757,6 +715,6 @@ export function AddItems({
           </DataGrid>
         </div>
       </AddTableContext>
-    </div>
+    </>
   );
 }

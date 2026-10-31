@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+/** A page built around a table: the width and rhythm its title, toolbar and grid share. */
+export const WORKSPACE_CLASS_NAME = "mx-auto flex w-full max-w-352 flex-col gap-4";
+
 export function PageHeader({
   title,
   titleAccessory,

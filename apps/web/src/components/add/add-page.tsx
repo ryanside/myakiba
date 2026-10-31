@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { PageHeader, formatCount } from "@/components/page-header";
+import { PageHeader, WORKSPACE_CLASS_NAME, formatCount } from "@/components/page-header";
+import { ActionBar, ActionBarSelection, ActionBarSeparator } from "@/components/ui/action-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrencyLocale } from "@/lib/locale";
+import { cn } from "@/lib/utils";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useAddController } from "./add-controller";
@@ -13,11 +15,6 @@ import { commitSummary } from "./commit-input";
 import { DestinationSentence } from "./destination-sentence";
 import { feeTotal, OrderDetails } from "./order-details";
 import { plannedPrice } from "./row-fields";
-
-// The header and this page's padding take 6rem, and the inset sidebar's margin 1rem more. The page
-// scrolls inside this height, so only the bar stays in view. Below 36rem tall it flows as a whole.
-const PAGE_HEIGHT =
-  "h-[calc(100dvh-6rem)] md:h-[calc(100dvh-7rem)] [@media(max-height:36rem)]:h-auto";
 
 /**
  * What the selected rows and a new Order's fees will save, or null when a typed price cannot be
@@ -41,26 +38,29 @@ function CommitBar({ controller: c }: { readonly controller: AddController }) {
   const total = showsTotal && !c.itemsLoading ? plannedTotal(c) : null;
   const summary =
     c.rows.length === 0
-      ? ["No items yet."]
+      ? null
       : (commitSummary(c.destination, count) ?? ["Choose Collection, Order or Item Database."]);
   return (
-    <section
-      aria-label="Commit"
-      // The fade says the page carries on under this bar, so a row it cuts does not look broken. It
-      // stops a pixel short, or it paints over the ring's top edge.
-      className="@container/bar relative z-40 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-card px-3 py-2.5 shadow-lg ring-1 ring-foreground/10 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:mb-px before:h-6 before:bg-linear-to-t before:from-background before:to-transparent max-md:fixed max-md:inset-x-3 max-md:bottom-3 max-md:before:hidden"
-    >
-      {/* Two lines at most: twenty Lists would otherwise push the button off a short screen. */}
-      <ul
-        className="flex max-h-10 min-w-0 flex-1 basis-56 flex-wrap gap-x-4 overflow-hidden text-sm text-muted-foreground tabular-nums [overflow-wrap:anywhere]"
-        title={summary.join(", ")}
-      >
-        {summary.map((part) => (
-          <li key={part}>{part}</li>
-        ))}
-      </ul>
+    // Always open, so it has no way to be dismissed, and it is there from the first paint.
+    <ActionBar open aria-label="Commit" className="animate-none!">
+      {summary === null ? null : (
+        <>
+          <ActionBarSelection className="min-w-0 border-none">
+            {/* Two lines at most: twenty Lists would otherwise push the button off the screen. */}
+            <ul
+              className="flex max-h-10 max-w-md min-w-0 flex-wrap gap-x-4 overflow-hidden [overflow-wrap:anywhere]"
+              title={summary.join(", ")}
+            >
+              {summary.map((part) => (
+                <li key={part}>{part}</li>
+              ))}
+            </ul>
+          </ActionBarSelection>
+          <ActionBarSeparator className="max-sm:hidden" />
+        </>
+      )}
       {showsTotal && (c.itemsLoading || total !== null) ? (
-        <div className="text-sm tabular-nums">
+        <div className="px-1 text-sm tabular-nums">
           Total {/* Holds the room of an ordinary total, so the Items loading moves nothing. */}
           <div className="inline-block min-w-20">
             {total === null ? (
@@ -72,7 +72,7 @@ function CommitBar({ controller: c }: { readonly controller: AddController }) {
         </div>
       ) : null}
       <CommitButton {...c.commitProps} />
-    </section>
+    </ActionBar>
   );
 }
 
@@ -83,35 +83,30 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
   const hasDraft = c.rows.length > 0;
   return (
     <div
-      className={`@container/add mx-auto flex w-full max-w-5xl flex-col ${PAGE_HEIGHT} max-md:h-auto max-md:pb-32`}
+      // The page scrolls under the sticky header and the fixed bar, so what takes focus stays clear
+      // of both, and the bar never covers the last row.
+      className={cn(
+        WORKSPACE_CLASS_NAME,
+        "@container/add pb-20 **:scroll-mt-9 **:scroll-mb-24 max-sm:pb-36 max-sm:**:scroll-mb-40",
+      )}
     >
       <LiveRegions controller={c} />
       <p role="status" className="sr-only">
         {filled}
       </p>
-      {/* The whole page scrolls as one, as the Collection and Orders pages do, and only the bar stays. */}
-      <div
-        data-add-pane=""
-        // A commit in flight holds what it was sent with, so nothing here can change under it.
-        inert={c.sending}
-        className="relative -mx-2 -mt-1 flex min-h-0 flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto overscroll-contain scroll-pt-9 px-2 pt-1 pb-6 **:scroll-mb-6 max-md:overflow-visible max-md:**:scroll-mb-40 [@media(max-height:36rem)]:overflow-visible"
-      >
-        <PageHeader
-          title={search.from === "mfc" ? "Review your picks" : "Add items"}
-          // The page's background runs behind this, and it is darker than other pages'.
-          meta={
-            <span className="text-foreground/80">
-              {formatCount(c.rows.length, "Item", "Items")}
-            </span>
-          }
-        />
+      {/* A commit in flight holds what it was sent with, so nothing here can change under it. */}
+      <div inert={c.sending} className="flex flex-col gap-4">
+        <div className="mb-2">
+          <PageHeader
+            title={search.from === "mfc" ? "Review your picks" : "Add items"}
+            meta={formatCount(c.rows.length, "Item", "Items")}
+          />
+        </div>
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />
         </div>
-        <div className="flex flex-col gap-4">
-          <DestinationSentence controller={c} disabled={!hasDraft} />
-          {hasDraft && kind === "order" ? <OrderDetails controller={c} /> : null}
-        </div>
+        <DestinationSentence controller={c} disabled={!hasDraft} />
+        {hasDraft && kind === "order" ? <OrderDetails controller={c} /> : null}
         <AddItems controller={c} onAnnounce={setFilled} />
       </div>
       <CommitBar controller={c} />

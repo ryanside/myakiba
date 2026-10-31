@@ -2,6 +2,7 @@ import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
 import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
+import { WORKSPACE_CLASS_NAME } from "@/components/page-header";
 import { KPICard } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useCollectionQuery } from "@/hooks/use-collection";
@@ -37,7 +38,7 @@ function RouteComponent() {
 
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-352">
+      <div className={WORKSPACE_CLASS_NAME}>
         <div className="flex flex-col gap-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl tracking-tight font-heading font-medium">Collection</h1>
@@ -51,7 +52,7 @@ function RouteComponent() {
   }
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-352">
+    <div className={WORKSPACE_CLASS_NAME}>
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl tracking-tight font-heading font-medium">Collection</h1>

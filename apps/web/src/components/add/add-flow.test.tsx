@@ -195,7 +195,7 @@ test("the summary reads Item Database with nothing else named, and no mid dot an
   const user = userEvent.setup();
   openAddPage("/add?to=none");
   await rowsLoaded();
-  const bar = () => within(screen.getByRole("region", { name: "Commit" }));
+  const bar = () => within(screen.getByRole("toolbar", { name: "Commit" }));
   expect(bar().getByText("Item Database")).toBeDefined();
   expect(screen.queryByText(/nothing to save/u)).toBeNull();
 
@@ -592,7 +592,7 @@ test("the total counts what will be saved, and a release in another currency add
   openAddPage("/add?to=collection");
   await rowsLoaded();
 
-  const bar = within(screen.getByRole("region", { name: "Commit" }));
+  const bar = within(screen.getByRole("toolbar", { name: "Commit" }));
   await waitFor(() => expect(bar.getByText(/^Total/u).textContent).toBe("Total $5,000.00"));
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 });
