@@ -60,7 +60,7 @@ const chooseOption = async (user: User, field: string, option: string) => {
   await user.click(screen.getByRole("combobox", { name: field }));
   await user.click(await screen.findByRole("option", { name: option }));
 };
-const destination = (user: User, name: string) => chooseOption(user, "Where these go", name);
+const destination = (user: User, name: string) => user.click(screen.getByRole("radio", { name }));
 const pause = (ms: number) =>
   act(async () => {
     await new Promise((resolve) => {
@@ -99,15 +99,46 @@ test("the destination menu is exactly Collection, New Order, Existing Order and 
   const user = userEvent.setup();
   openAddPage();
   await rowsLoaded();
-  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  const group = screen.getByRole("radiogroup", { name: "Where these go" });
+  expect(
+    within(group)
+      .getAllByRole("radio")
+      .map(({ textContent }) => textContent),
+  ).toEqual(["Collection", "New Order", "Existing Order", "Item Database"]);
+  await user.click(within(group).getByRole("radio", { name: "New Order" }));
+  expect(within(group).getByRole("radio", { name: "New Order" }).getAttribute("aria-checked")).toBe(
+    "true",
+  );
+});
 
-  const options = await screen.findAllByRole("option");
-  expect(options.map(({ textContent }) => textContent)).toEqual([
-    "Collection",
-    "New Order",
-    "Existing Order",
-    "Item Database",
-  ]);
+test("clicking a row's empty space opens its details, and its controls do not", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const details = () => screen.queryByRole("group", { name: "Details for Hatsune Miku" });
+
+  await user.click(screen.getByRole("textbox", { name: "Price for Hatsune Miku" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
+  await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
+  await chooseOption(user, "Condition for Hatsune Miku", "Pre-Owned");
+  expect(details()).toBeNull();
+
+  const row = screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).closest("tr");
+  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  expect(details()).not.toBeNull();
+  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  expect(details()).toBeNull();
+});
+
+test("with nothing chosen, a row's empty space does nothing", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add");
+  await rowsLoaded();
+  const row = screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).closest("tr");
+  await user.click(row?.querySelector('[data-add-col="item"]') as Element);
+  expect(screen.queryByRole("group", { name: "Details for Hatsune Miku" })).toBeNull();
 });
 
 test("the page has no Columns selector and no More Order details", async () => {
@@ -1035,7 +1066,7 @@ test("nothing on the page can change while a commit is in flight, and its answer
     box,
     screen.getByRole("checkbox", { name: "Select Hatsune Miku" }),
     screen.getByRole("textbox", { name: "Price for Hatsune Miku" }),
-    screen.getByRole("combobox", { name: "Where these go" }),
+    screen.getByRole("radio", { name: "Collection" }),
     screen.getByRole("button", { name: "Remove Hatsune Miku" }),
   ]) {
     expect(control.closest("[inert]")).not.toBeNull();
@@ -1156,9 +1187,11 @@ test("a commit resets the form to its preset, with issues gone", async () => {
 
   await screen.findByText("Added 1 to your collection");
   await waitFor(() =>
-    expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe(
-      "choose where",
-    ),
+    expect(
+      within(screen.getByRole("radiogroup", { name: "Where these go" })).queryAllByRole("radio", {
+        checked: true,
+      }),
+    ).toHaveLength(0),
   );
 });
 

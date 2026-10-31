@@ -36,14 +36,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const searchBox = () => screen.getByRole("combobox", { name: "Search the Item Database" });
-const destination = () => screen.findByRole("combobox", { name: "Where these go" });
 const chosenDestination = async () => {
-  const trigger = await destination();
-  return trigger.textContent;
+  await screen.findByRole("radiogroup", { name: "Where these go" });
+  return screen.queryByRole("radio", { checked: true })?.textContent ?? null;
 };
 const choose = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
-  await user.click(await destination());
-  await user.click(await screen.findByRole("option", { name }));
+  await user.click(await screen.findByRole("radio", { name }));
 };
 const pageReady = () => screen.findByRole("combobox", { name: "Search the Item Database" });
 
@@ -223,7 +221,7 @@ test("nothing is chosen without `to`, and an earlier commit's choice is not reme
   openAddPage(`/add?item=${ITEM_ID}`);
   const blocked = await screen.findByRole("button", { name: "Choose where these go" });
   expect(blocked.hasAttribute("disabled")).toBe(true);
-  expect(await chosenDestination()).toBe("choose where");
+  expect(await chosenDestination()).toBeNull();
 
   await choose(user, "Collection");
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
@@ -232,7 +230,7 @@ test("nothing is chosen without `to`, and an earlier commit's choice is not reme
 
   openAddPage(`/add?item=${OTHER_ID}`);
   await screen.findByRole("button", { name: "Choose where these go" });
-  expect(await chosenDestination()).toBe("choose where");
+  expect(await chosenDestination()).toBeNull();
   expect(localStorage.length).toBe(0);
 });
 

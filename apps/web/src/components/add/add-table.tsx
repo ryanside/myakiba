@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcItemUrl } from "@myakiba/contracts/add/constants";
 import { Link } from "@tanstack/react-router";
 import { Fragment, useState } from "react";
-import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -387,6 +387,16 @@ function MissingItemRow({
   );
 }
 
+/** A click on the row itself: not on a control, not in a popup it opened, not ending a selection. */
+function isEmptySpace(event: MouseEvent<HTMLTableRowElement>): boolean {
+  const target = event.target as Element;
+  return (
+    event.currentTarget.contains(target) &&
+    target.closest("a, button, input, label, [role='checkbox'], [role='combobox']") === null &&
+    !window.getSelection()?.toString()
+  );
+}
+
 function ItemRow({
   row,
   item,
@@ -414,9 +424,14 @@ function ItemRow({
   const { title, externalId, image } = item;
 
   return (
+    // A pointer shortcut for the Details button, which keyboards and screen readers use instead.
     <tr
       data-add-row={itemId}
+      onClick={(event) => {
+        if (owned && isEmptySpace(event)) onToggleDetails();
+      }}
       className={cn(
+        owned && "cursor-pointer",
         "motion-safe:animate-[data-in_160ms_ease-out_both] @max-3xl/rows:grid @max-3xl/rows:grid-cols-2 @max-3xl/rows:gap-x-3 @max-3xl/rows:gap-y-3 @max-3xl/rows:border-t @max-3xl/rows:border-border/60 @max-3xl/rows:p-3",
       )}
     >
@@ -458,7 +473,7 @@ function ItemRow({
               {...itemDestination(itemId, externalId)}
               title={title}
               className={cn(
-                "truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 @max-3xl/rows:line-clamp-2 @max-3xl/rows:whitespace-normal @max-3xl/rows:[overflow-wrap:anywhere]",
+                "w-fit max-w-full truncate rounded-sm font-medium outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 @max-3xl/rows:line-clamp-2 @max-3xl/rows:whitespace-normal @max-3xl/rows:[overflow-wrap:anywhere]",
                 !selected && "text-muted-foreground",
               )}
             >
