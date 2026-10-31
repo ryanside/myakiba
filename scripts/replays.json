@@ -1,6 +1,29 @@
 {
   "test": [
     {
+      "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
+      "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "trying another destination keeps what was typed, New and Existing Order included",
+        "arrow keys through the destinations leave a New Order's fields as typed"
+      ]
+    },
+    {
+      "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
+      "bug": "A save that disabled an InlineTextCell's preview lost focus, and the next focus on it could not edit.",
+      "test": "apps/web/src/components/cells/inline-text-cell.test.tsx",
+      "fixed": [
+        "focus comes back to the preview once a save stops disabling it, and the next focus edits"
+      ]
+    },
+    {
+      "fix": "bb7e128f1d1ec9fefc6fd9bae90feb7276851ead",
+      "bug": "Enter and Escape in the Order title dropped keyboard focus to the page.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": ["Enter and Escape in the Order title keep focus on it, without reopening it"]
+    },
+    {
       "fix": "e4e2e1e6c41670da39b0e8c14e6021d6c3aeb09a",
       "bug": "Pressing F6 twice with a toast open saved the toast as where focus returns to, so Tab could not leave it.",
       "test": "apps/web/src/components/ui/toast.test.tsx",
