@@ -144,13 +144,12 @@ export function useAddController(search: AddSearchParams) {
   };
 
   const handleRemove = (itemId: string) => {
-    const index = rows.findIndex((row) => row.itemId === itemId);
-    const neighbour = rows[index + 1] ?? rows[index - 1];
+    // The document holds the rows in the order on screen, which a sort makes differ from the draft's.
+    const buttons = [...document.querySelectorAll<HTMLElement>(`[id^="${removeButtonId("")}"]`)];
+    const index = buttons.findIndex(({ id }) => id === removeButtonId(itemId));
+    const next = buttons[index + 1] ?? buttons[index - 1];
     // The removed button had focus, so focus moves once the row is gone, not to the page's start.
     flushSync(() => dispatch({ type: "remove", itemIds: [itemId] }));
-    const next =
-      neighbour &&
-      document.querySelector<HTMLElement>(`[id="${removeButtonId(neighbour.itemId)}"]`);
     (next ?? searchInput.current)?.focus();
     setAnnouncement(`Removed ${items.get(itemId)?.title ?? "the row"}`);
   };

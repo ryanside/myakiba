@@ -17,7 +17,7 @@ import type {
   Table,
   Updater,
 } from "@tanstack/react-table";
-import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ComponentType, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
@@ -245,7 +245,9 @@ function isEmptySpace(event: MouseEvent<HTMLTableRowElement>): boolean {
   const target = event.target as Element;
   return (
     event.currentTarget.contains(target) &&
-    target.closest("a, button, input, label, [role='checkbox'], [role='combobox']") === null &&
+    target.closest(
+      "a, button, input, label, [role='checkbox'], [role='combobox'], [data-col='select']",
+    ) === null &&
     !window.getSelection()?.toString()
   );
 }
@@ -561,7 +563,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     header: ({ column }) => <DataGridColumnHeader title="Item" column={column} />,
     cell: itemCell(ItemName),
     sortingFn: "text",
-    size: 480,
+    size: 432,
     minSize: 200,
     meta: {
       skeleton: ITEM_SKELETON,
@@ -612,9 +614,19 @@ const COLUMNS: ColumnDef<AddRow>[] = [
 const HIDDEN_WITHOUT_OWNERSHIP = { price: false, count: false, condition: false };
 const SHOW_ALL = {};
 
-// A frame this wide holds every column unless the user resizes them past it, so it can clip and let
-// the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
-const SCROLLS_BELOW = 1024;
+// A frame this wide holds every column, as `fitsFrame` keeps it doing after a resize, so it can clip
+// and let the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
+// The container query below holds the same width.
+const SCROLLS_BELOW = 976;
+const FRAME_BORDERS = 2;
+
+function fitsFrame(table: Table<AddRow>, sizing: ColumnSizingState, frameWidth: number): boolean {
+  if (frameWidth < SCROLLS_BELOW) return true;
+  const total = table
+    .getVisibleLeafColumns()
+    .reduce((sum, column) => sum + (sizing[column.id] ?? column.columnDef.size ?? 0), 0);
+  return total <= frameWidth - FRAME_BORDERS;
+}
 
 /** The toolbar and every row. The search lives here so it lines up with what it adds to. */
 export function AddItems({
@@ -632,6 +644,16 @@ export function AddItems({
 
   const { kind } = c.resolvedForm;
   const owned = kind === "collection" || kind === "order";
+  const fieldsHidden = kind === "none";
+  // What was sized or sorted for other columns says nothing about these, and could put the row's
+  // actions out of the frame or sort by something no longer on screen.
+  const [columnsFor, setColumnsFor] = useState(fieldsHidden);
+  if (columnsFor !== fieldsHidden) {
+    setColumnsFor(fieldsHidden);
+    setColumnSizing({});
+    if (fieldsHidden)
+      setSorting((current) => current.filter(({ id }) => !(id in HIDDEN_WITHOUT_OWNERSHIP)));
+  }
   const fields = fieldsFor(kind);
   const data = tableRows(c);
 
@@ -660,7 +682,7 @@ export function AddItems({
     state: {
       sorting,
       columnSizing,
-      columnVisibility: kind === "none" ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
+      columnVisibility: fieldsHidden ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
       // A loading row has its tint from the first paint too, since the draft already knows.
       rowSelection: Object.fromEntries(
         data.flatMap((row) => (isSelected(row) ? [[row.id, true]] : [])),
@@ -674,11 +696,7 @@ export function AddItems({
     onColumnSizingChange: (updater: Updater<ColumnSizingState>) => {
       setColumnSizing((current) => {
         const next = functionalUpdate(updater, current);
-        const width = frame.current?.clientWidth ?? 0;
-        const total = table
-          .getVisibleLeafColumns()
-          .reduce((sum, column) => sum + (next[column.id] ?? column.columnDef.size ?? 0), 0);
-        return width >= SCROLLS_BELOW && total > width ? current : next;
+        return fitsFrame(table, next, frame.current?.clientWidth ?? 0) ? next : current;
       });
     },
     // The rows are new on every render, and resetting on that would render forever.
@@ -686,6 +704,18 @@ export function AddItems({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: heldSortedRowModel,
   });
+
+  // A frame that narrows, as when the sidebar opens, must not leave a sized column cutting off the
+  // row's actions, since a frame this wide does not scroll to them.
+  useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      setColumnSizing((current) => (fitsFrame(table, current, element.clientWidth) ? current : {}));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [table]);
 
   return (
     <>
@@ -723,10 +753,10 @@ export function AddItems({
               header: cn(data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none"),
             }}
           >
-            <DataGridContainer className="@5xl/grid:overflow-clip">
+            <DataGridContainer className="@[61rem]/grid:overflow-clip">
               <ScrollArea
                 horizontal
-                className="@5xl/grid:overflow-clip @5xl/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
+                className="@[61rem]/grid:overflow-clip @[61rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
               >
                 <DataGridTable />
               </ScrollArea>

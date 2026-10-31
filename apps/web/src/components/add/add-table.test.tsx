@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
-import { act, cleanup, configure, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PickRow } from "@/data/picks";
 import {
@@ -369,6 +377,33 @@ test("a header says how its column is sorted, and the table has its name and its
   expect(header.getAttribute("aria-sort")).toBe("descending");
 });
 
+test("a sort by a column that goes away is cleared, and stays cleared when it comes back", async () => {
+  seedItems(item("aaa000000001", { title: "A" }));
+  draft("miku00000001", "aaa000000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select A" });
+  await user.click(screen.getByRole("button", { name: "Condition" }));
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Item Database" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Condition" })).toBeNull());
+
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Collection" }));
+  const header = await screen.findByRole("columnheader", { name: "Condition" });
+  expect(header.getAttribute("aria-sort")).toBe("none");
+});
+
+test("a click in the select cell's padding opens nothing", async () => {
+  draft("miku00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  const cell = document.querySelector('tr[data-row="miku00000001"] td[data-col="select"]');
+  await user.click(cell as Element);
+  expect(screen.queryByRole("group", { name: "Details for Miku" })).toBeNull();
+});
+
 test("a row whose Item is gone is not selected, since it cannot be committed", async () => {
   draft("miku00000001", "gone00000001");
   openAddPage("/add?to=collection");
@@ -376,4 +411,38 @@ test("a row whose Item is gone is not selected, since it cannot be committed", a
   const row = (id: string) => document.querySelector<HTMLElement>(`tr[data-row="${id}"]`);
   expect(row("miku00000001")?.dataset.state).toBe("selected");
   expect(row("gone00000001")?.dataset.state).toBeUndefined();
+});
+
+test("column sizes go back to the defaults when the visible columns change", async () => {
+  draft("miku00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  const width = () => (document.querySelector('th[data-col="item"]') as HTMLElement).style.width;
+  const start = width();
+  const handle = document.querySelector('th[data-col="item"] .cursor-col-resize') as Element;
+  fireEvent.mouseDown(handle, { clientX: 100 });
+  fireEvent.mouseMove(document, { clientX: 300 });
+  fireEvent.mouseUp(document, { clientX: 300 });
+  await waitFor(() => expect(width()).not.toBe(start));
+
+  await user.click(screen.getByRole("combobox", { name: "Where these go" }));
+  await user.click(await screen.findByRole("option", { name: "Collection" }));
+  await screen.findByRole("columnheader", { name: "Price" });
+  await waitFor(() => expect(width()).toBe(start));
+});
+
+test("a row removed under a sort sends focus to the row below it on screen", async () => {
+  seedItems(item("bbb000000001", { title: "B" }), item("ccc000000001", { title: "C" }));
+  seedItems(item("aaa000000001", { title: "A" }));
+  draft("ccc000000001", "aaa000000001", "bbb000000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await screen.findByRole("checkbox", { name: "Select A" });
+  await user.click(screen.getByRole("button", { name: "Item" }));
+  expect(rowOrder()).toEqual(["aaa000000001", "bbb000000001", "ccc000000001"]);
+
+  await user.click(screen.getByRole("button", { name: "Remove A" }));
+
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove B" }));
 });
