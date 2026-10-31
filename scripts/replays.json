@@ -39,6 +39,74 @@
       ]
     },
     {
+      "fix": "e61e03edb15332f5bd7530024b54663d9b69e4fb",
+      "bug": "A grid's sorted column said so only with an icon, and Add's table had no accessible name of its own.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["a header says how its column is sorted, and the table has its name and its keys"]
+    },
+    {
+      "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
+      "bug": "A saving pick was not counted, so the page said 0 Items above its rows and the sentence and commit changed when each pick saved. /add?from=mfc showed the empty message before the extension answered.",
+      "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+      "fixed": [
+        "a saving pick counts in the sentence, the header and the commit from when it is known",
+        "the commit waits for a saving pick its label already counts",
+        "the page a Pick sends the user to shows a skeleton row until the extension answers"
+      ]
+    },
+    {
+      "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
+      "bug": "The empty page stacked both possible messages to hold room, which left a tall gap under the shorter one.",
+      "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+      "fixed": ["an empty page holds one message, with no room left for another"]
+    },
+    {
+      "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
+      "bug": "A commit bar stayed on an empty page, where it could cover the page's one action.",
+      "test": "apps/web/src/components/add/add-page.test.tsx",
+      "fixed": [
+        "the commit bar shows only with something to commit, and a row with nothing selected keeps it"
+      ]
+    },
+    {
+      "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
+      "bug": "An Existing Order's title joined the commit's summary once the Order loaded, which moved everything near it.",
+      "test": "apps/web/src/components/add/commit-input.test.ts",
+      "fixed": ["the summary of an existing Order leaves its title to the picker"]
+    },
+    {
+      "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
+      "bug": "A row whose Item was gone took the selected tint, though only an item row can be selected.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["a row whose Item is gone is not selected, since it cannot be committed"]
+    },
+    {
+      "fix": "6ac518e2439fe87109506c02db78ca947b18ce1b",
+      "bug": "Removing a row under a sort sent focus to its neighbour in the draft, which could be far from it on screen.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["a row removed under a sort sends focus to the row below it on screen"]
+    },
+    {
+      "fix": "6ac518e2439fe87109506c02db78ca947b18ce1b",
+      "bug": "A sort by a column that went away stayed on, with nothing on screen to say why the rows were in that order.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": [
+        "a sort by a column that goes away is cleared, and stays cleared when it comes back"
+      ]
+    },
+    {
+      "fix": "6ac518e2439fe87109506c02db78ca947b18ce1b",
+      "bug": "A click in the select cell's padding opened Details instead of doing nothing.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["a click in the select cell's padding opens nothing"]
+    },
+    {
+      "fix": "6ac518e2439fe87109506c02db78ca947b18ce1b",
+      "bug": "Sizes dragged for fewer columns stayed when more came back, which cut off Condition, Details and Remove with no way to reach them.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["column sizes go back to the defaults when the visible columns change"]
+    },
+    {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
       "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
@@ -2561,7 +2629,7 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
       ],
       "testAt": "0511bc129c7302a1670f8125297bcce3067cea83",
-      "reason": "The server's test at the head uses code that came after this fix, so it cannot run against it."
+      "reason": "The head's test differs from this fix's only in one expected string, \"settings to import\" against \"menu to save\", which later wording changed."
     },
     {
       "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
