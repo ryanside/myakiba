@@ -56,14 +56,20 @@ function SectionHeading({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
-        <ImageThumbnail
-          images={images}
-          title="This Order"
-          decorative
-          showRemainingCount
-          className={THUMBNAIL}
-          fallbackIcon={<OrderIcon />}
-        />
+        {images.length === 0 ? (
+          <span className="flex size-8 shrink-0 items-center justify-center">
+            <OrderIcon />
+          </span>
+        ) : (
+          <ImageThumbnail
+            images={images}
+            title="This Order"
+            decorative
+            showRemainingCount
+            className={THUMBNAIL}
+            fallbackIcon={<OrderIcon />}
+          />
+        )}
         {title}
       </div>
       {aside}

@@ -2,11 +2,9 @@ import { Alert02Icon, ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_ADD_ROWS, mfcItemUrl, mfcSearchUrl } from "@myakiba/contracts/add/constants";
 import type { ReactNode } from "react";
-import { ExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
+import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
 import { formatCount } from "@/components/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { extensionAvailability } from "@/lib/extension-availability";
-import { useExtensionStatus } from "@/lib/extension-gate";
 import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import type { AddController } from "./add-controller";
 import { VerifyEmailNotice } from "./verify-email-notice";
@@ -94,31 +92,41 @@ function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
   );
 }
 
-const EMPTY_TEXT = "Click Pick for myakiba on a MyFigureCollection item and it waits here.";
+const PICK_STEPS = [
+  "Open an item on MyFigureCollection",
+  "Click Pick for myakiba beside MFC's own buttons",
+  "Come back and choose where it goes",
+] as const;
 
-/** One line where the rows will be, or, with no extension to pick with, what to do about that. */
+/** How picking works, where the rows will be, and what to do with no extension to pick with. */
 export function EmptyState() {
-  const status = useExtensionStatus();
-  if (status.kind === "absent") {
-    return (
-      <ExtensionNotice
-        copy={pickExtensionCopy(extensionAvailability())}
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl bg-card px-3 py-3 text-sm ring-1 ring-foreground/10">
+        <ol className="grid min-w-0 flex-1 basis-96 list-none gap-x-6 gap-y-2 @2xl/add:grid-cols-3">
+          {PICK_STEPS.map((step, index) => (
+            <li key={step} className="flex gap-2">
+              <span className="text-muted-foreground tabular-nums" aria-hidden="true">
+                {index + 1}
+              </span>
+              <span className="min-w-0 text-pretty">{step}</span>
+            </li>
+          ))}
+        </ol>
+        <a
+          href={mfcSearchUrl("")}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Search MyFigureCollection
+          <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
+        </a>
+      </div>
+      <MissingExtensionNotice
+        copyOf={pickExtensionCopy}
         className="rounded-xl bg-card ring-foreground/10"
       />
-    );
-  }
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-card px-3 py-2.5 text-sm ring-1 ring-foreground/10">
-      <p className="min-w-0 flex-1 basis-56 text-pretty">{EMPTY_TEXT}</p>
-      <a
-        href={mfcSearchUrl("")}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={buttonVariants({ variant: "outline" })}
-      >
-        Search MyFigureCollection
-        <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
-      </a>
     </div>
   );
 }

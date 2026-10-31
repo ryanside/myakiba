@@ -250,9 +250,7 @@ test("`mfc` shows a hint linking to the item on MFC", async () => {
 test("the empty state says how picking works and links to MFC's search", async () => {
   openAddPage();
   await screen.findByRole("heading", { name: "Add items" });
-  expect(
-    screen.getByText("Click Pick for myakiba on a MyFigureCollection item and it waits here."),
-  ).toBeDefined();
+  expect(screen.getByText("Open an item on MyFigureCollection")).toBeDefined();
   expect(
     screen.getByRole("link", { name: /Search MyFigureCollection/u }).getAttribute("href"),
   ).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
@@ -262,8 +260,7 @@ test("the empty state tells someone without the extension where to get it", asyn
   loadExtension({ installed: false });
   openAddPage();
   await screen.findByText(/under review|Install the myakiba extension|needs desktop Chrome/u);
-  expect(screen.queryByText(/Click Pick for myakiba/u)).toBeNull();
-  expect(screen.queryByRole("link", { name: /Search MyFigureCollection/u })).toBeNull();
+  expect(screen.getByText(/Click Pick for myakiba/u)).toBeDefined();
 });
 
 test.each([
@@ -419,7 +416,7 @@ test("a row the Item Database no longer has says so and cannot be committed", as
     true,
   );
   await user.click(screen.getByRole("button", { name: "Remove this row" }));
-  await screen.findByText("Click Pick for myakiba on a MyFigureCollection item and it waits here.");
+  await screen.findByText("Open an item on MyFigureCollection");
 });
 
 test("a failed read of the rows' Items says so, never that they are gone, and Retry recovers them", async () => {
@@ -561,9 +558,7 @@ test("the page says the extension stopped, with rows or without, and stops sayin
   openAddPage();
   const empty = await screen.findByRole("alert");
   expect(empty.textContent).toBe(STOPPED_NOTICE);
-  expect(
-    screen.getByText("Click Pick for myakiba on a MyFigureCollection item and it waits here."),
-  ).toBeDefined();
+  expect(screen.getByText("Open an item on MyFigureCollection")).toBeDefined();
 });
 
 test("an extension that was never there is not called stopped", async () => {
