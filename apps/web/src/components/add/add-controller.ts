@@ -277,7 +277,6 @@ export function useAddController(search: AddSearchParams) {
     selectedRows,
     commitRows,
     countedRows,
-    savingPicks,
     rowCount,
     selectedCount,
     releaseOf,

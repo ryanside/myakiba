@@ -34,7 +34,7 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
       <div inert={c.sending} className="flex flex-1 flex-col gap-6">
         <PageHeader
           title={search.from === "mfc" ? "Review your picks" : "Add items"}
-          meta={formatCount(c.rows.length + c.savingPicks, "Item", "Items")}
+          meta={formatCount(c.rowCount, "Item", "Items")}
         />
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />

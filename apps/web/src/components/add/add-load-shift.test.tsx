@@ -99,6 +99,21 @@ test("a row whose Item turned out to be gone leaves the count once the read answ
   expect(screen.getByRole("button", { name: "Add 1 to collection" })).toBeDefined();
 });
 
+test("the header drops a row whose Item is gone, as the sentence does", async () => {
+  draft([
+    [MIKU, true],
+    ["gone00000001", true],
+  ]);
+  openAddPage("/add?to=collection");
+  await screen.findByRole("heading", { name: "Add items" });
+  expect(screen.getByText("2 Items")).toBeDefined();
+
+  await act(async () => release());
+  await screen.findByRole("checkbox", { name: "Select Miku" });
+  expect(screen.getByText("1 Item")).toBeDefined();
+  expect(sentence()).toContain("Add 1 item to");
+});
+
 test("an empty page's words hold their room until the extension answers, with no card popping in", async () => {
   loadExtension({ installed: false });
   openAddPage();
