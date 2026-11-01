@@ -72,7 +72,6 @@ export interface DataGridProps<TData extends object> {
     stripped?: boolean;
     headerBackground?: boolean;
     headerBorder?: boolean;
-    headerSticky?: boolean;
     width?: "auto" | "fixed";
     columnsVisibility?: boolean;
     columnsResizable?: boolean;
@@ -85,7 +84,6 @@ export interface DataGridProps<TData extends object> {
     base?: string;
     header?: string;
     headerRow?: string;
-    headerSticky?: string;
     body?: string;
     bodyRow?: string;
     footer?: string;
@@ -133,7 +131,6 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       rowBorder: true,
       rowRounded: false,
       stripped: false,
-      headerSticky: false,
       headerBackground: true,
       headerBorder: true,
       width: "fixed",
@@ -148,7 +145,6 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       base: "",
       header: "",
       headerRow: "",
-      headerSticky: "sticky top-0 z-10 data-stuck:bg-background/90 data-stuck:backdrop-blur-xs",
       body: "",
       bodyRow: "",
       footer: "",

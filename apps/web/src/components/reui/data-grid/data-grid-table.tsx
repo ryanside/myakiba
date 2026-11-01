@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment } from "react";
 import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import { flexRender } from "@tanstack/react-table";
@@ -76,43 +76,10 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
   );
 }
 
-/**
- * A header at rest shows the page behind it, as every other grid's does. Stuck, rows pass under it,
- * so it needs a background. Its top edge is cut only when it sits at the window's top.
- */
-function useIsStuck(sticky: boolean | undefined) {
-  const head = useRef<HTMLTableSectionElement>(null);
-  const [stuck, setStuck] = useState(false);
-  useEffect(() => {
-    if (!sticky || !head.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry) setStuck(entry.intersectionRatio < 1 && entry.boundingClientRect.top <= 0);
-      },
-      { rootMargin: "-1px 0px 0px 0px", threshold: 1 },
-    );
-    observer.observe(head.current);
-    return () => observer.disconnect();
-  }, [sticky]);
-  return { head, stuck };
-}
-
 function DataGridTableHead({ children }: { children: ReactNode }) {
   const { props } = useDataGrid();
-  const { head, stuck } = useIsStuck(props.tableLayout?.headerSticky);
 
-  return (
-    <thead
-      ref={head}
-      data-stuck={stuck ? "" : undefined}
-      className={cn(
-        props.tableClassNames?.header,
-        props.tableLayout?.headerSticky && props.tableClassNames?.headerSticky,
-      )}
-    >
-      {children}
-    </thead>
-  );
+  return <thead className={props.tableClassNames?.header}>{children}</thead>;
 }
 
 function DataGridTableHeadRow<TData>({

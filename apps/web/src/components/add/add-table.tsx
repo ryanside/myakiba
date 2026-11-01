@@ -2,12 +2,7 @@ import { ArrowDown01Icon, Cancel01Icon, PackageIcon } from "@hugeicons/core-free
 import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcItemUrl } from "@myakiba/contracts/add/constants";
 import { Link } from "@tanstack/react-router";
-import {
-  functionalUpdate,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import type {
   CellContext,
   ColumnDef,
@@ -15,9 +10,8 @@ import type {
   RowModel,
   SortingState,
   Table,
-  Updater,
 } from "@tanstack/react-table";
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
 import type { ComponentType, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
@@ -147,7 +141,7 @@ function focusablesIn(root: Element): HTMLElement[] {
 function focusCell(element: HTMLElement | undefined) {
   if (!element) return;
   element.focus();
-  // Focus alone scrolls only a fully hidden element, and the sticky header can cover part of one.
+  // Focus alone scrolls only a fully hidden element.
   element.scrollIntoView({ block: "nearest", inline: "nearest" });
   if (element instanceof HTMLInputElement) element.select();
 }
@@ -633,21 +627,6 @@ const COLUMNS: ColumnDef<AddRow>[] = [
 const HIDDEN_WITHOUT_OWNERSHIP = { price: false, count: false, condition: false };
 const SHOW_ALL = {};
 
-// A frame this wide holds every column, as `fitsFrame` keeps it doing after a resize, so it can clip
-// and let the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
-// The container query below holds the same width. It clears the 965px frame that 1280 with the sidebar
-// open has beside a classic scrollbar.
-const SCROLLS_BELOW = 960;
-const FRAME_BORDERS = 2;
-
-function fitsFrame(table: Table<AddRow>, sizing: ColumnSizingState, frameWidth: number): boolean {
-  if (frameWidth < SCROLLS_BELOW) return true;
-  const total = table
-    .getVisibleLeafColumns()
-    .reduce((sum, column) => sum + (sizing[column.id] ?? column.columnDef.size ?? 0), 0);
-  return total <= frameWidth - FRAME_BORDERS;
-}
-
 /** Every row, under a header that holds Fill all. */
 export function AddItems({
   controller: c,
@@ -666,8 +645,8 @@ export function AddItems({
   const owned = kind === "collection" || kind === "order";
   const fieldsHidden = kind === "none";
   useColumnsFade(frame, fieldsHidden);
-  // What was sized or sorted for other columns says nothing about these, and could put the row's
-  // actions out of the frame or sort by something no longer on screen.
+  // What was sized or sorted for other columns says nothing about these, and could sort by something
+  // no longer on screen.
   const [columnsFor, setColumnsFor] = useState(fieldsHidden);
   if (columnsFor !== fieldsHidden) {
     setColumnsFor(fieldsHidden);
@@ -716,29 +695,12 @@ export function AddItems({
     },
     columnResizeMode: "onChange",
     onSortingChange: setSorting,
-    onColumnSizingChange: (updater: Updater<ColumnSizingState>) => {
-      setColumnSizing((current) => {
-        const next = functionalUpdate(updater, current);
-        return fitsFrame(table, next, frame.current?.clientWidth ?? 0) ? next : current;
-      });
-    },
+    onColumnSizingChange: setColumnSizing,
     // The rows are new on every render, and resetting on that would render forever.
     autoResetAll: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: heldSortedRowModel,
   });
-
-  // A frame that narrows, as when the sidebar opens, must not leave a sized column cutting off the
-  // row's actions, since a frame this wide does not scroll to them.
-  useEffect(() => {
-    const element = frame.current;
-    if (!element) return;
-    const observer = new ResizeObserver(() => {
-      setColumnSizing((current) => (fitsFrame(table, current, element.clientWidth) ? current : {}));
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [table]);
 
   return (
     <AddTableContext value={tableState}>
@@ -762,7 +724,7 @@ export function AddItems({
               tableState.toggleDetails(row.id);
             }
           }}
-          tableLayout={{ dense: true, headerSticky: true, columnsResizable: true }}
+          tableLayout={{ dense: true, columnsResizable: true }}
           tableClassNames={{
             // Rows are there from the first paint, so an entrance would only move them on load.
             bodyRow: cn("animate-none", owned && "cursor-pointer"),
@@ -775,11 +737,8 @@ export function AddItems({
             ),
           }}
         >
-          <DataGridContainer className="@[60rem]/grid:overflow-clip">
-            <ScrollArea
-              horizontal
-              className="@[60rem]/grid:overflow-clip @[60rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
-            >
+          <DataGridContainer>
+            <ScrollArea horizontal>
               <DataGridTable />
             </ScrollArea>
           </DataGridContainer>
