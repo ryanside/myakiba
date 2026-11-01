@@ -2,9 +2,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useGlide } from "@/hooks/use-glide";
 import type { AddController } from "./add-controller";
 import { CommitButton } from "./commit-button";
-import { commitSummary } from "./commit-input";
+import { choiceOf, commitSummary } from "./commit-input";
 import { Swap, WORDS } from "./destination-motion";
-import { choiceOf } from "./destination-sentence";
 
 const ENTER = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const AWAY = { opacity: 0, transform: "translateY(8px)" };

@@ -348,3 +348,35 @@ export function commitSummary(destination: Destination, count: number): readonly
   const [first = "in the Item Database", ...rest] = places;
   return [`${count} ${count === 1 ? "item" : "items"} ${first}`, ...rest];
 }
+
+export type Choice = "collection" | "order-new" | "order-existing" | "none";
+
+export const choiceOf = (form: DestinationForm): Choice | null => {
+  if (form.kind === "order") return form.order.kind === "new" ? "order-new" : "order-existing";
+  return form.kind;
+};
+
+export function choose(form: DestinationForm, choice: Choice): DestinationForm {
+  switch (choice) {
+    case "collection":
+    case "none":
+      return { ...form, kind: choice };
+    // Trying the other kind of Order must not cost this one's fields.
+    case "order-new":
+      if (form.order.kind === "new") return { ...form, kind: "order" };
+      return {
+        ...form,
+        kind: "order",
+        order: form.otherOrder ?? { kind: "new", fields: DEFAULT_ORDER_FIELDS },
+        otherOrder: form.order,
+      };
+    case "order-existing":
+      if (form.order.kind === "existing") return { ...form, kind: "order" };
+      return {
+        ...form,
+        kind: "order",
+        order: form.otherOrder ?? { kind: "existing", order: null },
+        otherOrder: form.order,
+      };
+  }
+}

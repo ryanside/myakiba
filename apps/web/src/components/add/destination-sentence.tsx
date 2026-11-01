@@ -15,12 +15,10 @@ import {
 import { keyJustPressed, useGlide } from "@/hooks/use-glide";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
-import { DEFAULT_ORDER_FIELDS } from "./commit-input";
-import type { DestinationForm } from "./commit-input";
+import { choiceOf, choose } from "./commit-input";
+import type { Choice } from "./commit-input";
 import { Swap, WORDS } from "./destination-motion";
 import { ListsPicker } from "./lists-picker";
-
-type Choice = "collection" | "order-new" | "order-existing" | "none";
 
 const CHOICES: readonly {
   readonly value: Choice;
@@ -32,36 +30,6 @@ const CHOICES: readonly {
   { value: "order-existing", label: "Existing Order", icon: PackageIcon },
   { value: "none", label: "Item Database", icon: DatabaseIcon },
 ];
-
-export const choiceOf = (form: DestinationForm): Choice | null => {
-  if (form.kind === "order") return form.order.kind === "new" ? "order-new" : "order-existing";
-  return form.kind;
-};
-
-function choose(form: DestinationForm, choice: Choice): DestinationForm {
-  switch (choice) {
-    case "collection":
-    case "none":
-      return { ...form, kind: choice };
-    // Trying the other kind of Order must not cost this one's fields.
-    case "order-new":
-      if (form.order.kind === "new") return { ...form, kind: "order" };
-      return {
-        ...form,
-        kind: "order",
-        order: form.otherOrder ?? { kind: "new", fields: DEFAULT_ORDER_FIELDS },
-        otherOrder: form.order,
-      };
-    case "order-existing":
-      if (form.order.kind === "existing") return { ...form, kind: "order" };
-      return {
-        ...form,
-        kind: "order",
-        order: form.otherOrder ?? { kind: "existing", order: null },
-        otherOrder: form.order,
-      };
-  }
-}
 
 function itemsPhrase(selected: number, total: number): string {
   if (total === 0) return "items";
