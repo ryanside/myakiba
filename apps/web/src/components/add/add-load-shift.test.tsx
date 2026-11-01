@@ -183,3 +183,15 @@ test("the page a Pick sends the user to shows a skeleton row until the extension
   await screen.findByText("No items yet");
   expect(document.querySelector('tr[data-row="awaiting-picks"]')).toBeNull();
 });
+
+test("the Order title's pencil waits for the title, so it doesn't jump when the Items load", async () => {
+  draft([[MIKU, true]]);
+  openAddPage("/add?to=order-new");
+  const title = await screen.findByRole("button", { name: "Edit Order title" });
+  expect(title.querySelector("svg")).toBeNull();
+
+  await act(async () => release());
+
+  await waitFor(() => expect(title.textContent).toContain("Miku"));
+  expect(title.querySelector("svg")).not.toBeNull();
+});

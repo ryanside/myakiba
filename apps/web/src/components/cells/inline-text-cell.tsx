@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,8 @@ interface InlineTextCellProps {
   onSubmit: (value: string) => Saving;
   validate?: (value: string) => boolean | string;
   previewClassName?: string;
+  /** Sits right after the value, and stays in view when the value truncates. */
+  previewIcon?: ReactNode;
   disabled?: boolean;
 }
 
@@ -21,6 +24,7 @@ export function InlineTextCell({
   onSubmit,
   validate,
   previewClassName,
+  previewIcon,
   disabled,
 }: InlineTextCellProps): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
@@ -111,7 +115,14 @@ export function InlineTextCell({
             previewClassName,
           )}
         >
-          {displayValue}
+          {previewIcon ? (
+            <>
+              <span className="min-w-0 truncate">{displayValue}</span>
+              {previewIcon}
+            </>
+          ) : (
+            displayValue
+          )}
         </Button>
       )}
     </div>

@@ -528,6 +528,18 @@ test("Keep on Item Database alone clears the rows with no request and says where
   expect(screen.queryByRole("checkbox", { name: "Select Hatsune Miku" })).toBeNull();
 });
 
+test("a new Order's title shows it can be edited, with the title as the one control", async () => {
+  const user = userEvent.setup();
+  openAddPage(`/add?item=${ITEM_ID}&to=order-new`);
+  const title = await screen.findByRole("button", { name: "Edit Order title" });
+  const pencil = title.querySelector("svg");
+  expect(pencil?.getAttribute("aria-hidden")).toBe("true");
+
+  await user.click(pencil as SVGSVGElement);
+
+  expect(screen.getByRole("textbox", { name: "Order title" })).toBeDefined();
+});
+
 test("every Order field is on screen, with nothing to open first", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=collection`);

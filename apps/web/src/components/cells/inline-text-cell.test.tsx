@@ -87,3 +87,21 @@ test("the preview and the input are the app's 32px controls, with no size of the
   await userEvent.setup().click(preview);
   expect(sizes(screen.getByRole("textbox"))).toEqual(["h-8", "py-1"]);
 });
+
+test("an icon after the value is part of the one control, and clicking it edits", async () => {
+  render(
+    <InlineTextCell
+      label="Title"
+      value="Spring"
+      previewIcon={<svg data-testid="pencil" aria-hidden="true" />}
+      onSubmit={async () => Result.ok()}
+    />,
+  );
+  const preview = screen.getByRole("button", { name: "Edit Title" });
+  expect(screen.getAllByRole("button")).toHaveLength(1);
+  expect(preview.lastElementChild).toBe(screen.getByTestId("pencil"));
+
+  await userEvent.setup().click(screen.getByTestId("pencil"));
+
+  expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Title" }).value).toBe("Spring");
+});

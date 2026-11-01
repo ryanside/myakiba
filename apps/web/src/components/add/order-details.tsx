@@ -1,4 +1,4 @@
-import { PackageIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
+import { Edit03Icon, PackageIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -148,6 +148,16 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
               label="Order title"
               value={fields.title?.trim() || c.newOrderTitle}
               previewClassName="text-sm font-medium"
+              // Until the Items load, the default title is about to change, and the icon would jump.
+              previewIcon={
+                c.commitProps.loading && !fields.title?.trim() ? null : (
+                  <HugeiconsIcon
+                    icon={Edit03Icon}
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                )
+              }
               onSubmit={async (title) => {
                 set({ title });
                 return Result.ok();
