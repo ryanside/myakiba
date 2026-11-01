@@ -118,6 +118,18 @@
       "fixed": ["a popover has its own surface, so what is behind it does not show through"]
     },
     {
+      "fix": "353a83eeef03d0566ad32147ab640e88804d425c",
+      "bug": "A resize that re-wrapped the Add commit bar left the glide's start stale, so the next change snapped the bar back to its old height before it grew.",
+      "test": "apps/web/src/hooks/use-glide.test.ts",
+      "fixed": ["a resize that re-wraps the content moves where the next glide starts from"]
+    },
+    {
+      "fix": "3aad3c0e6e81ddeb6fc6f24473587326f0da7027",
+      "bug": "An action bar's group did not wrap, so Orders' Delete Items ran off the edge at 320 and 390 wide.",
+      "test": "apps/web/src/components/ui/action-bar.test.tsx",
+      "fixed": ["a group of actions wraps inside the bar, so its last one stays on a phone's screen"]
+    },
+    {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
       "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
