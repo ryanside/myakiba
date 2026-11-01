@@ -328,20 +328,22 @@ body {
 
 /* Opacity on the popup would turn off the backdrop blur of its `::before`, so only what it holds fades. */
 @utility menu-settle {
-  &[data-open] {
-    transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
-  }
+  @variant motion-safe {
+    &[data-open] {
+      transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
 
-  &[data-open] > * {
-    transition: opacity 100ms cubic-bezier(0.23, 1, 0.32, 1);
-  }
+    &[data-open] > * {
+      transition: opacity 100ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
 
-  &[data-starting-style] {
-    transform: scale(0.97);
-  }
+    &[data-starting-style] {
+      transform: scale(0.97);
+    }
 
-  &[data-starting-style] > * {
-    opacity: 0;
+    &[data-starting-style] > * {
+      opacity: 0;
+    }
   }
 }
 
