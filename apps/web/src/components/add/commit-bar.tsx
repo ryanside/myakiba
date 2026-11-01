@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useGlide } from "@/hooks/use-glide";
+import { EASE_OUT } from "@/lib/motion-policy";
 import type { AddController } from "./add-controller";
 import { CommitButton } from "./commit-button";
 import { choiceOf, commitSummary } from "./commit-input";
 import { Swap, WORDS } from "./destination-motion";
 
-const ENTER = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
+const ENTER = { duration: 0.2, ease: EASE_OUT } as const;
 const AWAY = { opacity: 0, transform: "translateY(8px)" };
 const IN_PLACE = { opacity: 1, transform: "translateY(0px)" };
 

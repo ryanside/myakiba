@@ -8,6 +8,7 @@ import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { useExtensionStatus } from "@/lib/extension-gate";
+import { EASE_OUT_CSS } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 import { FRAME_WIDTH } from "./row-fields";
 
@@ -77,8 +78,9 @@ export function EmptyState({ onSearch }: { readonly onSearch: () => void }) {
       <div
         ref={glide}
         inert={!known}
+        style={{ transitionTimingFunction: EASE_OUT_CSS }}
         className={cn(
-          "flex flex-col items-center gap-4 transition-opacity duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          "flex flex-col items-center gap-4 transition-opacity duration-200",
           !known && "opacity-0",
         )}
       >

@@ -1,11 +1,9 @@
-import { AnimatePresence, MotionGlobalConfig, motion, useIsPresent } from "motion/react";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 import type { ReactNode, RefObject } from "react";
-import { keyJustPressed } from "@/hooks/use-glide";
+import { EASE_OUT, EASE_OUT_CSS, keyJustPressed, motionOff } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const EASE_OUT_CSS = "cubic-bezier(0.23, 1, 0.32, 1)";
 const MOVE_CSS = "cubic-bezier(0.77, 0, 0.175, 1)";
 const SLIDE_MS = 220;
 const COLUMNS_FADE_MS = 150;
@@ -18,8 +16,6 @@ type Move = {
   readonly outMs: number;
   readonly delayMs: number;
 };
-
-const motionOff = () => MotionGlobalConfig.skipAnimations || keyJustPressed();
 
 function variantsOf({ fromY, toY, inMs, outMs, delayMs }: Move) {
   return {

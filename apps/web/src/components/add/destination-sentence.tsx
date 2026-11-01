@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { keyJustPressed, useGlide } from "@/hooks/use-glide";
+import { useGlide } from "@/hooks/use-glide";
+import { keyJustPressed } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { choiceOf, choose } from "./commit-input";

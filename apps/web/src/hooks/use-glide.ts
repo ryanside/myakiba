@@ -1,22 +1,7 @@
-import { MotionGlobalConfig } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
+import { EASE_OUT_CSS, motionOff } from "@/lib/motion-policy";
 
 const DURATION_MS = 200;
-const EASING = "cubic-bezier(0.23, 1, 0.32, 1)";
-/** A change this soon after a key press is that key's doing. A held Space fires its click on release. */
-const KEY_WINDOW_MS = 500;
-
-let lastKeyAt = Number.NEGATIVE_INFINITY;
-window.addEventListener(
-  "keydown",
-  () => {
-    lastKeyAt = performance.now();
-  },
-  { capture: true, passive: true },
-);
-
-/** A choice made from the keyboard stays instant. */
-export const keyJustPressed = () => performance.now() - lastKeyAt < KEY_WINDOW_MS;
 
 /**
  * Lets an element whose content has no known size reach its new size smoothly when `change` changes,
@@ -44,14 +29,14 @@ export function useGlide<T extends HTMLElement>(
     flight.current = null;
     const to = element.getBoundingClientRect()[axis];
     settled.current = to;
-    if (from === null || from === to || MotionGlobalConfig.skipAnimations || keyJustPressed()) {
+    if (from === null || from === to || motionOff()) {
       element.style.overflow = "";
       return;
     }
     if (clip) element.style.overflow = "clip";
     const animation = element.animate([{ [axis]: `${from}px` }, { [axis]: `${to}px` }], {
       duration: DURATION_MS,
-      easing: EASING,
+      easing: EASE_OUT_CSS,
     });
     flight.current = animation;
     animation.onfinish = () => {
