@@ -435,7 +435,7 @@ test("column sizes go back to the defaults when the visible columns change", asy
 test("a row removed under a sort sends focus to the row below it on screen", async () => {
   seedItems(item("bbb000000001", { title: "B" }), item("ccc000000001", { title: "C" }));
   seedItems(item("aaa000000001", { title: "A" }));
-  draft("ccc000000001", "aaa000000001", "bbb000000001");
+  draft("aaa000000001", "ccc000000001", "bbb000000001");
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await screen.findByRole("checkbox", { name: "Select A" });
