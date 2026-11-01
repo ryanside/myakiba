@@ -536,7 +536,7 @@ function ActionsHeader() {
       <span className="sr-only">Actions</span>
       {fields.length > 0 ? (
         <div className="flex justify-end">
-          <div className="pointer-events-auto @max-[61rem]/grid:-my-1 @max-[61rem]/grid:-me-2 @max-[61rem]/grid:border-s @max-[61rem]/grid:bg-[color-mix(in_srgb,var(--color-muted)_40%,var(--color-background))] @max-[61rem]/grid:px-2 @max-[61rem]/grid:py-1">
+          <div className="pointer-events-auto @max-[60rem]/grid:-my-1 @max-[60rem]/grid:-me-2 @max-[60rem]/grid:border-s @max-[60rem]/grid:bg-[color-mix(in_srgb,var(--color-muted)_40%,var(--color-background))] @max-[60rem]/grid:px-2 @max-[60rem]/grid:py-1">
             <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
           </div>
         </div>
@@ -582,7 +582,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     header: ({ column }) => <DataGridColumnHeader title="Item" column={column} />,
     cell: itemCell(ItemName),
     sortingFn: "text",
-    size: 432,
+    size: 416,
     minSize: 200,
     meta: {
       skeleton: ITEM_SKELETON,
@@ -635,8 +635,9 @@ const SHOW_ALL = {};
 
 // A frame this wide holds every column, as `fitsFrame` keeps it doing after a resize, so it can clip
 // and let the header stick to the window. A narrower one scrolls sideways, as a sticky header cannot.
-// The container query below holds the same width.
-const SCROLLS_BELOW = 976;
+// The container query below holds the same width. It clears the 965px frame that 1280 with the sidebar
+// open has beside a classic scrollbar.
+const SCROLLS_BELOW = 960;
 const FRAME_BORDERS = 2;
 
 function fitsFrame(table: Table<AddRow>, sizing: ColumnSizingState, frameWidth: number): boolean {
@@ -770,14 +771,14 @@ export function AddItems({
             header: cn(
               data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none",
               fields.length > 0 &&
-                "@max-[61rem]/grid:[&_th[data-col=actions]]:pointer-events-none @max-[61rem]/grid:[&_th[data-col=actions]]:sticky @max-[61rem]/grid:[&_th[data-col=actions]]:end-0 @max-[61rem]/grid:[&_th[data-col=actions]]:z-20",
+                "@max-[60rem]/grid:[&_th[data-col=actions]]:pointer-events-none @max-[60rem]/grid:[&_th[data-col=actions]]:sticky @max-[60rem]/grid:[&_th[data-col=actions]]:end-0 @max-[60rem]/grid:[&_th[data-col=actions]]:z-20",
             ),
           }}
         >
-          <DataGridContainer className="@[61rem]/grid:overflow-clip">
+          <DataGridContainer className="@[60rem]/grid:overflow-clip">
             <ScrollArea
               horizontal
-              className="@[61rem]/grid:overflow-clip @[61rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
+              className="@[60rem]/grid:overflow-clip @[60rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
             >
               <DataGridTable />
             </ScrollArea>
