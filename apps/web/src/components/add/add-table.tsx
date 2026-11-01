@@ -32,7 +32,6 @@ import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
-import { AddSearch } from "./add-search";
 import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
 import { useColumnsFade } from "./destination-motion";
@@ -115,6 +114,8 @@ type AddTableState = {
   readonly owned: boolean;
   readonly openRows: ReadonlySet<string>;
   readonly toggleDetails: (itemId: string) => void;
+  readonly fields: readonly Field[];
+  readonly onAnnounce: (message: string) => void;
 };
 
 // Columns are constants that read this, as a column array rebuilt per render would give every cell a
@@ -527,6 +528,23 @@ function PickLine({ pick }: { readonly pick: PickRow }) {
   );
 }
 
+/** Fill all heads the column of row actions, on the header's own surface when it stays pinned. */
+function ActionsHeader() {
+  const { c, fields, onAnnounce } = useAddTable();
+  return (
+    <>
+      <span className="sr-only">Actions</span>
+      {fields.length > 0 ? (
+        <div className="flex justify-end">
+          <div className="pointer-events-auto @max-[61rem]/grid:-my-1 @max-[61rem]/grid:-me-2 @max-[61rem]/grid:border-s @max-[61rem]/grid:bg-[color-mix(in_srgb,var(--color-muted)_40%,var(--color-background))] @max-[61rem]/grid:px-2 @max-[61rem]/grid:py-1">
+            <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function fullWidthRow(row: AddRow): ReactNode {
   if (row.kind === "pick") return <PickLine pick={row.pick} />;
   return row.kind === "missing" ? <MissingRow id={row.id} lookup={row.lookup} /> : null;
@@ -603,7 +621,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
   },
   {
     id: "actions",
-    header: () => <span className="sr-only">Actions</span>,
+    header: ActionsHeader,
     cell: itemCell(RowActions),
     size: 136,
     enableSorting: false,
@@ -629,7 +647,7 @@ function fitsFrame(table: Table<AddRow>, sizing: ColumnSizingState, frameWidth: 
   return total <= frameWidth - FRAME_BORDERS;
 }
 
-/** The toolbar and every row. The search lives here so it lines up with what it adds to. */
+/** Every row, under a header that holds Fill all. */
 export function AddItems({
   controller: c,
   onAnnounce,
@@ -664,6 +682,8 @@ export function AddItems({
       c,
       owned,
       openRows,
+      fields,
+      onAnnounce,
       toggleDetails: (itemId: string) => {
         setOpenRows((current) => {
           const next = new Set(current);
@@ -672,7 +692,7 @@ export function AddItems({
         });
       },
     }),
-    [c, owned, openRows],
+    [c, owned, openRows, fields, onAnnounce],
   );
 
   const table = useReactTable<AddRow>({
@@ -720,52 +740,50 @@ export function AddItems({
   }, [table]);
 
   return (
-    <>
-      <div className="flex items-center gap-2">
-        <AddSearch {...c.searchProps} />
-        {fields.length > 0 ? <FillMenu fields={fields} c={c} onFilled={onAnnounce} /> : null}
-      </div>
-
-      <AddTableContext value={tableState}>
-        <div
-          ref={frame}
-          role="presentation"
-          className="@container/grid"
-          onKeyDownCapture={onTableKeys}
+    <AddTableContext value={tableState}>
+      <div
+        ref={frame}
+        role="presentation"
+        className="@container/grid"
+        onKeyDownCapture={onTableKeys}
+      >
+        <p id={hintId} className="sr-only">
+          Arrow keys move between cells, Enter moves on, Space opens a menu.
+        </p>
+        <DataGrid
+          table={table}
+          recordCount={data.length}
+          tableAria={{ "aria-label": "Items to add", "aria-describedby": hintId }}
+          emptyMessage={<EmptyState onSearch={c.handleOpenSearch} />}
+          fullWidthRow={fullWidthRow}
+          onRowPointerClick={(row, event) => {
+            if (owned && row.kind === "item" && isEmptySpace(event)) {
+              tableState.toggleDetails(row.id);
+            }
+          }}
+          tableLayout={{ dense: true, headerSticky: true, columnsResizable: true }}
+          tableClassNames={{
+            // Rows are there from the first paint, so an entrance would only move them on load.
+            bodyRow: cn("animate-none", owned && "cursor-pointer"),
+            // An empty page keeps its header's look, with only search and its one action working.
+            // Below this width the table scrolls sideways, and Fill all stays in view anyway.
+            header: cn(
+              data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none",
+              fields.length > 0 &&
+                "@max-[61rem]/grid:[&_th[data-col=actions]]:pointer-events-none @max-[61rem]/grid:[&_th[data-col=actions]]:sticky @max-[61rem]/grid:[&_th[data-col=actions]]:end-0 @max-[61rem]/grid:[&_th[data-col=actions]]:z-20",
+            ),
+          }}
         >
-          <p id={hintId} className="sr-only">
-            Arrow keys move between cells, Enter moves on, Space opens a menu.
-          </p>
-          <DataGrid
-            table={table}
-            recordCount={data.length}
-            tableAria={{ "aria-label": "Items to add", "aria-describedby": hintId }}
-            emptyMessage={<EmptyState onSearch={c.handleOpenSearch} />}
-            fullWidthRow={fullWidthRow}
-            onRowPointerClick={(row, event) => {
-              if (owned && row.kind === "item" && isEmptySpace(event)) {
-                tableState.toggleDetails(row.id);
-              }
-            }}
-            tableLayout={{ dense: true, headerSticky: true, columnsResizable: true }}
-            tableClassNames={{
-              // Rows are there from the first paint, so an entrance would only move them on load.
-              bodyRow: cn("animate-none", owned && "cursor-pointer"),
-              // An empty page keeps its header's look, with only search and its one action working.
-              header: cn(data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none"),
-            }}
-          >
-            <DataGridContainer className="@[61rem]/grid:overflow-clip">
-              <ScrollArea
-                horizontal
-                className="@[61rem]/grid:overflow-clip @[61rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
-              >
-                <DataGridTable />
-              </ScrollArea>
-            </DataGridContainer>
-          </DataGrid>
-        </div>
-      </AddTableContext>
-    </>
+          <DataGridContainer className="@[61rem]/grid:overflow-clip">
+            <ScrollArea
+              horizontal
+              className="@[61rem]/grid:overflow-clip @[61rem]/grid:**:data-[slot=scroll-area-viewport]:overflow-clip!"
+            >
+              <DataGridTable />
+            </ScrollArea>
+          </DataGridContainer>
+        </DataGrid>
+      </div>
+    </AddTableContext>
   );
 }

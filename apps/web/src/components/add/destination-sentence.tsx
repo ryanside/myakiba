@@ -166,7 +166,7 @@ export function DestinationSentence({
   return (
     <section
       aria-label="Destination"
-      className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm"
+      className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm"
     >
       <span ref={glide} className="shrink-0 font-medium whitespace-nowrap tabular-nums">
         <Swap move={WORDS} id={choice === "none" ? "keep" : "add"}>

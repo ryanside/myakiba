@@ -295,6 +295,10 @@ test("an empty page keeps its shape, with only search and the one action working
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
   expect(screen.getByRole("columnheader", { name: "Item" })).toBeDefined();
+  // Fill all heads the row actions' column, and the search stays with the sentence, outside the table.
+  const fillAll = screen.getByRole("button", { name: "Fill all" });
+  expect(fillAll.closest("th")?.dataset.col).toBe("actions");
+  expect(searchButton().closest("table")).toBeNull();
 });
 
 test.each([

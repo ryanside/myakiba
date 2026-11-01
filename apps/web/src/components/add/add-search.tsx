@@ -73,7 +73,7 @@ export function AddSearch({
       <PopoverContent
         aria-label="Add from Item Database"
         initialFocus={input}
-        align="start"
+        align="end"
         className="w-96 max-w-[calc(100vw-2rem)] gap-0 p-0"
       >
         <search>

@@ -343,21 +343,16 @@ export function FillMenu({
     >
       <PopoverTrigger
         render={
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="Fill all"
-            disabled={c.rows.length === 0}
-          >
+          <Button type="button" variant="ghost" size="xs" disabled={c.rows.length === 0}>
             <HugeiconsIcon icon={PaintBucketIcon} data-icon="inline-start" aria-hidden="true" />
-            <span className="hidden md:block">Fill all</span>
+            Fill all
           </Button>
         }
       />
       <PopoverContent
         aria-label="Fill all"
         className="max-h-(--available-height) w-76 max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain"
-        align="start"
+        align="end"
       >
         {chosen ? (
           <div className="grid gap-2">

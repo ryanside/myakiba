@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { useAddController } from "./add-controller";
 import { LiveRegions, Notices } from "./add-notices";
+import { AddSearch } from "./add-search";
 import { AddItems } from "./add-table";
 import { CommitBar } from "./commit-bar";
 import { OrderSwap, useSlide } from "./destination-motion";
@@ -38,14 +39,21 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />
         </div>
-        <div className="relative flex flex-col">
-          <DestinationSentence controller={c} disabled={!c.hasItems} />
-          <OrderSwap id={orderId}>
-            <OrderDetails controller={c} />
-          </OrderSwap>
-        </div>
-        <div ref={slide} className="flex flex-col gap-6">
-          <AddItems controller={c} onAnnounce={setFilled} />
+        {/* What the Order's fields add is a group of its own, so the table keeps clear of them. */}
+        <div className={cn("flex flex-col", orderId === null ? "gap-2.5" : "gap-4")}>
+          <div className="relative flex flex-col">
+            {/* Alone on a wrapped line, `justify-between` starts the search at the sentence's edge. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <DestinationSentence controller={c} disabled={!c.hasItems} />
+              <AddSearch {...c.searchProps} />
+            </div>
+            <OrderSwap id={orderId}>
+              <OrderDetails controller={c} />
+            </OrderSwap>
+          </div>
+          <div ref={slide}>
+            <AddItems controller={c} onAnnounce={setFilled} />
+          </div>
         </div>
       </div>
       <CommitBar controller={c} />
