@@ -1,7 +1,5 @@
-import { ArrowDown01Icon, Cancel01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { mfcItemUrl } from "@myakiba/contracts/add/constants";
-import { Link } from "@tanstack/react-router";
 import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import type {
   CellContext,
@@ -13,16 +11,15 @@ import type {
 } from "@tanstack/react-table";
 import { createContext, useContext, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ComponentType, MouseEvent, ReactNode, RefObject } from "react";
+import { ItemTitleCell } from "@/components/cells/item-title-cell";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PickRow } from "@/data/picks";
-import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
@@ -192,13 +189,12 @@ function SelectAll() {
   const total = c.countedRows.length;
   const selected = c.countedRows.filter((row) => row.selected).length;
   return (
-    <Checkbox
-      aria-label="Select all items"
+    <SelectionCheckbox
+      label="Select all items"
       checked={total > 0 && selected === total}
       indeterminate={selected > 0 && selected < total}
       disabled={total === 0}
-      onCheckedChange={(checked) => c.selectAll(checked === true)}
-      className="align-[inherit] mb-0.5 rounded-xs"
+      onCheckedChange={(checked) => c.selectAll(checked)}
     />
   );
 }
@@ -207,69 +203,29 @@ function SelectRow({ row }: CellContext<AddRow, unknown>) {
   const { c } = useAddTable();
   const { original } = row;
   return (
-    <>
-      <div
-        className={cn(
-          "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-          row.getIsSelected() && "block",
-        )}
-      />
+    <SelectionCell selected={row.getIsSelected()}>
       {original.kind === "item" ? (
-        <Checkbox
-          aria-label={`Select ${original.item.title}`}
+        <SelectionCheckbox
+          label={`Select ${original.item.title}`}
           checked={original.row.selected}
-          onCheckedChange={(checked) => c.select(original.id, checked === true)}
-          className="align-[inherit] mb-0.5 rounded-xs"
+          onCheckedChange={(checked) => c.select(original.id, checked)}
         />
       ) : (
         <Skeleton className="size-4 rounded-xs" />
       )}
-    </>
+    </SelectionCell>
   );
 }
 
 function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
-  const { title, externalId, image } = item;
   return (
-    <div className="flex items-center gap-3">
-      <Link
-        {...itemDestination(id, externalId)}
-        className="shrink-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        tabIndex={-1}
-        aria-hidden="true"
-      >
-        <ImageThumbnail
-          images={image ? [image] : []}
-          title={title}
-          decorative
-          className={THUMBNAIL}
-          fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" aria-hidden="true" />}
-        />
-      </Link>
-      <div className="min-w-0 flex-1 space-y-px">
-        <Link
-          {...itemDestination(id, externalId)}
-          title={title}
-          className="block w-fit max-w-full truncate rounded-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {title}
-        </Link>
-        <div className="flex items-center gap-2 font-normal">
-          {externalId === null ? (
-            <span className="text-xs text-muted-foreground">Custom item</span>
-          ) : (
-            <a
-              href={mfcItemUrl(externalId)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-sm text-xs text-muted-foreground tabular-nums outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              MFC #{externalId}
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
+    <ItemTitleCell
+      itemId={id}
+      title={item.title}
+      externalId={item.externalId}
+      image={item.image}
+      walkedByKeys
+    />
   );
 }
 

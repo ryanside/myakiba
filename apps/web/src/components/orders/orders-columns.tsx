@@ -13,8 +13,8 @@ import {
   PackageIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -207,31 +207,23 @@ export function createOrdersColumns({
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <SelectionCheckbox
+          label="Select all"
           checked={table.getIsAllPageRowsSelected()}
           indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select all"
-          className="align-[inherit] mb-0.5 rounded-xs"
+          stopRowClick
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
         />
       ),
       cell: ({ row }) => (
-        <>
-          <div
-            className={cn(
-              "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block",
-            )}
-          />
-          <Checkbox
+        <SelectionCell selected={row.getIsSelected()}>
+          <SelectionCheckbox
+            label="Select row"
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-            className="align-[inherit] mb-0.5 rounded-xs"
+            stopRowClick
+            onCheckedChange={(value) => row.toggleSelected(value)}
           />
-        </>
+        </SelectionCell>
       ),
       size: 28,
       enableSorting: false,

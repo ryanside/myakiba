@@ -8,7 +8,6 @@ import { cva } from "class-variance-authority";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const headerCellSpacingVariants = cva("", {
   variants: {
@@ -463,43 +462,6 @@ function DataGridTableLoader() {
   );
 }
 
-function DataGridTableRowSelect<TData>({ row }: { row: Row<TData> }) {
-  return (
-    <>
-      <div
-        className={cn(
-          "bg-primary absolute start-0 top-0 bottom-0 hidden w-[2px]",
-          row.getIsSelected() && "block",
-        )}
-      />
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="align-[inherit]"
-      />
-    </>
-  );
-}
-
-function DataGridTableRowSelectAll() {
-  const { table, recordCount, isLoading } = useDataGrid();
-
-  const isAllSelected = table.getIsAllPageRowsSelected();
-  const isSomeSelected = table.getIsSomePageRowsSelected();
-
-  return (
-    <Checkbox
-      checked={isAllSelected}
-      indeterminate={isSomeSelected && !isAllSelected}
-      disabled={isLoading || recordCount === 0}
-      onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      aria-label="Select all"
-      className="align-[inherit]"
-    />
-  );
-}
-
 function DataGridTable<TData>() {
   const { table, isLoading, props } = useDataGrid();
   const pagination = table.getState().pagination;
@@ -626,7 +588,5 @@ export {
   DataGridTableHeadRowCell,
   DataGridTableHeadRowCellResize,
   DataGridTableLoader,
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
   DataGridTableRowSpacer,
 };

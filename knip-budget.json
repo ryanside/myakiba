@@ -23,8 +23,6 @@
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableHeadRowCell",
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableHeadRowCellResize",
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableLoader",
-    "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSelect",
-    "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSelectAll",
     "apps/web/src/components/reui/data-grid/data-grid-table.tsx DataGridTableRowSpacer",
     "apps/web/src/components/reui/frame.tsx FrameDescription",
     "apps/web/src/components/reui/frame.tsx FrameFooter",

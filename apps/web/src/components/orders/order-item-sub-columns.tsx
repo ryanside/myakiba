@@ -6,12 +6,11 @@ import {
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
-  PackageIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { ItemTitleCell } from "@/components/cells/item-title-cell";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -173,31 +172,23 @@ export function createOrderItemSubColumns({
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <SelectionCheckbox
+          label="Select all"
           checked={table.getIsAllPageRowsSelected()}
           indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select all"
-          className="align-[inherit] mb-0.5 rounded-xs"
+          stopRowClick
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
         />
       ),
       cell: ({ row }) => (
-        <>
-          <div
-            className={cn(
-              "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block",
-            )}
-          />
-          <Checkbox
+        <SelectionCell selected={row.getIsSelected()}>
+          <SelectionCheckbox
+            label="Select row"
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-            className="align-[inherit] mb-0.5 rounded-xs"
+            stopRowClick
+            onCheckedChange={(value) => row.toggleSelected(value)}
           />
-        </>
+        </SelectionCell>
       ),
       size: 32,
       enableSorting: false,
@@ -216,42 +207,14 @@ export function createOrderItemSubColumns({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex items-center gap-3">
-            <Link
-              {...itemDestination(item.itemId, item.itemExternalId)}
-              aria-label={`View ${item.itemTitle}`}
-            >
-              <ImageThumbnail
-                images={item.itemImage ? [item.itemImage] : []}
-                title={item.itemTitle}
-                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 shrink-0 rounded-md"
-              />
-            </Link>
-            <div className="min-w-0 space-y-px">
-              <Link
-                className="font-medium text-foreground truncate"
-                {...itemDestination(item.itemId, item.itemExternalId)}
-              >
-                {item.itemTitle}
-              </Link>
-              <div className="flex items-center gap-2 font-normal">
-                {item.itemExternalId ? (
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground font-normal hover:underline"
-                  >
-                    MFC #{item.itemExternalId}
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Custom</span>
-                )}
-                {item.itemCategory ? <CategoryLabel category={item.itemCategory} /> : null}
-              </div>
-            </div>
-          </div>
+          <ItemTitleCell
+            itemId={item.itemId}
+            title={item.itemTitle}
+            externalId={item.itemExternalId}
+            image={item.itemImage}
+          >
+            {item.itemCategory ? <CategoryLabel category={item.itemCategory} /> : null}
+          </ItemTitleCell>
         );
       },
       enableSorting: true,
