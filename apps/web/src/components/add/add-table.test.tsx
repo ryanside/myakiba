@@ -446,3 +446,35 @@ test("a row removed under a sort sends focus to the row below it on screen", asy
 
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove B" }));
 });
+
+test("the row's actions pin only while the columns overflow the frame", async () => {
+  seedItems(item("aaa000000001", { title: "A" }));
+  draft("aaa000000001");
+  Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+    configurable: true,
+    get: () => 2000,
+  });
+  try {
+    openAddPage("/add?to=collection");
+    await screen.findByRole("checkbox", { name: "Select A" });
+    const actions = () => screen.getByRole("columnheader", { name: /^Actions/ });
+    expect(actions().style.position).not.toBe("sticky");
+    cleanup();
+
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => 400,
+    });
+    openAddPage("/add?to=collection");
+    await screen.findByRole("checkbox", { name: "Select A" });
+    expect(actions().style.position).toBe("sticky");
+    expect(
+      screen.getByRole("button", { name: "Details for A" }).closest("td")?.style.position,
+    ).toBe("sticky");
+    expect(screen.getByRole("button", { name: "Price" }).closest("th")?.style.position).not.toBe(
+      "sticky",
+    );
+  } finally {
+    Reflect.deleteProperty(HTMLElement.prototype, "clientWidth");
+  }
+});

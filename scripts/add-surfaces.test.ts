@@ -9,7 +9,7 @@ const TABLE_TAG = "(?:table|thead|tbody|tr|th|td)";
 const RAW_TABLE = new RegExp(String.raw`<${TABLE_TAG}(?=[\s/>])`, "gu");
 const CREATED_TABLE = new RegExp(String.raw`createElement\(\s*["'\x60]${TABLE_TAG}["'\x60]`, "gu");
 const OWN_SURFACE =
-  /(?<![\w-])(?:bg-card|bg-popover|ring-foreground|rounded-\[[^\]\s]*\]|rounded-(?:xl|2xl|3xl)|shadow-(?:md|lg|xl|2xl)|backdrop-blur(?:-\[[^\]\s]*\]|-\w+)?|bg-background\/\S*)(?![\w-])/gu;
+  /(?<![\w-])(?:bg-card|bg-popover|bg-\[[^\]\s]*\]|ring-foreground|rounded-\[[^\]\s]*\]|rounded-(?:xl|2xl|3xl)|shadow-(?:md|lg|xl|2xl)|backdrop-blur(?:-\[[^\]\s]*\]|-\w+)?|bg-background\/\S*)(?![\w-])/gu;
 const CARD_IMPORT = /["'][^"'\n]*\/ui\/card["']/gu;
 
 // The commit footer was the owner's choice over the shared ActionBar, so it is the one surface Add
@@ -68,6 +68,7 @@ describe("an Add surface of its own", () => {
   test.each([
     "bg-card",
     "bg-popover",
+    "bg-[color-mix(in_srgb,var(--color-muted)_40%,var(--color-background))]",
     "ring-foreground/10",
     "rounded-xl",
     "rounded-2xl",

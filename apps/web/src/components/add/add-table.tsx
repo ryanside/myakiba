@@ -11,8 +11,23 @@ import type {
   SortingState,
   Table,
 } from "@tanstack/react-table";
-import { createContext, useContext, useId, useMemo, useRef, useState } from "react";
-import type { ComponentType, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type {
+  ComponentType,
+  FocusEvent,
+  KeyboardEvent,
+  MouseEvent,
+  ReactNode,
+  RefObject,
+} from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -141,8 +156,6 @@ function focusablesIn(root: Element): HTMLElement[] {
 function focusCell(element: HTMLElement | undefined) {
   if (!element) return;
   element.focus();
-  // Focus alone scrolls only a fully hidden element.
-  element.scrollIntoView({ block: "nearest", inline: "nearest" });
   if (element instanceof HTMLInputElement) element.select();
 }
 
@@ -233,6 +246,13 @@ function onTableKeys(event: KeyboardEvent<HTMLElement>) {
       stop();
       focusCell(nextDataCell(target));
     }
+  }
+}
+
+/** Focus alone scrolls only a fully hidden element, which can leave a sliver of a control in view. */
+function revealFocus({ currentTarget, target }: FocusEvent<HTMLElement>) {
+  if (currentTarget.contains(target) && target.matches(":focus-visible")) {
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 }
 
@@ -522,7 +542,7 @@ function PickLine({ pick }: { readonly pick: PickRow }) {
   );
 }
 
-/** Fill all heads the column of row actions, on the header's own surface when it stays pinned. */
+/** Fill all heads the column of row actions. */
 function ActionsHeader() {
   const { c, fields, onAnnounce } = useAddTable();
   return (
@@ -530,9 +550,7 @@ function ActionsHeader() {
       <span className="sr-only">Actions</span>
       {fields.length > 0 ? (
         <div className="flex justify-end">
-          <div className="pointer-events-auto @max-[60rem]/grid:-my-1 @max-[60rem]/grid:-me-2 @max-[60rem]/grid:border-s @max-[60rem]/grid:bg-[color-mix(in_srgb,var(--color-muted)_40%,var(--color-background))] @max-[60rem]/grid:px-2 @max-[60rem]/grid:py-1">
-            <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
-          </div>
+          <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
         </div>
       ) : null}
     </>
@@ -561,6 +579,9 @@ const ITEM_SKELETON = (
   </div>
 );
 
+/** What takes focus in a column that scrolls stops clear of the pinned row actions. */
+const CLEARS_ACTIONS = "**:scroll-me-34";
+
 const COLUMNS: ColumnDef<AddRow>[] = [
   {
     id: "select",
@@ -580,6 +601,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     minSize: 200,
     meta: {
       skeleton: ITEM_SKELETON,
+      cellClassName: CLEARS_ACTIONS,
       expandedContent: (row) => (row.kind === "item" ? <DetailsPanel row={row} /> : null),
     },
   },
@@ -591,7 +613,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     sortingFn: "basic",
     size: 144,
     minSize: 96,
-    meta: { skeleton: FIELD_SKELETON },
+    meta: { skeleton: FIELD_SKELETON, cellClassName: CLEARS_ACTIONS },
   },
   {
     id: "count",
@@ -601,7 +623,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     sortingFn: "basic",
     size: 80,
     minSize: 64,
-    meta: { skeleton: FIELD_SKELETON },
+    meta: { skeleton: FIELD_SKELETON, cellClassName: CLEARS_ACTIONS },
   },
   {
     id: "condition",
@@ -611,7 +633,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     sortingFn: "text",
     size: 144,
     minSize: 112,
-    meta: { skeleton: FIELD_SKELETON },
+    meta: { skeleton: FIELD_SKELETON, cellClassName: CLEARS_ACTIONS },
   },
   {
     id: "actions",
@@ -620,12 +642,33 @@ const COLUMNS: ColumnDef<AddRow>[] = [
     size: 136,
     enableSorting: false,
     enableResizing: false,
-    meta: { skeleton: <Skeleton className="ms-auto h-6 w-24" /> },
+    enablePinning: true,
+    meta: {
+      skeleton: <Skeleton className="ms-auto h-6 w-24" />,
+      // Solid, as a title passing under Details would read through the grid's translucent pin.
+      cellClassName: "data-pinned:bg-background!",
+    },
   },
 ];
 
 const HIDDEN_WITHOUT_OWNERSHIP = { price: false, count: false, condition: false };
 const SHOW_ALL = {};
+const PINNED = { right: ["actions"] };
+const FRAME_BORDERS = 2;
+
+function useFrameWidth(frame: RefObject<HTMLElement | null>): number {
+  const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
+  useLayoutEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    const measure = () => setWidth(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [frame]);
+  return width;
+}
 
 /** Every row, under a header that holds Fill all. */
 export function AddItems({
@@ -637,6 +680,7 @@ export function AddItems({
 }) {
   const hintId = useId();
   const frame = useRef<HTMLDivElement>(null);
+  const frameWidth = useFrameWidth(frame);
   const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set());
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
@@ -679,11 +723,13 @@ export function AddItems({
     columns: COLUMNS,
     data,
     getRowId: (row) => row.id,
+    defaultColumn: { enablePinning: false },
     getRowCanExpand: ({ original }) => original.kind === "item",
     enableRowSelection: ({ original }) => original.kind === "item",
     state: {
       sorting,
       columnSizing,
+      columnPinning: PINNED,
       columnVisibility: fieldsHidden ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
       // A loading row has its tint from the first paint too, since the draft already knows.
       rowSelection: Object.fromEntries(
@@ -709,6 +755,7 @@ export function AddItems({
         role="presentation"
         className="@container/grid"
         onKeyDownCapture={onTableKeys}
+        onFocusCapture={revealFocus}
       >
         <p id={hintId} className="sr-only">
           Arrow keys move between cells, Enter moves on, Space opens a menu.
@@ -724,17 +771,17 @@ export function AddItems({
               tableState.toggleDetails(row.id);
             }
           }}
-          tableLayout={{ dense: true, columnsResizable: true }}
+          tableLayout={{
+            dense: true,
+            columnsResizable: true,
+            // Only when columns can pass under it does the pin show, so at rest it is any other cell.
+            columnsPinnable: table.getTotalSize() > frameWidth - FRAME_BORDERS,
+          }}
           tableClassNames={{
             // Rows are there from the first paint, so an entrance would only move them on load.
             bodyRow: cn("animate-none", owned && "cursor-pointer"),
             // An empty page keeps its header's look, with only search and its one action working.
-            // Below this width the table scrolls sideways, and Fill all stays in view anyway.
-            header: cn(
-              data.length === 0 && "[&_.cursor-col-resize]:pointer-events-none",
-              fields.length > 0 &&
-                "@max-[60rem]/grid:[&_th[data-col=actions]]:pointer-events-none @max-[60rem]/grid:[&_th[data-col=actions]]:sticky @max-[60rem]/grid:[&_th[data-col=actions]]:end-0 @max-[60rem]/grid:[&_th[data-col=actions]]:z-20",
-            ),
+            header: cn(data.length === 0 && "pointer-events-none"),
           }}
         >
           <DataGridContainer>
