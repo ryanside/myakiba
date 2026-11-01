@@ -15,8 +15,15 @@ interface InlineTextCellProps {
   previewClassName?: string;
   /** Sits right after the value, and stays in view when the value truncates. */
   previewIcon?: ReactNode;
+  /** The preview and the input are as wide as their text, up to the row's width, not always that wide. */
+  fitContent?: boolean;
   disabled?: boolean;
 }
+
+// A box that hugs its text needs room inside. Its text stays put, as the room goes out to the start.
+const FIT = "-ms-1.5 max-w-[calc(100%+0.375rem)] px-1.5";
+const FIT_PREVIEW = `${FIT} w-fit`;
+const FIT_INPUT = `${FIT} field-sizing-content w-auto min-w-40`;
 
 export function InlineTextCell({
   label,
@@ -25,6 +32,7 @@ export function InlineTextCell({
   validate,
   previewClassName,
   previewIcon,
+  fitContent,
   disabled,
 }: InlineTextCellProps): React.ReactElement {
   const [isEditing, setIsEditing] = useState(false);
@@ -75,6 +83,8 @@ export function InlineTextCell({
           autoFocus
           aria-label={label}
           value={editingValue}
+          // Holds the width where `field-sizing` is not supported, and is ignored where it is.
+          size={fitContent ? Math.max(editingValue.length + 1, 20) : undefined}
           disabled={disabled}
           onClick={(event) => event.stopPropagation()}
           onFocus={(event) => event.currentTarget.select()}
@@ -93,7 +103,10 @@ export function InlineTextCell({
               void handleSubmit(editingValue);
             }
           }}
-          className="rounded-sm px-0 shadow-xs focus-visible:border-input focus-visible:ring-1 focus-visible:ring-ring disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent"
+          className={cn(
+            "rounded-sm px-0 shadow-xs focus-visible:border-input focus-visible:ring-1 focus-visible:ring-ring disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent",
+            fitContent && FIT_INPUT,
+          )}
         />
       ) : (
         <Button
@@ -112,6 +125,7 @@ export function InlineTextCell({
           }}
           className={cn(
             "w-full cursor-text justify-start truncate rounded-sm px-0 text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
+            fitContent && FIT_PREVIEW,
             previewClassName,
           )}
         >

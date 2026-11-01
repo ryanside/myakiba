@@ -148,6 +148,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
               label="Order title"
               value={fields.title?.trim() || c.newOrderTitle}
               previewClassName="text-sm font-medium"
+              fitContent
               // Until the Items load, the default title is about to change, and the icon would jump.
               previewIcon={
                 c.commitProps.loading && !fields.title?.trim() ? null : (

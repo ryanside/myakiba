@@ -105,3 +105,30 @@ test("an icon after the value is part of the one control, and clicking it edits"
 
   expect(screen.getByRole<HTMLInputElement>("textbox", { name: "Title" }).value).toBe("Spring");
 });
+
+test("a cell that fits its content leaves the row's width alone, and one that does not fills it", async () => {
+  const widths = (element: Element) =>
+    element.className.split(/\s+/u).filter((name) => name.startsWith("w-"));
+  const user = userEvent.setup();
+
+  const { unmount } = render(
+    <InlineTextCell label="Title" value="Spring" onSubmit={async () => Result.ok()} />,
+  );
+  expect(widths(screen.getByRole("button", { name: "Edit Title" }))).toEqual(["w-full"]);
+  await user.click(screen.getByRole("button", { name: "Edit Title" }));
+  expect(widths(screen.getByRole("textbox"))).toEqual(["w-full"]);
+  expect(screen.getByRole("textbox").getAttribute("size")).toBeNull();
+  unmount();
+
+  render(
+    <InlineTextCell label="Title" value="Spring" fitContent onSubmit={async () => Result.ok()} />,
+  );
+  expect(widths(screen.getByRole("button", { name: "Edit Title" }))).toEqual(["w-fit"]);
+  await user.click(screen.getByRole("button", { name: "Edit Title" }));
+  const input = screen.getByRole("textbox");
+  expect(widths(input)).toEqual(["w-auto"]);
+  expect(input.getAttribute("size")).toBe("20");
+  await user.clear(input);
+  await user.keyboard("A".repeat(40));
+  expect(input.getAttribute("size")).toBe("41");
+});
