@@ -36,12 +36,23 @@ function glide(element: HTMLElement) {
   );
 }
 
+const realResizeObserver = globalThis.ResizeObserver;
+let resized = () => {};
+
 beforeEach(() => {
   MotionGlobalConfig.skipAnimations = false;
   window.dispatchEvent(new Event("pointerdown"));
+  resized = () => {};
+  globalThis.ResizeObserver = class extends realResizeObserver {
+    constructor(onResize: ResizeObserverCallback) {
+      super(onResize);
+      resized = () => onResize([], this);
+    }
+  };
 });
 afterEach(() => {
   MotionGlobalConfig.skipAnimations = false;
+  globalThis.ResizeObserver = realResizeObserver;
   cleanup();
 });
 
@@ -59,6 +70,20 @@ test("nothing moves until the content changes, and a change glides from the old 
 
   expect(flights).toHaveLength(1);
   expect(flights[0]?.frames[0]?.width).toBe("100px");
+  expect(flights[0]?.frames[1]?.width).toBe("160px");
+});
+
+test("a resize that re-wraps the content moves where the next glide starts from", () => {
+  const { element, flights, setWidth } = measuredElement();
+  const view = glide(element);
+  settle(view);
+
+  setWidth(140);
+  resized();
+  setWidth(160);
+  view.rerender({ change: "b" });
+
+  expect(flights[0]?.frames[0]?.width).toBe("140px");
   expect(flights[0]?.frames[1]?.width).toBe("160px");
 });
 

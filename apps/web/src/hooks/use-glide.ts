@@ -45,5 +45,16 @@ export function useGlide<T extends HTMLElement>(
     };
   }, [axis, change, clip]);
 
+  // A resize can re-wrap the content with nothing to glide for, and the next glide starts from that.
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => {
+      if (!flight.current) settled.current = element.getBoundingClientRect()[axis];
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [axis]);
+
   return ref;
 }
