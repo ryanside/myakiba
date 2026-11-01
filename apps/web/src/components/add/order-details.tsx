@@ -151,7 +151,7 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
               fitContent
               // Until the Items load, the default title is about to change, and the icon would jump.
               previewIcon={
-                c.commitProps.loading && !fields.title?.trim() ? null : (
+                c.pending && !fields.title?.trim() ? null : (
                   <HugeiconsIcon
                     icon={Edit03Icon}
                     className="size-4 shrink-0 text-muted-foreground"

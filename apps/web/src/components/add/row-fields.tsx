@@ -9,20 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow, RowOverrides } from "./add-draft";
-import { LabeledField, TagsField } from "./add-fields";
+import { EnumSelect, LabeledField, TagsField } from "./add-fields";
 import { priceFieldId } from "./commit-input";
 import type { AddItem, CommitIssue, DestinationForm } from "./commit-input";
 
@@ -72,6 +65,8 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
 }
 
 export const THUMBNAIL = "size-8 shrink-0 rounded-md";
+/** Spans the table's frame, whatever it scrolled to. 100cqw is the frame with its 1px borders. */
+export const FRAME_WIDTH = "sticky start-0 w-[calc(100cqw-2px)]";
 /** An Item's title and MFC number, which every other kind of row matches so none moves its rows. */
 export const ROW_CONTENT = "min-h-[37px]";
 
@@ -342,23 +337,12 @@ export function RowField({
     case "shipping":
       return (
         <LabeledField id={id} label={openLabel}>
-          <Select
+          <EnumSelect
+            id={id}
             value={overrides.shippingMethod ?? shared?.shippingMethod ?? "n/a"}
-            onValueChange={(next) => {
-              if (next !== null) onEdit({ shippingMethod: next });
-            }}
-          >
-            <SelectTrigger id={id} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SHIPPING_METHODS.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={SHIPPING_METHODS}
+            onChange={(shippingMethod) => onEdit({ shippingMethod })}
+          />
         </LabeledField>
       );
   }

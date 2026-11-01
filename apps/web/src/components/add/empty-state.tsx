@@ -9,6 +9,7 @@ import type { ExtensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { useExtensionStatus } from "@/lib/extension-gate";
 import { cn } from "@/lib/utils";
+import { FRAME_WIDTH } from "./row-fields";
 
 type EmptyAction =
   | { readonly kind: "external"; readonly label: string; readonly href: string }
@@ -71,7 +72,7 @@ export function EmptyState({ onSearch }: { readonly onSearch: () => void }) {
   const glide = useGlide<HTMLDivElement>(body, { axis: "height" });
 
   return (
-    <div className="sticky start-0 flex w-[calc(100cqw-2px)] flex-col items-center gap-1.5 px-4 py-6">
+    <div className={cn(FRAME_WIDTH, "flex flex-col items-center gap-1.5 px-4 py-6")}>
       <p className="font-medium text-foreground">No items yet</p>
       <div
         ref={glide}

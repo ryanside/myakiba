@@ -266,7 +266,6 @@ export function useAddController(search: AddSearchParams) {
     pending,
     items,
     lookup,
-    itemsLoading,
     itemsReadError,
     retryItems,
 
@@ -283,6 +282,7 @@ export function useAddController(search: AddSearchParams) {
     newOrderTitle,
     issues,
     announcement,
+    handleAnnounce: setAnnouncement,
 
     select,
     selectAll,
@@ -291,9 +291,6 @@ export function useAddController(search: AddSearchParams) {
     handleRemove,
     handleRetryPick,
     handleDiscardPick,
-    committed,
-    done,
-    reportIssues,
 
     handleOpenSearch: () => setSearchOpen(true),
 

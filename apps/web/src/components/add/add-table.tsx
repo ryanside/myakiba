@@ -11,23 +11,8 @@ import type {
   SortingState,
   Table,
 } from "@tanstack/react-table";
-import {
-  createContext,
-  useContext,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type {
-  ComponentType,
-  FocusEvent,
-  KeyboardEvent,
-  MouseEvent,
-  ReactNode,
-  RefObject,
-} from "react";
+import { createContext, useContext, useId, useLayoutEffect, useRef, useState } from "react";
+import type { ComponentType, MouseEvent, ReactNode, RefObject } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridExpandedPanel, DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -43,6 +28,7 @@ import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
 import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
+import { onTableKeys, revealFocus } from "./add-table-keys";
 import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
 import { FillMenu } from "./fill-menu";
@@ -50,6 +36,7 @@ import { PickStatus } from "./pick-status";
 import {
   FIELD,
   FieldGroup,
+  FRAME_WIDTH,
   fieldsFor,
   plannedPrice,
   ROW_CONTENT,
@@ -123,8 +110,9 @@ type AddTableState = {
   readonly owned: boolean;
   readonly openRows: ReadonlySet<string>;
   readonly toggleDetails: (itemId: string) => void;
+  /** What Fill all can fill, which is nothing where a row has no fields to fill. */
   readonly fields: readonly Field[];
-  readonly onAnnounce: (message: string) => void;
+  readonly fieldsHidden: boolean;
 };
 
 // Columns are constants that read this, as a column array rebuilt per render would give every cell a
@@ -135,125 +123,6 @@ function useAddTable(): AddTableState {
   const state = useContext(AddTableContext);
   if (state === null) throw new Error("A cell of the Add table rendered outside of it");
   return state;
-}
-
-const EDITABLE_CELLS = '[data-col="price"], [data-col="count"], [data-col="condition"]';
-
-const isVisible = (element: HTMLElement) => element.checkVisibility();
-
-function focusablesIn(root: Element): HTMLElement[] {
-  return [
-    ...root.querySelectorAll<HTMLElement>("a[href], button, input, [role='checkbox']"),
-  ].filter(
-    (element) =>
-      element.tabIndex >= 0 &&
-      !element.hasAttribute("disabled") &&
-      element.getAttribute("aria-disabled") !== "true" &&
-      isVisible(element),
-  );
-}
-
-function focusCell(element: HTMLElement | undefined) {
-  if (!element) return;
-  element.focus();
-  if (element instanceof HTMLInputElement) element.select();
-}
-
-function isTextEntry(element: HTMLElement): element is HTMLInputElement {
-  return element instanceof HTMLInputElement && element.type !== "checkbox";
-}
-
-/** Left and Right belong to the caret until it reaches the end of the text. */
-function caretAtEdge(input: HTMLInputElement, key: "ArrowLeft" | "ArrowRight"): boolean {
-  const { selectionStart, selectionEnd, value } = input;
-  // A number input has no selection API, and its values are short.
-  if (selectionStart === null || selectionEnd === null) return true;
-  if (selectionStart !== selectionEnd) return true;
-  return key === "ArrowLeft" ? selectionStart === 0 : selectionEnd === value.length;
-}
-
-function nextDataCell(from: HTMLElement): HTMLElement | undefined {
-  const row = from.closest("tr");
-  const cell = from.closest(EDITABLE_CELLS);
-  if (!row || !cell) return undefined;
-  const inRow = [...row.querySelectorAll<HTMLElement>(EDITABLE_CELLS)];
-  const later = inRow.slice(inRow.indexOf(cell as HTMLElement) + 1);
-  for (const candidate of later) {
-    const [first] = focusablesIn(candidate);
-    if (first) return first;
-  }
-  const rows = [...(row.parentElement?.querySelectorAll("tr[data-row]") ?? [])];
-  for (const candidate of rows.slice(rows.indexOf(row) + 1)) {
-    for (const nextCell of candidate.querySelectorAll<HTMLElement>(EDITABLE_CELLS)) {
-      const [first] = focusablesIn(nextCell);
-      if (first) return first;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Spreadsheet keys over a real table. Left and Right walk the row's controls, Up and Down keep the
- * column, Enter moves on from an input or a closed select. Keys pressed in a portaled popup bubble
- * here through React but are not inside the table, so they stay the popup's.
- */
-function onTableKeys(event: KeyboardEvent<HTMLElement>) {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  const grid = event.currentTarget;
-  const target = event.target as HTMLElement;
-  if (!grid.contains(target)) return;
-  const row = target.closest<HTMLElement>("tr[data-row]");
-  if (!row) return;
-
-  const stop = () => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  switch (event.key) {
-    case "ArrowLeft":
-    case "ArrowRight": {
-      if (isTextEntry(target) && !caretAtEdge(target, event.key)) return;
-      stop();
-      const inRow = focusablesIn(row);
-      const step = event.key === "ArrowLeft" ? -1 : 1;
-      focusCell(inRow[inRow.indexOf(target) + step]);
-      return;
-    }
-    case "ArrowUp":
-    case "ArrowDown": {
-      stop();
-      const column = target.closest<HTMLElement>("[data-col]")?.dataset.col;
-      if (column === undefined) return;
-      const rows = [...grid.querySelectorAll<HTMLElement>("tr[data-row]")];
-      const step = event.key === "ArrowUp" ? -1 : 1;
-      for (let index = rows.indexOf(row) + step; rows[index]; index += step) {
-        const cell = rows[index]?.querySelector(`[data-col="${column}"]`);
-        const [first] = cell ? focusablesIn(cell) : [];
-        if (first) {
-          focusCell(first);
-          return;
-        }
-      }
-      return;
-    }
-    case "Enter": {
-      const moves =
-        isTextEntry(target) ||
-        (target.getAttribute("role") === "combobox" &&
-          target.getAttribute("aria-expanded") !== "true");
-      if (!moves || !target.closest(EDITABLE_CELLS)) return;
-      stop();
-      focusCell(nextDataCell(target));
-    }
-  }
-}
-
-/** Focus alone scrolls only a fully hidden element, which can leave a sliver of a control in view. */
-function revealFocus({ currentTarget, target }: FocusEvent<HTMLElement>) {
-  if (currentTarget.contains(target) && target.matches(":focus-visible")) {
-    target.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }
 }
 
 /** A click on the row itself: not on a control, not in a popup it opened, not ending a selection. */
@@ -405,11 +274,11 @@ function ItemName({ row: { id, item } }: { readonly row: ItemRow }) {
 }
 
 function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
-  const { c, owned, openRows, toggleDetails } = useAddTable();
+  const { c, owned, openRows, toggleDetails, fieldsHidden } = useAddTable();
   const open = owned && openRows.has(id);
   return (
     <div className="flex items-center justify-end gap-0.5">
-      {c.resolvedForm.kind === "none" ? null : (
+      {fieldsHidden ? null : (
         <Button
           type="button"
           variant="ghost"
@@ -499,9 +368,6 @@ function DetailsPanel({ row: { id, row, item, release } }: { readonly row: ItemR
   );
 }
 
-// A wide table scrolls sideways inside its frame, and what spans it stays in view. 100cqw is the
-// frame with its 1px borders, which this is inside of.
-const FRAME_WIDTH = "sticky start-0 w-[calc(100cqw-2px)]";
 // Its content starts under the Item column's, so a row keeps its place when it becomes an Item.
 const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem-2px)] ps-8.5";
 
@@ -544,15 +410,15 @@ function PickLine({ pick }: { readonly pick: PickRow }) {
 
 /** Fill all heads the column of row actions. */
 function ActionsHeader() {
-  const { c, fields, onAnnounce } = useAddTable();
+  const { c, fields, fieldsHidden } = useAddTable();
   return (
     <>
       <span className="sr-only">Actions</span>
-      {fields.length > 0 ? (
+      {fieldsHidden ? null : (
         <div className="flex justify-end">
-          <FillMenu fields={fields} c={c} onFilled={onAnnounce} />
+          <FillMenu fields={fields} c={c} onFilled={c.handleAnnounce} />
         </div>
-      ) : null}
+      )}
     </>
   );
 }
@@ -651,7 +517,7 @@ const COLUMNS: ColumnDef<AddRow>[] = [
   },
 ];
 
-const HIDDEN_WITHOUT_OWNERSHIP = { price: false, count: false, condition: false };
+const HIDDEN_WITHOUT_FIELDS = { price: false, count: false, condition: false };
 const SHOW_ALL = {};
 const PINNED = { right: ["actions"] };
 const FRAME_BORDERS = 2;
@@ -670,24 +536,35 @@ function useFrameWidth(frame: RefObject<HTMLElement | null>): number {
   return width;
 }
 
+function useAddTableState(c: AddController): AddTableState {
+  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set());
+  const { kind } = c.resolvedForm;
+  return {
+    c,
+    owned: kind === "collection" || kind === "order",
+    openRows,
+    toggleDetails: (itemId) => {
+      setOpenRows((current) => {
+        const next = new Set(current);
+        if (!next.delete(itemId)) next.add(itemId);
+        return next;
+      });
+    },
+    fields: fieldsFor(kind),
+    fieldsHidden: kind === "none",
+  };
+}
+
 /** Every row, under a header that holds Fill all. */
-export function AddItems({
-  controller: c,
-  onAnnounce,
-}: {
-  readonly controller: AddController;
-  readonly onAnnounce: (message: string) => void;
-}) {
+export function AddItems({ controller: c }: { readonly controller: AddController }) {
   const hintId = useId();
   const frame = useRef<HTMLDivElement>(null);
   const frameWidth = useFrameWidth(frame);
-  const [openRows, setOpenRows] = useState<ReadonlySet<string>>(() => new Set());
+  const tableState = useAddTableState(c);
+  const { owned, openRows, fieldsHidden } = tableState;
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
 
-  const { kind } = c.resolvedForm;
-  const owned = kind === "collection" || kind === "order";
-  const fieldsHidden = kind === "none";
   useColumnsFade(frame, fieldsHidden);
   // What was sized or sorted for other columns says nothing about these, and could sort by something
   // no longer on screen.
@@ -696,41 +573,21 @@ export function AddItems({
     setColumnsFor(fieldsHidden);
     setColumnSizing({});
     if (fieldsHidden)
-      setSorting((current) => current.filter(({ id }) => !(id in HIDDEN_WITHOUT_OWNERSHIP)));
+      setSorting((current) => current.filter(({ id }) => !(id in HIDDEN_WITHOUT_FIELDS)));
   }
-  const fields = fieldsFor(kind);
   const data = tableRows(c);
-
-  const tableState = useMemo(
-    () => ({
-      c,
-      owned,
-      openRows,
-      fields,
-      onAnnounce,
-      toggleDetails: (itemId: string) => {
-        setOpenRows((current) => {
-          const next = new Set(current);
-          if (!next.delete(itemId)) next.add(itemId);
-          return next;
-        });
-      },
-    }),
-    [c, owned, openRows, fields, onAnnounce],
-  );
 
   const table = useReactTable<AddRow>({
     columns: COLUMNS,
     data,
     getRowId: (row) => row.id,
     defaultColumn: { enablePinning: false },
-    getRowCanExpand: ({ original }) => original.kind === "item",
-    enableRowSelection: ({ original }) => original.kind === "item",
+    enableRowSelection: true,
     state: {
       sorting,
       columnSizing,
       columnPinning: PINNED,
-      columnVisibility: fieldsHidden ? HIDDEN_WITHOUT_OWNERSHIP : SHOW_ALL,
+      columnVisibility: fieldsHidden ? HIDDEN_WITHOUT_FIELDS : SHOW_ALL,
       // A loading row has its tint from the first paint too, since the draft already knows.
       rowSelection: Object.fromEntries(
         data.flatMap((row) => (isSelected(row) ? [[row.id, true]] : [])),

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { PageHeader, formatCount } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
@@ -13,7 +12,6 @@ import { OrderDetails } from "./order-details";
 
 export function AddPage({ search }: { readonly search: AddSearchParams }) {
   const c = useAddController(search);
-  const [filled, setFilled] = useState("");
   const { kind, order } = c.resolvedForm;
   const orderId = c.hasItems && kind === "order" ? order.kind : null;
   const slide = useSlide<HTMLDivElement>(orderId);
@@ -27,9 +25,6 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
       )}
     >
       <LiveRegions controller={c} />
-      <p role="status" className="sr-only">
-        {filled}
-      </p>
       {/* A commit in flight holds what it was sent with, so nothing here can change under it. */}
       <div inert={c.sending} className="flex flex-1 flex-col gap-6">
         <PageHeader
@@ -52,7 +47,7 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
             </OrderSwap>
           </div>
           <div ref={slide}>
-            <AddItems controller={c} onAnnounce={setFilled} />
+            <AddItems controller={c} />
           </div>
         </div>
       </div>
