@@ -142,7 +142,7 @@ function DataGridTableHeadRowCell<TData>({
       }}
       aria-sort={getAriaSort(column)}
       data-col={column.id}
-      data-pinned={isPinned || undefined}
+      data-pinned={(props.tableLayout?.columnsPinnable && isPinned) || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "text-secondary-foreground/80 h-9 relative text-left align-middle font-normal rtl:text-right [&:has([role=checkbox])]:pe-0",
@@ -394,7 +394,7 @@ function DataGridTableBodyRowCell<TData>({
         ...dndStyle,
       }}
       data-col={column.id}
-      data-pinned={isPinned || undefined}
+      data-pinned={(props.tableLayout?.columnsPinnable && isPinned) || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "align-middle",

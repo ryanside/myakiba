@@ -466,6 +466,7 @@ test.each([
     expect(header.style.position === "sticky").toBe(pinned);
     const details = screen.getByRole("button", { name: "Details for A" });
     expect(details.closest("td")?.style.position === "sticky").toBe(pinned);
+    expect(details.closest("td")?.dataset.pinned !== undefined).toBe(pinned);
     const price = screen.getByRole("button", { name: "Price" });
     expect(price.closest("th")?.style.position).not.toBe("sticky");
   } finally {
