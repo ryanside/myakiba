@@ -15,6 +15,9 @@ window.addEventListener(
   { capture: true, passive: true },
 );
 
+/** A choice made from the keyboard stays instant. */
+export const keyJustPressed = () => performance.now() - lastKeyAt < KEY_WINDOW_MS;
+
 /**
  * Lets an element whose content has no known size reach its new size smoothly when `change` changes,
  * from wherever it is, instead of snapping there. Nothing moves on first paint, and a change made
@@ -24,8 +27,8 @@ export function useGlide<T extends HTMLElement>(
   change: string | null,
   {
     axis = "width",
-    fade = false,
-  }: { readonly axis?: "width" | "height"; readonly fade?: boolean } = {},
+    clip = true,
+  }: { readonly axis?: "width" | "height"; readonly clip?: boolean } = {},
 ) {
   const ref = useRef<T>(null);
   const settled = useRef<number | null>(null);
@@ -41,29 +44,21 @@ export function useGlide<T extends HTMLElement>(
     flight.current = null;
     const to = element.getBoundingClientRect()[axis];
     settled.current = to;
-    if (
-      from === null ||
-      from === to ||
-      MotionGlobalConfig.skipAnimations ||
-      performance.now() - lastKeyAt < KEY_WINDOW_MS
-    ) {
+    if (from === null || from === to || MotionGlobalConfig.skipAnimations || keyJustPressed()) {
       element.style.overflow = "";
       return;
     }
-    element.style.overflow = "clip";
-    const animation = element.animate(
-      [
-        { [axis]: `${from}px`, ...(fade && { opacity: from === 0 ? 0 : 0.4 }) },
-        { [axis]: `${to}px`, ...(fade && { opacity: 1 }) },
-      ],
-      { duration: DURATION_MS, easing: EASING },
-    );
+    if (clip) element.style.overflow = "clip";
+    const animation = element.animate([{ [axis]: `${from}px` }, { [axis]: `${to}px` }], {
+      duration: DURATION_MS,
+      easing: EASING,
+    });
     flight.current = animation;
     animation.onfinish = () => {
       flight.current = null;
       element.style.overflow = "";
     };
-  }, [axis, change, fade]);
+  }, [axis, change, clip]);
 
   return ref;
 }

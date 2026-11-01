@@ -109,7 +109,9 @@ test("the destination menu is exactly Collection, New Order, Existing Order and 
     "Item Database",
   ]);
   await user.click(screen.getByRole("option", { name: "New Order" }));
-  expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe("New Order");
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "Where these go" }).textContent).toBe("New Order"),
+  );
 });
 
 test("typing in Price and Count holds focus and every character", async () => {

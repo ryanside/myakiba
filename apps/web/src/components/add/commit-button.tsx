@@ -3,6 +3,7 @@ import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { useGlide } from "@/hooks/use-glide";
 import { useCommitAdd } from "@/data/resources/add";
 import { buildCommitChoices, commitPlan } from "./commit-input";
+import { BUTTON_WORDS, Swap } from "./destination-motion";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
 
 export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommitAdd>["run"]>>>;
@@ -71,7 +72,9 @@ export function CommitButton({
         onClick={handleCommit}
       >
         <span className="block max-w-[min(70vw,26rem)] truncate" title={plan.label}>
-          {plan.label}
+          <Swap move={BUTTON_WORDS} id={plan.label} className="truncate">
+            {plan.label}
+          </Swap>
         </span>
       </StatusButton>
     </div>

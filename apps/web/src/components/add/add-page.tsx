@@ -6,19 +6,22 @@ import { useAddController } from "./add-controller";
 import { LiveRegions, Notices } from "./add-notices";
 import { AddItems } from "./add-table";
 import { CommitBar } from "./commit-bar";
+import { OrderSwap, useSlide } from "./destination-motion";
 import { DestinationSentence } from "./destination-sentence";
 import { OrderDetails } from "./order-details";
 
 export function AddPage({ search }: { readonly search: AddSearchParams }) {
   const c = useAddController(search);
   const [filled, setFilled] = useState("");
-  const { kind } = c.resolvedForm;
+  const { kind, order } = c.resolvedForm;
+  const orderId = c.hasItems && kind === "order" ? order.kind : null;
+  const slide = useSlide<HTMLDivElement>(orderId);
   return (
     <div
       // The page scrolls under the sticky header and the commit bar, so what takes focus stays clear
       // of both. On a phone the bar is fixed, so the padding lets the last row clear it.
       className={cn(
-        "@container/add mx-auto flex w-full max-w-5xl flex-col gap-6 **:scroll-mt-9 **:scroll-mb-28 max-md:**:scroll-mb-32 md:min-h-[calc(100dvh-7rem)]",
+        "@container/add mx-auto flex w-full max-w-5xl flex-col gap-6 **:scroll-mt-9 **:scroll-mb-28 max-md:**:scroll-mb-32 md:min-h-[calc(100dvh-6.5rem)]",
         c.hasItems && "max-md:pb-32",
       )}
     >
@@ -35,11 +38,15 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
         <div className="flex flex-col gap-2 empty:hidden">
           <Notices controller={c} />
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="relative flex flex-col">
           <DestinationSentence controller={c} disabled={!c.hasItems} />
-          {c.hasItems && kind === "order" ? <OrderDetails controller={c} /> : null}
+          <OrderSwap id={orderId}>
+            <OrderDetails controller={c} />
+          </OrderSwap>
         </div>
-        <AddItems controller={c} onAnnounce={setFilled} />
+        <div ref={slide} className="flex flex-col gap-6">
+          <AddItems controller={c} onAnnounce={setFilled} />
+        </div>
       </div>
       <CommitBar controller={c} />
     </div>

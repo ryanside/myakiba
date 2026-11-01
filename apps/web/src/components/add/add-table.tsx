@@ -35,6 +35,7 @@ import type { DraftRow } from "./add-draft";
 import { AddSearch } from "./add-search";
 import { removeButtonId } from "./commit-input";
 import type { AddItem } from "./commit-input";
+import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
@@ -645,6 +646,7 @@ export function AddItems({
   const { kind } = c.resolvedForm;
   const owned = kind === "collection" || kind === "order";
   const fieldsHidden = kind === "none";
+  useColumnsFade(frame, fieldsHidden);
   // What was sized or sorted for other columns says nothing about these, and could put the row's
   // actions out of the frame or sort by something no longer on screen.
   const [columnsFor, setColumnsFor] = useState(fieldsHidden);

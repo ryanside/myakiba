@@ -3,6 +3,8 @@ import { useGlide } from "@/hooks/use-glide";
 import type { AddController } from "./add-controller";
 import { CommitButton } from "./commit-button";
 import { commitSummary } from "./commit-input";
+import { Swap, WORDS } from "./destination-motion";
+import { choiceOf } from "./destination-sentence";
 
 const ENTER = { duration: 0.2, ease: [0.23, 1, 0.32, 1] } as const;
 const AWAY = { opacity: 0, transform: "translateY(8px)" };
@@ -28,14 +30,18 @@ function Bar({ controller: c }: { readonly controller: AddController }) {
       className="@container/bar relative z-20 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-card px-3 py-2.5 shadow-lg ring-1 ring-foreground/10 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:mb-px before:h-6 before:bg-linear-to-t before:from-background before:to-transparent max-md:fixed max-md:inset-x-3 max-md:bottom-3 max-md:before:hidden"
     >
       {/* Two lines at most: twenty Lists would otherwise push the button off a short screen. */}
-      <ul
-        className="flex max-h-10 min-w-0 flex-1 basis-56 flex-wrap gap-x-4 overflow-hidden text-sm text-muted-foreground tabular-nums [overflow-wrap:anywhere]"
-        title={summaryText}
-      >
-        {summary.map((part) => (
-          <li key={part}>{part}</li>
-        ))}
-      </ul>
+      <div className="relative min-w-0 flex-1 basis-56">
+        <Swap move={WORDS} id={choiceOf(c.resolvedForm) ?? "unset"} element="div">
+          <ul
+            className="flex max-h-10 min-w-0 flex-wrap gap-x-4 overflow-hidden text-sm text-muted-foreground tabular-nums [overflow-wrap:anywhere]"
+            title={summaryText}
+          >
+            {summary.map((part) => (
+              <li key={part}>{part}</li>
+            ))}
+          </ul>
+        </Swap>
+      </div>
       <CommitButton {...c.commitProps} />
     </motion.section>
   );
