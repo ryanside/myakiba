@@ -130,6 +130,15 @@
       "fixed": ["a group of actions wraps inside the bar, so its last one stays on a phone's screen"]
     },
     {
+      "fix": "68e1beaf82cdbaa9b6ae9b4199f44587544a3c74",
+      "bug": "A pin held in the table's state marked the Add row actions as pinned with nothing to scroll, which painted their solid surface over the selected row's tint.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": [
+        "in a 965px frame, the row's actions pinned: false",
+        "in a 2000px frame, the row's actions pinned: false"
+      ]
+    },
+    {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
       "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
