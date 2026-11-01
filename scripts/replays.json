@@ -127,7 +127,9 @@
       "fix": "3aad3c0e6e81ddeb6fc6f24473587326f0da7027",
       "bug": "An action bar's group did not wrap, so Orders' Delete Items ran off the edge at 320 and 390 wide.",
       "test": "apps/web/src/components/ui/action-bar.test.tsx",
-      "fixed": ["a group of actions wraps inside the bar, so its last one stays on a phone's screen"]
+      "fixed": [
+        "a group of actions wraps inside the bar, so its last one stays on a phone's screen"
+      ]
     },
     {
       "fix": "68e1beaf82cdbaa9b6ae9b4199f44587544a3c74",
