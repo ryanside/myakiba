@@ -106,6 +106,18 @@
       ]
     },
     {
+      "fix": "f03710438f92b0d83b2dca22d45e34e87bca21c4",
+      "bug": "The Add header counted a row whose Item was gone, so it said 2 Items above a sentence saying Add 1 item.",
+      "test": "apps/web/src/components/add/add-load-shift.test.tsx",
+      "fixed": ["the header drops a row whose Item is gone, as the sentence does"]
+    },
+    {
+      "fix": "ab3bd2edc87c6de61cd6f2cfde9a5b5f139f9d63",
+      "bug": "Removing a shared constant took the background, radius, shadow and ring from every popover, so what was behind it showed through.",
+      "test": "apps/web/src/components/ui/popover.test.tsx",
+      "fixed": ["a popover has its own surface, so what is behind it does not show through"]
+    },
+    {
       "fix": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
       "bug": "Passing through Existing Order with the destination's arrow keys erased a New Order's fields.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
