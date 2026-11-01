@@ -53,7 +53,7 @@ function Bar({ controller: c }: { readonly controller: AddController }) {
  */
 export function CommitBar({ controller: c }: { readonly controller: AddController }) {
   return (
-    <div className="empty:hidden md:sticky md:bottom-0 md:z-20 md:-mb-6 md:bg-background md:pb-6">
+    <div className="empty:hidden md:sticky md:bottom-0 md:z-20 md:-mb-8 md:bg-background md:pb-6">
       <AnimatePresence initial={false}>
         {c.hasItems ? <Bar key="commit" controller={c} /> : null}
       </AnimatePresence>

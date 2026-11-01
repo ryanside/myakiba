@@ -21,7 +21,7 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
       // The page scrolls under the sticky header and the commit bar, so what takes focus stays clear
       // of both. On a phone the bar is fixed, so the padding lets the last row clear it.
       className={cn(
-        "@container/add mx-auto flex w-full max-w-5xl flex-col gap-6 **:scroll-mt-9 **:scroll-mb-28 max-md:**:scroll-mb-32 md:min-h-[calc(100dvh-6.5rem)]",
+        "@container/add mx-auto flex w-full max-w-5xl flex-col gap-6 **:scroll-mt-9 **:scroll-mb-28 max-md:**:scroll-mb-32 md:min-h-[calc(100dvh-7rem)]",
         c.hasItems && "max-md:pb-32",
       )}
     >
