@@ -447,33 +447,27 @@ test("a row removed under a sort sends focus to the row below it on screen", asy
   expect(document.activeElement).toBe(screen.getByRole("button", { name: "Remove B" }));
 });
 
-test("the row's actions pin only while the columns overflow the frame", async () => {
+test.each([
+  // 1280 wide with the sidebar open and a classic scrollbar has the narrowest frame that holds them.
+  [965, false],
+  [2000, false],
+  [400, true],
+])("in a %ipx frame, the row's actions pinned: %p", async (frame, pinned) => {
   seedItems(item("aaa000000001", { title: "A" }));
   draft("aaa000000001");
   Object.defineProperty(HTMLElement.prototype, "clientWidth", {
     configurable: true,
-    get: () => 2000,
+    get: () => frame,
   });
   try {
     openAddPage("/add?to=collection");
     await screen.findByRole("checkbox", { name: "Select A" });
-    const actions = () => screen.getByRole("columnheader", { name: /^Actions/ });
-    expect(actions().style.position).not.toBe("sticky");
-    cleanup();
-
-    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
-      configurable: true,
-      get: () => 400,
-    });
-    openAddPage("/add?to=collection");
-    await screen.findByRole("checkbox", { name: "Select A" });
-    expect(actions().style.position).toBe("sticky");
-    expect(
-      screen.getByRole("button", { name: "Details for A" }).closest("td")?.style.position,
-    ).toBe("sticky");
-    expect(screen.getByRole("button", { name: "Price" }).closest("th")?.style.position).not.toBe(
-      "sticky",
-    );
+    const header = screen.getByRole("columnheader", { name: /^Actions/ });
+    expect(header.style.position === "sticky").toBe(pinned);
+    const details = screen.getByRole("button", { name: "Details for A" });
+    expect(details.closest("td")?.style.position === "sticky").toBe(pinned);
+    const price = screen.getByRole("button", { name: "Price" });
+    expect(price.closest("th")?.style.position).not.toBe("sticky");
   } finally {
     Reflect.deleteProperty(HTMLElement.prototype, "clientWidth");
   }
