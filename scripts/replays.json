@@ -110,7 +110,9 @@
       "fix": "82f5e98ad8b705e6da0d44f7d2c44c6e6d7efd3d",
       "bug": "A row whose Item was gone took the selected tint, though only an item row can be selected.",
       "test": "apps/web/src/components/add/add-table.test.tsx",
-      "fixed": ["a row whose Item is gone is not selected, since it cannot be committed"]
+      "fixed": ["a row whose Item is gone is not selected, since it cannot be committed"],
+      "testAt": "9f1389a4a64e1387bd90da3921350251654f95b4",
+      "reason": "A gone row now says it is no longer in myakiba, words this fix never had, so its harness stays at the last build that called it the item database."
     },
     {
       "fix": "6ac518e2439fe87109506c02db78ca947b18ce1b",
