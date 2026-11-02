@@ -1,4 +1,10 @@
-import { DatabaseIcon, LibraryIcon, PackageAddIcon, PackageIcon } from "@hugeicons/core-free-icons";
+import {
+  DatabaseIcon,
+  LibraryIcon,
+  PackageAddIcon,
+  PackageIcon,
+  StarIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { Fragment, useId, useState } from "react";
@@ -18,9 +24,21 @@ import { keyJustPressed } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import { choiceOf, choose } from "./commit-input";
-import type { Choice } from "./commit-input";
+import type { ChosenList, Choice } from "./commit-input";
 import { Swap, WORDS } from "./destination-motion";
 import { ListsPicker } from "./lists-picker";
+import {
+  ALSO_ON,
+  AND,
+  APART,
+  CHOICE_ICON,
+  FOLDED,
+  GAP,
+  ICON_WORDS,
+  LEAD,
+  ICONS,
+} from "./sentence-fit";
+import { useWordsTip, WordsTip } from "./words-tip";
 
 const CHOICES: readonly {
   readonly value: Choice;
@@ -55,7 +73,7 @@ function DestinationSelect({
   const glide = useGlide<HTMLDivElement>(choice);
   const [openedByKey, setOpenedByKey] = useState(false);
   return (
-    <div ref={glide} inert={held} className="max-w-full min-w-0">
+    <div ref={glide} inert={held} className="shrink-0">
       <Select
         items={CHOICES}
         value={choice}
@@ -71,7 +89,7 @@ function DestinationSelect({
             "gap-2",
             // The glide's width is the trigger's, so its edge and chevron stay whole as it grows.
             "w-full",
-            chosen && "pl-2",
+            chosen && "pl-2 @max-[21rem]/sentence:pl-2.5",
             choice === null &&
               !disabled &&
               "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
@@ -85,7 +103,7 @@ function DestinationSelect({
             {chosen ? (
               <HugeiconsIcon
                 icon={chosen.icon}
-                className="size-4 shrink-0 text-muted-foreground"
+                className={cn("size-4 shrink-0 text-muted-foreground", CHOICE_ICON)}
                 aria-hidden="true"
               />
             ) : null}
@@ -140,41 +158,69 @@ export function DestinationSentence({
   // A commit in flight holds what it was sent with, so nothing here can change under it.
   const held = c.sending;
 
+  const {
+    setWords: setWishlistWords,
+    open: wishlistTipOpen,
+    handleOpenChange: handleWishlistTip,
+  } = useWordsTip();
+  const setWishlist = (wishlist: boolean) => c.setForm({ ...form, wishlist });
+  const setLists = (lists: readonly ChosenList[]) => c.setForm({ ...form, lists });
+
   return (
-    <section aria-label="Destination" className="flex flex-wrap items-center gap-2 text-sm">
-      <span ref={glide} className="shrink-0 font-medium whitespace-nowrap tabular-nums">
+    <section aria-label="Destination" className={cn("flex items-center text-sm", GAP)}>
+      <span ref={glide} className={cn("shrink-0 font-medium whitespace-nowrap tabular-nums", LEAD)}>
         <Swap move={WORDS} id={choice === "none" ? "keep" : "add"}>
           {lead}
         </Swap>
       </span>
       <DestinationSelect controller={c} disabled={disabled} held={held} />
-      <span className="text-muted-foreground @2xl/add:ms-2">also on</span>
-      <span inert={held} className="flex items-center gap-2">
-        <Checkbox
-          id={`${baseId}-wishlist`}
-          checked={form.wishlist}
+      <span className={cn("shrink-0 text-muted-foreground @2xl/add:ms-2", ALSO_ON)}>also on</span>
+      <WordsTip
+        open={wishlistTipOpen}
+        onOpenChange={handleWishlistTip}
+        content="Wishlist"
+        trigger={
+          <span inert={held} className={cn("flex shrink-0 items-center gap-2", APART)}>
+            <Checkbox
+              id={`${baseId}-wishlist`}
+              checked={form.wishlist}
+              disabled={disabled}
+              onCheckedChange={(checked) => setWishlist(checked === true)}
+            />
+            <Label
+              htmlFor={`${baseId}-wishlist`}
+              className={cn("font-normal", disabled ? "opacity-50" : "cursor-pointer")}
+            >
+              <HugeiconsIcon
+                icon={StarIcon}
+                strokeWidth={2}
+                className={cn(
+                  "size-4",
+                  ICONS,
+                  form.wishlist ? "[&_path]:fill-current" : "text-muted-foreground",
+                )}
+                aria-hidden="true"
+              />
+              <span ref={setWishlistWords} className={ICON_WORDS}>
+                Wishlist
+              </span>
+            </Label>
+          </span>
+        }
+      />
+      <span className={cn("shrink-0 text-muted-foreground", AND)}>and</span>
+      <span inert={held} className={cn("flex min-w-0", APART)}>
+        <ListsPicker chosen={form.lists} disabled={disabled} onChange={setLists} />
+      </span>
+      <span inert={held} className={cn("shrink-0", FOLDED)}>
+        <ListsPicker
+          chosen={form.lists}
           disabled={disabled}
-          onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
+          wishlist={{ checked: form.wishlist, onChange: setWishlist }}
+          onChange={setLists}
         />
-        <Label
-          htmlFor={`${baseId}-wishlist`}
-          className={cn("font-normal", disabled ? "opacity-50" : "cursor-pointer")}
-        >
-          Wishlist
-        </Label>
       </span>
-      <span className="text-muted-foreground">and</span>
-      {/* One piece, so a wrapped sentence ends with the commit on its last line, never alone there. */}
-      <span className="flex grow items-center gap-2">
-        <span inert={held} className="contents">
-          <ListsPicker
-            chosen={form.lists}
-            disabled={disabled}
-            onChange={(lists) => c.setForm({ ...form, lists })}
-          />
-        </span>
-        {children}
-      </span>
+      {children}
     </section>
   );
 }

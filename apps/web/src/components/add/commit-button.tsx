@@ -5,11 +5,8 @@ import { useCommitAdd } from "@/data/resources/add";
 import { cn } from "@/lib/utils";
 import { buildCommitChoices, commitPlan } from "./commit-input";
 import { BUTTON_WORDS, Swap } from "./destination-motion";
+import { FULL_LABEL, SHORT_LABEL } from "./sentence-fit";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
-
-// A sentence with one List and the full label need up to 47.3rem, and with the verb alone 41.5rem.
-const FULL_LABEL = "block @max-[48rem]/sentence:sr-only";
-const SHORT_LABEL = "hidden @max-[48rem]/sentence:block";
 
 export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommitAdd>["run"]>>>;
 
@@ -68,7 +65,7 @@ export function CommitButton({
   };
 
   return (
-    <div ref={glide} className="ms-auto max-w-full min-w-0">
+    <div ref={glide} className="ms-auto shrink-0">
       <StatusButton
         type="button"
         status={status}
