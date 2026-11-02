@@ -46,8 +46,8 @@ const choose = async (user: ReturnType<typeof userEvent.setup>, name: string) =>
   await user.click(await destination());
   await user.click(await screen.findByRole("option", { name }));
 };
-const searchButton = () => screen.getByRole("button", { name: "Add from Item Database" });
-const pageReady = () => screen.findByRole("button", { name: "Add from Item Database" });
+const searchButton = () => screen.getByRole("button", { name: "Search myakiba" });
+const pageReady = () => screen.findByRole("button", { name: "Search myakiba" });
 const openSearch = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(searchButton());
   return screen.findByRole("combobox", { name: "Search the Item Database" });
@@ -289,16 +289,22 @@ test("an empty page keeps its shape, with only search and the one action working
   expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
   expect(searchButton().hasAttribute("disabled")).toBe(false);
   expect(
+    screen
+      .getByRole("link", { name: "Search MyFigureCollection (opens in a new tab)" })
+      .getAttribute("href"),
+  ).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
+  expect(
     screen.getByRole("checkbox", { name: "Select all items" }).getAttribute("aria-disabled"),
   ).toBe("true");
   for (const name of ["Item", "Price", "Count", "Condition"]) {
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
   expect(screen.getByRole("columnheader", { name: "Item" })).toBeDefined();
-  // Fill all heads the row actions' column, and the search stays with the sentence, outside the table.
+  // Fill all heads the row actions' column, and the searches sit under the message, outside the table.
   const fillAll = screen.getByRole("button", { name: "Fill all" });
   expect(fillAll.closest("th")?.dataset.col).toBe("actions");
   expect(searchButton().closest("table")).toBeNull();
+  expect(searchButton().closest('[data-slot="data-grid"]')).not.toBeNull();
 });
 
 test.each([
@@ -340,13 +346,15 @@ test.each([
   expect(screen.queryByText(/under review/u)).toBeNull();
 });
 
-test("while the extension is in review, the one action goes to the page's search", async () => {
+test("while the extension is in review, the message has no action of its own and the row's search opens", async () => {
   browseWith(CHROME.userAgent);
   listIn();
   loadExtension({ installed: false });
   const user = userEvent.setup();
   openAddPage();
-  await user.click(await screen.findByRole("button", { name: "Search the Item Database" }));
+  const message = await screen.findByText(/in review at the Chrome Web Store/u);
+  expect(message.closest("td")?.querySelector("a, button")).toBeNull();
+  await user.click(searchButton());
   await waitFor(() => expect(document.activeElement).toBe(searchBox()));
 });
 

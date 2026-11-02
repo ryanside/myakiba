@@ -48,7 +48,7 @@ function renderSearch() {
   return added;
 }
 
-const searchButton = () => screen.getByRole("button", { name: "Add from Item Database" });
+const searchButton = () => screen.getByRole("button", { name: "Search myakiba" });
 
 /** Holds every search answer until the returned function runs. */
 function holdSearches() {

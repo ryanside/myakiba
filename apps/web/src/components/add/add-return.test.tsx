@@ -126,9 +126,7 @@ test("an unselected row keeps the user here, and the commit that empties the pag
   );
   await screen.findByText("Added 1 to your collection");
   expect(router.state.location.pathname).toBe("/add");
-  expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Add from Item Database" }),
-  );
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Search myakiba" }));
 
   await user.click(screen.getByRole("checkbox", { name: "Select Rem" }));
   await user.click(await screen.findByRole("button", { name: "Add 1 to collection" }));

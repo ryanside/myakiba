@@ -30,6 +30,7 @@ import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
 import { FillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
+import { SearchRow } from "./search-row";
 import {
   FIELD,
   FieldGroup,
@@ -577,7 +578,7 @@ export function AddItems({ controller: c }: { readonly controller: AddController
           table={table}
           recordCount={data.length}
           tableAria={{ "aria-label": "Items to add", "aria-describedby": hintId }}
-          emptyMessage={<EmptyState onSearch={c.handleOpenSearch} />}
+          emptyMessage={<EmptyState />}
           fullWidthRow={fullWidthRow}
           onRowPointerClick={(row, event) => {
             if (owned && row.kind === "item" && isEmptySpace(event)) {
@@ -593,7 +594,7 @@ export function AddItems({ controller: c }: { readonly controller: AddController
           tableClassNames={{
             // Rows are there from the first paint, so an entrance would only move them on load.
             bodyRow: cn("animate-none", owned && "cursor-pointer"),
-            // An empty page keeps its header's look, with only search and its one action working.
+            // An empty page keeps its header's look, with only the searches and its one action working.
             header: cn(data.length === 0 && "pointer-events-none"),
           }}
         >
@@ -601,6 +602,7 @@ export function AddItems({ controller: c }: { readonly controller: AddController
             <ScrollArea horizontal>
               <DataGridTable />
             </ScrollArea>
+            <SearchRow controller={c} />
           </DataGridContainer>
         </DataGrid>
       </div>

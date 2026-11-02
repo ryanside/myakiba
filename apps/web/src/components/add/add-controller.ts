@@ -292,8 +292,6 @@ export function useAddController(search: AddSearchParams) {
     handleRetryPick,
     handleDiscardPick,
 
-    handleOpenSearch: () => setSearchOpen(true),
-
     full,
     stopped: intake.stopped,
     failedPicks,

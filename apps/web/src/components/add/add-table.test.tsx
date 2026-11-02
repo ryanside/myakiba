@@ -473,3 +473,35 @@ test.each([
     Reflect.deleteProperty(HTMLElement.prototype, "clientWidth");
   }
 });
+
+test("the last row offers both searches and is no row of the table, so keys and counts pass it by", async () => {
+  draft("miku00000001");
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const price = await screen.findByRole("textbox", { name: "Price for Miku" });
+  const table = screen.getByRole("table", { name: "Items to add" });
+
+  const mfc = screen.getByRole("link", { name: "Search MyFigureCollection (opens in a new tab)" });
+  expect(mfc.getAttribute("href")).toBe("https://myfigurecollection.net/?_tb=item&keywords=");
+  expect(mfc.getAttribute("target")).toBe("_blank");
+  expect(mfc.getAttribute("rel")).toBe("noopener noreferrer");
+  const search = screen.getByRole("button", { name: "Search myakiba" });
+  for (const action of [mfc, search]) {
+    expect(table.contains(action)).toBe(false);
+    expect(action.closest('[data-slot="data-grid"]')).not.toBeNull();
+  }
+  // The header row and Miku's, and nothing for the searches.
+  expect(within(table).getAllByRole("row")).toHaveLength(2);
+
+  await user.click(price);
+  await user.keyboard("{ArrowDown}");
+  expect(document.activeElement).toBe(price);
+
+  screen.getByRole("button", { name: "Remove Miku" }).focus();
+  await user.tab();
+  expect(document.activeElement).toBe(mfc);
+  await user.tab();
+  expect(document.activeElement).toBe(search);
+  await user.click(search);
+  await screen.findByRole("combobox", { name: "Search the Item Database" });
+});

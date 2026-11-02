@@ -1105,7 +1105,7 @@ test("nothing on the page can change while a commit is in flight, and its answer
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
-  const searchButton = screen.getByRole("button", { name: "Add from Item Database" });
+  const searchButton = screen.getByRole("button", { name: "Search myakiba" });
   expect(searchButton.closest("[inert]")).toBeNull();
 
   await click(user, "Add 1 to collection");
@@ -1227,7 +1227,7 @@ test("an Item added again after its commit is kept in the draft", async () => {
   await click(user, "Add 1 to collection");
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
 
-  await click(user, "Add from Item Database");
+  await click(user, "Search myakiba");
   await user.type(
     await screen.findByRole("combobox", { name: "Search the Item Database" }),
     "Hatsune",
@@ -1282,7 +1282,7 @@ test("a letter typed as the search's room changes is kept", async () => {
   try {
     const user = userEvent.setup();
     openAddPage();
-    await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
+    await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
     const box = (await screen.findByRole("combobox", {
       name: "Search the Item Database",
     })) as HTMLInputElement;
@@ -1316,7 +1316,7 @@ test("a full page says so, in a status region too, and removing a row clears it"
   );
   const user = userEvent.setup();
   openAddPage();
-  await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
+  await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   await user.type(box, "miku");
   await screen.findByRole("option", { name: /Hatsune Miku/u });
@@ -1338,7 +1338,7 @@ test("a full page says so, in a status region too, and removing a row clears it"
 test("the search says how many it found, and aria-expanded follows the panel", async () => {
   const user = userEvent.setup();
   openAddPage();
-  await user.click(await screen.findByRole("button", { name: "Add from Item Database" }));
+  await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   expect(box.getAttribute("aria-expanded")).toBe("false");
 
@@ -1510,7 +1510,7 @@ test("what changes on the page is announced", async () => {
   await screen.findByRole("checkbox", { name: "Select Picked Miku" });
   await announced("A picked item is ready to add");
 
-  await click(user, "Add from Item Database");
+  await click(user, "Search myakiba");
   const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
   await user.type(box, "Rem");
   await user.click(await screen.findByRole("option", { name: /^Rem/u }));
@@ -1523,9 +1523,7 @@ test("what changes on the page is announced", async () => {
 
   await click(user, "Remove Picked Miku");
   await announced("Removed Picked Miku");
-  expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Add from Item Database" }),
-  );
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Search myakiba" }));
 });
 
 test("a row's title links to its Item, and its picture skips the tab order", async () => {

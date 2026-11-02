@@ -1,4 +1,4 @@
-import { DatabaseIcon, Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcSearchUrl } from "@myakiba/contracts/add/constants";
 import { DEFAULT_PAGE_SIZE } from "@myakiba/contracts/shared/constants";
@@ -20,9 +20,12 @@ import { ItemBadges } from "./item-badges";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
+/** Words a narrow table's last row leaves to screen readers, so both its actions fit on one line. */
+export const NARROW_HIDDEN = "@max-[26rem]/grid:sr-only";
+
 /**
- * The Item Database, one small part of what the extension can reach, so it waits behind a button.
- * Text that looks like an MFC link or id is searched as text.
+ * The Item Database, one small part of what the extension can reach, so it waits behind a button
+ * quieter than the way to MFC. Text that looks like an MFC link or id is searched as text.
  */
 export function AddSearch({
   initialQuery,
@@ -64,16 +67,21 @@ export function AddSearch({
     >
       <PopoverTrigger
         render={
-          <Button ref={triggerRef} type="button" variant="outline">
-            <HugeiconsIcon icon={DatabaseIcon} data-icon="inline-start" aria-hidden="true" />
-            Add from Item Database
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="font-normal text-muted-foreground"
+          >
+            <span className={NARROW_HIDDEN}>Search </span>myakiba
           </Button>
         }
       />
       <PopoverContent
         aria-label="Add from Item Database"
         initialFocus={input}
-        align="end"
+        align="start"
         className="w-96 max-w-[calc(100vw-2rem)] gap-0 p-0"
       >
         <search>
