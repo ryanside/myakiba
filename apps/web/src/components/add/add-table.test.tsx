@@ -229,7 +229,7 @@ test("Price sorts by what each row will save, and a row with no fields stays on 
   );
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
-  await screen.findByText("No longer in the item database");
+  await screen.findByText("No longer in myakiba");
 
   await sortBy(user, "Price");
   expect(rowOrder()).toEqual(["gone00000001", "rem000000001", "miku00000001"]);
@@ -407,7 +407,7 @@ test("a click in the select cell's padding opens nothing", async () => {
 test("a row whose Item is gone is not selected, since it cannot be committed", async () => {
   draft("miku00000001", "gone00000001");
   openAddPage("/add?to=collection");
-  await screen.findByText("No longer in the item database");
+  await screen.findByText("No longer in myakiba");
   const row = (id: string) => document.querySelector<HTMLElement>(`tr[data-row="${id}"]`);
   expect(row("miku00000001")?.dataset.state).toBe("selected");
   expect(row("gone00000001")?.dataset.state).toBeUndefined();
@@ -503,5 +503,6 @@ test("the last row offers both searches and is no row of the table, so keys and 
   await user.tab();
   expect(document.activeElement).toBe(search);
   await user.click(search);
-  await screen.findByRole("combobox", { name: "Search the Item Database" });
+  const popover = await screen.findByRole("dialog", { name: "Add from myakiba" });
+  expect(within(popover).getByRole("combobox", { name: "Search myakiba" })).toBeDefined();
 });

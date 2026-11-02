@@ -1228,10 +1228,7 @@ test("an Item added again after its commit is kept in the draft", async () => {
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
 
   await click(user, "Search myakiba");
-  await user.type(
-    await screen.findByRole("combobox", { name: "Search the Item Database" }),
-    "Hatsune",
-  );
+  await user.type(await screen.findByRole("combobox", { name: "Search myakiba" }), "Hatsune");
   await user.click(await screen.findByRole("option", { name: /Hatsune Miku/u }));
 
   await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toContain(ITEM_ID));
@@ -1284,7 +1281,7 @@ test("a letter typed as the search's room changes is kept", async () => {
     openAddPage();
     await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
     const box = (await screen.findByRole("combobox", {
-      name: "Search the Item Database",
+      name: "Search myakiba",
     })) as HTMLInputElement;
     // A browser runs microtasks between a typed event's listeners, so React renders what an earlier
     // listener set before the input's own. A test's event runs them in one go, so this does it.
@@ -1298,7 +1295,7 @@ test("a letter typed as the search's room changes is kept", async () => {
 
 test("?q= opens the search with its words, and focus in it", async () => {
   openAddPage("/add?q=miku");
-  const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
+  const box = await screen.findByRole("combobox", { name: "Search myakiba" });
   expect((box as HTMLInputElement).value).toBe("miku");
   await waitFor(() => expect(document.activeElement).toBe(box));
 });
@@ -1317,7 +1314,7 @@ test("a full page says so, in a status region too, and removing a row clears it"
   const user = userEvent.setup();
   openAddPage();
   await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
-  const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
+  const box = await screen.findByRole("combobox", { name: "Search myakiba" });
   await user.type(box, "miku");
   await screen.findByRole("option", { name: /Hatsune Miku/u });
   await waitFor(() => expect(screen.getByRole("listbox").getAttribute("aria-busy")).toBe("false"));
@@ -1339,7 +1336,7 @@ test("the search says how many it found, and aria-expanded follows the panel", a
   const user = userEvent.setup();
   openAddPage();
   await user.click(await screen.findByRole("button", { name: "Search myakiba" }));
-  const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
+  const box = await screen.findByRole("combobox", { name: "Search myakiba" });
   expect(box.getAttribute("aria-expanded")).toBe("false");
 
   await user.type(box, "miku");
@@ -1511,7 +1508,7 @@ test("what changes on the page is announced", async () => {
   await announced("A picked item is ready to add");
 
   await click(user, "Search myakiba");
-  const box = await screen.findByRole("combobox", { name: "Search the Item Database" });
+  const box = await screen.findByRole("combobox", { name: "Search myakiba" });
   await user.type(box, "Rem");
   await user.click(await screen.findByRole("option", { name: /^Rem/u }));
   await announced("Added Rem");

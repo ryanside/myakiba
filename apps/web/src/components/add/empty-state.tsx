@@ -31,7 +31,7 @@ export function emptyMessage(
   switch (availability.kind) {
     case "listed":
       return {
-        body: "Picking new items needs the myakiba extension. Anything already in the Item Database can be added without it.",
+        body: "Picking new items needs the myakiba extension. Items already in myakiba can be added without it.",
         install: {
           label: `Install from ${STORE_NAMES[availability.store]}`,
           href: availability.url,
@@ -39,12 +39,12 @@ export function emptyMessage(
       };
     case "in_review":
       return {
-        body: `The myakiba extension is in review at ${STORE_NAMES[availability.store]}, so new items can't be picked yet. Anything already in the Item Database can be added now.`,
+        body: `The myakiba extension is in review at ${STORE_NAMES[availability.store]}, so new items can't be picked yet. Items already in myakiba can be added now.`,
         install: null,
       };
     case "unsupported":
       return {
-        body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Anything already in the Item Database can be added here.",
+        body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Items already in myakiba can be added here.",
         install: null,
       };
   }

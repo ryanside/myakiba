@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const searchBox = () => screen.findByRole("combobox", { name: "Search the Item Database" });
+const searchBox = () => screen.findByRole("combobox", { name: "Search myakiba" });
 const isDimmed = ({ className }: Element) => className.split(/\s+/u).includes("opacity-60");
 const pause = (ms: number) =>
   act(async () => {
@@ -128,12 +128,10 @@ test("a failed search says so, in the panel and in the status region", async () 
   renderSearch();
   await user.type(await searchBox(), "miku");
 
-  await screen.findByText("Couldn't search the Item Database. Try again.");
+  await screen.findByText("Couldn't search myakiba. Try again.");
   expect(screen.getByRole("listbox").getAttribute("aria-busy")).toBe("false");
   const regions = screen.getAllByRole("status");
-  expect(
-    regions.some(({ textContent }) => textContent === "Couldn't search the Item Database."),
-  ).toBe(true);
+  expect(regions.some(({ textContent }) => textContent === "Couldn't search myakiba.")).toBe(true);
 });
 
 test("a result shows its picture, title, release date and release price", async () => {

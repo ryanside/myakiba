@@ -21,7 +21,7 @@ const OTHER_ID = "rem000000002";
 const [CHROME] = SUPPORTED_BROWSERS;
 const STOPPED_NOTICE = "The extension stopped. Reload the page to see your picks.";
 const ITEMS_READ_FAILED = "Failed to load the items to add";
-const MISSING_ROW = "No longer in the item database";
+const MISSING_ROW = "No longer in myakiba";
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-const searchBox = () => screen.getByRole("combobox", { name: "Search the Item Database" });
+const searchBox = () => screen.getByRole("combobox", { name: "Search myakiba" });
 const destination = () => screen.findByRole("combobox", { name: "Where these go" });
 const chosenDestination = async () => {
   const trigger = await destination();
@@ -49,13 +49,12 @@ const searchButton = () => screen.getByRole("button", { name: "Search myakiba" }
 const pageReady = () => screen.findByRole("button", { name: "Search myakiba" });
 const openSearch = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(searchButton());
-  return screen.findByRole("combobox", { name: "Search the Item Database" });
+  return screen.findByRole("combobox", { name: "Search myakiba" });
 };
 
 async function searchAndAdd(user: ReturnType<typeof userEvent.setup>, text: string, title: string) {
   const box =
-    screen.queryByRole("combobox", { name: "Search the Item Database" }) ??
-    (await openSearch(user));
+    screen.queryByRole("combobox", { name: "Search myakiba" }) ?? (await openSearch(user));
   await user.type(box, text);
   await screen.findByRole("option", { name: new RegExp(title, "u") });
   await user.keyboard("{Enter}");
@@ -323,7 +322,7 @@ test.each([
       browseWith(CHROME.userAgent);
       listIn(CHROME.store);
     },
-    /Anything already in the Item Database can be added without it/u,
+    /Items already in myakiba can be added without it/u,
   ],
   [
     "in a browser it does not run in",
@@ -447,7 +446,7 @@ test("a reload keeps the rows, and a commit clears only the rows it added", asyn
   expect(document.activeElement).toBe(searchButton());
 });
 
-test("a row the Item Database no longer has says so and cannot be committed", async () => {
+test("a row myakiba no longer has says so and cannot be committed", async () => {
   server.items.delete(OTHER_ID);
   sessionStorage.setItem(
     "myakiba:add-draft",
@@ -456,7 +455,7 @@ test("a row the Item Database no longer has says so and cannot be committed", as
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
 
-  await screen.findByText("No longer in the item database");
+  await screen.findByText("No longer in myakiba");
   expect(screen.getByRole("button", { name: "Select items to add" }).hasAttribute("disabled")).toBe(
     true,
   );

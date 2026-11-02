@@ -24,8 +24,8 @@ const SEARCH_DEBOUNCE_MS = 250;
 export const NARROW_HIDDEN = "@max-[26rem]/grid:sr-only";
 
 /**
- * The Item Database, one small part of what the extension can reach, so it waits behind a button
- * quieter than the way to MFC. Text that looks like an MFC link or id is searched as text.
+ * A search of the Items already in myakiba, one small part of what the extension can reach, so it
+ * waits behind a button quieter than the way to MFC. Text that looks like an MFC link or id is searched as text.
  */
 export function AddSearch({
   initialQuery,
@@ -79,7 +79,7 @@ export function AddSearch({
         }
       />
       <PopoverContent
-        aria-label="Add from Item Database"
+        aria-label="Add from myakiba"
         initialFocus={input}
         align="end"
         className="w-96 max-w-[calc(100vw-2rem)] gap-0 p-0"
@@ -88,12 +88,7 @@ export function AddSearch({
           <p role="status" className="sr-only">
             {showResults && !stale ? resultsAnnouncement(results.length, isError) : ""}
           </p>
-          <Command
-            shouldFilter={false}
-            loop
-            label="Search the Item Database"
-            className="bg-transparent p-0"
-          >
+          <Command shouldFilter={false} loop label="Search myakiba" className="bg-transparent p-0">
             <div className="p-2">
               <CommandPageInput
                 ref={(element) => {
@@ -209,7 +204,7 @@ function focusIsOnAControl(): boolean {
 }
 
 function resultsAnnouncement(count: number, isError: boolean): string {
-  if (isError) return "Couldn't search the Item Database.";
+  if (isError) return "Couldn't search myakiba.";
   if (count === 0) return "No items match in myakiba.";
   return count === 1 ? "1 item found" : `${count} items found`;
 }
@@ -222,5 +217,5 @@ function searchStatus({
   readonly searching: boolean;
 }): string {
   if (searching) return "Searching…";
-  return isError ? "Couldn't search the Item Database. Try again." : "No items match in myakiba.";
+  return isError ? "Couldn't search myakiba. Try again." : "No items match in myakiba.";
 }

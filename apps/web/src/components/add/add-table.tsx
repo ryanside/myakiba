@@ -339,7 +339,7 @@ function MissingRow({
   return (
     <div className={cn(FRAME_WIDTH_IN_CELL, ROW_CONTENT, "flex items-center gap-3")}>
       <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-        {lookup === "failed" ? "Could not load this item" : "No longer in the item database"}
+        {lookup === "failed" ? "Could not load this item" : "No longer in myakiba"}
       </p>
       <Button
         type="button"

@@ -15,7 +15,7 @@ describe("what an empty Add page says", () => {
 
   test("without it, where a browser's store lists it, how to install it", () => {
     expect(emptyMessage("absent", LISTED)).toEqual({
-      body: "Picking new items needs the myakiba extension. Anything already in the Item Database can be added without it.",
+      body: "Picking new items needs the myakiba extension. Items already in myakiba can be added without it.",
       install: {
         label: "Install from Firefox Add-ons",
         href: "https://addons.example",
@@ -25,14 +25,14 @@ describe("what an empty Add page says", () => {
 
   test("without it, while a store reviews it, what still works", () => {
     expect(emptyMessage("absent", IN_REVIEW)).toEqual({
-      body: "The myakiba extension is in review at the Chrome Web Store, so new items can't be picked yet. Anything already in the Item Database can be added now.",
+      body: "The myakiba extension is in review at the Chrome Web Store, so new items can't be picked yet. Items already in myakiba can be added now.",
       install: null,
     });
   });
 
   test("without it, in a browser it does not run in, which ones it does", () => {
     expect(emptyMessage("absent", UNSUPPORTED)).toEqual({
-      body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Anything already in the Item Database can be added here.",
+      body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Items already in myakiba can be added here.",
       install: null,
     });
   });
