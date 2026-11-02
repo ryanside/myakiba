@@ -6,7 +6,6 @@ import {
   DEFAULT_SHARED,
   buildCommitChoices,
   commitPlan,
-  commitSummary,
   defaultOrderTitle,
   destinationOf,
   presetDestination,
@@ -221,12 +220,17 @@ describe("commitPlan", () => {
       "Add 4 to 2 Lists",
     ],
   ])("the label for %s says what will happen", (_name, destination, label) => {
-    expect(commitPlan(destination, 4, verified)).toEqual({ kind: "commit", label });
+    expect(commitPlan(destination, 4, verified)).toEqual({
+      kind: "commit",
+      verb: label.startsWith("Create") ? "Create" : "Add",
+      label,
+    });
   });
 
   test("Not owned alone keeps them in Item Database", () => {
     expect(commitPlan(to({ kind: "none" }), 4, verified)).toEqual({
       kind: "done",
+      verb: "Keep",
       label: "Keep 4 in Item Database",
     });
   });
@@ -242,41 +246,28 @@ describe("commitPlan", () => {
   test("an unverified email blocks every commit and says why", () => {
     expect(commitPlan(to(COLLECTION), 4, { emailVerified: false })).toEqual({
       kind: "blocked",
+      verb: "Add",
       label: "Verify your email to add items",
     });
   });
-});
 
-test("the summary names every place the rows will go", () => {
-  expect(
-    commitSummary(
-      to(COLLECTION, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
+  test.each([
+    ["nothing chosen", to(null), 4, "Add"],
+    ["a new Order, unverified", to(NEW_ORDER), 4, "Create"],
+    ["the Item Database, nothing selected", to({ kind: "none" }), 0, "Keep"],
+    [
+      "an existing Order not chosen yet",
+      to({ kind: "order", order: { kind: "existing", order: null } }),
       4,
-    ),
-  ).toEqual(["4 items to your Collection", "on your Wishlist", "in ‘Display shelf’"]);
-  expect(commitSummary(to(NEW_ORDER), 1)).toEqual(["1 item to a new Order"]);
-  expect(commitSummary(to({ kind: "none" }), 3)).toEqual(["3 items in the Item Database"]);
-  expect(
-    commitSummary(
-      to({ kind: "none" }, { wishlist: true, lists: [{ id: "l1", title: "Display shelf" }] }),
-      3,
-    ),
-  ).toEqual(["3 items on your Wishlist", "in ‘Display shelf’"]);
-  expect(commitSummary(to(null), 1)).toBeNull();
-});
-
-test("the summary of an existing Order leaves its title to the picker", () => {
-  expect(
-    commitSummary(
-      {
-        ownership: {
-          kind: "order",
-          order: { kind: "existing", order: { id: "o1", title: "Spring order" } },
-        },
-        wishlist: false,
-        lists: [],
-      },
-      2,
-    ),
-  ).toEqual(["2 items to an existing Order"]);
+      "Add",
+    ],
+    ["the Wishlist, nothing selected", to({ kind: "none" }, { wishlist: true }), 0, "Add"],
+  ] as const)(
+    "a blocked label for %s shortens to its destination's verb",
+    (_name, destination, count, verb) => {
+      const plan = commitPlan(destination, count, { emailVerified: !_name.endsWith("unverified") });
+      expect(plan.kind).toBe("blocked");
+      expect(plan.verb).toBe(verb);
+    },
+  );
 });

@@ -276,12 +276,17 @@ export function buildCommitChoices(
   return Result.ok({ ...built, wishlist, listIds });
 }
 
-export type CommitPlan =
+/** What a commit does to the rows, as a narrow button says it. */
+type CommitVerb = "Add" | "Create" | "Keep";
+
+export type CommitPlan = { readonly verb: CommitVerb; readonly label: string } &
   /** The button cannot act yet, and its label says why. */
-  | { readonly kind: "blocked"; readonly label: string }
-  /** Item Database alone: saving the pick already put the Item there. */
-  | { readonly kind: "done"; readonly label: string }
-  | { readonly kind: "commit"; readonly label: string };
+  (
+    | { readonly kind: "blocked" }
+    /** Item Database alone: saving the pick already put the Item there. */
+    | { readonly kind: "done" }
+    | { readonly kind: "commit" }
+  );
 
 export const quoted = (text: string) => `‘${text}’`;
 
@@ -296,57 +301,43 @@ export function namedTargets(wishlist: string | null, lists: readonly ChosenList
   return parts.length > 0 ? parts.join(" and ") : null;
 }
 
+/** The verb a commit to `destination` acts with, whether or not it can act yet. */
+function verbOf({ ownership, wishlist, lists }: Destination): CommitVerb {
+  if (ownership?.kind === "order" && ownership.order.kind === "new") return "Create";
+  return ownership?.kind === "none" && !wishlist && lists.length === 0 ? "Keep" : "Add";
+}
+
 export function commitPlan(
   destination: Destination,
   count: number,
   context: { readonly emailVerified: boolean },
 ): CommitPlan {
-  if (!context.emailVerified) return { kind: "blocked", label: "Verify your email to add items" };
-  if (count === 0) return { kind: "blocked", label: "Select items to add" };
+  const verb = verbOf(destination);
+  const blocked = (label: string): CommitPlan => ({ kind: "blocked", verb, label });
+  if (!context.emailVerified) return blocked("Verify your email to add items");
+  if (count === 0) return blocked("Select items to add");
   const { ownership, wishlist, lists } = destination;
   switch (ownership?.kind) {
     case undefined:
-      return { kind: "blocked", label: "Choose where these go" };
+      return blocked("Choose where these go");
     case "collection":
-      return { kind: "commit", label: `Add ${count} to collection` };
+      return { kind: "commit", verb, label: `Add ${count} to collection` };
     case "order": {
       const { order } = ownership;
-      if (order.kind === "new") return { kind: "commit", label: `Create order with ${count}` };
-      if (order.order === null) return { kind: "blocked", label: "Choose an Order" };
-      return { kind: "commit", label: `Add ${count} to order` };
+      if (order.kind === "new")
+        return { kind: "commit", verb, label: `Create order with ${count}` };
+      if (order.order === null) return blocked("Choose an Order");
+      return { kind: "commit", verb, label: `Add ${count} to order` };
     }
     case "none":
       return wishlist || lists.length > 0
         ? {
             kind: "commit",
+            verb,
             label: `Add ${count} to ${namedTargets(wishlist ? "Wishlist" : null, lists)}`,
           }
-        : { kind: "done", label: `Keep ${count} in Item Database` };
+        : { kind: "done", verb, label: `Keep ${count} in Item Database` };
   }
-}
-
-function ownershipSummary(ownership: Ownership): string | null {
-  switch (ownership.kind) {
-    case "collection":
-      return "to your Collection";
-    case "order":
-      return ownership.order.kind === "new" ? "to a new Order" : "to an existing Order";
-    case "none":
-      return null;
-  }
-}
-
-/** Where the commit will put the rows, in the Add page's own words, one place per part. */
-export function commitSummary(destination: Destination, count: number): readonly string[] | null {
-  const { ownership, wishlist, lists } = destination;
-  if (ownership === null) return null;
-  const places = [
-    ownershipSummary(ownership),
-    wishlist ? "on your Wishlist" : null,
-    ...lists.map((list) => `in ${quoted(list.title)}`),
-  ].filter((place) => place !== null);
-  const [first = "in the Item Database", ...rest] = places;
-  return [`${count} ${count === 1 ? "item" : "items"} ${first}`, ...rest];
 }
 
 export type Choice = "collection" | "order-new" | "order-existing" | "none";

@@ -191,22 +191,22 @@ test("the sentence counts the selected rows of all, and reads Keep for the Item 
   expect(sentence()).toContain("Keep 1 of 2 items in");
 });
 
-test("the summary reads Item Database with nothing else named, and no mid dot anywhere", async () => {
+test("the button keeps them in the Item Database with nothing else named, and no mid dot anywhere", async () => {
   draft(ITEM_ID);
   server.lists.push({ id: "shelf0000001", title: "Display shelf" });
   const user = userEvent.setup();
   openAddPage("/add?to=none");
   await rowsLoaded();
-  const bar = () => within(screen.getByRole("region", { name: "Commit" }));
-  expect(bar().getByText("1 item in the Item Database")).toBeDefined();
+  expect(screen.getByRole("button", { name: "Keep 1 in Item Database" })).toBeDefined();
   expect(screen.queryByText(/nothing to save/u)).toBeNull();
 
   await user.click(screen.getByRole("checkbox", { name: "Wishlist" }));
   await user.click(screen.getByRole("button", { name: "Lists" }));
   await user.click(await screen.findByRole("checkbox", { name: "Display shelf" }));
   await user.keyboard("{Escape}");
-  expect(bar().getByText("1 item on your Wishlist")).toBeDefined();
-  expect(bar().getByText("in ‘Display shelf’")).toBeDefined();
+  expect(
+    screen.getByRole("button", { name: "Add 1 to Wishlist and ‘Display shelf’" }),
+  ).toBeDefined();
   expect(document.body.textContent).not.toContain("·");
 });
 

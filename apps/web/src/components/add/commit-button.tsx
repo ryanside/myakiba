@@ -2,13 +2,18 @@ import type { InferOk } from "better-result";
 import { StatusButton, useButtonStatus } from "@/components/ui/status-button";
 import { useGlide } from "@/hooks/use-glide";
 import { useCommitAdd } from "@/data/resources/add";
+import { cn } from "@/lib/utils";
 import { buildCommitChoices, commitPlan } from "./commit-input";
 import { BUTTON_WORDS, Swap } from "./destination-motion";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
 
+// Below this the sentence and the full label no longer share a line, in the sentence's longest form.
+const FULL_LABEL = "block @max-[44rem]/sentence:sr-only";
+const SHORT_LABEL = "hidden @max-[44rem]/sentence:block";
+
 export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommitAdd>["run"]>>>;
 
-/** The one Add button. Its label says what the click will do. */
+/** The one Add button, at the end of the sentence. Its label says what the click will do. */
 export function CommitButton({
   rows,
   count,
@@ -63,7 +68,7 @@ export function CommitButton({
   };
 
   return (
-    <div ref={glide} className="max-w-full min-w-0 @max-xl/bar:w-full">
+    <div ref={glide} className="ms-auto max-w-full min-w-0">
       <StatusButton
         type="button"
         status={status}
@@ -71,9 +76,16 @@ export function CommitButton({
         className="w-full min-w-0"
         onClick={handleCommit}
       >
-        <span className="block max-w-[min(70vw,26rem)] truncate" title={plan.label}>
+        {/* A narrow row shows only the verb, and a screen reader always hears the whole label. Each
+        swaps on its own change, so a resize that trades one for the other moves nothing. */}
+        <span className={cn(FULL_LABEL, "max-w-[min(70vw,26rem)] truncate")} title={plan.label}>
           <Swap move={BUTTON_WORDS} id={plan.label} className="truncate">
             {plan.label}
+          </Swap>
+        </span>
+        <span aria-hidden="true" className={SHORT_LABEL}>
+          <Swap move={BUTTON_WORDS} id={plan.verb}>
+            {plan.verb}
           </Swap>
         </span>
       </StatusButton>

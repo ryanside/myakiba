@@ -66,7 +66,7 @@ test("the sentence counts an unselected row as unselected before the Items load"
   expect(sentence()).toContain("Add 1 of 2 items to");
 });
 
-test("the commit's label and summary say how many before the Items load", async () => {
+test("the commit's label says how many before the Items load", async () => {
   draft([
     [MIKU, true],
     [REM, true],
@@ -74,14 +74,12 @@ test("the commit's label and summary say how many before the Items load", async 
   openAddPage("/add?to=collection");
   const commit = await screen.findByRole("button", { name: "Add 2 to collection" });
   expect(commit.hasAttribute("disabled")).toBe(true);
-  expect(screen.getByText("2 items to your Collection")).toBeDefined();
 
   await act(async () => release());
   await screen.findByRole("checkbox", { name: "Select Miku" });
   expect(screen.getByRole("button", { name: "Add 2 to collection" }).hasAttribute("disabled")).toBe(
     false,
   );
-  expect(screen.getByText("2 items to your Collection")).toBeDefined();
 });
 
 test("a row whose Item turned out to be gone leaves the count once the read answers", async () => {
@@ -193,7 +191,6 @@ test("the page a Pick sends the user to shows a skeleton row until the extension
   await screen.findByRole("heading", { name: "Review your picks" });
   expect(screen.queryByText("No items yet")).toBeNull();
   expect(document.querySelector('tr[data-row="awaiting-picks"]')).not.toBeNull();
-  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
 
   await screen.findByText("No items yet");
   expect(document.querySelector('tr[data-row="awaiting-picks"]')).toBeNull();

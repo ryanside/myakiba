@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
 import { act, cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MotionGlobalConfig } from "motion/react";
 import { SAFARI, SUPPORTED_BROWSERS, browseWith, listIn } from "../../../test/extension-browser";
 import { fakePick } from "../../../test/fake-extension";
 import {
@@ -204,7 +203,6 @@ test("Collection asks for a Collection Date, never a status, and sends none", as
   await user.click(screen.getByRole("button", { name: "Details for Hatsune Miku" }));
   expect(screen.getByRole("button", { name: "Collection Date for Hatsune Miku" })).toBeDefined();
   expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();
-  expect(screen.getByText("1 item to your Collection")).toBeDefined();
 
   await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
   await waitFor(() => expect(server.commits).toHaveLength(1));
@@ -286,7 +284,12 @@ test("an empty page keeps its shape, with only search and the one action working
   for (const name of ["Lists", "Fill all"]) {
     expect(screen.getByRole("button", { name }).hasAttribute("disabled")).toBe(true);
   }
-  expect(screen.queryByRole("region", { name: "Commit" })).toBeNull();
+  // The commit stays at the end of the sentence, with nothing yet to do.
+  const commit = screen.getByRole("button", { name: "Select items to add" });
+  expect(commit.hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("region", { name: "Destination" }).parentElement).toBe(
+    commit.closest("div")?.parentElement ?? null,
+  );
   expect(searchButton().hasAttribute("disabled")).toBe(false);
   expect(
     screen
@@ -640,25 +643,24 @@ test("a failed pick is announced, and the announcement region is there before it
   expect(regions.some((region) => region.textContent === "1 pick could not be saved")).toBe(true);
 });
 
-test("the commit bar shows only with something to commit, and a row with nothing selected keeps it", async () => {
-  // happy-dom runs no animation to its end, so the bar's way out would never finish.
-  MotionGlobalConfig.skipAnimations = true;
+test("the commit button stays at the end of the sentence, disabled whenever it has nothing to commit", async () => {
   const user = userEvent.setup();
   sessionStorage.setItem(
     "myakiba:add-draft",
     JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
   );
   openAddPage("/add?to=collection");
-  const bar = await screen.findByRole("region", { name: "Commit" });
+  const commit = await screen.findByRole("button", { name: "Add 1 to collection" });
   await screen.findByRole("checkbox", { name: /^Select (?!all)/u });
+  await waitFor(() => expect(commit.hasAttribute("disabled")).toBe(false));
 
   await user.click(screen.getByRole("checkbox", { name: /^Select (?!all)/u }));
-  expect(
-    within(bar).getByRole("button", { name: "Select items to add" }).hasAttribute("disabled"),
-  ).toBe(true);
+  expect(commit.getAttribute("aria-label")).toBeNull();
+  expect(screen.getByRole("button", { name: "Select items to add" })).toBe(commit);
+  expect(commit.hasAttribute("disabled")).toBe(true);
 
   await user.click(screen.getByRole("button", { name: /^Remove /u }));
   await screen.findByText("No items yet");
-  await waitFor(() => expect(screen.queryByRole("region", { name: "Commit" })).toBeNull());
-  MotionGlobalConfig.skipAnimations = false;
+  expect(screen.getByRole("button", { name: "Select items to add" })).toBe(commit);
+  expect(commit.hasAttribute("disabled")).toBe(true);
 });

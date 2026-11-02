@@ -12,13 +12,7 @@ const OWN_SURFACE =
   /(?<![\w-])(?:bg-card|bg-popover|bg-\[[^\]\s]*\]|ring-foreground|rounded-\[[^\]\s]*\]|rounded-(?:xl|2xl|3xl)|shadow-(?:md|lg|xl|2xl)|backdrop-blur(?:-\[[^\]\s]*\]|-\w+)?|bg-background\/\S*)(?![\w-])/gu;
 const CARD_IMPORT = /["'][^"'\n]*\/ui\/card["']/gu;
 
-// The commit footer was the owner's choice over the shared ActionBar, so it is the one surface Add
-// draws itself. It may use only what that surface needs, and no other file may use even these.
-const COMMIT_BAR = "apps/web/src/components/add/commit-bar.tsx";
-const COMMIT_BAR_SURFACE = ["bg-card", "rounded-xl", "shadow-lg", "ring-foreground"];
-
 function ownSurfaces(file: string, text: string): string[] {
-  const allowed = file === COMMIT_BAR ? COMMIT_BAR_SURFACE : [];
   const lineOf = (index: number) => text.slice(0, index).split("\n").length;
   const hits = (pattern: RegExp, say: (found: string) => string) =>
     [...text.matchAll(pattern)].map((match) => ({
@@ -29,9 +23,7 @@ function ownSurfaces(file: string, text: string): string[] {
   return [
     ...hits(RAW_TABLE, (found) => `writes a raw ${found}`),
     ...hits(CREATED_TABLE, (found) => `creates a raw table with ${found}`),
-    ...hits(OWN_SURFACE, (found) => `uses ${found}`).filter(
-      ({ found }) => !allowed.includes(found),
-    ),
+    ...hits(OWN_SURFACE, (found) => `uses ${found}`),
     ...hits(CARD_IMPORT, (found) => `imports ${found}`),
   ]
     .toSorted((a, b) => a.at - b.at)
@@ -105,14 +97,6 @@ describe("an Add surface of its own", () => {
       flagged('<div className="bg-muted rounded-lg shadow-none rounded-xs bg-background" />'),
     ).toEqual([]);
     expect(flagged('import { cardOf } from "./ui/cards";')).toEqual([]);
-  });
-
-  test("lets only the commit bar use only its own surface", () => {
-    const surface = '<section className="bg-card rounded-xl shadow-lg ring-foreground/10" />';
-    expect(ownSurfaces(COMMIT_BAR, surface)).toEqual([]);
-    expect(ownSurfaces("apps/web/src/components/add/other.tsx", surface)).toHaveLength(4);
-    expect(ownSurfaces(COMMIT_BAR, '<div className="bg-popover shadow-xl" />')).toHaveLength(2);
-    expect(ownSurfaces(COMMIT_BAR, "<table>")).toHaveLength(1);
   });
 
   test("names the file and line", () => {

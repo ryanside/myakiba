@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { refused, resetServer, server } from "../../../test/add-app";
-import { DEFAULT_SHARED } from "./commit-input";
+import { DEFAULT_ORDER_FIELDS, DEFAULT_SHARED } from "./commit-input";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
 
 const { CommitButton } = await import("./commit-button");
@@ -17,6 +17,11 @@ const COLLECTION: Destination = {
   lists: [],
 };
 const NOT_OWNED: Destination = { ownership: { kind: "none" }, wishlist: false, lists: [] };
+const NEW_ORDER: Destination = {
+  ownership: { kind: "order", order: { kind: "new", fields: DEFAULT_ORDER_FIELDS } },
+  wishlist: false,
+  lists: [],
+};
 
 beforeEach(resetServer);
 afterEach(cleanup);
@@ -106,6 +111,25 @@ test("it ignores clicks while sending, so one click sends one commit", async () 
   });
   await waitFor(() => expect(calls.committed).toBe(1));
 });
+
+test.each([
+  ["a commit", COLLECTION, true, "Add 1 to collection", "Add"],
+  ["a new Order", NEW_ORDER, true, "Create order with 1", "Create"],
+  ["the Item Database alone", NOT_OWNED, true, "Keep 1 in Item Database", "Keep"],
+  ["a blocked new Order", NEW_ORDER, false, "Verify your email to add items", "Create"],
+] as const)(
+  "%s has its verb for a narrow row, and its whole label as its name at every width",
+  (_name, destination, emailVerified, label, verb) => {
+    renderButton({ destination, emailVerified });
+    const button = screen.getByRole("button", { name: label });
+    const short = [...button.querySelectorAll('[aria-hidden="true"]')].filter(
+      (element) => element.closest(".invisible") === null,
+    );
+    expect(short.map((element) => element.textContent)).toEqual([verb]);
+    expect(short[0]?.className).toContain("@max-");
+    expect(button.getAttribute("aria-label")).toBeNull();
+  },
+);
 
 test("it is disabled for an unverified email and says why", () => {
   renderButton({ emailVerified: false });

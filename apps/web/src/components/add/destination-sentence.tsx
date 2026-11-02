@@ -116,7 +116,10 @@ function DestinationSelect({
   );
 }
 
-/** The destination, as one sentence. */
+/**
+ * The destination, as one sentence. Its parts wrap in the row that holds it, so what follows it there
+ * ends its last line rather than taking one of its own.
+ */
 export function DestinationSentence({
   controller: c,
   disabled,
@@ -133,18 +136,16 @@ export function DestinationSentence({
   const glide = useGlide<HTMLSpanElement>(lead, { clip: false });
 
   return (
-    <section
-      aria-label="Destination"
-      className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-sm"
-    >
+    // A commit in flight holds what it was sent with, so nothing here can change under it.
+    <section aria-label="Destination" inert={c.sending} className="contents text-sm">
       <span ref={glide} className="shrink-0 font-medium whitespace-nowrap tabular-nums">
         <Swap move={WORDS} id={choice === "none" ? "keep" : "add"}>
           {lead}
         </Swap>
       </span>
       <DestinationSelect controller={c} disabled={disabled} />
-      <span className="flex flex-wrap items-center gap-2 @2xl/add:ms-2">
-        <span className="text-muted-foreground">also on</span>
+      <span className="contents">
+        <span className="text-muted-foreground @2xl/add:ms-2">also on</span>
         <span className="flex items-center gap-2">
           <Checkbox
             id={`${baseId}-wishlist`}
