@@ -30,10 +30,9 @@ export function AddPage({ search }: { readonly search: AddSearchParams }) {
       <div className={cn("flex flex-col", orderId === null ? "gap-2.5" : "gap-4")}>
         <div className="relative flex flex-col">
           <div className="@container/sentence">
-            <div className="flex flex-wrap items-center gap-2">
-              <DestinationSentence controller={c} disabled={!c.hasItems} />
+            <DestinationSentence controller={c} disabled={!c.hasItems}>
               <CommitButton {...c.commitProps} />
-            </div>
+            </DestinationSentence>
           </div>
           <div inert={c.sending}>
             <OrderSwap id={orderId}>

@@ -72,7 +72,7 @@ export function AddSearch({
             type="button"
             variant="ghost"
             size="sm"
-            className="font-normal text-muted-foreground"
+            className="font-normal text-muted-foreground @max-[21rem]/grid:ms-8.5"
           >
             <span className={NARROW_HIDDEN}>Search </span>myakiba
           </Button>

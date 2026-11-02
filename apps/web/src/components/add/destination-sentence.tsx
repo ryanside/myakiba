@@ -2,6 +2,7 @@ import { DatabaseIcon, LibraryIcon, PackageAddIcon, PackageIcon } from "@hugeico
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { Fragment, useId, useState } from "react";
+import type { ReactNode } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,9 +43,11 @@ function itemsPhrase(selected: number, total: number): string {
 function DestinationSelect({
   controller: c,
   disabled,
+  held,
 }: {
   readonly controller: AddController;
   readonly disabled: boolean;
+  readonly held: boolean;
 }) {
   const form = c.resolvedForm;
   const choice = choiceOf(form);
@@ -52,7 +55,7 @@ function DestinationSelect({
   const glide = useGlide<HTMLDivElement>(choice);
   const [openedByKey, setOpenedByKey] = useState(false);
   return (
-    <div ref={glide} className="max-w-full min-w-0">
+    <div ref={glide} inert={held} className="max-w-full min-w-0">
       <Select
         items={CHOICES}
         value={choice}
@@ -116,17 +119,17 @@ function DestinationSelect({
   );
 }
 
-/**
- * The destination, as one sentence. Its parts wrap in the row that holds it, so what follows it there
- * ends its last line rather than taking one of its own.
- */
+/** The destination, as one sentence that ends with what commits to it. */
 export function DestinationSentence({
   controller: c,
   disabled,
+  children,
 }: {
   readonly controller: AddController;
   /** No rows yet: the page keeps its shape, with nothing to choose for. */
   readonly disabled: boolean;
+  /** The commit, which stays out of the hold a commit in flight puts on the rest. */
+  readonly children: ReactNode;
 }) {
   const baseId = useId();
   const form = c.resolvedForm;
@@ -134,38 +137,43 @@ export function DestinationSentence({
   const phrase = itemsPhrase(c.selectedCount, c.rowCount);
   const lead = choice === "none" ? `Keep ${phrase} in` : `Add ${phrase} to`;
   const glide = useGlide<HTMLSpanElement>(lead, { clip: false });
+  // A commit in flight holds what it was sent with, so nothing here can change under it.
+  const held = c.sending;
 
   return (
-    // A commit in flight holds what it was sent with, so nothing here can change under it.
-    <section aria-label="Destination" inert={c.sending} className="contents text-sm">
+    <section aria-label="Destination" className="flex flex-wrap items-center gap-2 text-sm">
       <span ref={glide} className="shrink-0 font-medium whitespace-nowrap tabular-nums">
         <Swap move={WORDS} id={choice === "none" ? "keep" : "add"}>
           {lead}
         </Swap>
       </span>
-      <DestinationSelect controller={c} disabled={disabled} />
-      <span className="contents">
-        <span className="text-muted-foreground @2xl/add:ms-2">also on</span>
-        <span className="flex items-center gap-2">
-          <Checkbox
-            id={`${baseId}-wishlist`}
-            checked={form.wishlist}
-            disabled={disabled}
-            onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
-          />
-          <Label
-            htmlFor={`${baseId}-wishlist`}
-            className={cn("font-normal", disabled ? "opacity-50" : "cursor-pointer")}
-          >
-            Wishlist
-          </Label>
-        </span>
-        <span className="text-muted-foreground">and</span>
-        <ListsPicker
-          chosen={form.lists}
+      <DestinationSelect controller={c} disabled={disabled} held={held} />
+      <span className="text-muted-foreground @2xl/add:ms-2">also on</span>
+      <span inert={held} className="flex items-center gap-2">
+        <Checkbox
+          id={`${baseId}-wishlist`}
+          checked={form.wishlist}
           disabled={disabled}
-          onChange={(lists) => c.setForm({ ...form, lists })}
+          onCheckedChange={(checked) => c.setForm({ ...form, wishlist: checked === true })}
         />
+        <Label
+          htmlFor={`${baseId}-wishlist`}
+          className={cn("font-normal", disabled ? "opacity-50" : "cursor-pointer")}
+        >
+          Wishlist
+        </Label>
+      </span>
+      <span className="text-muted-foreground">and</span>
+      {/* One piece, so a wrapped sentence ends with the commit on its last line, never alone there. */}
+      <span className="flex grow items-center gap-2">
+        <span inert={held} className="contents">
+          <ListsPicker
+            chosen={form.lists}
+            disabled={disabled}
+            onChange={(lists) => c.setForm({ ...form, lists })}
+          />
+        </span>
+        {children}
       </span>
     </section>
   );

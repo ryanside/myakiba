@@ -287,9 +287,7 @@ test("an empty page keeps its shape, with only search and the one action working
   // The commit stays at the end of the sentence, with nothing yet to do.
   const commit = screen.getByRole("button", { name: "Select items to add" });
   expect(commit.hasAttribute("disabled")).toBe(true);
-  expect(screen.getByRole("region", { name: "Destination" }).parentElement).toBe(
-    commit.closest("div")?.parentElement ?? null,
-  );
+  expect(screen.getByRole("region", { name: "Destination" }).contains(commit)).toBe(true);
   expect(searchButton().hasAttribute("disabled")).toBe(false);
   expect(
     screen

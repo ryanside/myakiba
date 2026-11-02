@@ -12,7 +12,8 @@ import { AddSearch, NARROW_HIDDEN } from "./add-search";
  */
 export function SearchRow({ controller: c }: { readonly controller: AddController }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t py-1.5 ps-10 pe-2">
+    // Too narrow for both even with short words, Search myakiba goes under, its words under MFC's.
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t py-1.5 ps-10 pe-2 @max-[21rem]/grid:flex-col @max-[21rem]/grid:items-start">
       <a
         href={mfcSearchUrl("")}
         target="_blank"

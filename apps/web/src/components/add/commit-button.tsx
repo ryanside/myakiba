@@ -7,9 +7,9 @@ import { buildCommitChoices, commitPlan } from "./commit-input";
 import { BUTTON_WORDS, Swap } from "./destination-motion";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
 
-// Below this the sentence and the full label no longer share a line, in the sentence's longest form.
-const FULL_LABEL = "block @max-[44rem]/sentence:sr-only";
-const SHORT_LABEL = "hidden @max-[44rem]/sentence:block";
+// A sentence with one List and the full label need up to 47.3rem, and with the verb alone 41.5rem.
+const FULL_LABEL = "block @max-[48rem]/sentence:sr-only";
+const SHORT_LABEL = "hidden @max-[48rem]/sentence:block";
 
 export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommitAdd>["run"]>>>;
 
