@@ -72,7 +72,7 @@ export function AddSearch({
             type="button"
             variant="ghost"
             size="sm"
-            className="font-normal text-muted-foreground @max-[21rem]/grid:ms-8.5"
+            className="font-normal text-muted-foreground"
           >
             <span className={NARROW_HIDDEN}>Search </span>myakiba
           </Button>
@@ -81,7 +81,7 @@ export function AddSearch({
       <PopoverContent
         aria-label="Add from Item Database"
         initialFocus={input}
-        align="start"
+        align="end"
         className="w-96 max-w-[calc(100vw-2rem)] gap-0 p-0"
       >
         <search>

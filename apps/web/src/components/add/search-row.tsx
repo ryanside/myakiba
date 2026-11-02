@@ -6,25 +6,37 @@ import type { AddController } from "./add-controller";
 import { AddSearch, NARROW_HIDDEN } from "./add-search";
 
 /**
- * Where more rows come from, under the last one. It sits in the table's frame but not in the table,
- * so the keys, the sort, the selection and a screen reader's row count all leave it out. Its start
- * clears the select column, its icon sits under the rows' pictures, and its words under their titles.
+ * Where more rows come from, as the table's foot. It sits in the table's frame but not in the table,
+ * so the keys, the sort, the selection and a screen reader's row count all leave it out. It mirrors
+ * the header: MFC's icon on the Item column's edge, or its words when too narrow for the icon, and the
+ * quieter search at the end, as Fill all is.
  */
 export function SearchRow({ controller: c }: { readonly controller: AddController }) {
   return (
-    // Too narrow for both even with short words, Search myakiba goes under, its words under MFC's.
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t py-1.5 ps-10 pe-2 @max-[21rem]/grid:flex-col @max-[21rem]/grid:items-start">
+    <div className="flex items-center justify-between gap-1 border-t bg-muted/40 py-1 ps-8.5 pe-2">
       <a
         href={mfcSearchUrl("")}
         target="_blank"
         rel="noopener noreferrer"
-        className={buttonVariants({ variant: "ghost" })}
+        className={buttonVariants({ variant: "ghost", size: "sm" })}
       >
-        <HugeiconsIcon icon={Search01Icon} data-icon="inline-start" aria-hidden="true" />
-        <span className="ms-3.5">
+        <HugeiconsIcon
+          icon={Search01Icon}
+          data-icon="inline-start"
+          strokeWidth={2}
+          className="@max-[21rem]/grid:hidden"
+          aria-hidden="true"
+        />
+        <span>
           <span className={NARROW_HIDDEN}>Search </span>MyFigureCollection
         </span>
-        <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
+        <HugeiconsIcon
+          icon={ArrowUpRight01Icon}
+          data-icon="inline-end"
+          strokeWidth={2}
+          className="text-muted-foreground group-hover/button:text-foreground"
+          aria-hidden="true"
+        />
         <span className="sr-only"> (opens in a new tab)</span>
       </a>
       <AddSearch {...c.searchProps} />
