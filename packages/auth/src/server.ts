@@ -1,3 +1,6 @@
+// @better-auth/infra puts jose types in the type of `auth`. Without this
+// reference tsc cannot name them in the declaration (TS2883).
+/// <reference types="jose" />
 import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -8,6 +11,7 @@ import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
 import { redis } from "@myakiba/redis/client";
+import { incrementWithTtl } from "@myakiba/redis/counter";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 
@@ -26,9 +30,17 @@ export const auth = betterAuth({
     delete: async (key) => {
       await redis.del(key);
     },
+    getAndDelete: async (key) => {
+      return await redis.getdel(key);
+    },
+    increment: async (key, ttl) => {
+      return await incrementWithTtl(redis, key, ttl);
+    },
   },
-  experimental: {
-    joins: true,
+  advanced: {
+    database: {
+      joins: true,
+    },
   },
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -58,7 +70,7 @@ export const auth = betterAuth({
     storage: "secondary-storage",
     customRules: {
       "/send-verification-email": { window: 60, max: 1 },
-      "/forget-password": { window: 60, max: 3 },
+      "/request-password-reset": { window: 60, max: 3 },
     },
   },
   emailAndPassword: {

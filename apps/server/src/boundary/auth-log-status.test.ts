@@ -13,6 +13,17 @@ await mock.module("@myakiba/redis/client", () => ({
       return "OK";
     },
     del: async (key: string) => Number(redisStore.delete(key)),
+    getdel: async (key: string) => {
+      const value = redisStore.get(key) ?? null;
+      redisStore.delete(key);
+      return value;
+    },
+    // The auth package's only eval is its rate-limit counter script.
+    eval: async (_script: string, _keys: number, key: string) => {
+      const count = Number(redisStore.get(key) ?? 0) + 1;
+      redisStore.set(key, String(count));
+      return count;
+    },
   },
 }));
 

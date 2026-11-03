@@ -368,7 +368,12 @@ function GoogleRow() {
     );
   } else if (google) {
     control = (
-      <Button variant="outline" size="sm" disabled={unlink.isPending} onClick={() => unlink.run()}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={unlink.isPending}
+        onClick={() => unlink.run(google.id)}
+      >
         Disconnect
       </Button>
     );

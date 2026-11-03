@@ -10,6 +10,7 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "test": "bun test",
     "redis:start": "docker compose up -d",
     "redis:stop": "docker compose stop",
     "redis:down": "docker compose down"
