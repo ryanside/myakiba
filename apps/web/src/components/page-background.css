@@ -9,12 +9,8 @@
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
-  opacity: 0.3;
+  opacity: 0.5;
   transition-property: none;
-}
-
-.dark .page-background {
-  opacity: 0.4;
 }
 
 .page-background img {
