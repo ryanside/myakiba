@@ -1,7 +1,7 @@
 import { Add01Icon, Folder01Icon, StarIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_COMMIT_LISTS } from "@myakiba/contracts/add/constants";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,19 +10,21 @@ import { Separator } from "@/components/ui/separator";
 import { useListMutations, useListsQuery } from "@/hooks/use-lists";
 import { cn } from "@/lib/utils";
 import type { ListInput } from "@myakiba/contracts/lists/schema";
+import { namedTargets } from "./commit-input";
 import type { ChosenList } from "./commit-input";
-import { ICONS, ICON_WORDS, WORDS_ONLY } from "./sentence-fit";
+import { APART, FOLDED, ICONS, ICON_WORDS, WORDS_ONLY } from "./sentence-fit";
 import { useWordsTip, WordsTip } from "./words-tip";
 
-/** Whether the Wishlist is chosen, for the one control that holds it with the Lists. */
+/** Whether the Wishlist is chosen, for the trigger that holds it with the Lists. */
 type WishlistChoice = {
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
 };
 
 /**
- * Several Lists at once. "New list…" opens the existing form and chooses the List it creates. Given
- * `wishlist`, it holds the Wishlist too, as the narrowest sentence has room for only one control.
+ * Several Lists at once. "New list…" opens the existing form and chooses the List it creates. The
+ * narrowest sentence has room for one control, so there the trigger folds the Wishlist in with the
+ * Lists, and the popup offers it too.
  */
 export function ListsPicker({
   chosen,
@@ -32,12 +34,14 @@ export function ListsPicker({
 }: {
   readonly chosen: readonly ChosenList[];
   readonly disabled?: boolean;
-  readonly wishlist?: WishlistChoice;
+  readonly wishlist: WishlistChoice;
   readonly onChange: (lists: readonly ChosenList[]) => void;
 }) {
   const baseId = useId();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [foldedFace, setFoldedFace] = useState<HTMLElement | null>(null);
+  const folded = useShown(foldedFace);
   const { setWords, open: tipOpen, handleOpenChange: handleTip } = useWordsTip();
   const { data, isPending, isError, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useListsQuery();
@@ -45,9 +49,14 @@ export function ListsPicker({
   const lists = data?.pages.flatMap((page) => page.items) ?? [];
   const chosenIds = new Set(chosen.map((list) => list.id));
   const atLimit = chosen.length >= MAX_COMMIT_LISTS;
-  const name = wishlist ? heldName(wishlist.checked, chosen) : triggerLabel(chosen);
+  const name = triggerLabel(chosen);
+  const held = namedTargets(wishlist.checked ? "Wishlist" : null, chosen);
+  const heldName = held === null ? "Wishlist and Lists" : `Also on ${held}`;
   const rowClass =
     "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50";
+  let tip = `Lists: ${titlesOf(chosen)}`;
+  if (folded) tip = heldName;
+  else if (chosen.length === 0) tip = name;
 
   const handleCreate = async (input: ListInput) => {
     const created = await createList(input);
@@ -63,7 +72,7 @@ export function ListsPicker({
         <WordsTip
           open={tipOpen}
           onOpenChange={handleTip}
-          content={wishlist || chosen.length === 0 ? name : `Lists: ${titlesOf(chosen)}`}
+          content={tip}
           trigger={
             <PopoverTrigger
               render={
@@ -71,52 +80,60 @@ export function ListsPicker({
                   type="button"
                   variant="outline"
                   disabled={disabled}
-                  className="max-w-56 min-w-0 justify-between"
+                  className="max-w-56 min-w-0 justify-between pr-2"
                 >
-                  {wishlist ? (
-                    <>
-                      <span ref={setWords} className="sr-only">
-                        {name}
-                      </span>
-                      <span aria-hidden="true" className="flex items-center gap-1">
-                        <HugeiconsIcon
-                          icon={StarIcon}
-                          strokeWidth={2}
-                          className={
-                            wishlist.checked ? "[&_path]:fill-current" : "text-muted-foreground"
-                          }
-                        />
-                        <ListsCount chosen={chosen} />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span ref={setWords} className={cn("min-w-0 truncate", ICON_WORDS)}>
-                        {name}
-                      </span>
+                  {/* One trigger with a face for each width, so the popup it opened stays with it.
+                  The stylesheet shows one face, and the name is the words of the face it shows. */}
+                  <span className={cn("contents", APART)}>
+                    <span
+                      ref={setWords}
+                      aria-hidden={folded || undefined}
+                      className={cn("min-w-0 truncate", ICON_WORDS)}
+                    >
+                      {name}
+                    </span>
+                    <HugeiconsIcon
+                      icon={UnfoldMoreIcon}
+                      strokeWidth={2}
+                      className={cn("shrink-0 text-muted-foreground", WORDS_ONLY)}
+                      aria-hidden="true"
+                    />
+                    <span aria-hidden="true" className={cn("items-center gap-1", ICONS)}>
+                      <ListsCount chosen={chosen} />
+                    </span>
+                  </span>
+                  <span className={FOLDED}>
+                    <span ref={setWords} aria-hidden={!folded || undefined} className="sr-only">
+                      {heldName}
+                    </span>
+                    {/* The trigger keeps one padding, so a resize has nothing to animate, and this
+                    face makes up the end it has without the chevron. */}
+                    <span
+                      ref={setFoldedFace}
+                      aria-hidden="true"
+                      className="me-0.5 flex items-center gap-1"
+                    >
                       <HugeiconsIcon
-                        icon={UnfoldMoreIcon}
-                        data-icon="inline-end"
+                        icon={StarIcon}
                         strokeWidth={2}
-                        className={cn("shrink-0 text-muted-foreground", WORDS_ONLY)}
-                        aria-hidden="true"
+                        className={
+                          wishlist.checked ? "[&_path]:fill-current" : "text-muted-foreground"
+                        }
                       />
-                      <span aria-hidden="true" className={cn("items-center gap-1", ICONS)}>
-                        <ListsCount chosen={chosen} />
-                      </span>
-                    </>
-                  )}
+                      <ListsCount chosen={chosen} />
+                    </span>
+                  </span>
                 </Button>
               }
             />
           }
         />
         <PopoverContent
-          aria-label={wishlist ? "Wishlist and Lists" : "Lists"}
+          aria-label={folded ? "Wishlist and Lists" : "Lists"}
           className="w-72 max-w-[calc(100vw-2rem)] gap-0 p-1"
           align="end"
         >
-          {wishlist ? (
+          {folded ? (
             <>
               <label htmlFor={`${baseId}-wishlist`} className={rowClass}>
                 <Checkbox
@@ -221,20 +238,22 @@ function titlesOf(chosen: readonly ChosenList[]): string {
   return chosen.map((list) => list.title).join(", ");
 }
 
-function heldName(wishlist: boolean, chosen: readonly ChosenList[]): string {
-  const [first] = chosen;
-  const lists =
-    first === undefined
-      ? []
-      : [chosen.length === 1 ? `‘${first.title}’` : `${chosen.length} Lists`];
-  const held = [...(wishlist ? ["Wishlist"] : []), ...lists];
-  return held.length === 0 ? "Wishlist and Lists" : `Also on ${held.join(" and ")}`;
-}
-
 function triggerLabel(chosen: readonly ChosenList[]): string {
   const [first] = chosen;
   if (first === undefined) return "Lists";
   return chosen.length === 1 ? first.title : `${chosen.length} Lists`;
+}
+
+/** Whether `element` shows: a container query hides or shows it, so only its size can tell. */
+function useShown(element: HTMLElement | null): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => setShown((entry?.contentRect.width ?? 0) > 0));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  return shown;
 }
 
 function listsStatus({

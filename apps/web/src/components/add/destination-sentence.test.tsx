@@ -65,39 +65,63 @@ test("the sentence holds every word a width may hide, and each control its whole
   expect(within(sentence()).getByRole("button", { name: "Display shelf" })).toBeDefined();
 });
 
-test("the narrowest sentence holds Wishlist and Lists in one control that says what it holds", async () => {
-  const user = userEvent.setup();
+test("the sentence has one Lists control at every width, so a resize keeps its popup with it", async () => {
   openAddPage("/add?to=collection");
   await rowsLoaded();
 
-  const folded = within(sentence()).getByRole("button", { name: "Wishlist and Lists" });
-  await user.click(within(sentence()).getByRole("checkbox", { name: "Wishlist" }));
-  expect(within(sentence()).getByRole("button", { name: "Also on Wishlist" })).toBe(folded);
+  const popupTriggers = within(sentence())
+    .getAllByRole("button")
+    .filter((button) => button.getAttribute("aria-haspopup") === "dialog");
+  expect(popupTriggers).toHaveLength(1);
+});
 
-  await user.click(folded);
-  const popover = await screen.findByRole("dialog", { name: "Wishlist and Lists" });
-  const wishlist = within(popover).getByRole("checkbox", { name: "Wishlist" });
-  expect(wishlist.getAttribute("aria-checked")).toBe("true");
-  await user.click(wishlist);
-  await user.click(within(popover).getByRole("checkbox", { name: "Display shelf" }));
-  expect(folded.textContent).toContain("Also on ‘Display shelf’");
-  await user.click(within(popover).getByRole("checkbox", { name: "Wishlist" }));
-  expect(folded.textContent).toContain("Also on Wishlist and ‘Display shelf’");
-  await user.click(within(popover).getByRole("checkbox", { name: "Gifts" }));
-  expect(within(sentence()).getByRole("button", { name: "Also on Wishlist and 2 Lists" })).toBe(
-    folded,
-  );
-  await user.keyboard("{Escape}");
-  await waitFor(() => expect(document.activeElement).toBe(folded));
+test("folded, the Lists control names what it holds, and its popup holds the sentence's Wishlist", async () => {
+  // A container query shows the folded face, which the browser check proves. Here every observed
+  // box reports a size, as that face does when it shows.
+  const realResizeObserver = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = class extends realResizeObserver {
+    constructor(onResize: ResizeObserverCallback) {
+      super(onResize);
+      const shown = { contentRect: { width: 36 } } as ResizeObserverEntry;
+      this.observe = () => onResize([shown], this);
+    }
+  };
+  try {
+    const user = userEvent.setup();
+    openAddPage("/add?to=collection");
+    await rowsLoaded();
 
-  // It is the same choice as the separate controls, so the commit carries it.
-  expect(
-    within(sentence()).getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-checked"),
-  ).toBe("true");
-  await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
-  await waitFor(() => expect(server.commits).toHaveLength(1));
-  expect(server.commits[0]?.wishlist).toBe(true);
-  expect(server.commits[0]?.listIds).toEqual(["shelf0000001", "gifts0000001"]);
+    const folded = within(sentence()).getByRole("button", { name: "Wishlist and Lists" });
+    await user.click(within(sentence()).getByRole("checkbox", { name: "Wishlist" }));
+    expect(within(sentence()).getByRole("button", { name: "Also on Wishlist" })).toBe(folded);
+
+    await user.click(folded);
+    const popover = await screen.findByRole("dialog", { name: "Wishlist and Lists" });
+    const wishlist = within(popover).getByRole("checkbox", { name: "Wishlist" });
+    expect(wishlist.getAttribute("aria-checked")).toBe("true");
+    await user.click(wishlist);
+    await user.click(within(popover).getByRole("checkbox", { name: "Display shelf" }));
+    expect(folded.textContent).toContain("Also on ‘Display shelf’");
+    await user.click(within(popover).getByRole("checkbox", { name: "Wishlist" }));
+    expect(folded.textContent).toContain("Also on Wishlist and ‘Display shelf’");
+    await user.click(within(popover).getByRole("checkbox", { name: "Gifts" }));
+    expect(within(sentence()).getByRole("button", { name: "Also on Wishlist and 2 Lists" })).toBe(
+      folded,
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(folded));
+
+    // It is the same choice as the separate controls, so the commit carries it.
+    expect(
+      within(sentence()).getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Add 1 to collection" }));
+    await waitFor(() => expect(server.commits).toHaveLength(1));
+    expect(server.commits[0]?.wishlist).toBe(true);
+    expect(server.commits[0]?.listIds).toEqual(["shelf0000001", "gifts0000001"]);
+  } finally {
+    globalThis.ResizeObserver = realResizeObserver;
+  }
 });
 
 test("a control whose words are cut shows its whole name in a tooltip, by pointer and by keyboard", async () => {

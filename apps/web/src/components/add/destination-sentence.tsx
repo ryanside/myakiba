@@ -27,17 +27,7 @@ import { choiceOf, choose } from "./commit-input";
 import type { ChosenList, Choice } from "./commit-input";
 import { Swap, WORDS } from "./destination-motion";
 import { ListsPicker } from "./lists-picker";
-import {
-  ALSO_ON,
-  AND,
-  APART,
-  CHOICE_ICON,
-  FOLDED,
-  GAP,
-  ICON_WORDS,
-  LEAD,
-  ICONS,
-} from "./sentence-fit";
+import { ALSO_ON, AND, APART, CHOICE_ICON, GAP, ICON_WORDS, LEAD, ICONS } from "./sentence-fit";
 import { useWordsTip, WordsTip } from "./words-tip";
 
 const CHOICES: readonly {
@@ -209,10 +199,7 @@ export function DestinationSentence({
         }
       />
       <span className={cn("shrink-0 text-muted-foreground", AND)}>and</span>
-      <span inert={held} className={cn("flex min-w-0", APART)}>
-        <ListsPicker chosen={form.lists} disabled={disabled} onChange={setLists} />
-      </span>
-      <span inert={held} className={cn("shrink-0", FOLDED)}>
+      <span inert={held} className="flex min-w-0">
         <ListsPicker
           chosen={form.lists}
           disabled={disabled}

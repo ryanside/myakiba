@@ -339,3 +339,126 @@ describe("every destination keeps one line, and shows what fits each width", () 
     }
   }
 });
+
+/** The open Lists popup, where it sits against the one control that opened it, and what it offers. */
+async function popupState(page: Page) {
+  await page.evaluate(async () => {
+    const dialog = document.querySelector("[role=dialog]");
+    await Promise.allSettled(
+      dialog?.getAnimations({ subtree: true }).map((run) => run.finished) ?? [],
+    );
+  });
+  return page.evaluate(() => {
+    const section = document.querySelector('section[aria-label="Destination"]');
+    const triggers = [...(section?.querySelectorAll("button[aria-haspopup=dialog]") ?? [])];
+    const dialogs = [...document.querySelectorAll("[role=dialog]")];
+    const [trigger] = triggers;
+    const [dialog] = dialogs;
+    if (!trigger || !dialog) throw new Error("No trigger or no popup");
+    const at = trigger.getBoundingClientRect();
+    const box = dialog.getBoundingClientRect();
+    return {
+      triggers: triggers.length,
+      popups: dialogs.length,
+      triggerShows: at.width > 1 && at.height > 1,
+      // Below the trigger, and across from it.
+      anchored:
+        box.top - at.bottom >= 0 &&
+        box.top - at.bottom <= 12 &&
+        box.left < at.right &&
+        box.right > at.left,
+      name: dialog.getAttribute("aria-label"),
+      wishlist: [...dialog.querySelectorAll("[role=checkbox]")].some(
+        (checkbox) => checkbox.parentElement?.textContent?.trim() === "Wishlist",
+      ),
+    };
+  });
+}
+
+async function escapeReturnsFocus(page: Page) {
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  return page.evaluate(() => {
+    const focused = document.activeElement;
+    const box = focused?.getBoundingClientRect();
+    return (
+      focused?.getAttribute("aria-haspopup") === "dialog" &&
+      focused.closest('section[aria-label="Destination"]') !== null &&
+      box !== undefined &&
+      box.width > 1
+    );
+  });
+}
+
+describe("the Lists popup stays with its control across a resize", () => {
+  const sentence: SentenceCase = {
+    to: "collection",
+    rows: 12,
+    selected: 12,
+    lists: ["shelf0000001"],
+    wishlist: true,
+  };
+
+  test("wide to narrow", async () => {
+    const { page, errors } = await open(sentence);
+    const section = page.getByRole("region", { name: "Destination" });
+    await section.getByRole("button", { name: "Display shelf", exact: true }).click();
+    await page.getByRole("dialog").waitFor();
+    expect(await popupState(page)).toMatchObject({
+      name: "Lists",
+      wishlist: false,
+      anchored: true,
+    });
+
+    await sizeTo(page, 320, "viewport");
+    expect(await popupState(page)).toEqual({
+      triggers: 1,
+      popups: 1,
+      triggerShows: true,
+      anchored: true,
+      name: "Wishlist and Lists",
+      wishlist: true,
+    });
+    expect(await escapeReturnsFocus(page)).toBe(true);
+    expect(
+      await section
+        .getByRole("button", { name: "Also on Wishlist and ‘Display shelf’", exact: true })
+        .evaluate((element) => element === document.activeElement),
+    ).toBe(true);
+    expect(errors).toEqual([]);
+    await page.close();
+  });
+
+  test("narrow to wide", async () => {
+    const { page, errors } = await open(sentence);
+    await sizeTo(page, 320, "viewport");
+    const section = page.getByRole("region", { name: "Destination" });
+    await section
+      .getByRole("button", { name: "Also on Wishlist and ‘Display shelf’", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor();
+    expect(await popupState(page)).toMatchObject({
+      name: "Wishlist and Lists",
+      wishlist: true,
+      anchored: true,
+    });
+
+    await sizeTo(page, 1280, "viewport");
+    expect(await popupState(page)).toEqual({
+      triggers: 1,
+      popups: 1,
+      triggerShows: true,
+      anchored: true,
+      name: "Lists",
+      wishlist: false,
+    });
+    expect(await escapeReturnsFocus(page)).toBe(true);
+    expect(
+      await section
+        .getByRole("button", { name: "Display shelf", exact: true })
+        .evaluate((element) => element === document.activeElement),
+    ).toBe(true);
+    expect(errors).toEqual([]);
+    await page.close();
+  });
+});

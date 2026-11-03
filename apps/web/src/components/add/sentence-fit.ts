@@ -26,6 +26,6 @@ export const LEAD = "@max-[31rem]/sentence:sr-only";
 
 /** Wishlist and Lists as two controls, and as the one that holds both. */
 export const APART = "@max-[21rem]/sentence:hidden";
-export const FOLDED = "hidden @max-[21rem]/sentence:flex";
+export const FOLDED = "hidden @max-[21rem]/sentence:contents";
 export const CHOICE_ICON = "@max-[21rem]/sentence:hidden";
 export const GAP = "gap-2 @max-[21rem]/sentence:gap-1.5";
