@@ -31,6 +31,7 @@ const UNREACHABLE = [
 ];
 
 let isGoogleLinked = false;
+let unlinkBodies: unknown[] = [];
 
 const account = (providerId: string) => ({
   id: `${providerId}-account`,
@@ -65,7 +66,9 @@ const otherSession = session(
 const realFetch = globalThis.fetch;
 globalThis.fetch = Object.assign(
   async (input: RequestInfo | URL, init?: RequestInit) => {
-    const { pathname } = new URL(new Request(input, init).url);
+    const request = new Request(input, init);
+    const { pathname } = new URL(request.url);
+    if (pathname.endsWith("/unlink-account")) unlinkBodies.push(await request.json());
     if (UNREACHABLE.some((path) => pathname.endsWith(path))) {
       throw new TypeError("Failed to fetch");
     }
@@ -91,6 +94,7 @@ const { Toaster } = await import("@/components/ui/toast");
 afterEach(() => {
   cleanup();
   isGoogleLinked = false;
+  unlinkBodies = [];
 });
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -156,6 +160,17 @@ test.each([
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
   },
 );
+
+test("Disconnect unlinks the Google account by its local id", async () => {
+  isGoogleLinked = true;
+  openAccount();
+  const button = await screen.findByRole("button", { name: "Disconnect" });
+  await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+
+  fireEvent.click(button);
+
+  await waitFor(() => expect(unlinkBodies).toEqual([{ accountId: "google-account" }]));
+});
 
 test("Change password reopened right after a change starts idle", async () => {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
