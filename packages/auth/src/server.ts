@@ -11,18 +11,11 @@ import { emailHarmony } from "better-auth-harmony";
 import { Resend } from "resend";
 import { createId } from "@paralleldrive/cuid2";
 import { redis } from "@myakiba/redis/client";
+import { incrementWithTtl } from "@myakiba/redis/counter";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 
 const resend = new Resend(env.RESEND_API_KEY);
-
-// INCR and EXPIRE run as one script so the TTL is set only when the counter is
-// created, which is the window Better Auth's rate limiter expects.
-const INCREMENT_WITH_TTL = `
-local count = redis.call("INCR", KEYS[1])
-if count == 1 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end
-return count
-`;
 
 export const auth = betterAuth({
   appName: "myakiba",
@@ -41,7 +34,7 @@ export const auth = betterAuth({
       return await redis.getdel(key);
     },
     increment: async (key, ttl) => {
-      return Number(await redis.eval(INCREMENT_WITH_TTL, 1, key, ttl));
+      return await incrementWithTtl(redis, key, ttl);
     },
   },
   advanced: {

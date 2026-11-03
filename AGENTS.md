@@ -8,7 +8,7 @@ Run these from the repo root. CI's Validate job runs the same checks, each as it
 
 - `bun run check` checks formatting, this file's rule table and the lint budget.
 - `bunx turbo run check-types` type-checks every package and fails when the server or web app turns off a strict flag.
-- `bun run test` runs every package's tests and the tooling tests. The order tests need `TEST_DATABASE_URL`, and they create and drop their own database.
+- `bun run test` runs every package's tests and the tooling tests. The order tests need `TEST_DATABASE_URL`, and they create and drop their own database. The Redis counter test needs `TEST_REDIS_URL`, and it deletes the keys it writes.
 - `bun run knip` checks undeclared dependencies and dead files and exports against their budget.
 
 ## Budgets and approvals
