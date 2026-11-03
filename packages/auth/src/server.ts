@@ -1,3 +1,6 @@
+// @better-auth/infra puts jose types in the type of `auth`. Without this
+// reference tsc cannot name them in the declaration (TS2883).
+/// <reference types="jose" />
 import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -13,6 +16,14 @@ import { dash } from "@better-auth/infra";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
+// INCR and EXPIRE run as one script so the TTL is set only when the counter is
+// created, which is the window Better Auth's rate limiter expects.
+const INCREMENT_WITH_TTL = `
+local count = redis.call("INCR", KEYS[1])
+if count == 1 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end
+return count
+`;
+
 export const auth = betterAuth({
   appName: "myakiba",
   secondaryStorage: {
@@ -26,9 +37,17 @@ export const auth = betterAuth({
     delete: async (key) => {
       await redis.del(key);
     },
+    getAndDelete: async (key) => {
+      return await redis.getdel(key);
+    },
+    increment: async (key, ttl) => {
+      return Number(await redis.eval(INCREMENT_WITH_TTL, 1, key, ttl));
+    },
   },
-  experimental: {
-    joins: true,
+  advanced: {
+    database: {
+      joins: true,
+    },
   },
   database: drizzleAdapter(db, {
     provider: "pg",
