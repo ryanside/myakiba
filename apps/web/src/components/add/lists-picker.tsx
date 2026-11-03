@@ -80,7 +80,7 @@ export function ListsPicker({
                   type="button"
                   variant="outline"
                   disabled={disabled}
-                  className="max-w-56 min-w-0 justify-between pr-2"
+                  className="max-w-56 min-w-0 shrink justify-between pr-2"
                 >
                   {/* One trigger with a face for each width, so the popup it opened stays with it.
                   The stylesheet shows one face, and the name is the words of the face it shows. */}

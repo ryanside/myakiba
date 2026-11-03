@@ -8,11 +8,12 @@
  * - under 31rem the lead ("Add 12 items to") goes;
  * - under 21rem Wishlist and Lists are one control, and the choice loses its icon.
  *
- * Each width fits the widest choice, Item Database with Keep, and a List title too long for the row
- * is cut short in the Lists trigger, which is the one part that shrinks.
+ * Each width fits the widest choice, Item Database with Keep. A List title too long for the row is
+ * cut short in the Lists trigger and in the commit's label, the two parts that shrink, and the
+ * commit never to less than its verb.
  */
 
-export const FULL_LABEL = "block @max-[48rem]/sentence:sr-only";
+export const FULL_LABEL = "grid @max-[48rem]/sentence:sr-only";
 export const SHORT_LABEL = "hidden @max-[48rem]/sentence:block";
 
 /** Words an icon stands in for. */

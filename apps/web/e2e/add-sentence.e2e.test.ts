@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
-import type { Browser, Page } from "playwright";
+import type { Browser, Locator, Page } from "playwright";
 import { caseQuery, LISTS } from "./sentence/cases";
 import type { SentenceCase } from "./sentence/cases";
 
@@ -461,4 +461,55 @@ describe("the Lists popup stays with its control across a resize", () => {
     expect(errors).toEqual([]);
     await page.close();
   });
+});
+
+/** Whether a click near one end of a control lands on that control. */
+async function hitsItself(control: Locator, end: "start" | "end") {
+  return control.evaluate((own, at) => {
+    const box = own.getBoundingClientRect();
+    const x = at === "end" ? box.right - 10 : box.left + 6;
+    return document.elementFromPoint(x, box.top + box.height / 2)?.closest("button") === own;
+  }, end);
+}
+
+describe("a long List title fits the line at every width", () => {
+  const LONG: readonly Pick<SentenceCase, "to" | "lists" | "wishlist">[] = [
+    { to: "collection", lists: ["long00000001"], wishlist: false },
+    { to: "collection", lists: ["long00000001"], wishlist: true },
+    { to: "none", lists: ["long00000001"], wishlist: false },
+    { to: "none", lists: ["long00000001"], wishlist: true },
+  ];
+  for (const destination of LONG) {
+    for (const theme of ["dark", "light"] as const) {
+      const sentence: SentenceCase = { ...destination, rows: 12, selected: 11 };
+      test(`${caseQuery(sentence, theme)}`, async () => {
+        const { page, errors } = await open(sentence, theme);
+        const expected = expectedOf(sentence);
+        for (const viewport of VIEWPORTS) {
+          const width = sentenceWidth(viewport);
+          const tier = tierAt(width);
+          const context = `${width}px, ${tier}`;
+          await sizeTo(page, viewport, "viewport");
+          const layout = await page.evaluate(measure);
+          expectOneLine(layout, context);
+          await expectNames(page, expected, tier, context);
+
+          // Each control takes the clicks on its own box, the Lists chevron included.
+          const section = page.getByRole("region", { name: "Destination" });
+          const lists = section.getByRole("button", {
+            name: tier === "folded" ? expected.held : expected.lists,
+            exact: true,
+          });
+          const commit = section.getByRole("button", { name: expected.label, exact: true });
+          expect({
+            context,
+            listsEnd: await hitsItself(lists, "end"),
+            commitStart: await hitsItself(commit, "start"),
+          }).toEqual({ context, listsEnd: true, commitStart: true });
+        }
+        expect(errors).toEqual([]);
+        await page.close();
+      });
+    }
+  }
 });

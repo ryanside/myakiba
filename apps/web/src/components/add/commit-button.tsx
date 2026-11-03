@@ -65,7 +65,7 @@ export function CommitButton({
   };
 
   return (
-    <div ref={glide} className="ms-auto shrink-0">
+    <div ref={glide} className="ms-auto flex">
       <StatusButton
         type="button"
         status={status}
@@ -75,10 +75,24 @@ export function CommitButton({
       >
         {/* A narrow row shows only the verb, and a screen reader always hears the whole label. Each
         swaps on its own change, so a resize that trades one for the other moves nothing. */}
-        <span className={cn(FULL_LABEL, "max-w-[min(70vw,26rem)] truncate")} title={plan.label}>
-          <Swap move={BUTTON_WORDS} id={plan.label} className="truncate">
+        <span className={cn(FULL_LABEL, "max-w-[min(70vw,26rem)]")}>
+          {/* Two unseen copies size it: the label, free to break at any letter, asks for its whole
+          width, and the verb, which cannot break, is the least it takes. The shown label is cut
+          short to the room they get. */}
+          <span
+            aria-hidden="true"
+            className={cn(SIZER, "whitespace-normal [overflow-wrap:anywhere]")}
+          >
             {plan.label}
-          </Swap>
+          </span>
+          <span aria-hidden="true" className={SIZER}>
+            {plan.verb}…
+          </span>
+          <span className="col-start-1 row-start-1 w-0 min-w-full truncate" title={plan.label}>
+            <Swap move={BUTTON_WORDS} id={plan.label} className="truncate">
+              {plan.label}
+            </Swap>
+          </span>
         </span>
         <span aria-hidden="true" className={SHORT_LABEL}>
           <Swap move={BUTTON_WORDS} id={plan.verb}>
@@ -89,3 +103,5 @@ export function CommitButton({
     </div>
   );
 }
+
+const SIZER = "invisible col-start-1 row-start-1 h-0 overflow-hidden";
