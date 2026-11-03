@@ -270,7 +270,6 @@ export function useAddController(search: AddSearchParams) {
     retryItems,
 
     resolvedForm,
-    destination,
     setForm,
 
     selectedRows,
