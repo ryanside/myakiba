@@ -37,7 +37,7 @@ const sentence = () => screen.getByRole("region", { name: "Destination" });
 // Base UI gives a tooltip no role, as its words are already the control's name.
 const tooltip = () => document.querySelector('[data-slot="tooltip-content"]');
 
-/** A narrow sentence hides words with CSS, which a test's DOM never lays out, so it fakes a cut. */
+/** A narrow sentence hides or cuts words with CSS, which a test's DOM never lays out, so it fakes a cut. */
 function cutEveryWord() {
   Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
     configurable: true,
@@ -48,7 +48,7 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, "scrollWidth");
 });
 
-test("the words a narrow sentence leaves out stay in it for screen readers", async () => {
+test("the sentence holds every word a width may hide, and each control its whole name", async () => {
   openAddPage("/add?to=collection");
   await rowsLoaded();
 
@@ -56,7 +56,7 @@ test("the words a narrow sentence leaves out stay in it for screen readers", asy
   for (const words of ["Add 1 item to", "also on", "Wishlist", "and", "Lists"]) {
     expect(text).toContain(words);
   }
-  // Each compact control keeps its whole name, with its icons and count left out of it.
+  // Each control's name leaves out its icons and count.
   expect(within(sentence()).getByRole("checkbox", { name: "Wishlist" })).toBeDefined();
   const user = userEvent.setup();
   await user.click(within(sentence()).getByRole("button", { name: "Lists" }));
@@ -100,7 +100,7 @@ test("the narrowest sentence holds Wishlist and Lists in one control that says w
   expect(server.commits[0]?.listIds).toEqual(["shelf0000001", "gifts0000001"]);
 });
 
-test("a compact control shows its whole name in a tooltip, by pointer and by keyboard", async () => {
+test("a control whose words are cut shows its whole name in a tooltip, by pointer and by keyboard", async () => {
   cutEveryWord();
   const user = userEvent.setup();
   openAddPage("/add?to=collection");

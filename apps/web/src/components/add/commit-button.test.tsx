@@ -118,7 +118,7 @@ test.each([
   ["the Item Database alone", NOT_OWNED, true, "Keep 1 in Item Database", "Keep"],
   ["a blocked new Order", NEW_ORDER, false, "Verify your email to add items", "Create"],
 ] as const)(
-  "%s has its verb for a narrow row, and its whole label as its name at every width",
+  "%s holds its verb beside its whole label, and the whole label is its name",
   (_name, destination, emailVerified, label, verb) => {
     renderButton({ destination, emailVerified });
     const button = screen.getByRole("button", { name: label });
@@ -126,7 +126,6 @@ test.each([
       (element) => element.closest(".invisible") === null,
     );
     expect(short.map((element) => element.textContent)).toEqual([verb]);
-    expect(short[0]?.className).toContain("@max-");
     expect(button.getAttribute("aria-label")).toBeNull();
   },
 );

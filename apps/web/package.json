@@ -9,7 +9,9 @@
     "serve": "vite preview",
     "start": "vite",
     "check-types": "tsc --noEmit",
-    "test": "bun test --isolate --env-file=test.env"
+    "test": "bun test --isolate --env-file=test.env",
+    "e2e": "cd e2e && bun test",
+    "e2e:build": "vite build --config e2e/sentence/vite.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -67,6 +69,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "elysia": "catalog:",
+    "playwright": "1.64.1",
     "remark-frontmatter": "^5.0.0",
     "remark-mdx-frontmatter": "^6.0.0",
     "tailwindcss": "^4.3.3",
