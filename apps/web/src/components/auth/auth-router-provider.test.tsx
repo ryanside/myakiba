@@ -330,7 +330,7 @@ test("a page renders without an interstitial while the first session check is in
   const check = Promise.withResolvers<null>();
   held = check.promise;
   let refetching = Promise.resolve();
-  act(() => {
+  await act(async () => {
     refetching = authState.result.current.refetch();
   });
   expect(authState.result.current.isPending).toBe(true);
