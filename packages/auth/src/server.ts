@@ -77,7 +77,7 @@ export const auth = betterAuth({
     storage: "secondary-storage",
     customRules: {
       "/send-verification-email": { window: 60, max: 1 },
-      "/forget-password": { window: 60, max: 3 },
+      "/request-password-reset": { window: 60, max: 3 },
     },
   },
   emailAndPassword: {
