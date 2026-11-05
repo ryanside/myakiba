@@ -12,6 +12,7 @@ import {
 } from "@/components/media-tile";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -137,7 +138,7 @@ export function CollectionCardGrid({
             <MediaCardBody>
               <span className="flex min-w-0 items-center justify-between gap-2">
                 <CategoryLabel category={item.itemCategory} />
-                {item.itemScale && item.itemScale !== "n/a" ? (
+                {item.itemScale && item.itemScale !== NO_SCALE ? (
                   <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>
