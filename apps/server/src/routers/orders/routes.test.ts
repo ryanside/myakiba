@@ -235,8 +235,8 @@ describe("each orders route answers as before", () => {
     expect(status).toBe(200);
     expect(body).toMatchObject({
       items: [
-        { orderId: "order-1", itemCount: "2" },
-        { orderId: "order-2", itemCount: "1" },
+        { orderId: "order-1", itemCount: 2 },
+        { orderId: "order-2", itemCount: 1 },
       ],
       totalCount: 2,
       activeOrders: 2,
@@ -246,7 +246,19 @@ describe("each orders route answers as before", () => {
   test("get", async () => {
     expect(await call("GET", "/order-1")).toMatchObject({
       status: 200,
-      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: "2" },
+      body: { orderId: "order-1", title: "AmiAmi preorder", itemCount: 2 },
+    });
+  });
+
+  // Postgres returns COUNT as a bigint string; the contract and the web app expect a number,
+  // and a string "1" made the order list read "1 items".
+  test("an order's item count is a number", async () => {
+    const list = await call("GET", "/?sort=title&order=asc");
+    const detail = await call("GET", "/order-2");
+
+    expect({ list: list.body, detail: detail.body }).toMatchObject({
+      list: { items: [{ itemCount: 2 }, { itemCount: 1 }] },
+      detail: { itemCount: 1 },
     });
   });
 
