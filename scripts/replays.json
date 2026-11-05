@@ -868,6 +868,69 @@
         "currency formatting normalizes the full-width yen sign",
         "compact currency formatting rounds chart axes to at most one decimal"
       ]
+    },
+    {
+      "fix": "1f921f85",
+      "bug": "inline cell editors used 13px text on phones, triggering iOS Safari focus zoom",
+      "test": "apps/web/src/components/cells/cell-editor-size.test.tsx",
+      "fixed": [
+        "an open cell editor is 16px on phones and 13px from md up > in a text cell",
+        "an open cell editor is 16px on phones and 13px from md up > in a count cell",
+        "an open cell editor is 16px on phones and 13px from md up > in a currency cell"
+      ]
+    },
+    {
+      "fix": "9184d20a",
+      "bug": "Reset Filters stayed visible after outside navigation cleared a locally typed and committed search",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > hides when an outside change clears a search typed and committed here",
+        "Reset Filters on /collection > hides when an outside change clears a search typed and committed here"
+      ]
+    },
+    {
+      "fix": "09df27eb",
+      "bug": "the footer hid at a nonzero offset or when unsorted page sizes started with a larger size",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination at an offset that is not a page start > a short result at an offset past its first row names the rows from that offset",
+        "DataGridPagination with page sizes in any order > a result larger than the smallest page size keeps its footer"
+      ]
+    },
+    {
+      "fix": "08b02d5b",
+      "bug": "leaderboard names painted outside their cells and overlapped counts in narrow columns",
+      "test": "apps/web/src/components/analytics/leaderboard-table.test.tsx",
+      "fixed": ["a name cut short by its column keeps the full name in its title"]
+    },
+    {
+      "fix": "fb2931ee",
+      "bug": "a collapsed offcanvas sidebar left its links in the tab order and the accessibility tree",
+      "test": "apps/web/src/components/ui/sidebar.test.tsx",
+      "fixed": ["offcanvas sidebar links are inert only while collapsed"]
+    },
+    {
+      "fix": "7539a959",
+      "bug": "repeating the same error stacked identical persistent toasts, and dismissing one revealed an older copy",
+      "test": "apps/web/src/components/ui/toast.test.tsx",
+      "fixed": ["repeated errors leave one toast and dismiss without revealing an older copy"]
+    },
+    {
+      "fix": "555413c0",
+      "bug": "Collection, Orders and Expenses replaced the server's load error with a fixed sentence",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "a page that fails to load > Collection shows the server's message",
+        "a page that fails to load > Orders shows the server's message",
+        "a page that fails to load > Expenses shows the server's message",
+        "LoadError > uses the server fallback when no message is supplied"
+      ]
+    },
+    {
+      "fix": "883f7844",
+      "bug": "number column headers pushed their resize line about 7px past the column border",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-resize-alignment.test.tsx",
+      "fixed": ["numeric and text columns keep the resize line centered on the handle"]
     }
   ],
   "lint": [
