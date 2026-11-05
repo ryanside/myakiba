@@ -9,7 +9,6 @@ import { ChartSection } from "@/components/expenses/dashboard-shell";
 import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
-  formatAxisCurrency,
 } from "@/components/expenses/chart-utils";
 
 const config = {
@@ -49,7 +48,9 @@ export function CollectionSpendingByPeriod({
         <EvilBarChart.Grid />
         <EvilBarChart.XAxis dataKey="bucket" />
         <EvilBarChart.YAxis
-          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

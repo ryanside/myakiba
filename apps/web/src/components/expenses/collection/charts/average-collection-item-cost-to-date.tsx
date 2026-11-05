@@ -10,7 +10,6 @@ import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
   EXPENSE_CHART_DOT_MAX_POINTS,
-  formatAxisCurrency,
 } from "@/components/expenses/chart-utils";
 
 const config = {
@@ -51,7 +50,9 @@ export function AverageCollectionItemCostToDate({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

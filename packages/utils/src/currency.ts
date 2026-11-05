@@ -5,6 +5,7 @@
  * - `valueMinorUnits`: whole minor units, where `100` means `1.00`
  * - `currency`: ISO currency code, such as `"USD"` or `"JPY"`
  * - `locale`: locale used by `Intl.NumberFormat`, such as `"en-US"` or `"ja-JP"`
+ * - `options.compact`: compact notation with at most one decimal, for chart axes
  *
  * Output:
  * - a display-ready currency string for the given locale and currency
@@ -12,19 +13,27 @@
  * Examples:
  * - `formatCurrencyFromMinorUnits(12345, "USD", "en-US")` -> `"$123.45"`
  * - `formatCurrencyFromMinorUnits(12345, "EUR", "de-DE")` -> `"123,45\u00A0€"`
- * - `formatCurrencyFromMinorUnits(5000, "JPY", "ja-JP")` -> `"￥50"`
+ * - `formatCurrencyFromMinorUnits(5000, "JPY", "ja-JP")` -> `"¥50"`
+ * - `formatCurrencyFromMinorUnits(825000, "USD", "en-US", { compact: true })` -> `"$8.3K"`
  */
 export function formatCurrencyFromMinorUnits(
   valueMinorUnits: number,
   currency: string,
   locale: Intl.LocalesArgument,
+  options: { readonly compact?: boolean } = {},
 ): string {
   const amountMajorUnits = valueMinorUnits / 100;
 
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-  }).format(amountMajorUnits);
+  const formatOptions: Intl.NumberFormatOptions = { style: "currency", currency };
+  if (options.compact) {
+    formatOptions.notation = "compact";
+    formatOptions.maximumFractionDigits = 1;
+  }
+
+  // Some ICU builds use a full-width yen sign that Inter lacks.
+  return new Intl.NumberFormat(locale, formatOptions)
+    .format(amountMajorUnits)
+    .replaceAll("\uFFE5", "\u00A5");
 }
 
 /**
