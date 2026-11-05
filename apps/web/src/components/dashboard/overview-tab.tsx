@@ -105,7 +105,7 @@ export function OverviewTab({
 
       {/* The heading belongs to its board, so they sit together rather than a section apart. */}
       <section className="flex flex-col gap-3">
-        <SectionHeading title="In progress" scope={boardWindow(new Date())} />
+        <SectionHeading title="In progress" scope="Recent and upcoming" />
         <OrderKanban
           orders={orders}
           ordersUpdatedAt={dataUpdatedAt}
@@ -126,14 +126,4 @@ function SectionHeading({ title, scope }: { readonly title: string; readonly sco
       <p className="text-sm text-muted-foreground">{scope}</p>
     </div>
   );
-}
-
-const MONTH_SHORT = new Intl.DateTimeFormat(undefined, { month: "short" });
-
-// The board holds orders released or ordered from two months back to two months ahead; saying so
-// keeps it from reading as every active order.
-function boardWindow(today: Date): string {
-  const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-  const end = new Date(today.getFullYear(), today.getMonth() + 2, 1);
-  return `Released or ordered ${MONTH_SHORT.format(start)} – ${MONTH_SHORT.format(end)}`;
 }
