@@ -474,7 +474,7 @@
     },
     {
       "fix": "9597fbf5",
-      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101–5 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     },
@@ -838,6 +838,36 @@
       "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
       "test": "apps/web/src/components/settings/account.test.tsx",
       "fixed": ["Change password reopened right after a change starts idle"]
+    },
+    {
+      "fix": "72386510",
+      "bug": "a one-method shipping chart hid its method name",
+      "test": "apps/web/src/components/expenses/dashboard-shell.test.tsx",
+      "fixed": ["a one-method shipping legend shows its method label"]
+    },
+    {
+      "fix": "72386510",
+      "bug": "completed order timeline steps without recorded dates said Pending",
+      "test": "apps/web/src/components/orders/order-summary.test.tsx",
+      "fixed": [
+        "an Owned order without dates shows four completed undated steps",
+        "only future undated steps show Pending"
+      ]
+    },
+    {
+      "fix": "fff606b9",
+      "bug": "the overview board recomputed the UTC server window in browser local time and described only some matching dates",
+      "test": "apps/web/src/components/dashboard/overview-tab.test.tsx",
+      "fixed": ["the overview board describes its scope without browser date math"]
+    },
+    {
+      "fix": "71027eae",
+      "bug": "the shared currency formatter left the full-width yen sign unnormalized",
+      "test": "packages/utils/src/currency.test.ts",
+      "fixed": [
+        "currency formatting normalizes the full-width yen sign",
+        "compact currency formatting rounds chart axes to at most one decimal"
+      ]
     }
   ],
   "lint": [
