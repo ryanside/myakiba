@@ -37,7 +37,7 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { CategoryLabel } from "@/components/media-tile";
+import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { itemDestination } from "@/lib/item-destination";
@@ -79,7 +79,7 @@ function OrderItemActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>

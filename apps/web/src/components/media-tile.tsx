@@ -25,6 +25,10 @@ export const ROW_LINK_CLASS_NAME = cn(
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
 );
 
+// A row's secondary action waits for hover or focus on the row, where the device can hover.
+export const ROW_ACTION_CLASS_NAME =
+  "text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100";
+
 // Cards and gallery tiles have no frame, so hover strengthens the photo's edge, instantly.
 export const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
 

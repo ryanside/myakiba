@@ -48,6 +48,7 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import { ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
@@ -104,7 +105,7 @@ function OrderActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit order</span>

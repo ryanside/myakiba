@@ -41,7 +41,7 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { CategoryLabel } from "@/components/media-tile";
+import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
@@ -107,7 +107,7 @@ function CollectionActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
