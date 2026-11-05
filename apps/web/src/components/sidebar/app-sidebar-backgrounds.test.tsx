@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import {
   decodedImages,
@@ -12,6 +12,8 @@ const dashboardBackground = "11-akihabara-bright-bitgrain.webp";
 const analyticsBackground = "56-blossoms-and-wires-bitgrain.webp";
 const ordersBackground = "17-night-calendar-bitgrain.webp";
 const settingsBackground = "10-settings-desk-bitgrain.webp";
+
+afterAll(() => expect(localStorage.getItem("appearance:pageBackgrounds")).toBeNull());
 
 function decodedSources() {
   return decodedImages.map((image) => image.src);
