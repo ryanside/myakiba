@@ -840,13 +840,13 @@
       "fixed": ["Change password reopened right after a change starts idle"]
     },
     {
-      "fix": "72386510",
+      "fix": "327e6264",
       "bug": "a one-method shipping chart hid its method name",
       "test": "apps/web/src/components/expenses/dashboard-shell.test.tsx",
       "fixed": ["a one-method shipping legend shows its method label"]
     },
     {
-      "fix": "72386510",
+      "fix": "327e6264",
       "bug": "completed order timeline steps without recorded dates said Pending",
       "test": "apps/web/src/components/orders/order-summary.test.tsx",
       "fixed": [
@@ -855,13 +855,13 @@
       ]
     },
     {
-      "fix": "fff606b9",
+      "fix": "c083f8ad",
       "bug": "the overview board recomputed the UTC server window in browser local time and described only some matching dates",
       "test": "apps/web/src/components/dashboard/overview-tab.test.tsx",
       "fixed": ["the overview board describes its scope without browser date math"]
     },
     {
-      "fix": "71027eae",
+      "fix": "2c83af1a",
       "bug": "the shared currency formatter left the full-width yen sign unnormalized",
       "test": "packages/utils/src/currency.test.ts",
       "fixed": [
