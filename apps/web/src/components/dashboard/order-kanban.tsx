@@ -423,24 +423,26 @@ function OrderColumn({
           value={columnId}
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
         >
-          {isLoading ? <Loader className="justify-start pt-4" /> : null}
-          {!isLoading && orders.length === 0 ? (
-            <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
-              No orders
-            </p>
-          ) : null}
-          {isLoading
-            ? null
-            : orders.map((order) => (
-                <OrderCard
-                  key={order.orderId}
-                  order={order}
-                  currency={currency}
-                  dateFormat={dateFormat}
-                  asHandle={!isOverlay}
-                  onDateChange={onDateChange}
-                />
-              ))}
+          {(() => {
+            if (isLoading) return <Loader className="justify-start pt-4" />;
+            if (orders.length === 0) {
+              return (
+                <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
+                  No orders
+                </p>
+              );
+            }
+            return orders.map((order) => (
+              <OrderCard
+                key={order.orderId}
+                order={order}
+                currency={currency}
+                dateFormat={dateFormat}
+                asHandle={!isOverlay}
+                onDateChange={onDateChange}
+              />
+            ));
+          })()}
         </KanbanColumnContent>
       </Frame>
     </KanbanColumn>
