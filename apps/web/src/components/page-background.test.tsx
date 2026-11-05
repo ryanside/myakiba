@@ -10,7 +10,10 @@ import {
 } from "@tanstack/react-router";
 import { PageBackground } from "@/components/page-background";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.removeItem("appearance:pageBackgrounds");
+});
 // Page backgrounds are opt-in; these tests cover the photo each page shows when they are on.
 beforeEach(() => localStorage.setItem("appearance:pageBackgrounds", "true"));
 afterAll(() => expect(localStorage.getItem("appearance:pageBackgrounds")).toBeNull());
