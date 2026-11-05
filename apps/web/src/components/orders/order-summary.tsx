@@ -22,6 +22,22 @@ const STATUS_TO_STEP = new Map<string, number>([
   ["owned", 4],
 ]);
 
+function StepDate({
+  date,
+  dateFormat,
+  reached,
+}: {
+  readonly date: string | null | undefined;
+  readonly dateFormat: DateFormat;
+  readonly reached: boolean;
+}): ReactNode {
+  if (date) return formatDateOnlyForDisplay(date, dateFormat);
+  if (reached) {
+    return <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>;
+  }
+  return <span className="text-muted-foreground">Pending</span>;
+}
+
 function CostRow({
   label,
   amount,
@@ -97,43 +113,33 @@ export function OrderSummary({
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-medium text-foreground">Progress</h2>
         <Timeline orientation="horizontal" value={isLoading ? 0 : activeStep}>
-          {timelineSteps.map(({ step, title, date }) => {
-            let dateContent: ReactNode = "—";
-
-            if (isLoading) {
-              dateContent = <Skeleton className="h-3 w-12 max-w-full" />;
-            } else {
-              dateContent = (
-                <span className="animate-data-in">
-                  {date ? (
-                    formatDateOnlyForDisplay(date, dateFormat)
-                  ) : (
-                    <span className="text-muted-foreground">Pending</span>
-                  )}
-                </span>
-              );
-            }
-
-            return (
-              <TimelineItem key={step} step={step}>
-                <TimelineIndicator
-                  className={cn(
-                    "group-data-completed/timeline-item:bg-primary",
-                    !isLoading && step === activeStep && "ring-4 ring-primary/15",
-                  )}
-                />
-                <TimelineSeparator />
-                <TimelineHeader>
-                  <TimelineTitle
-                    className={cn(!isLoading && step > activeStep && "text-muted-foreground")}
-                  >
-                    {title}
-                  </TimelineTitle>
-                </TimelineHeader>
-                <TimelineDate>{dateContent}</TimelineDate>
-              </TimelineItem>
-            );
-          })}
+          {timelineSteps.map(({ step, title, date }) => (
+            <TimelineItem key={step} step={step}>
+              <TimelineIndicator
+                className={cn(
+                  "group-data-completed/timeline-item:bg-primary",
+                  !isLoading && step === activeStep && "ring-4 ring-primary/15",
+                )}
+              />
+              <TimelineSeparator />
+              <TimelineHeader>
+                <TimelineTitle
+                  className={cn(!isLoading && step > activeStep && "text-muted-foreground")}
+                >
+                  {title}
+                </TimelineTitle>
+              </TimelineHeader>
+              <TimelineDate>
+                {isLoading ? (
+                  <Skeleton className="h-3 w-12 max-w-full" />
+                ) : (
+                  <span className="animate-data-in">
+                    <StepDate date={date} dateFormat={dateFormat} reached={step <= activeStep} />
+                  </span>
+                )}
+              </TimelineDate>
+            </TimelineItem>
+          ))}
         </Timeline>
       </section>
 

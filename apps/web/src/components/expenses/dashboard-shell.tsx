@@ -123,8 +123,6 @@ export function ChartSeriesLegend<TKey extends string>({
   readonly visibleKeys?: ReadonlySet<TKey>;
   readonly onToggle?: (key: TKey) => void;
 }): ReactNode {
-  // One series needs no key; the chart title already names it.
-  if (items.length < 2) return null;
   return (
     <div className="flex flex-wrap items-center gap-1" aria-label="Chart series">
       {items.map((item) => {
@@ -176,7 +174,7 @@ export function ChartSection({
 }: {
   readonly title: string;
   readonly selector: ReactNode;
-  readonly legend: ReactNode;
+  readonly legend?: ReactNode;
   readonly children: ReactNode;
   readonly isEmpty: boolean;
   readonly emptyMessage: string;
