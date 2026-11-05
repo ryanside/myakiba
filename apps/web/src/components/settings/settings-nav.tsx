@@ -2,6 +2,7 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef } from "react";
+import { ActiveDot } from "@/components/active-dot";
 import { cn } from "@/lib/utils";
 import { hasLostFocus } from "./settings-content";
 import { SETTINGS_NAV_GROUPS, SETTINGS_SECTIONS } from "./settings-registry";
@@ -96,12 +97,7 @@ function NavItem({
             {section.description}
           </span>
         </span>
-        {isCurrent ? (
-          <span
-            aria-hidden
-            className="hidden size-1.5 shrink-0 rounded-full bg-foreground md:block"
-          />
-        ) : null}
+        {isCurrent ? <ActiveDot className="hidden md:block" /> : null}
         <HugeiconsIcon
           icon={ArrowRight01Icon}
           className="size-4 shrink-0 text-muted-foreground md:hidden"

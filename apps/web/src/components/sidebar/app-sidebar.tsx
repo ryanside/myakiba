@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEffect } from "react";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { ActiveDot } from "@/components/active-dot";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
@@ -123,9 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         render={<Link to={item.url} preload="intent" />}
                       >
                         <span>{item.title}</span>
-                        {isActive ? (
-                          <span aria-hidden className="size-1.5 rounded-full bg-foreground" />
-                        ) : null}
+                        {isActive ? <ActiveDot /> : null}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
