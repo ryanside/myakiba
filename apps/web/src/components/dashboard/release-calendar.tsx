@@ -139,7 +139,7 @@ function ReleaseCalendar({
           )}
         </div>
       </FrameHeader>
-      <FramePanel className="flex flex-col shadow-none! border-none">
+      <FramePanel className="flex flex-col">
         {(() => {
           if (isPending) return <ReleaseCalendarSkeleton />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
