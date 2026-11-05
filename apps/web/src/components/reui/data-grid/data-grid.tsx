@@ -196,7 +196,7 @@ function DataGridContainer({ children, className }: { children: ReactNode; class
  */
 const NUMERIC_COLUMN_META = {
   headerClassName:
-    "pe-6 [&>div]:justify-end [&_button]:-me-3 [&_button]:ms-0 [&_button]:flex-row-reverse",
+    "pe-6 [&>div:not(.cursor-col-resize)]:justify-end [&_button]:-me-3 [&_button]:ms-0 [&_button]:flex-row-reverse",
   cellClassName: "pe-6 text-right tabular-nums [&_button]:justify-end [&_input]:text-right",
 } as const;
 
