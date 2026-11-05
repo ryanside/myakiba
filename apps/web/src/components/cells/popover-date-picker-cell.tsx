@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
@@ -44,11 +45,7 @@ export function PopoverDatePickerCell({
       className={cn(CELL_TRIGGER_CLASS_NAME, "justify-start text-foreground", triggerClassName)}
       disabled={disabled}
     >
-      {displayValue ? (
-        formatDateOnlyForDisplay(displayValue, dateFormat)
-      ) : (
-        <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-      )}
+      {displayValue ? formatDateOnlyForDisplay(displayValue, dateFormat) : <EmptyValue />}
     </Button>
   );
 

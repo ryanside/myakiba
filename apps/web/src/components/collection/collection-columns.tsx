@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
+import { EmptyValue } from "@/components/cells/empty-value";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -320,11 +321,7 @@ export function createCollectionColumns({
       ),
       cell: (info) => {
         const scale = info.getValue() as string | null;
-        return scale && scale !== NO_SCALE ? (
-          scale
-        ) : (
-          <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-        );
+        return scale && scale !== NO_SCALE ? scale : <EmptyValue />;
       },
       enableSorting: true,
       enableHiding: true,

@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { cn } from "@/lib/utils";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
 
 interface InlineCurrencyCellProps {
   /** What the cell holds, such as "Price", for its accessible name. */
@@ -93,7 +94,7 @@ export function InlineCurrencyCell({
       aria-label={`${zeroAsEmpty && displayValue === 0 ? "Empty" : formatCurrencyFromMinorUnits(displayValue, currency, locale)}, edit ${label}`}
     >
       {zeroAsEmpty && displayValue === 0 ? (
-        <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+        <EmptyValue />
       ) : (
         formatCurrencyFromMinorUnits(displayValue, currency, locale)
       )}

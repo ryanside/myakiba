@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
 
 interface InlineTextCellProps {
   label: string;
@@ -100,11 +101,7 @@ export function InlineTextCell({
             previewClassName,
           )}
         >
-          {displayValue ? (
-            <span className="truncate">{displayValue}</span>
-          ) : (
-            <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-          )}
+          {displayValue ? <span className="truncate">{displayValue}</span> : <EmptyValue />}
         </Button>
       )}
     </div>
