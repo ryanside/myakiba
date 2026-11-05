@@ -58,7 +58,6 @@ function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
     <div
       className={cn(
         "relative grow overflow-hidden rounded-(--frame-radius) bg-(--frame-panel-bg) p-(--frame-panel-p)",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-radius)-1px)] before:shadow-black/5 dark:before:shadow-white/5",
         className,
       )}
       data-slot="frame-panel"
