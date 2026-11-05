@@ -76,6 +76,13 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
         cell: ({ getValue }) => {
           const value = getValue();
           const shown = (formatCell ? formatCell(column, value) : value) ?? "—";
+          if (!spec.number) {
+            return (
+              <span className="block truncate" title={String(shown)}>
+                {shown}
+              </span>
+            );
+          }
           if (column !== barColumn || barMax <= 0) return shown;
 
           return (
