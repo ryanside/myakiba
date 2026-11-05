@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { usePendingValue } from "@/hooks/use-pending-value";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { cn } from "@/lib/utils";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
@@ -19,49 +18,30 @@ export function InlineCountCell({
   onSubmit,
   disabled = false,
 }: InlineCountCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingValue, setEditingValue] = useState(1);
-  const [displayValue, submit] = usePendingValue(value, onSubmit);
+  const edit = useInlineEdit({
+    label,
+    value,
+    onSubmit,
+    disabled,
+    format: String,
+    toDraft: (count) => count,
+    parse: (draft) => draft,
+  });
 
-  const handleEdit = useCallback(() => {
-    setEditingValue(displayValue);
-    setIsEditing(true);
-  }, [displayValue]);
-
-  const handleCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    setIsEditing(false);
-    if (editingValue === displayValue) return;
-    await submit(editingValue);
-  }, [displayValue, editingValue, submit]);
-
-  if (isEditing) {
+  if (edit.draft !== null) {
     return (
       <div className="grid">
         <Input
+          {...edit.editorHandlers}
           id="count"
           name="count"
           aria-label={label}
           autoFocus
           className={CELL_EDITOR_CLASS_NAME}
-          value={editingValue}
-          // Leaving the cell keeps what was typed, as the Shop cell does.
-          onBlur={() => {
-            if (!disabled) void handleSubmit();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleSubmit();
-            } else if (e.key === "Escape") {
-              handleCancel();
-            }
-          }}
+          value={edit.draft}
           type="number"
           min="1"
-          onChange={(e) => setEditingValue(Number.parseInt(e.target.value, 10) || 1)}
+          onChange={(e) => edit.setDraft(Number.parseInt(e.target.value, 10) || 1)}
           placeholder="1"
         />
       </div>
@@ -70,13 +50,13 @@ export function InlineCountCell({
 
   return (
     <Button
-      onClick={handleEdit}
+      onClick={edit.handleOpen}
       className={cn(CELL_TRIGGER_CLASS_NAME, "h-8 justify-start text-foreground")}
       variant="ghost"
       disabled={disabled}
-      aria-label={`${displayValue}, edit ${label}`}
+      aria-label={edit.triggerLabel}
     >
-      {displayValue}
+      {edit.shownText}
     </Button>
   );
 }
