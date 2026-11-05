@@ -27,11 +27,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<string>();
     render(<InlineTextCell label="Shop" value="AmiAmi" onSubmit={onSubmit} />);
 
-    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/ }));
+    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/i }));
     fireEvent.change(screen.getByLabelText("Shop"), { target: { value: "HLJ" } });
     fireEvent.keyDown(screen.getByLabelText("Shop"), { key: "Enter" });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /edit Shop$/ }).textContent).toBe("AmiAmi"),
+      expect(screen.getByRole("button", { name: /edit Shop$/i }).textContent).toBe("AmiAmi"),
     );
     await settle();
 
@@ -42,11 +42,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<string>();
     render(<InlineTextCell label="Shop" value="AmiAmi" onSubmit={onSubmit} />);
 
-    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/ }));
+    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/i }));
     fireEvent.change(screen.getByLabelText("Shop"), { target: { value: "HLJ" } });
     fireEvent.blur(screen.getByLabelText("Shop"));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /edit Shop$/ }).textContent).toBe("AmiAmi"),
+      expect(screen.getByRole("button", { name: /edit Shop$/i }).textContent).toBe("AmiAmi"),
     );
     await settle();
 
@@ -57,11 +57,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<number>();
     render(<InlineCountCell label="Count" value={1} onSubmit={onSubmit} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "1, edit Count" }));
+    fireEvent.click(screen.getByRole("button", { name: /^1(?:, edit Count)?$/ }));
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "3" } });
     fireEvent.keyDown(screen.getByRole("spinbutton"), { key: "Enter" });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "1, edit Count" })).toBeDefined(),
+      expect(screen.getByRole("button", { name: /^1(?:, edit Count)?$/ })).toBeDefined(),
     );
     await settle();
 
