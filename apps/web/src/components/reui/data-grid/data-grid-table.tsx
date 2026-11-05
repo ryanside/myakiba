@@ -5,6 +5,7 @@ import { flexRender } from "@tanstack/react-table";
 import type { Cell, Column, Header, HeaderGroup, Row } from "@tanstack/react-table";
 import { cva } from "class-variance-authority";
 
+import { ariaSort } from "@/components/data-table/aria-sort";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -577,9 +578,3 @@ export {
   DataGridTableRowSelectAll,
   DataGridTableRowSpacer,
 };
-
-function ariaSort(sorted: false | "asc" | "desc"): "ascending" | "descending" | undefined {
-  if (sorted === "asc") return "ascending";
-  if (sorted === "desc") return "descending";
-  return undefined;
-}
