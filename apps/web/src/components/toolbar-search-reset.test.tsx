@@ -80,6 +80,30 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect(queryResetButton()).toBeNull();
   });
 
+  test("shows as soon as text is typed before the search commits", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+
+    expect(router.state.location.search.search).toBeUndefined();
+    expect(queryResetButton()).not.toBeNull();
+  });
+
+  test("hides when an outside change clears a search typed and committed here", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+    await user.tab();
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect({
+      search: router.state.location.search.search,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+    }).toEqual({ search: undefined, shown: "", resetShown: false });
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
     const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
       `${path}?search=Ram`,
