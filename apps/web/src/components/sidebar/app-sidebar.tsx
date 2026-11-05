@@ -3,7 +3,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -101,12 +100,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <nav aria-label="Main">
           {NAV_GROUPS.map((group) => (
             <SidebarGroup key={group.label} className="px-0 py-2">
-              <SidebarGroupLabel
+              <div
                 id={`nav-group-${group.label.toLowerCase()}`}
-                className="eyebrow h-6 px-2 text-[0.6875rem] tracking-tight text-muted-foreground/70"
+                className="group-label flex h-6 shrink-0 items-center px-2"
               >
                 {group.label}
-              </SidebarGroupLabel>
+              </div>
               <SidebarMenu
                 className="gap-0"
                 aria-labelledby={`nav-group-${group.label.toLowerCase()}`}

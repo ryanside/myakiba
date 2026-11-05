@@ -53,10 +53,7 @@ export function ListHeading({
     <div id={id} className={cn(LIST_HEADING_CLASS_NAME, "animate-data-in")}>
       <h1
         ref={titleRef}
-        className={cn(
-          "display font-heading text-[1.375rem] leading-8 font-medium",
-          expanded ? "text-pretty [overflow-wrap:anywhere]" : "truncate",
-        )}
+        className={cn("page-title", expanded ? "text-pretty [overflow-wrap:anywhere]" : "truncate")}
       >
         {title}
       </h1>

@@ -40,10 +40,7 @@ function NavGroup({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <p
-          id={labelId}
-          className="eyebrow flex h-6 items-center px-3 text-[0.6875rem] tracking-tight text-muted-foreground/70 md:px-2"
-        >
+        <p id={labelId} className="group-label flex h-6 items-center px-3 md:px-2">
           {label}
         </p>
       ) : null}

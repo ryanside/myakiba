@@ -19,9 +19,7 @@ export function PageHeader({
     <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-3">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         <div className="flex items-center gap-1.5">
-          <h1 className="min-w-0 display font-heading text-[1.375rem] leading-8 font-medium break-words">
-            {title}
-          </h1>
+          <h1 className="min-w-0 page-title break-words">{title}</h1>
           {titleAccessory}
         </div>
         {meta === undefined ? null : (
