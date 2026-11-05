@@ -1,35 +1,14 @@
-import { createContext, useState } from "react";
+import { createContext } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowRight01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  FolderAddIcon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
+import { ArrowRight01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
 import { SelectCell } from "../cells/select-cell";
@@ -49,9 +28,8 @@ import type {
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
-import { ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
-import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -60,105 +38,6 @@ export const OrderItemSelectionContext = createContext<{
   selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
-
-function OrderActionsCell({
-  order,
-  isPending,
-  onEditOrder,
-  onDeleteOrders,
-  currency,
-}: Pick<OrdersColumnsParams, "onEditOrder" | "onDeleteOrders" | "currency"> & {
-  readonly order: Order;
-  readonly isPending: boolean;
-}): React.JSX.Element {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [addToListsOpen, setAddToListsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  return (
-    <>
-      <div className="flex items-center justify-end gap-0.5">
-        <OrderForm
-          renderTrigger={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              disabled={isPending}
-              className={ROW_ACTION_CLASS_NAME}
-            >
-              <HugeiconsIcon icon={Edit03Icon} />
-              <span className="sr-only">Edit order</span>
-            </Button>
-          }
-          type="edit-order"
-          orderData={order}
-          callbackFn={onEditOrder}
-          currency={currency}
-        />
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger
-            render={
-              <Button variant="ghost" size="icon-sm" disabled={isPending}>
-                <span className="sr-only">Open menu</span>
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn(isPending && "animate-spin")}
-                />
-              </Button>
-            }
-          />
-          {menuOpen ? (
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLinkItem
-                  render={<Link to="/orders/$id" params={{ id: order.orderId }} />}
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
-                  View details
-                </DropdownMenuLinkItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setAddToListsOpen(true);
-                  }}
-                >
-                  <HugeiconsIcon icon={FolderAddIcon} />
-                  Add to List
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setDeleteOpen(true);
-                  }}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  Delete order
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          ) : null}
-        </DropdownMenu>
-      </div>
-      <AddToListsDialog
-        open={addToListsOpen}
-        onOpenChange={setAddToListsOpen}
-        targets={[{ type: "order", id: order.orderId }]}
-        targetTitle={order.title}
-      />
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete order?"
-        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
-      />
-    </>
-  );
-}
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
@@ -595,21 +474,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Items" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const { itemCount } = row.original;
-        return (
-          <Button
-            type="button"
-            variant="ghost"
-            className="pr-0 tabular-nums"
-            aria-expanded={row.getIsExpanded()}
-            onClick={() => row.getToggleExpandedHandler()()}
-          >
-            {itemCount}
-            <span className="sr-only"> items</span>
-          </Button>
-        );
-      },
+      cell: ({ row }) => <OrderItemCountCell row={row} />,
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
