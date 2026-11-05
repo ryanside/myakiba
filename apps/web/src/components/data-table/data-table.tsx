@@ -8,6 +8,11 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
 
+export const NUMBER_COLUMN_META = {
+  headerClassName: "text-right",
+  cellClassName: "text-right tabular-nums",
+} as const;
+
 type DataTableVariant = "default" | "sized";
 
 interface DataTableProps<TData extends RowData> {
