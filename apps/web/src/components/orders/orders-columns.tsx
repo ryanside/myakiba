@@ -25,7 +25,7 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import type { ColumnDef, Row } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -48,6 +48,7 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
@@ -59,28 +60,6 @@ export const OrderItemSelectionContext = createContext<{
   selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
-
-function ExpandButton({ row }: { readonly row: Row<Order> }) {
-  const isExpanded = row.getIsExpanded();
-
-  return row.getCanExpand() ? (
-    <Button
-      onClick={row.getToggleExpandedHandler()}
-      size="icon-sm"
-      variant="ghost"
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={ArrowRight01Icon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
-      />
-    </Button>
-  ) : null;
-}
 
 function OrderActionsCell({
   order,
@@ -245,7 +224,7 @@ export function createOrdersColumns({
     {
       id: "expand",
       header: () => null,
-      cell: ({ row }) => <ExpandButton row={row} />,
+      cell: ({ row }) => <RowExpandButton row={row} />,
       size: 24,
       enableSorting: false,
       enableHiding: false,

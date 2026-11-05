@@ -2,10 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
-import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
+import type { ColumnDef, ExpandedState } from "@tanstack/react-table";
 import type {
   ExpenseFilters,
   ExpenseScope,
@@ -15,11 +13,11 @@ import type {
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { DataTable, DataTableEmpty, NUMBER_COLUMN_META } from "@/components/data-table/data-table";
+import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -217,7 +215,12 @@ function getColumns({
   formatCurrency: (value: number) => string;
 }): ColumnDef<ExpenseShopRow>[] {
   const columns: ColumnDef<ExpenseShopRow>[] = [
-    { id: EXPAND_COLUMN_ID, header: "", cell: ({ row }) => <ExpandButton row={row} />, size: 32 },
+    {
+      id: EXPAND_COLUMN_ID,
+      header: "",
+      cell: ({ row }) => <RowExpandButton row={row} />,
+      size: 32,
+    },
     { id: ROW_NUMBER_COLUMN_ID, header: "#", cell: ({ row }) => offset + row.index + 1, size: 40 },
     { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
     {
@@ -310,28 +313,4 @@ function getColumns({
   }
 
   return columns;
-}
-
-function ExpandButton({ row }: { readonly row: Row<ExpenseShopRow> }): ReactNode {
-  const isExpanded = row.getIsExpanded();
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={(event) => {
-        event.stopPropagation();
-        row.toggleExpanded();
-      }}
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={ArrowRight01Icon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
-      />
-    </Button>
-  );
 }
