@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import type { FocusEvent, InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FocusEvent, InputHTMLAttributes, Ref } from "react";
+import { composeRefs } from "@/lib/compose-refs";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
 
@@ -8,15 +9,17 @@ export function DebouncedInput({
   onChange,
   debounce = 200,
   isCommandInput = false,
+  ref,
   ...props
 }: {
   value: string | number;
   onChange: (value: string | number) => void;
   debounce?: number;
   isCommandInput?: boolean;
+  ref?: Ref<HTMLInputElement>;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const composedRef = useMemo(() => composeRefs(inputRef, ref), [ref]);
   // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults (until 2027-04-16, approved by root, pending operator review)
   const [defaultValue] = useState(initialValue);
   const onChangeRef = useRef(onChange);
@@ -29,7 +32,7 @@ export function DebouncedInput({
   }, [onChange]);
 
   useEffect(() => {
-    const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
+    const inputElement = inputRef.current;
     const nextValue = String(initialValue);
 
     if (!inputElement) return;
@@ -50,7 +53,7 @@ export function DebouncedInput({
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
-  }, [initialValue, isCommandInput]);
+  }, [initialValue]);
 
   useEffect(() => {
     return () => {
@@ -104,7 +107,7 @@ export function DebouncedInput({
     return (
       <CommandInput
         {...props}
-        ref={commandInputRef}
+        ref={composedRef}
         defaultValue={String(defaultValue)}
         onBlur={handleBlur}
         onValueChange={handleValueChange}
@@ -115,7 +118,7 @@ export function DebouncedInput({
   return (
     <Input
       {...props}
-      ref={inputRef}
+      ref={composedRef}
       defaultValue={defaultValue}
       onBlur={handleBlur}
       onChange={(e) => {

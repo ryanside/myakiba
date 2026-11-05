@@ -1,6 +1,6 @@
-import { useId, useState } from "react";
 import { FilterIcon, FilterResetIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useToolbarSearch } from "@/hooks/use-toolbar-search";
 import { SearchPill } from "@/components/search-pill";
 import FiltersForm from "@/components/collection/filters-form";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,9 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 
 export function CollectionToolbar(): React.JSX.Element {
   const { filters, setFilters, resetFilters } = useCollectionFilters();
-  const [searchResetKey, setSearchResetKey] = useState(0);
-  // Reset shows only when there is something to reset: an applied filter or sort, or typed text.
-  const [hasSearchDraft, setHasSearchDraft] = useState(false);
-  const searchId = useId();
+  const { inputRef, searchResetKey, hasSearchDraft, onSearchInput, resetSearch } = useToolbarSearch(
+    { search: filters.search, resetFilters },
+  );
   const { currency } = useUserPreferences();
   const currentSort =
     filters.sort && filters.order
@@ -68,8 +67,8 @@ export function CollectionToolbar(): React.JSX.Element {
         onChange={(value) => setFilters({ search: value.toString() || undefined })}
         placeholder="Search"
         aria-label="Search Collection"
-        id={searchId}
-        onInput={(event) => setHasSearchDraft(event.currentTarget.value !== "")}
+        ref={inputRef}
+        onInput={onSearchInput}
         className="max-w-64"
       />
       <FiltersForm
@@ -89,20 +88,7 @@ export function CollectionToolbar(): React.JSX.Element {
         onSortChange={handleSortChange}
       />
       {hasActiveFiltersOrSorting(filters) || hasSearchDraft ? (
-        <Button
-          onClick={async () => {
-            setSearchResetKey((key) => key + 1);
-            setHasSearchDraft(false);
-            await resetFilters();
-            // The button leaves with the filters, so focus returns to the search it cleared. It
-            // waits for the reset: a focused search ignores outside changes to its value.
-            requestAnimationFrame(() =>
-              document.querySelector<HTMLInputElement>(`[id="${searchId}"]`)?.focus(),
-            );
-          }}
-          variant="ghost"
-          className="text-muted-foreground"
-        >
+        <Button onClick={resetSearch} variant="ghost" className="text-muted-foreground">
           <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
           <span className="max-md:sr-only">Reset Filters</span>
         </Button>
