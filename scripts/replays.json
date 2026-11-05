@@ -474,7 +474,7 @@
     },
     {
       "fix": "9597fbf5",
-      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101\u20135 of 5 on a page past the end",
+      "bug": "the analytics section page and the expenses shop table showed an impossible range such as Showing 101–5 of 5 on a page past the end",
       "test": "apps/web/src/components/data-table/data-table-pagination.test.tsx",
       "fixed": ["pageRange > names the rows on a page, and no rows on a page past the end"]
     },
@@ -838,6 +838,16 @@
       "bug": "Change password reopened within 1.5 s of a change showed the previous change's check",
       "test": "apps/web/src/components/settings/account.test.tsx",
       "fixed": ["Change password reopened right after a change starts idle"]
+    },
+    {
+      "fix": "06c0e9bc",
+      "bug": "an order with one item read \"1 items\" because the API sent its item count as a string",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "each orders route answers as before > list",
+        "each orders route answers as before > get",
+        "each orders route answers as before > an order's item count is a number"
+      ]
     }
   ],
   "lint": [
