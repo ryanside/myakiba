@@ -41,13 +41,13 @@ interface BreakdownChartProps<TData extends BreakdownChartData> {
 
 const CHART_VARIANTS = {
   default: {
-    legendClassName: "animate-data-in flex flex-col gap-0.5",
+    legendClassName: "flex flex-col gap-0.5",
     rowClassName: "flex cursor-default items-center gap-2.5 py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col gap-0.5",
   },
   scrollable: {
     legendClassName:
-      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto pb-4 scroll-fade-b",
+      "-mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto pb-4 scroll-fade-b",
     rowClassName:
       "flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col",
@@ -151,40 +151,42 @@ export function BreakdownChart<TData extends BreakdownChartData>({
         </div>
       </TooltipProvider>
 
-      <div className={variantStyles.legendClassName}>
-        {items.map((item) => {
-          const isHovered = hoveredItemId === item.id;
-          const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
-          const state: BreakdownChartRenderState<TData> = {
-            item,
-            isHovered,
-            isOtherHovered,
-            rowProps: {
-              className: variantStyles.rowClassName,
-              style: { opacity: isOtherHovered ? 0.4 : 1 },
-              onMouseEnter: () => setHoveredItemId(item.id),
-              onMouseLeave: () => setHoveredItemId(null),
-            },
-            markerProps: {
-              className: "h-4 shrink-0 rounded-full transition-[width] duration-200",
-              style: {
-                backgroundColor: item.color,
-                width: isHovered ? "0.5rem" : "0.375rem",
+      <div className="animate-data-in">
+        <div className={variantStyles.legendClassName}>
+          {items.map((item) => {
+            const isHovered = hoveredItemId === item.id;
+            const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
+            const state: BreakdownChartRenderState<TData> = {
+              item,
+              isHovered,
+              isOtherHovered,
+              rowProps: {
+                className: variantStyles.rowClassName,
+                style: { opacity: isOtherHovered ? 0.4 : 1 },
+                onMouseEnter: () => setHoveredItemId(item.id),
+                onMouseLeave: () => setHoveredItemId(null),
               },
-            },
-          };
+              markerProps: {
+                className: "h-4 shrink-0 rounded-full transition-[width] duration-200",
+                style: {
+                  backgroundColor: item.color,
+                  width: isHovered ? "0.5rem" : "0.375rem",
+                },
+              },
+            };
 
-          if (children) {
-            return <Fragment key={item.id}>{children(state)}</Fragment>;
-          }
+            if (children) {
+              return <Fragment key={item.id}>{children(state)}</Fragment>;
+            }
 
-          return (
-            <div key={item.id} {...state.rowProps}>
-              <div {...state.markerProps} />
-              <DefaultLegendItem item={item} />
-            </div>
-          );
-        })}
+            return (
+              <div key={item.id} {...state.rowProps}>
+                <div {...state.markerProps} />
+                <DefaultLegendItem item={item} />
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -145,10 +145,12 @@ function ReleaseCalendar({
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="animate-data-in -mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
-                {grouped.map(([dateKey, items]) => (
-                  <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
-                ))}
+              <div className="animate-data-in">
+                <div className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
+                  {grouped.map(([dateKey, items]) => (
+                    <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+                  ))}
+                </div>
               </div>
             );
           }
