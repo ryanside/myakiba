@@ -195,7 +195,6 @@ export function OrderItemSubDataGrid({
         tableLayout={{
           dense: true,
           rowBorder: true,
-          headerBackground: true,
           headerBorder: true,
           columnsPinnable: true,
           columnsResizable: true,

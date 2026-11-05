@@ -61,9 +61,14 @@ export interface DataGridProps<TData extends object> {
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;
+    /**
+     * Rules under an expanded row's cells. When off, a spacer row sits between header and body.
+     * Body rows never get a rule: rows are separated by space and the hover tint.
+     */
     rowBorder?: boolean;
     rowRounded?: boolean;
     stripped?: boolean;
+    /** Ignored. The header row has no background. Scraper grids still pass it. */
     headerBackground?: boolean;
     headerBorder?: boolean;
     headerSticky?: boolean;
@@ -128,7 +133,6 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       rowRounded: false,
       stripped: false,
       headerSticky: false,
-      headerBackground: true,
       headerBorder: true,
       width: "fixed",
       columnsVisibility: false,

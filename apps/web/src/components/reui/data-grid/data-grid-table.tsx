@@ -102,11 +102,8 @@ function DataGridTableHeadRow<TData>({
     <tr
       key={headerGroup.id}
       className={cn(
-        "bg-transparent",
         props.tableLayout?.headerBorder && "[&>th]:border-b [&>th]:border-border/70",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
-        props.tableLayout?.stripped && "bg-transparent",
-        props.tableLayout?.headerBackground === false && "bg-transparent",
         props.tableClassNames?.headerRow,
       )}
     >
@@ -213,10 +210,6 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
     <tr
       className={cn(
         props.onRowClick && "cursor-pointer",
-        !props.tableLayout?.stripped &&
-          props.tableLayout?.rowBorder &&
-          // Rows are separated by space and the hover tint, not rules.
-          "",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",
@@ -300,10 +293,6 @@ function DataGridTableBodyRow<TData>({
         ROW_HOVER_CLASS_NAME,
         isInteractive &&
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-        !props.tableLayout?.stripped &&
-          props.tableLayout?.rowBorder &&
-          // Rows are separated by space and the hover tint, not rules.
-          "",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",
