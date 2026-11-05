@@ -1,7 +1,7 @@
 import { useCollectionFilters } from "@/hooks/use-collection";
 import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { Category } from "@myakiba/contracts/shared/types";
-import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import { QuickFilterChips } from "../quick-filter-chips";
 
 type QuickFilterGroup = {
   readonly label: string;
@@ -12,10 +12,9 @@ const QUICK_FILTER_GROUPS: readonly QuickFilterGroup[] = Object.entries(ITEM_CAT
   ([label, categories]) => ({ label, categories }),
 );
 
-const GROUP_BY_LABEL = new Map(QUICK_FILTER_GROUPS.map((g) => [g.label, g] as const));
+const GROUP_LABELS = QUICK_FILTER_GROUPS.map((g) => g.label);
 
-// "All" is pressed while no filter is on; pressing it clears the filters.
-const ALL = "All";
+const GROUP_BY_LABEL = new Map(QUICK_FILTER_GROUPS.map((g) => [g.label, g] as const));
 
 export function CollectionQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useCollectionFilters();
@@ -25,10 +24,7 @@ export function CollectionQuickFilters(): React.ReactElement {
     g.categories.every((cat) => activeCategories.has(cat)),
   ).map((g) => g.label);
 
-  const isAll = (filters.category?.length ?? 0) === 0;
-
-  const handleValueChange = (values: string[]): void => {
-    const labels = values.includes(ALL) && !isAll ? [] : values;
+  const handleChange = (labels: string[]): void => {
     const categories: Category[] = labels.flatMap((label) => {
       const group = GROUP_BY_LABEL.get(label);
       return group ? [...group.categories] : [];
@@ -41,21 +37,12 @@ export function CollectionQuickFilters(): React.ReactElement {
   };
 
   return (
-    <ToggleGroup
-      value={isAll ? [ALL] : activeGroupLabels}
-      onValueChange={handleValueChange}
-      multiple
-      variant="pill"
-      size="sm"
-      spacing={1.5}
-      aria-label="Quick filters"
-    >
-      <ToggleGroupItem value={ALL}>{ALL}</ToggleGroupItem>
-      {QUICK_FILTER_GROUPS.map((group) => (
-        <ToggleGroupItem key={group.label} value={group.label}>
-          {group.label}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <QuickFilterChips
+      options={GROUP_LABELS}
+      selected={activeGroupLabels}
+      // A category picked in the filter dialog is a filter even when it fills no whole group.
+      isAll={(filters.category?.length ?? 0) === 0}
+      onChange={handleChange}
+    />
   );
 }
