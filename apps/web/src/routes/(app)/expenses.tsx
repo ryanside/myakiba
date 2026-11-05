@@ -1,7 +1,5 @@
 import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
-import { InformationCircleIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
@@ -15,9 +13,9 @@ import OrdersTab from "@/components/expenses/orders/orders-tab";
 import type { ShippingChart } from "@/components/expenses/shipping/shipping-tab";
 import ShippingTab from "@/components/expenses/shipping/shipping-tab";
 import { ExpensesFilters } from "@/components/expenses/filters";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { PageHeader } from "@/components/page-header";
+import { LoadError } from "@/components/page-states";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const expensesSearchSchema = expenseFiltersSchema.extend({
@@ -91,37 +89,12 @@ function RouteComponent(): ReactNode {
   );
 
   return (
-    <div className="mx-auto flex max-w-[88rem] flex-col gap-4" aria-busy={activeQuery.isPending}>
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-8" aria-busy={activeQuery.isPending}>
       <output className="sr-only" aria-live="polite">
         {activeQuery.isPending ? `Loading ${TAB_LABELS[tab]} expenses` : ""}
       </output>
-      <div className="mb-2 flex items-center gap-2">
-        <h1 className="font-heading text-2xl font-medium tracking-tight">Expenses</h1>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="About expense accounting"
-                className="mt-0.75"
-              >
-                <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
-              </Button>
-            }
-          />
-          <TooltipContent side="right" sideOffset={12}>
-            <div className="flex max-w-sm flex-col gap-2 text-pretty">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-medium">dev note:</h3>
-                <p className="text-pretty">This is an early implementation of the expense page.</p>
-              </div>
-              <p>Owned order items also appear in Collection because they belong to both views.</p>
-              <p>Undated expenses do not appear in charts.</p>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+
+      <PageHeader title="Expenses" />
 
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -142,11 +115,10 @@ function RouteComponent(): ReactNode {
         </div>
 
         {activeQuery.error ? (
-          <div className="flex h-64 items-center justify-center">
-            <p className="animate-data-in text-lg font-medium text-destructive">
-              Error: {activeQuery.error.message}
-            </p>
-          </div>
+          <LoadError
+            title={`Couldn't load ${TAB_LABELS[tab]} expenses`}
+            message="The server didn't answer."
+          />
         ) : (
           <>
             <TabsContent value="collection">

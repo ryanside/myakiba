@@ -52,7 +52,11 @@ export function Breakdown({
     [currency, data?.breakdown, locale],
   );
   return (
-    <ExpensePanel title="Breakdown" className="min-h-80" panelClassName="flex flex-col gap-3">
+    <ExpensePanel
+      title="Spend by cost type"
+      className="min-h-80"
+      panelClassName="flex flex-col gap-3"
+    >
       <BreakdownChart
         data={entries}
         isLoading={isLoading}

@@ -86,7 +86,7 @@ export function SortCombobox({
       className="justify-between"
     >
       {getSortButtonIcon()}
-      <span className="hidden md:block">{currentColumnName || "Sort By"}</span>
+      <span className="max-md:sr-only">{currentColumnName || "Sort"}</span>
     </Button>
   );
 

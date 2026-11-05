@@ -26,7 +26,7 @@ export function ListHeading({
       setTruncated(lines.some((line) => line.scrollWidth > line.clientWidth));
     };
     const measureAfterFonts = async (): Promise<void> => {
-      // Instrument Sans swaps in after first paint and changes how much of a line fits.
+      // Inter swaps in after first paint and changes how much of a line fits.
       await document.fonts.ready;
       measure();
     };
@@ -54,7 +54,7 @@ export function ListHeading({
       <h1
         ref={titleRef}
         className={cn(
-          "font-heading text-2xl font-medium tracking-tight",
+          "display font-heading text-[1.375rem] leading-8 font-medium",
           expanded ? "text-pretty [overflow-wrap:anywhere]" : "truncate",
         )}
       >

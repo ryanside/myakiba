@@ -42,7 +42,9 @@ export function ViewToggle<const TModes extends readonly ViewMode[]>({
           onValueChange(newValue[0] as TModes[number]);
         }
       }}
-      variant="outline"
+      variant="segmented"
+      size="sm"
+      spacing={0.5}
     >
       {modes.map((mode) => {
         const option = VIEW_OPTIONS[mode];

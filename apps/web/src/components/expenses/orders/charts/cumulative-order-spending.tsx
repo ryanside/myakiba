@@ -11,6 +11,7 @@ import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
   EXPENSE_CHART_DOT_MAX_POINTS,
+  formatAxisCurrency,
 } from "@/components/expenses/chart-utils";
 
 type SpendKey = "total" | "orderItems" | "fees";
@@ -57,7 +58,7 @@ export function CumulativeOrderSpending({
   };
   return (
     <ChartSection
-      title="Cumulative Order Spending"
+      title="Order spending"
       selector={selector}
       legend={<ChartSeriesLegend items={legend} visibleKeys={visibleKeys} onToggle={toggle} />}
       isEmpty={!isLoading && data.length === 0}
@@ -74,7 +75,7 @@ export function CumulativeOrderSpending({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
+          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
         />
         {isLoading ? null : (
           <ChartTooltip

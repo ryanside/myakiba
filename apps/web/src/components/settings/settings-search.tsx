@@ -71,7 +71,7 @@ export function SettingsSearchField({ query }: { readonly query: string }) {
 
   return (
     <div role="search" className="flex flex-col">
-      <InputGroup className="h-9 md:h-8">
+      <InputGroup className="h-8 rounded-full border-transparent bg-muted dark:bg-muted">
         <InputGroupAddon>
           <HugeiconsIcon icon={Search01Icon} aria-hidden="true" />
         </InputGroupAddon>
@@ -161,7 +161,7 @@ export function SettingsSearchResults({ query }: { readonly query: string }) {
                 </span>
                 <HugeiconsIcon
                   icon={ArrowRight01Icon}
-                  className="size-4 shrink-0 text-muted-foreground/60 group-hover/result:text-foreground"
+                  className="size-4 shrink-0 text-muted-foreground group-hover/result:text-foreground"
                   aria-hidden="true"
                 />
               </Link>

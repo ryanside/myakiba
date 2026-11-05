@@ -396,18 +396,21 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   );
 }
 
-type Surface = "card" | "gallery" | "row";
+type Surface = "card" | "gallery" | "row" | "panel";
 
 // What hover may change on each surface type: the element it lands on and the properties it
 // changes there. Nothing else, so hover never moves a shadow, ring or transform. A card or a
 // gallery tile strengthens the edge it already has, and a row, which has none, is tinted.
 const LANGUAGE = {
-  card: { on: "tile", changes: [{ target: "self", property: "border-color" }] },
+  // Cards have no frame, so like gallery tiles they hover on the photo's edge.
+  card: { on: "image", changes: [{ target: "::after", property: "border-color" }] },
   gallery: {
     on: "image",
     changes: [{ target: "::after", property: "border-color" }],
   },
   row: { on: "tile", changes: [{ target: "self", property: "background-color" }] },
+  // A kanban card keeps its frame on the tinted column, so hover strengthens that edge.
+  panel: { on: "tile", changes: [{ target: "self", property: "border-color" }] },
 } as const satisfies Record<
   Surface,
   { readonly on: "tile" | "image"; readonly changes: readonly Change[] }
@@ -440,7 +443,7 @@ const SCREENS: readonly {
   },
   {
     name: "Dashboard order card",
-    surface: "card",
+    surface: "panel",
     ui: () => (
       <OrderKanban
         orders={[kanbanOrder]}
@@ -730,7 +733,7 @@ test.each(SCREENS_WITH_BARS)("$name control bars take no backdrop filter", async
   }
 });
 
-test("Settings theme cards take a card's hover, apart from their selected ring", async () => {
+test("Settings theme cards take a card's hover and show the choice in their radio dot", async () => {
   const wishlistGrid = SCREENS.find((screen) => screen.name === "Wishlist grid");
   if (!wishlistGrid) throw new Error("no Wishlist grid screen");
   const [card] = await surfaces(wishlistGrid);
@@ -742,9 +745,13 @@ test("Settings theme cards take a card's hover, apart from their selected ring",
   const themes = [...container.querySelectorAll('[role="radio"]')];
   expect(themes).toHaveLength(3);
   for (const theme of themes) {
-    expect(hoverClasses(theme)).toEqual(cardHover);
-    expect(motionClasses(theme)).toEqual([]);
-    expect(theme.classList).toContain("data-checked:ring-2");
+    const preview = theme.firstElementChild;
+    if (!preview) throw new Error("theme card has no preview");
+    expect(hoverClasses(preview)).toEqual(cardHover);
+    expect(motionClasses(preview)).toEqual([]);
+    expect([...theme.classList].some((name) => name.startsWith("data-checked:ring"))).toBe(false);
+    expect(theme.classList).toContain("group/item");
+    expect(theme.querySelector('[class~="group-data-checked/item:bg-primary"]')).not.toBeNull();
   }
 });
 

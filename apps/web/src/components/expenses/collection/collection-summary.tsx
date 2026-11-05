@@ -23,14 +23,14 @@ export function CollectionSummary({
   ];
 
   return (
-    <ExpensePanel title="Summary" className="h-full lg:h-[400px]">
+    <ExpensePanel title="Summary" className="h-full lg:h-[340px]">
       <div className="flex h-full flex-col gap-8" aria-busy={isLoading}>
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-muted-foreground">Collection Spend</p>
+          <p className="eyebrow">Collection Spend</p>
           {isLoading ? (
             <Skeleton className="my-1 h-7 w-40" />
           ) : (
-            <p className="animate-data-in text-3xl font-medium tabular-nums">
+            <p className="display animate-data-in text-3xl font-medium tabular-nums">
               {formatCurrencyFromMinorUnits(data?.summary.spend ?? 0, currency, locale)}
             </p>
           )}
@@ -56,9 +56,11 @@ export function CollectionSummary({
               {isLoading ? (
                 <Skeleton className="h-3 w-24" />
               ) : (
-                <p className="animate-data-in text-xs text-muted-foreground">
-                  {row.value?.count ?? 0} {row.value?.count === 1 ? "item" : "items"},{" "}
-                  {(row.value?.percentage ?? 0).toFixed(1)}%
+                <p className="animate-data-in flex justify-between gap-4 text-xs text-muted-foreground tabular-nums">
+                  <span>
+                    {row.value?.count ?? 0} {row.value?.count === 1 ? "item" : "items"}
+                  </span>
+                  <span>{(row.value?.percentage ?? 0).toFixed(1)}% of spend</span>
                 </p>
               )}
             </div>

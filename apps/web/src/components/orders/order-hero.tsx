@@ -1,14 +1,27 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete02Icon, Edit03Icon, FolderAddIcon, PackageIcon } from "@hugeicons/core-free-icons";
+import {
+  Delete02Icon,
+  Edit03Icon,
+  FolderAddIcon,
+  MoreHorizontalIcon,
+  PackageIcon,
+} from "@hugeicons/core-free-icons";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
-import { ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { OrderForm } from "@/components/orders/order-form";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { getStatusVariant } from "@/lib/orders";
+import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { cn } from "@/lib/utils";
 import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,13 +60,12 @@ export function OrderHero({
             </div>
           </div>
           <div className="hidden items-center gap-2 sm:flex">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="outline" disabled>
               <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" />
               Edit
             </Button>
-            <Button variant="destructive" size="sm" disabled>
-              <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
-              Delete
+            <Button variant="outline" size="icon" disabled aria-label="More order actions">
+              <HugeiconsIcon icon={MoreHorizontalIcon} />
             </Button>
           </div>
         </div>
@@ -62,6 +74,26 @@ export function OrderHero({
   }
 
   if (!order) return null;
+
+  return (
+    <LoadedOrderHero order={order} {...{ currency, dateFormat, onEditOrder, onDeleteOrder }} />
+  );
+}
+
+function LoadedOrderHero({
+  order,
+  currency,
+  dateFormat,
+  onEditOrder,
+  onDeleteOrder,
+}: {
+  readonly order: Order;
+  readonly currency: Currency;
+  readonly dateFormat: DateFormat;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
+  readonly onDeleteOrder: (orderId: string) => Promise<void>;
+}): ReactNode {
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-3">
@@ -76,22 +108,24 @@ export function OrderHero({
           />
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="animate-data-in text-2xl font-medium tracking-tight">{order.title}</h1>
-              <ThemedBadge
-                variant={getStatusVariant(order.status)}
-                size="lg"
-                className="animate-data-in"
-              >
+              <h1 className="animate-data-in display text-2xl font-medium">{order.title}</h1>
+              <span className="animate-data-in inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <span
+                  aria-hidden
+                  className={cn("size-1.5 rounded-full", ORDER_STATUS_COLORS[order.status])}
+                />
                 {order.status}
-              </ThemedBadge>
+              </span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {order.shop ? (
                 <span className="animate-data-in inline-block">{order.shop}</span>
               ) : null}
-              <span className="animate-data-in inline-block">{order.shippingMethod}</span>
+              {order.shippingMethod === "n/a" ? null : (
+                <span className="animate-data-in inline-block">{order.shippingMethod}</span>
+              )}
               <span className="animate-data-in inline-block">
-                {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+                {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
               </span>
               {order.releaseDate ? (
                 <span className="animate-data-in inline-block">
@@ -107,7 +141,7 @@ export function OrderHero({
             targets={[{ type: "order", id: order.orderId }]}
             targetTitle={order.title}
             renderTrigger={
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 <HugeiconsIcon icon={FolderAddIcon} data-icon="inline-start" />
                 Add to List
               </Button>
@@ -115,7 +149,7 @@ export function OrderHero({
           />
           <OrderForm
             renderTrigger={
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" /> Edit
               </Button>
             }
@@ -124,12 +158,24 @@ export function OrderHero({
             callbackFn={onEditOrder}
             currency={currency}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="icon" aria-label="More order actions">
+                  <HugeiconsIcon icon={MoreHorizontalIcon} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <HugeiconsIcon icon={Delete02Icon} />
+                Delete order
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ConfirmDialog
-            renderTrigger={
-              <Button variant="destructive" size="sm">
-                <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" /> Delete
-              </Button>
-            }
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
             title="Delete order?"
             description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
             onConfirm={() => onDeleteOrder(order.orderId)}

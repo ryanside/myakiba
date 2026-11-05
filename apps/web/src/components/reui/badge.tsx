@@ -2,7 +2,6 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva } from "class-variance-authority";
 import type { VariantProps } from "class-variance-authority";
-import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
 
@@ -38,8 +37,8 @@ const badgeVariants = cva(
         "focus-outline": "bg-background border-border text-focus-foreground dark:bg-input/30",
       },
       size: {
-        xs: "px-1 py-0.25 text-[0.6rem] leading-none h-4 min-w-4 gap-1",
-        sm: "px-1 py-0.25 text-[0.625rem] leading-none h-4.5 min-w-4.5 gap-1",
+        xs: "px-1.5 py-0.25 text-xs leading-none h-5 min-w-5 gap-1",
+        sm: "px-1.5 py-0.25 text-xs leading-none h-5 min-w-5 gap-1",
         default: "px-1.25 py-0.5 text-xs h-5 min-w-5 gap-1",
         lg: "px-1.5 py-0.5 text-xs h-5.5 min-w-5.5 gap-1",
         xl: "px-2 py-0.75 text-sm h-6 min-w-6 gap-1.5",
@@ -82,10 +81,9 @@ const LIGHT_VARIANT_MAP = new Map<BadgeVariant, BadgeVariant>([
   ["focus", "focus-light"],
 ]);
 
+/** A status badge in its tinted form, which reads quieter than a solid fill in both themes. */
 function ThemedBadge({ variant, ...props }: BadgeProps) {
-  const { resolvedTheme } = useTheme();
-  const resolvedVariant =
-    resolvedTheme === "dark" || !variant ? variant : (LIGHT_VARIANT_MAP.get(variant) ?? variant);
+  const resolvedVariant = variant ? (LIGHT_VARIANT_MAP.get(variant) ?? variant) : variant;
   return <Badge variant={resolvedVariant} {...props} />;
 }
 

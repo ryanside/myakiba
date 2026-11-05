@@ -5,19 +5,30 @@ import type { VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-control-pressed data-pressed:bg-control-pressed dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-150 ease-out outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-pressed:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default: "bg-transparent",
-        outline: "border border-control-edge bg-control hover:bg-muted",
+        outline: "border border-input bg-transparent hover:bg-muted",
+        // A filter chip: grey until chosen, then black, after recent.design's category pills.
+        pill: "rounded-full bg-muted px-3 text-foreground hover:bg-[color-mix(in_oklab,var(--color-foreground)_8%,var(--color-muted))] aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary/90 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90",
+        // A single choice among a few options: a grey track with the chosen option raised.
+        segmented:
+          "rounded-full bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs data-pressed:bg-background data-pressed:text-foreground data-pressed:shadow-xs dark:aria-pressed:bg-input dark:data-pressed:bg-input",
       },
       size: {
         default: "h-8 min-w-8 px-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-1.5 text-[0.8rem]",
+        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8125rem]",
         lg: "h-9 min-w-9 px-2.5",
       },
     },
+    // A segmented option sits inside a 2px track, so the whole control matches a 32px button.
+    compoundVariants: [
+      { variant: "segmented", size: "default", class: "h-7 min-w-7 px-3" },
+      // Chips and segments stay fully round; the small size's corner radius is for square toggles.
+      { variant: ["pill", "segmented"], class: "rounded-full" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

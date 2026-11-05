@@ -112,3 +112,17 @@ function getVisibleShippingKeys(
 
   return new Set(activeKeys.slice(0, initialVisibleCount));
 }
+
+/** Axis labels stay short ("$8K"); tooltips keep the exact amount. */
+export function formatAxisCurrency(
+  valueMinorUnits: number,
+  currency: string,
+  locale: Intl.LocalesArgument,
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(valueMinorUnits / 100);
+}

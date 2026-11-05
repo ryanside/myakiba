@@ -54,10 +54,13 @@ export function DatePicker({
               className,
             )}
             title={dateValue ? format(dateValue, "PPP") : undefined}
+            aria-label={
+              placeholder && dateValue ? `${placeholder}, ${format(dateValue, "PPP")}` : undefined
+            }
           >
             <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" className="shrink-0" />
             <span className="min-w-0 flex-1 truncate">
-              {dateValue ? format(dateValue, "PPP") : placeholder}
+              {dateValue ? format(dateValue, "PP") : placeholder}
             </span>
           </Button>
         }

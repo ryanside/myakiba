@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AddSquareIcon, MinusSignSquareIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
 import type {
@@ -16,7 +16,7 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
-import { DebouncedInput } from "@/components/debounced-input";
+import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
 import { Button } from "@/components/ui/button";
@@ -78,20 +78,15 @@ export function ShopTable({
   const rows = query.data?.items ?? [];
   const totalCount = query.data?.totalCount ?? 0;
   const shopSearchInput = (
-    <div className="relative w-full sm:w-64">
-      <HugeiconsIcon
-        icon={Search01Icon}
-        className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-      />
-      <DebouncedInput
-        value={search}
-        onChange={(value) => {
-          setSearch(String(value));
-        }}
-        placeholder="Search shops..."
-        className="pl-8 text-sm"
-      />
-    </div>
+    <SearchPill
+      value={search}
+      onChange={(value) => {
+        setSearch(String(value));
+      }}
+      placeholder="Search shops..."
+      aria-label="Search shops"
+      className="sm:w-64"
+    />
   );
   let resultCount: ReactNode = null;
   if (query.isPending) {
@@ -177,7 +172,13 @@ function ShopsTable({
     [currency, locale],
   );
   const columns = useMemo<ColumnDef<ExpenseShopRow>[]>(
-    () => getColumns({ scope, offset, formatCurrency }),
+    () =>
+      // Figures sit right-aligned under right-aligned headers, as in every other table.
+      getColumns({ scope, offset, formatCurrency }).map((column) =>
+        column.id !== undefined && TABULAR_COLUMN_IDS.has(column.id)
+          ? { ...column, meta: { ...column.meta, headerClassName: "text-right" } }
+          : column,
+      ),
     [formatCurrency, offset, scope],
   );
   const table = useReactTable({
@@ -217,7 +218,7 @@ function ShopsTable({
         cn(
           columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
           columnId === EXPAND_COLUMN_ID && "w-8",
-          TABULAR_COLUMN_IDS.has(columnId) && "tabular-nums",
+          TABULAR_COLUMN_IDS.has(columnId) && "text-right tabular-nums",
         )
       }
     />
@@ -333,8 +334,11 @@ function ExpandButton({ row }: { readonly row: Row<ExpenseShopRow> }): ReactNode
       aria-expanded={isExpanded}
     >
       <HugeiconsIcon
-        icon={isExpanded ? MinusSignSquareIcon : AddSquareIcon}
-        className="size-3.5 text-muted-foreground transition-transform duration-200 ease-out"
+        icon={ArrowRight01Icon}
+        className={cn(
+          "text-muted-foreground transition-transform duration-150 ease-out",
+          isExpanded && "rotate-90",
+        )}
       />
     </Button>
   );

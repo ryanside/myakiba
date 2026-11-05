@@ -2,13 +2,11 @@ import { createContext, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AddSquareIcon,
   ArrowRight01Icon,
   Delete02Icon,
   Edit03Icon,
   FolderAddIcon,
   Loading03Icon,
-  MinusSignSquareIcon,
   MoreHorizontalIcon,
   PackageIcon,
   ViewIcon,
@@ -50,6 +48,7 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
@@ -71,11 +70,13 @@ function ExpandButton({ row }: { readonly row: Row<Order> }) {
       aria-label={isExpanded ? "Collapse row" : "Expand row"}
       aria-expanded={isExpanded}
     >
-      {isExpanded ? (
-        <HugeiconsIcon icon={MinusSignSquareIcon} />
-      ) : (
-        <HugeiconsIcon icon={AddSquareIcon} />
-      )}
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
+        className={cn(
+          "text-muted-foreground transition-transform duration-150 ease-out",
+          isExpanded && "rotate-90",
+        )}
+      />
     </Button>
   ) : null;
 }
@@ -103,7 +104,7 @@ function OrderActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground"
+              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit order</span>
@@ -283,7 +284,7 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const order = row.original;
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pe-4">
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}
@@ -327,7 +328,7 @@ export function createOrdersColumns({
             <Link
               to="/orders/$id"
               params={{ id: order.orderId }}
-              className="shrink-0 rounded-sm p-0.5 text-muted-foreground/60 opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label={`View ${order.title}`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -339,7 +340,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 320,
+      size: 264,
       meta: {
         skeleton: <Skeleton className="h-6 my-1" />,
       },
@@ -372,7 +373,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 152,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -381,7 +382,7 @@ export function createOrdersColumns({
       accessorKey: "shippingMethod",
       id: "shippingMethod",
       header: ({ column }) => (
-        <DataGridColumnHeader title="Shipping Method" visibility={true} column={column} />
+        <DataGridColumnHeader title="Shipping" visibility={true} column={column} />
       ),
       cell: ({ row }) => {
         const order = row.original;
@@ -389,6 +390,7 @@ export function createOrdersColumns({
         return (
           <div className="space-y-px">
             <SelectCell
+              label="Shipping method"
               value={order.shippingMethod}
               options={SHIPPING_METHOD_OPTIONS}
               disabled={isPending}
@@ -413,6 +415,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 115,
       meta: {
+        headerTitle: "Shipping Method",
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -615,16 +618,24 @@ export function createOrdersColumns({
       cell: ({ row }) => {
         const { itemCount } = row.original;
         return (
-          <Button type="button" variant="ghost" onClick={() => row.getToggleExpandedHandler()()}>
-            {itemCount} {itemCount === 1 ? "item" : "items"}
+          <Button
+            type="button"
+            variant="ghost"
+            className="pr-0 tabular-nums"
+            aria-expanded={row.getIsExpanded()}
+            onClick={() => row.getToggleExpandedHandler()()}
+          >
+            {itemCount}
+            <span className="sr-only"> items</span>
           </Button>
         );
       },
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 78,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -696,8 +707,10 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 100,
+      // Wide enough for a seven-figure total in any currency; figures never truncate.
+      size: 128,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Total",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -714,6 +727,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
+            label="Shipping fee"
             value={order.shippingFee}
             currency={currency}
             locale={locale}
@@ -738,6 +752,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 90,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Shipping Fee",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -754,6 +769,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
+            label="Taxes"
             value={order.taxes}
             currency={currency}
             locale={locale}
@@ -778,6 +794,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 90,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Taxes",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -794,6 +811,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
+            label="Duties"
             value={order.duties}
             currency={currency}
             locale={locale}
@@ -818,6 +836,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 90,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Duties",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -834,6 +853,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
+            label="Tariffs"
             value={order.tariffs}
             currency={currency}
             locale={locale}
@@ -858,6 +878,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 90,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Tariffs",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -874,6 +895,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
+            label="Other fees"
             value={order.miscFees}
             currency={currency}
             locale={locale}
@@ -898,6 +920,7 @@ export function createOrdersColumns({
       enableResizing: true,
       size: 90,
       meta: {
+        ...NUMERIC_COLUMN_META,
         headerTitle: "Misc Fees",
         skeleton: <Skeleton className="h-6" />,
       },
@@ -913,6 +936,7 @@ export function createOrdersColumns({
         const isPending = isOrderPending(row.original.orderId);
         return (
           <SelectCell
+            label="Status"
             value={status}
             options={ORDER_STATUS_OPTIONS}
             colorMap={ORDER_STATUS_COLORS}
@@ -935,7 +959,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 105,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -956,7 +980,7 @@ export function createOrdersColumns({
           />
         );
       },
-      size: 56,
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

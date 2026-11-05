@@ -17,13 +17,14 @@ export function SectionShell({
   return (
     <div
       className={cn(
-        "relative overflow-hidden ring-1 ring-foreground/10 rounded-xl p-4 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/15 shadow-xs",
+        // No box: the section sits on the page, and its glow fades out on every side.
+        "relative isolate",
         className,
       )}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-10"
+        className="pointer-events-none absolute -inset-x-8 -inset-y-6 -z-10 opacity-10 mask-x-from-80% mask-y-from-75%"
         style={{
           background: `radial-gradient(125% 125% at 50% 0%, transparent 40%, ${gradientColor} 60%, transparent 80%)`,
         }}

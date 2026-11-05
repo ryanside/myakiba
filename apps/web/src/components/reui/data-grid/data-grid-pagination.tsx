@@ -70,6 +70,12 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const paginationInfo = from > recordCount ? `0 of ${recordCount}` : pageInfo;
 
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
+  // Nothing to page through: every row fits on the smallest page size.
+  const fitsOnSmallestPage =
+    recordCount > 0 &&
+    !isPastEnd &&
+    pageCount <= 1 &&
+    recordCount <= (mergedProps.sizes?.[0] ?? pageSize);
 
   const currentGroupStart =
     Math.floor(Math.min(pageIndex, lastPageIndex) / paginationMoreLimit) * paginationMoreLimit;
@@ -131,6 +137,8 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
     return null;
   };
 
+  if (fitsOnSmallestPage) return <div data-slot="data-grid-pagination" />;
+
   return (
     <div
       data-slot="data-grid-pagination"
@@ -148,7 +156,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
             table.setPageSize(newPageSize);
           }}
         >
-          <SelectTrigger className="w-14" size="sm">
+          <SelectTrigger className="w-auto min-w-14 gap-1" size="sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent side="top" className="min-w-18">

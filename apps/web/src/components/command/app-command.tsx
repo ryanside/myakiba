@@ -283,7 +283,7 @@ export function AppCommand(): React.JSX.Element {
           <CommandInput
             value={inputValue}
             onValueChange={setInputValue}
-            placeholder="Search pages, actions, orders, or items..."
+            placeholder="Search pages, actions, orders, or items…"
           />
           <CommandList className="max-h-104 mx-2">
             {hasVisibleResults ? null : <CommandEmpty>No results found.</CommandEmpty>}
@@ -335,7 +335,7 @@ export function AppCommand(): React.JSX.Element {
                 !isSearchLoading &&
                 !searchError &&
                 orderMatches.length === 0 ? (
-                  <StatusCommandItem title={`No orders matched "${query}"`} />
+                  <StatusCommandItem title={`No orders matched “${query}”`} />
                 ) : null}
                 {isSearchPending
                   ? null
@@ -384,7 +384,7 @@ export function AppCommand(): React.JSX.Element {
                 !isSearchLoading &&
                 !searchError &&
                 itemMatches.length === 0 ? (
-                  <StatusCommandItem title={`No items matched "${query}"`} />
+                  <StatusCommandItem title={`No items matched “${query}”`} />
                 ) : null}
                 {isSearchPending
                   ? null
@@ -393,11 +393,7 @@ export function AppCommand(): React.JSX.Element {
                         key={item.itemId}
                         value={`item-${item.itemId}`}
                         title={item.itemTitle}
-                        subtitle={
-                          item.itemExternalId
-                            ? `MFC #${item.itemExternalId}${item.itemCategory ? ` • ${item.itemCategory}` : ""}`
-                            : (item.itemCategory ?? "Open item details")
-                        }
+                        subtitle={item.itemCategory ?? "Open item details"}
                         leading={
                           <ImageThumbnail
                             images={item.itemImage ? [item.itemImage] : []}

@@ -39,7 +39,7 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
         <div className="mt-0.5 flex items-center gap-2.5 text-xs text-muted-foreground">
           <span className="truncate">{order.shop || "-"}</span>
           <span className="shrink-0 tabular-nums">
-            {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+            {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
           </span>
         </div>
       </div>

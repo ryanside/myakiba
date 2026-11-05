@@ -48,7 +48,7 @@ export const Route = createFileRoute("/(app)/settings")({
         { name: "description", content: "your settings" },
         {
           title: section
-            ? `${SETTINGS_SECTIONS[section].label} · Settings - myakiba`
+            ? `${SETTINGS_SECTIONS[section].label} Settings - myakiba`
             : "Settings - myakiba",
         },
       ],
@@ -80,7 +80,7 @@ function RouteComponent() {
   const isPhoneDetail = selected !== undefined && !isSearching;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 md:gap-8">
+    <div className="mx-auto flex w-full max-w-[88rem] flex-col gap-6 md:gap-8">
       <div className={cn(isPhoneDetail && "max-md:sr-only")}>
         <PageHeader title="Settings" />
       </div>

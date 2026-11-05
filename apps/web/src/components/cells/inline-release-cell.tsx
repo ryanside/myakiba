@@ -11,6 +11,7 @@ import { items } from "@/data/resources/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import { quietSelectTrigger } from "./select-cell";
 import { usePendingValue } from "@/hooks/use-pending-value";
 
 type ReleaseFallback = {
@@ -72,10 +73,10 @@ export function InlineReleaseCell({
         }}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger className={quietSelectTrigger}>
           <SelectValue placeholder="Select release">
             {displayReleaseId && displayData.date && (
-              <span className="text-sm font-medium">
+              <span className="text-sm tabular-nums">
                 {formatDateOnlyForDisplay(displayData.date, dateFormat)}
               </span>
             )}
@@ -99,7 +100,7 @@ export function InlineReleaseCell({
                     {formatDateOnlyForDisplay(release.date, dateFormat)}
                   </span>
                   {release.type && (
-                    <span className="text-xs text-muted-foreground/80 bg-muted/60 px-1.5 py-px rounded">
+                    <span className="text-xs text-muted-foreground bg-muted/60 px-1.5 py-px rounded">
                       {release.type}
                     </span>
                   )}

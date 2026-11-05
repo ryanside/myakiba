@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { FilterIcon, FilterResetIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { DebouncedInput } from "@/components/debounced-input";
+import { SearchPill } from "@/components/search-pill";
 import OrdersFiltersForm from "@/components/orders/orders-filters-form";
 import { Button } from "@/components/ui/button";
 import { SortCombobox } from "@/components/ui/sort-combobox";
 import type { SortableColumn } from "@/components/ui/sort-combobox";
 import { useOrdersFilters } from "@/hooks/use-orders";
+import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 
 const SORTABLE_COLUMNS: SortableColumn[] = [
@@ -33,6 +34,9 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 export function OrdersToolbar(): React.JSX.Element {
   const { filters, setFilters, resetFilters } = useOrdersFilters();
   const [searchResetKey, setSearchResetKey] = useState(0);
+  // Reset shows only when there is something to reset: an applied filter or sort, or typed text.
+  const [hasSearchDraft, setHasSearchDraft] = useState(false);
+  const searchId = useId();
   const { currency } = useUserPreferences();
   const currentSort =
     filters.sort && filters.order
@@ -49,19 +53,22 @@ export function OrdersToolbar(): React.JSX.Element {
   };
 
   return (
-    <div className="flex items-center justify-start gap-2">
-      <DebouncedInput
+    <div className="flex min-w-0 items-center justify-start gap-2">
+      <SearchPill
         key={searchResetKey}
         value={filters.search ?? ""}
         onChange={(value) => setFilters({ search: value.toString() || undefined })}
         placeholder="Search"
-        className="max-w-xs"
+        aria-label="Search Orders"
+        id={searchId}
+        onInput={(event) => setHasSearchDraft(event.currentTarget.value !== "")}
+        className="max-w-64"
       />
       <OrdersFiltersForm
         renderTrigger={
           <Button variant="outline">
             <HugeiconsIcon icon={FilterIcon} data-icon="inline-start" />
-            <span className="hidden md:block">Filters</span>
+            <span className="max-md:sr-only">Filters</span>
           </Button>
         }
         currentFilters={{ ...filters }}
@@ -73,16 +80,25 @@ export function OrdersToolbar(): React.JSX.Element {
         currentSort={currentSort}
         onSortChange={handleSortChange}
       />
-      <Button
-        onClick={() => {
-          setSearchResetKey((key) => key + 1);
-          void resetFilters();
-        }}
-        variant="outline"
-      >
-        <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
-        <span className="hidden md:block">Reset Filters</span>
-      </Button>
+      {hasActiveFiltersOrSorting(filters) || hasSearchDraft ? (
+        <Button
+          onClick={async () => {
+            setSearchResetKey((key) => key + 1);
+            setHasSearchDraft(false);
+            await resetFilters();
+            // The button leaves with the filters, so focus returns to the search it cleared. It
+            // waits for the reset: a focused search ignores outside changes to its value.
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLInputElement>(`[id="${searchId}"]`)?.focus(),
+            );
+          }}
+          variant="ghost"
+          className="text-muted-foreground"
+        >
+          <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
+          <span className="max-md:sr-only">Reset Filters</span>
+        </Button>
+      ) : null}
     </div>
   );
 }

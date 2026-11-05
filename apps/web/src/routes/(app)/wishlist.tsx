@@ -63,15 +63,17 @@ function RouteComponent(): React.JSX.Element {
   const hasInitialError = itemsQuery.isError && !itemsQuery.data;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6" aria-busy={isPending}>
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-6" aria-busy={isPending}>
       <PageHeader
         title="Wishlist"
         meta={isPending || hasInitialError ? null : formatCount(totalCount, "Item", "Items")}
         actions={
-          <>
+          // A filter and a view switch look alike, so space keeps them from reading as one control.
+          <div className="flex items-center gap-4">
             <ToggleGroup
               value={[releaseStatus]}
-              variant="outline"
+              variant="segmented"
+              spacing={0.5}
               aria-label="Filter Wishlist by release date"
             >
               {wishlistReleaseStatusSchema.options.map((value) => (
@@ -93,7 +95,7 @@ function RouteComponent(): React.JSX.Element {
               value={viewMode}
               onValueChange={setViewMode}
             />
-          </>
+          </div>
         }
       />
 

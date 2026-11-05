@@ -16,7 +16,7 @@ export function SettingsNav({
   readonly selected: SettingsSectionId | undefined;
 }) {
   return (
-    <nav aria-label="Settings sections" className="flex flex-col gap-5 md:gap-4">
+    <nav aria-label="Settings sections" className="flex flex-col gap-5">
       {SETTINGS_NAV_GROUPS.map((group) => (
         <NavGroup key={group.sections[0]} label={group.label}>
           {group.sections.map((id) => (
@@ -38,15 +38,18 @@ function NavGroup({
   const labelId = useId();
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {label ? (
-        <p id={labelId} className="px-3 text-xs font-medium text-muted-foreground md:px-2.5">
+        <p
+          id={labelId}
+          className="eyebrow flex h-6 items-center px-3 text-[0.6875rem] tracking-tight text-muted-foreground/70 md:px-2"
+        >
           {label}
         </p>
       ) : null}
       <ul
         aria-labelledby={label ? labelId : undefined}
-        className="flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 max-md:divide-y max-md:divide-border/70 md:gap-0.5 md:overflow-visible md:rounded-none md:bg-transparent md:ring-0"
+        className="flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 max-md:divide-y max-md:divide-border/70 md:gap-0 md:overflow-visible md:rounded-none md:bg-transparent md:ring-0"
       >
         {children}
       </ul>
@@ -82,24 +85,29 @@ function NavItem({
         aria-current={isCurrent ? "page" : undefined}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-          "md:gap-2.5 md:rounded-md md:px-2.5 md:py-1.5 md:text-sm md:hover:bg-sidebar-accent md:hover:text-sidebar-accent-foreground",
-          isCurrent
-            ? "md:bg-sidebar-accent md:text-sidebar-accent-foreground md:shadow-[0_0_0_1px_var(--color-border),0_1px_2px_0_rgb(0_0_0/0.05)]"
-            : "md:text-muted-foreground",
+          // From md up the list reads like the app sidebar: plain text rows, the current one dotted.
+          "md:h-8 md:gap-2 md:rounded-md md:px-2 md:py-0 md:text-sm md:transition-colors md:duration-150 md:ease-out md:hover:bg-transparent md:hover:text-foreground",
+          isCurrent ? "md:font-medium md:text-foreground" : "md:text-muted-foreground",
         )}
       >
-        <span className="flex size-8 shrink-0 items-center justify-center md:size-auto">
+        <span className="flex size-8 shrink-0 items-center justify-center md:hidden">
           <HugeiconsIcon icon={section.icon} className="size-4" aria-hidden="true" />
         </span>
-        <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex min-w-0 flex-1 flex-col md:flex-none">
           <span className="truncate text-[15px] md:text-sm">{section.label}</span>
           <span className="truncate text-[13px] text-muted-foreground md:hidden">
             {section.description}
           </span>
         </span>
+        {isCurrent ? (
+          <span
+            aria-hidden
+            className="hidden size-1.5 shrink-0 rounded-full bg-foreground md:block"
+          />
+        ) : null}
         <HugeiconsIcon
           icon={ArrowRight01Icon}
-          className="size-4 shrink-0 text-muted-foreground/60 md:hidden"
+          className="size-4 shrink-0 text-muted-foreground md:hidden"
           aria-hidden="true"
         />
       </Link>

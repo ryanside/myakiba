@@ -415,7 +415,7 @@ function UnifiedItemMoveFormContent({
               }
             }}
           >
-            <div className="overflow-y-auto w-full max-h-[60vh] py-2">
+            <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
               <div className="flex flex-col gap-3 px-4">
                 <FormSection title="Basics">
                   <div className="grid grid-cols-2 gap-3">

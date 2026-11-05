@@ -9,6 +9,7 @@ import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface PopoverDatePickerCellProps {
   value: string | null;
@@ -40,10 +41,14 @@ export function PopoverDatePickerCell({
     <Button
       variant="ghost"
       data-empty={!dateValue}
-      className={cn("w-full justify-start text-foreground pl-0", triggerClassName)}
+      className={cn(CELL_TRIGGER_CLASS_NAME, "justify-start text-foreground", triggerClassName)}
       disabled={disabled}
     >
-      {displayValue ? formatDateOnlyForDisplay(displayValue, dateFormat) : "n/a"}
+      {displayValue ? (
+        formatDateOnlyForDisplay(displayValue, dateFormat)
+      ) : (
+        <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+      )}
     </Button>
   );
 

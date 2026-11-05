@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { DatabaseIcon, LibraryIcon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_LABELS = {
   collection: "Add to collection",
@@ -13,6 +14,7 @@ export function ItemSyncActions({
   onSyncOrder,
   onSyncItems,
   labels = DEFAULT_LABELS,
+  className,
 }: {
   readonly onSyncCollection: () => void;
   readonly onSyncOrder: () => void;
@@ -21,9 +23,10 @@ export function ItemSyncActions({
     readonly collection: string;
     readonly order: string;
   };
+  readonly className?: string;
 }): ReactNode {
   return (
-    <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
+    <div className={cn("flex flex-col sm:flex-row gap-2 w-full justify-center", className)}>
       <Button variant="default" onClick={onSyncCollection}>
         <HugeiconsIcon icon={LibraryIcon} data-icon="inline-start" />
         {labels.collection}

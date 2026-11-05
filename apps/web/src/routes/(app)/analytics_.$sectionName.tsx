@@ -106,7 +106,7 @@ function RouteComponent(): ReactNode {
     : KPI_LABELS.map((kpiLabel) => ({ label: kpiLabel, value: "" }));
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-5xl">
+    <div className="flex flex-col gap-6 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-4">
         <BackLink fallbackTo="/analytics" text="Back" font="orbitron" />
         <h1 className="text-2xl font-orbitron font-medium lowercase">

@@ -83,7 +83,7 @@ export function OrderItemSubDataGrid({
   );
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     TABLE_LAYOUTS.orderItems.visibility,
-    {},
+    { orderDate: false },
   );
 
   const offset = pagination.pageIndex * pagination.pageSize;
@@ -217,13 +217,10 @@ export function OrderItemSubDataGrid({
                   selected
                 </span>
               ) : (
-                <span>
-                  <span className="animate-data-in inline-block">
-                    {subTable.getFilteredSelectedRowModel().rows.length}
-                  </span>{" "}
-                  of <span className="animate-data-in inline-block">{totalCount}</span> item(s)
-                  selected
-                </span>
+                <SelectionSummary
+                  selected={subTable.getFilteredSelectedRowModel().rows.length}
+                  total={totalCount}
+                />
               )}
             </div>
             <DataGridPagination className="pb-1.5" />
@@ -275,5 +272,26 @@ export function OrderItemSubDataGrid({
     >
       {content}
     </div>
+  );
+}
+
+function SelectionSummary({
+  selected,
+  total,
+}: {
+  readonly selected: number;
+  readonly total: number;
+}): React.JSX.Element {
+  if (selected === 0)
+    return (
+      <span className="sr-only">
+        {total} {total === 1 ? "item" : "items"}
+      </span>
+    );
+  return (
+    <span className="tabular-nums">
+      <span className="animate-data-in inline-block">{selected}</span> of{" "}
+      <span className="animate-data-in inline-block">{total}</span> selected
+    </span>
   );
 }

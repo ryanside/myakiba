@@ -73,12 +73,10 @@ function RouteComponent(): ReactNode {
   }
 
   return (
-    <div
-      className="flex flex-col gap-8 min-h-full mx-auto max-w-352"
-      aria-busy={isPending}
-      aria-live="polite"
-    >
-      {isPending ? <span className="sr-only">Loading order details</span> : null}
+    <div className="flex flex-col gap-8 min-h-full mx-auto max-w-352" aria-busy={isPending}>
+      <span role="status" className="sr-only">
+        {isPending ? "Loading order details" : ""}
+      </span>
       <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
 
       <OrderHero
@@ -112,14 +110,14 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-4 pb-2">
         {order?.notes ? (
           <section className="animate-data-in flex flex-col gap-1.5">
-            <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
+            <h2 className="text-base font-medium text-foreground">Notes</h2>
             <p className="max-w-prose text-sm leading-relaxed text-pretty wrap-break-word whitespace-pre-wrap text-muted-foreground">
               {order.notes}
             </p>
           </section>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {isPending ? (
             <>
               <span className="flex items-center gap-1">

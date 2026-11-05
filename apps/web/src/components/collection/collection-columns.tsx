@@ -43,6 +43,8 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
+import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionColumnsParams {
@@ -104,7 +106,7 @@ function CollectionActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground"
+              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
@@ -277,7 +279,7 @@ export function createCollectionColumns({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pe-4">
             <Link
               {...itemDestination(item.itemId, item.itemExternalId)}
               aria-label={`View ${item.itemTitle}`}
@@ -292,25 +294,12 @@ export function createCollectionColumns({
             <div className="min-w-0 space-y-px">
               <Link
                 {...itemDestination(item.itemId, item.itemExternalId)}
-                className="font-medium text-foreground truncate"
+                className="block truncate font-medium text-foreground"
+                title={item.itemTitle}
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-2 font-normal">
-                {item.itemExternalId ? (
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground hover:underline"
-                  >
-                    MFC #{item.itemExternalId}
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Custom</span>
-                )}
-                <CategoryLabel category={item.itemCategory} />
-              </div>
+              <CategoryLabel category={item.itemCategory} />
             </div>
           </div>
         );
@@ -318,7 +307,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 450,
+      size: 420,
       meta: {
         skeleton: <Skeleton className="h-6 my-1.5 w-2/3" />,
       },
@@ -329,7 +318,14 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Scale" visibility={true} column={column} />
       ),
-      cell: (info) => (info.getValue() as string | null) || "n/a",
+      cell: (info) => {
+        const scale = info.getValue() as string | null;
+        return scale && scale !== NO_SCALE ? (
+          scale
+        ) : (
+          <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+        );
+      },
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -349,6 +345,7 @@ export function createCollectionColumns({
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCountCell
+            label="Count"
             value={item.count}
             disabled={isPending}
             onSubmit={async (newValue) => {
@@ -363,8 +360,9 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 65,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -393,8 +391,9 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 68,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -425,7 +424,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 168,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -442,6 +441,7 @@ export function createCollectionColumns({
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCurrencyCell
+            label="Price"
             value={item.price}
             currency={currency}
             onSubmit={async (newValue) => {
@@ -452,6 +452,7 @@ export function createCollectionColumns({
             }}
             locale={locale}
             disabled={isPending}
+            zeroAsEmpty
           />
         );
       },
@@ -460,6 +461,7 @@ export function createCollectionColumns({
       enableResizing: true,
       size: 100,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -498,7 +500,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 110,
+      size: 136,
       meta: {
         headerTitle: "Release",
         skeleton: <Skeleton className="h-6" />,
@@ -655,7 +657,7 @@ export function createCollectionColumns({
           />
         );
       },
-      size: 56,
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

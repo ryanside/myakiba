@@ -2,14 +2,23 @@ import { useCallback, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { cn } from "@/lib/utils";
+import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface InlineCountCellProps {
+  /** What the cell holds, such as "Count", for its accessible name. */
+  label: string;
   value: number;
   onSubmit: (newValue: number) => Promise<void>;
   disabled?: boolean;
 }
 
-export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCountCellProps) {
+export function InlineCountCell({
+  label,
+  value,
+  onSubmit,
+  disabled = false,
+}: InlineCountCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingValue, setEditingValue] = useState(1);
   const [displayValue, submit] = usePendingValue(value, onSubmit);
@@ -25,18 +34,24 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
 
   const handleSubmit = useCallback(async () => {
     setIsEditing(false);
+    if (editingValue === displayValue) return;
     await submit(editingValue);
-  }, [editingValue, submit]);
+  }, [displayValue, editingValue, submit]);
 
   if (isEditing) {
     return (
-      <div className="grid gap-2">
+      <div className="grid">
         <Input
           id="count"
           name="count"
-          className="w-full text-foreground pl-0"
+          aria-label={label}
+          autoFocus
+          className={CELL_EDITOR_CLASS_NAME}
           value={editingValue}
-          onBlur={handleCancel}
+          // Leaving the cell keeps what was typed, as the Shop cell does.
+          onBlur={() => {
+            if (!disabled) void handleSubmit();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               handleSubmit();
@@ -56,9 +71,10 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
   return (
     <Button
       onClick={handleEdit}
-      className="w-full justify-start text-foreground pl-0"
+      className={cn(CELL_TRIGGER_CLASS_NAME, "h-8 justify-start text-foreground")}
       variant="ghost"
       disabled={disabled}
+      aria-label={`${displayValue}, edit ${label}`}
     >
       {displayValue}
     </Button>

@@ -3,12 +3,7 @@ import { RadioGroup } from "@base-ui/react/radio-group";
 import { useTheme } from "next-themes";
 import { useId } from "react";
 import * as z from "zod";
-import {
-  CARD_IMAGE_CLASS_NAME,
-  MediaImage,
-  TILE_HOVER_CLASS_NAME,
-  TILE_SURFACE_CLASS_NAME,
-} from "@/components/media-tile";
+import { CARD_IMAGE_CLASS_NAME, MediaImage, IMAGE_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Switch } from "@/components/ui/switch";
 import { useMotionPreference, usePageBackgrounds } from "@/hooks/use-appearance";
 import { cn } from "@/lib/utils";
@@ -71,20 +66,24 @@ function ThemeChoices() {
             const parsed = themeChoice.safeParse(next);
             if (parsed.success) setTheme(parsed.data);
           }}
-          className="grid grid-cols-3 gap-1"
+          className="grid grid-cols-3 gap-3"
         >
           {THEMES.map(({ value: choice, label, previews }) => (
             <Radio.Root
               key={choice}
               value={choice}
               className={cn(
-                "group/theme flex flex-col rounded-2xl p-1.5 text-left",
-                TILE_SURFACE_CLASS_NAME,
-                TILE_HOVER_CLASS_NAME,
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-checked:ring-2 data-checked:ring-primary",
+                "group/item flex flex-col rounded-2xl text-left",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
               )}
             >
-              <MediaImage className={cn(CARD_IMAGE_CLASS_NAME, "aspect-[16/10] bg-sidebar")}>
+              <MediaImage
+                className={cn(
+                  CARD_IMAGE_CLASS_NAME,
+                  IMAGE_HOVER_CLASS_NAME,
+                  "aspect-[16/10] bg-sidebar",
+                )}
+              >
                 {previews.map((layer: PreviewLayer) => (
                   <ThemePreview
                     key={layer.scheme}
@@ -93,9 +92,9 @@ function ThemeChoices() {
                   />
                 ))}
               </MediaImage>
-              <span className="flex items-center gap-2 px-1.5 pt-2.5 pb-1">
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-control-edge bg-control group-data-checked/theme:border-primary group-data-checked/theme:bg-primary">
-                  <span className="size-1.5 rounded-full bg-primary-foreground opacity-0 group-data-checked/theme:opacity-100" />
+              <span className="flex items-center gap-2 pt-2.5">
+                <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-input dark:bg-input/30 group-data-checked/item:border-primary group-data-checked/item:bg-primary dark:group-data-checked/item:bg-primary">
+                  <span className="size-1.5 rounded-full bg-primary-foreground opacity-0 group-data-checked/item:opacity-100" />
                 </span>
                 <span className="text-sm font-medium">{label}</span>
               </span>

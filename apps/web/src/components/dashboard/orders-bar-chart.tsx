@@ -141,34 +141,32 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
   );
 
   return (
-    <Frame
-      spacing="sm"
-      className={`border-none ring-1 ring-foreground/10 shadow-xs! ${isLoading ? "min-h-[320px]" : "lg:max-h-[320px]"}`}
-      aria-busy={isLoading}
-    >
+    <Frame spacing="sm" className="min-h-[320px] " aria-busy={isLoading}>
       <FrameHeader>
         {isLoading ? (
           <Skeleton className="h-4 my-1 w-32" />
         ) : (
           <FrameTitle className="animate-data-in text-base font-medium">
-            {maxValueIndex.value}{" "}
-            <span className="ml-1 text-sm text-muted-foreground">
-              {maxValueIndex.value === 1 ? "order" : "orders"} in{" "}
-              {chartData[maxValueIndex.index]?.month}
-            </span>
+            {maxValueIndex.value} {maxValueIndex.value === 1 ? "order" : "orders"} releasing in{" "}
+            {chartData[maxValueIndex.index]?.month}
           </FrameTitle>
         )}
       </FrameHeader>
-      <FramePanel className="shadow-none! border-none m-1 mt-0">
-        <OrderChartContext value={orderChart}>
-          <OrderBars
-            chartData={chartData}
-            isLoading={isLoading}
-            onBarEnter={setActiveIndex}
-            onBarClick={handleBarClick}
-            onChartLeave={resetActiveIndex}
-          />
-        </OrderChartContext>
+      <FramePanel className="flex flex-col shadow-none! border-none">
+        {/* The chart takes the row's height from its neighbours instead of setting it. */}
+        <div className="relative min-h-56 flex-1">
+          <div className="absolute inset-0">
+            <OrderChartContext value={orderChart}>
+              <OrderBars
+                chartData={chartData}
+                isLoading={isLoading}
+                onBarEnter={setActiveIndex}
+                onBarClick={handleBarClick}
+                onChartLeave={resetActiveIndex}
+              />
+            </OrderChartContext>
+          </div>
+        </div>
       </FramePanel>
     </Frame>
   );
@@ -216,8 +214,11 @@ function OrderBarsChart({
           dataKey="month"
           tickLine={false}
           tickMargin={10}
-          axisLine={false}
+          // The baseline lets a month with no orders read as zero.
+          axisLine={{ stroke: "var(--border)" }}
           tickFormatter={(value: string) => value.slice(0, 3)}
+          interval={0}
+          tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
           allowDataOverflow={true}
         />
       )}
@@ -306,7 +307,7 @@ function OrderBar(props: OrderBarProps): React.ReactNode {
       <Rectangle
         {...props}
         className="cursor-pointer transition-opacity duration-200"
-        opacity={isActive ? 1 : 0.2}
+        opacity={isActive ? 1 : 0.32}
       />
       {/* Ring the whole column so a month with no orders still shows focus. */}
       {column?.y == null ? null : (
@@ -351,12 +352,7 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
   const { viewBox, value } = props;
   const x = viewBox?.x ?? 0;
   const y = viewBox?.y ?? 0;
-
-  const width = useMemo(() => {
-    const characterWidth = 8;
-    const padding = 10;
-    return value.toString().length * characterWidth + padding;
-  }, [value]);
+  const width = value.toString().length * 8 + 10;
 
   return (
     <>
@@ -368,7 +364,15 @@ function CustomReferenceLabel(props: CustomReferenceLabelProps): React.ReactNode
         fill="var(--foreground)"
         rx={4}
       />
-      <text fontWeight={600} x={x - CHART_MARGIN + 6} y={y + 4} fill="var(--background)">
+      <text
+        fontWeight={500}
+        x={x - CHART_MARGIN + width / 2}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="var(--background)"
+        className="tabular-nums"
+      >
         {value}
       </text>
     </>

@@ -25,10 +25,11 @@ export const ROW_LINK_CLASS_NAME = cn(
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
 );
 
-const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
+// Cards and gallery tiles have no frame, so hover strengthens the photo's edge, instantly.
+export const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
 
-// The card's image is inset by the card's padding, so its radius is the card's minus that padding.
-export const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-[10px]";
+// Cards have no frame, so the photo fills its square and carries the card's shape.
+export const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-2xl";
 
 const ROW_IMAGE_CLASS_NAME = "size-16 rounded-md";
 
@@ -40,7 +41,10 @@ const TILE_FOCUS_CLASS_NAME =
 type DropGeometry = { readonly before: string; readonly after: string };
 
 // A 2 px line centred in the gap, so its offset is half the gap plus 1 px.
-const CARD_DROP = { before: "inset-y-2 -left-[7px] w-0.5", after: "inset-y-2 -right-[7px] w-0.5" };
+const CARD_DROP = {
+  before: "inset-y-2 -left-[11px] w-0.5",
+  after: "inset-y-2 -right-[11px] w-0.5",
+};
 const ROW_DROP = {
   before: "inset-x-2 top-0 h-0.5 -translate-y-1/2",
   after: "inset-x-2 bottom-0 h-0.5 translate-y-1/2",
@@ -110,10 +114,9 @@ export function MediaCard({
       <DropIndicator placement={dropIndicator} geometry={CARD_DROP} />
       <div
         className={cn(
-          "group/item relative min-w-0 flex h-full flex-col rounded-2xl p-1.5",
-          TILE_SURFACE_CLASS_NAME,
-          TILE_HOVER_CLASS_NAME,
-          selected && "ring-2 ring-primary",
+          // No frame: the rounded photo is the tile's surface, after marked.dev.
+          "group/item relative min-w-0 flex h-full flex-col rounded-2xl",
+          selected && "ring-2 ring-primary ring-offset-4 ring-offset-background",
           TILE_FOCUS_CLASS_NAME,
           className,
         )}
@@ -136,13 +139,15 @@ export function MediaCardImage({
 }): React.JSX.Element {
   return (
     <Link {...destination} className="block shrink-0 outline-none" title={title}>
-      <MediaImage className={cn(CARD_IMAGE_CLASS_NAME, className)}>{children}</MediaImage>
+      <MediaImage className={cn(CARD_IMAGE_CLASS_NAME, IMAGE_HOVER_CLASS_NAME, className)}>
+        {children}
+      </MediaImage>
     </Link>
   );
 }
 
 export function MediaCardBody({ children }: { readonly children: ReactNode }): React.JSX.Element {
-  return <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-1.5 pt-2.5 pb-1">{children}</div>;
+  return <div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-3">{children}</div>;
 }
 
 export function MediaCardTitle({
@@ -155,7 +160,10 @@ export function MediaCardTitle({
   readonly destination: MediaDestination;
 }): React.JSX.Element {
   return (
-    <Heading className="line-clamp-2 text-sm leading-snug font-medium text-pretty" title={title}>
+    <Heading
+      className="line-clamp-2 min-h-10 text-sm leading-5 font-medium text-pretty"
+      title={title}
+    >
       <Link {...destination} className="outline-none hover:underline" title={title}>
         {title}
       </Link>
@@ -169,7 +177,7 @@ export function MediaCardSkeleton({
   readonly imageClassName?: string;
 }): React.JSX.Element {
   return (
-    <div className={cn("flex h-full flex-col rounded-2xl p-1.5", TILE_SURFACE_CLASS_NAME)}>
+    <div className="flex h-full flex-col">
       <Skeleton className={cn("shrink-0", CARD_IMAGE_CLASS_NAME, imageClassName)} />
       <div className="flex flex-col gap-2 px-1.5 pt-3 pb-1.5">
         <Skeleton className="h-3 w-1/2" />
@@ -349,10 +357,14 @@ export function MediaGallerySkeleton(): React.JSX.Element {
   return <Skeleton className={cn("shrink-0", GALLERY_IMAGE_CLASS_NAME)} />;
 }
 
+// Cards have no frame, so space alone separates them: room across, and more between rows than
+// between a card's own lines. Every card grid uses this, whatever sizes its columns.
+export const CARD_GRID_GAP_CLASS_NAME = "gap-x-5 gap-y-8";
+
 // Gallery matches Collection's and Orders' square gallery at their default 180 px tile size.
 const MEDIA_VIEWS = {
   grid: {
-    collection: "grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(176px,1fr))]",
+    collection: `grid grid-cols-2 ${CARD_GRID_GAP_CLASS_NAME} sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]`,
     skeleton: <MediaCardSkeleton />,
   },
   list: { collection: "flex flex-col", skeleton: <MediaRowSkeleton /> },

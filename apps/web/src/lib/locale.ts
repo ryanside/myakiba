@@ -116,9 +116,11 @@ export function formatReleasePrice(
   if (valueMinorUnits == null || valueMinorUnits <= 0 || !currency?.trim()) return null;
 
   const resolvedCurrencyFormat = resolveCurrencyFormat(currency, fallbackCurrency);
+  // Some ICU builds write yen in ja-JP as the full-width "￥", which Inter lacks; the fallback
+  // glyph sets wide and reads as "¥ 3,000". The half-width sign is the same currency.
   return formatCurrencyFromMinorUnits(
     valueMinorUnits,
     resolvedCurrencyFormat.currency,
     resolvedCurrencyFormat.locale,
-  );
+  ).replace("\uFFE5", "\u00A5");
 }

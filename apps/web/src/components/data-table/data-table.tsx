@@ -74,7 +74,10 @@ function TableHeader<TData extends RowData>({
             <th
               key={header.id}
               aria-sort={getAriaSort(header.column)}
-              className="border-b p-1.5 text-left font-medium text-muted-foreground"
+              className={cn(
+                "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
+                header.column.columnDef.meta?.headerClassName,
+              )}
               style={variant === "sized" ? { width: header.column.getSize() } : undefined}
             >
               {header.isPlaceholder
@@ -119,7 +122,7 @@ function TableBody<TData extends RowData>({
     return (
       <tbody>
         {Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
-          <tr key={rowIndex} className="border-b border-border/50">
+          <tr key={rowIndex}>
             {columns.map((column) => (
               <td key={column.id} className="p-1.5">
                 <Skeleton className="h-4 w-full" />
@@ -163,7 +166,7 @@ function TableBody<TData extends RowData>({
               }
               tabIndex={isInteractive ? 0 : undefined}
               className={cn(
-                "animate-data-in border-b border-border/50",
+                "animate-data-in",
                 ROW_HOVER_CLASS_NAME,
                 isInteractive &&
                   "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
@@ -171,7 +174,14 @@ function TableBody<TData extends RowData>({
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className={cn("p-1.5", getCellClassName?.(row, cell.column.id))}>
+                <td
+                  key={cell.id}
+                  className={cn(
+                    "p-1.5",
+                    cell.column.columnDef.meta?.cellClassName,
+                    getCellClassName?.(row, cell.column.id),
+                  )}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

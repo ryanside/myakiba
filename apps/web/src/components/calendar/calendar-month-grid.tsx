@@ -65,7 +65,10 @@ export function CalendarMonthGrid({
     const leadingDays = firstOfMonth.getDay();
     const gridStart = new Date(year, month - 1, 1 - leadingDays);
 
-    const cells = Array.from({ length: 42 }, (_, idx) => {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    // Only the weeks this month touches, so no row is all next-month days.
+    const cellCount = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
+    const cells = Array.from({ length: cellCount }, (_, idx) => {
       const date = new Date(gridStart);
       date.setDate(gridStart.getDate() + idx);
       const y = String(date.getFullYear()).padStart(4, "0");
@@ -89,12 +92,12 @@ export function CalendarMonthGrid({
   }, [buckets]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      <div className="grid grid-cols-7 border-b border-border bg-muted/30">
+    <div className="overflow-hidden rounded-lg border">
+      <div className="grid grid-cols-7 border-b border-border">
         {WEEKDAY_LABELS.map((label) => (
           <div
             key={label}
-            className="px-2 py-1.5 text-center text-xs font-medium text-muted-foreground select-none"
+            className="px-2.5 py-2 text-left text-xs font-medium text-muted-foreground select-none"
           >
             {label}
           </div>
@@ -110,9 +113,9 @@ export function CalendarMonthGrid({
           const isSelected = inMonth && selectedDays?.has(dayNumber) === true;
           const isClickable = !isLoading && inMonth && onToggleDay != null;
           const cellClassName = cn(
-            "group/cell relative flex min-h-24 flex-col gap-1 border-b border-r border-border/60 p-1.5 text-left sm:min-h-28",
+            "group/cell relative flex min-h-24 flex-col gap-1 border-b border-r border-border/60 p-2.5 text-left sm:min-h-28",
             "nth-[7n]:border-r-0",
-            !inMonth && "bg-muted/20 text-muted-foreground/60",
+            !inMonth && "bg-muted/50 text-muted-foreground",
             inMonth && !isSelected && "hover:bg-muted/30",
             isSelected && "bg-primary/8 hover:bg-primary/12",
             isClickable &&
@@ -143,7 +146,7 @@ export function CalendarMonthGrid({
                 {isSelected && (
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 rounded-none ring-1 ring-inset ring-primary/30"
+                    className="pointer-events-none absolute inset-0 rounded-none ring-2 ring-inset ring-primary"
                   />
                 )}
               </button>
@@ -179,19 +182,30 @@ function CalendarDayCellContent({
 }): ReactNode {
   return (
     <>
-      <span
-        className={cn(
-          "inline-flex h-5 items-center self-start text-[0.6875rem] font-medium tabular-nums transition-colors duration-150 ease-out",
-          isToday &&
-            "min-w-5 justify-center rounded-full bg-primary px-1.5 text-primary-foreground",
-          !isToday && inMonth && "text-foreground",
-          !isToday && !inMonth && "text-muted-foreground/60",
-        )}
-      >
-        {dayNumber}
+      <span className="flex items-center justify-between gap-1">
+        <span
+          className={cn(
+            "inline-flex h-5 items-center self-start text-xs font-medium tabular-nums transition-colors duration-150 ease-out",
+            isToday &&
+              "min-w-5 justify-center rounded-full bg-primary px-1.5 text-primary-foreground",
+            !isToday && inMonth && "text-foreground",
+            !isToday && !inMonth && "text-muted-foreground/70",
+          )}
+        >
+          {dayNumber}
+        </span>
+        {/* The count says how much is due; the thumbnails only say what. */}
+        {bucket != null && bucket.thumbs.length > 0 ? (
+          <span
+            aria-hidden
+            className="rounded-full bg-muted px-1.5 text-[0.6875rem] leading-4 font-medium text-foreground tabular-nums"
+          >
+            {bucket.thumbs.length}
+          </span>
+        ) : null}
       </span>
       {bucket != null && bucket.thumbs.length > 0 && (
-        <CalendarDayThumbStack thumbs={bucket.thumbs} className="animate-data-in mt-auto" />
+        <CalendarDayThumbStack thumbs={bucket.thumbs} className="animate-data-in mt-2" />
       )}
     </>
   );
@@ -229,7 +243,7 @@ function CalendarDayThumbStack({
         {hasOverflow && (
           <span
             className={cn(
-              "relative inline-flex shrink-0 items-center justify-center rounded-md border border-border bg-muted text-[0.625rem] font-medium tabular-nums text-muted-foreground shadow-sm",
+              "relative inline-flex shrink-0 items-center justify-center rounded-md border border-background bg-muted text-[0.6875rem] font-medium tabular-nums text-foreground",
               THUMB_STACK_SIZE,
               visible.length > 0 && THUMB_STACK_OVERLAP,
             )}

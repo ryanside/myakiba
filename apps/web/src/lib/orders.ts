@@ -15,6 +15,6 @@ export function getStatusVariant(status: OrderStatus): BadgeVariant {
 export const ORDER_STATUS_COLORS = {
   Ordered: "bg-info",
   Paid: "bg-warning",
-  Shipped: "bg-primary",
+  Shipped: "bg-violet-500",
   Owned: "bg-success",
 } satisfies Readonly<Record<OrderStatus, string>>;

@@ -24,7 +24,7 @@ export const Route = createFileRoute("/(app)/items")({
 
 function RouteComponent(): React.JSX.Element {
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-6">
       <ItemDatabase />
     </div>
   );

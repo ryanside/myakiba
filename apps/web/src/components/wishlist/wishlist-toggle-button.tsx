@@ -23,7 +23,6 @@ export function WishlistToggleButton({
     <Button
       type="button"
       variant="outline"
-      size="xs"
       aria-pressed={isWishlisted}
       disabled={disabled || itemId === undefined || mutation.isPending}
       onClick={

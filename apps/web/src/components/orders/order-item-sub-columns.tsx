@@ -39,6 +39,7 @@ import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { itemDestination } from "@/lib/item-destination";
 
 interface OrderItemSubColumnsParams {
@@ -78,7 +79,7 @@ function OrderItemActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground"
+              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
@@ -229,26 +230,13 @@ export function createOrderItemSubColumns({
             </Link>
             <div className="min-w-0 space-y-px">
               <Link
-                className="font-medium text-foreground truncate"
+                className="block truncate font-medium text-foreground"
+                title={item.itemTitle}
                 {...itemDestination(item.itemId, item.itemExternalId)}
               >
                 {item.itemTitle}
               </Link>
-              <div className="flex items-center gap-2 font-normal">
-                {item.itemExternalId ? (
-                  <a
-                    href={`https://myfigurecollection.net/item/${item.itemExternalId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-muted-foreground font-normal hover:underline"
-                  >
-                    MFC #{item.itemExternalId}
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Custom</span>
-                )}
-                {item.itemCategory ? <CategoryLabel category={item.itemCategory} /> : null}
-              </div>
+              <CategoryLabel category={item.itemCategory} />
             </div>
           </div>
         );
@@ -256,7 +244,7 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 450,
+      size: 300,
       meta: {
         skeleton: (
           <div className="flex items-center gap-3">
@@ -327,7 +315,7 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 110,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -342,6 +330,7 @@ export function createOrderItemSubColumns({
         const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCountCell
+            label="Count"
             value={item.count}
             disabled={isPending}
             onSubmit={async (newValue) => {
@@ -353,8 +342,9 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 70,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6 w-10" />,
       },
     },
@@ -368,6 +358,7 @@ export function createOrderItemSubColumns({
         const isPending = isCollectionItemPending(item.id);
         return (
           <SelectCell
+            label="Status"
             value={item.status}
             options={[...ORDER_STATUSES]}
             colorMap={ORDER_STATUS_COLORS}
@@ -384,7 +375,7 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 105,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -400,6 +391,7 @@ export function createOrderItemSubColumns({
         const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCurrencyCell
+            label="Price"
             value={item.price}
             currency={currency}
             onSubmit={async (newValue) => {
@@ -407,6 +399,7 @@ export function createOrderItemSubColumns({
             }}
             locale={locale}
             disabled={isPending}
+            zeroAsEmpty
           />
         );
       },
@@ -415,6 +408,7 @@ export function createOrderItemSubColumns({
       enableResizing: true,
       size: 95,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -436,7 +430,7 @@ export function createOrderItemSubColumns({
           />
         );
       },
-      size: 56,
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

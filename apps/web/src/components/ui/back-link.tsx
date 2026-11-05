@@ -25,7 +25,7 @@ export function BackLink({ text, font, className, ...navigationProps }: BackLink
   const router = useRouter();
   const styles = cn(
     "group/link cursor-pointer relative flex items-center gap-1.5 w-fit py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground",
-    font === "orbitron" && "font-orbitron lowercase",
+    font === "orbitron" && "decorative",
     font === "sans" && "font-sans",
     className,
   );

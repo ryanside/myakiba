@@ -5,14 +5,16 @@ import { cn } from "@/lib/utils";
 
 const frameVariants = cva(
   [
-    "relative flex flex-col bg-muted/50 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/10 gap-0.75 p-0.75 rounded-(--frame-radius)",
-    "[--frame-radius:var(--radius-xl)]",
-    "[--frame-panel-bg:var(--color-card)] [--frame-panel-border-color:var(--color-border)] [--frame-border-color:var(--color-border)]",
+    // One opaque surface: the header is a title on the card, not a band around an inner card.
+    "relative flex flex-col gap-0 p-0 rounded-(--frame-radius)",
+    "[--frame-radius:var(--radius-2xl)]",
+    "[--frame-panel-bg:transparent] [--frame-panel-border-color:transparent] [--frame-border-color:var(--color-border)]",
   ],
   {
     variants: {
       variant: {
-        default: "border border-[var(--frame-border-color)] bg-clip-padding",
+        // A section on the page: no box or rule, content flush with the column edge.
+        default: "-mx-(--frame-panel-p) rounded-none",
         inverse:
           "[--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)] border border-[var(--frame-border-color)] bg-background bg-clip-padding",
         ghost: "",
@@ -74,7 +76,7 @@ function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "relative grow overflow-hidden rounded-(--frame-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding shadow-xs",
+        "relative grow overflow-hidden rounded-(--frame-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding",
         "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-radius)-1px)] before:shadow-black/5",
         "dark:bg-clip-border dark:before:shadow-white/5",
         "p-(--frame-panel-p)",
@@ -99,13 +101,11 @@ function FrameHeader({ className, ...props }: React.ComponentProps<"header">) {
   );
 }
 
-function FrameTitle({ className, ...props }: React.ComponentProps<"div">) {
+function FrameTitle({ className, children, ...props }: React.ComponentProps<"h2">) {
   return (
-    <div
-      className={cn("text-sm font-medium", className)}
-      data-slot="frame-panel-title"
-      {...props}
-    />
+    <h2 className={cn("text-sm font-medium", className)} data-slot="frame-panel-title" {...props}>
+      {children}
+    </h2>
   );
 }
 
@@ -132,4 +132,4 @@ function FrameFooter({ className, ...props }: React.ComponentProps<"footer">) {
   );
 }
 
-export { Frame, FramePanel, FrameHeader, FrameTitle, FrameDescription, FrameFooter, frameVariants };
+export { Frame, FramePanel, FrameHeader, FrameTitle, FrameDescription, FrameFooter };

@@ -30,6 +30,7 @@ const CALENDAR_MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
 
 const RELEASE_DATE_GROUP_LABEL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
+  month: "short",
   day: "numeric",
 });
 
@@ -96,11 +97,7 @@ function ReleaseCalendar({
   }, [invalidateReleases, apiMonth, apiYear]);
 
   return (
-    <Frame
-      spacing="sm"
-      className={cn("border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]", className)}
-      aria-busy={isPending}
-    >
+    <Frame spacing="sm" className={cn("min-h-[320px]", className)} aria-busy={isPending}>
       <FrameHeader>
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-1.5">
@@ -112,14 +109,14 @@ function ReleaseCalendar({
                 <Skeleton className="size-2" />
               </Badge>
             ) : (
-              <Badge variant="outline" className="animate-data-in">
+              <Badge variant="outline" className="animate-data-in tabular-nums">
                 {releases.length}
               </Badge>
             )}
           </div>
 
           {!hideControls && (
-            <div className="flex items-center">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -142,13 +139,13 @@ function ReleaseCalendar({
           )}
         </div>
       </FrameHeader>
-      <FramePanel className="shadow-none! border-none m-1 mt-0">
+      <FramePanel className="flex flex-col shadow-none! border-none">
         {(() => {
           if (isPending) return <ReleaseCalendarSkeleton />;
           if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="overflow-y-auto animate-data-in -mx-(--frame-panel-p) max-h-56 pb-6">
+              <div className="animate-data-in -mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
                 {grouped.map(([dateKey, items]) => (
                   <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
                 ))}
@@ -168,12 +165,11 @@ function ReleaseCalendar({
 
 function ReleaseCalendarSkeleton(): React.ReactNode {
   return (
-    <div aria-hidden="true" className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6">
-      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
+    <div aria-hidden="true" className="-mx-(--frame-panel-p) pb-3">
+      <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
         <span className="flex h-4 shrink-0 items-center">
           <Skeleton className="h-3 w-12" />
         </span>
-        <div className="h-px flex-1 bg-border" />
       </div>
       <div className="px-(--frame-panel-p)">
         {RELEASE_CALENDAR_SKELETON_ROWS.map((row) => (
@@ -209,11 +205,10 @@ function DateGroup({
 }): React.ReactNode {
   return (
     <div>
-      <div className="sticky top-0 z-10 flex items-center gap-2 bg-(--frame-panel-bg) px-(--frame-panel-p) pb-1">
+      <div className="flex items-center gap-2 px-(--frame-panel-p) pb-1">
         <span className="shrink-0 text-xs font-medium text-muted-foreground">
           {RELEASE_DATE_GROUP_LABEL_FORMATTER.format(parseISO(dateKey))}
         </span>
-        <div className="h-px flex-1 bg-border" />
       </div>
       <div className="px-(--frame-panel-p)">
         {items.map((item) => (

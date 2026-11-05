@@ -11,6 +11,7 @@ import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
   EXPENSE_CHART_DOT_MAX_POINTS,
+  formatAxisCurrency,
   shippingMethodChartConfig,
   shippingMethodKeys,
   useShippingMethodVisibility,
@@ -77,7 +78,7 @@ export function CumulativeShippingSpendByMethod({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
+          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
         />
         {isLoading ? null : (
           <ChartTooltip

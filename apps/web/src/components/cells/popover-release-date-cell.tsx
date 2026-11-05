@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;
@@ -178,7 +179,7 @@ export function PopoverReleaseDateCell({
       data-empty={!dateValue}
       className={cn(
         "w-full justify-start",
-        triggerVariant === "ghost" && "text-foreground pl-0",
+        triggerVariant === "ghost" && [CELL_TRIGGER_CLASS_NAME, "text-foreground"],
         triggerVariant === "outline" &&
           "data-[empty=true]:text-muted-foreground text-left font-normal",
         triggerClassName,
@@ -188,7 +189,12 @@ export function PopoverReleaseDateCell({
       {triggerVariant === "outline" && (
         <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" />
       )}
-      {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : "n/a")}
+      {formattedDisplay ??
+        (placeholder ? (
+          <span>{placeholder}</span>
+        ) : (
+          <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+        ))}
     </Button>
   );
 
