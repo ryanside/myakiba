@@ -4,6 +4,7 @@ import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyValue } from "@/components/cells/empty-value";
 import { cn } from "@/lib/utils";
 import {
   Timeline,
@@ -32,9 +33,7 @@ function StepDate({
   readonly reached: boolean;
 }): ReactNode {
   if (date) return formatDateOnlyForDisplay(date, dateFormat);
-  if (reached) {
-    return <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>;
-  }
+  if (reached) return <EmptyValue />;
   return <span className="text-muted-foreground">Pending</span>;
 }
 
