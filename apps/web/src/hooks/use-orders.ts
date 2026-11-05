@@ -45,7 +45,7 @@ export function useOrdersQuery() {
   const { filters } = useOrdersFilters();
   const filtersActive = hasActiveFiltersOrSorting(filters);
 
-  const { data, isPending, isError, status } = useRead(ordersResource.list, filters);
+  const { data, isPending, isError, error, status } = useRead(ordersResource.list, filters);
 
   return {
     orders: data?.items ?? [],
@@ -55,6 +55,7 @@ export function useOrdersQuery() {
     unpaidCosts: data?.unpaidCosts ?? 0,
     isPending,
     isError,
+    error,
     status,
     filtersActive,
   } as const;

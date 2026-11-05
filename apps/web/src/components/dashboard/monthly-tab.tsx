@@ -35,12 +35,7 @@ export function MonthlyTab({
   year,
 }: MonthlyTabProps): ReactElement {
   if (isError) {
-    return (
-      <LoadError
-        title="Couldn't load this month"
-        message={error?.message ?? "The server didn't answer."}
-      />
-    );
+    return <LoadError title="Couldn't load this month" message={error?.message} />;
   }
 
   const {

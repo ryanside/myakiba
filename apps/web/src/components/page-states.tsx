@@ -17,10 +17,10 @@ export const STATE_ICON_CLASS_NAME =
 
 export function LoadError({
   title,
-  message,
+  message = "The server didn't answer.",
 }: {
   readonly title: string;
-  readonly message: string;
+  readonly message?: string;
 }): React.JSX.Element {
   return (
     <Empty className={STATE_PANEL_CLASS_NAME}>

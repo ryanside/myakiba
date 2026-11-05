@@ -22,7 +22,7 @@ export function useCollectionQuery() {
   const { filters } = useCollectionFilters();
   const filtersActive = hasActiveFiltersOrSorting(filters);
 
-  const { data, isPending, isError, status } = useRead(collectionResource.list, filters);
+  const { data, isPending, isError, error, status } = useRead(collectionResource.list, filters);
 
   return {
     items: data?.items ?? [],
@@ -31,6 +31,7 @@ export function useCollectionQuery() {
     totalItemsThisMonth: data?.totalItemsThisMonth ?? 0,
     isPending,
     isError,
+    error,
     status,
     filtersActive,
   } as const;
