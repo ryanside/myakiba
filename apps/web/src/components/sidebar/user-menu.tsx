@@ -60,13 +60,13 @@ export default function UserMenu({ session }: { session: Session }) {
         <div className="py-2.5">
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full">
-              <TabsTrigger value="light" className="h-6 flex-1">
+              <TabsTrigger value="light" aria-label="Light" className="h-6 flex-1">
                 <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />
               </TabsTrigger>
-              <TabsTrigger value="dark" className="h-6 flex-1">
+              <TabsTrigger value="dark" aria-label="Dark" className="h-6 flex-1">
                 <HugeiconsIcon icon={Moon02Icon} className="size-4" aria-hidden="true" />
               </TabsTrigger>
-              <TabsTrigger value="system" className="h-6 flex-1">
+              <TabsTrigger value="system" aria-label="System" className="h-6 flex-1">
                 <HugeiconsIcon icon={ComputerIcon} className="size-4" aria-hidden="true" />
               </TabsTrigger>
             </TabsList>
