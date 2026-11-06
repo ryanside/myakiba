@@ -602,7 +602,7 @@ function OrderFormContent(
               children={([isSubmitting]) => (
                 <SheetClose
                   disabled={isSubmitting}
-                  render={<Button type="button" variant="outline" className="w-full flex-1" />}
+                  render={<Button type="button" variant="outline" />}
                 >
                   Cancel
                 </SheetClose>
