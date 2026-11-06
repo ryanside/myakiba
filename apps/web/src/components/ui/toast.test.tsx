@@ -65,3 +65,25 @@ test("error identity includes its description and preserves caller-provided ids"
   expect(screen.getByText("Order A")).toBeTruthy();
   expect(screen.getByText("Order B")).toBeTruthy();
 });
+
+test("a repeated error returns to the visible front after newer errors", () => {
+  render(<Toaster limit={3} />);
+
+  act(() => {
+    for (const title of ["Error A", "Error B", "Error C", "Error D"]) {
+      toast.add({ type: "error", title });
+    }
+  });
+  expect(
+    screen.getByText("Error A").closest('[data-slot="toast"]')?.hasAttribute("data-limited"),
+  ).toBe(true);
+
+  act(() => {
+    toast.add({ type: "error", title: "Error A" });
+  });
+
+  const repeated = screen.getByText("Error A").closest('[data-slot="toast"]');
+  expect(repeated?.hasAttribute("data-limited")).toBe(false);
+  expect(repeated?.style.getPropertyValue("--toast-index")).toBe("0");
+  expect(screen.getAllByText("Error A")).toHaveLength(1);
+});
