@@ -3,7 +3,7 @@
  * so its text still starts on the column's edge. The cell's own padding keeps the box inside the
  * cell, so nothing clips it.
  */
-export const CELL_TRIGGER_CLASS_NAME = "-mx-2 w-[calc(100%+1rem)] rounded-lg px-2";
+export const CELL_TRIGGER_CLASS_NAME = "-mx-2 w-[calc(100%+1rem)] rounded-lg px-2 press-none";
 
 /**
  * The editor takes the trigger's exact box, so clicking in moves nothing: the text stays where it

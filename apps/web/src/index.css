@@ -431,6 +431,12 @@ body {
   }
 }
 
+/* A field built from a button (a date picker, a form combobox, a cell trigger) keeps its colour
+   fade but does not press: a field answers with its focus state. */
+@utility press-none {
+  --press-scale: 1;
+}
+
 /* Popovers, menus and selects scale and fade in from their anchor, and leave a little faster. */
 @utility popup-motion {
   transform-origin: var(--transform-origin);

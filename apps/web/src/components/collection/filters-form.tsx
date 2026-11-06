@@ -392,7 +392,7 @@ function FiltersDraft({
                             role="combobox"
                             aria-controls={entriesListId}
                             aria-expanded={entriesPopoverOpen}
-                            className="w-full justify-between"
+                            className="press-none w-full justify-between"
                           >
                             Select entries...
                             <HugeiconsIcon

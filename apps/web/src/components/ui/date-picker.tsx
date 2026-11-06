@@ -50,7 +50,7 @@ export function DatePicker({
             data-empty={!dateValue}
             onBlur={onBlur}
             className={cn(
-              "data-[empty=true]:text-muted-foreground w-full min-w-0 justify-start overflow-hidden text-left font-normal",
+              "data-[empty=true]:text-muted-foreground press-none w-full min-w-0 justify-start overflow-hidden text-left font-normal",
               className,
             )}
             title={dateValue ? format(dateValue, "PPP") : undefined}

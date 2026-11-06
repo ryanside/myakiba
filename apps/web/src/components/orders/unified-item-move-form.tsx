@@ -268,7 +268,7 @@ function UnifiedItemMoveFormContent({
                               role="combobox"
                               aria-controls={targetOrderListId}
                               aria-expanded={popoverOpen}
-                              className="w-full justify-between"
+                              className="press-none w-full justify-between"
                               type="button"
                             >
                               {field.state.value

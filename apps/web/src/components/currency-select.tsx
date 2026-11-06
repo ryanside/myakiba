@@ -47,7 +47,7 @@ export function CurrencySelect({
             aria-invalid={invalid || undefined}
             disabled={disabled}
             onBlur={onBlur}
-            className="justify-between"
+            className="press-none justify-between"
           >
             <span className="min-w-0 truncate text-left">
               <span className="font-medium">{value}</span>
