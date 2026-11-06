@@ -451,10 +451,7 @@ function OrderColumn({
             )}
           </Badge>
         </FrameHeader>
-        <KanbanColumnContent
-          value={columnId}
-          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
-        >
+        <KanbanColumnContent value={columnId} className="flex flex-1 flex-col gap-2 p-0.5">
           <ColumnBody
             orders={orders}
             isLoading={isLoading}
@@ -659,7 +656,7 @@ function OrderKanbanBoard({
       onValueChange={setColumns}
       onMove={handleMove}
       getItemValue={(item) => item.orderId}
-      className="flex min-h-0 flex-1 flex-col overflow-x-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
     >
       <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
       <KanbanBoard className="min-h-0 min-w-[960px] flex-1 gap-3 sm:grid-cols-4">
