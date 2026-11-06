@@ -28,11 +28,10 @@ afterEach(() => {
   for (const client of queryClients.splice(0)) client.clear();
 });
 
-function renderFailingPage(route: AnyRoute) {
-  globalThis.fetch = Object.assign(
-    async () => new Response("That filter is invalid", { status: 400 }),
-    { preconnect: realFetch.preconnect },
-  );
+function renderFailingPage(route: AnyRoute, status = 400) {
+  globalThis.fetch = Object.assign(async () => new Response("That filter is invalid", { status }), {
+    preconnect: realFetch.preconnect,
+  });
   const Page = route.options.component;
   if (!Page) throw new Error("Route has no component");
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -58,6 +57,17 @@ describe("a page that fails to load", () => {
   test("Expenses shows the server's message", async () => {
     renderFailingPage(expensesRoute);
     expect(await screen.findByText("That filter is invalid")).toBeTruthy();
+  });
+});
+
+describe.each([
+  ["Collection", collectionRoute],
+  ["Orders", ordersRoute],
+  ["Expenses", expensesRoute],
+] as const)("%s during an outage", (_name, route) => {
+  test("uses the server fallback for a 503 response", async () => {
+    renderFailingPage(route, 503);
+    expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
   });
 });
 
