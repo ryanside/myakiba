@@ -39,7 +39,7 @@ export async function getCollection(filters: CollectionFilters) {
     throw new Error(getUserErrorMessage(error, ""));
   }
   if (!data) {
-    throw new Error();
+    throw new Error("Failed to get collection");
   }
 
   return data;
