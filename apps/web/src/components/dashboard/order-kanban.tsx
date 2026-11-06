@@ -385,6 +385,34 @@ function OrderCard({
   );
 }
 
+function ColumnBody({
+  orders,
+  isLoading,
+  currency,
+  dateFormat,
+  isOverlay,
+  onDateChange,
+}: Omit<React.ComponentProps<typeof OrderColumn>, "columnId">) {
+  if (isLoading) return <Loader className="justify-start pt-4" />;
+  if (orders.length === 0) {
+    return (
+      <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
+        No orders
+      </p>
+    );
+  }
+  return orders.map((order) => (
+    <OrderCard
+      key={order.orderId}
+      order={order}
+      currency={currency}
+      dateFormat={dateFormat}
+      asHandle={!isOverlay}
+      onDateChange={onDateChange}
+    />
+  ));
+}
+
 function OrderColumn({
   columnId,
   orders,
@@ -423,26 +451,14 @@ function OrderColumn({
           value={columnId}
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
         >
-          {(() => {
-            if (isLoading) return <Loader className="justify-start pt-4" />;
-            if (orders.length === 0) {
-              return (
-                <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
-                  No orders
-                </p>
-              );
-            }
-            return orders.map((order) => (
-              <OrderCard
-                key={order.orderId}
-                order={order}
-                currency={currency}
-                dateFormat={dateFormat}
-                asHandle={!isOverlay}
-                onDateChange={onDateChange}
-              />
-            ));
-          })()}
+          <ColumnBody
+            orders={orders}
+            isLoading={isLoading}
+            currency={currency}
+            dateFormat={dateFormat}
+            isOverlay={isOverlay}
+            onDateChange={onDateChange}
+          />
         </KanbanColumnContent>
       </Frame>
     </KanbanColumn>
