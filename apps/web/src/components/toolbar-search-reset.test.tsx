@@ -179,6 +179,30 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect(queryResetButton()).toBeNull();
   });
 
+  test("hides Reset and restores search focus after resetting text typed after an outside change", async () => {
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
+      `${path}?search=Ram`,
+    );
+    await user.click(input());
+    await act(() => router.navigate({ to: ".", search: (prev) => ({ ...prev, search: "Rem" }) }));
+    await user.type(input(), "x");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect(queryResetButton()).toBeNull();
+    expect(document.activeElement).toBe(input());
+  });
+
+  test("hides Reset and restores search focus after resetting a first search within the debounce", async () => {
+    const { user, input, resetButton, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect(queryResetButton()).toBeNull();
+    expect(document.activeElement).toBe(input());
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
     const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
       `${path}?search=Ram`,
