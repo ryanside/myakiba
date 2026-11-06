@@ -1078,6 +1078,17 @@
         "Move items order search > shows the outage message for a 503 response",
         "Command menu search > shows the outage message for a 503 response"
       ]
+    },
+    {
+      "fix": "e91c5b7f",
+      "bug": "a failed order edit showed two toasts, and the order edit dialogs never showed the server's text",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "a failed order edit from fees > shows the server's message when the order no longer exists",
+        "a failed order edit from fees > keeps the fallback when the server answers 503",
+        "a failed order edit from fees > keeps the fallback when the server cannot be reached",
+        "a failed order edit from dialog > shows the server's message when the order no longer exists"
+      ]
     }
   ],
   "lint": [
