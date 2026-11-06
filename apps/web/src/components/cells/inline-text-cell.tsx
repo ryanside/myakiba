@@ -15,8 +15,6 @@ interface InlineTextCellProps {
   disabled?: boolean;
 }
 
-const asText = (text: string): string => text;
-
 // Select everything, with the caret at the start, so a long value opens on its first words
 // instead of scrolled to its end.
 function selectFromStart(event: FocusEvent<HTMLInputElement>): void {
@@ -39,9 +37,9 @@ export function InlineTextCell({
     onSubmit,
     validate,
     disabled,
-    format: asText,
-    toDraft: asText,
-    parse: asText,
+    format: (text) => text,
+    toDraft: (text) => text,
+    parse: (draft) => draft,
   });
 
   return (
