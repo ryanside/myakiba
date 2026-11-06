@@ -1306,6 +1306,16 @@
         "Item Database load errors > shows the rejected-request message for a 422 validation body",
         "an analytics section rejected with a 422 validation body says so"
       ]
+    },
+    {
+      "fix": "55c4b80d",
+      "bug": "the analytics table skeletons drew 10 short rows, so the loaded section table and leaderboards shifted the layout",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table shows a placeholder row for each row of the page while it loads",
+        "a section placeholder row holds the box of the expand button that replaces it",
+        "a leaderboard shows a placeholder row for each row the board can hold while it loads"
+      ]
     }
   ],
   "lint": [
