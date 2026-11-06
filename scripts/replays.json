@@ -1143,7 +1143,7 @@
       "fixed": ["a rejected Reset navigation restores focus to the remounted search field"]
     },
     {
-      "fix": "997cbcb3",
+      "fix": "28c946cc",
       "bug": "empty HEAD aliases disabled the pinned guard, and unpinned aliases were silently ignored",
       "test": "scripts/replay.test.ts",
       "fixed": [
@@ -1152,7 +1152,7 @@
       ]
     },
     {
-      "fix": "ea452301",
+      "fix": "e1cffa5d",
       "bug": "WORKTREE snapshots dropped force-staged ignored files that were not yet committed",
       "test": "scripts/replay.test.ts",
       "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"]
