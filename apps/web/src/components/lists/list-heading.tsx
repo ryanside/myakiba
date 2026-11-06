@@ -42,10 +42,11 @@ export function ListHeading({
         type="button"
         aria-expanded={expanded}
         aria-controls={id}
+        aria-label={expanded ? "Show less" : "Show more"}
         onClick={() => setExpanded((current) => !current)}
-        className="relative shrink-0 rounded-sm font-medium text-foreground/70 underline-offset-4 outline-ring transition-colors duration-150 ease-out after:absolute after:-inset-x-1.5 after:-inset-y-1 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="relative shrink-0 rounded-sm font-medium text-muted-foreground underline-offset-4 outline-ring transition-colors duration-150 ease-out after:absolute after:-inset-x-1.5 after:-inset-y-1 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-muted-foreground/70 dark:hover:text-foreground"
       >
-        {expanded ? "less" : "more"}
+        {expanded ? "[show less]" : "[show more]"}
       </button>
     ) : null;
 
