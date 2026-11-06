@@ -59,7 +59,7 @@ function CalendarReleaseList<TItem>({
   }
 
   return (
-    <ol className="animate-data-in flex flex-col gap-5">
+    <ol className="flex flex-col gap-5">
       {groups.map(([date, dayItems]) => {
         const dayNumber = Number(date.slice(8, 10));
         const isSelected = isFilteringByDay && selectedDays.has(dayNumber);
@@ -258,7 +258,8 @@ function FilteredReleaseList<TItem>({
   const emptyLabel = isFilteringEmpty ? emptyFilteredLabel : emptyMonthLabel;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    // The list fades in from outside its scroll area, so the scrollbar fades in with the rows.
+    <div className="animate-data-in flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto pb-6 scroll-fade-b">
         <CalendarReleaseList
           items={filteredRows}
