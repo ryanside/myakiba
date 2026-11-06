@@ -1238,6 +1238,16 @@
       "bug": "with no index file, a WORKTREE snapshot dropped tracked files that match .gitignore",
       "test": "scripts/replay.test.ts",
       "fixed": ["a WORKTREE replay keeps tracked ignored files with no index file"]
+    },
+    {
+      "fix": "037f912d",
+      "bug": "the account menu's Light, Dark and System theme tabs were icon-only with no accessible name",
+      "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
+      "fixed": [
+        "the account menu's Light theme tab has an accessible name and sets the theme",
+        "the account menu's Dark theme tab has an accessible name and sets the theme",
+        "the account menu's System theme tab has an accessible name and sets the theme"
+      ]
     }
   ],
   "lint": [
