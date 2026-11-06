@@ -12,7 +12,9 @@ export const CollectionPendingContext = createContext<CollectionPendingState | n
 export function useCollectionPending() {
   const pending = useContext(CollectionPendingContext);
   if (!pending) {
-    throw new Error("Collection cells must be rendered within CollectionPendingContext");
+    throw new Error(
+      "Collection rows must be rendered within a grid that provides CollectionPendingContext",
+    );
   }
   return pending;
 }
