@@ -370,7 +370,7 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
       <OrderPendingContext
         value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
       >
-        <CollectionPendingContext value={{ isPending: () => false }}>
+        <CollectionPendingContext value={{ isItemPending: () => false }}>
           <RouterProvider router={router} />
         </CollectionPendingContext>
       </OrderPendingContext>

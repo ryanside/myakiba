@@ -205,7 +205,7 @@ async function renderGallery(ui: ReactNode) {
       <OrderPendingContext
         value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
       >
-        <CollectionPendingContext value={{ isPending: () => false }}>
+        <CollectionPendingContext value={{ isItemPending: () => false }}>
           <RouterProvider router={router} />
         </CollectionPendingContext>
       </OrderPendingContext>

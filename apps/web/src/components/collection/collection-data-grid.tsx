@@ -142,7 +142,9 @@ export const CollectionDataGrid = () => {
   );
 
   const pendingContextValue = useMemo(
-    () => ({ isPending: (id: string) => isCollectionPending(id) || isCollectionOrderPending(id) }),
+    () => ({
+      isItemPending: (id: string) => isCollectionPending(id) || isCollectionOrderPending(id),
+    }),
     [isCollectionPending, isCollectionOrderPending],
   );
 

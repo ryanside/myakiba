@@ -51,7 +51,7 @@ export function CollectionGalleryGrid({
   dateFormat,
   isLoading,
 }: CollectionGalleryGridProps): React.JSX.Element {
-  const { isPending } = useCollectionPending();
+  const { isItemPending } = useCollectionPending();
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {
@@ -109,7 +109,7 @@ export function CollectionGalleryGrid({
           item={item}
           itemSize={tileSize}
           variant="media"
-          isPending={isPending(item.id)}
+          isPending={isItemPending(item.id)}
           isSelected={isSelected}
           onEditCollectionItem={onEditCollectionItem}
           onDeleteCollectionItems={onDeleteCollectionItems}

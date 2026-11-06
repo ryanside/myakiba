@@ -59,7 +59,7 @@ export function CollectionCardGrid({
   dateFormat,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
-  const { isPending } = useCollectionPending();
+  const { isItemPending } = useCollectionPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -106,7 +106,7 @@ export function CollectionCardGrid({
               item={item}
               itemSize={cardWidth}
               variant="card"
-              isPending={isPending(item.id)}
+              isPending={isItemPending(item.id)}
               isSelected={isSelected}
               onEditCollectionItem={onEditCollectionItem}
               onDeleteCollectionItems={onDeleteCollectionItems}
