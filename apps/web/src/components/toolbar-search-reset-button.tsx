@@ -2,10 +2,10 @@ import { FilterResetIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 
-export function ResetFiltersButton({
+export function ToolbarSearchResetButton({
   onReset,
 }: {
-  readonly onReset: () => Promise<void>;
+  readonly onReset: () => void;
 }): React.JSX.Element {
   return (
     <Button
