@@ -3,15 +3,31 @@ import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-type TestReplay = {
+type TestReplayEntry = {
   fix: string;
   base?: string;
   bug: string;
   test: string;
-  testAt?: string;
   fixed: string[];
+  testAt?: string;
   atHead?: string[];
 };
+type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
+  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
+
+function parseTestReplay(
+  { testAt, atHead, ...replay }: TestReplayEntry,
+  index: number,
+): TestReplay {
+  const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
+  if (atHead !== undefined && testAt === undefined) {
+    throw invalid("atHead requires testAt");
+  }
+  if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
+    throw invalid("atHead must not be empty and must be a list of test names");
+  }
+  return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
+}
 
 type TestHarness = {
   packageDir: string;
@@ -74,18 +90,19 @@ const root = path.resolve(import.meta.dir, "..");
 const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
-  test: testReplays = [],
+  test: testEntries = [],
   lint: lintReplays = [],
   knip: knipReplays = [],
   types: typesReplays = [],
   fixtures: fixtureReplays = [],
 }: {
-  test?: TestReplay[];
+  test?: TestReplayEntry[];
   lint?: LintReplay[];
   knip?: KnipReplay[];
   types?: TypesReplay[];
   fixtures?: TypesFixture[];
 } = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
+const testReplays = testEntries.map(parseTestReplay);
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
@@ -329,8 +346,8 @@ const difference = (left: string[], right: string[]) => {
 for (const testFile of new Set(selected.map((replay) => replay.test))) {
   const run = await runTest(root, testFile);
   const required = selected
-    .filter((replay) => replay.test === testFile && replay.testAt !== undefined)
-    .flatMap((replay) => replay.atHead ?? replay.fixed);
+    .filter((replay) => replay.test === testFile)
+    .flatMap((replay) => (replay.testAt === undefined ? [] : replay.atHead));
   const notPassed = [...new Set(required)].filter((name) => !run.passed.includes(name));
   const pass =
     run.exitCode === 0 &&
