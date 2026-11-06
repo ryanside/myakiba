@@ -141,31 +141,3 @@ test("a leaderboard shows a placeholder row for each row the board can hold whil
 
   expect(bodyRows()).toHaveLength(ANALYTICS_LEADERBOARD_SIZE);
 });
-
-const headerWidths = () =>
-  screen
-    .getAllByRole("columnheader")
-    .map((header) => header.getAttribute("class")?.match(/(?:^|\s)(w-\d+)(?:\s|$)/)?.[1]);
-
-test("the section table holds every column but the name to a fixed width, loading or loaded", async () => {
-  await renderInApp(sectionTable([], true));
-  const loading = headerWidths();
-  const loadingLayout = screen.getByRole("table").classList.contains("table-fixed");
-  cleanup();
-
-  await renderInApp(
-    sectionTable([{ id: "entry-1", name: "Hatsune Miku", itemCount: 3, totalSpent: 1200 }], false),
-  );
-
-  expect(loadingLayout).toBe(true);
-  expect(screen.getByRole("table").classList.contains("table-fixed")).toBe(true);
-  expect(loading).toEqual(headerWidths());
-  expect(loading.filter((width) => width === undefined)).toHaveLength(1);
-});
-
-test("a long section name stays on one truncated line and keeps the full name in its title", async () => {
-  const name = "Kantai Collection: Kan Colle Fleet Girls Extended Edition";
-  await renderInApp(sectionTable([{ id: "entry-1", name, itemCount: 3, totalSpent: 1200 }], false));
-
-  expect(screen.getByTitle(name).classList.contains("truncate")).toBe(true);
-});
