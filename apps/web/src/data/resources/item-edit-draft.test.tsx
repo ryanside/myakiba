@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
+import { useMemo } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react/pure";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -13,8 +14,28 @@ import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/sc
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem, CollectionPage } from "@myakiba/contracts/collection/types";
 import type { Order, OrdersPage } from "@myakiba/contracts/orders/types";
-import OrdersDataGrid from "@/components/orders/orders-data-grid";
-import { CollectionDataGrid } from "@/components/collection/collection-data-grid";
+
+const realForm = await import("@tanstack/react-form");
+const { useForm: useRealForm } = realForm;
+let submissionDone: Promise<PromiseSettledResult<void>[]> = Promise.resolve([]);
+await mock.module("@tanstack/react-form", () => ({
+  ...realForm,
+  useForm: (...args: Parameters<typeof useRealForm>) => {
+    const form = useRealForm(...args);
+    return useMemo(() => {
+      const handleSubmit = form.handleSubmit;
+      form.handleSubmit = (submitMeta?: Parameters<typeof handleSubmit>[0]) => {
+        const submission = handleSubmit(submitMeta);
+        // The pre-fix form drops this rejection, so observe it before the failed save settles.
+        submissionDone = Promise.allSettled([submission]);
+        return submission;
+      };
+      return form;
+    }, [form]);
+  },
+}));
+const { default: OrdersDataGrid } = await import("@/components/orders/orders-data-grid");
+const { CollectionDataGrid } = await import("@/components/collection/collection-data-grid");
 
 const realFetch = globalThis.fetch;
 
@@ -167,7 +188,10 @@ describe.each(["orders", "collection"] as const)(
         ).toBe(true);
         await act(async () => {
           response.resolve(new Response("Item could not be saved", { status: 503 }));
+          await submissionDone;
         });
+        const [submission] = await submissionDone;
+        expect(submission?.status).toBe("rejected");
         await waitFor(() =>
           expect(
             screen
