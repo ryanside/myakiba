@@ -8,21 +8,9 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import * as z from "zod";
-import type { User } from "@/lib/auth-client";
+import { signedInSession } from "../../../test/session";
 
-const user = {
-  id: "collector",
-  name: "collector",
-  username: "collector",
-  email: "collector@example.com",
-  emailVerified: true,
-  currency: "USD",
-  dateFormat: "MM/DD/YYYY",
-  hasSeenOnboarding: true,
-  banned: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} satisfies User;
+const user = signedInSession().user;
 
 const savedChanges: unknown[] = [];
 
