@@ -183,6 +183,32 @@ test("a pinned replay fails when an explicit HEAD alias is missing", async () =>
   expect(output).toContain("not passed at head: missing guarding test");
 }, 30_000);
 
+test("a pinned replay rejects an empty HEAD alias list before running tests", async () => {
+  const repo = await fixture();
+  await repo.assertions("current", "unrelated passing test");
+  const { exitCode, output } = await repo.run({
+    fix: repo.fix,
+    testAt: repo.fix,
+    atHead: [],
+  });
+  expect(exitCode, output).toBe(1);
+  expect(output).toContain("atHead must not be empty");
+  expect(output).not.toContain(`head  ${testFile}`);
+}, 30_000);
+
+test("an unpinned replay rejects HEAD aliases before running tests", async () => {
+  const repo = await fixture();
+  await repo.source("old", true);
+  await repo.assertions("old");
+  const { exitCode, output } = await repo.run({
+    fix: repo.fix,
+    atHead: [testName],
+  });
+  expect(exitCode, output).toBe(1);
+  expect(output).toContain("atHead requires testAt");
+  expect(output).not.toContain(`head  ${testFile}`);
+}, 30_000);
+
 test("a WORKTREE replay keeps tracked files even when Git ignores them", async () => {
   const repo = await fixture();
   await repo.write(".gitignore", "node_modules\nsrc/ignored-value.ts\n");
