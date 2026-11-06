@@ -111,7 +111,8 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
                   rankedBy="itemCount"
-                  rows={entry.topByCount.slice(0, PREVIEW_ROWS)}
+                  rows={entry.topByCount}
+                  limit={PREVIEW_ROWS}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   rowIdKey="entryId"
@@ -130,7 +131,8 @@ function RouteComponent(): ReactNode {
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
                   rankedBy="totalSpent"
-                  rows={entry.topBySpend.slice(0, PREVIEW_ROWS)}
+                  rows={entry.topBySpend}
+                  limit={PREVIEW_ROWS}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   rowIdKey="entryId"
@@ -164,7 +166,8 @@ function RouteComponent(): ReactNode {
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
                 rankedBy="itemCount"
-                rows={shops.topByCount.slice(0, PREVIEW_ROWS)}
+                rows={shops.topByCount}
+                limit={PREVIEW_ROWS}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="shop"
@@ -183,7 +186,8 @@ function RouteComponent(): ReactNode {
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
                 rankedBy="totalSpent"
-                rows={shops.topBySpend.slice(0, PREVIEW_ROWS)}
+                rows={shops.topBySpend}
+                limit={PREVIEW_ROWS}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="shop"
@@ -216,7 +220,8 @@ function RouteComponent(): ReactNode {
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
                 rankedBy="itemCount"
-                rows={scales.topByCount.slice(0, PREVIEW_ROWS)}
+                rows={scales.topByCount}
+                limit={PREVIEW_ROWS}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="scale"
@@ -238,7 +243,8 @@ function RouteComponent(): ReactNode {
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
                 rankedBy="totalSpent"
-                rows={scales.topBySpend.slice(0, PREVIEW_ROWS)}
+                rows={scales.topBySpend}
+                limit={PREVIEW_ROWS}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="scale"
