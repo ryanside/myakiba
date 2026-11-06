@@ -57,11 +57,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<number>();
     render(<InlineCountCell label="Count" value={1} onSubmit={onSubmit} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^1(?:, edit Count)?$/ }));
+    fireEvent.click(screen.getByRole("button", { name: "1, edit Count" }));
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "3" } });
     fireEvent.keyDown(screen.getByRole("spinbutton"), { key: "Enter" });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /^1(?:, edit Count)?$/ })).toBeDefined(),
+      expect(screen.getByRole("button", { name: "1, edit Count" })).toBeDefined(),
     );
     await settle();
 
