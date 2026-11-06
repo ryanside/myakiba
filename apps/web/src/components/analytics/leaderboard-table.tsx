@@ -34,11 +34,8 @@ type ColumnSpec = {
   readonly skeleton?: ReactNode;
   /** Money columns hold minor units and show in the user's currency. */
   readonly format?: "money";
-  /** Number columns: [plain, with a bar] header widths and the figure's minimum width. */
-  readonly number?: {
-    readonly widths: readonly [string, string];
-    readonly figureWidth: string;
-  };
+  /** Number columns: [plain, with a bar] header widths. */
+  readonly number?: { readonly widths: readonly [string, string] };
 };
 
 const COLUMN_SPECS = {
@@ -49,13 +46,13 @@ const COLUMN_SPECS = {
   itemCount: {
     label: "Count",
     skeleton: DATA_TABLE_SKELETON.count,
-    number: { widths: ["w-16", "w-16 lg:w-36"], figureWidth: "min-w-6" },
+    number: { widths: ["w-16", "w-16 lg:w-36"] },
   },
   totalSpent: {
     label: "Spent",
     format: "money",
     skeleton: DATA_TABLE_SKELETON.money,
-    number: { widths: ["w-24", "w-24 lg:w-44"], figureWidth: "min-w-18" },
+    number: { widths: ["w-24", "w-24 lg:w-44"] },
   },
 } as const satisfies Readonly<Record<string, ColumnSpec>>;
 
@@ -63,16 +60,30 @@ export type LeaderboardColumn = keyof typeof COLUMN_SPECS;
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 
+function formatCell(
+  spec: ColumnSpec,
+  value: CellValue,
+  { currency, locale }: Preferences,
+): string | number {
+  return (
+    (spec.format === "money" && value !== null
+      ? formatCurrencyFromMinorUnits(Number(value), currency, locale)
+      : value) ?? "—"
+  );
+}
+
 function leaderboardColumns<TRow extends Record<string, CellValue>>({
   columns,
   barColumn,
   barMax,
+  widestBarFigure,
   currency,
   locale,
 }: Preferences & {
   readonly columns: readonly LeaderboardColumn[];
   readonly barColumn: RankedBy;
   readonly barMax: number;
+  readonly widestBarFigure: string;
 }): ColumnDef<TRow, CellValue>[] {
   return [
     {
@@ -111,10 +122,7 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
           : { skeleton: spec.skeleton },
         cell: ({ getValue }) => {
           const value = getValue();
-          const shown =
-            (spec.format === "money" && value !== null
-              ? formatCurrencyFromMinorUnits(Number(value), currency, locale)
-              : value) ?? "—";
+          const shown = formatCell(spec, value, { currency, locale });
           if (!spec.number) {
             return (
               <span className="block truncate" title={String(shown)}>
@@ -125,7 +133,7 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
           if (column !== barColumn || barMax <= 0) return shown;
 
           return (
-            <span className="flex items-center justify-end gap-2">
+            <span className="flex items-center justify-end gap-1.5">
               <span
                 aria-hidden
                 className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
@@ -135,8 +143,13 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
                   style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
                 />
               </span>
-              {/* A fixed figure width keeps every bar starting on the same line. */}
-              <span className={cn("inline-block", spec.number.figureWidth)}>{shown}</span>
+              {/* Each figure reserves the widest figure's width, so the bars line up and sit against their figures. */}
+              <span
+                data-widest={widestBarFigure}
+                className="inline-grid justify-items-end before:invisible before:col-start-1 before:row-start-1 before:content-[attr(data-widest)]"
+              >
+                <span className="col-start-1 row-start-1">{shown}</span>
+              </span>
             </span>
           );
         },
@@ -169,9 +182,26 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
     [rankedBy, tableData],
   );
+  const widestBarFigure = useMemo(
+    () =>
+      tableData
+        .map((row) =>
+          String(formatCell(COLUMN_SPECS[rankedBy], row[rankedBy] ?? null, { currency, locale })),
+        )
+        .reduce((widest, figure) => (figure.length > widest.length ? figure : widest), ""),
+    [currency, locale, rankedBy, tableData],
+  );
   const tableColumns = useMemo(
-    () => leaderboardColumns<TRow>({ columns, barColumn: rankedBy, barMax, currency, locale }),
-    [barMax, columns, currency, locale, rankedBy],
+    () =>
+      leaderboardColumns<TRow>({
+        columns,
+        barColumn: rankedBy,
+        barMax,
+        widestBarFigure,
+        currency,
+        locale,
+      }),
+    [barMax, columns, currency, locale, rankedBy, widestBarFigure],
   );
   const table = useReactTable({
     data: tableData,
