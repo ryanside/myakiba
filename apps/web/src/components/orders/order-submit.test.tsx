@@ -110,6 +110,7 @@ type SubmitPath = {
   readonly render: (write: HeldWrite, clearSelections: () => void) => ReactElement;
   readonly submit: (user: ReturnType<typeof userEvent.setup>) => Promise<void>;
   readonly clearsSelection: boolean;
+  readonly checksWidths: boolean;
 };
 
 const trigger = <button type="button">Open</button>;
@@ -120,6 +121,7 @@ const clickSubmit = (name: string) => async (user: ReturnType<typeof userEvent.s
 const SUBMIT_PATHS: SubmitPath[] = [
   {
     name: "edit-order sheet",
+    checksWidths: true,
     render: (write) => (
       <OrderForm
         type="edit-order"
@@ -134,6 +136,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "merge dialog",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <OrderForm
         type="merge"
@@ -149,6 +152,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "move to an existing order",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <UnifiedItemMoveForm
         renderTrigger={trigger}
@@ -169,6 +173,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "move to a new order",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <UnifiedItemMoveForm
         renderTrigger={trigger}
@@ -215,10 +220,11 @@ const collectionItem: CollectionItemFormValues = {
   releaseBarcode: null,
 };
 
-const FOOTER_PATHS: Pick<SubmitPath, "name" | "render">[] = [
+const FOOTER_PATHS: Pick<SubmitPath, "name" | "render" | "checksWidths">[] = [
   ...SUBMIT_PATHS,
   {
     name: "collection item sheet",
+    checksWidths: true,
     render: (write) => (
       <CollectionItemForm
         renderTrigger={trigger}
@@ -305,9 +311,7 @@ describe.each(FOOTER_PATHS)("$name footer", (path) => {
   });
 });
 
-describe.each(
-  FOOTER_PATHS.filter((path) => ["edit-order sheet", "collection item sheet"].includes(path.name)),
-)("$name footer widths", (path) => {
+describe.each(FOOTER_PATHS.filter((path) => path.checksWidths))("$name footer widths", (path) => {
   test("keeps Cancel content-sized and lets Update fill the remaining width", () => {
     const queryClient = new QueryClient();
     try {
