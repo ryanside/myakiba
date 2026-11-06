@@ -41,16 +41,31 @@ const buttonVariants = cva(
   },
 );
 
+// CSS can't read an element's own width, and the press caps its travel in px (`press` in index.css).
+function handPressWidth(button: HTMLElement): void {
+  button.style.setProperty("--press-width", String(button.offsetWidth));
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  onPointerDown,
+  onKeyDown,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      onPointerDown={(event) => {
+        handPressWidth(event.currentTarget);
+        onPointerDown?.(event);
+      }}
+      onKeyDown={(event) => {
+        handPressWidth(event.currentTarget);
+        onKeyDown?.(event);
+      }}
       {...props}
     />
   );

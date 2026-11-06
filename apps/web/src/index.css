@@ -207,6 +207,9 @@
   --motion-data-in: 250ms;
   --press-scale: 0.97;
   --press-scale-text: 0.96;
+  /* The most, in px, a press narrows a button. 0.97 reaches it at about 170px wide, so a
+     full-width button narrows by 5px, not 18px. Button hands its width over as --press-width. */
+  --press-travel: 5;
   --popup-from: 0.95;
   --tooltip-from: 0.97;
   --modal-from: 0.96;
@@ -416,7 +419,7 @@ body {
 @utility press {
   @apply color-motion;
   &:active:not(:disabled, [data-disabled]) {
-    scale: var(--press-scale);
+    scale: max(var(--press-scale), 1 - var(--press-travel) / var(--press-width, 1));
   }
 }
 
