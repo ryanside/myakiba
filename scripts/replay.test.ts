@@ -246,39 +246,33 @@ test("a WORKTREE replay keeps force-staged ignored files and preserves the real 
   expect(await Bun.file(path.resolve(repo.dir, indexPath)).bytes()).toEqual(index);
 }, 30_000);
 
-for (const trackedIgnored of [false, true]) {
-  const name = trackedIgnored
-    ? "a WORKTREE replay keeps tracked ignored files with no index file"
-    : "a WORKTREE replay works in a checkout with no index file";
-  test(
-    name,
-    async () => {
-      const repo = await fixture();
-      if (trackedIgnored) {
-        await repo.write(".gitignore", "node_modules\nsrc/ignored-value.ts\n");
-        await repo.write("src/ignored-value.ts", "export const ignored = true;\n");
-        await repo.git("add", "--force", "src/ignored-value.ts");
-        await repo.commit("tracked ignored dependency");
-      }
-      const indexResult = await repo.git("rev-parse", "--git-path", "index");
-      const indexPath = path.resolve(repo.dir, indexResult.text().trim());
-      await rm(indexPath);
-      await repo.source("old", true);
-      await repo.assertions(
-        "old",
-        testName,
-        trackedIgnored
-          ? 'expect(await Bun.file(new URL("./ignored-value.ts", import.meta.url)).exists()).toBe(true);'
-          : "",
-      );
-      const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
-      expect(await Bun.file(indexPath).exists()).toBe(false);
-      expect(exitCode, output).toBe(0);
-      expect(output).toContain("every replay matched");
-    },
-    30_000,
-  );
+async function replayWithoutIndex(repo: Awaited<ReturnType<typeof fixture>>, assertion: string) {
+  const indexResult = await repo.git("rev-parse", "--git-path", "index");
+  const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+  await rm(indexPath);
+  await repo.source("old", true);
+  await repo.assertions("old", testName, assertion);
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(await Bun.file(indexPath).exists()).toBe(false);
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
 }
+
+test("a WORKTREE replay works in a checkout with no index file", async () => {
+  await replayWithoutIndex(await fixture(), "");
+}, 30_000);
+
+test("a WORKTREE replay keeps tracked ignored files with no index file", async () => {
+  const repo = await fixture();
+  await repo.write(".gitignore", "node_modules\nsrc/ignored-value.ts\n");
+  await repo.write("src/ignored-value.ts", "export const ignored = true;\n");
+  await repo.git("add", "--force", "src/ignored-value.ts");
+  await repo.commit("tracked ignored dependency");
+  await replayWithoutIndex(
+    repo,
+    'expect(await Bun.file(new URL("./ignored-value.ts", import.meta.url)).exists()).toBe(true);',
+  );
+}, 30_000);
 
 test("a WORKTREE replay captures assume-unchanged deletions and keeps missing sparse files", async () => {
   const repo = await fixture();
