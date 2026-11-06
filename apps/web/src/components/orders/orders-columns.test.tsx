@@ -154,6 +154,6 @@ test("disables only the pending order item's cells", () => {
 
 test("refuses to render without a pending provider", () => {
   expect(() => render(<OrderStatusCells orders={[order("saving")]} />)).toThrow(
-    "Order rows must be rendered within a grid that provides OrderPendingContext",
+    "Order rows must render inside OrdersDataGrid or the order detail page, or provide OrderPendingContext",
   );
 });

@@ -13,7 +13,7 @@ export function useCollectionPending() {
   const pending = useContext(CollectionPendingContext);
   if (!pending) {
     throw new Error(
-      "Collection rows must be rendered within a grid that provides CollectionPendingContext",
+      "Collection rows must render inside CollectionDataGrid, or provide CollectionPendingContext",
     );
   }
   return pending;

@@ -13,7 +13,9 @@ export const OrderPendingContext = createContext<OrdersPendingState | null>(null
 export function useOrderPending() {
   const pending = useContext(OrderPendingContext);
   if (!pending) {
-    throw new Error("Order rows must be rendered within a grid that provides OrderPendingContext");
+    throw new Error(
+      "Order rows must render inside OrdersDataGrid or the order detail page, or provide OrderPendingContext",
+    );
   }
   return pending;
 }
