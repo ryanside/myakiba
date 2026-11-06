@@ -59,7 +59,7 @@ export function CollectionCardGrid({
   dateFormat,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
-  const { isCollectionPending, isCollectionOrderPending } = useCollectionPending();
+  const { isPending } = useCollectionPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -98,7 +98,6 @@ export function CollectionCardGrid({
     <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle}>
       {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         const itemLink = itemDestination(item.itemId, item.itemExternalId);
 
         return (
@@ -107,7 +106,7 @@ export function CollectionCardGrid({
               item={item}
               itemSize={cardWidth}
               variant="card"
-              isPending={isPending}
+              isPending={isPending(item.id)}
               isSelected={isSelected}
               onEditCollectionItem={onEditCollectionItem}
               onDeleteCollectionItems={onDeleteCollectionItems}

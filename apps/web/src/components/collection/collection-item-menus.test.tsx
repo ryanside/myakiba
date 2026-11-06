@@ -79,9 +79,7 @@ function RowActions(): ReactNode {
     .rows[0]?.getVisibleCells()
     .find((visible) => visible.column.id === "actions");
   return (
-    <CollectionPendingContext
-      value={{ isCollectionPending: () => false, isCollectionOrderPending: () => false }}
-    >
+    <CollectionPendingContext value={{ isPending: () => false }}>
       {cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null}
     </CollectionPendingContext>
   );

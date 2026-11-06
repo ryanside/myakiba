@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { useCollectionPending } from "./collection-pending-context";
+import { withCollectionPending } from "./collection-pending-context";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -31,7 +30,7 @@ import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-colu
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import type { CellContext, ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import CollectionItemForm from "./collection-item-form";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
@@ -222,19 +221,6 @@ function CollectionActionsCell({
       />
     </>
   );
-}
-
-function withCollectionPending(
-  render: (context: CellContext<CollectionItem, unknown>, isPending: boolean) => ReactNode,
-) {
-  return function PendingCell(context: CellContext<CollectionItem, unknown>) {
-    const { isCollectionPending, isCollectionOrderPending } = useCollectionPending();
-    return render(
-      context,
-      isCollectionPending(context.row.original.id) ||
-        isCollectionOrderPending(context.row.original.id),
-    );
-  };
 }
 
 export function createCollectionColumns({
