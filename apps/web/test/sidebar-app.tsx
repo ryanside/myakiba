@@ -12,31 +12,9 @@ import {
 } from "@tanstack/react-router";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { RouterAppContext } from "@/routes/__root";
+import { signedInSession } from "./session";
 
-const session = {
-  session: {
-    id: "sidebar-session",
-    token: "test-token",
-    userId: "sidebar-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "sidebar-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    hasSeenOnboarding: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-} satisfies NonNullable<Awaited<ReturnType<RouterAppContext["readSession"]>>["session"]>;
+const session = signedInSession();
 
 const realRequestAnimationFrame = globalThis.requestAnimationFrame;
 const realCancelAnimationFrame = globalThis.cancelAnimationFrame;
