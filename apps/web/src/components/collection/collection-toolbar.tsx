@@ -69,6 +69,7 @@ export function CollectionToolbar(): React.JSX.Element {
         aria-label="Search Collection"
         ref={inputRef}
         onInput={onSearchInput}
+        onBlur={onSearchInput}
         className="max-w-64"
       />
       <FiltersForm

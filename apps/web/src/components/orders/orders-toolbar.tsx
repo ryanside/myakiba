@@ -61,6 +61,7 @@ export function OrdersToolbar(): React.JSX.Element {
         aria-label="Search Orders"
         ref={inputRef}
         onInput={onSearchInput}
+        onBlur={onSearchInput}
         className="max-w-64"
       />
       <OrdersFiltersForm

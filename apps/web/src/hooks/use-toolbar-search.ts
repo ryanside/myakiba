@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 export function useToolbarSearch({
@@ -10,23 +10,23 @@ export function useToolbarSearch({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
-  const [draft, setDraft] = useState({ search, hasText: false });
+  const [hasSearchDraft, setHasSearchDraft] = useState(false);
 
-  if (draft.search !== search) {
-    setDraft({ search, hasText: false });
-  }
+  useEffect(() => {
+    setHasSearchDraft((inputRef.current?.value ?? "") !== "");
+  }, [search]);
 
   const onSearchInput = (event: FormEvent<HTMLInputElement>): void => {
-    setDraft({ search, hasText: event.currentTarget.value !== "" });
+    setHasSearchDraft(event.currentTarget.value !== "");
   };
 
   const resetSearch = async (): Promise<void> => {
     setSearchResetKey((key) => key + 1);
-    setDraft({ search, hasText: false });
+    setHasSearchDraft(false);
     await resetFilters();
     // Wait for the cleared value before focusing, because focused inputs defer outside changes.
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  return { inputRef, searchResetKey, hasSearchDraft: draft.hasText, onSearchInput, resetSearch };
+  return { inputRef, searchResetKey, hasSearchDraft, onSearchInput, resetSearch };
 }

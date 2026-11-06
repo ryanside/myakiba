@@ -121,6 +121,19 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect(queryResetButton()).toBeNull();
   });
 
+  test("hides Reset when blur applies a deferred outside clear", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    await act(() => router.navigate({ to: path, search: {} }));
+    expect(queryResetButton()).not.toBeNull();
+
+    await user.tab();
+
+    expect(input().value).toBe("");
+    expect(queryResetButton()).toBeNull();
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
     const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
       `${path}?search=Ram`,
