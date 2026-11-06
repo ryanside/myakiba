@@ -448,7 +448,7 @@ async function checkOut(revision: string, harness?: TestHarness) {
 async function commitWorkingTree() {
   const index = path.join(worktree, ".replay-index");
   try {
-    const tree = await $`git add -A && git write-tree`
+    const tree = await $`git read-tree HEAD && git add -A && git write-tree`
       .cwd(root)
       .env({ ...process.env, GIT_INDEX_FILE: index })
       .quiet()
