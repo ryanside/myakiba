@@ -1322,6 +1322,22 @@
       "bug": "the list heading's more/less toggle read as more words of the description",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
       "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+    },
+    {
+      "fix": "dd00a72f",
+      "bug": "each kanban lane was its own scroll area, so the turning spinner and the entering cards showed a scrollbar before any card was visible",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "the board's scrolling > no part of the board scrolls vertically while its lanes load or after their cards arrive"
+      ]
+    },
+    {
+      "fix": "073dd622",
+      "bug": "the calendar's release list faded its rows in inside the scroll area, so the scrollbar was fully drawn before the rows",
+      "test": "apps/web/src/components/calendar/calendar-release-list.test.tsx",
+      "fixed": [
+        "the calendar's release list > fades in around its scroll area, so the scrollbar appears with the rows instead of ahead of them"
+      ]
     }
   ],
   "lint": [
