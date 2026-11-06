@@ -6,6 +6,8 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { ComputerIcon, Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { ThemeProvider } from "next-themes";
 import UserMenu from "./user-menu";
 import { signedInSession } from "../../../test/session";
@@ -63,3 +65,22 @@ test.each([
     expect(localStorage.getItem("theme")).toBe(value);
   },
 );
+
+test("each account menu theme tab shows its own icon", async () => {
+  renderUserMenu();
+
+  fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+
+  const tabs = await screen.findAllByRole("tab");
+  const pathsOf = (icon: IconSvgElement) => icon.map(([, { d }]) => String(d));
+  expect(
+    tabs.map((tab) => ({
+      name: tab.getAttribute("aria-label"),
+      paths: [...tab.querySelectorAll("path")].map((path) => path.getAttribute("d")),
+    })),
+  ).toEqual([
+    { name: "Light", paths: pathsOf(Sun01Icon) },
+    { name: "Dark", paths: pathsOf(Moon02Icon) },
+    { name: "System", paths: pathsOf(ComputerIcon) },
+  ]);
+});
