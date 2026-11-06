@@ -30,8 +30,8 @@ import {
   Tick02Icon,
   ArrowLeft03Icon,
   ArrowRight03Icon,
-  ArrowLeft02Icon,
-  ArrowRight02Icon,
+  MoveLeftIcon,
+  MoveRightIcon,
   DragDropVerticalIcon,
   PinOffIcon,
 } from "@hugeicons/core-free-icons";
@@ -246,7 +246,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           disabled={!canMoveLeft || isPinned !== false}
         >
           <HugeiconsIcon
-            icon={ArrowLeft02Icon}
+            icon={MoveLeftIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
@@ -267,7 +267,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           disabled={!canMoveRight || isPinned !== false}
         >
           <HugeiconsIcon
-            icon={ArrowRight02Icon}
+            icon={MoveRightIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
