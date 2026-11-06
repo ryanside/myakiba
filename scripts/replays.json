@@ -1331,6 +1331,20 @@
       "bug": "a WORKTREE replay without a base failed only mid-run, after HEAD and earlier replays had run",
       "test": "scripts/replay-config.test.ts",
       "fixed": ["a WORKTREE replay without a base revision is rejected"]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table holds each column to the same share of its width while loading and once loaded"
+      ]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table holds each column to a fixed share of its width in every scope"]
     }
   ],
   "lint": [
