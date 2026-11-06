@@ -1,0 +1,108 @@
+import { afterEach, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import path from "node:path";
+import { $ } from "bun";
+
+const root = path.resolve(import.meta.dir, "..");
+const fixtures: string[] = [];
+const testFile = "src/value.test.ts";
+const testName = "the value is fixed in the expected era";
+const gitEnv = {
+  ...process.env,
+  GIT_AUTHOR_NAME: "Fixture",
+  GIT_AUTHOR_EMAIL: "fixture@example.invalid",
+  GIT_COMMITTER_NAME: "Fixture",
+  GIT_COMMITTER_EMAIL: "fixture@example.invalid",
+};
+
+afterEach(async () => {
+  await Promise.all(fixtures.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+async function fixture() {
+  const cache = path.join(root, "node_modules/.cache");
+  await mkdir(cache, { recursive: true });
+  const dir = await mkdtemp(path.join(cache, "replay-test-"));
+  fixtures.push(dir);
+  const write = (file: string, value: string | Blob) => Bun.write(path.join(dir, file), value);
+  const git = (...args: string[]) => $`git ${args}`.cwd(dir).env(gitEnv).quiet();
+  const commit = async (message: string) => {
+    await git("add", ".");
+    await git("commit", "--no-verify", "-qm", message);
+    return (await git("rev-parse", "HEAD")).text().trim();
+  };
+  const source = (era: string, fixed: boolean) =>
+    write("src/value.ts", `export const value = ${JSON.stringify({ era, fixed })};\n`);
+  const assertions = (era: string) =>
+    write(
+      testFile,
+      `import { expect, test } from "bun:test";
+import { value } from "./value";
+test(${JSON.stringify(testName)}, () => {
+  expect(value).toEqual(${JSON.stringify({ era, fixed: true })});
+});
+`,
+    );
+
+  await write("scripts/replay.ts", Bun.file(path.join(root, "scripts/replay.ts")));
+  await write(
+    "package.json",
+    '{"name":"fixture","scripts":{"test":"bun test"},"dependencies":{"fixture-dep":"file:./dependency"}}\n',
+  );
+  await write("dependency/package.json", '{"name":"fixture-dep","version":"1.0.0"}\n');
+  await write(".gitignore", "node_modules\n");
+  await $`bun install`.cwd(dir).quiet();
+  await git("init", "-q", "-b", "main");
+  await source("old", false);
+  await assertions("old");
+  const base = await commit("broken");
+  await source("old", true);
+  const fix = await commit("fixed");
+  await source("current", true);
+  await assertions("current");
+  await commit("new era");
+
+  const run = async (entry: { fix: string; base?: string; testAt?: string }) => {
+    await write(
+      "scripts/replays.json",
+      JSON.stringify({
+        test: [{ ...entry, bug: "fixture bug", test: testFile, fixed: [testName] }],
+      }),
+    );
+    const result = await $`bun scripts/replay.ts`.cwd(dir).env(gitEnv).nothrow().quiet();
+    return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
+  };
+  return { base, fix, source, assertions, run };
+}
+
+test("testAt uses the pinned test at both the parent and fix while HEAD uses current assertions", async () => {
+  const repo = await fixture();
+  const { exitCode, output } = await repo.run({ fix: repo.fix, testAt: repo.fix });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
+
+test("an unpinned replay uses the working copy of the test", async () => {
+  const repo = await fixture();
+  await repo.source("old", true);
+  await repo.assertions("old");
+  const { exitCode, output } = await repo.run({ fix: repo.fix });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
+
+test("a WORKTREE replay with no behavior change does not flip", async () => {
+  const repo = await fixture();
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: "HEAD" });
+  expect(exitCode, output).toBe(1);
+  expect(output).toContain(`did not flip: ${testName}`);
+}, 30_000);
+
+test("a WORKTREE replay detects a real behavior change", async () => {
+  const repo = await fixture();
+  await repo.source("old", true);
+  await repo.assertions("old");
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
