@@ -47,7 +47,7 @@ test("a rejected Reset navigation restores focus to the remounted search field",
           ref={inputRef}
         />
         {hasSearchDraft && (
-          <button onClick={resetSearch} type="button">
+          <button onClick={() => Promise.allSettled([resetSearch()])} type="button">
             Reset Filters
           </button>
         )}

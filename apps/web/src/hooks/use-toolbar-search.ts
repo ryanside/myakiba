@@ -17,10 +17,10 @@ export function useToolbarSearch(resetFilters: () => Promise<void>) {
       await resetFilters();
     } catch {
       toast.add({ type: "error", title: "Failed to reset filters. Please try again." });
-      return;
+    } finally {
+      // Wait for the cleared value before focusing, because focused inputs defer outside changes.
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
-    // Wait for the cleared value before focusing, because focused inputs defer outside changes.
-    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   return { inputRef, searchResetKey, hasSearchDraft, onSearchTextChange, resetSearch };
