@@ -404,18 +404,17 @@ body {
 }
 
 /* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant.
-   Scale is listed too, so a press stacked on the same element keeps its transition. */
+   Scale is listed so the press utilities build on it, and a press stacked on it keeps its transition. */
 @utility color-motion {
   transition-property: color, background-color, border-color, scale;
-  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
+  transition-duration:
+    var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
   transition-timing-function: ease, ease, ease, var(--ease-out);
 }
 
 /* Pills and icon buttons: the colour fade plus a press. */
 @utility press {
-  transition-property: color, background-color, border-color, scale;
-  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
-  transition-timing-function: ease, ease, ease, var(--ease-out);
+  @apply color-motion;
   &:active:not(:disabled, [data-disabled]) {
     scale: var(--press-scale);
   }
@@ -423,9 +422,7 @@ body {
 
 /* Links and headers: a smaller target presses a little deeper for the same visible travel. */
 @utility press-text {
-  transition-property: color, background-color, border-color, scale;
-  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
-  transition-timing-function: ease, ease, ease, var(--ease-out);
+  @apply color-motion;
   &:active:not(:disabled, [data-disabled]) {
     scale: var(--press-scale-text);
   }
