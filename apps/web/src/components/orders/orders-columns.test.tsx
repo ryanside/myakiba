@@ -1,5 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -131,4 +137,47 @@ test("saves a fee edit without cascading", async () => {
   fireEvent.keyDown(editor, { key: "Enter" });
 
   await waitFor(() => expect(edits).toEqual([[{ ...savedOrder, taxes: 500 }, []]]));
+});
+
+function OrderRow() {
+  const table = useReactTable({
+    data: [order("o1")],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getRowCanExpand: () => true,
+  });
+  return table
+    .getRowModel()
+    .rows[0]?.getVisibleCells()
+    .filter(({ column }) => column.id === "expand" || column.id === "title")
+    .map((cell) => (
+      <div key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
+    ));
+}
+
+function glyph(control: HTMLElement): (string | null)[] {
+  return [...control.querySelectorAll("svg path")].map((path) => path.getAttribute("d"));
+}
+
+test("draws the row's open-order link with a different icon from its expand button", async () => {
+  const router = createRouter({
+    routeTree: createRootRoute({
+      component: () => (
+        <OrderPendingContext
+          value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+        >
+          <OrderRow />
+        </OrderPendingContext>
+      ),
+    }),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  render(<RouterProvider router={router} />);
+
+  const expand = await screen.findByRole("button", { name: "Expand row" });
+  const open = screen.getAllByRole("link", { name: "View o1" }).at(-1);
+  if (!open) throw new Error("the row has no open-order link");
+
+  expect(glyph(open)).not.toEqual(glyph(expand));
 });
