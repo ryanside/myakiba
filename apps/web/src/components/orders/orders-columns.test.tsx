@@ -1,7 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { Order } from "@myakiba/contracts/orders/types";
+import type { ColumnDef } from "@tanstack/react-table";
+import type { Order, OrderItem } from "@myakiba/contracts/orders/types";
+import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { createOrdersColumns } from "./orders-columns";
 import { OrderPendingContext } from "./order-pending-context";
 
@@ -33,7 +35,7 @@ function order(orderId: string): Order {
   };
 }
 
-const columns = createOrdersColumns({
+const orderColumns = createOrdersColumns({
   onEditOrder: async () => {},
   onDeleteOrders: async () => {},
   onEditItem: async () => {},
@@ -43,12 +45,20 @@ const columns = createOrdersColumns({
   dateFormat: "MM/DD/YYYY",
 });
 
-function StatusCells({ orders }: { readonly orders: readonly Order[] }) {
+function StatusCells<TRow>({
+  rows,
+  columns,
+  rowId,
+}: {
+  readonly rows: readonly TRow[];
+  readonly columns: ColumnDef<TRow>[];
+  readonly rowId: (row: TRow) => string;
+}) {
   const table = useReactTable({
-    data: [...orders],
+    data: [...rows],
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => row.orderId,
+    getRowId: rowId,
   });
   return table.getRowModel().rows.map((row) => {
     const cell = row.getAllCells().find(({ column }) => column.id === "status");
@@ -60,6 +70,50 @@ function StatusCells({ orders }: { readonly orders: readonly Order[] }) {
   });
 }
 
+function orderItem(id: string): OrderItem {
+  return {
+    id,
+    orderId: "order-1",
+    itemId: `item-${id}`,
+    itemExternalId: null,
+    itemTitle: id,
+    itemImage: null,
+    itemCategory: null,
+    status: "Ordered",
+    count: 1,
+    score: "0",
+    price: 0,
+    shop: "AmiAmi",
+    condition: "New",
+    orderDate: null,
+    paymentDate: null,
+    shippingDate: null,
+    collectionDate: null,
+    shippingMethod: "n/a",
+    tags: [],
+    notes: "",
+    releaseId: null,
+    releaseDate: null,
+    releasePrice: null,
+    releaseType: null,
+    releaseCurrency: null,
+    releaseBarcode: null,
+  };
+}
+
+const orderItemColumns = createOrderItemSubColumns({
+  orderId: "order-1",
+  onEditItem: async () => {},
+  onDeleteItem: async () => {},
+  currency: "USD",
+  locale: "en-US",
+  dateFormat: "MM/DD/YYYY",
+});
+
+function OrderStatusCells({ orders }: { readonly orders: readonly Order[] }) {
+  return <StatusCells rows={orders} columns={orderColumns} rowId={(row) => row.orderId} />;
+}
+
 test("disables only the pending order's cells", () => {
   render(
     <OrderPendingContext
@@ -68,7 +122,7 @@ test("disables only the pending order's cells", () => {
         isCollectionItemPending: () => false,
       }}
     >
-      <StatusCells orders={[order("saving"), order("idle")]} />
+      <OrderStatusCells orders={[order("saving"), order("idle")]} />
     </OrderPendingContext>,
   );
 
@@ -77,8 +131,29 @@ test("disables only the pending order's cells", () => {
   expect("disabled" in status("idle").dataset).toBe(false);
 });
 
+test("disables only the pending order item's cells", () => {
+  render(
+    <OrderPendingContext
+      value={{
+        isOrderPending: () => false,
+        isCollectionItemPending: (id) => id === "saving",
+      }}
+    >
+      <StatusCells
+        rows={[orderItem("saving"), orderItem("idle")]}
+        columns={orderItemColumns}
+        rowId={(row) => row.id}
+      />
+    </OrderPendingContext>,
+  );
+
+  const status = (id: string) => within(screen.getByTestId(id)).getByLabelText("Status");
+  expect("disabled" in status("saving").dataset).toBe(true);
+  expect("disabled" in status("idle").dataset).toBe(false);
+});
+
 test("refuses to render without a pending provider", () => {
-  expect(() => render(<StatusCells orders={[order("saving")]} />)).toThrow(
+  expect(() => render(<OrderStatusCells orders={[order("saving")]} />)).toThrow(
     "Order rows must be rendered within a grid that provides OrderPendingContext",
   );
 });
