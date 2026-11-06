@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
 import { ariaSort } from "@/components/data-table/aria-sort";
@@ -29,6 +29,10 @@ export const DATA_TABLE_NUMBER_META = {
   cellClassName: "text-right tabular-nums",
 } as const;
 
+/**
+ * `sized` fixes each column to its `size` as a share of all the sizes, so the columns hold still
+ * while rows load. A `w-*` class in a column's `headerClassName` overrides the share.
+ */
 type DataTableVariant = "default" | "sized";
 
 interface DataTableProps<TData extends RowData> {
@@ -63,7 +67,13 @@ export function DataTable<TData extends RowData>({
       aria-busy={isLoading}
       className={cn("transition-opacity duration-150", isLoading && "opacity-60", className)}
     >
-      <table className={cn("w-full border-collapse text-xs", tableClassName)}>
+      <table
+        className={cn(
+          "w-full border-collapse text-xs",
+          variant === "sized" && "table-fixed",
+          tableClassName,
+        )}
+      >
         <TableHeader table={table} variant={variant} />
         <TableBody
           table={table}
@@ -97,9 +107,16 @@ function TableHeader<TData extends RowData>({
               aria-sort={ariaSort(header.column.getIsSorted())}
               className={cn(
                 "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
+                variant === "sized" && "w-(--column-share)",
                 header.column.columnDef.meta?.headerClassName,
               )}
-              style={variant === "sized" ? { width: header.column.getSize() } : undefined}
+              style={
+                variant === "sized"
+                  ? ({
+                      "--column-share": `${(header.getSize() / table.getTotalSize()) * 100}%`,
+                    } as CSSProperties)
+                  : undefined
+              }
             >
               {header.isPlaceholder
                 ? null

@@ -202,10 +202,7 @@ function ShopsTable({
         />
       )}
       getCellClassName={(_, columnId) =>
-        cn(
-          columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-          columnId === EXPAND_COLUMN_ID && "w-8",
-        )
+        columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
       }
     />
   );
@@ -225,7 +222,7 @@ function getColumns({
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 32,
+      size: 40,
       meta: { skeleton: ROW_EXPAND_SKELETON },
     },
     {
@@ -235,7 +232,7 @@ function getColumns({
       size: 40,
       meta: { skeleton: DATA_TABLE_SKELETON.rank },
     },
-    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
+    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop", size: 150 },
     {
       id: "spend",
       accessorFn: (row) => row.spend,

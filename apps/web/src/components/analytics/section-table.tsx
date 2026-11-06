@@ -41,27 +41,31 @@ function createSectionColumns({
   readonly locale: string;
   readonly offset: number;
 }): ColumnDef<AnalyticsSectionRow>[] {
+  // Below 440 px the expand button and the figures need more than their size's share, so the
+  // narrow table gets its own shares.
   return [
     {
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 32,
-      meta: { skeleton: ROW_EXPAND_SKELETON },
+      size: 40,
+      meta: { headerClassName: "max-[440px]:w-[11.2%]", skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
       size: 40,
-      meta: { skeleton: DATA_TABLE_SKELETON.rank },
+      meta: { headerClassName: "max-[440px]:w-[9.7%]", skeleton: DATA_TABLE_SKELETON.rank },
     },
     {
       id: "name",
       accessorFn: (row) => row.name,
       header: ({ column }) => <SortableHeader column={column} title="name" />,
       cell: ({ getValue }) => getValue() ?? "—",
+      size: 150,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[32.7%]" },
     },
     {
       id: "itemCount",
@@ -70,7 +74,7 @@ function createSectionColumns({
       cell: ({ getValue }) => getValue() ?? "—",
       size: 80,
       sortDescFirst: false,
-      meta: { skeleton: DATA_TABLE_SKELETON.count },
+      meta: { headerClassName: "max-[440px]:w-[20.6%]", skeleton: DATA_TABLE_SKELETON.count },
     },
     {
       id: "totalSpent",
@@ -82,7 +86,7 @@ function createSectionColumns({
       },
       size: 100,
       sortDescFirst: false,
-      meta: { skeleton: DATA_TABLE_SKELETON.money },
+      meta: { headerClassName: "max-[440px]:w-[25.8%]", skeleton: DATA_TABLE_SKELETON.money },
     },
   ];
 }
@@ -175,7 +179,6 @@ export function SectionTable({
         getCellClassName={(_, columnId) =>
           cn(
             columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-            columnId === EXPAND_COLUMN_ID && "w-8",
             (columnId === ROW_NUMBER_COLUMN_ID ||
               columnId === "itemCount" ||
               columnId === "totalSpent") &&
