@@ -335,7 +335,7 @@ function OrderCard({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
+                className="press-none h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
               >
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
                 <span
