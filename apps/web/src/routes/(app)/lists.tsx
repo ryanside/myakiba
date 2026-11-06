@@ -338,9 +338,7 @@ function RouteComponent(): React.JSX.Element {
 
       {isPending && viewMode === "list" ? <MediaViewSkeletons viewMode="list" count={4} /> : null}
 
-      {isError && !data ? (
-        <LoadError title="Couldn't load your Lists" message={error.message} />
-      ) : null}
+      {isError && !data ? <LoadError title="Couldn't load your Lists" error={error} /> : null}
 
       {!isPending && data && lists.length === 0 ? (
         <Empty className={STATE_PANEL_CLASS_NAME}>

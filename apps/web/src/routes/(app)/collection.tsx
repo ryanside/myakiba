@@ -41,7 +41,7 @@ function RouteComponent() {
     return (
       <div className="mx-auto flex flex-col gap-8 max-w-352">
         <PageHeader title="Collection" />
-        <LoadError title="Couldn't load your Collection" message={error?.message || undefined} />
+        <LoadError title="Couldn't load your Collection" error={error} />
       </div>
     );
   }

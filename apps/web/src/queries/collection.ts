@@ -1,3 +1,4 @@
+import { readResponse } from "@/lib/read-response";
 import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -32,17 +33,7 @@ export async function getCollection(filters: CollectionFilters) {
     condition: filters.condition,
   };
 
-  const { data, error } = await app.api.collection.get({
-    query: queryParams,
-  });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, ""));
-  }
-  if (!data) {
-    throw new Error("Failed to get collection");
-  }
-
-  return data;
+  return readResponse(app.api.collection.get({ query: queryParams }), "Failed to get collection");
 }
 
 export async function deleteCollectionItems(ids: string[]) {

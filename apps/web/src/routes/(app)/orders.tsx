@@ -40,7 +40,7 @@ function RouteComponent() {
     return (
       <div className="mx-auto flex flex-col gap-8 max-w-[88rem]">
         <PageHeader title="Orders" />
-        <LoadError title="Couldn't load your Orders" message={error?.message || undefined} />
+        <LoadError title="Couldn't load your Orders" error={error} />
       </div>
     );
   }

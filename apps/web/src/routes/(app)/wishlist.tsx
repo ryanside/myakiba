@@ -100,10 +100,7 @@ function RouteComponent(): React.JSX.Element {
       />
 
       {hasInitialError ? (
-        <LoadError
-          title="Couldn't load your Wishlist"
-          message={itemsQuery.error?.message ?? "Failed to load Wishlist"}
-        />
+        <LoadError title="Couldn't load your Wishlist" error={itemsQuery.error} />
       ) : null}
 
       {!isPending && !hasInitialError && totalCount === 0 ? (

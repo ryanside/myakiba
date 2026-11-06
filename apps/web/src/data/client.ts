@@ -9,6 +9,7 @@ import {
 import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
+import { readResponse } from "@/lib/read-response";
 import { getUserErrorMessage } from "@/lib/treaty-client";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
@@ -63,7 +64,10 @@ function stampInfiniteRead<Input, Identity, Page extends OffsetPage>(
       infiniteQueryOptions({
         queryKey: key(spec.identify(input)),
         queryFn: ({ pageParam }) =>
-          unwrap(spec.request(input, { limit: spec.pageSize, offset: pageParam }), spec.failure),
+          readResponse(
+            spec.request(input, { limit: spec.pageSize, offset: pageParam }),
+            spec.failure,
+          ),
         initialPageParam: 0,
         getNextPageParam: offsetAfterLoaded,
       }),

@@ -1,3 +1,4 @@
+import { readResponse } from "@/lib/read-response";
 import { app, getUserErrorMessage } from "@/lib/treaty-client";
 import { MoveNotFoundError } from "./move-not-found-error";
 import type {
@@ -48,15 +49,7 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
     miscFeesMax: filters.miscFeesMax,
   };
 
-  const { data, error } = await app.api.orders.get({ query: queryParams });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, ""));
-  }
-  if (!data) {
-    throw new Error("Failed to get orders");
-  }
-
-  return data;
+  return readResponse(app.api.orders.get({ query: queryParams }), "Failed to get orders");
 }
 
 type OrdersClient = ReturnType<typeof app.api.orders>;

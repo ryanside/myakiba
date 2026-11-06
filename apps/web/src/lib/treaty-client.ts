@@ -39,7 +39,12 @@ type ApiError = { readonly status: number; readonly value: unknown };
 const serverMessage = z.string().regex(/[^\s\p{Cf}]/u);
 
 /** Only a 4xx text body with visible text is a message the server wrote for the user. Anything else shows `fallback`. */
-export function getUserErrorMessage({ status, value }: ApiError, fallback: string): string {
+export function getUserErrorMessage(error: ApiError, fallback: string): string;
+export function getUserErrorMessage(error: ApiError): string | undefined;
+export function getUserErrorMessage(
+  { status, value }: ApiError,
+  fallback?: string,
+): string | undefined {
   if (status < 400 || status >= 500) return fallback;
   const message = serverMessage.safeParse(value);
   return message.success ? message.data : fallback;

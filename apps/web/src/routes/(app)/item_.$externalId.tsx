@@ -134,7 +134,7 @@ function RouteComponent(): ReactNode {
           ordersList={ordersList}
           isPending={isPending || isPendingItemRelatedCollection}
           isError={isErrorItemRelatedCollection}
-          errorMessage={errorItemRelatedCollection?.message}
+          error={errorItemRelatedCollection}
           onSyncCollection={() => setSyncType("collection")}
           onSyncOrder={() => setSyncType("order")}
           onEditCollectionItem={handleEditCollectionItem}

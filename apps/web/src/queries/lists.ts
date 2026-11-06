@@ -1,11 +1,10 @@
+import { readResponse } from "@/lib/read-response";
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { app, getUserErrorMessage } from "@/lib/treaty-client";
 
 export async function getLists(limit: number, offset: number) {
-  const { data, error } = await app.api.lists.get({ query: { limit, offset } });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get lists"));
-  return data;
+  return readResponse(app.api.lists.get({ query: { limit, offset } }), "Failed to get lists");
 }
 
 export async function createList(input: ListInput) {
@@ -34,17 +33,14 @@ export async function deleteLists(listIds: readonly string[]): Promise<void> {
 }
 
 export async function getList(listId: string) {
-  const { data, error } = await app.api.lists({ listId }).get();
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get list"));
-  return data;
+  return readResponse(app.api.lists({ listId }).get(), "Failed to get list");
 }
 
 export async function getListMembers(listId: string, limit: number, offset: number) {
-  const { data, error } = await app.api.lists({ listId }).members.get({
-    query: { limit, offset },
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to load List"));
-  return data;
+  return readResponse(
+    app.api.lists({ listId }).members.get({ query: { limit, offset } }),
+    "Failed to load List",
+  );
 }
 
 export async function getListOptionsForTargets(targets: readonly ListTarget[]) {

@@ -1,3 +1,4 @@
+import { readResponse } from "@/lib/read-response";
 import { app, getErrorMessage, getUserErrorMessage } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 
@@ -29,11 +30,10 @@ export async function getItemRelatedOrders(externalId: number) {
 }
 
 export async function getItemRelatedCollection(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).collection.get();
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get item related collection"));
-  }
-  return data;
+  return readResponse(
+    app.api.item({ id: externalId }).collection.get(),
+    "Failed to get item related collection",
+  );
 }
 
 export async function getResyncStatus(externalId: number) {

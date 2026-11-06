@@ -1,3 +1,4 @@
+import { readResponse } from "@/lib/read-response";
 import type {
   ItemDatabaseSearch,
   ItemDatabaseSearchResponse,
@@ -42,15 +43,10 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
 export async function getItemDatabaseItems(
   params: ItemDatabaseSearch,
 ): Promise<ItemDatabaseSearchResponse> {
-  const { data, error } = await app.api.search.items.get({
-    query: params,
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to search item database"));
-  }
-
-  return data;
+  return readResponse(
+    app.api.search.items.get({ query: params }),
+    "Failed to search item database",
+  );
 }
 
 export async function searchEntries(params: SearchEntriesQuery): Promise<SearchEntriesResponse> {

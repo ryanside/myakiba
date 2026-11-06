@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { getCollection } from "./collection";
 import { getOrders } from "./orders";
 import { getExpensesCollection, getExpensesOrders, getExpensesShipping } from "./expenses";
-import { getList, getListMembers, getLists } from "./lists";
+import { createList, getList, getListMembers, getLists } from "./lists";
 import { getDashboard, getMonthlyDashboard } from "./dashboard";
 import { getItemDatabaseItems } from "./search";
 import { QueryClient } from "@tanstack/react-query";
@@ -64,5 +64,14 @@ describe("Wishlist diagnostics", () => {
     } finally {
       client.clear();
     }
+  });
+});
+
+test.each([400, 503])("a failed List save preserves its existing %s message", async (status) => {
+  globalThis.fetch = Object.assign(async () => new Response("Server detail", { status }), {
+    preconnect: realFetch.preconnect,
+  });
+  await expect(createList({ title: "My List", description: "" })).rejects.toMatchObject({
+    message: status === 400 ? "Server detail" : "Failed to create list",
   });
 });

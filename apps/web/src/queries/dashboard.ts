@@ -1,3 +1,4 @@
+import { readResponse } from "@/lib/read-response";
 import { app, getUserErrorMessage } from "@/lib/treaty-client";
 
 type DashboardClient = typeof app.api.dashboard;
@@ -15,23 +16,14 @@ export type ReleaseCalendarData = NonNullable<
 export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][number];
 
 export async function getDashboard(): Promise<DashboardResponse> {
-  const { data, error } = await app.api.dashboard.get();
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get dashboard"));
-  }
-
-  return data;
+  return readResponse(app.api.dashboard.get(), "Failed to get dashboard");
 }
 
 export async function getMonthlyDashboard(month: number, year: number): Promise<MonthlyData> {
-  const { data, error } = await app.api.dashboard["monthly"].get({
-    query: { month, year },
-  });
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get monthly dashboard"));
-  }
-
-  return data;
+  return readResponse(
+    app.api.dashboard.monthly.get({ query: { month, year } }),
+    "Failed to get monthly dashboard",
+  );
 }
 
 export async function getReleaseCalendar(

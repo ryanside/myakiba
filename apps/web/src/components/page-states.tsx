@@ -1,3 +1,4 @@
+import { ReadError } from "@/lib/read-response";
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -17,11 +18,12 @@ export const STATE_ICON_CLASS_NAME =
 
 export function LoadError({
   title,
-  message = "The server didn't answer.",
+  error,
 }: {
   readonly title: string;
-  readonly message?: string;
+  readonly error?: Error | null;
 }): React.JSX.Element {
+  const userMessage = error instanceof ReadError ? error.userMessage : undefined;
   return (
     <Empty className={STATE_PANEL_CLASS_NAME}>
       <EmptyHeader>
@@ -30,7 +32,7 @@ export function LoadError({
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
         <EmptyDescription>
-          <span className="block">{message}</span>
+          <span className="block">{userMessage ?? "The server didn't answer."}</span>
           Reload the page to try again.
         </EmptyDescription>
       </EmptyHeader>

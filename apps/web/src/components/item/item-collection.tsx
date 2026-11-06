@@ -15,7 +15,7 @@ export function ItemCollection({
   ordersList,
   isPending,
   isError,
-  errorMessage,
+  error,
   onSyncCollection,
   onSyncOrder,
   onEditCollectionItem,
@@ -30,7 +30,7 @@ export function ItemCollection({
   readonly ordersList: readonly ItemRelatedOrder[];
   readonly isPending: boolean;
   readonly isError: boolean;
-  readonly errorMessage: string | undefined;
+  readonly error: Error | null;
   readonly onSyncCollection: () => void;
   readonly onSyncOrder: () => void;
   readonly onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
@@ -56,12 +56,7 @@ export function ItemCollection({
       <h2 className="text-xs font-medium text-muted-foreground">Your Collection</h2>
 
       <div className="mt-4">
-        {isError && (
-          <LoadError
-            title="Couldn't load your Collection"
-            message={errorMessage ?? "Failed to load collection"}
-          />
-        )}
+        {isError && <LoadError title="Couldn't load your Collection" error={error} />}
 
         {!isPending && !isError && collectionItems.length === 0 && (
           <div className="flex flex-col gap-4">
