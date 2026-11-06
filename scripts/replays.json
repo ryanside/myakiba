@@ -1174,7 +1174,8 @@
         "edit-order sheet footer > has no nested button and Cancel closes the form",
         "merge dialog footer > has no nested button and Cancel closes the form",
         "move to an existing order footer > has no nested button and Cancel closes the form",
-        "move to a new order footer > has no nested button and Cancel closes the form"
+        "move to a new order footer > has no nested button and Cancel closes the form",
+        "collection item sheet footer > has no nested button and Cancel closes the form"
       ]
     },
     {
