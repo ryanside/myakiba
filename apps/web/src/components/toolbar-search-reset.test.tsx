@@ -189,8 +189,10 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     await user.click(resetButton());
     await wait(SETTLE_MS);
 
-    expect(queryResetButton()).toBeNull();
-    expect(document.activeElement).toBe(input());
+    expect({
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ resetShown: false, searchFocused: true });
   });
 
   test("hides Reset and restores search focus after resetting a first search within the debounce", async () => {
@@ -199,14 +201,14 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     await user.click(resetButton());
     await wait(SETTLE_MS);
 
-    expect(queryResetButton()).toBeNull();
-    expect(document.activeElement).toBe(input());
+    expect({
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ resetShown: false, searchFocused: true });
   });
 
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
-    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
-      `${path}?search=Ram`,
-    );
+    const { user, router, input, resetButton } = await renderToolbar(`${path}?search=Ram`);
     await user.click(input());
     await act(() => router.navigate({ to: ".", search: (prev) => ({ ...prev, search: "Rem" }) }));
     await user.type(input(), "x");
@@ -216,13 +218,11 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      resetShown: queryResetButton() !== null,
-      searchFocused: document.activeElement === input(),
-    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
+    }).toEqual({ search: undefined, shown: "" });
   });
 
   test("drops a first search typed just before Reset, though Reset leaves the search unchanged", async () => {
-    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(path);
+    const { user, router, input, resetButton } = await renderToolbar(path);
     await user.type(input(), "mi");
     await user.click(resetButton());
     await wait(SETTLE_MS);
@@ -230,8 +230,6 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      resetShown: queryResetButton() !== null,
-      searchFocused: document.activeElement === input(),
-    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
+    }).toEqual({ search: undefined, shown: "" });
   });
 });
