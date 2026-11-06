@@ -7,32 +7,10 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
-import type { Session } from "@/lib/session";
 import UserMenu from "./user-menu";
+import { signedInSession } from "../../../test/session";
 
-const session = {
-  session: {
-    id: "theme-session",
-    token: "test-token",
-    userId: "collector",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "collector",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    hasSeenOnboarding: true,
-    banned: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-} satisfies NonNullable<Session>;
+const session = signedInSession();
 
 afterEach(() => {
   cleanup();
