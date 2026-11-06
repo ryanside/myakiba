@@ -1,6 +1,14 @@
 {
   "test": [
     {
+      "fix": "a36fca8f",
+      "bug": "Fees & Charges hid the server's missing-order message behind the diagnostic fallback",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "a failed Fees & Charges save > shows the server's message when the order no longer exists"
+      ]
+    },
+    {
       "fix": "667c8154",
       "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
       "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
