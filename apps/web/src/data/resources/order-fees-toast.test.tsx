@@ -183,3 +183,64 @@ describe.each(surfaces)("a failed order edit from $name", (surface) => {
     expect(toasts).toEqual({ unfiltered: shown, filtered: shown });
   });
 });
+
+describe.each(Object.entries(lists))("the edit order sheet on the %s list", (_name, url) => {
+  for (const status of [404, 503]) {
+    test(`keeps the draft after a ${status} response`, async () => {
+      const response = Promise.withResolvers<Response>();
+      let requested = false;
+      globalThis.fetch = Object.assign(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          if (new Request(input, init).method === "PUT") {
+            requested = true;
+            return response.promise;
+          }
+          return Response.json(page);
+        },
+        { preconnect: realFetch.preconnect },
+      );
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      try {
+        await renderOrdersGrid(url, queryClient);
+        fireEvent.click(screen.getByRole("button", { name: "Edit order" }));
+        fireEvent.change(await screen.findByLabelText("Title"), {
+          target: { value: "My unsaved order title" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Update" }));
+        await waitFor(() => expect(requested).toBe(true));
+        if (url === lists.filtered) {
+          expect(
+            screen
+              .getByRole("button", { name: "Edit order", hidden: true })
+              .hasAttribute("disabled"),
+          ).toBe(true);
+        }
+        await act(async () => {
+          response.resolve(new Response("Order could not be saved", { status }));
+        });
+        await waitFor(() =>
+          expect(
+            screen
+              .getByRole("button", { name: "Edit order", hidden: true })
+              .hasAttribute("disabled"),
+          ).toBe(false),
+        );
+        expect(screen.getByRole("dialog", { name: "Edit Order" })).toBeTruthy();
+        expect(screen.getByLabelText<HTMLInputElement>("Title").value).toBe(
+          "My unsaved order title",
+        );
+        await waitFor(() =>
+          expect(screen.getByRole("button", { name: "Update" }).hasAttribute("aria-busy")).toBe(
+            false,
+          ),
+        );
+      } finally {
+        response.resolve(new Response("Order could not be saved", { status }));
+        cleanup();
+        queryClient.clear();
+      }
+    });
+  }
+});
