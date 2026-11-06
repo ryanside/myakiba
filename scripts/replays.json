@@ -1104,6 +1104,12 @@
         "testAt uses the pinned test at both the parent and fix while HEAD uses current assertions",
         "a pinned WORKTREE replay uses the same assertions on both sides and preserves the working test"
       ]
+    },
+    {
+      "fix": "9140476b",
+      "bug": "a rejected Reset navigation was dropped with no report",
+      "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
+      "fixed": ["a rejected Reset navigation reports an error without leaking its rejection"]
     }
   ],
   "lint": [
