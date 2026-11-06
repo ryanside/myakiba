@@ -149,7 +149,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
       table={table}
       tableClassName="table-fixed"
       isLoading={isLoading}
-      empty={<p className="text-muted-foreground text-xs italic">No data</p>}
+      empty={<p className="text-muted-foreground text-xs">No data</p>}
       onRowClick={(row) => {
         const rowNav = getRowNavigation?.(row.original);
 
