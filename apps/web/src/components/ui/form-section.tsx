@@ -25,13 +25,13 @@ function FormSection({
           "group/trigger flex w-full items-center gap-2 py-1 cursor-pointer select-none",
           "text-xs font-normal tracking-wide",
           "text-muted-foreground hover:text-muted-foreground",
-          "transition-colors duration-150",
+          "color-motion",
         )}
       >
         <HugeiconsIcon
           icon={ArrowRight01Icon}
           strokeWidth={2}
-          className="size-3.5 shrink-0 transition-transform duration-200 group-aria-expanded/trigger:rotate-90"
+          className="size-3.5 shrink-0 collapse-chevron group-aria-expanded/trigger:rotate-90"
         />
         <span>{title}</span>
         {description && (
@@ -40,7 +40,7 @@ function FormSection({
           </span>
         )}
       </CollapsiblePrimitive.Trigger>
-      <CollapsiblePrimitive.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0">
+      <CollapsiblePrimitive.Panel className="collapse-motion">
         <div className="grid gap-2.5 pt-1.5 pb-0.5">{children}</div>
       </CollapsiblePrimitive.Panel>
     </CollapsiblePrimitive.Root>
