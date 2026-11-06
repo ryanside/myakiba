@@ -19,6 +19,7 @@ import type {
 } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { itemDestination } from "@/lib/item-destination";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 const RELATIONSHIP_PAGE_SIZE = 5;
 const RELATIONSHIP_SKELETONS = [0, 1, 2, 3, 4] as const;
@@ -117,7 +118,7 @@ function RelationshipPage({
     return (
       <Alert variant="destructive">
         <AlertTitle>Failed to load relationships</AlertTitle>
-        <AlertDescription>{error?.message}</AlertDescription>
+        <AlertDescription>{userMessageOf(error) ?? NO_ANSWER_MESSAGE}</AlertDescription>
         <AlertAction>
           <Button
             type="button"

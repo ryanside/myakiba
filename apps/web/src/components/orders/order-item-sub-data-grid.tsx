@@ -28,6 +28,7 @@ import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [
@@ -183,7 +184,7 @@ export function OrderItemSubDataGrid({
   const grid =
     isError && !isLoading ? (
       <p className="animate-data-in py-3 text-center text-sm text-destructive">
-        Failed to load order items: {error.message}
+        Failed to load order items: {userMessageOf(error) ?? NO_ANSWER_MESSAGE}
       </p>
     ) : (
       <DataGrid

@@ -12,6 +12,7 @@ import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -142,7 +143,7 @@ function ReleaseCalendar({
       <FramePanel className="flex flex-col">
         {(() => {
           if (isPending) return <ReleaseCalendarSkeleton />;
-          if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
+          if (isError) return <ReleaseCalendarError error={error} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
               <div className="animate-data-in">
@@ -222,15 +223,15 @@ function DateGroup({
 }
 
 function ReleaseCalendarError({
-  message,
+  error,
   onRetry,
 }: {
-  readonly message: string;
+  readonly error: Error;
   readonly onRetry: () => void;
 }): React.ReactNode {
   return (
     <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
-      <p className="text-xs text-destructive">{message}</p>
+      <p className="text-xs text-destructive">{userMessageOf(error) ?? NO_ANSWER_MESSAGE}</p>
       <Button variant="ghost" size="xs" onClick={onRetry}>
         Retry
       </Button>

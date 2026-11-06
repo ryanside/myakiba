@@ -1,35 +1,29 @@
-import { readResponse } from "@/lib/read-response";
+import { readResponse, sendRequest } from "@/lib/read-response";
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { app } from "@/lib/treaty-client";
 
 export async function getLists(limit: number, offset: number) {
   return readResponse(app.api.lists.get({ query: { limit, offset } }), "Failed to get lists");
 }
 
 export async function createList(input: ListInput) {
-  const { data, error } = await app.api.lists.post(input);
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to create list"));
-  return data;
+  return readResponse(app.api.lists.post(input), "Failed to create list");
 }
 
 export async function moveLists(intent: PositionOrderInput): Promise<void> {
-  const { error } = await app.api.lists.order.patch({
-    ...intent,
-    movedIds: [...intent.movedIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to move lists"));
+  await sendRequest(
+    app.api.lists.order.patch({ ...intent, movedIds: [...intent.movedIds] }),
+    "Failed to move lists",
+  );
 }
 
 export async function updateList(listId: string, input: ListInput) {
-  const { data, error } = await app.api.lists({ listId }).put(input);
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to update list"));
-  return data;
+  return sendRequest(app.api.lists({ listId }).put(input), "Failed to update list");
 }
 
 export async function deleteLists(listIds: readonly string[]): Promise<void> {
-  const { error } = await app.api.lists.delete({ listIds: [...listIds] });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to delete lists"));
+  await sendRequest(app.api.lists.delete({ listIds: [...listIds] }), "Failed to delete lists");
 }
 
 export async function getList(listId: string) {
@@ -44,48 +38,42 @@ export async function getListMembers(listId: string, limit: number, offset: numb
 }
 
 export async function getListOptionsForTargets(targets: readonly ListTarget[]) {
-  const { data, error } = await app.api.lists.targets.options.post({
-    targets: [...targets],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to get List options"));
-  return data;
+  return readResponse(
+    app.api.lists.targets.options.post({ targets: [...targets] }),
+    "Failed to get List options",
+  );
 }
 
 export async function addTargetsToLists(
   targets: readonly ListTarget[],
   listIds: readonly string[],
 ) {
-  const { data, error } = await app.api.lists.targets.put({
-    targets: [...targets],
-    listIds: [...listIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to add to Lists"));
-  return data;
+  return sendRequest(
+    app.api.lists.targets.put({ targets: [...targets], listIds: [...listIds] }),
+    "Failed to add to Lists",
+  );
 }
 
 export async function removeTargetsFromList(targets: readonly ListTarget[], listId: string) {
-  const { data, error } = await app.api.lists.targets.delete({
-    targets: [...targets],
-    listId,
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
-  return data;
+  return sendRequest(
+    app.api.lists.targets.delete({ targets: [...targets], listId }),
+    "Failed to remove from List",
+  );
 }
 
 export async function removeListMembers(
   listId: string,
   memberIds: readonly string[],
 ): Promise<void> {
-  const { error } = await app.api.lists({ listId }).members.delete({
-    memberIds: [...memberIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to remove from List"));
+  await sendRequest(
+    app.api.lists({ listId }).members.delete({ memberIds: [...memberIds] }),
+    "Failed to remove from List",
+  );
 }
 
 export async function moveListMembers(listId: string, intent: PositionOrderInput): Promise<void> {
-  const { error } = await app.api.lists({ listId }).members.order.patch({
-    ...intent,
-    movedIds: [...intent.movedIds],
-  });
-  if (error) throw new Error(getUserErrorMessage(error, "Failed to save List order"));
+  await sendRequest(
+    app.api.lists({ listId }).members.order.patch({ ...intent, movedIds: [...intent.movedIds] }),
+    "Failed to save List order",
+  );
 }

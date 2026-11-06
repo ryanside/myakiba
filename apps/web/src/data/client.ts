@@ -10,23 +10,9 @@ import type { keepPreviousData, QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "@/components/ui/toast";
 import { readResponse } from "@/lib/read-response";
-import { getUserErrorMessage } from "@/lib/treaty-client";
+import type { ApiResponse } from "@/lib/read-response";
 import { inFamilies } from "./catalog";
 import type { Family, PersistedFamily, RootOf, WritableFamily } from "./catalog";
-
-type EdenResult<Data> =
-  | { readonly data: Data; readonly error: null }
-  | { readonly data: null; readonly error: Parameters<typeof getUserErrorMessage>[0] };
-
-/** The one place an Eden response becomes data or a thrown Error. */
-export async function unwrap<Data>(
-  response: PromiseLike<EdenResult<Data>>,
-  fallback: string,
-): Promise<Data> {
-  const { data, error } = await response;
-  if (error) throw new Error(getUserErrorMessage(error, fallback));
-  return data;
-}
 
 type PageCursor = { readonly limit: number; readonly offset: number };
 type OffsetPage = { readonly items: readonly unknown[]; readonly totalCount: number };
@@ -36,7 +22,7 @@ type InfiniteReadSpec<Input, Identity, Page extends OffsetPage> = {
   readonly failure: string;
   /** The part of the input that changes the result. It becomes the key. */
   readonly identify: (input: Input) => Identity;
-  readonly request: (input: Input, cursor: PageCursor) => PromiseLike<EdenResult<Page>>;
+  readonly request: (input: Input, cursor: PageCursor) => PromiseLike<ApiResponse<Page>>;
 };
 
 export function infiniteRead<Input, Identity, Page extends OffsetPage>(

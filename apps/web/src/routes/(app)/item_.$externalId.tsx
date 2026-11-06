@@ -15,6 +15,7 @@ import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { getResyncStatus, requestResync } from "@/queries/item";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -93,7 +94,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col items-center justify-center gap-y-4">
         <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          Error: {itemError.message}
+          Error: {userMessageOf(itemError) ?? NO_ANSWER_MESSAGE}
         </div>
       </div>
     );

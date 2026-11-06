@@ -1,5 +1,5 @@
 import { readResponse } from "@/lib/read-response";
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { app } from "@/lib/treaty-client";
 
 type DashboardClient = typeof app.api.dashboard;
 
@@ -30,15 +30,8 @@ export async function getReleaseCalendar(
   month: number,
   year: number,
 ): Promise<ReleaseCalendarData> {
-  const { data, error } = await app.api.dashboard["release-calendar"].get({
-    query: { month, year },
-  });
-  if (error) {
-    if (error.status === 422) {
-      throw new Error(getUserErrorMessage(error, "Invalid month or year"));
-    }
-    throw new Error(getUserErrorMessage(error, "Failed to get release calendar"));
-  }
-
-  return data;
+  return readResponse(
+    app.api.dashboard["release-calendar"].get({ query: { month, year } }),
+    "Failed to get release calendar",
+  );
 }

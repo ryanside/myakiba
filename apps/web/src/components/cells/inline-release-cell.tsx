@@ -13,6 +13,7 @@ import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 type ReleaseFallback = {
   readonly releaseDate: string | null;
@@ -90,7 +91,9 @@ export function InlineReleaseCell({
             </div>
           )}
           {releasesError && (
-            <div className="p-3 text-sm text-destructive">{releasesError.message}</div>
+            <div className="p-3 text-sm text-destructive">
+              {userMessageOf(releasesError) ?? NO_ANSWER_MESSAGE}
+            </div>
           )}
           {releasesData?.releases.map((release) => (
             <SelectItem key={release.id} value={release.id} className="py-2.5">

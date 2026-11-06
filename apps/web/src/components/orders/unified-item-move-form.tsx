@@ -49,6 +49,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/cons
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger?: React.ReactElement;
@@ -299,7 +300,8 @@ function UnifiedItemMoveFormContent({
                               )}
                               {orderSearchError && (
                                 <CommandEmpty>
-                                  Could not load orders. {orderSearchError.message}
+                                  Could not load orders.{" "}
+                                  {userMessageOf(orderSearchError) ?? NO_ANSWER_MESSAGE}
                                 </CommandEmpty>
                               )}
                               {orderSearch.title.length > 0 &&

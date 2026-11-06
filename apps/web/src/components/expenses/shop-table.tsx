@@ -24,6 +24,7 @@ import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
 
 const PAGE_SIZE = 10;
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
@@ -94,7 +95,9 @@ export function ShopTable({
     <ExpensePanel title="Shops" headerAction={shopSearchInput} className="min-w-0">
       {query.isError ? (
         <div className="flex h-64 items-center justify-center">
-          <p className="text-sm text-destructive">Error: {query.error.message}</p>
+          <p className="text-sm text-destructive">
+            Error: {userMessageOf(query.error) ?? NO_ANSWER_MESSAGE}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-4" aria-busy={query.isPending}>
