@@ -5,6 +5,8 @@ import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import type { Column } from "@tanstack/react-table";
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { AnimatePresence, motion } from "motion/react";
+import { ICON_SWAP } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +35,8 @@ import {
   DragDropVerticalIcon,
   PinOffIcon,
 } from "@hugeicons/core-free-icons";
+
+const SORT_ICONS = { asc: ArrowUp02Icon, desc: ArrowDown02Icon } as const;
 
 interface DataGridColumnHeaderProps<TData, TValue> extends HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
@@ -85,38 +89,22 @@ function DataGridColumnHeaderInner<TData, TValue>({
     className,
   );
 
-  const renderSortIcon = (): ReactNode => {
-    if (!canSort) return null;
-    if (isSorted === "desc") {
-      return (
-        <HugeiconsIcon
-          icon={ArrowDown02Icon}
-          data-icon="inline-end"
-          strokeWidth={2}
-          className="size-3.25"
-        />
-      );
-    }
-    if (isSorted === "asc") {
-      return (
-        <HugeiconsIcon
-          icon={ArrowUp02Icon}
-          data-icon="inline-end"
-          strokeWidth={2}
-          className="size-3.25"
-        />
-      );
-    }
-    return (
-      <HugeiconsIcon
-        icon={UnfoldMoreIcon}
+  const sortIcon = canSort ? (
+    <AnimatePresence initial={false} mode="popLayout">
+      <motion.span
+        key={isSorted || "none"}
+        {...ICON_SWAP}
         data-icon="inline-end"
-        strokeWidth={2}
-        className="mt-px size-3.25"
-      />
-    );
-  };
-  const sortIcon = renderSortIcon();
+        className={cn("inline-flex", !isSorted && "mt-px")}
+      >
+        <HugeiconsIcon
+          icon={isSorted ? SORT_ICONS[isSorted] : UnfoldMoreIcon}
+          strokeWidth={2}
+          className="size-3.25"
+        />
+      </motion.span>
+    </AnimatePresence>
+  ) : null;
 
   const hasControls =
     props.tableLayout?.columnsMovable ||

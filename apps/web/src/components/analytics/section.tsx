@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ARROW_ICON_CLASS_NAME, ARROW_LINK_CLASS_NAME } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -69,14 +70,11 @@ export function Section({
       </div>
       <div className="relative">{children}</div>
       {link ? (
-        <Link
-          to={link.to}
-          className="font-orbitron lowercase group/link relative flex items-center gap-1.5 w-fit ml-auto py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
-        >
+        <Link to={link.to} className={cn(ARROW_LINK_CLASS_NAME, "font-orbitron lowercase ml-auto")}>
           {link.label}
           <HugeiconsIcon
             icon={ArrowRight01Icon}
-            className="size-3.5 transition-transform duration-150 ease-out group-hover/link:translate-x-0.5"
+            className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:translate-x-0.5")}
           />
         </Link>
       ) : null}

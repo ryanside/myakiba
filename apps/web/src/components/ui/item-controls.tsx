@@ -23,10 +23,10 @@ const ROW_PLACEMENT_CLASS_NAME = "mr-1.5 gap-0 p-0";
 // The square ::before and the square selection root make the whole control box clickable, so
 // rounded corners leave no dead space between adjacent controls.
 const controlBaseClassName =
-  "relative size-8 cursor-pointer rounded-[10px] border-transparent bg-transparent shadow-none transition-[scale] duration-150 ease-out before:absolute before:-inset-px focus-visible:border-transparent focus-visible:ring-2 active:translate-y-0 active:not-aria-[haspopup=menu]:scale-[0.96]";
+  "relative size-8 cursor-pointer rounded-[10px] border-transparent bg-transparent shadow-none [--press-scale:var(--press-scale-text)] before:absolute before:-inset-px focus-visible:border-transparent focus-visible:ring-2";
 
 const selectionBaseClassName =
-  "size-8 cursor-pointer rounded-none border-transparent bg-transparent shadow-none outline-none transition-[scale] duration-150 ease-out after:pointer-events-none after:top-1/2 after:right-auto after:bottom-auto after:left-1/2 after:size-5 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-[6px] after:opacity-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:after:opacity-100 active:translate-y-0 active:scale-[0.96] aria-invalid:border-transparent aria-invalid:ring-0 aria-invalid:aria-checked:border-transparent data-checked:border-transparent data-checked:bg-transparent dark:bg-transparent dark:aria-invalid:border-transparent dark:aria-invalid:ring-0 dark:data-checked:bg-transparent";
+  "size-8 cursor-pointer rounded-none border-transparent bg-transparent shadow-none outline-none press-text after:pointer-events-none after:top-1/2 after:right-auto after:bottom-auto after:left-1/2 after:size-5 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-[6px] after:opacity-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:after:opacity-100 aria-invalid:border-transparent aria-invalid:ring-0 aria-invalid:aria-checked:border-transparent data-checked:border-transparent data-checked:bg-transparent dark:bg-transparent dark:aria-invalid:border-transparent dark:aria-invalid:ring-0 dark:data-checked:bg-transparent";
 
 function useItemControlsMaterial(): ItemControlsMaterial {
   const material = use(ItemControlsContext);
