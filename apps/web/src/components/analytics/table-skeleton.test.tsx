@@ -55,6 +55,30 @@ const sizeClassOf = (element: Element | null | undefined) =>
     ?.getAttribute("class")
     ?.split(/\s+/)
     .find((token) => /^size-\d+(?:\.\d+)?$/.test(token));
+const barWidth = (cell: Element) => {
+  const width = cell
+    .querySelector('[data-slot="skeleton"]')
+    ?.getAttribute("class")
+    ?.split(/\s+/)
+    .map((token) => /^w-(\d+(?:\.\d+)?)$/.exec(token)?.[1])
+    .find((match) => match !== undefined);
+  return width === undefined ? undefined : Number(width);
+};
+const barWidthsByColumn = () =>
+  bodyRows().map((row) => Array.from(row.querySelectorAll("td"), barWidth));
+const expectTextSizedBars = (
+  rows: readonly (readonly (number | undefined)[])[],
+  [rankAt, nameAt, countAt, spentAt]: readonly [number, number, number, number],
+) => {
+  for (const row of rows) {
+    const [rank, name, count, spent] = [row[rankAt], row[nameAt], row[countAt], row[spentAt]];
+    expect([rank, name, count, spent]).not.toContain(undefined);
+    expect(Number(rank)).toBeLessThanOrEqual(Number(count));
+    expect(Number(count)).toBeLessThan(Number(spent));
+    expect(Number(spent)).toBeLessThan(Number(name));
+  }
+  expect(new Set(rows.map((row) => row[nameAt])).size).toBeGreaterThan(1);
+};
 
 test("the section table shows a placeholder row for each row of the page while it loads", async () => {
   await renderInApp(sectionTable([], true));
@@ -74,6 +98,34 @@ test("a section placeholder row holds the box of the expand button that replaces
 
   expect(buttonSize).toBeDefined();
   expect(sizeClassOf(placeholder)).toBe(buttonSize);
+});
+
+test("a section placeholder row shows a visible bar where the expand chevron sits", async () => {
+  await renderInApp(sectionTable([], true));
+  const expandCell = bodyRows()[0]?.querySelector("td");
+
+  expect(expandCell?.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+  expect(expandCell?.querySelector(".invisible")).toBeNull();
+});
+
+test("section placeholder bars are about as wide as the text they stand in for", async () => {
+  await renderInApp(sectionTable([], true));
+
+  expectTextSizedBars(barWidthsByColumn(), [1, 2, 3, 4]);
+});
+
+test("leaderboard placeholder bars are about as wide as the text they stand in for", async () => {
+  await renderInApp(
+    <LeaderboardTable
+      rankedBy="totalSpent"
+      rows={noEntries}
+      columns={["name", "itemCount", "totalSpent"]}
+      rowIdKey="name"
+      isLoading
+    />,
+  );
+
+  expectTextSizedBars(barWidthsByColumn(), [0, 1, 2, 3]);
 });
 
 test("a leaderboard shows a placeholder row for each row the board can hold while it loads", async () => {
