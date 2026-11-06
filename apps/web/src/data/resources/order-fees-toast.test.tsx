@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { useMemo } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { Order } from "@myakiba/contracts/orders/types";
-import { createOrdersColumns } from "@/components/orders/orders-columns";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/schema";
+import type { Order, OrdersPage } from "@myakiba/contracts/orders/types";
+import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { toast } from "@/components/ui/toast";
-import { useOrdersMutations } from "@/hooks/use-orders";
 
 const realFetch = globalThis.fetch;
 
@@ -39,67 +45,58 @@ const order: Order = {
   updatedAt: "2026-11-05T00:00:00.000Z",
 };
 
-const rows = [order];
+const page: OrdersPage = {
+  items: [order],
+  totalCount: 1,
+  totalSpent: 1000,
+  activeOrders: 1,
+  unpaidCosts: 0,
+};
 
-function OrdersTableCell({ column }: { readonly column: string }) {
-  const {
-    handleEditOrder,
-    handleDeleteOrders,
-    handleEditItem,
-    handleDeleteItem,
-    isOrderPending,
-    isCollectionItemPending,
-  } = useOrdersMutations();
-  const columns = useMemo(
-    () =>
-      createOrdersColumns({
-        onEditOrder: handleEditOrder,
-        onDeleteOrders: handleDeleteOrders,
-        onEditItem: handleEditItem,
-        onDeleteItem: handleDeleteItem,
-        isOrderPending,
-        isCollectionItemPending,
-        currency: "USD",
-        locale: "en-US",
-        dateFormat: "MM/DD/YYYY",
-      }),
-    [
-      handleEditOrder,
-      handleDeleteOrders,
-      handleEditItem,
-      handleDeleteItem,
-      isOrderPending,
-      isCollectionItemPending,
-    ],
+/** The grid edits optimistically without filters and marks the order pending with them. */
+const lists = { unfiltered: "/orders", filtered: "/orders?order=asc" } as const;
+
+async function renderOrdersGrid(url: string, queryClient: QueryClient) {
+  const root = createRootRoute({ component: Outlet });
+  const app = createRoute({
+    getParentRoute: () => root,
+    id: "(app)",
+    component: Outlet,
+    beforeLoad: () => ({ session: { user: { currency: "USD", dateFormat: "MM/DD/YYYY" } } }),
+  });
+  const orders = createRoute({
+    getParentRoute: () => app,
+    path: "/orders",
+    component: OrdersDataGrid,
+    validateSearch: ordersSearchSchema,
+  });
+  const router = createRouter({
+    routeTree: root.addChildren([app.addChildren([orders])]),
+    history: createMemoryHistory({ initialEntries: [url] }),
+  });
+  await router.load();
+  render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
   );
-  const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
-  const cell = table
-    .getRowModel()
-    .rows.at(0)
-    ?.getAllCells()
-    .find((candidate) => candidate.column.id === column);
-  if (!cell) {
-    throw new Error(`orders table has no ${column} cell`);
-  }
-  return flexRender(cell.column.columnDef.cell, cell.getContext());
+  await screen.findByRole("button", { name: "$10.00" });
 }
 
 const surfaces = [
   {
     name: "fees",
-    column: "total",
     submitLabel: "Save",
     edit: async () => {
       fireEvent.click(screen.getByRole("button", { name: "$10.00" }));
       fireEvent.change(await screen.findByLabelText("Shipping"), { target: { value: "2.50" } });
     },
     settled: async () => {
-      expect(screen.getByRole("button", { name: "$10.00" })).toBeDefined();
+      await screen.findByRole("button", { name: "$10.00" });
     },
   },
   {
     name: "dialog",
-    column: "actions",
     submitLabel: "Update",
     edit: async () => {
       fireEvent.click(screen.getByRole("button", { name: "Edit order" }));
@@ -108,9 +105,10 @@ const surfaces = [
       });
     },
     settled: async () => {
-      expect(screen.getByRole("dialog")).toBeDefined();
       await waitFor(() =>
-        expect(screen.getByRole("button", { name: "Update" }).getAttribute("aria-busy")).toBeNull(),
+        expect(
+          screen.getByRole("button", { name: "Edit order", hidden: true }).hasAttribute("disabled"),
+        ).toBe(false),
       );
     },
   },
@@ -118,16 +116,22 @@ const surfaces = [
 
 type Surface = (typeof surfaces)[number];
 
-async function saveAndReadToasts(surface: Surface, respond: () => Promise<Response>) {
-  globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
+async function saveAndReadToasts(
+  surface: Surface,
+  url: string,
+  respondToEdit: () => Promise<Response>,
+) {
+  globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL, init?: RequestInit) =>
+      new Request(input, init).method === "PUT" ? respondToEdit() : Response.json(page),
+    { preconnect: realFetch.preconnect },
+  );
   const added = spyOn(toast, "add");
-  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   try {
-    render(
-      <QueryClientProvider client={queryClient}>
-        <OrdersTableCell column={surface.column} />
-      </QueryClientProvider>,
-    );
+    await renderOrdersGrid(url, queryClient);
     await surface.edit();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: surface.submitLabel }));
@@ -137,34 +141,45 @@ async function saveAndReadToasts(surface: Surface, respond: () => Promise<Respon
     return added.mock.calls.map(([options]) => options);
   } finally {
     added.mockRestore();
+    cleanup();
     queryClient.clear();
   }
 }
 
+async function toastsPerList(surface: Surface, respondToEdit: () => Promise<Response>) {
+  return {
+    unfiltered: await saveAndReadToasts(surface, lists.unfiltered, respondToEdit),
+    filtered: await saveAndReadToasts(surface, lists.filtered, respondToEdit),
+  };
+}
+
 describe.each(surfaces)("a failed order edit from $name", (surface) => {
   test("shows the server's message when the order no longer exists", async () => {
-    const toasts = await saveAndReadToasts(
+    const toasts = await toastsPerList(
       surface,
       async () => new Response("Order not found", { status: 404 }),
     );
 
-    expect(toasts).toEqual([{ type: "error", title: "Order not found" }]);
+    const shown = [{ type: "error", title: "Order not found" }];
+    expect(toasts).toEqual({ unfiltered: shown, filtered: shown });
   });
 
   test("keeps the fallback when the server answers 503", async () => {
-    const toasts = await saveAndReadToasts(
+    const toasts = await toastsPerList(
       surface,
       async () => new Response("Internal failure", { status: 503 }),
     );
 
-    expect(toasts).toEqual([{ type: "error", title: "Failed to update order. Please try again." }]);
+    const shown = [{ type: "error", title: "Failed to update order. Please try again." }];
+    expect(toasts).toEqual({ unfiltered: shown, filtered: shown });
   });
 
   test("keeps the fallback when the server cannot be reached", async () => {
-    const toasts = await saveAndReadToasts(surface, async () => {
+    const toasts = await toastsPerList(surface, async () => {
       throw new TypeError("Failed to fetch");
     });
 
-    expect(toasts).toEqual([{ type: "error", title: "Failed to update order. Please try again." }]);
+    const shown = [{ type: "error", title: "Failed to update order. Please try again." }];
+    expect(toasts).toEqual({ unfiltered: shown, filtered: shown });
   });
 });
