@@ -495,7 +495,8 @@
         "DataGridPagination at an offset that is not a page start > an empty result at an offset inside page 1 offers page 1",
         "DataGridPagination at an offset that is not a page start > previous from an offset past the rows of page 1 goes to page 1",
         "DataGridPagination at an offset that is not a page start > an offset past the rows of the only page shows no rows of the total",
-        "DataGridPagination at an offset that is not a page start > an offset inside the rows names the rows from that offset"
+        "DataGridPagination at an offset that is not a page start > an offset inside the rows names the rows from that offset",
+        "DataGridPagination at an offset that is not a page start > a short result at an offset past its first row names the rows from that offset"
       ]
     },
     {
