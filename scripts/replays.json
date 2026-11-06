@@ -1248,6 +1248,12 @@
         "the account menu's Dark theme tab has an accessible name and sets the theme",
         "the account menu's System theme tab has an accessible name and sets the theme"
       ]
+    },
+    {
+      "fix": "e18f9201",
+      "bug": "the account menu's theme tablist had no accessible name",
+      "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
+      "fixed": ["the account menu's theme tablist has an accessible name"]
     }
   ],
   "lint": [
