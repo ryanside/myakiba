@@ -1135,6 +1135,12 @@
       "bug": "a fresh snapshot index dropped tracked files that matched ignore rules",
       "test": "scripts/replay.test.ts",
       "fixed": ["a WORKTREE replay keeps tracked files even when Git ignores them"]
+    },
+    {
+      "fix": "79e474c1",
+      "bug": "a failed Reset left focus on the page body instead of the remounted search field",
+      "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
+      "fixed": ["a rejected Reset navigation restores focus to the remounted search field"]
     }
   ],
   "lint": [
