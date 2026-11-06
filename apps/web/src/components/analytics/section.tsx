@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { ARROW_ICON_CLASS_NAME, ARROW_LINK_CLASS_NAME } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { NavigateIcon } from "@/lib/icons";
 
 export function SectionShell({
   gradientColor,
@@ -73,7 +73,7 @@ export function Section({
         <Link to={link.to} className={cn(ARROW_LINK_CLASS_NAME, "font-orbitron lowercase ml-auto")}>
           {link.label}
           <HugeiconsIcon
-            icon={ArrowRight01Icon}
+            icon={NavigateIcon}
             className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:translate-x-0.5")}
           />
         </Link>

@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
@@ -12,6 +12,7 @@ import {
   searchTerms,
   settingHash,
 } from "./settings-registry";
+import { NavigateIcon } from "@/lib/icons";
 
 const RESULT_SCROLL = { block: "center" } as const;
 const SEARCH_FIELD_ID = "settings-search";
@@ -160,7 +161,7 @@ export function SettingsSearchResults({ query }: { readonly query: string }) {
                   </span>
                 </span>
                 <HugeiconsIcon
-                  icon={ArrowRight01Icon}
+                  icon={NavigateIcon}
                   className="size-4 shrink-0 text-muted-foreground group-hover/result:text-foreground"
                   aria-hidden="true"
                 />

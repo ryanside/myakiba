@@ -5,7 +5,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  ArrowRight02Icon,
   FileUploadIcon,
   LibraryIcon,
   Loading03Icon,
@@ -45,6 +44,7 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { NavigateIcon } from "@/lib/icons";
 
 type StepId = "welcome" | "preferences" | "sync";
 
@@ -467,7 +467,7 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
         <span className="text-xs text-muted-foreground">{option.description}</span>
       </span>
       <HugeiconsIcon
-        icon={ArrowRight02Icon}
+        icon={NavigateIcon}
         strokeWidth={2}
         className={cn(
           "size-4 shrink-0 text-muted-foreground",

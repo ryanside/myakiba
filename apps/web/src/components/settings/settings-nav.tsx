@@ -1,4 +1,3 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef } from "react";
@@ -7,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { hasLostFocus } from "./settings-content";
 import { SETTINGS_NAV_GROUPS, SETTINGS_SECTIONS } from "./settings-registry";
 import type { SettingsSectionId } from "./settings-registry";
+import { NavigateIcon } from "@/lib/icons";
 
 export function SettingsNav({
   current,
@@ -99,7 +99,7 @@ function NavItem({
         </span>
         {isCurrent ? <ActiveDot className="hidden md:block" /> : null}
         <HugeiconsIcon
-          icon={ArrowRight01Icon}
+          icon={NavigateIcon}
           className="size-4 shrink-0 text-muted-foreground md:hidden"
           aria-hidden="true"
         />

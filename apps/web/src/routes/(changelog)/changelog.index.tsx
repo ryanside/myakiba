@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChangelogCoverImage } from "@/components/changelog/changelog-mdx";
@@ -8,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
 import { cn } from "@/lib/utils";
 import "@/components/changelog/changelog.css";
+import { NavigateIcon } from "@/lib/icons";
 
 export const Route = createFileRoute("/(changelog)/changelog/")({
   component: ChangelogIndex,
@@ -75,7 +75,7 @@ function ChangelogIndex() {
                   <span className="flex min-h-10 w-fit items-center gap-1.5 text-sm">
                     Read more
                     <HugeiconsIcon
-                      icon={ArrowRight02Icon}
+                      icon={NavigateIcon}
                       className={cn(
                         ARROW_ICON_CLASS_NAME,
                         "group-hover:translate-x-0.5 size-3 mt-0.5",

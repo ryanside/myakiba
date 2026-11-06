@@ -1,10 +1,4 @@
-import {
-  ArrowRight01Icon,
-  LibraryIcon,
-  Loading03Icon,
-  PackageIcon,
-  SearchIcon,
-} from "@hugeicons/core-free-icons";
+import { LibraryIcon, Loading03Icon, PackageIcon, SearchIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useRead } from "@/data/client";
@@ -38,6 +32,7 @@ import type {
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
 import { shownMessageOf } from "@/lib/api-response";
+import { NavigateIcon } from "@/lib/icons";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -362,7 +357,7 @@ export function AppCommand(): React.JSX.Element {
                   value={`orders-all-${query}`}
                   title={`View all orders for "${query}"`}
                   subtitle="Open the full orders page with this query"
-                  leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
+                  leading={<CommandLeadIcon icon={NavigateIcon} />}
                   onSelect={handleViewAllOrders}
                 />
               </CommandGroup>
@@ -410,7 +405,7 @@ export function AppCommand(): React.JSX.Element {
                   value={`items-all-${query}`}
                   title={`View all items for "${query}"`}
                   subtitle="Open the collection page with this query"
-                  leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
+                  leading={<CommandLeadIcon icon={NavigateIcon} />}
                   onSelect={handleViewAllItems}
                 />
               </CommandGroup>
