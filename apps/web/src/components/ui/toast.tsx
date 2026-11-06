@@ -16,17 +16,25 @@ import {
 
 const baseToast = ToastPrimitive.createToastManager();
 
+function isErrorToastText(
+  content: Pick<Parameters<typeof baseToast.add>[0], "title" | "description">,
+): content is { title: string; description?: string } {
+  const { title, description } = content;
+  return (
+    typeof title === "string" && (description === undefined || typeof description === "string")
+  );
+}
+
 // A failed save rolls back its edit, so an error stays until dismissed unless its caller sets a timeout.
 const toast: typeof baseToast = {
   ...baseToast,
   add: (options) => {
     if (options.type !== "error") return baseToast.add(options);
 
-    const { title, description } = options;
     const id =
       options.id ??
-      (typeof title === "string" && (description === undefined || typeof description === "string")
-        ? `error:${JSON.stringify([title, description])}`
+      (isErrorToastText(options)
+        ? `error:${JSON.stringify([options.title, options.description])}`
         : undefined);
     if (id !== undefined) baseToast.close(id);
 

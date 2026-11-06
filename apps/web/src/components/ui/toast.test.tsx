@@ -75,15 +75,16 @@ test("a repeated error returns to the visible front after newer errors", () => {
     }
   });
   expect(
-    screen.getByText("Error A").closest('[data-slot="toast"]')?.hasAttribute("data-limited"),
+    screen.getByText("Error A").closest<HTMLElement>('[data-slot="toast"]')?.dataset.limited !==
+      undefined,
   ).toBe(true);
 
   act(() => {
     toast.add({ type: "error", title: "Error A" });
   });
 
-  const repeated = screen.getByText("Error A").closest('[data-slot="toast"]');
-  expect(repeated?.hasAttribute("data-limited")).toBe(false);
+  const repeated = screen.getByText("Error A").closest<HTMLElement>('[data-slot="toast"]');
+  expect(repeated?.dataset.limited).toBeUndefined();
   expect(repeated?.style.getPropertyValue("--toast-index")).toBe("0");
   expect(screen.getAllByText("Error A")).toHaveLength(1);
 });
