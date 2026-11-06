@@ -7,7 +7,7 @@ export type ApiResponse<Data> =
   | { readonly data: Data; readonly error: null; readonly status: number }
   | { readonly data: null; readonly error: EdenError; readonly status: number };
 
-/** A request that failed. `message` is the diagnostic; `userMessageOf` gives the text a user may see. */
+/** A request that failed. `message` is the diagnostic; `shownMessageOf` gives the text a user may see. */
 export class ApiError extends Error {
   override readonly name = "ApiError";
   readonly status: number;
@@ -46,7 +46,7 @@ export async function requireData<Data>(
 const serverMessage = z.string().regex(/[^\s\p{Cf}]/u);
 
 /** Only a 4xx text body with visible text is a message the server wrote for the user. */
-export function userMessageOf(error: Error | null): string | undefined {
+function userMessageOf(error: Error | null): string | undefined {
   if (!(error instanceof ApiError) || error.status < 400 || error.status >= 500) return undefined;
   const message = serverMessage.safeParse(error.cause);
   return message.success ? message.data : undefined;

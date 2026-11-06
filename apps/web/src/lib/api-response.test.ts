@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createList, getLists } from "@/queries/lists";
-import { ApiError, userMessageOf } from "./api-response";
+import { ApiError, shownMessageOf } from "./api-response";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -17,7 +17,7 @@ async function failureOf(load: () => Promise<object>): Promise<ApiError> {
   } catch (error) {
     if (error instanceof ApiError) return error;
   }
-  throw new Error("the request did not reject with a ApiError");
+  throw new Error("the request did not reject with an ApiError");
 }
 
 test.each([400, 409, 500, 503])(
@@ -48,7 +48,7 @@ test("a request that never reaches the server keeps the network error as its cau
     status: 503,
     cause: offline,
   });
-  expect(userMessageOf(error)).toBeUndefined();
+  expect(shownMessageOf(error)).toBe("The server didn't answer.");
 });
 
 test("a read answered without data fails with the answer's status", async () => {
@@ -62,11 +62,11 @@ test("a read answered without data fails with the answer's status", async () => 
   });
 });
 
-describe("userMessageOf", () => {
+describe("shownMessageOf", () => {
   test.each([400, 401, 404, 409, 499])("returns the server's %d text", (status) => {
-    expect(userMessageOf(new ApiError("Failed", status, { cause: "Order not found" }))).toBe(
-      "Order not found",
-    );
+    expect(
+      shownMessageOf(new ApiError("Failed", status, { cause: "Order not found" }), "Try again."),
+    ).toBe("Order not found");
   });
 
   test.each([
@@ -76,9 +76,10 @@ describe("userMessageOf", () => {
     ["zero-width spaces", new ApiError("Failed", 400, { cause: "​​" })],
     ["a validation object", new ApiError("Failed", 422, { cause: { message: "Expected string" } })],
     ["an answer without data", new ApiError("Failed", 200)],
-    ["an error that is not a ApiError", new Error("Order not found")],
+    ["an error that is not an ApiError", new Error("Order not found")],
     ["no error", null],
-  ])("returns nothing for %s", (_name, error) => {
-    expect(userMessageOf(error)).toBeUndefined();
+  ])("returns the fallback for %s", (_name, error) => {
+    expect(shownMessageOf(error, "Try again.")).toBe("Try again.");
+    expect(shownMessageOf(error)).toBe("The server didn't answer.");
   });
 });

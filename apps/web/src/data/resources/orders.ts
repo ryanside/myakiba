@@ -9,6 +9,7 @@ import type {
 } from "@myakiba/contracts/orders/schema";
 import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
+import { shownMessageOf } from "@/lib/api-response";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { updateCollectionItem } from "@/queries/collection";
 import {
@@ -130,7 +131,8 @@ export const editOrderCommand = defineCommand({
     };
   },
   successTitle: () => "Order updated",
-  failureTitle: () => "Failed to update order. Please try again.",
+  failureTitle: (_input, error) =>
+    shownMessageOf(error, "Failed to update order. Please try again."),
 });
 
 export const deleteOrdersCommand = defineCommand({

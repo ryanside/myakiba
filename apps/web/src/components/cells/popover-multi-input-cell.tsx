@@ -17,8 +17,6 @@ import {
   parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
-import { toast } from "@/components/ui/toast";
-import { userMessageOf } from "@/lib/api-response";
 import { cn } from "@/lib/utils";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
@@ -77,7 +75,6 @@ export function PopoverMultiInputCell({
     const { error } = await tryCatch(onSubmit(newValues));
     if (error) {
       setPending(null);
-      toast.add({ type: "error", title: userMessageOf(error) ?? error.message });
     }
   };
 
