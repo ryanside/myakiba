@@ -60,11 +60,11 @@ export const OrderPendingContext = createContext<OrdersPendingState>({
 });
 
 function withOrderPending(
-  render: (context: CellContext<Order, unknown>, pending: OrdersPendingState) => ReactNode,
+  render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
 ) {
   return (context: CellContext<Order, unknown>) => (
     <OrderPendingContext.Consumer>
-      {(pending) => render(context, pending)}
+      {({ isOrderPending }) => render(context, isOrderPending(context.row.original.orderId))}
     </OrderPendingContext.Consumer>
   );
 }
@@ -162,7 +162,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
         return (
           <div className="flex items-center gap-3 pe-4">
@@ -184,7 +184,7 @@ export function createOrdersColumns({
               <InlineTextCell
                 label="Order title"
                 value={order.title}
-                disabled={isOrderPending(order.orderId)}
+                disabled={isPending}
                 onSubmit={async (newValue) => {
                   const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
                   void createdAt;
@@ -232,27 +232,25 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
-        return (
-          <InlineTextCell
-            label="Shop"
-            value={row.original.shop}
-            disabled={isOrderPending(row.original.orderId)}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  shop: newValue,
-                },
-                ["shop"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: withOrderPending(({ row }, isPending) => (
+        <InlineTextCell
+          label="Shop"
+          value={row.original.shop}
+          disabled={isPending}
+          onSubmit={async (newValue) => {
+            const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
+            void createdAt;
+            void updatedAt;
+            await onEditOrder(
+              {
+                ...orderWithoutTimestamps,
+                shop: newValue,
+              },
+              ["shop"] as CascadeOptions,
+            );
+          }}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -267,9 +265,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <div className="space-y-px">
             <SelectCell
@@ -308,9 +305,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverReleaseDateCell
             value={order.releaseDate}
@@ -346,9 +342,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.orderDate}
@@ -384,9 +379,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.paymentDate}
@@ -422,9 +416,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.shippingDate}
@@ -460,9 +453,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collection Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.collectionDate}
@@ -514,9 +506,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Total" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         const inputs = [
           {
             title: "Shipping",
@@ -591,9 +582,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Fee" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Shipping fee"
@@ -633,9 +623,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Taxes" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Taxes"
@@ -675,9 +664,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Duties" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Duties"
@@ -717,9 +705,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Tariffs" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Tariffs"
@@ -759,9 +746,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Misc Fees" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Other fees"
@@ -800,9 +786,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const status = row.original.status;
-        const isPending = isOrderPending(row.original.orderId);
         return (
           <SelectCell
             label="Status"
@@ -836,9 +821,8 @@ export function createOrdersColumns({
     {
       id: "actions",
       header: () => null,
-      cell: withOrderPending(({ row }, { isOrderPending }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <OrderActionsCell
             order={order}
