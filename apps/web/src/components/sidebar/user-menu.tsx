@@ -59,7 +59,7 @@ export default function UserMenu({ session }: { session: Session }) {
         </div>
         <div className="py-2.5">
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
-            <TabsList className="w-full">
+            <TabsList className="w-full" aria-label="Theme">
               <TabsTrigger value="light" aria-label="Light" className="h-6 flex-1">
                 <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />
               </TabsTrigger>
