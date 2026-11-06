@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { Order } from "@myakiba/contracts/orders/types";
 
 const realSearch = await import("@/queries/search");
@@ -13,6 +14,7 @@ await mock.module("@/queries/search", () => ({
 
 const { OrderForm } = await import("./order-form");
 const { default: UnifiedItemMoveForm } = await import("./unified-item-move-form");
+const { default: CollectionItemForm } = await import("../collection/collection-item-form");
 
 const settle = () =>
   act(
@@ -185,6 +187,49 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
 ];
 
+const collectionItem: CollectionItemFormValues = {
+  id: "ci-alpha",
+  orderId: "od-alpha",
+  itemId: "it-alpha",
+  itemExternalId: null,
+  itemTitle: "Alpha Figure",
+  itemImage: null,
+  status: "Ordered",
+  count: 1,
+  score: "0",
+  price: 0,
+  shop: "AmiAmi",
+  condition: "New",
+  orderDate: null,
+  paymentDate: null,
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "n/a",
+  tags: [],
+  notes: "",
+  releaseId: null,
+  releaseDate: null,
+  releasePrice: null,
+  releaseType: null,
+  releaseCurrency: null,
+  releaseBarcode: null,
+};
+
+const FOOTER_PATHS: Pick<SubmitPath, "name" | "render">[] = [
+  ...SUBMIT_PATHS,
+  {
+    name: "collection item sheet",
+    render: (write) => (
+      <CollectionItemForm
+        renderTrigger={trigger}
+        itemData={collectionItem}
+        callbackFn={write.send}
+        currency="USD"
+      />
+    ),
+  },
+];
+
 async function openAndSubmit(path: SubmitPath) {
   const write = heldWrite();
   const clearSelections = mock(() => {});
@@ -236,7 +281,7 @@ describe.each(SUBMIT_PATHS)("$name submit", (path) => {
   );
 });
 
-describe.each(SUBMIT_PATHS)("$name footer", (path) => {
+describe.each(FOOTER_PATHS)("$name footer", (path) => {
   test("has no nested button and Cancel closes the form", async () => {
     const queryClient = new QueryClient();
     try {
