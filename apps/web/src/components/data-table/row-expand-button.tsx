@@ -20,18 +20,26 @@ export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): R
       aria-label={isExpanded ? "Collapse row" : "Expand row"}
       aria-expanded={isExpanded}
     >
-      <HugeiconsIcon
-        icon={ArrowRight01Icon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
-      />
+      <ExpandChevron isExpanded={isExpanded} />
     </Button>
   );
 }
 
-/** Holds the expand button's box in a loading row, so the row keeps the height it loads with. */
+function ExpandChevron({ isExpanded }: { readonly isExpanded: boolean }): ReactNode {
+  return (
+    <HugeiconsIcon
+      icon={ArrowRight01Icon}
+      className={cn(
+        "text-muted-foreground transition-transform duration-150 ease-out",
+        isExpanded && "rotate-90",
+      )}
+    />
+  );
+}
+
+/** An invisible copy of the expand button for a loading row, so the row keeps the height it loads with. */
 export const ROW_EXPAND_SKELETON = (
-  <Button variant="ghost" size="icon-sm" disabled aria-hidden tabIndex={-1} className="invisible" />
+  <Button variant="ghost" size="icon-sm" disabled aria-hidden tabIndex={-1} className="invisible">
+    <ExpandChevron isExpanded={false} />
+  </Button>
 );
