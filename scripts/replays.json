@@ -1043,6 +1043,30 @@
         "Reset Filters on /orders > clears a deferred search and restores focus when Reset is shown only for its text",
         "Reset Filters on /collection > clears a deferred search and restores focus when Reset is shown only for its text"
       ]
+    },
+    {
+      "fix": "8f8b0e1c",
+      "bug": "seventeen read error surfaces showed the read's internal fallback, such as \"Failed to get expense shops\", during an outage instead of \"The server didn't answer.\"",
+      "test": "apps/web/src/components/outage-messages.test.tsx",
+      "fixed": [
+        "Expenses Shops card > shows the outage message for a 503 response",
+        "Expenses shop row expansion > shows the outage message for a 503 response",
+        "Orders row expansion > shows the outage message for a 503 response",
+        "Dashboard release calendar > shows the outage message for a 503 response",
+        "Calendar page > shows the outage message for a 503 response",
+        "Analytics page > shows the outage message for a 503 response",
+        "Analytics section page > shows the outage message for a 503 response",
+        "Analytics section items > shows the outage message for a 503 response",
+        "Analytics shared entries > shows the outage message for a 503 response",
+        "Item page header > shows the outage message for a 503 response",
+        "Add to List dialog > shows the outage message for a 503 response",
+        "Collection release cell > shows the outage message for a 503 response",
+        "Order release date cell > shows the outage message for a 503 response",
+        "Collection item form release picker > shows the outage message for a 503 response",
+        "Collection filters entry search > shows the outage message for a 503 response",
+        "Move items order search > shows the outage message for a 503 response",
+        "Command menu search > shows the outage message for a 503 response"
+      ]
     }
   ],
   "lint": [
