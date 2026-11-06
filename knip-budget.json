@@ -153,7 +153,6 @@
     "apps/web/src/components/reui/data-grid/data-grid-column-visibility.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-table-dnd-rows.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-table-dnd.tsx",
-    "apps/web/src/components/sidebar/nav-user.tsx",
     "apps/web/src/components/ui/chart.tsx",
     "apps/web/src/components/ui/infinite-slider.tsx",
     "apps/web/src/components/ui/progressive-blur.tsx",
