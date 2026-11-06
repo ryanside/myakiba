@@ -141,14 +141,15 @@ test("a pinned WORKTREE replay never writes into the working checkout", async ()
   const testAt = await repo.commit("guard working checkout");
   await repo.source("old", false);
   await repo.git("add", "src/value.ts");
-  const index = (await repo.git("write-tree")).text();
+  const index = await repo.git("write-tree");
   await repo.write("src/value.ts", 'export { value } from "./untracked-value";\n');
   await repo.write("src/untracked-value.ts", 'export const value = { era: "old", fixed: true };\n');
   await repo.assertions("old");
   const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base, testAt });
   expect(exitCode, output).toBe(0);
   expect(output).toContain(`PASS  WORKTREE  ${testFile}  1 fixed`);
-  expect((await repo.git("write-tree")).text()).toBe(index);
+  const after = await repo.git("write-tree");
+  expect(after.text()).toBe(index.text());
 }, 30_000);
 
 test("a pinned replay fails when its guarding test no longer passes at HEAD", async () => {
