@@ -1120,6 +1120,15 @@
       "bug": "a pinned WORKTREE replay wrote a temporary test into the working checkout that could survive interruption",
       "test": "scripts/replay.test.ts",
       "fixed": ["a pinned WORKTREE replay never writes into the working checkout"]
+    },
+    {
+      "fix": "f0e459ab",
+      "bug": "a pinned replay still passed after its guarding test or explicit HEAD alias disappeared",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a pinned replay fails when its guarding test no longer passes at HEAD",
+        "a pinned replay fails when an explicit HEAD alias is missing"
+      ]
     }
   ],
   "lint": [
