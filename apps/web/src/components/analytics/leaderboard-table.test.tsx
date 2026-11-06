@@ -77,3 +77,13 @@ test("shows spending in the user's currency", async () => {
   const [row] = screen.getAllByRole("row").slice(1);
   expect(row?.textContent).toBe("1AmiAmi123¥12,346");
 });
+
+test("marks only the header of the column the rows are ranked by", async () => {
+  await renderShops("AmiAmi");
+  const ranked = screen.getByRole("columnheader", { name: "Count" });
+  const other = screen.getByRole("columnheader", { name: "Spent" });
+  expect(ranked.getAttribute("aria-sort")).toBe("descending");
+  expect(ranked.querySelector("svg")).not.toBeNull();
+  expect(other.hasAttribute("aria-sort")).toBe(false);
+  expect(other.querySelector("svg")).toBeNull();
+});

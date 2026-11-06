@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
+import { ArrowDown02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -84,7 +86,15 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
       return {
         id: column,
         accessorFn: (row) => row[column] ?? null,
-        header: spec.label,
+        header: ({ column: tableColumn }) =>
+          tableColumn.getIsSorted() === "desc" ? (
+            <span className="flex items-center justify-end gap-1.5">
+              {spec.label}
+              <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.5 shrink-0" />
+            </span>
+          ) : (
+            spec.label
+          ),
         // Fixed widths keep every section's columns on the same lines.
         meta: spec.number
           ? {
@@ -164,6 +174,9 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     data: tableData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    // The rows arrive ranked; declaring the order marks the ranked header without re-sorting.
+    manualSorting: true,
+    state: { sorting: [{ id: rankedBy, desc: true }] },
     getRowId: (row) => String(row[rowIdKey]),
   });
 
