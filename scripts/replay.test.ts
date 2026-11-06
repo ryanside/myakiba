@@ -189,8 +189,12 @@ test("a WORKTREE replay keeps tracked files even when Git ignores them", async (
   await repo.write("src/ignored-value.ts", 'export const value = { era: "old", fixed: true };\n');
   await repo.git("add", "--force", "src/ignored-value.ts");
   await repo.commit("tracked ignored dependency");
-  await repo.write("src/value.ts", 'export { value } from "./ignored-value";\n');
-  await repo.assertions("old");
+  await repo.source("old", true);
+  await repo.assertions(
+    "old",
+    testName,
+    'expect(await Bun.file(new URL("./ignored-value.ts", import.meta.url)).exists()).toBe(true);',
+  );
   const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
   expect(exitCode, output).toBe(0);
   expect(output).toContain("every replay matched");
