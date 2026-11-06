@@ -1,5 +1,4 @@
 import * as React from "react";
-import { z } from "zod";
 import { Toast as ToastPrimitive } from "@base-ui/react/toast";
 
 import { cn } from "@/lib/utils";
@@ -16,7 +15,6 @@ import {
 } from "@hugeicons/core-free-icons";
 
 const baseToast = ToastPrimitive.createToastManager();
-const errorToastContentSchema = z.tuple([z.string(), z.string().optional()]);
 
 // A failed save rolls back its edit, so an error stays until dismissed unless its caller sets a timeout.
 const toast: typeof baseToast = {
@@ -24,9 +22,13 @@ const toast: typeof baseToast = {
   add: (options) => {
     if (options.type !== "error") return baseToast.add(options);
 
-    const content = errorToastContentSchema.safeParse([options.title, options.description]);
+    const { title, description } = options;
     const id =
-      options.id ?? (content.success ? `error:${JSON.stringify(content.data)}` : undefined);
+      options.id ??
+      (typeof title === "string" && (description === undefined || typeof description === "string")
+        ? `error:${JSON.stringify([title, description])}`
+        : undefined);
+    if (id !== undefined) baseToast.close(id);
 
     return baseToast.add({ ...options, id, timeout: options.timeout ?? 0 });
   },
