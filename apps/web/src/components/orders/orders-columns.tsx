@@ -18,6 +18,7 @@ import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
+import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type {
   Currency,
@@ -31,6 +32,7 @@ import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
 import { withOrderPending } from "./order-pending-context";
+import { editableCell } from "@/components/data-table/row-pending";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -39,6 +41,16 @@ export const OrderItemSelectionContext = createContext<{
   selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
+
+function withoutTimestamps({ createdAt: _createdAt, updatedAt: _updatedAt, ...order }: Order) {
+  return order;
+}
+
+// Editing a field the order shares with its items carries the change to the items too.
+function cascadeFor(field: keyof Order): CascadeOptions {
+  const option = ORDER_CASCADE_OPTIONS.find((candidate) => candidate === field);
+  return option ? [option] : [];
+}
 
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
@@ -59,6 +71,10 @@ export function createOrdersColumns({
   locale,
   dateFormat,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
+  const editOrder = editableCell(withOrderPending, (order, field, value) =>
+    onEditOrder({ ...withoutTimestamps(order), [field]: value }, cascadeFor(field)),
+  );
+
   return [
     {
       id: "select",
@@ -136,62 +152,47 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <div className="flex items-center gap-3 pe-4">
-            <Link
-              to="/orders/$id"
-              params={{ id: order.orderId }}
-              aria-label={`View ${order.title}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ImageThumbnail
-                images={order.images}
-                title={order.title}
-                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 shrink-0 rounded-md"
-                showRemainingCount
-              />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <InlineTextCell
-                label="Order title"
-                value={order.title}
-                disabled={isPending}
-                onSubmit={async (newValue) => {
-                  const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
-                  void createdAt;
-                  void updatedAt;
-                  await onEditOrder(
-                    {
-                      ...orderWithoutTimestamps,
-                      title: newValue,
-                    },
-                    [] as CascadeOptions,
-                  );
-                }}
-                validate={(value) => {
-                  if (!value || value.trim().length === 0) {
-                    return "Order title cannot be empty";
-                  }
-                  return true;
-                }}
-                previewClassName="text-sm font-medium"
-              />
-            </div>
-            <Link
-              to="/orders/$id"
-              params={{ id: order.orderId }}
-              className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label={`View ${order.title}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" strokeWidth={2} />
-            </Link>
+      cell: editOrder("title", (order, edit) => (
+        <div className="flex items-center gap-3 pe-4">
+          <Link
+            to="/orders/$id"
+            params={{ id: order.orderId }}
+            aria-label={`View ${order.title}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ImageThumbnail
+              images={order.images}
+              title={order.title}
+              fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
+              className="size-8 shrink-0 rounded-md"
+              showRemainingCount
+            />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <InlineTextCell
+              label="Order title"
+              value={order.title}
+              {...edit}
+              validate={(value) => {
+                if (!value || value.trim().length === 0) {
+                  return "Order title cannot be empty";
+                }
+                return true;
+              }}
+              previewClassName="text-sm font-medium"
+            />
           </div>
-        );
-      }),
+          <Link
+            to="/orders/$id"
+            params={{ id: order.orderId }}
+            className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label={`View ${order.title}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" strokeWidth={2} />
+          </Link>
+        </div>
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -206,24 +207,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => (
-        <InlineTextCell
-          label="Shop"
-          value={row.original.shop}
-          disabled={isPending}
-          onSubmit={async (newValue) => {
-            const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-            void createdAt;
-            void updatedAt;
-            await onEditOrder(
-              {
-                ...orderWithoutTimestamps,
-                shop: newValue,
-              },
-              ["shop"] as CascadeOptions,
-            );
-          }}
-        />
+      cell: editOrder("shop", (order, edit) => (
+        <InlineTextCell label="Shop" value={order.shop} {...edit} />
       )),
       enableSorting: true,
       enableHiding: true,
@@ -239,31 +224,17 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <div className="space-y-px">
-            <SelectCell
-              label="Shipping method"
-              value={order.shippingMethod}
-              options={SHIPPING_METHOD_OPTIONS}
-              disabled={isPending}
-              onSubmit={async (value) => {
-                const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-                void createdAt;
-                void updatedAt;
-                await onEditOrder(
-                  {
-                    ...orderWithoutTimestamps,
-                    shippingMethod: value as ShippingMethod,
-                  },
-                  ["shippingMethod"] as CascadeOptions,
-                );
-              }}
-            />
-          </div>
-        );
-      }),
+      cell: editOrder("shippingMethod", (order, { disabled, onSubmit }) => (
+        <div className="space-y-px">
+          <SelectCell
+            label="Shipping method"
+            value={order.shippingMethod}
+            options={SHIPPING_METHOD_OPTIONS}
+            disabled={disabled}
+            onSubmit={(value) => onSubmit(value as ShippingMethod)}
+          />
+        </div>
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -279,29 +250,14 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <PopoverReleaseDateCell
-            value={order.releaseDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            orderId={order.orderId}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  releaseDate: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("releaseDate", (order, edit) => (
+        <PopoverReleaseDateCell
+          value={order.releaseDate}
+          dateFormat={dateFormat}
+          orderId={order.orderId}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -316,28 +272,9 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <PopoverDatePickerCell
-            value={order.orderDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  orderDate: newValue,
-                },
-                ["orderDate"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("orderDate", (order, edit) => (
+        <PopoverDatePickerCell value={order.orderDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -353,28 +290,9 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <PopoverDatePickerCell
-            value={order.paymentDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  paymentDate: newValue,
-                },
-                ["paymentDate"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("paymentDate", (order, edit) => (
+        <PopoverDatePickerCell value={order.paymentDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -390,28 +308,9 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <PopoverDatePickerCell
-            value={order.shippingDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  shippingDate: newValue,
-                },
-                ["shippingDate"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("shippingDate", (order, edit) => (
+        <PopoverDatePickerCell value={order.shippingDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -427,28 +326,9 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collection Date" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <PopoverDatePickerCell
-            value={order.collectionDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  collectionDate: newValue,
-                },
-                ["collectionDate"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("collectionDate", (order, edit) => (
+        <PopoverDatePickerCell value={order.collectionDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -524,16 +404,7 @@ export function createOrdersColumns({
             locale={locale}
             disabled={isPending}
             onSubmit={async (newValues) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  ...newValues,
-                },
-                [] as CascadeOptions,
-              );
+              await onEditOrder({ ...withoutTimestamps(order), ...newValues }, []);
             }}
           />
         );
@@ -556,30 +427,15 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Fee" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Shipping fee"
-            value={order.shippingFee}
-            currency={currency}
-            locale={locale}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  shippingFee: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-            disabled={isPending}
-          />
-        );
-      }),
+      cell: editOrder("shippingFee", (order, edit) => (
+        <InlineCurrencyCell
+          label="Shipping fee"
+          value={order.shippingFee}
+          currency={currency}
+          locale={locale}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -597,30 +453,15 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Taxes" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Taxes"
-            value={order.taxes}
-            currency={currency}
-            locale={locale}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  taxes: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-            disabled={isPending}
-          />
-        );
-      }),
+      cell: editOrder("taxes", (order, edit) => (
+        <InlineCurrencyCell
+          label="Taxes"
+          value={order.taxes}
+          currency={currency}
+          locale={locale}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -638,30 +479,15 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Duties" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Duties"
-            value={order.duties}
-            currency={currency}
-            locale={locale}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  duties: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-            disabled={isPending}
-          />
-        );
-      }),
+      cell: editOrder("duties", (order, edit) => (
+        <InlineCurrencyCell
+          label="Duties"
+          value={order.duties}
+          currency={currency}
+          locale={locale}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -679,30 +505,15 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Tariffs" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Tariffs"
-            value={order.tariffs}
-            currency={currency}
-            locale={locale}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  tariffs: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-            disabled={isPending}
-          />
-        );
-      }),
+      cell: editOrder("tariffs", (order, edit) => (
+        <InlineCurrencyCell
+          label="Tariffs"
+          value={order.tariffs}
+          currency={currency}
+          locale={locale}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -720,30 +531,15 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Misc Fees" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const order = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Other fees"
-            value={order.miscFees}
-            currency={currency}
-            locale={locale}
-            onSubmit={async (newValue) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  miscFees: newValue,
-                },
-                [] as CascadeOptions,
-              );
-            }}
-            disabled={isPending}
-          />
-        );
-      }),
+      cell: editOrder("miscFees", (order, edit) => (
+        <InlineCurrencyCell
+          label="Other fees"
+          value={order.miscFees}
+          currency={currency}
+          locale={locale}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -760,30 +556,16 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: withOrderPending(({ row }, isPending) => {
-        const status = row.original.status;
-        return (
-          <SelectCell
-            label="Status"
-            value={status}
-            options={ORDER_STATUS_OPTIONS}
-            colorMap={ORDER_STATUS_COLORS}
-            disabled={isPending}
-            onSubmit={async (value) => {
-              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-              void createdAt;
-              void updatedAt;
-              await onEditOrder(
-                {
-                  ...orderWithoutTimestamps,
-                  status: value as OrderStatus,
-                },
-                ["status"] as CascadeOptions,
-              );
-            }}
-          />
-        );
-      }),
+      cell: editOrder("status", (order, { disabled, onSubmit }) => (
+        <SelectCell
+          label="Status"
+          value={order.status}
+          options={ORDER_STATUS_OPTIONS}
+          colorMap={ORDER_STATUS_COLORS}
+          disabled={disabled}
+          onSubmit={(value) => onSubmit(value as OrderStatus)}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,

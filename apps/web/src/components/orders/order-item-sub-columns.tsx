@@ -35,6 +35,7 @@ import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
 import { withOrderItemPending } from "./order-pending-context";
+import { editableCell } from "@/components/data-table/row-pending";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -168,6 +169,10 @@ export function createOrderItemSubColumns({
   locale,
   dateFormat,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
+  const editItem = editableCell(withOrderItemPending, (item, field, value) =>
+    onEditItem({ ...item, [field]: value }),
+  );
+
   return [
     {
       id: "select",
@@ -261,19 +266,9 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: withOrderItemPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <PopoverDatePickerCell
-            value={item.orderDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditItem({ ...item, orderDate: newValue });
-            }}
-          />
-        );
-      }),
+      cell: editItem("orderDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.orderDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -287,28 +282,22 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: withOrderItemPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineReleaseCell
-            releaseId={item.releaseId}
-            itemId={item.itemId}
-            fallback={{
-              releaseDate: item.releaseDate,
-              releaseType: item.releaseType,
-              releasePrice: item.releasePrice,
-              releaseCurrency: item.releaseCurrency,
-              releaseBarcode: item.releaseBarcode,
-            }}
-            currency={currency}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newReleaseId) => {
-              await onEditItem({ ...item, releaseId: newReleaseId });
-            }}
-          />
-        );
-      }),
+      cell: editItem("releaseId", (item, edit) => (
+        <InlineReleaseCell
+          releaseId={item.releaseId}
+          itemId={item.itemId}
+          fallback={{
+            releaseDate: item.releaseDate,
+            releaseType: item.releaseType,
+            releasePrice: item.releasePrice,
+            releaseCurrency: item.releaseCurrency,
+            releaseBarcode: item.releaseBarcode,
+          }}
+          currency={currency}
+          dateFormat={dateFormat}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -322,19 +311,9 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: withOrderItemPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineCountCell
-            label="Count"
-            value={item.count}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditItem({ ...item, count: newValue });
-            }}
-          />
-        );
-      }),
+      cell: editItem("count", (item, edit) => (
+        <InlineCountCell label="Count" value={item.count} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -349,24 +328,16 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: withOrderItemPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <SelectCell
-            label="Status"
-            value={item.status}
-            options={[...ORDER_STATUSES]}
-            colorMap={ORDER_STATUS_COLORS}
-            disabled={isPending}
-            onSubmit={async (value) => {
-              await onEditItem({
-                ...item,
-                status: value as OrderStatus,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("status", (item, { disabled, onSubmit }) => (
+        <SelectCell
+          label="Status"
+          value={item.status}
+          options={[...ORDER_STATUSES]}
+          colorMap={ORDER_STATUS_COLORS}
+          disabled={disabled}
+          onSubmit={(value) => onSubmit(value as OrderStatus)}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -381,22 +352,16 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: withOrderItemPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Price"
-            value={item.price}
-            currency={currency}
-            onSubmit={async (newValue) => {
-              await onEditItem({ ...item, price: newValue });
-            }}
-            locale={locale}
-            disabled={isPending}
-            zeroAsEmpty
-          />
-        );
-      }),
+      cell: editItem("price", (item, edit) => (
+        <InlineCurrencyCell
+          label="Price"
+          value={item.price}
+          currency={currency}
+          locale={locale}
+          {...edit}
+          zeroAsEmpty
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,

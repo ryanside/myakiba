@@ -6,7 +6,7 @@ type PendingCellRender<TRow> = (
   isPending: boolean,
 ) => ReactNode;
 
-export type WithPending<TRow> = (
+type WithPending<TRow> = (
   render: PendingCellRender<TRow>,
 ) => (context: CellContext<TRow, unknown>) => ReactNode;
 
@@ -21,4 +21,27 @@ export function withRowPending<TRow>(
       const isPending = useIsPending();
       return render(context, isPending(idOf(context.row.original)));
     };
+}
+
+export interface CellEdit<TValue> {
+  readonly disabled: boolean;
+  readonly onSubmit: (value: TValue) => Promise<void>;
+}
+
+export function editableCell<TRow>(
+  withPending: WithPending<TRow>,
+  save: (row: TRow, field: keyof TRow, value: TRow[keyof TRow]) => Promise<void>,
+) {
+  return <TField extends keyof TRow>(
+    field: TField,
+    render: (row: TRow, edit: CellEdit<TRow[TField]>) => ReactNode,
+  ) =>
+    withPending(({ row }, isPending) =>
+      render(row.original, {
+        disabled: isPending,
+        onSubmit: async (value) => {
+          await save(row.original, field, value);
+        },
+      }),
+    );
 }

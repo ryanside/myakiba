@@ -33,6 +33,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import CollectionItemForm from "./collection-item-form";
 import { withCollectionPending } from "./collection-pending-context";
+import { editableCell } from "@/components/data-table/row-pending";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
@@ -232,6 +233,10 @@ export function createCollectionColumns({
   locale,
   dateFormat,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
+  const editItem = editableCell(withCollectionPending, (item, field, value) =>
+    onEditCollectionItem({ ...item, [field]: value }),
+  );
+
   return [
     {
       id: "select",
@@ -334,22 +339,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineCountCell
-            label="Count"
-            value={item.count}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...item,
-                count: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("count", (item, edit) => (
+        <InlineCountCell label="Count" value={item.count} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -365,21 +357,7 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Score" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <PopoverRatingCell
-            value={item.score}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...item,
-                score: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("score", (item, edit) => <PopoverRatingCell value={item.score} {...edit} />),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -395,23 +373,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineTextCell
-            label="Shop"
-            value={item.shop}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...item,
-                shop: newValue,
-              });
-            }}
-            previewClassName="text-sm"
-          />
-        );
-      }),
+      cell: editItem("shop", (item, edit) => (
+        <InlineTextCell label="Shop" value={item.shop} {...edit} previewClassName="text-sm" />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -427,25 +391,16 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineCurrencyCell
-            label="Price"
-            value={item.price}
-            currency={currency}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...item,
-                price: newValue,
-              });
-            }}
-            locale={locale}
-            disabled={isPending}
-            zeroAsEmpty
-          />
-        );
-      }),
+      cell: editItem("price", (item, edit) => (
+        <InlineCurrencyCell
+          label="Price"
+          value={item.price}
+          currency={currency}
+          locale={locale}
+          {...edit}
+          zeroAsEmpty
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -461,31 +416,22 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const item = row.original;
-        return (
-          <InlineReleaseCell
-            releaseId={item.releaseId}
-            itemId={item.itemId}
-            fallback={{
-              releaseDate: item.releaseDate,
-              releaseType: item.releaseType,
-              releasePrice: item.releasePrice,
-              releaseCurrency: item.releaseCurrency,
-              releaseBarcode: item.releaseBarcode,
-            }}
-            currency={currency}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newReleaseId) => {
-              await onEditCollectionItem({
-                ...item,
-                releaseId: newReleaseId,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("releaseId", (item, edit) => (
+        <InlineReleaseCell
+          releaseId={item.releaseId}
+          itemId={item.itemId}
+          fallback={{
+            releaseDate: item.releaseDate,
+            releaseType: item.releaseType,
+            releasePrice: item.releasePrice,
+            releaseCurrency: item.releaseCurrency,
+            releaseBarcode: item.releaseBarcode,
+          }}
+          currency={currency}
+          dateFormat={dateFormat}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -501,22 +447,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const orderDate = row.original.orderDate;
-        return (
-          <PopoverDatePickerCell
-            value={orderDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...row.original,
-                orderDate: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("orderDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.orderDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -532,22 +465,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const paymentDate = row.original.paymentDate;
-        return (
-          <PopoverDatePickerCell
-            value={paymentDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...row.original,
-                paymentDate: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("paymentDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.paymentDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -563,22 +483,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const shippingDate = row.original.shippingDate;
-        return (
-          <PopoverDatePickerCell
-            value={shippingDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...row.original,
-                shippingDate: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("shippingDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.shippingDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -594,22 +501,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collected" visibility={true} column={column} />
       ),
-      cell: withCollectionPending(({ row }, isPending) => {
-        const collectionDate = row.original.collectionDate;
-        return (
-          <PopoverDatePickerCell
-            value={collectionDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              await onEditCollectionItem({
-                ...row.original,
-                collectionDate: newValue,
-              });
-            }}
-          />
-        );
-      }),
+      cell: editItem("collectionDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.collectionDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
