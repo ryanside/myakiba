@@ -12,8 +12,9 @@ import {
 } from "@tanstack/react-router";
 import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
-import type { CollectionItem, CollectionPage } from "@myakiba/contracts/collection/types";
+import type { CollectionPage } from "@myakiba/contracts/collection/types";
 import type { Order, OrdersPage } from "@myakiba/contracts/orders/types";
+import { collectionItem } from "../../../test/collection-item";
 
 const realForm = await import("@tanstack/react-form");
 const { useForm: useRealForm } = realForm;
@@ -79,37 +80,17 @@ const page: OrdersPage = {
   unpaidCosts: 0,
 };
 
-const item: CollectionItem = {
+const item = collectionItem({
   id: "ci-alpha",
   orderId: order.orderId,
   itemId: "it-alpha",
-  itemExternalId: null,
   itemTitle: "Alpha Figure",
-  itemImage: null,
-  itemCategory: null,
-  itemScale: null,
   status: "Ordered",
-  count: 1,
-  score: "0",
   price: 1000,
   shop: "AmiAmi",
-  condition: "New",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-  shippingMethod: "n/a",
-  tags: [],
-  notes: "",
-  releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseType: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
   createdAt: order.createdAt,
   updatedAt: order.updatedAt,
-};
+});
 const collectionPage: CollectionPage = {
   items: [item],
   totalCount: 1,

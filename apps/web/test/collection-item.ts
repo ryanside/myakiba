@@ -1,0 +1,36 @@
+import type { CollectionItem } from "@myakiba/contracts/collection/types";
+
+export function collectionItem(overrides: Partial<CollectionItem> = {}): CollectionItem {
+  return {
+    id: "collection-1",
+    orderId: null,
+    itemId: "item-1",
+    itemExternalId: null,
+    itemTitle: "Hatsune Miku",
+    itemImage: null,
+    itemCategory: null,
+    itemScale: null,
+    status: "Owned",
+    count: 1,
+    score: "0",
+    price: 0,
+    shop: "",
+    condition: "New",
+    orderDate: null,
+    paymentDate: null,
+    shippingDate: null,
+    collectionDate: null,
+    shippingMethod: "n/a",
+    tags: [],
+    notes: "",
+    releaseId: null,
+    releaseDate: null,
+    releasePrice: null,
+    releaseType: null,
+    releaseCurrency: null,
+    releaseBarcode: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}

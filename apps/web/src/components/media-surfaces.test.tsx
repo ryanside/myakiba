@@ -11,7 +11,6 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseOrder, ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { itemDatabaseSearchSchema } from "@myakiba/contracts/search/schema";
@@ -46,6 +45,7 @@ import type { AnalyticsSectionRow } from "@/queries/analytics";
 import type { CalendarItem, CalendarOrder } from "@/queries/calendar";
 import type { DashboardKanbanOrder, ReleaseItem } from "@/queries/dashboard";
 import { Route as ListsRoute } from "@/routes/(app)/lists";
+import { collectionItem } from "../../test/collection-item";
 
 afterEach(() => {
   cleanup();
@@ -86,37 +86,14 @@ const members = [
   },
 ] satisfies ComponentProps<typeof ListMemberGrid>["members"];
 
-const collectionItem = {
-  id: "collection-1",
-  orderId: null,
-  itemId: "item-1",
+const ownedItem = collectionItem({
   itemExternalId: 123,
-  itemTitle: "Hatsune Miku",
   itemImage: image,
   itemCategory: "Prepainted",
   itemScale: "1/7",
-  status: "Owned",
-  count: 1,
-  score: "0",
   price: 12_000,
   shop: "AmiAmi",
-  condition: "New",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-  shippingMethod: "n/a",
-  tags: [],
-  notes: "",
-  releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseType: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-} satisfies CollectionItem;
+});
 
 const order = {
   orderId: "order-1",
@@ -288,7 +265,7 @@ function listDetail(viewMode: MediaViewMode): ReactNode {
 }
 
 const collectionProps = {
-  items: [collectionItem],
+  items: [ownedItem],
   rowSelection: {},
   onRowSelectionChange: () => {},
   onEditCollectionItem: noop,
