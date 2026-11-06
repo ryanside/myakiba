@@ -7,6 +7,7 @@ import { CommandInput } from "./ui/command";
 export function DebouncedInput({
   value: initialValue,
   onChange,
+  onTextChange,
   debounce = 200,
   isCommandInput = false,
   ref,
@@ -14,6 +15,7 @@ export function DebouncedInput({
 }: {
   value: string | number;
   onChange: (value: string | number) => void;
+  onTextChange?: (text: string) => void;
   debounce?: number;
   isCommandInput?: boolean;
   ref?: Ref<HTMLInputElement>;
@@ -23,13 +25,15 @@ export function DebouncedInput({
   // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults (until 2027-04-16, approved by root, pending operator review)
   const [defaultValue] = useState(initialValue);
   const onChangeRef = useRef(onChange);
+  const onTextChangeRef = useRef(onTextChange);
   const pendingLocalAcknowledgementsRef = useRef(new Set<string>());
   const pendingExternalValueRef = useRef<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onTextChangeRef.current = onTextChange;
+  }, [onChange, onTextChange]);
 
   useEffect(() => {
     const inputElement = inputRef.current;
@@ -53,6 +57,7 @@ export function DebouncedInput({
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
+    onTextChangeRef.current?.(nextValue);
   }, [initialValue]);
 
   useEffect(() => {
@@ -100,6 +105,7 @@ export function DebouncedInput({
 
     pendingExternalValueRef.current = null;
     pendingLocalAcknowledgementsRef.current.clear();
+    onTextChange?.(event.currentTarget.value);
     props.onBlur?.(event);
   };
 
@@ -110,7 +116,10 @@ export function DebouncedInput({
         ref={composedRef}
         defaultValue={String(defaultValue)}
         onBlur={handleBlur}
-        onValueChange={handleValueChange}
+        onValueChange={(value) => {
+          onTextChange?.(value);
+          handleValueChange(value);
+        }}
       />
     );
   }
@@ -122,6 +131,7 @@ export function DebouncedInput({
       defaultValue={defaultValue}
       onBlur={handleBlur}
       onChange={(e) => {
+        onTextChange?.(e.target.value);
         if (e.target.value === "") {
           handleValueChange("");
           return;

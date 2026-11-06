@@ -33,9 +33,8 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 
 export function OrdersToolbar(): React.JSX.Element {
   const { filters, setFilters, resetFilters } = useOrdersFilters();
-  const { inputRef, searchResetKey, hasSearchDraft, onSearchInput, resetSearch } = useToolbarSearch(
-    { search: filters.search, resetFilters },
-  );
+  const { inputRef, searchResetKey, hasSearchDraft, onSearchTextChange, resetSearch } =
+    useToolbarSearch(resetFilters);
   const { currency } = useUserPreferences();
   const currentSort =
     filters.sort && filters.order
@@ -60,8 +59,7 @@ export function OrdersToolbar(): React.JSX.Element {
         placeholder="Search"
         aria-label="Search Orders"
         ref={inputRef}
-        onInput={onSearchInput}
-        onBlur={onSearchInput}
+        onTextChange={onSearchTextChange}
         className="max-w-64"
       />
       <OrdersFiltersForm

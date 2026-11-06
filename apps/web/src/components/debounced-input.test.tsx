@@ -20,6 +20,7 @@ const waitForDebounce = () =>
 
 function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
   const emitted: (string | number)[] = [];
+  let reportedText: string | undefined;
   let setOwnerValue: (value: string) => void = () => {};
   let ownerValue = initialValue;
 
@@ -40,6 +41,9 @@ function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
           emitted.push(next);
           if (echoChanges) setValue(String(next));
         }}
+        onTextChange={(text) => {
+          reportedText = text;
+        }}
       />
     );
   }
@@ -49,6 +53,7 @@ function renderOwnedInput(initialValue: string, { echoChanges = true } = {}) {
     user: userEvent.setup({ advanceTimers: jest.advanceTimersByTime }),
     input: screen.getByRole("textbox", { name: "Search" }) as HTMLInputElement,
     emitted,
+    reportedText: () => reportedText,
     ownerValue: () => ownerValue,
     setOwnerValue: (value: string) => act(() => setOwnerValue(value)),
   };
@@ -158,6 +163,25 @@ describe("DebouncedInput", () => {
     expect(input.value).toBe("miku");
     await user.tab();
     expect(input.value).toBe("rin");
+  });
+
+  test("reports the text it shows as it mounts, as the user types, and when blur applies an outside change", async () => {
+    const { user, input, reportedText, setOwnerValue } = renderOwnedInput("a");
+    const shownAndReported = () => ({ shown: input.value, reported: reportedText() });
+    expect(shownAndReported()).toEqual({ shown: "a", reported: "a" });
+
+    await user.type(input, "b");
+    expect(shownAndReported()).toEqual({ shown: "ab", reported: "ab" });
+
+    await waitForDebounce();
+    await setOwnerValue("rin");
+    expect(shownAndReported()).toEqual({ shown: "ab", reported: "ab" });
+
+    await user.tab();
+    expect(shownAndReported()).toEqual({ shown: "rin", reported: "rin" });
+
+    await setOwnerValue("");
+    expect(shownAndReported()).toEqual({ shown: "", reported: "" });
   });
 
   test("an outside change back to earlier typed text still shows after blur", async () => {

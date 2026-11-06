@@ -1,23 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
 
-export function useToolbarSearch({
-  search,
-  resetFilters,
-}: {
-  search: string | undefined;
-  resetFilters: () => Promise<void>;
-}) {
+export function useToolbarSearch(resetFilters: () => Promise<void>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [hasSearchDraft, setHasSearchDraft] = useState(false);
 
-  useEffect(() => {
-    setHasSearchDraft((inputRef.current?.value ?? search ?? "") !== "");
-  }, [search]);
-
-  const onSearchInput = (event: FormEvent<HTMLInputElement>): void => {
-    setHasSearchDraft(event.currentTarget.value !== "");
+  const onSearchTextChange = (text: string): void => {
+    setHasSearchDraft(text !== "");
   };
 
   const resetSearch = async (): Promise<void> => {
@@ -28,5 +17,5 @@ export function useToolbarSearch({
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  return { inputRef, searchResetKey, hasSearchDraft, onSearchInput, resetSearch };
+  return { inputRef, searchResetKey, hasSearchDraft, onSearchTextChange, resetSearch };
 }
