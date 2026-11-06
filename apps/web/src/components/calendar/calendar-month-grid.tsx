@@ -185,7 +185,7 @@ function CalendarDayCellContent({
       <span className="flex items-center justify-between gap-1">
         <span
           className={cn(
-            "inline-flex h-5 items-center self-start text-xs font-medium tabular-nums transition-colors duration-150 ease-out",
+            "inline-flex h-5 items-center self-start text-xs font-medium tabular-nums color-motion",
             isToday &&
               "min-w-5 justify-center rounded-full bg-primary px-1.5 text-primary-foreground",
             !isToday && inMonth && "text-foreground",
