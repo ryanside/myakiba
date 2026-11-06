@@ -104,6 +104,23 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     }).toEqual({ search: undefined, shown: "", resetShown: false });
   });
 
+  test("keeps Reset while an outside clear is deferred by the focused search", async () => {
+    const { user, router, input, queryResetButton, resetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect(input().value).toBe("mi");
+    expect(queryResetButton()).not.toBeNull();
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+    expect(input().value).toBe("");
+    expect(queryResetButton()).toBeNull();
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
     const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
       `${path}?search=Ram`,
