@@ -4,6 +4,8 @@
 export {
   // Reveals content inline, such as a row's sub-rows or a form section. Rotate it 90° while open.
   ArrowRight01Icon as ExpandIcon,
+  // Opens a popup below its trigger, such as a select's list.
+  ArrowDown01Icon as DisclosureIcon,
   // Goes to another page in the app, such as an order's own page or a "view all" link.
   ArrowRight02Icon as NavigateIcon,
   // Goes back to the page you came from.

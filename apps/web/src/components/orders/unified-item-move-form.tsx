@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
@@ -50,6 +50,7 @@ import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/s
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { shownMessageOf } from "@/lib/api-response";
+import { DisclosureIcon } from "@/lib/icons";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger?: React.ReactElement;
@@ -276,7 +277,7 @@ function UnifiedItemMoveFormContent({
                                     ?.title || "Select target order"
                                 : "Select target order"}
                               <HugeiconsIcon
-                                icon={ArrowUpDownIcon}
+                                icon={DisclosureIcon}
                                 data-icon="inline-end"
                                 className="shrink-0 opacity-50"
                               />
