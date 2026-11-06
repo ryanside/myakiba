@@ -476,7 +476,14 @@ async function commitWorkingTree() {
       .split("\0")
       .filter((entry) => /^[a-zS] /.test(entry))
       .map((entry) => entry.slice(2))
-      .filter((file) => lstatSync(path.join(root, file), { throwIfNoEntry: false }));
+      .filter((file) => {
+        try {
+          return lstatSync(path.join(root, file), { throwIfNoEntry: false });
+        } catch (error) {
+          if (error instanceof Error && "code" in error && error.code === "ENOTDIR") return false;
+          throw error;
+        }
+      });
     if (present.length > 0) {
       const input = Buffer.from(`${present.join("\0")}\0`);
       for (const flag of ["--no-assume-unchanged", "--no-skip-worktree"])
