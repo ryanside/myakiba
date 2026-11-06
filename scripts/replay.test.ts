@@ -260,6 +260,28 @@ test("a WORKTREE replay works in a checkout with no index file", async () => {
 }, 30_000);
 
 for (const flag of ["assume-unchanged", "skip-worktree"]) {
+  test(`a WORKTREE replay captures a directory replaced by a file with ${flag} and preserves the real index`, async () => {
+    const repo = await fixture();
+    await repo.write("dir/value.ts", "export const nested = true;\n");
+    await repo.commit("tracked directory");
+    await repo.git("update-index", `--${flag}`, "dir/value.ts");
+    await rm(path.join(repo.dir, "dir"), { recursive: true });
+    await repo.write("dir", "replacement\n");
+    await repo.source("old", true);
+    await repo.assertions(
+      "old",
+      testName,
+      'expect(await Bun.file(new URL("../dir", import.meta.url)).text()).toBe("replacement\\n");',
+    );
+    const indexResult = await repo.git("rev-parse", "--git-path", "index");
+    const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+    const index = await Bun.file(indexPath).bytes();
+    const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+    expect(await Bun.file(indexPath).bytes()).toEqual(index);
+    expect(exitCode, output).toBe(0);
+    expect(output).toContain("every replay matched");
+  }, 30_000);
+
   test(`a WORKTREE replay captures edits with ${flag} and preserves the real index`, async () => {
     const repo = await fixture();
     await repo.write("src/sparse-value.ts", "export const sparse = true;\n");
