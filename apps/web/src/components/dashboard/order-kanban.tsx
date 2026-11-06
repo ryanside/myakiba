@@ -390,9 +390,16 @@ function ColumnBody({
   isLoading,
   currency,
   dateFormat,
-  isOverlay,
+  asHandle,
   onDateChange,
-}: Omit<React.ComponentProps<typeof OrderColumn>, "columnId">) {
+}: {
+  orders: readonly DashboardKanbanOrder[];
+  isLoading: boolean;
+  currency: Currency;
+  dateFormat: DateFormat;
+  asHandle: boolean;
+  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+}) {
   if (isLoading) return <Loader className="justify-start pt-4" />;
   if (orders.length === 0) {
     return (
@@ -407,7 +414,7 @@ function ColumnBody({
       order={order}
       currency={currency}
       dateFormat={dateFormat}
-      asHandle={!isOverlay}
+      asHandle={asHandle}
       onDateChange={onDateChange}
     />
   ));
@@ -456,7 +463,7 @@ function OrderColumn({
             isLoading={isLoading}
             currency={currency}
             dateFormat={dateFormat}
-            isOverlay={isOverlay}
+            asHandle={!isOverlay}
             onDateChange={onDateChange}
           />
         </KanbanColumnContent>
