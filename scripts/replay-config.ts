@@ -1,0 +1,75 @@
+type TestReplayEntry = {
+  fix: string;
+  base?: string;
+  bug: string;
+  test: string;
+  fixed: string[];
+  testAt?: string;
+  atHead?: string[];
+};
+export type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
+  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
+
+export type LintReplay = {
+  fix: string;
+  bug: string;
+  rule: string;
+  atParent: string[];
+  atFix: string[];
+};
+
+export type KnipReplay = {
+  fix: string;
+  bug: string;
+  reports: string[];
+};
+
+export type TypesReplay = {
+  name: string;
+  fix: string;
+  bug: string;
+  package: string;
+  config: string[];
+  errors: string[];
+};
+
+/** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
+export type TypesFixture = {
+  name: string;
+  bug: string;
+  package: string;
+  file: string;
+  errors: string[];
+};
+
+type ReplaysFile = {
+  test?: TestReplayEntry[];
+  lint?: LintReplay[];
+  knip?: KnipReplay[];
+  types?: TypesReplay[];
+  fixtures?: TypesFixture[];
+};
+
+function parseTestReplay(
+  { testAt, atHead, ...replay }: TestReplayEntry,
+  index: number,
+): TestReplay {
+  const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
+  if (atHead !== undefined && testAt === undefined) {
+    throw invalid("atHead requires testAt");
+  }
+  if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
+    throw invalid("atHead must not be empty and must be a list of test names");
+  }
+  return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
+}
+
+export function parseReplays({
+  test = [],
+  lint = [],
+  knip = [],
+  types = [],
+  fixtures = [],
+}: ReplaysFile) {
+  return { test: test.map(parseTestReplay), lint, knip, types, fixtures };
+}

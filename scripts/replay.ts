@@ -3,69 +3,19 @@ import { lstatSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-type TestReplayEntry = {
-  fix: string;
-  base?: string;
-  bug: string;
-  test: string;
-  fixed: string[];
-  testAt?: string;
-  atHead?: string[];
-};
-type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
-  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
-
-function parseTestReplay(
-  { testAt, atHead, ...replay }: TestReplayEntry,
-  index: number,
-): TestReplay {
-  const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
-  if (atHead !== undefined && testAt === undefined) {
-    throw invalid("atHead requires testAt");
-  }
-  if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
-    throw invalid("atHead must not be empty and must be a list of test names");
-  }
-  return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
-}
+import type {
+  KnipReplay,
+  LintReplay,
+  TestReplay,
+  TypesFixture,
+  TypesReplay,
+} from "./replay-config";
+import { parseReplays } from "./replay-config";
 
 type TestHarness = {
   packageDir: string;
   files: string[];
   testSource?: { file: string; source: string };
-};
-
-type LintReplay = {
-  fix: string;
-  bug: string;
-  rule: string;
-  atParent: string[];
-  atFix: string[];
-};
-
-type KnipReplay = {
-  fix: string;
-  bug: string;
-  reports: string[];
-};
-
-type TypesReplay = {
-  name: string;
-  fix: string;
-  bug: string;
-  package: string;
-  config: string[];
-  errors: string[];
-};
-
-/** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
-type TypesFixture = {
-  name: string;
-  bug: string;
-  package: string;
-  file: string;
-  errors: string[];
 };
 
 type LintRule = string | [string, ...unknown[]];
@@ -91,19 +41,12 @@ const root = path.resolve(import.meta.dir, "..");
 const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
-  test: testEntries = [],
-  lint: lintReplays = [],
-  knip: knipReplays = [],
-  types: typesReplays = [],
-  fixtures: fixtureReplays = [],
-}: {
-  test?: TestReplayEntry[];
-  lint?: LintReplay[];
-  knip?: KnipReplay[];
-  types?: TypesReplay[];
-  fixtures?: TypesFixture[];
-} = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
-const testReplays = testEntries.map(parseTestReplay);
+  test: testReplays,
+  lint: lintReplays,
+  knip: knipReplays,
+  types: typesReplays,
+  fixtures: fixtureReplays,
+} = parseReplays(await Bun.file(path.join(import.meta.dir, "replays.json")).json());
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
