@@ -258,3 +258,42 @@ test("a WORKTREE replay works in a checkout with no index file", async () => {
   expect(output).toContain("every replay matched");
   expect(await Bun.file(indexPath).exists()).toBe(false);
 }, 30_000);
+
+for (const flag of ["assume-unchanged", "skip-worktree"]) {
+  test(`a WORKTREE replay captures edits with ${flag} and preserves the real index`, async () => {
+    const repo = await fixture();
+    await repo.git("update-index", `--${flag}`, "src/value.ts");
+    await repo.source("old", true);
+    await repo.assertions("old");
+    const indexResult = await repo.git("rev-parse", "--git-path", "index");
+    const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+    const index = await Bun.file(indexPath).bytes();
+    const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+    expect(await Bun.file(indexPath).bytes()).toEqual(index);
+    expect(exitCode, output).toBe(0);
+    expect(output).toContain("every replay matched");
+  }, 30_000);
+}
+
+test("a WORKTREE replay preserves an absent skip-worktree file", async () => {
+  const repo = await fixture();
+  await repo.write("src/sparse-value.ts", "export const sparse = true;\n");
+  await repo.commit("sparse dependency");
+  await repo.git("update-index", "--skip-worktree", "src/sparse-value.ts");
+  await rm(path.join(repo.dir, "src/sparse-value.ts"));
+  await repo.source("old", true);
+  await repo.assertions(
+    "old",
+    testName,
+    `if (!import.meta.dir.startsWith(${JSON.stringify(`${repo.dir}${path.sep}`)})) {
+    expect(await Bun.file(new URL("./sparse-value.ts", import.meta.url)).exists()).toBe(true);
+  }`,
+  );
+  const indexResult = await repo.git("rev-parse", "--git-path", "index");
+  const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+  const index = await Bun.file(indexPath).bytes();
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(await Bun.file(indexPath).bytes()).toEqual(index);
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
