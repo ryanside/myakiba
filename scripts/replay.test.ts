@@ -225,3 +225,23 @@ test("a WORKTREE replay keeps tracked files even when Git ignores them", async (
   expect(exitCode, output).toBe(0);
   expect(output).toContain("every replay matched");
 }, 30_000);
+
+test("a WORKTREE replay keeps force-staged ignored files and preserves the real index", async () => {
+  const repo = await fixture();
+  await repo.write(".gitignore", "node_modules\nsrc/ignored-value.ts\n");
+  await repo.write("src/ignored-value.ts", 'export const value = { era: "old", fixed: true };\n');
+  await repo.git("add", "--force", "src/ignored-value.ts");
+  const indexResult = await repo.git("rev-parse", "--git-path", "index");
+  const indexPath = indexResult.text().trim();
+  const index = await Bun.file(path.resolve(repo.dir, indexPath)).bytes();
+  await repo.source("old", true);
+  await repo.assertions(
+    "old",
+    testName,
+    'expect(await Bun.file(new URL("./ignored-value.ts", import.meta.url)).exists()).toBe(true);',
+  );
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+  expect(await Bun.file(path.resolve(repo.dir, indexPath)).bytes()).toEqual(index);
+}, 30_000);
