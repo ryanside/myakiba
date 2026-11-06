@@ -304,3 +304,31 @@ describe.each(FOOTER_PATHS)("$name footer", (path) => {
     }
   });
 });
+
+describe.each(
+  FOOTER_PATHS.filter((path) => ["edit-order sheet", "collection item sheet"].includes(path.name)),
+)("$name footer widths", (path) => {
+  test("keeps Cancel content-sized and lets Update fill the remaining width", () => {
+    const queryClient = new QueryClient();
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          {path.render(heldWrite(), () => {})}
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      const cancel = screen.getByRole("button", { name: "Cancel" });
+      const update = screen.getByRole("button", { name: "Update" });
+      expect(cancel.classList.contains("w-full")).toBe(false);
+      expect(cancel.classList.contains("flex-1")).toBe(false);
+      expect(update.classList.contains("w-full")).toBe(true);
+      expect(update.classList.contains("flex-1")).toBe(true);
+      expect(
+        screen.getByRole("dialog").querySelectorAll('[data-slot="sheet-footer"] button').length,
+      ).toBe(2);
+    } finally {
+      cleanup();
+      queryClient.clear();
+    }
+  });
+});
