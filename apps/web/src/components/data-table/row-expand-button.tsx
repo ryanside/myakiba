@@ -1,10 +1,10 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { Row } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ExpandIcon } from "@/lib/icons";
 
 export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): ReactNode {
   if (!row.getCanExpand()) return null;
@@ -22,7 +22,7 @@ export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): R
       aria-expanded={isExpanded}
     >
       <HugeiconsIcon
-        icon={ArrowRight01Icon}
+        icon={ExpandIcon}
         className={cn(
           "text-muted-foreground transition-transform duration-150 ease-out",
           isExpanded && "rotate-90",
