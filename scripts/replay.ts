@@ -433,9 +433,13 @@ try {
     );
   }
 
+  let worktreeSnapshot: Promise<string> | undefined;
   for (const replay of selected) {
     const harness = await harnessOf(replay);
-    const fix = replay.fix === "WORKTREE" ? await snapshotWorkingTree(root) : replay.fix;
+    const fix =
+      replay.fix === "WORKTREE"
+        ? await (worktreeSnapshot ??= snapshotWorkingTree(root))
+        : replay.fix;
     await checkOut(replay.base, harness);
     const before = await runTest(worktree, replay.test);
     await checkOut(fix, harness);
