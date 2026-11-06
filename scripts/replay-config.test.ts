@@ -24,3 +24,9 @@ test("an unpinned replay rejects HEAD aliases", () => {
     "scripts/replays.json test[0]: atHead requires testAt",
   );
 });
+
+test("a WORKTREE replay without a base revision is rejected", () => {
+  expect(() => parseReplays({ test: [entry, { ...entry, fix: "WORKTREE" }] })).toThrow(
+    "scripts/replays.json test[1]: a WORKTREE replay needs a base revision",
+  );
+});
