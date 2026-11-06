@@ -245,3 +245,16 @@ test("a WORKTREE replay keeps force-staged ignored files and preserves the real 
   expect(output).toContain("every replay matched");
   expect(await Bun.file(path.resolve(repo.dir, indexPath)).bytes()).toEqual(index);
 }, 30_000);
+
+test("a WORKTREE replay works in a checkout with no index file", async () => {
+  const repo = await fixture();
+  const indexResult = await repo.git("rev-parse", "--git-path", "index");
+  const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+  await rm(indexPath);
+  await repo.source("old", true);
+  await repo.assertions("old");
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+  expect(await Bun.file(indexPath).exists()).toBe(false);
+}, 30_000);
