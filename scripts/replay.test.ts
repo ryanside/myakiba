@@ -136,7 +136,7 @@ test("a pinned WORKTREE replay never writes into the working checkout", async ()
   await repo.assertions(
     "old",
     testName,
-    `expect(await Array.fromAsync(new Bun.Glob(".replay-*").scan(${JSON.stringify(path.join(repo.dir, "src"))}))).toEqual([]);`,
+    `expect(import.meta.dir.startsWith(${JSON.stringify(`${repo.dir}${path.sep}`)})).toBe(false);`,
   );
   const testAt = await repo.commit("guard working checkout");
   await repo.source("old", false);
