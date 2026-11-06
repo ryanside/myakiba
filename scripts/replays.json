@@ -920,10 +920,9 @@
       "bug": "Collection, Orders and Expenses replaced the server's load error with a fixed sentence",
       "test": "apps/web/src/components/page-load-error.test.tsx",
       "fixed": [
-        "a page that fails to load > Collection shows the server's message",
-        "a page that fails to load > Orders shows the server's message",
-        "a page that fails to load > Expenses shows the server's message",
-        "LoadError > uses the server fallback when no message is supplied"
+        "Collection load errors > shows the server's 400 text message",
+        "Orders load errors > shows the server's 400 text message",
+        "Expenses load errors > shows the server's 400 text message"
       ]
     },
     {
@@ -971,28 +970,69 @@
       "bug": "an outage showed the loader's internal fallback instead of \"The server didn't answer.\"",
       "test": "apps/web/src/components/page-load-error.test.tsx",
       "fixed": [
-        "Collection during an outage > uses the server fallback for a 503 response",
-        "Orders during an outage > uses the server fallback for a 503 response",
-        "Expenses during an outage > uses the server fallback for a 503 response"
+        "Collection load errors > uses the server fallback for a 500 response",
+        "Collection load errors > uses the server fallback for a 503 response",
+        "Collection load errors > uses the server fallback for a network failure",
+        "Orders load errors > uses the server fallback for a 500 response",
+        "Orders load errors > uses the server fallback for a 503 response",
+        "Orders load errors > uses the server fallback for a network failure",
+        "Expenses load errors > uses the server fallback for a 500 response",
+        "Expenses load errors > uses the server fallback for a 503 response",
+        "Expenses load errors > uses the server fallback for a network failure",
+        "Collection with no response data > shows the server fallback instead of diagnostic text",
+        "Orders with no response data > shows the server fallback instead of diagnostic text"
       ]
     },
     {
       "fix": "11184510",
-      "bug": "outages lost their diagnostic text, and six more pages showed internal \"Failed to …\" text instead of the outage message",
-      "test": "apps/web/src/queries/page-load-error.test.ts",
+      "bug": "outages lost their diagnostic text",
+      "test": "apps/web/src/queries/page-load-error.test.tsx",
       "fixed": [
-        "Collection diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Orders diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Order expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Lists diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "List detail diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "List members diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Dashboard overview diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Dashboard monthly diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Item Database diagnostics > keeps the diagnostic fallback apart from the %s user message",
-        "Wishlist diagnostics > separates diagnostics from the %s user message"
+        "Collection diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Collection diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Orders diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Orders diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Order expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Order expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Lists diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "List detail diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "List members diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Dashboard overview diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Dashboard monthly diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Item Database diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Wishlist diagnostics > separates diagnostics from the 400 user message"
+      ]
+    },
+    {
+      "fix": "11184510",
+      "bug": "six more pages showed internal \"Failed to …\" text during an outage, and Collection and Orders showed it for an empty response",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Lists load errors > uses the server fallback for a 500 response",
+        "Lists load errors > uses the server fallback for a 503 response",
+        "Lists load errors > uses the server fallback for a network failure",
+        "List detail load errors > uses the server fallback for a 500 response",
+        "List detail load errors > uses the server fallback for a 503 response",
+        "List detail load errors > uses the server fallback for a network failure",
+        "Wishlist load errors > uses the server fallback for a 500 response",
+        "Wishlist load errors > uses the server fallback for a 503 response",
+        "Wishlist load errors > uses the server fallback for a network failure",
+        "Dashboard overview load errors > uses the server fallback for a 500 response",
+        "Dashboard overview load errors > uses the server fallback for a 503 response",
+        "Dashboard overview load errors > uses the server fallback for a network failure",
+        "Dashboard monthly load errors > uses the server fallback for a 500 response",
+        "Dashboard monthly load errors > uses the server fallback for a 503 response",
+        "Dashboard monthly load errors > uses the server fallback for a network failure",
+        "Item Database load errors > uses the server fallback for a 500 response",
+        "Item Database load errors > uses the server fallback for a 503 response",
+        "Item Database load errors > uses the server fallback for a network failure",
+        "List member errors use the safe message for a 503 response",
+        "Collection with no response data > shows the server fallback instead of diagnostic text",
+        "Orders with no response data > shows the server fallback instead of diagnostic text"
       ]
     },
     {

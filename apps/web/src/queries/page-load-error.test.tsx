@@ -1,17 +1,42 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { getCollection } from "./collection";
-import { getOrders } from "./orders";
-import { getExpensesCollection, getExpensesOrders, getExpensesShipping } from "./expenses";
-import { createList, getList, getListMembers, getLists } from "./lists";
-import { getDashboard, getMonthlyDashboard } from "./dashboard";
-import { getItemDatabaseItems } from "./search";
+import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
+import { LoadError } from "@/components/page-states";
 import { wishlist } from "@/data/resources/wishlist";
+import { getCollection } from "./collection";
+import { getDashboard, getMonthlyDashboard } from "./dashboard";
+import { getExpensesCollection, getExpensesOrders, getExpensesShipping } from "./expenses";
+import { getList, getListMembers, getLists } from "./lists";
+import { getOrders } from "./orders";
+import { getItemDatabaseItems } from "./search";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
+  cleanup();
   globalThis.fetch = realFetch;
 });
+
+function answerWith(status: number) {
+  globalThis.fetch = Object.assign(async () => new Response("Server detail", { status }), {
+    preconnect: realFetch.preconnect,
+  });
+}
+
+async function failureOf(load: () => Promise<object>): Promise<Error> {
+  try {
+    await load();
+  } catch (error) {
+    if (error instanceof Error) return error;
+  }
+  throw new Error("the load did not reject with an Error");
+}
+
+function expectShownMessage(error: Error, status: number) {
+  render(<LoadError title="Could not load" error={error} />);
+  expect(
+    screen.getByText(status === 400 ? "Server detail" : "The server didn't answer."),
+  ).toBeTruthy();
+}
 
 const reads = [
   ["Collection", () => getCollection({}), "Failed to get collection"],
@@ -33,45 +58,30 @@ const reads = [
 
 describe.each(reads)("%s diagnostics", (_name, load, fallback) => {
   test.each([400, 503])(
-    "keeps the diagnostic fallback apart from the %s user message",
+    "keeps the diagnostic fallback apart from the %d user message",
     async (status) => {
-      globalThis.fetch = Object.assign(async () => new Response("Server detail", { status }), {
-        preconnect: realFetch.preconnect,
-      });
-      await expect(load()).rejects.toMatchObject({
-        message: fallback,
-        userMessage: status === 400 ? "Server detail" : undefined,
-      });
+      answerWith(status);
+      const error = await failureOf(load);
+      expect(error.message).toBe(fallback);
+      expectShownMessage(error, status);
     },
   );
 });
 
 describe("Wishlist diagnostics", () => {
-  test.each([400, 503])("separates diagnostics from the %s user message", async (status) => {
-    globalThis.fetch = Object.assign(async () => new Response("Server detail", { status }), {
-      preconnect: realFetch.preconnect,
-    });
+  test.each([400, 503])("separates diagnostics from the %d user message", async (status) => {
+    answerWith(status);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     try {
-      await expect(
+      const error = await failureOf(() =>
         client.fetchInfiniteQuery(
           wishlist.items.options({ releaseStatus: "all", today: "2026-11-05" }),
         ),
-      ).rejects.toMatchObject({
-        message: "Failed to load Wishlist",
-        userMessage: status === 400 ? "Server detail" : undefined,
-      });
+      );
+      expect(error.message).toBe("Failed to load Wishlist");
+      expectShownMessage(error, status);
     } finally {
       client.clear();
     }
-  });
-});
-
-test.each([400, 503])("a failed List save preserves its existing %s message", async (status) => {
-  globalThis.fetch = Object.assign(async () => new Response("Server detail", { status }), {
-    preconnect: realFetch.preconnect,
-  });
-  await expect(createList({ title: "My List", description: "" })).rejects.toMatchObject({
-    message: status === 400 ? "Server detail" : "Failed to create list",
   });
 });

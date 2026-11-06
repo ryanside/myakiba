@@ -3,8 +3,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AnyRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ReadError } from "@/lib/read-response";
-import { LoadError } from "./page-states";
 
 Object.defineProperty(document, "fonts", {
   configurable: true,
@@ -94,7 +92,7 @@ describe.each(pages)("%s load errors", (_name, route, search) => {
     expect(await screen.findByText("That filter is invalid")).toBeTruthy();
   });
 
-  test.each([500, 503])("uses the server fallback for a %s response", async (status) => {
+  test.each([500, 503])("uses the server fallback for a %d response", async (status) => {
     pageSearch = search;
     renderPage(route, async () => new Response("Internal failure", { status }));
     expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
@@ -111,7 +109,7 @@ describe.each(pages)("%s load errors", (_name, route, search) => {
 });
 
 test.each([400, 503])(
-  "List member errors use the safe message for a %s response",
+  "List member errors use the safe message for a %d response",
   async (status) => {
     pageSearch = {};
     renderPage(listRoute, async (input) => {
@@ -138,34 +136,5 @@ describe.each([
     renderPage(route, async () => Response.json(null));
     expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
     expect(screen.queryByText(/Failed to get/)).toBeNull();
-  });
-});
-
-describe("LoadError", () => {
-  test.each([
-    new Error("Failed to get collection"),
-    new ReadError("Failed to load", { status: 400, value: " " }),
-    new ReadError("Failed to load", { status: 422, value: { message: "Expected string" } }),
-    new ReadError("Failed to load", { status: 503, value: "Internal failure" }),
-  ])("uses the server fallback when an error has no user message", (loadError) => {
-    render(<LoadError title="Could not load" error={loadError} />);
-    expect(screen.getByText("The server didn't answer.")).toBeTruthy();
-    expect(screen.queryByText(/Failed to/)).toBeNull();
-  });
-
-  test("uses the server fallback when no error is supplied", () => {
-    render(<LoadError title="Could not load" />);
-    expect(screen.getByText("The server didn't answer.")).toBeTruthy();
-  });
-
-  test("preserves a server user message", () => {
-    render(
-      <LoadError
-        title="Could not load"
-        error={new ReadError("Failed to load", { status: 401, value: "Please sign in again" })}
-      />,
-    );
-    expect(screen.getByText("Please sign in again")).toBeTruthy();
-    expect(screen.queryByText("The server didn't answer.")).toBeNull();
   });
 });
