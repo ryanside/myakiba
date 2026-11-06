@@ -616,15 +616,11 @@ function CollectionItemFormContent({
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
-              <SheetClose>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex-1"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
+              <SheetClose
+                disabled={isSubmitting}
+                render={<Button type="button" variant="outline" className="w-full flex-1" />}
+              >
+                Cancel
               </SheetClose>
             )}
           />

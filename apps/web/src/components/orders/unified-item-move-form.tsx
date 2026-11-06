@@ -382,10 +382,11 @@ function UnifiedItemMoveFormContent({
               <existingOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />
@@ -762,10 +763,11 @@ function UnifiedItemMoveFormContent({
               <newOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />
