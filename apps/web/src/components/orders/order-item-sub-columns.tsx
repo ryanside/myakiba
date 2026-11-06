@@ -34,7 +34,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
-import { orderPendingCell } from "./order-pending-context";
+import { withOrderItemPending } from "./order-pending-context";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
@@ -159,10 +159,6 @@ function OrderItemActionsCell({
     </>
   );
 }
-
-const withOrderItemPending = orderPendingCell<OrderItem>((pending, item) =>
-  pending.isCollectionItemPending(item.id),
-);
 
 export function createOrderItemSubColumns({
   orderId,

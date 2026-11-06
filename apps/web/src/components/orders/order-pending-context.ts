@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import type { CellContext } from "@tanstack/react-table";
+import type { Order, OrderItem } from "@myakiba/contracts/orders/types";
 
 interface OrdersPendingState {
   isOrderPending: (id: string) => boolean;
@@ -17,12 +18,20 @@ export function useOrderPending() {
   return pending;
 }
 
-export function orderPendingCell<TData>(
-  isRowPending: (pending: OrdersPendingState, row: TData) => boolean,
+export function withOrderPending(
+  render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
 ) {
-  return (render: (context: CellContext<TData, unknown>, isPending: boolean) => ReactNode) =>
-    function PendingCell(context: CellContext<TData, unknown>) {
-      const pending = useOrderPending();
-      return render(context, isRowPending(pending, context.row.original));
-    };
+  return function PendingCell(context: CellContext<Order, unknown>) {
+    const { isOrderPending } = useOrderPending();
+    return render(context, isOrderPending(context.row.original.orderId));
+  };
+}
+
+export function withOrderItemPending(
+  render: (context: CellContext<OrderItem, unknown>, isPending: boolean) => ReactNode,
+) {
+  return function PendingCell(context: CellContext<OrderItem, unknown>) {
+    const { isCollectionItemPending } = useOrderPending();
+    return render(context, isCollectionItemPending(context.row.original.id));
+  };
 }
