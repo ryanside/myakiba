@@ -6,6 +6,8 @@ import * as z from "zod";
 import { CARD_IMAGE_CLASS_NAME, MediaImage, IMAGE_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Switch } from "@/components/ui/switch";
 import { useMotionPreference, usePageBackgrounds } from "@/hooks/use-appearance";
+import { THEME_OPTIONS } from "@/lib/theme-options";
+import type { ThemeValue } from "@/lib/theme-options";
 import { cn } from "@/lib/utils";
 import { SettingsGroup } from "./settings-group";
 import { SettingsRow, useSettingAnchor } from "./settings-row";
@@ -14,24 +16,16 @@ import type { Scheme } from "./theme-preview";
 
 type PreviewLayer = { readonly scheme: Scheme; readonly half?: "start" | "end" };
 
-const THEMES = [
-  { value: "light", label: "Light", previews: [{ scheme: "light" }] },
-  { value: "dark", label: "Dark", previews: [{ scheme: "dark" }] },
-  {
-    value: "system",
-    label: "System",
-    previews: [
-      { scheme: "light", half: "start" },
-      { scheme: "dark", half: "end" },
-    ],
-  },
-] as const satisfies readonly {
-  readonly value: string;
-  readonly label: string;
-  readonly previews: readonly PreviewLayer[];
-}[];
+const THEME_PREVIEWS = {
+  light: [{ scheme: "light" }],
+  dark: [{ scheme: "dark" }],
+  system: [
+    { scheme: "light", half: "start" },
+    { scheme: "dark", half: "end" },
+  ],
+} satisfies Record<ThemeValue, readonly PreviewLayer[]>;
 
-const themeChoice = z.enum(["light", "dark", "system"]);
+const themeChoice = z.enum(THEME_OPTIONS.map(({ value }) => value));
 
 /** System draws the light app on the left and the dark app on the right, split on a slant. */
 const HALF_CLIP = {
@@ -68,7 +62,7 @@ function ThemeChoices() {
           }}
           className="grid grid-cols-3 gap-3"
         >
-          {THEMES.map(({ value: choice, label, previews }) => (
+          {THEME_OPTIONS.map(({ value: choice, label }) => (
             <Radio.Root
               key={choice}
               value={choice}
@@ -84,7 +78,7 @@ function ThemeChoices() {
                   "aspect-[16/10] bg-sidebar",
                 )}
               >
-                {previews.map((layer: PreviewLayer) => (
+                {THEME_PREVIEWS[choice].map((layer: PreviewLayer) => (
                   <ThemePreview
                     key={layer.scheme}
                     scheme={layer.scheme}

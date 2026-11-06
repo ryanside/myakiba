@@ -22,7 +22,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useTheme } from "next-themes";
 import type { Session } from "@/lib/session";
 import { toast } from "@/components/ui/toast";
+import { THEME_OPTIONS } from "@/lib/theme-options";
+import type { ThemeValue } from "@/lib/theme-options";
 import { Button } from "../ui/button";
+
+const THEME_ICONS = {
+  light: Sun01Icon,
+  dark: Moon02Icon,
+  system: ComputerIcon,
+} satisfies Record<ThemeValue, typeof Sun01Icon>;
 
 export default function UserMenu({ session }: { session: Session }) {
   const navigate = useNavigate();
@@ -60,15 +68,11 @@ export default function UserMenu({ session }: { session: Session }) {
         <div className="py-2.5">
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full" aria-label="Theme">
-              <TabsTrigger value="light" aria-label="Light" className="h-6 flex-1">
-                <HugeiconsIcon icon={Sun01Icon} className="size-4" aria-hidden="true" />
-              </TabsTrigger>
-              <TabsTrigger value="dark" aria-label="Dark" className="h-6 flex-1">
-                <HugeiconsIcon icon={Moon02Icon} className="size-4" aria-hidden="true" />
-              </TabsTrigger>
-              <TabsTrigger value="system" aria-label="System" className="h-6 flex-1">
-                <HugeiconsIcon icon={ComputerIcon} className="size-4" aria-hidden="true" />
-              </TabsTrigger>
+              {THEME_OPTIONS.map(({ value, label }) => (
+                <TabsTrigger key={value} value={value} aria-label={label} className="h-6 flex-1">
+                  <HugeiconsIcon icon={THEME_ICONS[value]} className="size-4" aria-hidden="true" />
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
