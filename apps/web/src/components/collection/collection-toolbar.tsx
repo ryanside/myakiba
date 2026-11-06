@@ -1,7 +1,8 @@
-import { FilterIcon, FilterResetIcon } from "@hugeicons/core-free-icons";
+import { FilterIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useToolbarSearch } from "@/hooks/use-toolbar-search";
 import { SearchPill } from "@/components/search-pill";
+import { ResetFiltersButton } from "@/components/reset-filters-button";
 import FiltersForm from "@/components/collection/filters-form";
 import { Button } from "@/components/ui/button";
 import { SortCombobox } from "@/components/ui/sort-combobox";
@@ -87,15 +88,7 @@ export function CollectionToolbar(): React.JSX.Element {
         onSortChange={handleSortChange}
       />
       {hasActiveFiltersOrSorting(filters) || hasSearchDraft ? (
-        <Button
-          onPointerDown={(event) => event.preventDefault()}
-          onClick={resetSearch}
-          variant="ghost"
-          className="text-muted-foreground"
-        >
-          <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
-          <span className="max-md:sr-only">Reset Filters</span>
-        </Button>
+        <ResetFiltersButton onReset={resetSearch} />
       ) : null}
     </div>
   );
