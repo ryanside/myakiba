@@ -1345,6 +1345,25 @@
       "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
       "test": "apps/web/src/components/expenses/shop-table.test.tsx",
       "fixed": ["the Shops table holds each column to a fixed share of its width in every scope"]
+    },
+    {
+      "fix": "7ee19a9e",
+      "bug": "the filter dialogs' dropdown fields shrank on press like buttons",
+      "test": "apps/web/src/components/field-trigger-press.test.tsx",
+      "fixed": [
+        "field triggers keep still when pressed > collection filters",
+        "field triggers keep still when pressed > orders filters",
+        "field triggers keep still when pressed > expenses filters"
+      ]
+    },
+    {
+      "fix": "80200374",
+      "bug": "a wide button shrank by many pixels at the same press scale as a small one",
+      "test": "apps/web/src/components/ui/button.test.tsx",
+      "fixed": [
+        "Button press > a pointer press hands the button's width to the press",
+        "Button press > a key press hands the button's width to the press"
+      ]
     }
   ],
   "lint": [
