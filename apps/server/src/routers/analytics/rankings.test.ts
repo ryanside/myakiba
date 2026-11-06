@@ -86,3 +86,8 @@ test("the shops section still lists every shop past the overview's five", async 
   expect(section.totalCount).toBe(6);
   expect(section.rows).toHaveLength(6);
 });
+
+test.each(["%2C", "a,b"])("a section search for %s answers with no rows", async (search) => {
+  const section = await get<{ readonly totalCount: number }>(`/analytics/shops?search=${search}`);
+  expect(section.totalCount).toBe(0);
+});
