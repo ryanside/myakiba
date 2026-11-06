@@ -41,6 +41,22 @@ afterEach(() => {
   document.documentElement.style.colorScheme = "";
 });
 
+test("the account menu's theme tablist has an accessible name", async () => {
+  const root = createRootRoute({ component: () => <UserMenu session={session} /> });
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  render(
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>,
+  );
+
+  fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+  await screen.findByRole("tablist", { name: "Theme" });
+});
+
 test.each([
   { name: "Light", value: "light", initial: "dark" },
   { name: "Dark", value: "dark", initial: "light" },
@@ -61,6 +77,11 @@ test.each([
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual([
+      "Light",
+      "Dark",
+      "System",
+    ]);
     const tab = await screen.findByRole("tab", { name });
     expect(tab.getAttribute("aria-selected")).toBe("false");
 
