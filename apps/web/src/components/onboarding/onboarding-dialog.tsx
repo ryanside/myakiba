@@ -3,8 +3,6 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
   FileUploadIcon,
   LibraryIcon,
   Loading03Icon,
@@ -44,7 +42,7 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
-import { NavigateIcon } from "@/lib/icons";
+import { NavigateIcon, NextIcon, PreviousIcon } from "@/lib/icons";
 
 type StepId = "welcome" | "preferences" | "sync";
 
@@ -502,7 +500,7 @@ function StepFooter({
   const getContinueIcon = () => {
     if (isSaving) return Loading03Icon;
     if (isLast) return Tick02Icon;
-    return ArrowRight01Icon;
+    return NextIcon;
   };
   const continueIcon = getContinueIcon();
   const skipLabel = "Close";
@@ -515,7 +513,7 @@ function StepFooter({
       <div className="flex items-center gap-2">
         {!isFirst && (
           <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" strokeWidth={2} />
+            <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}

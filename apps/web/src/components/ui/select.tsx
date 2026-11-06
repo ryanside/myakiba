@@ -3,7 +3,8 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Tick02Icon, ArrowUp01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { DisclosureIcon, ScrollDownIcon, ScrollUpIcon } from "@/lib/icons";
 
 const Select = SelectPrimitive.Root;
 
@@ -49,7 +50,7 @@ function SelectTrigger({
       <SelectPrimitive.Icon
         render={
           <HugeiconsIcon
-            icon={ArrowDown01Icon}
+            icon={DisclosureIcon}
             strokeWidth={2}
             className="pointer-events-none size-4 text-muted-foreground"
           />
@@ -158,7 +159,7 @@ function SelectScrollUpButton({
       )}
       {...props}
     >
-      <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} />
+      <HugeiconsIcon icon={ScrollUpIcon} strokeWidth={2} />
     </SelectPrimitive.ScrollUpArrow>
   );
 }
@@ -176,7 +177,7 @@ function SelectScrollDownButton({
       )}
       {...props}
     >
-      <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
+      <HugeiconsIcon icon={ScrollDownIcon} strokeWidth={2} />
     </SelectPrimitive.ScrollDownArrow>
   );
 }

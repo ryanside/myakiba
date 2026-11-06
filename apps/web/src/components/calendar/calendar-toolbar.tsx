@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import type { CalendarView } from "@myakiba/contracts/calendar/schema";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 const MONTH_NAMES = [
   "January",
@@ -52,7 +52,7 @@ export function CalendarToolbar({
           onClick={() => onShiftMonth(-1)}
           aria-label="Previous month"
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={PreviousIcon} strokeWidth={2} className="size-4" />
         </Button>
         <NativeSelect
           size="sm"
@@ -85,7 +85,7 @@ export function CalendarToolbar({
           onClick={() => onShiftMonth(1)}
           aria-label="Next month"
         >
-          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={NextIcon} strokeWidth={2} className="size-4" />
         </Button>
       </div>
 

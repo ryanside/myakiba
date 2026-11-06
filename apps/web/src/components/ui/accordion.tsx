@@ -2,7 +2,7 @@ import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ExpandIcon } from "@/lib/icons";
 
 function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (
@@ -37,7 +37,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
       >
         {children}
         <HugeiconsIcon
-          icon={ArrowRight01Icon}
+          icon={ExpandIcon}
           strokeWidth={2}
           data-slot="accordion-trigger-icon"
           className="pointer-events-none shrink-0 collapse-chevron group-aria-expanded/accordion-trigger:rotate-90"

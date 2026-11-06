@@ -1,8 +1,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DisclosureIcon } from "@/lib/icons";
 
 /** A full-width button that reads as a field and opens a menu of choices. Like an input, it keeps still when pressed. */
 function FieldTrigger({ className, children, ...props }: ComponentProps<typeof Button>) {
@@ -14,7 +14,7 @@ function FieldTrigger({ className, children, ...props }: ComponentProps<typeof B
       {...props}
     >
       {children}
-      <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
+      <HugeiconsIcon icon={DisclosureIcon} data-icon="inline-end" />
     </Button>
   );
 }

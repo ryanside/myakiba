@@ -6,6 +6,14 @@ export {
   ArrowRight01Icon as ExpandIcon,
   // Opens a popup below its trigger, such as a select's list.
   ArrowDown01Icon as DisclosureIcon,
+  // Opens a submenu beside its menu item.
+  ArrowRight01Icon as SubmenuIcon,
+  // Steps back or forward through pages, months or wizard steps. Always shown as a pair.
+  ArrowLeft01Icon as PreviousIcon,
+  ArrowRight01Icon as NextIcon,
+  // Scrolls a popup list that overflows.
+  ArrowUp01Icon as ScrollUpIcon,
+  ArrowDown01Icon as ScrollDownIcon,
   // Goes to another page in the app, such as an order's own page or a "view all" link.
   ArrowRight02Icon as NavigateIcon,
   // Goes back to the page you came from.

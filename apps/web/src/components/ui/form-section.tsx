@@ -1,7 +1,7 @@
 import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ExpandIcon } from "@/lib/icons";
 
 type FormSectionProps = {
   readonly title: string;
@@ -29,7 +29,7 @@ function FormSection({
         )}
       >
         <HugeiconsIcon
-          icon={ArrowRight01Icon}
+          icon={ExpandIcon}
           strokeWidth={2}
           className="size-3.5 shrink-0 collapse-chevron group-aria-expanded/trigger:rotate-90"
         />

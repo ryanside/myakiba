@@ -11,7 +11,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { randomKaomoji } from "@/lib/kaomoji";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 function getCurrentVisibleMonth(): Date {
   const now = new Date();
@@ -127,7 +127,7 @@ function RouteComponent(): ReactElement {
                 onClick={() => shiftMonth(-1)}
                 aria-label="Previous month"
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5" />
+                <HugeiconsIcon icon={PreviousIcon} strokeWidth={2} className="size-3.5" />
               </Button>
               <Button
                 type="button"
@@ -136,7 +136,7 @@ function RouteComponent(): ReactElement {
                 onClick={() => shiftMonth(1)}
                 aria-label="Next month"
               >
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+                <HugeiconsIcon icon={NextIcon} strokeWidth={2} className="size-3.5" />
               </Button>
             </div>
           )}

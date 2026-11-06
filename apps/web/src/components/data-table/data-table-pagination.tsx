@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 function getPageNumbers({
   totalPages,
@@ -105,7 +105,7 @@ export function DataTablePagination({
             disabled={offset === 0}
           >
             <span className="sr-only">Go to previous page</span>
-            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
+            <HugeiconsIcon icon={PreviousIcon} strokeWidth={2} className="size-4" />
           </Button>
         </PaginationItem>
 
@@ -147,7 +147,7 @@ export function DataTablePagination({
             disabled={currentPage >= totalPages}
           >
             <span className="sr-only">Go to next page</span>
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+            <HugeiconsIcon icon={NextIcon} strokeWidth={2} className="size-4" />
           </Button>
         </PaginationItem>
       </PaginationContent>

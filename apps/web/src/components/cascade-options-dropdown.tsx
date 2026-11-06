@@ -1,5 +1,4 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { CascadeOptions } from "@myakiba/contracts/orders/schema";
+import { DisclosureIcon } from "@/lib/icons";
 
 interface CascadeOptionsDropdownProps {
   readonly cascadeOptions: CascadeOptions;
@@ -36,7 +36,7 @@ export function CascadeOptionsDropdown({
             className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-open:bg-background"
           >
             {cascadeDisplayText}
-            <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" className="z-10" />
+            <HugeiconsIcon icon={DisclosureIcon} data-icon="inline-end" className="z-10" />
           </Button>
         }
       />

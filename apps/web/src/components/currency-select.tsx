@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CURRENCY_LABELS } from "@/lib/locale";
 import { CURRENCIES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import { DisclosureIcon } from "@/lib/icons";
 
 type CurrencySelectProps = {
   readonly id: string;
@@ -54,7 +54,7 @@ export function CurrencySelect({
               <span className="text-muted-foreground">{` — ${CURRENCY_LABELS[value]}`}</span>
             </span>
             <HugeiconsIcon
-              icon={ArrowDown01Icon}
+              icon={DisclosureIcon}
               data-icon="inline-end"
               className="shrink-0 text-muted-foreground"
             />

@@ -1,6 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
@@ -13,6 +12,7 @@ import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
 import { shownMessageOf } from "@/lib/api-response";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -125,7 +125,7 @@ function ReleaseCalendar({
                 disabled={isPending}
                 aria-label="Previous month"
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+                <HugeiconsIcon icon={PreviousIcon} className="size-3.5" />
               </Button>
               <Button
                 variant="ghost"
@@ -134,7 +134,7 @@ function ReleaseCalendar({
                 disabled={isPending}
                 aria-label="Next month"
               >
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
+                <HugeiconsIcon icon={NextIcon} className="size-3.5" />
               </Button>
             </div>
           )}
