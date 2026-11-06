@@ -87,3 +87,11 @@ test("marks only the header of the column the rows are ranked by", async () => {
   expect(other.hasAttribute("aria-sort")).toBe(false);
   expect(other.querySelector("svg")).toBeNull();
 });
+
+test("dims only the figure the rows are not ranked by", async () => {
+  await renderShops("AmiAmi");
+  const ranked = screen.getByRole("cell", { name: "123" });
+  const other = screen.getByRole("cell", { name: "¥12,346" });
+  expect(ranked.classList.contains("text-muted-foreground")).toBe(false);
+  expect(other.classList.contains("text-muted-foreground")).toBe(true);
+});

@@ -102,7 +102,10 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
                 DATA_TABLE_NUMBER_META.headerClassName,
                 spec.number.widths[column === barColumn ? 1 : 0],
               ),
-              cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
+              cellClassName: cn(
+                DATA_TABLE_NUMBER_META.cellClassName,
+                column !== barColumn && "text-muted-foreground",
+              ),
               skeleton: spec.skeleton,
             }
           : { skeleton: spec.skeleton },
