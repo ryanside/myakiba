@@ -105,7 +105,7 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
   });
 
   test("keeps Reset while an outside clear is deferred by the focused search", async () => {
-    const { user, router, input, queryResetButton, resetButton } = await renderToolbar(path);
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
     await user.type(input(), "mi");
     await wait(SETTLE_MS);
     expect(router.state.location.search.search).toBe("mi");
@@ -115,10 +115,35 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
 
     expect(input().value).toBe("mi");
     expect(queryResetButton()).not.toBeNull();
+  });
+
+  test("clears a deferred search and the sort when Reset is clicked", async () => {
+    const { user, router, input, queryResetButton, resetButton } = await renderToolbar(
+      `${path}?order=asc`,
+    );
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+
+    await act(() => router.navigate({ to: path, search: { order: "asc" } }));
+    await wait(SETTLE_MS);
+    expect(input().value).toBe("mi");
     await user.click(resetButton());
     await wait(SETTLE_MS);
-    expect(input().value).toBe("");
-    expect(queryResetButton()).toBeNull();
+
+    expect({
+      search: router.state.location.search.search,
+      order: router.state.location.search.order,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({
+      search: undefined,
+      order: undefined,
+      shown: "",
+      resetShown: false,
+      searchFocused: true,
+    });
   });
 
   test("hides Reset when blur applies a deferred outside clear", async () => {
