@@ -7,7 +7,10 @@
       "fixed": [
         "a failed Fees & Charges save > shows the server's message when the order no longer exists"
       ],
-      "testAt": "8a8c0c7c"
+      "testAt": "8a8c0c7c",
+      "atHead": [
+        "a failed order edit from fees > shows the server's message when the order no longer exists"
+      ]
     },
     {
       "fix": "667c8154",
@@ -1098,6 +1101,7 @@
     },
     {
       "fix": "b87a9ccf",
+      "testAt": "b87a9ccf",
       "bug": "replay compatibility depended on the checkout folder instead of the test revision, so historical assertions drifted and WORKTREE could report false flips",
       "test": "scripts/replay.test.ts",
       "fixed": [
@@ -1110,6 +1114,12 @@
       "bug": "a rejected Reset navigation was dropped with no report",
       "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
       "fixed": ["a rejected Reset navigation reports an error without leaking its rejection"]
+    },
+    {
+      "fix": "e368d699",
+      "bug": "a pinned WORKTREE replay wrote a temporary test into the working checkout that could survive interruption",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a pinned WORKTREE replay never writes into the working checkout"]
     }
   ],
   "lint": [

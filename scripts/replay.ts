@@ -10,6 +10,7 @@ type TestReplay = {
   test: string;
   testAt?: string;
   fixed: string[];
+  atHead?: string[];
 };
 
 type TestHarness = {
@@ -327,12 +328,21 @@ const difference = (left: string[], right: string[]) => {
 
 for (const testFile of new Set(selected.map((replay) => replay.test))) {
   const run = await runTest(root, testFile);
+  const required = selected
+    .filter((replay) => replay.test === testFile && replay.testAt !== undefined)
+    .flatMap((replay) => replay.atHead ?? replay.fixed);
+  const notPassed = [...new Set(required)].filter((name) => !run.passed.includes(name));
   const pass =
     run.exitCode === 0 &&
     run.failed.length === 0 &&
     run.skipped.length === 0 &&
-    run.passed.length > 0;
-  report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+    run.passed.length > 0 &&
+    notPassed.length === 0;
+  report(
+    pass,
+    `head  ${testFile}`,
+    pass ? [] : [...notPassed.map((name) => `      not passed at head: ${name}`), tail(run.output)],
+  );
 }
 
 if (knipMode) {
