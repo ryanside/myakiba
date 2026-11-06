@@ -164,7 +164,8 @@ export function BreakdownChart<TData extends BreakdownChartData>({
 
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <TooltipProvider>
+      {/* A data readout, so it opens on contact. */}
+      <TooltipProvider delay={0}>
         <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm">
           {items.map((item) => {
             const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
