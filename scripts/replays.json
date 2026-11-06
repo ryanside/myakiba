@@ -1255,6 +1255,19 @@
       "bug": "the account menu's theme tablist had no accessible name",
       "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
       "fixed": ["the account menu's theme tablist has an accessible name"]
+    },
+    {
+      "fix": "24a766af",
+      "bug": "every search, filter, sort and page change pushed a history entry, so Back stepped through filter states instead of leaving the page",
+      "test": "apps/web/src/components/filter-history.test.tsx",
+      "fixed": [
+        "changing a page's own search state leaves Back pointing at the previous page > analytics section search, then its Back link",
+        "changing a page's own search state leaves Back pointing at the previous page > orders search and Reset Filters, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Item Database search, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Wishlist release filter, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Calendar month change, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Expenses date preset, then browser Back"
+      ]
     }
   ],
   "lint": [
