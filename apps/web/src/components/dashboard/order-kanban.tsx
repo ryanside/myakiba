@@ -385,6 +385,16 @@ function OrderCard({
   );
 }
 
+interface OrderColumnProps {
+  readonly columnId: OrderStatus;
+  readonly orders: readonly DashboardKanbanOrder[];
+  readonly isLoading: boolean;
+  readonly currency: Currency;
+  readonly dateFormat: DateFormat;
+  readonly isOverlay?: boolean;
+  readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+}
+
 function ColumnBody({
   orders,
   isLoading,
@@ -392,13 +402,8 @@ function ColumnBody({
   dateFormat,
   asHandle,
   onDateChange,
-}: {
-  orders: readonly DashboardKanbanOrder[];
-  isLoading: boolean;
-  currency: Currency;
-  dateFormat: DateFormat;
-  asHandle: boolean;
-  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+}: Pick<OrderColumnProps, "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange"> & {
+  readonly asHandle: boolean;
 }) {
   if (isLoading) return <Loader className="justify-start pt-4" />;
   if (orders.length === 0) {
@@ -428,15 +433,7 @@ function OrderColumn({
   dateFormat,
   isOverlay,
   onDateChange,
-}: {
-  columnId: OrderStatus;
-  orders: readonly DashboardKanbanOrder[];
-  isLoading: boolean;
-  currency: Currency;
-  dateFormat: DateFormat;
-  isOverlay?: boolean;
-  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
-}) {
+}: OrderColumnProps) {
   const col = COLUMNS[columnId];
 
   return (
