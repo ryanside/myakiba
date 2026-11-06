@@ -35,7 +35,7 @@ import type {
   EntrySection,
 } from "./model";
 
-const TOP_LIMIT = 10;
+const TOP_LIMIT = 5;
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
 const EMPTY_SECTION_KPIS: AnalyticsSectionKpis = {
