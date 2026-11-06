@@ -574,3 +574,43 @@ describe("reconciling the board with a fetch", () => {
     }).toEqual({ newBoard: true, orderedKept: true, paid: [], shipped: [rinShipped] });
   });
 });
+
+describe("the board's scrolling", () => {
+  // The board scrolls sideways only. A part that scrolls vertically shows a bar whenever a
+  // spinner's turning corners or a card's entry slide pokes past its bottom edge.
+  const SCROLL_CLASSES = [
+    "overflow-auto",
+    "overflow-scroll",
+    "overflow-y-auto",
+    "overflow-y-scroll",
+  ];
+  const scrollsVertically = (element: Element) =>
+    SCROLL_CLASSES.some((name) => element.classList.contains(name)) ||
+    (/\boverflow-x-(auto|scroll)\b/.test(element.className) &&
+      !element.classList.contains("overflow-y-hidden"));
+  const verticalScrollers = () =>
+    [...document.querySelectorAll('[data-slot="kanban"], [data-slot="kanban"] *')].filter(
+      scrollsVertically,
+    );
+
+  test("no part of the board scrolls vertically while its lanes load or after their cards arrive", async () => {
+    server = [order("miku", "Ordered"), order("rin", "Ordered"), order("len", "Paid")];
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Number.POSITIVE_INFINITY } },
+    });
+    const release = holdFetches();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Dashboard />
+      </QueryClientProvider>,
+    );
+    const whileLoading = verticalScrollers().length;
+    await release();
+
+    expect({ whileLoading, cards: board().Ordered, loaded: verticalScrollers().length }).toEqual({
+      whileLoading: 0,
+      cards: ["miku", "rin"],
+      loaded: 0,
+    });
+  });
+});
