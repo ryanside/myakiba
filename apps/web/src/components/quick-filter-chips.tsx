@@ -15,12 +15,9 @@ export function QuickFilterChips<T extends string>({
   readonly isAll?: boolean;
   readonly onChange: (selected: T[]) => void;
 }): React.ReactElement {
+  const isOption = (value: string): value is T => options.some((option) => option === value);
   const handleValueChange = (values: string[]): void => {
-    onChange(
-      values.includes(ALL) && !isAll
-        ? []
-        : values.flatMap((value) => options.find((option) => option === value) ?? []),
-    );
+    onChange(values.includes(ALL) && !isAll ? [] : values.filter(isOption));
   };
 
   return (
