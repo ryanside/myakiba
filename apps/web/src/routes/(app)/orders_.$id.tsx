@@ -13,7 +13,7 @@ import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
-import { userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -68,7 +68,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-3">
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          {userMessageOf(orderError) ?? ORDER_LOAD_FAILED}
+          {shownMessageOf(orderError, ORDER_LOAD_FAILED)}
         </div>
       </div>
     );

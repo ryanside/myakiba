@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { EmptyValue } from "./empty-value";
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;
@@ -84,9 +84,7 @@ function ReleaseSelect({
   if (isError) {
     return (
       <div className="border-b p-2">
-        <p className="text-destructive flex h-7 items-center text-xs">
-          {userMessageOf(error) ?? NO_ANSWER_MESSAGE}
-        </p>
+        <p className="text-destructive flex h-7 items-center text-xs">{shownMessageOf(error)}</p>
       </div>
     );
   }

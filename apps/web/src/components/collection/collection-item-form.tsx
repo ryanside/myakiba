@@ -46,7 +46,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -387,7 +387,7 @@ function CollectionItemFormContent({
                         )}
                         {releasesError && (
                           <div className="p-3 text-sm text-destructive">
-                            {userMessageOf(releasesError) ?? NO_ANSWER_MESSAGE}
+                            {shownMessageOf(releasesError)}
                           </div>
                         )}
                         {releasesData?.releases.map((release) => (

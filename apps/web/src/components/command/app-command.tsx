@@ -37,7 +37,7 @@ import type {
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -329,7 +329,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search orders"
-                    subtitle={userMessageOf(searchError) ?? NO_ANSWER_MESSAGE}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&
@@ -378,7 +378,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search items"
-                    subtitle={userMessageOf(searchError) ?? NO_ANSWER_MESSAGE}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&

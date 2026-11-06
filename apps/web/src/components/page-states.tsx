@@ -1,4 +1,4 @@
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -31,7 +31,7 @@ export function LoadError({
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
         <EmptyDescription>
-          <span className="block">{userMessageOf(error) ?? NO_ANSWER_MESSAGE}</span>
+          <span className="block">{shownMessageOf(error)}</span>
           Reload the page to try again.
         </EmptyDescription>
       </EmptyHeader>

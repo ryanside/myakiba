@@ -12,7 +12,7 @@ import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -231,7 +231,7 @@ function ReleaseCalendarError({
 }): React.ReactNode {
   return (
     <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
-      <p className="text-xs text-destructive">{userMessageOf(error) ?? NO_ANSWER_MESSAGE}</p>
+      <p className="text-xs text-destructive">{shownMessageOf(error)}</p>
       <Button variant="ghost" size="xs" onClick={onRetry}>
         Retry
       </Button>

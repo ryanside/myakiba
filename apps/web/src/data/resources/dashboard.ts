@@ -1,5 +1,5 @@
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
-import { userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
 import { updateOrderDate, updateOrderStatus } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";
@@ -31,7 +31,7 @@ export const updateKanbanOrderStatusCommand = defineCommand({
     updateOrderStatus(orderId, status),
   successTitle: ({ status }) => (status === "Owned" ? "Order marked as collected" : undefined),
   failureTitle: (_input, error) =>
-    userMessageOf(error) ?? "Failed to update order status. Please try again.",
+    shownMessageOf(error, "Failed to update order status. Please try again."),
 });
 
 export const updateKanbanOrderDateCommand = defineCommand({
@@ -47,5 +47,5 @@ export const updateKanbanOrderDateCommand = defineCommand({
     readonly date: string | null;
   }) => updateOrderDate(orderId, field, date),
   failureTitle: () => "Failed to update date",
-  failureDescription: (_input, error) => userMessageOf(error) ?? "Failed to update order date",
+  failureDescription: (_input, error) => shownMessageOf(error, "Failed to update order date"),
 });

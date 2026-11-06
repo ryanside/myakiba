@@ -10,7 +10,7 @@ import { CalendarReleasePanel } from "@/components/calendar/calendar-release-lis
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
-import { NO_ANSWER_MESSAGE, userMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/read-response";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
@@ -134,7 +134,7 @@ function RouteComponent(): ReactNode {
 
       {isError && (
         <div className="animate-data-in rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load calendar: {userMessageOf(error) ?? NO_ANSWER_MESSAGE}
+          Failed to load calendar: {shownMessageOf(error)}
         </div>
       )}
 

@@ -49,4 +49,9 @@ export function userMessageOf(error: Error | null): string | undefined {
   return message.success ? message.data : undefined;
 }
 
-export const NO_ANSWER_MESSAGE = "The server didn't answer.";
+const NO_ANSWER_MESSAGE = "The server didn't answer.";
+
+/** The server's message for the user, or `fallback` when it wrote none. */
+export function shownMessageOf(error: Error | null, fallback = NO_ANSWER_MESSAGE): string {
+  return userMessageOf(error) ?? fallback;
+}
