@@ -69,18 +69,11 @@ const swapTransition: Transition = {
   bounce: 0,
 };
 
-const noOvershoot = { opacity: swapTransition, filter: swapTransition };
-
 const successVariants: Variants = {
   ...swapVariants,
   animate: {
     ...swapVariants.animate,
-    transition: {
-      type: "spring",
-      duration: 0.45,
-      bounce: 0.35,
-      ...noOvershoot,
-    },
+    transition: { type: "spring", duration: 0.45, bounce: 0 },
   },
 };
 

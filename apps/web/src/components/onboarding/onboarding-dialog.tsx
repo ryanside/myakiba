@@ -456,9 +456,6 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
       onClick={() => onSelect(option.id)}
       className={cn(
         "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
-        "transition-[transform] duration-100",
-        EASE_OUT,
-        "active:scale-[0.98]",
         "animate-data-in",
       )}
     >
@@ -474,7 +471,7 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
         strokeWidth={2}
         className={cn(
           "size-4 shrink-0 text-muted-foreground",
-          "transition-[transform,color] duration-200",
+          "transition-[translate,color] duration-200",
           EASE_OUT,
           "group-hover:translate-x-0.5 group-hover:text-foreground",
         )}
