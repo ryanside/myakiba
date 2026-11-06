@@ -182,11 +182,42 @@
   --row-hover: color-mix(in oklab, var(--muted) 50%, transparent);
 }
 
-@theme inline {
-  /* Motion curves. Tailwind's built-in ease-out and ease-in-out are too weak for UI. */
+/* Motion curves. Tailwind's built-in ease-out and ease-in-out are too weak for UI. Static, so the
+   motion utilities below can read them as variables. */
+@theme static {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Motion tokens. */
+:root {
+  --motion-press: 150ms;
+  --motion-hover: 150ms;
+  --motion-tooltip: 125ms;
+  --motion-popup-in: 180ms;
+  --motion-popup-out: 130ms;
+  --motion-modal-in: 200ms;
+  --motion-modal-out: 150ms;
+  --motion-sheet-in: 300ms;
+  --motion-sheet-out: 200ms;
+  --motion-toast-in: 400ms;
+  --motion-toast-out: 200ms;
+  --motion-collapse: 200ms;
+  --motion-data-in: 250ms;
+  --press-scale: 0.97;
+  --press-scale-text: 0.96;
+  --popup-from: 0.95;
+  --tooltip-from: 0.97;
+  --modal-from: 0.96;
+  --tick-from: 0.9;
+  --sheet-from: 100%;
+  --sheet-from-opacity: 1;
+  --toast-from: -100%;
+  --bar-rise: 8px;
+}
+
+@theme inline {
   /* Inter sets wider than its size suggests, so body copy runs at 13px, as on recent.design and marked.dev. */
   --text-sm: 0.8125rem;
   --text-sm--line-height: calc(1.25 / 0.8125);
@@ -353,13 +384,164 @@ body {
   @apply display font-heading text-[1.375rem] leading-8 font-medium;
 }
 
-/* Popovers, menus and selects scale and fade in from their anchor. */
+/* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant. */
+@utility color-motion {
+  transition-property: color, background-color, border-color;
+  transition-duration: var(--motion-hover);
+  transition-timing-function: ease;
+}
+
+/* Pills and icon buttons: the colour fade plus a press. */
+@utility press {
+  transition-property: color, background-color, border-color, scale;
+  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
+  transition-timing-function: ease, ease, ease, var(--ease-out);
+  &:active:not(:disabled, [data-disabled]) {
+    scale: var(--press-scale);
+  }
+}
+
+/* Links and headers: a smaller target presses a little deeper for the same visible travel. */
+@utility press-text {
+  transition-property: color, background-color, border-color, scale;
+  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
+  transition-timing-function: ease, ease, ease, var(--ease-out);
+  &:active:not(:disabled, [data-disabled]) {
+    scale: var(--press-scale-text);
+  }
+}
+
+/* Popovers, menus and selects scale and fade in from their anchor, and leave a little faster. */
 @utility popup-motion {
-  @apply origin-(--transform-origin) transition-[opacity,scale] duration-200 ease-out data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0;
+  transform-origin: var(--transform-origin);
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-popup-in);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--popup-from);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-popup-out);
+  }
+  &[data-instant] {
+    transition-duration: 0ms;
+  }
+}
+
+@utility tooltip-motion {
+  transform-origin: var(--transform-origin);
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-tooltip);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--tooltip-from);
+  }
+  &[data-instant] {
+    transition-duration: 0ms;
+  }
+}
+
+/* Dialogs are not anchored to a trigger, so they scale from their centre. */
+@utility modal-motion {
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-modal-in);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--modal-from);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-modal-out);
+  }
+}
+
+/* A backdrop fades on its surface's timing: a dialog's by default, a sheet's when it sets the variables. */
+@utility backdrop-motion {
+  transition-property: opacity;
+  transition-duration: var(--backdrop-in, var(--motion-modal-in));
+  transition-timing-function: var(--backdrop-ease, var(--ease-out));
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+  &[data-ending-style] {
+    transition-duration: var(--backdrop-out, var(--motion-modal-out));
+  }
+}
+
+/* A sheet slides fully in from its edge on the drawer curve. */
+@utility sheet-motion {
+  transition-property: translate, opacity;
+  transition-duration: var(--motion-sheet-in);
+  transition-timing-function: var(--ease-drawer);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: var(--sheet-from-opacity);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-sheet-out);
+  }
+  &[data-side="right"]:is([data-starting-style], [data-ending-style]) {
+    translate: var(--sheet-from) 0;
+  }
+  &[data-side="left"]:is([data-starting-style], [data-ending-style]) {
+    translate: calc(var(--sheet-from) * -1) 0;
+  }
+  &[data-side="bottom"]:is([data-starting-style], [data-ending-style]) {
+    translate: 0 var(--sheet-from);
+  }
+  &[data-side="top"]:is([data-starting-style], [data-ending-style]) {
+    translate: 0 calc(var(--sheet-from) * -1);
+  }
+}
+
+/* Toasts arrive on Sonner's ease and leave on the strong ease-out. Under reduced motion the stack
+   jumps and only the opacity fades. */
+@utility toast-motion {
+  transition-property: transform, opacity, height;
+  transition-duration: var(--toast-move, var(--motion-toast-in)), var(--motion-toast-in), 150ms;
+  transition-timing-function: ease;
+  &[data-ending-style] {
+    transition-duration: var(--toast-move, var(--motion-toast-out)), var(--motion-toast-out), 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+  :root[data-reduce-motion] & {
+    --toast-move: 0ms;
+  }
+}
+
+/* Collapsible and accordion panels: the one sanctioned height transition. */
+@utility collapse-motion {
+  height: var(--collapsible-panel-height, var(--accordion-panel-height));
+  overflow: hidden;
+  transition-property: height, opacity;
+  transition-duration: var(--motion-collapse);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+/* The disclosure chevron turns on its panel's timing. */
+@utility collapse-chevron {
+  transition-property: rotate;
+  transition-duration: var(--motion-collapse);
+  transition-timing-function: var(--ease-out);
 }
 
 @utility animate-appear {
-  animation: appear 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: appear 600ms var(--ease-out) both;
   animation-delay: var(--appear-delay, 0ms);
 }
 
@@ -371,7 +553,7 @@ body {
 }
 
 @utility animate-data-in {
-  animation: data-in 250ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: data-in var(--motion-data-in) var(--ease-out) both;
 }
 
 .root {
