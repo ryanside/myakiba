@@ -87,7 +87,12 @@ export function CollectionToolbar(): React.JSX.Element {
         onSortChange={handleSortChange}
       />
       {hasActiveFiltersOrSorting(filters) || hasSearchDraft ? (
-        <Button onClick={resetSearch} variant="ghost" className="text-muted-foreground">
+        <Button
+          onPointerDown={(event) => event.preventDefault()}
+          onClick={resetSearch}
+          variant="ghost"
+          className="text-muted-foreground"
+        >
           <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
           <span className="max-md:sr-only">Reset Filters</span>
         </Button>
