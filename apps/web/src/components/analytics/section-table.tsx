@@ -26,6 +26,7 @@ import { DataTable, DataTableEmpty, DATA_TABLE_SKELETON } from "@/components/dat
 import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
+import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
@@ -40,37 +41,26 @@ function createSectionColumns({
   readonly locale: string;
   readonly offset: number;
 }): ColumnDef<AnalyticsSectionRow>[] {
-  // Fixed widths, wide enough for a 4-digit rank and a 5-figure total, keep the columns on the
-  // same lines while loading, across pages and searches; the name takes the rest.
   return [
     {
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      meta: { headerClassName: "w-10", skeleton: ROW_EXPAND_SKELETON },
+      size: 32,
+      meta: { skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
-      meta: {
-        headerClassName: "w-10",
-        cellClassName: "text-muted-foreground tabular-nums",
-        skeleton: DATA_TABLE_SKELETON.rank,
-      },
+      size: 40,
+      meta: { skeleton: DATA_TABLE_SKELETON.rank },
     },
     {
       id: "name",
       accessorFn: (row) => row.name,
       header: ({ column }) => <SortableHeader column={column} title="name" />,
-      cell: ({ row }) => {
-        const name = row.original.name ?? "—";
-        return (
-          <span className="block truncate" title={name}>
-            {name}
-          </span>
-        );
-      },
+      cell: ({ getValue }) => getValue() ?? "—",
       sortDescFirst: false,
     },
     {
@@ -78,12 +68,9 @@ function createSectionColumns({
       accessorFn: (row) => row.itemCount,
       header: ({ column }) => <SortableHeader column={column} title="count" />,
       cell: ({ getValue }) => getValue() ?? "—",
+      size: 80,
       sortDescFirst: false,
-      meta: {
-        headerClassName: "w-16",
-        cellClassName: "tabular-nums",
-        skeleton: DATA_TABLE_SKELETON.count,
-      },
+      meta: { skeleton: DATA_TABLE_SKELETON.count },
     },
     {
       id: "totalSpent",
@@ -93,12 +80,9 @@ function createSectionColumns({
         const value = getValue() as number | null;
         return value === null ? "—" : formatCurrencyFromMinorUnits(value, currency, locale);
       },
+      size: 100,
       sortDescFirst: false,
-      meta: {
-        headerClassName: "w-24",
-        cellClassName: "tabular-nums",
-        skeleton: DATA_TABLE_SKELETON.money,
-      },
+      meta: { skeleton: DATA_TABLE_SKELETON.money },
     },
   ];
 }
@@ -183,11 +167,21 @@ export function SectionTable({
         isLoading={isLoading}
         skeletonRowCount={pageSize}
         empty={<DataTableEmpty title={`No ${sectionName} found`} />}
-        tableClassName="table-fixed"
+        variant="sized"
         onRowClick={(row) => row.toggleExpanded()}
         renderExpandedRow={(row) => (
           <ExpandedRowContent row={row.original} sectionName={sectionName} />
         )}
+        getCellClassName={(_, columnId) =>
+          cn(
+            columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+            columnId === EXPAND_COLUMN_ID && "w-8",
+            (columnId === ROW_NUMBER_COLUMN_ID ||
+              columnId === "itemCount" ||
+              columnId === "totalSpent") &&
+              "tabular-nums",
+          )
+        }
       />
     </LazyMotion>
   );

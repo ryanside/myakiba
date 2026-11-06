@@ -185,11 +185,12 @@ function ShopsTable({
       isLoading={isPending}
       skeletonRowCount={PAGE_SIZE}
       empty={<DataTableEmpty title="No shops found" />}
+      variant="sized"
       className={cn(
         "overflow-x-auto overflow-y-hidden transition-opacity duration-200",
         isFetching && !isPending && "opacity-60",
       )}
-      tableClassName={cn("table-fixed", scope === "orders" ? "min-w-210" : "min-w-150")}
+      tableClassName={scope === "orders" ? "min-w-210" : "min-w-150"}
       onRowClick={(row) => row.toggleExpanded()}
       renderExpandedRow={(row) => (
         <ShopTableRowExpansion
@@ -200,16 +201,14 @@ function ShopsTable({
           dateFormat={dateFormat}
         />
       )}
+      getCellClassName={(_, columnId) =>
+        cn(
+          columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
+          columnId === EXPAND_COLUMN_ID && "w-8",
+        )
+      }
     />
   );
-}
-
-function numberMeta(width: string, skeleton: ReactNode) {
-  return {
-    headerClassName: cn(DATA_TABLE_NUMBER_META.headerClassName, width),
-    cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
-    skeleton,
-  };
 }
 
 function getColumns({
@@ -221,51 +220,37 @@ function getColumns({
   offset: number;
   formatCurrency: (value: number) => string;
 }): ColumnDef<ExpenseShopRow>[] {
-  // Fixed widths keep the columns on the same lines while loading, across pages and searches;
-  // the shop takes the rest.
   const columns: ColumnDef<ExpenseShopRow>[] = [
     {
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      meta: { headerClassName: "w-10", skeleton: ROW_EXPAND_SKELETON },
+      size: 32,
+      meta: { skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
-      meta: {
-        headerClassName: "w-10",
-        cellClassName: "text-muted-foreground",
-        skeleton: DATA_TABLE_SKELETON.rank,
-      },
+      size: 40,
+      meta: { skeleton: DATA_TABLE_SKELETON.rank },
     },
-    {
-      id: "shop",
-      accessorFn: (row) => row.shop || "Unassigned",
-      header: "Shop",
-      cell: ({ getValue }) => {
-        const shop = String(getValue());
-        return (
-          <span className="block truncate" title={shop}>
-            {shop}
-          </span>
-        );
-      },
-    },
+    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
     {
       id: "spend",
       accessorFn: (row) => row.spend,
       header: "Spend",
       cell: ({ getValue }) => formatCurrency(Number(getValue())),
-      meta: numberMeta("w-24", DATA_TABLE_SKELETON.money),
+      size: 96,
+      meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
     },
     {
       id: "share",
       accessorFn: (row) => row.share,
       header: "Share",
       cell: ({ getValue }) => `${Number(getValue()).toFixed(1)}%`,
-      meta: numberMeta("w-16", DATA_TABLE_SKELETON.percent),
+      size: 72,
+      meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.percent },
     },
   ];
 
@@ -275,14 +260,16 @@ function getColumns({
         id: "itemCount",
         accessorFn: (row) => (row.scope === "collection" ? row.itemCount : 0),
         header: "Items",
-        meta: numberMeta("w-16", DATA_TABLE_SKELETON.count),
+        size: 64,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageItemCost",
         accessorFn: (row) => (row.scope === "collection" ? row.averageItemCost : 0),
         header: "Average Item Cost",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        meta: numberMeta("w-32", DATA_TABLE_SKELETON.money),
+        size: 120,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   } else if (scope === "orders") {
@@ -291,27 +278,31 @@ function getColumns({
         id: "orderCount",
         accessorFn: (row) => (row.scope === "orders" ? row.orderCount : 0),
         header: "Orders",
-        meta: numberMeta("w-16", DATA_TABLE_SKELETON.count),
+        size: 64,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageOrder",
         accessorFn: (row) => (row.scope === "orders" ? row.averageOrder : 0),
         header: "Average Order",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        meta: numberMeta("w-28", DATA_TABLE_SKELETON.money),
+        size: 104,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
       {
         id: "orderItemCount",
         accessorFn: (row) => (row.scope === "orders" ? row.orderItemCount : 0),
         header: "Order Items",
-        meta: numberMeta("w-24", DATA_TABLE_SKELETON.count),
+        size: 88,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "fees",
         accessorFn: (row) => (row.scope === "orders" ? row.fees : 0),
         header: "Fees",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        meta: numberMeta("w-24", DATA_TABLE_SKELETON.money),
+        size: 88,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   } else {
@@ -320,14 +311,16 @@ function getColumns({
         id: "orderCount",
         accessorFn: (row) => (row.scope === "shipping" ? row.orderCount : 0),
         header: "Orders",
-        meta: numberMeta("w-16", DATA_TABLE_SKELETON.count),
+        size: 64,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageShipping",
         accessorFn: (row) => (row.scope === "shipping" ? row.averageShipping : 0),
         header: "Average Shipping",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        meta: numberMeta("w-32", DATA_TABLE_SKELETON.money),
+        size: 120,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   }
