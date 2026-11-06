@@ -1144,8 +1144,11 @@
     {
       "fix": "79e474c1",
       "bug": "a failed Reset left focus on the page body instead of the remounted search field",
-      "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
-      "fixed": ["a rejected Reset navigation restores focus to the remounted search field"]
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > shows an error and returns focus to the search when Reset's navigation rejects",
+        "Reset Filters on /collection > shows an error and returns focus to the search when Reset's navigation rejects"
+      ]
     },
     {
       "fix": "28c946cc",
