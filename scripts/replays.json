@@ -1192,6 +1192,24 @@
         "a WORKTREE replay captures edits with assume-unchanged and preserves the real index",
         "a WORKTREE replay captures edits with skip-worktree and preserves the real index"
       ]
+    },
+    {
+      "fix": "611d239c",
+      "bug": "on a filtered list, a pending item save rebuilt the item and Collection grid columns, remounting the Edit item sheet so it vanished and lost its draft",
+      "test": "apps/web/src/data/resources/item-edit-draft.test.tsx",
+      "fixed": [
+        "the edit item sheet on filtered orders > keeps the typed draft after a failed save and updates pending controls",
+        "the edit item sheet on filtered collection > keeps the typed draft after a failed save and updates pending controls"
+      ]
+    },
+    {
+      "fix": "9a853b04",
+      "bug": "the sheet footer Cancel buttons stretched to half the footer instead of their content width",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "edit-order sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width",
+        "collection item sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width"
+      ]
     }
   ],
   "lint": [
