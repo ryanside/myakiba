@@ -29,14 +29,11 @@ export const DATA_TABLE_NUMBER_META = {
   cellClassName: "text-right tabular-nums",
 } as const;
 
-type DataTableVariant = "default" | "sized";
-
 interface DataTableProps<TData extends RowData> {
   readonly table: TanStackTable<TData>;
   readonly isLoading?: boolean;
   readonly skeletonRowCount?: number;
   readonly empty: ReactNode;
-  readonly variant?: DataTableVariant;
   readonly className?: string;
   readonly tableClassName?: string;
   readonly onRowClick?: (row: Row<TData>) => void;
@@ -50,7 +47,6 @@ export function DataTable<TData extends RowData>({
   isLoading = false,
   skeletonRowCount = DEFAULT_SKELETON_ROW_COUNT,
   empty,
-  variant = "default",
   className,
   tableClassName,
   onRowClick,
@@ -64,7 +60,7 @@ export function DataTable<TData extends RowData>({
       className={cn("transition-opacity duration-150", isLoading && "opacity-60", className)}
     >
       <table className={cn("w-full border-collapse text-xs", tableClassName)}>
-        <TableHeader table={table} variant={variant} />
+        <TableHeader table={table} />
         <TableBody
           table={table}
           isLoading={isLoading}
@@ -82,10 +78,8 @@ export function DataTable<TData extends RowData>({
 
 function TableHeader<TData extends RowData>({
   table,
-  variant,
 }: {
   readonly table: TanStackTable<TData>;
-  readonly variant: DataTableVariant;
 }): ReactNode {
   return (
     <thead>
@@ -99,7 +93,6 @@ function TableHeader<TData extends RowData>({
                 "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
                 header.column.columnDef.meta?.headerClassName,
               )}
-              style={variant === "sized" ? { width: header.column.getSize() } : undefined}
             >
               {header.isPlaceholder
                 ? null
