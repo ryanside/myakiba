@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
+import { FieldTrigger } from "@/components/ui/field-trigger";
 import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
@@ -209,10 +210,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "shipping method")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -249,10 +249,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "condition")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -287,10 +286,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "category")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -828,10 +826,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "currency")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
