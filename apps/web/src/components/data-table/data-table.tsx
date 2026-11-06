@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
 
-export const NUMBER_COLUMN_META = {
+export const DATA_TABLE_NUMBER_META = {
   headerClassName: "text-right",
   cellClassName: "text-right tabular-nums",
 } as const;

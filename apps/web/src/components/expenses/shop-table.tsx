@@ -12,7 +12,11 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable, DataTableEmpty, NUMBER_COLUMN_META } from "@/components/data-table/data-table";
+import {
+  DataTable,
+  DataTableEmpty,
+  DATA_TABLE_NUMBER_META,
+} from "@/components/data-table/data-table";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SearchPill } from "@/components/search-pill";
@@ -229,7 +233,7 @@ function getColumns({
       header: "Spend",
       cell: ({ getValue }) => formatCurrency(Number(getValue())),
       size: 96,
-      meta: NUMBER_COLUMN_META,
+      meta: DATA_TABLE_NUMBER_META,
     },
     {
       id: "share",
@@ -237,7 +241,7 @@ function getColumns({
       header: "Share",
       cell: ({ getValue }) => `${Number(getValue()).toFixed(1)}%`,
       size: 72,
-      meta: NUMBER_COLUMN_META,
+      meta: DATA_TABLE_NUMBER_META,
     },
   ];
 
@@ -248,7 +252,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "collection" ? row.itemCount : 0),
         header: "Items",
         size: 64,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageItemCost",
@@ -256,7 +260,7 @@ function getColumns({
         header: "Average Item Cost",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   } else if (scope === "orders") {
@@ -266,7 +270,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "orders" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageOrder",
@@ -274,14 +278,14 @@ function getColumns({
         header: "Average Order",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 104,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "orderItemCount",
         accessorFn: (row) => (row.scope === "orders" ? row.orderItemCount : 0),
         header: "Order Items",
         size: 88,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "fees",
@@ -289,7 +293,7 @@ function getColumns({
         header: "Fees",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 88,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   } else {
@@ -299,7 +303,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "shipping" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageShipping",
@@ -307,7 +311,7 @@ function getColumns({
         header: "Average Shipping",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
-        meta: NUMBER_COLUMN_META,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   }

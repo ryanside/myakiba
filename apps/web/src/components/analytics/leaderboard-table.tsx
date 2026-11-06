@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { DataTable, NUMBER_COLUMN_META } from "@/components/data-table/data-table";
+import { DataTable, DATA_TABLE_NUMBER_META } from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -67,10 +67,10 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
         meta: spec.number
           ? {
               headerClassName: cn(
-                NUMBER_COLUMN_META.headerClassName,
+                DATA_TABLE_NUMBER_META.headerClassName,
                 spec.number.widths[column === barColumn ? 1 : 0],
               ),
-              cellClassName: NUMBER_COLUMN_META.cellClassName,
+              cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
             }
           : undefined,
         cell: ({ getValue }) => {
