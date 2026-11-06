@@ -10,7 +10,7 @@ import { CalendarReleasePanel } from "@/components/calendar/calendar-release-lis
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;

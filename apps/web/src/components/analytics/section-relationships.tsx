@@ -19,7 +19,7 @@ import type {
 } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const RELATIONSHIP_PAGE_SIZE = 5;
 const RELATIONSHIP_SKELETONS = [0, 1, 2, 3, 4] as const;

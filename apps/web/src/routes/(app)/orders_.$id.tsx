@@ -13,7 +13,7 @@ import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,

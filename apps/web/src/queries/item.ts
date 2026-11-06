@@ -1,26 +1,26 @@
-import { readResponse } from "@/lib/read-response";
+import { requireData } from "@/lib/api-response";
 import { app, getErrorMessage } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 
 export async function getItem(externalId: number) {
   const response = await app.api.item({ id: externalId }).get();
   if (response.error?.status === 404) return null;
-  return readResponse(response, "Failed to get item");
+  return requireData(response, "Failed to get item");
 }
 
 export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
-  return readResponse(app.api.item({ id: itemId }).releases.get(), "Failed to get item releases");
+  return requireData(app.api.item({ id: itemId }).releases.get(), "Failed to get item releases");
 }
 
 export async function getItemRelatedOrders(externalId: number) {
-  return readResponse(
+  return requireData(
     app.api.item({ id: externalId }).orders.get(),
     "Failed to get item related orders",
   );
 }
 
 export async function getItemRelatedCollection(externalId: number) {
-  return readResponse(
+  return requireData(
     app.api.item({ id: externalId }).collection.get(),
     "Failed to get item related collection",
   );

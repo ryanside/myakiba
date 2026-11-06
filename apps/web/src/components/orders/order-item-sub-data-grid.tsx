@@ -28,7 +28,7 @@ import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [

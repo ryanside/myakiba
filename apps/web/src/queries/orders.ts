@@ -1,4 +1,4 @@
-import { readResponse, sendRequest } from "@/lib/read-response";
+import { requireData, checkResponse } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import { MoveNotFoundError } from "./move-not-found-error";
 import type {
@@ -49,7 +49,7 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
     miscFeesMax: filters.miscFeesMax,
   };
 
-  return readResponse(app.api.orders.get({ query: queryParams }), "Failed to get orders");
+  return requireData(app.api.orders.get({ query: queryParams }), "Failed to get orders");
 }
 
 type OrdersClient = ReturnType<typeof app.api.orders>;
@@ -58,7 +58,7 @@ export type OrderItemRelease = NonNullable<
 >[number];
 
 export async function getOrderItemReleases(orderId: string): Promise<readonly OrderItemRelease[]> {
-  return readResponse(
+  return requireData(
     app.api.orders({ orderId })["item-releases"].get(),
     "Failed to get order item releases",
   );
@@ -68,10 +68,7 @@ export async function getOrderItems(
   orderId: string,
   query: OrderItemsQuery,
 ): Promise<Page<OrderItem>> {
-  return readResponse(
-    app.api.orders({ orderId }).items.get({ query }),
-    "Failed to get order items",
-  );
+  return requireData(app.api.orders({ orderId }).items.get({ query }), "Failed to get order items");
 }
 
 export async function mergeOrders(
@@ -79,7 +76,7 @@ export async function mergeOrders(
   orderIds: Set<string>,
   cascadeOptions: CascadeOptions,
 ) {
-  return sendRequest(
+  return checkResponse(
     app.api.orders.merge.post({ orderIds: [...orderIds], newOrder: values, cascadeOptions }),
     "Failed to merge orders",
   );
@@ -90,7 +87,7 @@ export async function splitOrders(
   collectionIds: ReadonlySet<string>,
   cascadeOptions: CascadeOptions,
 ) {
-  return sendRequest(
+  return checkResponse(
     app.api.orders.split.post({
       collectionIds: [...collectionIds],
       newOrder: values,
@@ -101,25 +98,28 @@ export async function splitOrders(
 }
 
 export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
-  await sendRequest(
+  await checkResponse(
     app.api.orders({ orderId: values.orderId }).put({ order: values, cascadeOptions }),
     "Failed to edit order",
   );
 }
 
 export async function deleteOrders(orderIds: Set<string>) {
-  await sendRequest(app.api.orders.delete({ orderIds: [...orderIds] }), "Failed to delete orders");
+  await checkResponse(
+    app.api.orders.delete({ orderIds: [...orderIds] }),
+    "Failed to delete orders",
+  );
 }
 
 export async function deleteOrderItem(orderId: string, collectionId: string) {
-  await sendRequest(
+  await checkResponse(
     app.api.orders({ orderId }).items({ collectionId }).delete(),
     "Failed to delete order item",
   );
 }
 
 export async function deleteOrderItems(collectionIds: Set<string>) {
-  await sendRequest(
+  await checkResponse(
     app.api.orders.items.delete({ collectionIds: [...collectionIds] }),
     "Failed to delete order items",
   );
@@ -138,17 +138,17 @@ export async function moveItem(
 
   const response = await app.api.orders["move-items"].put(moveItemPayload);
   if (response.error?.status === 404) throw new MoveNotFoundError(response.error.value);
-  await sendRequest(response, "Failed to move items");
+  await checkResponse(response, "Failed to move items");
 }
 
 export const ORDER_LOAD_FAILED = "Couldn't load this order. Check your connection and try again.";
 
 export async function getOrder(orderId: string): Promise<Order> {
-  return readResponse(app.api.orders({ orderId }).get(), ORDER_LOAD_FAILED);
+  return requireData(app.api.orders({ orderId }).get(), ORDER_LOAD_FAILED);
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
-  await sendRequest(
+  await checkResponse(
     app.api.orders({ orderId }).put({ order: { status }, cascadeOptions: ["status"] }),
     "Failed to update order status",
   );
@@ -166,7 +166,7 @@ export async function updateOrderDate(
   field: OrderDateField,
   date: string | null,
 ): Promise<void> {
-  await sendRequest(
+  await checkResponse(
     app.api.orders({ orderId }).put({ order: { [field]: date }, cascadeOptions: [] }),
     "Failed to update order date",
   );

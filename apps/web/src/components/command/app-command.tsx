@@ -37,7 +37,7 @@ import type {
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;

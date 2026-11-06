@@ -1,4 +1,4 @@
-import { readResponse } from "@/lib/read-response";
+import { requireData } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import type { CalendarQuery } from "@myakiba/contracts/calendar/schema";
 
@@ -13,5 +13,5 @@ export type CalendarItem = CalendarItemsResponse["items"][number];
 export type CalendarOrder = CalendarOrdersResponse["orders"][number];
 
 export async function getCalendar(query: CalendarQuery): Promise<CalendarResponse> {
-  return readResponse(app.api.calendar.get({ query }), "Failed to get calendar");
+  return requireData(app.api.calendar.get({ query }), "Failed to get calendar");
 }

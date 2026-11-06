@@ -1,5 +1,5 @@
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 import { getDashboard, getMonthlyDashboard } from "@/queries/dashboard";
 import { updateOrderDate, updateOrderStatus } from "@/queries/orders";
 import type { OrderDateField } from "@/queries/orders";

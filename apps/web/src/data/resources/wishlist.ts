@@ -1,7 +1,7 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { WISHLIST_PAGE_SIZE } from "@myakiba/contracts/wishlist/schema";
 import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
-import { sendRequest } from "@/lib/read-response";
+import { checkResponse } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import type { getItem } from "@/queries/item";
 import { defineCommand, defineResource, infiniteRead } from "../client";
@@ -38,8 +38,8 @@ export const setWishlistMembership = defineCommand({
     wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
   persist: async ({ itemId, wishlisted }: Membership) => {
     const item = app.api.wishlist({ itemId });
-    if (wishlisted) await sendRequest(item.put(), "Failed to add to Wishlist");
-    else await sendRequest(item.delete(), "Failed to remove from Wishlist");
+    if (wishlisted) await checkResponse(item.put(), "Failed to add to Wishlist");
+    else await checkResponse(item.delete(), "Failed to remove from Wishlist");
   },
   saved: async (queryClient, { itemExternalId, wishlisted }) => {
     if (itemExternalId === null) return;
@@ -56,7 +56,7 @@ export const setWishlistMembership = defineCommand({
 });
 
 export async function moveWishlistItems(intent: PositionOrderInput): Promise<void> {
-  await sendRequest(
+  await checkResponse(
     app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }),
     "Failed to save Wishlist order",
   );

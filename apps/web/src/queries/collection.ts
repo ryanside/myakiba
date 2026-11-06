@@ -1,4 +1,4 @@
-import { readResponse, sendRequest } from "@/lib/read-response";
+import { requireData, checkResponse } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -33,15 +33,15 @@ export async function getCollection(filters: CollectionFilters) {
     condition: filters.condition,
   };
 
-  return readResponse(app.api.collection.get({ query: queryParams }), "Failed to get collection");
+  return requireData(app.api.collection.get({ query: queryParams }), "Failed to get collection");
 }
 
 export async function deleteCollectionItems(ids: string[]) {
-  await sendRequest(app.api.collection.delete({ ids }), "Failed to delete collection items");
+  await checkResponse(app.api.collection.delete({ ids }), "Failed to delete collection items");
 }
 
 export async function updateCollectionItem(values: CollectionItemFormValues) {
-  await sendRequest(
+  await checkResponse(
     app.api.collection({ id: values.id }).put(values),
     "Failed to update collection item",
   );

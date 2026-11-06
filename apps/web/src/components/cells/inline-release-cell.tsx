@@ -13,7 +13,7 @@ import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { usePendingValue } from "@/hooks/use-pending-value";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 type ReleaseFallback = {
   readonly releaseDate: string | null;

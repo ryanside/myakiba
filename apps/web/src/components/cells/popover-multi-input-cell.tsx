@@ -18,7 +18,7 @@ import {
 } from "@myakiba/utils/currency";
 import { tryCatch } from "@myakiba/utils/result";
 import { toast } from "@/components/ui/toast";
-import { userMessageOf } from "@/lib/read-response";
+import { userMessageOf } from "@/lib/api-response";
 import { cn } from "@/lib/utils";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 

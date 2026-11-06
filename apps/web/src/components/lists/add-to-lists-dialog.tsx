@@ -46,7 +46,7 @@ import {
 } from "@/hooks/use-lists";
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 type ListOptionsForTargets = NonNullable<Awaited<ReturnType<typeof getListOptionsForTargets>>>;
 

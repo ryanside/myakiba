@@ -1,4 +1,4 @@
-import { readResponse } from "@/lib/read-response";
+import { requireData } from "@/lib/api-response";
 import type {
   ExpenseFilterOptions,
   ExpenseFilters,
@@ -12,7 +12,7 @@ import type {
 import { app } from "@/lib/treaty-client";
 
 export async function getExpenseFilterOptions(): Promise<ExpenseFilterOptions> {
-  return readResponse(
+  return requireData(
     app.api.expenses["filter-options"].get(),
     "Failed to get expense filter options",
   );
@@ -21,7 +21,7 @@ export async function getExpenseFilterOptions(): Promise<ExpenseFilterOptions> {
 export async function getExpensesCollection(
   filters: ExpenseFilters = {},
 ): Promise<ExpensesCollectionResponse> {
-  return readResponse(
+  return requireData(
     app.api.expenses.collection.get({ query: filters }),
     "Failed to get collection expenses",
   );
@@ -30,7 +30,7 @@ export async function getExpensesCollection(
 export async function getExpensesOrders(
   filters: ExpenseFilters = {},
 ): Promise<ExpensesOrdersResponse> {
-  return readResponse(
+  return requireData(
     app.api.expenses.orders.get({ query: filters }),
     "Failed to get order expenses",
   );
@@ -39,24 +39,21 @@ export async function getExpensesOrders(
 export async function getExpensesShipping(
   filters: ExpenseFilters = {},
 ): Promise<ExpensesShippingResponse> {
-  return readResponse(
+  return requireData(
     app.api.expenses.shipping.get({ query: filters }),
     "Failed to get shipping expenses",
   );
 }
 
 export async function getExpensesShops(filters: ExpenseShopFilters): Promise<ExpenseShopsResponse> {
-  return readResponse(
-    app.api.expenses.shops.get({ query: filters }),
-    "Failed to get expense shops",
-  );
+  return requireData(app.api.expenses.shops.get({ query: filters }), "Failed to get expense shops");
 }
 
 export async function getShopExpansion(
   shopId: string,
   filters: ExpenseShopFilters,
 ): Promise<ShopExpansionResponse> {
-  return readResponse(
+  return requireData(
     app.api.expenses.shops({ shop: encodeURIComponent(shopId) }).expansion.get({ query: filters }),
     "Failed to get shop expansion",
   );

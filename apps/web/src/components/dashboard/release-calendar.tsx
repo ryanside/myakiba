@@ -12,7 +12,7 @@ import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface ReleaseCalendarProps {
   readonly className?: string;

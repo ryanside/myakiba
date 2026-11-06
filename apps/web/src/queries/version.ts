@@ -1,6 +1,6 @@
-import { readResponse } from "@/lib/read-response";
+import { requireData } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 
 export async function getVersion() {
-  return readResponse(app.api.version.get(), "Failed to get version");
+  return requireData(app.api.version.get(), "Failed to get version");
 }

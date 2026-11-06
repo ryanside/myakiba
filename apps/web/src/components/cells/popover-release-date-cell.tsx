@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { EmptyValue } from "./empty-value";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;

@@ -48,7 +48,7 @@ import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { getCategoryColor } from "@/lib/category-colors";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;

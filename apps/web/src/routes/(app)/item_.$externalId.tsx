@@ -15,7 +15,7 @@ import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { getResyncStatus, requestResync } from "@/queries/item";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {

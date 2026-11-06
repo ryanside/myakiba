@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 

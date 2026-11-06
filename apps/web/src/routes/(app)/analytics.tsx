@@ -9,7 +9,7 @@ import { Section } from "@/components/analytics/section";
 import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section-utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
-import { shownMessageOf } from "@/lib/read-response";
+import { shownMessageOf } from "@/lib/api-response";
 
 const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
 const SHOP_LEADERBOARD_COLUMNS = ["shop", "itemCount", "totalSpent"] as const;

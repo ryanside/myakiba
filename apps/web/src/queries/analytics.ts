@@ -1,4 +1,4 @@
-import { readResponse } from "@/lib/read-response";
+import { requireData } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
@@ -41,7 +41,7 @@ function getAnalyticsSectionApiPath(sectionName: AnalyticsSection) {
 }
 
 export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
-  return readResponse(app.api.analytics.get(), "Failed to get analytics");
+  return requireData(app.api.analytics.get(), "Failed to get analytics");
 }
 
 export async function getAnalyticsSection(
@@ -58,7 +58,7 @@ export async function getAnalyticsSection(
     order: filters.order,
   };
 
-  const data = await readResponse(
+  const data = await requireData(
     app.api.analytics({ sectionName: apiSectionName }).get({ query }),
     "Failed to get analytics section",
   );
@@ -76,7 +76,7 @@ export async function getAnalyticsSectionItems(
     offset: filters.offset ?? 0,
   };
 
-  return readResponse(
+  return requireData(
     app.api.analytics({ sectionName: apiSectionName }).items.get({ query }),
     "Failed to get analytics section items",
   );
@@ -93,7 +93,7 @@ export async function getAnalyticsSectionRelationships(
     limit: filters.limit ?? 5,
     offset: filters.offset ?? 0,
   };
-  return readResponse(
+  return requireData(
     app.api.analytics({ sectionName: apiSectionName }).relationships.get({ query }),
     "Failed to get analytics section relationships",
   );
