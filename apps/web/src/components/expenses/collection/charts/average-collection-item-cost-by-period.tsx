@@ -5,7 +5,7 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { EvilBarChart } from "@/components/evilcharts/charts/recharts-bar-chart";
 import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
-import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard-shell";
+import { ChartSection } from "@/components/expenses/dashboard-shell";
 import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
@@ -14,9 +14,6 @@ import {
 const config = {
   collectionItems: { label: "Collection Items", colors: { light: [EXPENSE_CHART_COLORS[0]] } },
 } satisfies ChartConfig;
-const legend = [
-  { key: "collectionItems", label: "Collection Items", color: EXPENSE_CHART_COLORS[0] },
-] as const;
 
 export function AverageCollectionItemCostByPeriod({
   data,
@@ -35,7 +32,6 @@ export function AverageCollectionItemCostByPeriod({
     <ChartSection
       title="Average Collection Item Cost by Period"
       selector={selector}
-      legend={<ChartSeriesLegend items={legend} />}
       isEmpty={!isLoading && data.length === 0}
       emptyMessage="No dated collection items for these filters."
     >
