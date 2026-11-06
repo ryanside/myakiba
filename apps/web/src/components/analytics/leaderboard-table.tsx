@@ -5,7 +5,12 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
 import { cn } from "@/lib/utils";
-import { DataTable, DATA_TABLE_NUMBER_META } from "@/components/data-table/data-table";
+import {
+  CellSkeleton,
+  DataTable,
+  DATA_TABLE_NUMBER_META,
+  DATA_TABLE_SKELETON,
+} from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -19,6 +24,8 @@ type RowIdKey<TRow> = {
 
 type ColumnSpec = {
   readonly label: string;
+  /** The loading bar; text columns without one get DataTable's lines of text. */
+  readonly skeleton?: ReactNode;
   /** Number columns: [plain, with a bar] header widths and the figure's minimum width. */
   readonly number?: {
     readonly widths: readonly [string, string];
@@ -29,14 +36,16 @@ type ColumnSpec = {
 const COLUMN_SPECS = {
   name: { label: "Name" },
   shop: { label: "Shop" },
-  scale: { label: "Scale" },
+  scale: { label: "Scale", skeleton: <CellSkeleton className="w-8" /> },
   // Bars only fit once the table has a full-width column, from lg; below that the figures stand alone.
   itemCount: {
     label: "Count",
+    skeleton: DATA_TABLE_SKELETON.count,
     number: { widths: ["w-16", "w-16 lg:w-36"], figureWidth: "min-w-6" },
   },
   totalSpent: {
     label: "Spent",
+    skeleton: DATA_TABLE_SKELETON.money,
     number: { widths: ["w-24", "w-24 lg:w-44"], figureWidth: "min-w-18" },
   },
 } as const satisfies Readonly<Record<string, ColumnSpec>>;
@@ -56,7 +65,7 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => row.index + 1,
-      meta: { headerClassName: "w-8" },
+      meta: { headerClassName: "w-8", skeleton: DATA_TABLE_SKELETON.rank },
     },
     ...columns.map((column): ColumnDef<TRow, CellValue> => {
       const spec: ColumnSpec = COLUMN_SPECS[column];
@@ -72,8 +81,9 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
                 spec.number.widths[column === barColumn ? 1 : 0],
               ),
               cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
+              skeleton: spec.skeleton,
             }
-          : undefined,
+          : { skeleton: spec.skeleton },
         cell: ({ getValue }) => {
           const value = getValue();
           const shown = (formatCell ? formatCell(column, value) : value) ?? "—";

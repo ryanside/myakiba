@@ -22,7 +22,7 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
+import { DataTable, DataTableEmpty, DATA_TABLE_SKELETON } from "@/components/data-table/data-table";
 import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
@@ -54,6 +54,7 @@ function createSectionColumns({
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
       size: 40,
+      meta: { skeleton: DATA_TABLE_SKELETON.rank },
     },
     {
       id: "name",
@@ -69,6 +70,7 @@ function createSectionColumns({
       cell: ({ getValue }) => getValue() ?? "—",
       size: 80,
       sortDescFirst: false,
+      meta: { skeleton: DATA_TABLE_SKELETON.count },
     },
     {
       id: "totalSpent",
@@ -80,6 +82,7 @@ function createSectionColumns({
       },
       size: 100,
       sortDescFirst: false,
+      meta: { skeleton: DATA_TABLE_SKELETON.money },
     },
   ];
 }
