@@ -19,10 +19,9 @@ afterEach(() => {
   document.documentElement.style.colorScheme = "";
 });
 
-test("the account menu's theme tablist has an accessible name", async () => {
-  const root = createRootRoute({ component: () => <UserMenu session={session} /> });
+function renderUserMenu() {
   const router = createRouter({
-    routeTree: root,
+    routeTree: createRootRoute({ component: () => <UserMenu session={session} /> }),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   render(
@@ -30,6 +29,10 @@ test("the account menu's theme tablist has an accessible name", async () => {
       <RouterProvider router={router} />
     </ThemeProvider>,
   );
+}
+
+test("the account menu's theme tablist has an accessible name", async () => {
+  renderUserMenu();
 
   fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
   await screen.findByRole("tablist", { name: "Theme" });
@@ -43,16 +46,7 @@ test.each([
   "the account menu's $name theme tab has an accessible name and sets the theme",
   async ({ name, value, initial }) => {
     localStorage.setItem("theme", initial);
-    const root = createRootRoute({ component: () => <UserMenu session={session} /> });
-    const router = createRouter({
-      routeTree: root,
-      history: createMemoryHistory({ initialEntries: ["/"] }),
-    });
-    render(
-      <ThemeProvider>
-        <RouterProvider router={router} />
-      </ThemeProvider>,
-    );
+    renderUserMenu();
 
     fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
     expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual([
