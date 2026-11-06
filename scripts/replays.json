@@ -1129,6 +1129,12 @@
         "a pinned replay fails when its guarding test no longer passes at HEAD",
         "a pinned replay fails when an explicit HEAD alias is missing"
       ]
+    },
+    {
+      "fix": "f7411a8e",
+      "bug": "a fresh snapshot index dropped tracked files that matched ignore rules",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay keeps tracked files even when Git ignores them"]
     }
   ],
   "lint": [
