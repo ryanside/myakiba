@@ -931,6 +931,50 @@
       "bug": "number column headers pushed their resize line about 7px past the column border",
       "test": "apps/web/src/components/reui/data-grid/data-grid-resize-alignment.test.tsx",
       "fixed": ["numeric and text columns keep the resize line centered on the handle"]
+    },
+    {
+      "fix": "1bf403dc",
+      "bug": "a repeated error updated its toast in place and stayed hidden behind newer errors",
+      "test": "apps/web/src/components/ui/toast.test.tsx",
+      "fixed": ["a repeated error returns to the visible front after newer errors"]
+    },
+    {
+      "fix": "344abfc9",
+      "bug": "a short result at a nonzero offset kept its footer but offered no way back to the skipped rows",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination at an offset that is not a page start > a short result at an offset can return to its first row"
+      ]
+    },
+    {
+      "fix": "05a0158f",
+      "bug": "the two average collection cost charts showed a redundant one-item legend their siblings omit",
+      "test": "apps/web/src/components/expenses/collection/charts/collection-legends.test.tsx",
+      "fixed": [
+        "AverageCollectionItemCostByPeriod omits the redundant single-series legend",
+        "AverageCollectionItemCostToDate omits the redundant single-series legend"
+      ]
+    },
+    {
+      "fix": "1760b4ea",
+      "bug": "Reset Filters hid while a focused search still showed text an outside change had cleared",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > keeps Reset while an outside clear is deferred by the focused search",
+        "Reset Filters on /collection > keeps Reset while an outside clear is deferred by the focused search",
+        "Reset Filters on /orders > hides Reset when blur applies a deferred outside clear",
+        "Reset Filters on /collection > hides Reset when blur applies a deferred outside clear"
+      ]
+    },
+    {
+      "fix": "b9e77e3e",
+      "bug": "an outage showed the loader's internal fallback instead of \"The server didn't answer.\"",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection during an outage > uses the server fallback for a 503 response",
+        "Orders during an outage > uses the server fallback for a 503 response",
+        "Expenses during an outage > uses the server fallback for a 503 response"
+      ]
     }
   ],
   "lint": [
