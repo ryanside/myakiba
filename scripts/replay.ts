@@ -466,7 +466,9 @@ async function commitWorkingTree() {
   const index = path.join(worktree, ".replay-index");
   try {
     const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
-    await copyFile(path.resolve(root, realIndex.trim()), index);
+    const realIndexPath = path.resolve(root, realIndex.trim());
+    // The copy carries assume-unchanged and skip-worktree bits, so `git add -A` skips those files' working-tree edits.
+    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
     const tree = await $`git add -A && git write-tree`
       .cwd(root)
       .env({ ...process.env, GIT_INDEX_FILE: index })
