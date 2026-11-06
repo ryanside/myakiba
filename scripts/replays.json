@@ -1246,7 +1246,8 @@
       "fixed": [
         "the account menu's Light theme tab has an accessible name and sets the theme",
         "the account menu's Dark theme tab has an accessible name and sets the theme",
-        "the account menu's System theme tab has an accessible name and sets the theme"
+        "the account menu's System theme tab has an accessible name and sets the theme",
+        "each account menu theme tab shows its own icon"
       ]
     },
     {
