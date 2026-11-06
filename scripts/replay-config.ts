@@ -7,8 +7,12 @@ type TestReplayEntry = {
   testAt?: string;
   atHead?: string[];
 };
-export type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
-  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
+
+/** `base` is the revision the test fails at: the given one for WORKTREE, else the fix's parent. */
+export type TestReplay = Omit<TestReplayEntry, "base" | "testAt" | "atHead"> & { base: string } & (
+    | { testAt: string; atHead: string[] }
+    | { testAt?: never; atHead?: never }
+  );
 
 export type LintReplay = {
   fix: string;
@@ -51,7 +55,7 @@ type ReplaysFile = {
 };
 
 function parseTestReplay(
-  { testAt, atHead, ...replay }: TestReplayEntry,
+  { base, testAt, atHead, ...entry }: TestReplayEntry,
   index: number,
 ): TestReplay {
   const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
@@ -61,6 +65,11 @@ function parseTestReplay(
   if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
     throw invalid("atHead must not be empty and must be a list of test names");
   }
+  const parent = entry.fix === "WORKTREE" ? base : `${entry.fix}^`;
+  if (!parent) {
+    throw invalid("a WORKTREE replay needs a base revision");
+  }
+  const replay = { ...entry, base: parent };
   return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
 }
 

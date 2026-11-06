@@ -487,11 +487,8 @@ try {
 
   for (const replay of selected) {
     const harness = await harnessOf(replay);
-    const workingTree = replay.fix === "WORKTREE";
-    const base = workingTree ? replay.base : `${replay.fix}^`;
-    if (!base) throw new Error("A WORKTREE replay needs a base revision");
-    const fix = workingTree ? await commitWorkingTree() : replay.fix;
-    await checkOut(base, harness);
+    const fix = replay.fix === "WORKTREE" ? await commitWorkingTree() : replay.fix;
+    await checkOut(replay.base, harness);
     const before = await runTest(worktree, replay.test);
     await checkOut(fix, harness);
     const after = await runTest(worktree, replay.test);
