@@ -653,7 +653,8 @@
       "fixed": [
         "choosing Assign order in a collection card's actions menu closes the menu behind its dialog",
         "choosing Assign order in a collection table row's actions menu closes the menu behind its dialog"
-      ]
+      ],
+      "testAt": "2b3dcb21"
     },
     {
       "fix": "a1a03661",
@@ -680,7 +681,8 @@
         "Orders masonry gallery > names each image link by its title alone",
         "Analytics section items > names each image link by its title alone",
         "Analytics shared item previews > names each image link by its title alone"
-      ]
+      ],
+      "testAt": "04b7cfe1"
     },
     {
       "fix": "93ed9f38",
