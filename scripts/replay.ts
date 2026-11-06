@@ -1,4 +1,5 @@
 import { $ } from "bun";
+import { lstatSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -467,13 +468,21 @@ async function commitWorkingTree() {
   try {
     const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
     const realIndexPath = path.resolve(root, realIndex.trim());
-    // The copy carries assume-unchanged and skip-worktree bits, so `git add -A` skips those files' working-tree edits.
+    // Keep force-staged ignored files, then clear flags only for paths present in the working tree.
     if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
-    const tree = await $`git add -A && git write-tree`
-      .cwd(root)
-      .env({ ...process.env, GIT_INDEX_FILE: index })
-      .quiet()
-      .text();
+    const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
+    const entries = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
+    const present = entries
+      .split("\0")
+      .filter((entry) => /^[a-zS] /.test(entry))
+      .map((entry) => entry.slice(2))
+      .filter((file) => lstatSync(path.join(root, file), { throwIfNoEntry: false }));
+    if (present.length > 0) {
+      const input = Buffer.from(`${present.join("\0")}\0`);
+      for (const flag of ["--no-assume-unchanged", "--no-skip-worktree"])
+        await $`git update-index ${flag} -z --stdin < ${input}`.cwd(root).env(indexEnv).quiet();
+    }
+    const tree = await $`git add -A && git write-tree`.cwd(root).env(indexEnv).quiet().text();
     const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
       .cwd(root)
       .quiet()
