@@ -82,7 +82,11 @@ function RouteComponent(): React.JSX.Element {
                   value={value}
                   onPressedChange={(pressed) => {
                     if (pressed) {
-                      navigate({ search: { releaseStatus: value }, resetScroll: false });
+                      navigate({
+                        search: { releaseStatus: value },
+                        replace: true,
+                        resetScroll: false,
+                      });
                     }
                   }}
                 >

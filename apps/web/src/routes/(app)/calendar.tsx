@@ -70,6 +70,7 @@ function RouteComponent(): ReactNode {
           year: nextYear,
           days: nextDays.length > 0 ? [...nextDays] : undefined,
         },
+        replace: nextView === view,
         resetScroll: false,
       });
     },
