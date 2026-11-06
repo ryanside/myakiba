@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FocusEvent, InputHTMLAttributes, Ref } from "react";
 import { composeRefs } from "@/lib/compose-refs";
 import { Input } from "./ui/input";
@@ -35,6 +35,10 @@ export function DebouncedInput({
     onTextChangeRef.current = onTextChange;
   }, [onChange, onTextChange]);
 
+  const report = useCallback((text: string): void => {
+    onTextChangeRef.current?.(text);
+  }, []);
+
   useEffect(() => {
     const inputElement = inputRef.current;
     const nextValue = String(initialValue);
@@ -57,8 +61,8 @@ export function DebouncedInput({
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
-    onTextChangeRef.current?.(nextValue);
-  }, [initialValue]);
+    report(nextValue);
+  }, [initialValue, report]);
 
   useEffect(() => {
     return () => {
@@ -105,7 +109,7 @@ export function DebouncedInput({
 
     pendingExternalValueRef.current = null;
     pendingLocalAcknowledgementsRef.current.clear();
-    onTextChange?.(event.currentTarget.value);
+    report(event.currentTarget.value);
     props.onBlur?.(event);
   };
 
@@ -117,7 +121,7 @@ export function DebouncedInput({
         defaultValue={String(defaultValue)}
         onBlur={handleBlur}
         onValueChange={(value) => {
-          onTextChange?.(value);
+          report(value);
           handleValueChange(value);
         }}
       />
@@ -131,7 +135,7 @@ export function DebouncedInput({
       defaultValue={defaultValue}
       onBlur={handleBlur}
       onChange={(e) => {
-        onTextChange?.(e.target.value);
+        report(e.target.value);
         if (e.target.value === "") {
           handleValueChange("");
           return;
