@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react/pure";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react/pure";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
@@ -234,4 +234,28 @@ describe.each(SUBMIT_PATHS)("$name submit", (path) => {
       });
     }),
   );
+});
+
+describe.each(SUBMIT_PATHS)("$name footer", (path) => {
+  test("has no nested button and Cancel closes the form", async () => {
+    const queryClient = new QueryClient();
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          {path.render(heldWrite(), () => {})}
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      if (path.name === "move to a new order") {
+        fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+      }
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.querySelectorAll('[data-slot$="footer"] button button').length).toBe(0);
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(formIsOpen()).toBe(false));
+    } finally {
+      cleanup();
+      queryClient.clear();
+    }
+  });
 });
