@@ -34,12 +34,13 @@ async function fixture() {
   };
   const source = (era: string, fixed: boolean) =>
     write("src/value.ts", `export const value = ${JSON.stringify({ era, fixed })};\n`);
-  const assertions = (era: string, name = testName) =>
+  const assertions = (era: string, name = testName, body = "") =>
     write(
       testFile,
       `import { expect, test } from "bun:test";
 import { value } from "./value";
-test(${JSON.stringify(name)}, () => {
+test(${JSON.stringify(name)}, async () => {
+  ${body}
   expect(value).toEqual(${JSON.stringify({ era, fixed: true })});
 });
 `,
@@ -63,7 +64,7 @@ test(${JSON.stringify(name)}, () => {
   await assertions("current");
   await commit("new era");
 
-  const run = async (entry: { fix: string; base?: string; testAt?: string }) => {
+  const run = async (entry: { fix: string; base?: string; testAt?: string; atHead?: string[] }) => {
     await write(
       "scripts/replays.json",
       JSON.stringify({
@@ -77,7 +78,7 @@ test(${JSON.stringify(name)}, () => {
       .quiet();
     return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
   };
-  return { dir, base, fix, source, assertions, run };
+  return { dir, base, fix, source, assertions, run, write, git, commit };
 }
 
 test("testAt uses the pinned test at both the parent and fix while HEAD uses current assertions", async () => {
@@ -121,10 +122,62 @@ test("a pinned WORKTREE replay uses the same assertions on both sides and preser
     fix: "WORKTREE",
     base: repo.base,
     testAt: repo.fix,
+    atHead: ["current assertions"],
   });
   expect(exitCode, output).toBe(0);
   expect(output).toContain("every replay matched");
   expect(await Bun.file(path.join(repo.dir, testFile)).text()).toBe(original);
   const files = await readdir(path.join(repo.dir, "src"));
   expect(files.toSorted()).toEqual(["value.test.ts", "value.ts"]);
+}, 30_000);
+
+test("a pinned WORKTREE replay never writes into the working checkout", async () => {
+  const repo = await fixture();
+  await repo.assertions(
+    "old",
+    testName,
+    `expect(await Array.fromAsync(new Bun.Glob(".replay-*").scan(${JSON.stringify(path.join(repo.dir, "src"))}))).toEqual([]);`,
+  );
+  const testAt = await repo.commit("guard working checkout");
+  await repo.source("old", false);
+  await repo.git("add", "src/value.ts");
+  const index = (await repo.git("write-tree")).text();
+  await repo.write("src/value.ts", 'export { value } from "./untracked-value";\n');
+  await repo.write("src/untracked-value.ts", 'export const value = { era: "old", fixed: true };\n');
+  await repo.assertions("old");
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base, testAt });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain(`PASS  WORKTREE  ${testFile}  1 fixed`);
+  expect((await repo.git("write-tree")).text()).toBe(index);
+}, 30_000);
+
+test("a pinned replay fails when its guarding test no longer passes at HEAD", async () => {
+  const repo = await fixture();
+  await repo.assertions("current", "replacement test");
+  const { exitCode, output } = await repo.run({ fix: repo.fix, testAt: repo.fix });
+  expect(exitCode, output).toBe(1);
+  expect(output).toContain(`not passed at head: ${testName}`);
+}, 30_000);
+
+test("a pinned replay accepts an explicit renamed guarding test at HEAD", async () => {
+  const repo = await fixture();
+  await repo.assertions("current", "renamed guarding test");
+  const { exitCode, output } = await repo.run({
+    fix: repo.fix,
+    testAt: repo.fix,
+    atHead: ["renamed guarding test"],
+  });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
+
+test("a pinned replay fails when an explicit HEAD alias is missing", async () => {
+  const repo = await fixture();
+  const { exitCode, output } = await repo.run({
+    fix: repo.fix,
+    testAt: repo.fix,
+    atHead: [testName, "missing guarding test"],
+  });
+  expect(exitCode, output).toBe(1);
+  expect(output).toContain("not passed at head: missing guarding test");
 }, 30_000);
