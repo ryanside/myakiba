@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const LIST_HEADING_CLASS_NAME = "flex min-h-18 min-w-0 flex-1 flex-col justify-center";
@@ -39,16 +38,15 @@ export function ListHeading({
 
   const toggle =
     truncated || expanded || /\n/.test(description) ? (
-      <Button
-        variant="secondary"
-        size="xs"
+      <button
+        type="button"
         aria-expanded={expanded}
         aria-controls={id}
         onClick={() => setExpanded((current) => !current)}
-        className="-my-0.5 ms-0.5 self-center align-top"
+        className="relative shrink-0 rounded-sm font-medium text-foreground/70 underline-offset-4 outline-ring transition-colors duration-150 ease-out after:absolute after:-inset-x-1.5 after:-inset-y-1 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        {expanded ? "Less" : "More"}
-      </Button>
+        {expanded ? "less" : "more"}
+      </button>
     ) : null;
 
   return (
@@ -63,7 +61,7 @@ export function ListHeading({
         <div
           className={cn(
             "max-w-2xl text-sm leading-5 text-muted-foreground",
-            !expanded && "flex items-baseline gap-1",
+            !expanded && "flex items-baseline gap-1.5",
           )}
         >
           <p
@@ -80,7 +78,7 @@ export function ListHeading({
           {toggle}
         </div>
       ) : null}
-      <p className="flex min-h-5 items-baseline gap-1 text-sm leading-5 text-muted-foreground tabular-nums">
+      <p className="flex min-h-5 items-baseline gap-1.5 text-sm leading-5 text-muted-foreground tabular-nums">
         {count}
         {description ? null : toggle}
       </p>
