@@ -259,6 +259,38 @@ test("a WORKTREE replay works in a checkout with no index file", async () => {
   expect(await Bun.file(indexPath).exists()).toBe(false);
 }, 30_000);
 
+test("a WORKTREE replay captures assume-unchanged deletions and keeps missing sparse files", async () => {
+  const repo = await fixture();
+  await repo.write("src/deleted-value.ts", "export const deleted = true;\n");
+  await repo.write("src/sparse-value.ts", "export const sparse = true;\n");
+  await repo.commit("flagged dependencies");
+  await repo.git(
+    "update-index",
+    "--assume-unchanged",
+    "src/deleted-value.ts",
+    "src/sparse-value.ts",
+  );
+  await repo.git("update-index", "--skip-worktree", "src/sparse-value.ts");
+  await rm(path.join(repo.dir, "src/deleted-value.ts"));
+  await rm(path.join(repo.dir, "src/sparse-value.ts"));
+  await repo.source("old", true);
+  await repo.assertions(
+    "old",
+    testName,
+    `if (!import.meta.dir.startsWith(${JSON.stringify(`${repo.dir}${path.sep}`)})) {
+    expect(await Bun.file(new URL("./deleted-value.ts", import.meta.url)).exists()).toBe(false);
+    expect(await Bun.file(new URL("./sparse-value.ts", import.meta.url)).exists()).toBe(true);
+  }`,
+  );
+  const indexResult = await repo.git("rev-parse", "--git-path", "index");
+  const indexPath = path.resolve(repo.dir, indexResult.text().trim());
+  const index = await Bun.file(indexPath).bytes();
+  const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
+  expect(await Bun.file(indexPath).bytes()).toEqual(index);
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+}, 30_000);
+
 for (const flag of ["assume-unchanged", "skip-worktree"]) {
   test(`a WORKTREE replay captures a directory replaced by a file with ${flag} and preserves the real index`, async () => {
     const repo = await fixture();
