@@ -72,14 +72,20 @@ describe("shownMessageOf", () => {
   test.each([
     ["a 5xx text body", new ApiError("Failed", 500, { cause: "Internal failure" })],
     ["a 503 outage", new ApiError("Failed", 503, { cause: "Service Unavailable" })],
-    ["a blank body", new ApiError("Failed", 400, { cause: " \n\t " })],
-    ["zero-width spaces", new ApiError("Failed", 400, { cause: "​​" })],
-    ["a validation object", new ApiError("Failed", 422, { cause: { message: "Expected string" } })],
     ["an answer without data", new ApiError("Failed", 200)],
     ["an error that is not an ApiError", new Error("Order not found")],
     ["no error", null],
   ])("returns the fallback for %s", (_name, error) => {
     expect(shownMessageOf(error, "Try again.")).toBe("Try again.");
     expect(shownMessageOf(error)).toBe("The server didn't answer.");
+  });
+
+  test.each([
+    ["a blank body", new ApiError("Failed", 400, { cause: " \n\t " })],
+    ["zero-width spaces", new ApiError("Failed", 400, { cause: "​​" })],
+    ["a validation object", new ApiError("Failed", 422, { cause: { message: "Expected string" } })],
+  ])("returns the fallback, or says the request was rejected, for %s", (_name, error) => {
+    expect(shownMessageOf(error, "Try again.")).toBe("Try again.");
+    expect(shownMessageOf(error)).toBe("The server rejected this request.");
   });
 });

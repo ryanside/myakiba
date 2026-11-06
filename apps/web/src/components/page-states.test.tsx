@@ -8,12 +8,19 @@ afterEach(cleanup);
 describe("LoadError", () => {
   test.each([
     new Error("Failed to get collection"),
-    new ApiError("Failed to load", 400, { cause: " " }),
-    new ApiError("Failed to load", 422, { cause: { message: "Expected string" } }),
     new ApiError("Failed to load", 503, { cause: "Internal failure" }),
   ])("uses the server fallback when an error has no user message", (loadError) => {
     render(<LoadError title="Could not load" error={loadError} />);
     expect(screen.getByText("The server didn't answer.")).toBeTruthy();
+    expect(screen.queryByText(/Failed to/)).toBeNull();
+  });
+
+  test.each([
+    new ApiError("Failed to load", 400, { cause: " " }),
+    new ApiError("Failed to load", 422, { cause: { message: "Expected string" } }),
+  ])("says the request was rejected when a 4xx has no user message", (loadError) => {
+    render(<LoadError title="Could not load" error={loadError} />);
+    expect(screen.getByText("The server rejected this request.")).toBeTruthy();
     expect(screen.queryByText(/Failed to/)).toBeNull();
   });
 
