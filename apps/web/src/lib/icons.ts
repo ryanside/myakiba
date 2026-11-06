@@ -10,4 +10,7 @@ export {
   ArrowLeft02Icon as BackIcon,
   // Opens a page in a new tab.
   ExternalLinkIcon as ExternalIcon,
+  ArrowUp02Icon as SortAscendingIcon,
+  ArrowDown02Icon as SortDescendingIcon,
+  ArrowUpDownIcon as UnsortedIcon,
 } from "@hugeicons/core-free-icons";

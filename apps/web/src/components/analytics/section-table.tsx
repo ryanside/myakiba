@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown02Icon, ArrowUp02Icon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
 import { ICON_SWAP } from "@/lib/motion";
@@ -29,6 +28,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
@@ -220,12 +220,12 @@ function SortableHeader({
 
 function getSortPresentation(sorted: false | "asc" | "desc") {
   if (sorted === "asc") {
-    return { icon: ArrowUp02Icon, nextDirection: "descending" } as const;
+    return { icon: SortAscendingIcon, nextDirection: "descending" } as const;
   }
 
   if (sorted === "desc") {
-    return { icon: ArrowDown02Icon, nextDirection: "default" } as const;
+    return { icon: SortDescendingIcon, nextDirection: "default" } as const;
   }
 
-  return { icon: UnfoldMoreIcon, nextDirection: "ascending" } as const;
+  return { icon: UnsortedIcon, nextDirection: "ascending" } as const;
 }

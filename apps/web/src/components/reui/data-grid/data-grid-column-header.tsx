@@ -24,9 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowDown02Icon,
-  ArrowUp02Icon,
-  UnfoldMoreIcon,
   Tick02Icon,
   ArrowLeft03Icon,
   ArrowRight03Icon,
@@ -35,8 +32,9 @@ import {
   DragDropVerticalIcon,
   PinOffIcon,
 } from "@hugeicons/core-free-icons";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
-const SORT_ICONS = { asc: ArrowUp02Icon, desc: ArrowDown02Icon } as const;
+const SORT_ICONS = { asc: SortAscendingIcon, desc: SortDescendingIcon } as const;
 
 interface DataGridColumnHeaderProps<TData, TValue> extends HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
@@ -98,7 +96,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
         className={cn("inline-flex", !isSorted && "mt-px")}
       >
         <HugeiconsIcon
-          icon={isSorted ? SORT_ICONS[isSorted] : UnfoldMoreIcon}
+          icon={isSorted ? SORT_ICONS[isSorted] : UnsortedIcon}
           strokeWidth={2}
           className="size-3.25"
         />
@@ -143,7 +141,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           }}
           disabled={!canSort}
         >
-          <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className="size-3.5!" />
+          <HugeiconsIcon icon={SortAscendingIcon} strokeWidth={2} className="size-3.5!" />
           <span className="grow">Asc</span>
           {isSorted === "asc" && (
             <HugeiconsIcon
@@ -164,7 +162,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           }}
           disabled={!canSort}
         >
-          <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.5!" />
+          <HugeiconsIcon icon={SortDescendingIcon} strokeWidth={2} className="size-3.5!" />
           <span className="grow">Desc</span>
           {isSorted === "desc" && (
             <HugeiconsIcon
