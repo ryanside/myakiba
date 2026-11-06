@@ -36,10 +36,10 @@ export async function getCollection(filters: CollectionFilters) {
     query: queryParams,
   });
   if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get collection"));
+    throw new Error(getUserErrorMessage(error, ""));
   }
   if (!data) {
-    throw new Error("Failed to get collection");
+    throw new Error();
   }
 
   return data;

@@ -26,7 +26,7 @@ export async function getExpensesCollection(
   const { data, error } = await app.api.expenses.collection.get({ query: filters });
 
   if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get collection expenses"));
+    throw new Error(getUserErrorMessage(error, ""));
   }
 
   return data;
@@ -38,7 +38,7 @@ export async function getExpensesOrders(
   const { data, error } = await app.api.expenses.orders.get({ query: filters });
 
   if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get order expenses"));
+    throw new Error(getUserErrorMessage(error, ""));
   }
 
   return data;
@@ -50,7 +50,7 @@ export async function getExpensesShipping(
   const { data, error } = await app.api.expenses.shipping.get({ query: filters });
 
   if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get shipping expenses"));
+    throw new Error(getUserErrorMessage(error, ""));
   }
 
   return data;

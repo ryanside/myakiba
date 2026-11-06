@@ -50,10 +50,10 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
 
   const { data, error } = await app.api.orders.get({ query: queryParams });
   if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get orders"));
+    throw new Error(getUserErrorMessage(error, ""));
   }
   if (!data) {
-    throw new Error("Failed to get orders");
+    throw new Error();
   }
 
   return data;
