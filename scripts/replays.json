@@ -1348,6 +1348,12 @@
       "fixed": [
         "the calendar's release list > fades in around its scroll area, so the scrollbar appears with the rows instead of ahead of them"
       ]
+    },
+    {
+      "fix": "bdd9a415",
+      "bug": "a WORKTREE replay without a base failed only mid-run, after HEAD and earlier replays had run",
+      "test": "scripts/replay-config.test.ts",
+      "fixed": ["a WORKTREE replay without a base revision is rejected"]
     }
   ],
   "lint": [
