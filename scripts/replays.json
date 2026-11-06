@@ -1176,6 +1176,12 @@
         "move to an existing order footer > has no nested button and Cancel closes the form",
         "move to a new order footer > has no nested button and Cancel closes the form"
       ]
+    },
+    {
+      "fix": "920dab4b",
+      "bug": "a WORKTREE replay crashed with ENOENT in a checkout that had no index file yet",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay works in a checkout with no index file"]
     }
   ],
   "lint": [
