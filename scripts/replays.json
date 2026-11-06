@@ -1316,6 +1316,12 @@
         "a section placeholder row holds the box of the expand button that replaces it",
         "a leaderboard shows a placeholder row for each row the board can hold while it loads"
       ]
+    },
+    {
+      "fix": "e584fedb",
+      "bug": "the list heading's more/less toggle read as more words of the description",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
     }
   ],
   "lint": [
