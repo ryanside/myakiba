@@ -384,11 +384,12 @@ body {
   @apply display font-heading text-[1.375rem] leading-8 font-medium;
 }
 
-/* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant. */
+/* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant.
+   Scale is listed too, so a press stacked on the same element keeps its transition. */
 @utility color-motion {
-  transition-property: color, background-color, border-color;
-  transition-duration: var(--motion-hover);
-  transition-timing-function: ease;
+  transition-property: color, background-color, border-color, scale;
+  transition-duration: var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
+  transition-timing-function: ease, ease, ease, var(--ease-out);
 }
 
 /* Pills and icon buttons: the colour fade plus a press. */
@@ -530,6 +531,21 @@ body {
   &[data-ending-style] {
     height: 0;
     opacity: 0;
+  }
+}
+
+/* A checkbox tick or radio dot fades and grows in, and leaves a little faster. */
+@utility tick-motion {
+  transition-property: opacity, scale;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--tick-from);
+  }
+  &[data-ending-style] {
+    transition-duration: 100ms;
   }
 }
 
