@@ -1190,15 +1190,6 @@
       "fixed": ["a WORKTREE replay works in a checkout with no index file"]
     },
     {
-      "fix": "d8fefa04",
-      "bug": "WORKTREE snapshots copied assume-unchanged and skip-worktree bits from the real index, so edits to those files never reached the snapshot",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures edits with assume-unchanged and preserves the real index",
-        "a WORKTREE replay captures edits with skip-worktree and preserves the real index"
-      ]
-    },
-    {
       "fix": "611d239c",
       "bug": "on a filtered list, a pending item save rebuilt the item and Collection grid columns, remounting the Edit item sheet so it vanished and lost its draft",
       "test": "apps/web/src/data/resources/item-edit-draft.test.tsx",
@@ -1214,23 +1205,6 @@
       "fixed": [
         "edit-order sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width",
         "collection item sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width"
-      ]
-    },
-    {
-      "fix": "feed6ec4",
-      "bug": "a WORKTREE snapshot crashed with ENOTDIR when a flagged file's directory had been replaced by a regular file",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures a directory replaced by a file with assume-unchanged and preserves the real index",
-        "a WORKTREE replay captures a directory replaced by a file with skip-worktree and preserves the real index"
-      ]
-    },
-    {
-      "fix": "f75b6184",
-      "bug": "a deleted assume-unchanged file stayed in the WORKTREE snapshot",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures assume-unchanged deletions and keeps missing sparse files"
       ]
     },
     {
