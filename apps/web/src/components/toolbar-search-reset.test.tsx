@@ -146,6 +146,26 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     });
   });
 
+  test("clears a deferred search and restores focus when Reset is shown only for its text", async () => {
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect(router.state.location.search.search).toBeUndefined();
+    expect(input().value).toBe("mi");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      search: router.state.location.search.search,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
+  });
+
   test("hides Reset when blur applies a deferred outside clear", async () => {
     const { user, router, input, queryResetButton } = await renderToolbar(path);
     await user.type(input(), "mi");
