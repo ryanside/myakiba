@@ -16,11 +16,13 @@ test("a short multiline description can be expanded to read its saved line break
     render(<ListHeading title="Shopping" description={"Buy first\nBuy later"} count="2 items" />);
   });
 
-  const more = screen.getByRole("button", { name: "more" });
+  const more = screen.getByRole("button", { name: "Show more" });
+  expect(more.textContent).toBe("[show more]");
   expect(more.getAttribute("aria-expanded")).toBe("false");
   fireEvent.click(more);
 
-  const less = screen.getByRole("button", { name: "less" });
+  const less = screen.getByRole("button", { name: "Show less" });
+  expect(less.textContent).toBe("[show less]");
   expect(less.getAttribute("aria-expanded")).toBe("true");
   const description = screen.getByText(/Buy first/);
   expect(description.textContent).toBe("Buy first\nBuy later");
@@ -29,7 +31,9 @@ test("a short multiline description can be expanded to read its saved line break
   await act(async () => {
     fireEvent.click(less);
   });
-  expect(screen.getByRole("button", { name: "more" }).getAttribute("aria-expanded")).toBe("false");
+  expect(screen.getByRole("button", { name: "Show more" }).getAttribute("aria-expanded")).toBe(
+    "false",
+  );
 });
 
 test("a short single-line description needs no expansion toggle", async () => {
@@ -43,5 +47,5 @@ test("a lone carriage return needs no expansion toggle", async () => {
   await act(async () => {
     render(<ListHeading title="Shopping" description={"Buy first\rBuy later"} count="2 items" />);
   });
-  expect(screen.queryByRole("button", { name: "more" })).toBeNull();
+  expect(screen.queryByRole("button")).toBeNull();
 });
