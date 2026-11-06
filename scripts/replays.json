@@ -6,7 +6,8 @@
       "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
       "fixed": [
         "a failed Fees & Charges save > shows the server's message when the order no longer exists"
-      ]
+      ],
+      "testAt": "8a8c0c7c"
     },
     {
       "fix": "667c8154",
@@ -1093,6 +1094,15 @@
         "a failed order edit from fees > keeps the fallback when the server answers 503",
         "a failed order edit from fees > keeps the fallback when the server cannot be reached",
         "a failed order edit from dialog > shows the server's message when the order no longer exists"
+      ]
+    },
+    {
+      "fix": "b87a9ccf",
+      "bug": "replay compatibility depended on the checkout folder instead of the test revision, so historical assertions drifted and WORKTREE could report false flips",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "testAt uses the pinned test at both the parent and fix while HEAD uses current assertions",
+        "a pinned WORKTREE replay uses the same assertions on both sides and preserves the working test"
       ]
     }
   ],
