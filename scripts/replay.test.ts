@@ -46,8 +46,8 @@ test(${JSON.stringify(name)}, async () => {
 `,
     );
 
-  for (const script of ["scripts/replay.ts", "scripts/replay-config.ts"])
-    await write(script, Bun.file(path.join(root, script)));
+  for (const script of ["replay.ts", "replay-config.ts", "worktree-snapshot.ts"])
+    await write(`scripts/${script}`, Bun.file(path.join(import.meta.dir, script)));
   await write(
     "package.json",
     '{"name":"fixture","scripts":{"test":"bun test"},"dependencies":{"fixture-dep":"file:./dependency"}}\n',
