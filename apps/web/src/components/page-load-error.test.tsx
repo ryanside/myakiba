@@ -2,22 +2,57 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { AnyRoute } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { LoadError } from "./page-states";
+
+let pageSearch = {};
+const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "test" } };
 
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
-  useSearch: () => ({}),
+  useSearch: () => pageSearch,
+  useRouter: () => ({}),
+  Link: ({ children, to, className }: { children: ReactNode; to: string; className?: string }) => (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  ),
   useNavigate: () => async () => {},
   getRouteApi: () => ({
-    useRouteContext: () => ({ session: { user: { currency: "USD", dateFormat: "MM/DD/YYYY" } } }),
+    useRouteContext: () => ({ session }),
+    useSearch: () => ({ page: 1, pageSize: 25 }),
   }),
 }));
 
 const { Route: collectionRoute } = await import("@/routes/(app)/collection");
 const { Route: ordersRoute } = await import("@/routes/(app)/orders");
 const { Route: expensesRoute } = await import("@/routes/(app)/expenses");
-Object.assign(expensesRoute, { useSearch: () => ({}) });
+const { Route: listsRoute } = await import("@/routes/(app)/lists");
+const { Route: listRoute } = await import("@/routes/(app)/lists_.$listId");
+const { Route: wishlistRoute } = await import("@/routes/(app)/wishlist");
+const { Route: dashboardRoute } = await import("@/routes/(app)/dashboard");
+const { Route: itemsRoute } = await import("@/routes/(app)/items");
+
+const pages = [
+  ["Collection", collectionRoute, {}],
+  ["Orders", ordersRoute, {}],
+  ["Expenses", expensesRoute, {}],
+  ["Lists", listsRoute, {}],
+  ["List detail", listRoute, {}],
+  ["Wishlist", wishlistRoute, { releaseStatus: "all" }],
+  ["Dashboard overview", dashboardRoute, {}],
+  ["Dashboard monthly", dashboardRoute, { tab: "monthly" }],
+  ["Item Database", itemsRoute, {}],
+] as const;
+
+const routeHooks = {
+  useSearch: () => pageSearch,
+  useParams: () => ({ listId: "list-1" }),
+  useRouteContext: () => ({ session }),
+  useNavigate: () => async () => {},
+};
+for (const [, route] of pages) Object.assign(route, routeHooks);
 
 const realFetch = globalThis.fetch;
 const queryClients: QueryClient[] = [];
@@ -28,8 +63,8 @@ afterEach(() => {
   for (const client of queryClients.splice(0)) client.clear();
 });
 
-function renderFailingPage(route: AnyRoute, status = 400) {
-  globalThis.fetch = Object.assign(async () => new Response("That filter is invalid", { status }), {
+function renderPage(route: AnyRoute, respond: () => Promise<Response>) {
+  globalThis.fetch = Object.assign(respond, {
     preconnect: realFetch.preconnect,
   });
   const Page = route.options.component;
@@ -43,31 +78,38 @@ function renderFailingPage(route: AnyRoute, status = 400) {
   );
 }
 
-describe("a page that fails to load", () => {
-  test("Collection shows the server's message", async () => {
-    renderFailingPage(collectionRoute);
+describe.each(pages)("%s load errors", (_name, route, search) => {
+  test("shows the server's 400 text message", async () => {
+    pageSearch = search;
+    renderPage(route, async () => new Response("That filter is invalid", { status: 400 }));
     expect(await screen.findByText("That filter is invalid")).toBeTruthy();
   });
 
-  test("Orders shows the server's message", async () => {
-    renderFailingPage(ordersRoute);
-    expect(await screen.findByText("That filter is invalid")).toBeTruthy();
+  test.each([500, 503])("uses the server fallback for a %s response", async (status) => {
+    pageSearch = search;
+    renderPage(route, async () => new Response("Internal failure", { status }));
+    expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
+    expect(screen.queryByText(/Failed to (get|load|search)/)).toBeNull();
   });
 
-  test("Expenses shows the server's message", async () => {
-    renderFailingPage(expensesRoute);
-    expect(await screen.findByText("That filter is invalid")).toBeTruthy();
+  test("uses the server fallback for a network failure", async () => {
+    pageSearch = search;
+    renderPage(route, async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
   });
 });
 
 describe.each([
   ["Collection", collectionRoute],
   ["Orders", ordersRoute],
-  ["Expenses", expensesRoute],
-] as const)("%s during an outage", (_name, route) => {
-  test("uses the server fallback for a 503 response", async () => {
-    renderFailingPage(route, 503);
+] as const)("%s with no response data", (_name, route) => {
+  test("shows the server fallback instead of diagnostic text", async () => {
+    pageSearch = {};
+    renderPage(route, async () => Response.json(null));
     expect(await screen.findByText("The server didn't answer.")).toBeTruthy();
+    expect(screen.queryByText(/Failed to get/)).toBeNull();
   });
 });
 
