@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
-import type { ReactNode } from "react";
-import type { CellContext } from "@tanstack/react-table";
 import type { Order, OrderItem } from "@myakiba/contracts/orders/types";
+import { withRowPending } from "@/components/data-table/row-pending";
 
 interface OrdersPendingState {
   isOrderPending: (id: string) => boolean;
@@ -20,20 +19,11 @@ export function useOrderPending() {
   return pending;
 }
 
-export function withOrderPending(
-  render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
-) {
-  return function PendingCell(context: CellContext<Order, unknown>) {
-    const { isOrderPending } = useOrderPending();
-    return render(context, isOrderPending(context.row.original.orderId));
-  };
-}
+const useIsOrderPending = () => useOrderPending().isOrderPending;
+const useIsOrderItemPending = () => useOrderPending().isCollectionItemPending;
 
-export function withOrderItemPending(
-  render: (context: CellContext<OrderItem, unknown>, isPending: boolean) => ReactNode,
-) {
-  return function PendingCell(context: CellContext<OrderItem, unknown>) {
-    const { isCollectionItemPending } = useOrderPending();
-    return render(context, isCollectionItemPending(context.row.original.id));
-  };
-}
+export const withOrderPending = withRowPending(useIsOrderPending, (order: Order) => order.orderId);
+export const withOrderItemPending = withRowPending(
+  useIsOrderItemPending,
+  (item: OrderItem) => item.id,
+);

@@ -1,7 +1,6 @@
 import { createContext, useContext } from "react";
-import type { ReactNode } from "react";
-import type { CellContext } from "@tanstack/react-table";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
+import { withRowPending } from "@/components/data-table/row-pending";
 
 interface CollectionPendingState {
   isItemPending: (id: string) => boolean;
@@ -19,11 +18,9 @@ export function useCollectionPending() {
   return pending;
 }
 
-export function withCollectionPending(
-  render: (context: CellContext<CollectionItem, unknown>, isPending: boolean) => ReactNode,
-) {
-  return function PendingCell(context: CellContext<CollectionItem, unknown>) {
-    const { isItemPending } = useCollectionPending();
-    return render(context, isItemPending(context.row.original.id));
-  };
-}
+const useIsItemPending = () => useCollectionPending().isItemPending;
+
+export const withCollectionPending = withRowPending(
+  useIsItemPending,
+  (item: CollectionItem) => item.id,
+);
