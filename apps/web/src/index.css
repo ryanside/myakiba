@@ -190,7 +190,7 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Motion tokens. */
+/* Motion tokens. Reduced motion overrides the scales and distances, so things fade but never move. */
 :root {
   --motion-press: 150ms;
   --motion-hover: 150ms;
@@ -214,7 +214,34 @@
   --sheet-from: 100%;
   --sheet-from-opacity: 1;
   --toast-from: -100%;
+  --rise: 3px;
+  --appear-rise: 8px;
   --bar-rise: 8px;
+}
+
+:root[data-reduce-motion] {
+  --press-scale: 1;
+  --press-scale-text: 1;
+  --popup-from: 1;
+  --tooltip-from: 1;
+  --modal-from: 1;
+  --tick-from: 1;
+  --sheet-from: 0%;
+  --sheet-from-opacity: 0;
+  --toast-from: 0%;
+  --rise: 0px;
+  --appear-rise: 0px;
+  --bar-rise: 0px;
+  --motion-collapse: 0ms;
+}
+
+:root[data-reduce-motion] * {
+  scroll-behavior: auto !important;
+}
+
+/* Skeletons sit still. Spinners keep turning: a frozen one reads as a hung page. */
+:root[data-reduce-motion] .animate-pulse {
+  animation: none;
 }
 
 @theme inline {
@@ -307,14 +334,6 @@ body {
   position: relative;
 }
 
-:root[data-reduce-motion] *,
-:root[data-reduce-motion] *::before,
-:root[data-reduce-motion] *::after {
-  animation: none !important;
-  scroll-behavior: auto !important;
-  transition: none !important;
-}
-
 @layer base {
   /* The page is the only scrollbar: inner scrollers still scroll, but draw no bar. */
   * {
@@ -342,7 +361,7 @@ body {
 @keyframes appear {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--appear-rise));
   }
 }
 
@@ -564,7 +583,7 @@ body {
 @keyframes data-in {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(var(--rise));
   }
 }
 

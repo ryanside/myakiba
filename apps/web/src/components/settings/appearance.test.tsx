@@ -51,3 +51,9 @@ test.each([
     expect(localStorage.getItem("theme")).toBe(value);
   },
 );
+
+test("the Reduce motion setting says it keeps fades and drops movement", async () => {
+  renderAppearance();
+
+  expect(await screen.findByText("Replace movement with simple fades.")).toBeDefined();
+});
