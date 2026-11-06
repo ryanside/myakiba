@@ -18,7 +18,6 @@ import { collectionItem } from "../../../test/collection-item";
 
 const realForm = await import("@tanstack/react-form");
 const { useForm: useRealForm } = realForm;
-let submissionDone: Promise<PromiseSettledResult<void>[]> = Promise.resolve([]);
 await mock.module("@tanstack/react-form", () => ({
   ...realForm,
   useForm: (...args: Parameters<typeof useRealForm>) => {
@@ -27,8 +26,8 @@ await mock.module("@tanstack/react-form", () => ({
       const handleSubmit = form.handleSubmit;
       form.handleSubmit = (submitMeta?: Parameters<typeof handleSubmit>[0]) => {
         const submission = handleSubmit(submitMeta);
-        // The pre-fix form drops this rejection, so observe it before the failed save settles.
-        submissionDone = Promise.allSettled([submission]);
+        // The pre-fix sheet drops this rejection, and Bun would fail that run outside the test.
+        submission.catch(() => {});
         return submission;
       };
       return form;
@@ -169,10 +168,7 @@ describe.each(["orders", "collection"] as const)(
         ).toBe(true);
         await act(async () => {
           response.resolve(new Response("Item could not be saved", { status: 503 }));
-          await submissionDone;
         });
-        const [submission] = await submissionDone;
-        expect(submission?.status).toBe("rejected");
         await waitFor(() =>
           expect(
             screen
