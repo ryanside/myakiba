@@ -1156,6 +1156,26 @@
       "bug": "WORKTREE snapshots dropped force-staged ignored files that were not yet committed",
       "test": "scripts/replay.test.ts",
       "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"]
+    },
+    {
+      "fix": "875312fc",
+      "bug": "a failed save on a filtered or sorted Orders list remounted every cell, so the open Edit order sheet vanished with the user's draft",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "the edit order sheet on the filtered list > keeps the draft after a 404 response",
+        "the edit order sheet on the filtered list > keeps the draft after a 503 response"
+      ]
+    },
+    {
+      "fix": "734e0b51",
+      "bug": "form footers rendered a button inside a button",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "edit-order sheet footer > has no nested button and Cancel closes the form",
+        "merge dialog footer > has no nested button and Cancel closes the form",
+        "move to an existing order footer > has no nested button and Cancel closes the form",
+        "move to a new order footer > has no nested button and Cancel closes the form"
+      ]
     }
   ],
   "lint": [
