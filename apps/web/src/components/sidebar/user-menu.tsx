@@ -1,4 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
 import {
   ComputerIcon,
   LogoutSquare01Icon,
@@ -30,7 +31,7 @@ const THEME_ICONS = {
   light: Sun01Icon,
   dark: Moon02Icon,
   system: ComputerIcon,
-} satisfies Record<ThemeValue, typeof Sun01Icon>;
+} satisfies Record<ThemeValue, IconSvgElement>;
 
 export default function UserMenu({ session }: { session: Session }) {
   const navigate = useNavigate();
