@@ -12,7 +12,7 @@ import {
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 
-function collectionItem(id: string): CollectionItem {
+function pendingViewItem(id: string): CollectionItem {
   return {
     id,
     orderId: null,
@@ -46,7 +46,7 @@ function collectionItem(id: string): CollectionItem {
   };
 }
 
-const items = [collectionItem("saving"), collectionItem("idle")];
+const items = [pendingViewItem("saving"), pendingViewItem("idle")];
 const pending = { edit: new Set<string>(), order: new Set<string>() };
 
 const realCollection = await import("@/hooks/use-collection");
