@@ -1,3 +1,4 @@
+import { useOrderPending } from "./order-pending-context";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +23,6 @@ interface OrdersGalleryGridProps {
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly currency: Currency;
-  readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -35,9 +35,9 @@ export function OrdersGalleryGrid({
   onEditOrder,
   onDeleteOrders,
   currency,
-  isOrderPending,
   isLoading,
 }: OrdersGalleryGridProps): React.JSX.Element {
+  const { isOrderPending } = useOrderPending();
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {

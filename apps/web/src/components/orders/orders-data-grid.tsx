@@ -1,3 +1,4 @@
+import { OrderPendingContext } from "./order-pending-context";
 import { useCallback, useMemo, useState } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
@@ -21,11 +22,7 @@ import { OrdersToolbar } from "./orders-toolbar";
 import { OrdersActionBar } from "./orders-action-bar";
 import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
-import {
-  createOrdersColumns,
-  OrderItemSelectionContext,
-  OrderPendingContext,
-} from "./orders-columns";
+import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
@@ -325,7 +322,6 @@ export default function OrdersDataGrid() {
                         onEditOrder={handleEditOrder}
                         onDeleteOrders={handleDeleteOrders}
                         currency={currency}
-                        isOrderPending={isOrderPending}
                         isLoading={isPending}
                       />
                     );
@@ -340,7 +336,6 @@ export default function OrdersDataGrid() {
                       onDeleteOrders={handleDeleteOrders}
                       currency={currency}
                       locale={locale}
-                      isOrderPending={isOrderPending}
                       isLoading={isPending}
                     />
                   );

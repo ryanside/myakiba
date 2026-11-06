@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { useOrderPending } from "./order-pending-context";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -34,7 +36,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
@@ -49,7 +51,6 @@ interface OrderItemSubColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
-  isCollectionItemPending: (collectionId: string) => boolean;
 }
 
 function OrderItemActionsCell({
@@ -160,6 +161,15 @@ function OrderItemActionsCell({
   );
 }
 
+function withOrderItemPending(
+  render: (context: CellContext<OrderItem, unknown>, isPending: boolean) => ReactNode,
+) {
+  return function PendingCell(context: CellContext<OrderItem, unknown>) {
+    const { isCollectionItemPending } = useOrderPending();
+    return render(context, isCollectionItemPending(context.row.original.id));
+  };
+}
+
 export function createOrderItemSubColumns({
   orderId,
   onEditItem,
@@ -167,7 +177,6 @@ export function createOrderItemSubColumns({
   currency,
   locale,
   dateFormat,
-  isCollectionItemPending,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
   return [
     {
@@ -262,9 +271,8 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <PopoverDatePickerCell
             value={item.orderDate}
@@ -275,7 +283,7 @@ export function createOrderItemSubColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -289,9 +297,8 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <InlineReleaseCell
             releaseId={item.releaseId}
@@ -311,7 +318,7 @@ export function createOrderItemSubColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -325,9 +332,8 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCountCell
             label="Count"
@@ -338,7 +344,7 @@ export function createOrderItemSubColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -353,9 +359,8 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <SelectCell
             label="Status"
@@ -371,7 +376,7 @@ export function createOrderItemSubColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -386,9 +391,8 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <InlineCurrencyCell
             label="Price"
@@ -402,7 +406,7 @@ export function createOrderItemSubColumns({
             zeroAsEmpty
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -415,9 +419,8 @@ export function createOrderItemSubColumns({
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <OrderItemActionsCell
             item={item}
@@ -429,7 +432,7 @@ export function createOrderItemSubColumns({
             dateFormat={dateFormat}
           />
         );
-      },
+      }),
       size: 72,
       enableSorting: false,
       enableHiding: false,

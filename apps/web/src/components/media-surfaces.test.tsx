@@ -1,3 +1,5 @@
+import { OrderPendingContext } from "./orders/order-pending-context";
+import { CollectionPendingContext } from "./collection/collection-pending-context";
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { cleanup, render } from "@testing-library/react";
@@ -295,8 +297,6 @@ const collectionProps = {
   onAddCollectionItemsToNewOrder: noop,
   currency: "JPY",
   dateFormat: "MM/DD/YYYY",
-  isCollectionPending: () => false,
-  isCollectionOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -307,7 +307,6 @@ const ordersProps = {
   onEditOrder: noop,
   onDeleteOrders: noop,
   currency: "JPY",
-  isOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -391,7 +390,15 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   await router.load();
   return render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <OrderPendingContext
+        value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+      >
+        <CollectionPendingContext
+          value={{ isCollectionPending: () => false, isCollectionOrderPending: () => false }}
+        >
+          <RouterProvider router={router} />
+        </CollectionPendingContext>
+      </OrderPendingContext>
     </QueryClientProvider>,
   );
 }

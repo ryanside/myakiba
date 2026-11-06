@@ -27,7 +27,7 @@
     "apps/web/src/components/cells/popover-multi-input-cell.tsx": 1,
     "apps/web/src/components/cells/select-cell.tsx": 2,
     "apps/web/src/components/collection/collection-data-grid.tsx": 2,
-    "apps/web/src/components/collection/collection-item-form.tsx": 2,
+    "apps/web/src/components/collection/collection-item-form.tsx": 1,
     "apps/web/src/components/collection/collection-quick-filters.tsx": 1,
     "apps/web/src/components/collection/collection-toolbar.tsx": 2,
     "apps/web/src/components/collection/filters-form.tsx": 1,

@@ -12,7 +12,6 @@ export function OrderDetailItems({
   setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
-  isCollectionItemPending,
 }: {
   readonly orderId: string;
   readonly order: Order | undefined;
@@ -21,7 +20,6 @@ export function OrderDetailItems({
   readonly setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   readonly onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   readonly onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  readonly isCollectionItemPending: (collectionId: string) => boolean;
 }): ReactNode {
   if (isLoading) {
     return (
@@ -39,7 +37,6 @@ export function OrderDetailItems({
           setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
-          isCollectionItemPending={isCollectionItemPending}
         />
       </section>
     );
@@ -61,7 +58,6 @@ export function OrderDetailItems({
         setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
         onEditItem={onEditItem}
         onDeleteItem={onDeleteItem}
-        isCollectionItemPending={isCollectionItemPending}
       />
     </section>
   );

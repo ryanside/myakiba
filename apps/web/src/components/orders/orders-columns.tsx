@@ -1,3 +1,4 @@
+import { OrderPendingContext } from "./order-pending-context";
 import { createContext } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -48,13 +49,6 @@ interface OrdersColumnsParams {
   locale: string;
   dateFormat: DateFormat;
 }
-
-interface OrdersPendingState {
-  isOrderPending: (orderId: string) => boolean;
-  isCollectionItemPending: (collectionId: string) => boolean;
-}
-
-export const OrderPendingContext = createContext<OrdersPendingState | null>(null);
 
 function withOrderPending(
   render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
@@ -139,28 +133,13 @@ export function createOrdersColumns({
               }
 
               return (
-                <OrderPendingContext.Consumer>
-                  {(pending) => {
-                    if (!pending) {
-                      throw new Error(
-                        "Order item grids must be rendered within OrderPendingContext",
-                      );
-                    }
-
-                    return (
-                      <OrderItemSubDataGrid
-                        orderId={row.orderId}
-                        selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
-                        setSelectedOrderIdByCollectionId={
-                          itemSelection.setSelectedOrderIdByCollectionId
-                        }
-                        onEditItem={onEditItem}
-                        onDeleteItem={onDeleteItem}
-                        isCollectionItemPending={pending.isCollectionItemPending}
-                      />
-                    );
-                  }}
-                </OrderPendingContext.Consumer>
+                <OrderItemSubDataGrid
+                  orderId={row.orderId}
+                  selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
+                  setSelectedOrderIdByCollectionId={itemSelection.setSelectedOrderIdByCollectionId}
+                  onEditItem={onEditItem}
+                  onDeleteItem={onDeleteItem}
+                />
               );
             }}
           </OrderItemSelectionContext.Consumer>

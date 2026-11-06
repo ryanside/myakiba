@@ -1,3 +1,4 @@
+import { useCollectionPending } from "./collection-pending-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
@@ -41,8 +42,6 @@ interface CollectionCardGridProps {
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-  readonly isCollectionPending: (collectionId: string) => boolean;
-  readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -58,10 +57,9 @@ export function CollectionCardGrid({
   currency,
   locale,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
+  const { isCollectionPending, isCollectionOrderPending } = useCollectionPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {

@@ -167,7 +167,6 @@ const SURFACES: readonly Surface[] = [
         setSelectedOrderIdByCollectionId={() => {}}
         onEditItem={noop}
         onDeleteItem={noop}
-        isCollectionItemPending={() => false}
       />
     ),
   },

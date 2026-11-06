@@ -48,7 +48,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
-  isCollectionItemPending,
   heading,
   wrapped = true,
   isLoading = false,
@@ -58,7 +57,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  isCollectionItemPending: (collectionId: string) => boolean;
   heading?: ReactNode;
   wrapped?: boolean;
   isLoading?: boolean;
@@ -129,9 +127,8 @@ export function OrderItemSubDataGrid({
         currency,
         locale,
         dateFormat,
-        isCollectionItemPending,
       }),
-    [currency, locale, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
+    [currency, locale, dateFormat, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({

@@ -2,7 +2,8 @@ import { afterEach, expect, test } from "bun:test";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { createOrdersColumns, OrderPendingContext } from "./orders-columns";
+import { createOrdersColumns } from "./orders-columns";
+import { OrderPendingContext } from "./order-pending-context";
 
 afterEach(cleanup);
 

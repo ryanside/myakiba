@@ -1,3 +1,4 @@
+import { CollectionPendingContext } from "./collection-pending-context";
 import { afterEach, mock, test } from "bun:test";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -70,8 +71,6 @@ function RowActions(): ReactNode {
     columns: createCollectionColumns({
       ...handlers,
       locale: "en-US",
-      isCollectionPending: () => false,
-      isCollectionOrderPending: () => false,
     }),
     getCoreRowModel: getCoreRowModel(),
   });
@@ -79,7 +78,13 @@ function RowActions(): ReactNode {
     .getRowModel()
     .rows[0]?.getVisibleCells()
     .find((visible) => visible.column.id === "actions");
-  return cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null;
+  return (
+    <CollectionPendingContext
+      value={{ isCollectionPending: () => false, isCollectionOrderPending: () => false }}
+    >
+      {cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null}
+    </CollectionPendingContext>
+  );
 }
 
 const MENUS: readonly (readonly [string, () => ReactNode])[] = [

@@ -107,10 +107,14 @@ function CollectionItemFormContent({
   return (
     <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          try {
+            await form.handleSubmit();
+          } catch {
+            // The mutation reports the error and the sheet keeps the draft.
+          }
         }}
       >
         <SheetHeader>
