@@ -1,4 +1,6 @@
 import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
+import type { CellContext } from "@tanstack/react-table";
 
 interface OrdersPendingState {
   isOrderPending: (id: string) => boolean;
@@ -13,4 +15,14 @@ export function useOrderPending() {
     throw new Error("Order cells must be rendered within OrderPendingContext");
   }
   return pending;
+}
+
+export function orderPendingCell<TData>(
+  isRowPending: (pending: OrdersPendingState, row: TData) => boolean,
+) {
+  return (render: (context: CellContext<TData, unknown>, isPending: boolean) => ReactNode) =>
+    function PendingCell(context: CellContext<TData, unknown>) {
+      const pending = useOrderPending();
+      return render(context, isRowPending(pending, context.row.original));
+    };
 }

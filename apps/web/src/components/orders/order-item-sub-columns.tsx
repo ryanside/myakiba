@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import { useOrderPending } from "./order-pending-context";
+import { orderPendingCell } from "./order-pending-context";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -36,7 +35,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
-import type { CellContext, ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
@@ -161,14 +160,9 @@ function OrderItemActionsCell({
   );
 }
 
-function withOrderItemPending(
-  render: (context: CellContext<OrderItem, unknown>, isPending: boolean) => ReactNode,
-) {
-  return function PendingCell(context: CellContext<OrderItem, unknown>) {
-    const { isCollectionItemPending } = useOrderPending();
-    return render(context, isCollectionItemPending(context.row.original.id));
-  };
-}
+const withOrderItemPending = orderPendingCell<OrderItem>((pending, item) =>
+  pending.isCollectionItemPending(item.id),
+);
 
 export function createOrderItemSubColumns({
   orderId,

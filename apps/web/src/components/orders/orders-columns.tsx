@@ -1,12 +1,12 @@
-import { OrderPendingContext } from "./order-pending-context";
+import { orderPendingCell } from "./order-pending-context";
 import { createContext } from "react";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import type { CellContext, ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -50,21 +50,9 @@ interface OrdersColumnsParams {
   dateFormat: DateFormat;
 }
 
-function withOrderPending(
-  render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
-) {
-  return (context: CellContext<Order, unknown>) => (
-    <OrderPendingContext.Consumer>
-      {(pending) => {
-        if (!pending) {
-          throw new Error("Order cells must be rendered within OrderPendingContext");
-        }
-
-        return render(context, pending.isOrderPending(context.row.original.orderId));
-      }}
-    </OrderPendingContext.Consumer>
-  );
-}
+const withOrderPending = orderPendingCell<Order>((pending, order) =>
+  pending.isOrderPending(order.orderId),
+);
 
 export function createOrdersColumns({
   onEditOrder,
