@@ -17,6 +17,7 @@ import {
 import type { SQL, SQLWrapper } from "drizzle-orm";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection, EntryCategory } from "@myakiba/contracts/shared/types";
+import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
 import type {
   AnalyticsSectionSort,
   AnalyticsSectionSortOrder,
@@ -35,7 +36,6 @@ import type {
   EntrySection,
 } from "./model";
 
-const TOP_LIMIT = 5;
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
 const EMPTY_SECTION_KPIS: AnalyticsSectionKpis = {
@@ -232,7 +232,7 @@ function rankAnalytics(
         category,
         uniqueOwned: categoryRows.length,
         topByCount: categoryRows
-          .filter((row) => row.rankByCount <= TOP_LIMIT)
+          .filter((row) => row.rankByCount <= ANALYTICS_LEADERBOARD_SIZE)
           .toSorted((left, right) => left.rankByCount - right.rankByCount)
           .map(({ entryId, name, itemCount, totalSpent }) => ({
             entryId,
@@ -241,7 +241,7 @@ function rankAnalytics(
             totalSpent,
           })),
         topBySpend: categoryRows
-          .filter((row) => row.rankBySpend <= TOP_LIMIT)
+          .filter((row) => row.rankBySpend <= ANALYTICS_LEADERBOARD_SIZE)
           .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
           .map(({ entryId, name, itemCount, totalSpent }) => ({
             entryId,
@@ -254,22 +254,22 @@ function rankAnalytics(
     shops: {
       uniqueOwned: shopRows.length,
       topByCount: shopRows
-        .filter((row) => row.rankByCount <= TOP_LIMIT)
+        .filter((row) => row.rankByCount <= ANALYTICS_LEADERBOARD_SIZE)
         .toSorted((left, right) => left.rankByCount - right.rankByCount)
         .map(({ shop, itemCount, totalSpent }) => ({ shop, itemCount, totalSpent })),
       topBySpend: shopRows
-        .filter((row) => row.rankBySpend <= TOP_LIMIT)
+        .filter((row) => row.rankBySpend <= ANALYTICS_LEADERBOARD_SIZE)
         .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
         .map(({ shop, itemCount, totalSpent }) => ({ shop, itemCount, totalSpent })),
     },
     scales: {
       uniqueOwned: scaleRows.length,
       topByCount: scaleRows
-        .filter((row) => row.rankByCount <= TOP_LIMIT)
+        .filter((row) => row.rankByCount <= ANALYTICS_LEADERBOARD_SIZE)
         .toSorted((left, right) => left.rankByCount - right.rankByCount)
         .map(({ scale, itemCount, totalSpent }) => ({ scale, itemCount, totalSpent })),
       topBySpend: scaleRows
-        .filter((row) => row.rankBySpend <= TOP_LIMIT)
+        .filter((row) => row.rankBySpend <= ANALYTICS_LEADERBOARD_SIZE)
         .toSorted((left, right) => left.rankBySpend - right.rankBySpend)
         .map(({ scale, itemCount, totalSpent }) => ({ scale, itemCount, totalSpent })),
     },
