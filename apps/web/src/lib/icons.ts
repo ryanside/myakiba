@@ -6,4 +6,6 @@ export {
   ArrowRight01Icon as ExpandIcon,
   // Goes to another page in the app, such as an order's own page or a "view all" link.
   ArrowRight02Icon as NavigateIcon,
+  // Goes back to the page you came from.
+  ArrowLeft02Icon as BackIcon,
 } from "@hugeicons/core-free-icons";

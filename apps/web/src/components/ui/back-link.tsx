@@ -1,8 +1,8 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { BackIcon } from "@/lib/icons";
 
 type LinkProps = ComponentProps<typeof Link>;
 
@@ -39,7 +39,7 @@ export function BackLink({ text, font, className, ...navigationProps }: BackLink
   const content = (
     <>
       <HugeiconsIcon
-        icon={ArrowLeft01Icon}
+        icon={BackIcon}
         className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:-translate-x-0.5")}
         aria-hidden
       />
