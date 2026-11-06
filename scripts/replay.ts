@@ -468,13 +468,21 @@ async function commitWorkingTree() {
   try {
     const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
     const realIndexPath = path.resolve(root, realIndex.trim());
-    // Keep force-staged ignored files, then clear flags only for paths present in the working tree.
+    // Keep force-staged ignored files and preserve absent sparse paths.
     if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
     const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
-    const entries = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
+    const indexListing = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
+    const entries = indexListing.split("\0");
+    const assumed = entries.filter((entry) => /^[a-z] /.test(entry)).map((entry) => entry.slice(2));
+    if (assumed.length > 0) {
+      const input = Buffer.from(`${assumed.join("\0")}\0`);
+      await $`git update-index --no-assume-unchanged -z --stdin < ${input}`
+        .cwd(root)
+        .env(indexEnv)
+        .quiet();
+    }
     const present = entries
-      .split("\0")
-      .filter((entry) => /^[a-zS] /.test(entry))
+      .filter((entry) => /^[Ss] /.test(entry))
       .map((entry) => entry.slice(2))
       .filter((file) => {
         try {
@@ -486,8 +494,10 @@ async function commitWorkingTree() {
       });
     if (present.length > 0) {
       const input = Buffer.from(`${present.join("\0")}\0`);
-      for (const flag of ["--no-assume-unchanged", "--no-skip-worktree"])
-        await $`git update-index ${flag} -z --stdin < ${input}`.cwd(root).env(indexEnv).quiet();
+      await $`git update-index --no-skip-worktree -z --stdin < ${input}`
+        .cwd(root)
+        .env(indexEnv)
+        .quiet();
     }
     const tree = await $`git add -A && git write-tree`.cwd(root).env(indexEnv).quiet().text();
     const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
