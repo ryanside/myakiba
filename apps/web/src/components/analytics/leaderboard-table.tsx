@@ -4,6 +4,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
 import {
   CellSkeleton,
@@ -18,6 +20,8 @@ export interface RowNavigation {
 }
 
 type CellValue = string | number | null;
+type RankedBy = "itemCount" | "totalSpent";
+type Preferences = Pick<ReturnType<typeof useUserPreferences>, "currency" | "locale">;
 type RowIdKey<TRow> = {
   [Key in keyof TRow]-?: TRow[Key] extends string | number ? Key : never;
 }[keyof TRow];
@@ -26,6 +30,8 @@ type ColumnSpec = {
   readonly label: string;
   /** The loading bar; text columns without one get DataTable's lines of text. */
   readonly skeleton?: ReactNode;
+  /** Money columns hold minor units and show in the user's currency. */
+  readonly format?: "money";
   /** Number columns: [plain, with a bar] header widths and the figure's minimum width. */
   readonly number?: {
     readonly widths: readonly [string, string];
@@ -45,6 +51,7 @@ const COLUMN_SPECS = {
   },
   totalSpent: {
     label: "Spent",
+    format: "money",
     skeleton: DATA_TABLE_SKELETON.money,
     number: { widths: ["w-24", "w-24 lg:w-44"], figureWidth: "min-w-18" },
   },
@@ -54,12 +61,17 @@ export type LeaderboardColumn = keyof typeof COLUMN_SPECS;
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 
-function leaderboardColumns<TRow extends Record<string, CellValue>>(
-  columns: readonly LeaderboardColumn[],
-  formatCell: ((column: string, value: CellValue) => CellValue) | undefined,
-  barColumn: string,
-  barMax: number,
-): ColumnDef<TRow, CellValue>[] {
+function leaderboardColumns<TRow extends Record<string, CellValue>>({
+  columns,
+  barColumn,
+  barMax,
+  currency,
+  locale,
+}: Preferences & {
+  readonly columns: readonly LeaderboardColumn[];
+  readonly barColumn: RankedBy;
+  readonly barMax: number;
+}): ColumnDef<TRow, CellValue>[] {
   return [
     {
       id: ROW_NUMBER_COLUMN_ID,
@@ -86,7 +98,10 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
           : { skeleton: spec.skeleton },
         cell: ({ getValue }) => {
           const value = getValue();
-          const shown = (formatCell ? formatCell(column, value) : value) ?? "—";
+          const shown =
+            (spec.format === "money" && value !== null
+              ? formatCurrencyFromMinorUnits(Number(value), currency, locale)
+              : value) ?? "—";
           if (!spec.number) {
             return (
               <span className="block truncate" title={String(shown)}>
@@ -120,7 +135,6 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
   columns,
-  formatCell,
   rowIdKey,
   getRowNavigation,
   isLoading = false,
@@ -128,14 +142,14 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
 }: {
   readonly rows: readonly TRow[];
   readonly columns: readonly LeaderboardColumn[];
-  readonly formatCell?: (column: string, value: CellValue) => CellValue;
   readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
   readonly isLoading?: boolean;
   /** The column the rows are ranked by; its values get a proportional bar. */
-  readonly rankedBy: "itemCount" | "totalSpent";
+  readonly rankedBy: RankedBy;
 }): ReactNode {
   const navigate = useNavigate();
+  const { currency, locale } = useUserPreferences();
   // useReactTable takes a mutable array, so this copy only drops `readonly`.
   const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
@@ -143,8 +157,8 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     [rankedBy, tableData],
   );
   const tableColumns = useMemo(
-    () => leaderboardColumns<TRow>(columns, formatCell, rankedBy, barMax),
-    [barMax, columns, formatCell, rankedBy],
+    () => leaderboardColumns<TRow>({ columns, barColumn: rankedBy, barMax, currency, locale }),
+    [barMax, columns, currency, locale, rankedBy],
   );
   const table = useReactTable({
     data: tableData,

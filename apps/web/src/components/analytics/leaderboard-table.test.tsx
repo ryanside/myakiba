@@ -15,9 +15,15 @@ afterEach(cleanup);
 
 async function renderInRouter(table: ReactNode) {
   const root = createRootRoute({ component: Outlet });
-  const home = createRoute({ getParentRoute: () => root, path: "/", component: () => table });
+  const app = createRoute({
+    getParentRoute: () => root,
+    id: "(app)",
+    component: Outlet,
+    beforeLoad: () => ({ session: { user: { currency: "JPY", dateFormat: "MM/DD/YYYY" } } }),
+  });
+  const home = createRoute({ getParentRoute: () => app, path: "/", component: () => table });
   const router = createRouter({
-    routeTree: root.addChildren([home]),
+    routeTree: root.addChildren([app.addChildren([home])]),
     history: createMemoryHistory({ initialEntries: ["/"] }),
   });
   await act(async () => {
@@ -64,4 +70,10 @@ test("shows every row it is given and scales the bars to the largest", async () 
     (row) => row.querySelector<HTMLElement>("[aria-hidden] > span")?.style.width,
   );
   expect(bars).toEqual(["100%", "50%", "25%"]);
+});
+
+test("shows spending in the user's currency", async () => {
+  await renderShops("AmiAmi");
+  const [row] = screen.getAllByRole("row").slice(1);
+  expect(row?.textContent).toBe("1AmiAmi123¥12,346");
 });
