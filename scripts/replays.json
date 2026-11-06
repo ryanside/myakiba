@@ -994,6 +994,15 @@
         "Item Database diagnostics > keeps the diagnostic fallback apart from the %s user message",
         "Wishlist diagnostics > separates diagnostics from the %s user message"
       ]
+    },
+    {
+      "fix": "0dc2bd69",
+      "bug": "a Reset shown only for deferred search text unmounted on pointerdown, so its click never ran and focus fell to the page",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > clears a deferred search and restores focus when Reset is shown only for its text",
+        "Reset Filters on /collection > clears a deferred search and restores focus when Reset is shown only for its text"
+      ]
     }
   ],
   "lint": [
