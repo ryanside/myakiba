@@ -1,85 +1,23 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  createMemoryHistory,
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  RouterProvider,
-} from "@tanstack/react-router";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/schema";
-import type { Order, OrdersPage } from "@myakiba/contracts/orders/types";
 import OrdersDataGrid from "@/components/orders/orders-data-grid";
 import { toast } from "@/components/ui/toast";
+import { renderAppRoute, stubFetch } from "../../../test/app-route";
+import { ordersPage } from "../../../test/order";
 
-const realFetch = globalThis.fetch;
-
-afterEach(() => {
-  cleanup();
-  globalThis.fetch = realFetch;
-});
-
-const order: Order = {
-  orderId: "od-deleted",
-  title: "Deleted order",
-  shop: "AmiAmi",
-  releaseDate: null,
-  shippingMethod: "n/a",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-  status: "Ordered",
-  shippingFee: 100,
-  taxes: 0,
-  duties: 0,
-  tariffs: 0,
-  miscFees: 0,
-  notes: "",
-  total: 1000,
-  itemCount: 1,
-  images: [],
-  createdAt: "2026-11-05T00:00:00.000Z",
-  updatedAt: "2026-11-05T00:00:00.000Z",
-};
-
-const page: OrdersPage = {
-  items: [order],
-  totalCount: 1,
-  totalSpent: 1000,
-  activeOrders: 1,
-  unpaidCosts: 0,
-};
+afterEach(cleanup);
 
 /** The grid edits optimistically without filters and marks the order pending with them. */
 const lists = { unfiltered: "/orders", filtered: "/orders?order=asc" } as const;
 
+const pages = [
+  { path: "/orders", component: OrdersDataGrid, validateSearch: ordersSearchSchema },
+] as const;
+
 async function renderOrdersGrid(url: string, queryClient: QueryClient) {
-  const root = createRootRoute({ component: Outlet });
-  const app = createRoute({
-    getParentRoute: () => root,
-    id: "(app)",
-    component: Outlet,
-    beforeLoad: () => ({ session: { user: { currency: "USD", dateFormat: "MM/DD/YYYY" } } }),
-  });
-  const orders = createRoute({
-    getParentRoute: () => app,
-    path: "/orders",
-    component: OrdersDataGrid,
-    validateSearch: ordersSearchSchema,
-  });
-  const router = createRouter({
-    routeTree: root.addChildren([app.addChildren([orders])]),
-    history: createMemoryHistory({ initialEntries: [url] }),
-  });
-  await router.load();
-  render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  );
+  await renderAppRoute(url, pages, queryClient);
   await screen.findByRole("button", { name: "$10.00" });
 }
 
@@ -121,11 +59,7 @@ async function saveAndReadToasts(
   url: string,
   respondToEdit: () => Promise<Response>,
 ) {
-  globalThis.fetch = Object.assign(
-    async (input: RequestInfo | URL, init?: RequestInit) =>
-      new Request(input, init).method === "PUT" ? respondToEdit() : Response.json(page),
-    { preconnect: realFetch.preconnect },
-  );
+  stubFetch((request) => (request.method === "PUT" ? respondToEdit() : Response.json(ordersPage)));
   const added = spyOn(toast, "add");
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -189,16 +123,13 @@ describe.each(Object.entries(lists))("the edit order sheet on the %s list", (_na
     test(`keeps the draft after a ${status} response`, async () => {
       const response = Promise.withResolvers<Response>();
       let requested = false;
-      globalThis.fetch = Object.assign(
-        async (input: RequestInfo | URL, init?: RequestInit) => {
-          if (new Request(input, init).method === "PUT") {
-            requested = true;
-            return response.promise;
-          }
-          return Response.json(page);
-        },
-        { preconnect: realFetch.preconnect },
-      );
+      stubFetch((request) => {
+        if (request.method === "PUT") {
+          requested = true;
+          return response.promise;
+        }
+        return Response.json(ordersPage);
+      });
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
       });
