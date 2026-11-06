@@ -1141,6 +1141,21 @@
       "bug": "a failed Reset left focus on the page body instead of the remounted search field",
       "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
       "fixed": ["a rejected Reset navigation restores focus to the remounted search field"]
+    },
+    {
+      "fix": "997cbcb3",
+      "bug": "empty HEAD aliases disabled the pinned guard, and unpinned aliases were silently ignored",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a pinned replay rejects an empty HEAD alias list before running tests",
+        "an unpinned replay rejects HEAD aliases before running tests"
+      ]
+    },
+    {
+      "fix": "ea452301",
+      "bug": "WORKTREE snapshots dropped force-staged ignored files that were not yet committed",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"]
     }
   ],
   "lint": [
