@@ -87,7 +87,7 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
           if (column !== barColumn || barMax <= 0) return shown;
 
           return (
-            <span className="inline-flex items-center justify-end gap-2">
+            <span className="flex items-center justify-end gap-2">
               <span
                 aria-hidden
                 className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
