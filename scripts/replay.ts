@@ -469,8 +469,9 @@ async function commitWorkingTree() {
     const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
     const realIndexPath = path.resolve(root, realIndex.trim());
     // Keep force-staged ignored files and preserve absent sparse paths.
-    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
     const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
+    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
+    else await $`git read-tree HEAD`.cwd(root).env(indexEnv).quiet();
     const indexListing = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
     const entries = indexListing.split("\0");
     const assumed = entries.filter((entry) => /^[a-z] /.test(entry)).map((entry) => entry.slice(2));
