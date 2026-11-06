@@ -8,4 +8,6 @@ export {
   ArrowRight02Icon as NavigateIcon,
   // Goes back to the page you came from.
   ArrowLeft02Icon as BackIcon,
+  // Opens a page in a new tab.
+  ExternalLinkIcon as ExternalIcon,
 } from "@hugeicons/core-free-icons";
