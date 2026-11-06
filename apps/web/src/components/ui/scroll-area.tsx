@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils";
 function ScrollArea({
   className,
   children,
-  horizontal = false,
+  // Only the scraper's grids still pass this; with no drawn scrollbar it changes nothing.
+  horizontal: _horizontal,
   ...props
 }: ScrollAreaPrimitive.Root.Props & { horizontal?: boolean }) {
   return (
@@ -20,35 +21,8 @@ function ScrollArea({
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
-      {horizontal ? <ScrollBar orientation="horizontal" /> : null}
-      <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );
 }
 
-function ScrollBar({
-  className,
-  orientation = "vertical",
-  ...props
-}: ScrollAreaPrimitive.Scrollbar.Props) {
-  return (
-    <ScrollAreaPrimitive.Scrollbar
-      data-slot="scroll-area-scrollbar"
-      data-orientation={orientation}
-      orientation={orientation}
-      className={cn(
-        "flex touch-none p-px opacity-0 transition-opacity duration-150 ease-out select-none data-hovering:opacity-100 data-scrolling:opacity-100 data-horizontal:opacity-100 data-scrolling:duration-0 data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
-        className,
-      )}
-      {...props}
-    >
-      <ScrollAreaPrimitive.Thumb
-        data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
-      />
-    </ScrollAreaPrimitive.Scrollbar>
-  );
-}
-
-export { ScrollArea, ScrollBar };
+export { ScrollArea };

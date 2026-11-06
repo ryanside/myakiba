@@ -305,7 +305,7 @@ export default function OrdersDataGrid() {
                   if (isTableView) {
                     return (
                       <DataGridContainer>
-                        <ScrollArea horizontal>
+                        <ScrollArea>
                           <DataGridTable />
                         </ScrollArea>
                       </DataGridContainer>

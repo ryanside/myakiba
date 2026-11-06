@@ -293,7 +293,7 @@ export const CollectionDataGrid = () => {
               if (isTableView) {
                 return (
                   <DataGridContainer>
-                    <ScrollArea horizontal>
+                    <ScrollArea>
                       <DataGridTable />
                     </ScrollArea>
                   </DataGridContainer>

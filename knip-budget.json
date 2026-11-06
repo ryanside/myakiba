@@ -70,7 +70,6 @@
     "apps/web/src/components/ui/progress.tsx ProgressIndicator",
     "apps/web/src/components/ui/progress.tsx ProgressTrack",
     "apps/web/src/components/ui/progress.tsx ProgressValue",
-    "apps/web/src/components/ui/scroll-area.tsx ScrollBar",
     "apps/web/src/components/ui/select.tsx SelectLabel",
     "apps/web/src/components/ui/select.tsx SelectScrollDownButton",
     "apps/web/src/components/ui/select.tsx SelectScrollUpButton",

@@ -202,7 +202,7 @@ export function OrderItemSubDataGrid({
       >
         <div className="w-full space-y-2.5 overflow-x-auto">
           <DataGridContainer className={wrapped ? "bg-card" : undefined}>
-            <ScrollArea horizontal>
+            <ScrollArea>
               <DataGridTable />
             </ScrollArea>
           </DataGridContainer>
