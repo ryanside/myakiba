@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { useMemo } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { EditedOrder } from "@myakiba/contracts/orders/schema";
+import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { PopoverMultiInputCell } from "@/components/cells/popover-multi-input-cell";
-import { OrderActionsCell } from "@/components/orders/order-row-cells";
+import { createOrdersColumns } from "@/components/orders/orders-columns";
 import { toast } from "@/components/ui/toast";
-import { orThrow, useResourceMutation } from "../client";
-import { editOrderCommand } from "./orders";
+import { useOrdersMutations } from "@/hooks/use-orders";
 
 const realFetch = globalThis.fetch;
 
@@ -40,70 +39,101 @@ const order: Order = {
   updatedAt: "2026-11-05T00:00:00.000Z",
 };
 
-function FeesCell() {
-  const mutation = useResourceMutation(editOrderCommand);
-  return (
-    <PopoverMultiInputCell
-      title="Fees & Charges"
-      inputs={[{ title: "Shipping", name: "shippingFee", type: "currency", value: 100 }]}
-      totalAmount={1000}
-      currency="USD"
-      locale="en-US"
-      onSubmit={async (fees) => {
-        await orThrow(
-          mutation.run({ values: { ...order, ...fees }, cascadeOptions: [], list: {} }),
-        );
-      }}
-    />
+const rows = [order];
+
+function OrdersTableCell({ column }: { readonly column: string }) {
+  const {
+    handleEditOrder,
+    handleDeleteOrders,
+    handleEditItem,
+    handleDeleteItem,
+    isOrderPending,
+    isCollectionItemPending,
+  } = useOrdersMutations();
+  const columns = useMemo(
+    () =>
+      createOrdersColumns({
+        onEditOrder: handleEditOrder,
+        onDeleteOrders: handleDeleteOrders,
+        onEditItem: handleEditItem,
+        onDeleteItem: handleDeleteItem,
+        isOrderPending,
+        isCollectionItemPending,
+        currency: "USD",
+        locale: "en-US",
+        dateFormat: "MM/DD/YYYY",
+      }),
+    [
+      handleEditOrder,
+      handleDeleteOrders,
+      handleEditItem,
+      handleDeleteItem,
+      isOrderPending,
+      isCollectionItemPending,
+    ],
   );
+  const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
+  const cell = table
+    .getRowModel()
+    .rows.at(0)
+    ?.getAllCells()
+    .find((candidate) => candidate.column.id === column);
+  if (!cell) {
+    throw new Error(`orders table has no ${column} cell`);
+  }
+  return flexRender(cell.column.columnDef.cell, cell.getContext());
 }
 
-function EditOrderDialog() {
-  const mutation = useResourceMutation(editOrderCommand);
-  return (
-    <OrderActionsCell
-      order={order}
-      isPending={mutation.isPending}
-      currency="USD"
-      onEditOrder={async (values: EditedOrder, cascadeOptions) => {
-        await orThrow(mutation.run({ values, cascadeOptions, list: {} }));
-      }}
-      onDeleteOrders={async () => {}}
-    />
-  );
-}
+const surfaces = [
+  {
+    name: "fees",
+    column: "total",
+    submitLabel: "Save",
+    edit: async () => {
+      fireEvent.click(screen.getByRole("button", { name: "$10.00" }));
+      fireEvent.change(await screen.findByLabelText("Shipping"), { target: { value: "2.50" } });
+    },
+    settled: async () => {
+      expect(screen.getByRole("button", { name: "$10.00" })).toBeDefined();
+    },
+  },
+  {
+    name: "dialog",
+    column: "actions",
+    submitLabel: "Update",
+    edit: async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Edit order" }));
+      fireEvent.change(await screen.findByLabelText("Title"), {
+        target: { value: "Edited order" },
+      });
+    },
+    settled: async () => {
+      expect(screen.getByRole("dialog")).toBeDefined();
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Update" }).getAttribute("aria-busy")).toBeNull(),
+      );
+    },
+  },
+] as const;
 
-async function saveAndReadToasts(surface: "fees" | "dialog", respond: () => Promise<Response>) {
+type Surface = (typeof surfaces)[number];
+
+async function saveAndReadToasts(surface: Surface, respond: () => Promise<Response>) {
   globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
   const added = spyOn(toast, "add");
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   try {
     render(
       <QueryClientProvider client={queryClient}>
-        {surface === "fees" ? <FeesCell /> : <EditOrderDialog />}
+        <OrdersTableCell column={surface.column} />
       </QueryClientProvider>,
     );
-    if (surface === "fees") {
-      fireEvent.click(screen.getByRole("button", { name: "$10.00" }));
-      fireEvent.change(await screen.findByLabelText("Shipping"), { target: { value: "2.50" } });
-    } else {
-      fireEvent.click(screen.getByRole("button", { name: "Edit order" }));
-      fireEvent.change(await screen.findByLabelText("Title"), {
-        target: { value: "Edited order" },
-      });
-    }
+    await surface.edit();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: surface === "fees" ? "Save" : "Update" }));
+      fireEvent.click(screen.getByRole("button", { name: surface.submitLabel }));
     });
     await waitFor(() => expect(added.mock.calls.length).toBeGreaterThan(0));
-    if (surface === "fees") {
-      expect(screen.getByRole("button", { name: "$10.00" })).toBeDefined();
-    } else {
-      expect(screen.getByRole("dialog")).toBeDefined();
-      await waitFor(() =>
-        expect(screen.getByRole("button", { name: "Update" }).getAttribute("aria-busy")).toBeNull(),
-      );
-    }
+    await surface.settled();
     return added.mock.calls.map(([options]) => options);
   } finally {
     added.mockRestore();
@@ -111,7 +141,7 @@ async function saveAndReadToasts(surface: "fees" | "dialog", respond: () => Prom
   }
 }
 
-describe.each(["fees", "dialog"] as const)("a failed order edit from %s", (surface) => {
+describe.each(surfaces)("a failed order edit from $name", (surface) => {
   test("shows the server's message when the order no longer exists", async () => {
     const toasts = await saveAndReadToasts(
       surface,
