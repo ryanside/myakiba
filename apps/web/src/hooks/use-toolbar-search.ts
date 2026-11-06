@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { toast } from "@/components/ui/toast";
 
 export function useToolbarSearch(resetFilters: () => Promise<void>) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -12,7 +13,12 @@ export function useToolbarSearch(resetFilters: () => Promise<void>) {
   const resetSearch = async (): Promise<void> => {
     setSearchResetKey((key) => key + 1);
     setHasSearchDraft(false);
-    await resetFilters();
+    try {
+      await resetFilters();
+    } catch {
+      toast.add({ type: "error", title: "Failed to reset filters. Please try again." });
+      return;
+    }
     // Wait for the cleared value before focusing, because focused inputs defer outside changes.
     requestAnimationFrame(() => inputRef.current?.focus());
   };
