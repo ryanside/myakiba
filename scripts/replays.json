@@ -1268,6 +1268,44 @@
         "changing a page's own search state leaves Back pointing at the previous page > Calendar month change, then browser Back",
         "changing a page's own search state leaves Back pointing at the previous page > Expenses date preset, then browser Back"
       ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "Elysia split a comma in a free-text query value into an array and JSON-parsed bracketed values, so searching \",\" answered 422",
+      "test": "apps/server/src/boundary/query-text.test.ts",
+      "fixed": [
+        "a free-text query value reaches the route as the text the client sent > search=%2C",
+        "a free-text query value reaches the route as the text the client sent > search=a,b",
+        "a free-text query value reaches the route as the text the client sent > search=a%2Cb",
+        "a free-text query value reaches the route as the text the client sent > search=%5B1%5D",
+        "a free-text query value reaches the route as the text the client sent > search=%7B%7D"
+      ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "an analytics section search containing a comma answered 422",
+      "test": "apps/server/src/routers/analytics/rankings.test.ts",
+      "fixed": [
+        "a section search for %2C answers with no rows",
+        "a section search for a,b answers with no rows"
+      ]
+    },
+    {
+      "fix": "c6ea6429",
+      "bug": "a 4xx without a usable message showed \"The server didn't answer.\" although the server answered",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection load errors > shows the rejected-request message for a 422 validation body",
+        "Orders load errors > shows the rejected-request message for a 422 validation body",
+        "Expenses load errors > shows the rejected-request message for a 422 validation body",
+        "Lists load errors > shows the rejected-request message for a 422 validation body",
+        "List detail load errors > shows the rejected-request message for a 422 validation body",
+        "Wishlist load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard overview load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard monthly load errors > shows the rejected-request message for a 422 validation body",
+        "Item Database load errors > shows the rejected-request message for a 422 validation body",
+        "an analytics section rejected with a 422 validation body says so"
+      ]
     }
   ],
   "lint": [
