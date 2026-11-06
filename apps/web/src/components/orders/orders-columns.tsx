@@ -54,17 +54,20 @@ interface OrdersPendingState {
   isCollectionItemPending: (collectionId: string) => boolean;
 }
 
-export const OrderPendingContext = createContext<OrdersPendingState>({
-  isOrderPending: () => false,
-  isCollectionItemPending: () => false,
-});
+export const OrderPendingContext = createContext<OrdersPendingState | null>(null);
 
 function withOrderPending(
   render: (context: CellContext<Order, unknown>, isPending: boolean) => ReactNode,
 ) {
   return (context: CellContext<Order, unknown>) => (
     <OrderPendingContext.Consumer>
-      {({ isOrderPending }) => render(context, isOrderPending(context.row.original.orderId))}
+      {(pending) => {
+        if (!pending) {
+          throw new Error("Order cells must be rendered within OrderPendingContext");
+        }
+
+        return render(context, pending.isOrderPending(context.row.original.orderId));
+      }}
     </OrderPendingContext.Consumer>
   );
 }
@@ -137,18 +140,26 @@ export function createOrdersColumns({
 
               return (
                 <OrderPendingContext.Consumer>
-                  {({ isCollectionItemPending }) => (
-                    <OrderItemSubDataGrid
-                      orderId={row.orderId}
-                      selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
-                      setSelectedOrderIdByCollectionId={
-                        itemSelection.setSelectedOrderIdByCollectionId
-                      }
-                      onEditItem={onEditItem}
-                      onDeleteItem={onDeleteItem}
-                      isCollectionItemPending={isCollectionItemPending}
-                    />
-                  )}
+                  {(pending) => {
+                    if (!pending) {
+                      throw new Error(
+                        "Order item grids must be rendered within OrderPendingContext",
+                      );
+                    }
+
+                    return (
+                      <OrderItemSubDataGrid
+                        orderId={row.orderId}
+                        selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
+                        setSelectedOrderIdByCollectionId={
+                          itemSelection.setSelectedOrderIdByCollectionId
+                        }
+                        onEditItem={onEditItem}
+                        onDeleteItem={onDeleteItem}
+                        isCollectionItemPending={pending.isCollectionItemPending}
+                      />
+                    );
+                  }}
                 </OrderPendingContext.Consumer>
               );
             }}

@@ -75,3 +75,9 @@ test("disables only the pending order's cells", () => {
   expect("disabled" in status("saving").dataset).toBe(true);
   expect("disabled" in status("idle").dataset).toBe(false);
 });
+
+test("refuses to render without a pending provider", () => {
+  expect(() => render(<StatusCells orders={[order("saving")]} />)).toThrow(
+    "Order cells must be rendered within OrderPendingContext",
+  );
+});
