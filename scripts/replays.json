@@ -975,6 +975,25 @@
         "Orders during an outage > uses the server fallback for a 503 response",
         "Expenses during an outage > uses the server fallback for a 503 response"
       ]
+    },
+    {
+      "fix": "11184510",
+      "bug": "outages lost their diagnostic text, and six more pages showed internal \"Failed to …\" text instead of the outage message",
+      "test": "apps/web/src/queries/page-load-error.test.ts",
+      "fixed": [
+        "Collection diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Orders diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Order expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Lists diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "List detail diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "List members diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Dashboard overview diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Dashboard monthly diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Item Database diagnostics > keeps the diagnostic fallback apart from the %s user message",
+        "Wishlist diagnostics > separates diagnostics from the %s user message"
+      ]
     }
   ],
   "lint": [
