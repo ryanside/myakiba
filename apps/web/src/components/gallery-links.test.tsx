@@ -1,5 +1,3 @@
-import { OrderPendingContext } from "./orders/order-pending-context";
-import { CollectionPendingContext } from "./collection/collection-pending-context";
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,9 +16,11 @@ import type { ComponentProps, ReactNode } from "react";
 import { ExpandedRowContent } from "./analytics/section-expanded-row";
 import { SectionRelationships } from "./analytics/section-relationships";
 import { CollectionGalleryGrid } from "./collection/collection-gallery-grid";
+import { CollectionPendingContext } from "./collection/collection-pending-context";
 import { ShopTableRowExpansion } from "./expenses/shop-table-row-expansion";
 import { ListMemberGrid } from "./lists/list-member-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
+import { OrderPendingContext } from "./orders/order-pending-context";
 import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
 import { analytics } from "@/data/resources/analytics";
 import { expenses } from "@/data/resources/expenses";

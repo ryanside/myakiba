@@ -1,4 +1,3 @@
-import { withCollectionPending } from "./collection-pending-context";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -33,6 +32,7 @@ import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import CollectionItemForm from "./collection-item-form";
+import { withCollectionPending } from "./collection-pending-context";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";

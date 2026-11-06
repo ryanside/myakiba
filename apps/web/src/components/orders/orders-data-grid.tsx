@@ -1,4 +1,3 @@
-import { OrderPendingContext } from "./order-pending-context";
 import { useCallback, useMemo, useState } from "react";
 import { DataGrid, DataGridContainer } from "@/components/reui/data-grid/data-grid";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
@@ -23,6 +22,7 @@ import { OrdersActionBar } from "./orders-action-bar";
 import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
 import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
+import { OrderPendingContext } from "./order-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";

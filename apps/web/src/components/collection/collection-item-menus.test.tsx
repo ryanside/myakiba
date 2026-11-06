@@ -1,4 +1,3 @@
-import { CollectionPendingContext } from "./collection-pending-context";
 import { afterEach, mock, test } from "bun:test";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,6 +11,7 @@ import {
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
+import { CollectionPendingContext } from "./collection-pending-context";
 
 const realSearch = await import("@/queries/search");
 await mock.module("@/queries/search", () => ({

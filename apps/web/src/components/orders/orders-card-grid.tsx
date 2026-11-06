@@ -1,7 +1,7 @@
-import { useOrderPending } from "./order-pending-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import {
   MediaCard,
   MediaCardBody,

@@ -1,7 +1,7 @@
-import { useCollectionPending } from "./collection-pending-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
+import { useCollectionPending } from "@/components/collection/collection-pending-context";
 import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";

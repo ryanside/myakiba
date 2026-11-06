@@ -1,10 +1,10 @@
-import { useOrderPending } from "./order-pending-context";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import { cn } from "@/lib/utils";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";

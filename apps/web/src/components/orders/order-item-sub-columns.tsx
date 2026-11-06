@@ -1,4 +1,3 @@
-import { orderPendingCell } from "./order-pending-context";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -35,6 +34,7 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
+import { orderPendingCell } from "./order-pending-context";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";

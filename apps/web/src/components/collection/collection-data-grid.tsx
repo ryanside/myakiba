@@ -1,4 +1,3 @@
-import { CollectionPendingContext } from "./collection-pending-context";
 import { useSelection } from "@/hooks/use-selection";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type {
@@ -22,6 +21,7 @@ import { CollectionActionBar } from "./collection-action-bar";
 import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
+import { CollectionPendingContext } from "./collection-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";

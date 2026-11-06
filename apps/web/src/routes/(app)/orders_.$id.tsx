@@ -1,4 +1,3 @@
-import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
@@ -6,6 +5,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { OrderDetailItems } from "@/components/orders/order-detail-items";
 import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
+import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRead } from "@/data/client";

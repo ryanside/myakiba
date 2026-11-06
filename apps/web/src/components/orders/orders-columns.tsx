@@ -1,4 +1,3 @@
-import { orderPendingCell } from "./order-pending-context";
 import { createContext } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -31,6 +30,7 @@ import { ImageThumbnail } from "../ui/image-thumbnail";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
+import { orderPendingCell } from "./order-pending-context";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
