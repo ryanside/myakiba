@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -465,7 +465,9 @@ async function checkOut(revision: string, harness?: TestHarness) {
 async function commitWorkingTree() {
   const index = path.join(worktree, ".replay-index");
   try {
-    const tree = await $`git read-tree HEAD && git add -A && git write-tree`
+    const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
+    await copyFile(path.resolve(root, realIndex.trim()), index);
+    const tree = await $`git add -A && git write-tree`
       .cwd(root)
       .env({ ...process.env, GIT_INDEX_FILE: index })
       .quiet()
