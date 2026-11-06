@@ -13,7 +13,7 @@ export function useToolbarSearch({
   const [hasSearchDraft, setHasSearchDraft] = useState(false);
 
   useEffect(() => {
-    setHasSearchDraft((inputRef.current?.value ?? "") !== "");
+    setHasSearchDraft((inputRef.current?.value ?? search ?? "") !== "");
   }, [search]);
 
   const onSearchInput = (event: FormEvent<HTMLInputElement>): void => {
