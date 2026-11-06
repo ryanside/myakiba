@@ -39,11 +39,13 @@ interface BreakdownChartProps<TData extends BreakdownChartData> {
   readonly variant?: "default" | "scrollable";
 }
 
+const STACKED_LEGEND_CLASS_NAME = "flex flex-col gap-0.5";
+
 const CHART_VARIANTS = {
   default: {
-    legendClassName: "flex flex-col gap-0.5",
+    legendClassName: STACKED_LEGEND_CLASS_NAME,
     rowClassName: "flex cursor-default items-center gap-2.5 py-1 transition-opacity duration-200",
-    skeletonLegendClassName: "flex flex-col gap-0.5",
+    skeletonLegendClassName: STACKED_LEGEND_CLASS_NAME,
   },
   scrollable: {
     legendClassName:
@@ -189,7 +191,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
         </div>
       </TooltipProvider>
 
-      {/* scroll-fade-b sets its own animation, so the legend fades in from a wrapper. */}
+      {/* The scrollable legend's scroll-fade-b sets its own animation, so every legend fades in from a wrapper. */}
       <div className="animate-data-in">{legend}</div>
     </div>
   );
