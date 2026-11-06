@@ -80,6 +80,42 @@ const expectTextSizedBars = (
   expect(new Set(rows.map((row) => row[nameAt])).size).toBeGreaterThan(1);
 };
 
+const columnShares = () =>
+  screen
+    .getAllByRole("columnheader")
+    .map((header) => Number.parseFloat(header.style.getPropertyValue("--column-share")));
+const expectShares = (shares: readonly number[], sizes: readonly number[]) => {
+  const total = sizes.reduce((sum, size) => sum + size, 0);
+  expect(shares).toHaveLength(sizes.length);
+  sizes.forEach((size, index) => expect(shares[index]).toBeCloseTo((size / total) * 100, 2));
+};
+
+// The browser shared out an auto-layout table's spare width by content, so the columns moved
+// when the placeholder bars gave way to names and figures.
+test("the section table holds each column to the same share of its width while loading and once loaded", async () => {
+  const sizes = [40, 40, 150, 80, 100];
+  await renderInApp(sectionTable([], true));
+  expect(screen.getByRole("table").classList.contains("table-fixed")).toBe(true);
+  expectShares(columnShares(), sizes);
+  cleanup();
+
+  await renderInApp(
+    sectionTable(
+      [
+        {
+          id: "entry-1",
+          name: "A very long artist name that wraps",
+          itemCount: 1234,
+          totalSpent: 9_876_543,
+        },
+      ],
+      false,
+    ),
+  );
+  expect(screen.getByRole("table").classList.contains("table-fixed")).toBe(true);
+  expectShares(columnShares(), sizes);
+});
+
 test("the section table shows a placeholder row for each row of the page while it loads", async () => {
   await renderInApp(sectionTable([], true));
 
