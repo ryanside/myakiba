@@ -23,7 +23,7 @@ import type {
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
-import { RowExpandButton } from "@/components/data-table/row-expand-button";
+import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,7 @@ function createSectionColumns({
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
       size: 32,
+      meta: { skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
@@ -87,6 +88,7 @@ export function SectionTable({
   rows,
   sectionName,
   offset,
+  pageSize,
   isLoading,
   sort,
   order,
@@ -95,6 +97,7 @@ export function SectionTable({
   readonly rows: readonly AnalyticsSectionRow[];
   readonly sectionName: AnalyticsSection;
   readonly offset: number;
+  readonly pageSize: number;
   readonly isLoading: boolean;
   readonly sort?: AnalyticsSectionSort;
   readonly order?: AnalyticsSectionSortOrder;
@@ -159,6 +162,7 @@ export function SectionTable({
       <DataTable
         table={table}
         isLoading={isLoading}
+        skeletonRowCount={pageSize}
         empty={<DataTableEmpty title={`No ${sectionName} found`} />}
         variant="sized"
         onRowClick={(row) => row.toggleExpanded()}

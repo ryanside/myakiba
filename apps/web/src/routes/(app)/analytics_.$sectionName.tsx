@@ -157,6 +157,7 @@ function RouteComponent(): ReactNode {
                 rows={data?.rows ?? []}
                 sectionName={sectionName}
                 offset={offset}
+                pageSize={limit}
                 isLoading={isLoading}
                 sort={sort}
                 order={order}

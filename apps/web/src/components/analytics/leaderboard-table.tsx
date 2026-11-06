@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
 import { cn } from "@/lib/utils";
 import { DataTable, DATA_TABLE_NUMBER_META } from "@/components/data-table/data-table";
 
@@ -147,6 +148,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
       table={table}
       tableClassName="table-fixed"
       isLoading={isLoading}
+      skeletonRowCount={ANALYTICS_LEADERBOARD_SIZE}
       empty={<p className="text-muted-foreground text-xs">No data</p>}
       onRowClick={(row) => {
         const rowNav = getRowNavigation?.(row.original);

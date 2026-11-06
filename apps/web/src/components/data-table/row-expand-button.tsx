@@ -30,3 +30,8 @@ export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): R
     </Button>
   );
 }
+
+/** Holds the expand button's box in a loading row, so the row keeps the height it loads with. */
+export const ROW_EXPAND_SKELETON = (
+  <Button variant="ghost" size="icon-sm" disabled aria-hidden tabIndex={-1} className="invisible" />
+);

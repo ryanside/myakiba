@@ -17,7 +17,7 @@ import {
   DataTableEmpty,
   DATA_TABLE_NUMBER_META,
 } from "@/components/data-table/data-table";
-import { RowExpandButton } from "@/components/data-table/row-expand-button";
+import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
@@ -225,6 +225,7 @@ function getColumns({
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
       size: 32,
+      meta: { skeleton: ROW_EXPAND_SKELETON },
     },
     { id: ROW_NUMBER_COLUMN_ID, header: "#", cell: ({ row }) => offset + row.index + 1, size: 40 },
     { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },

@@ -120,8 +120,8 @@ function TableBody<TData extends RowData>({
         {Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
           <tr key={rowIndex}>
             {columns.map((column) => (
-              <td key={column.id} className="p-1.5">
-                <Skeleton className="h-4 w-full" />
+              <td key={column.id} className={cn("p-1.5", column.columnDef.meta?.cellClassName)}>
+                {column.columnDef.meta?.skeleton ?? <Skeleton className="h-4 w-full" />}
               </td>
             ))}
           </tr>
