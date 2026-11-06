@@ -114,6 +114,10 @@ describe("DataGridPagination at an offset that is not a page start", () => {
     expect(screen.getByText("3 - 5 of 5")).toBeTruthy();
   });
 
+  test("a short result at an offset can return to its first row", () => {
+    expect(pageRequestedBy("1", { recordCount: 5, pageIndex: 0, offset: 2 })).toBe(0);
+  });
+
   test("an offset inside the rows names the rows from that offset", () => {
     render(<Pager recordCount={50} pageIndex={1} offset={15} />);
     expect(screen.getByText("16 - 25 of 50")).toBeTruthy();
