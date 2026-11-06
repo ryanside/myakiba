@@ -41,7 +41,7 @@ test("a name cut short by its column keeps the full name in its title", async ()
   expect(screen.getByTitle("MandarakeOnline").textContent).toBe("MandarakeOnline");
 });
 
-test("a limit shows only the first rows and scales the bars to them", async () => {
+test("shows every row it is given and scales the bars to the largest", async () => {
   await renderInRouter(
     <LeaderboardTable
       rankedBy="itemCount"
@@ -50,15 +50,18 @@ test("a limit shows only the first rows and scales the bars to them", async () =
         { shop: "Mandarake", itemCount: 4, totalSpent: 0 },
         { shop: "Suruga-ya", itemCount: 2, totalSpent: 0 },
       ]}
-      limit={2}
       columns={["shop", "itemCount"]}
       rowIdKey="shop"
     />,
   );
   const bodyRows = screen.getAllByRole("row").slice(1);
-  expect(bodyRows.map((row) => row.textContent)).toEqual(["1AmiAmi8", "2Mandarake4"]);
+  expect(bodyRows.map((row) => row.textContent)).toEqual([
+    "1AmiAmi8",
+    "2Mandarake4",
+    "3Suruga-ya2",
+  ]);
   const bars = bodyRows.map(
     (row) => row.querySelector<HTMLElement>("[aria-hidden] > span")?.style.width,
   );
-  expect(bars).toEqual(["100%", "50%"]);
+  expect(bars).toEqual(["100%", "50%", "25%"]);
 });

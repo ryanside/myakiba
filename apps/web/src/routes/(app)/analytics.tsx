@@ -14,9 +14,6 @@ const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
 const SHOP_LEADERBOARD_COLUMNS = ["shop", "itemCount", "totalSpent"] as const;
 const SCALE_LEADERBOARD_COLUMNS = ["scale", "itemCount", "totalSpent"] as const;
 
-// The overview previews each ranking; "View all" opens the full table.
-const PREVIEW_ROWS = 5;
-
 const PLACEHOLDER_ENTRIES = ENTRY_CATEGORIES.map((category) => ({
   category,
   uniqueOwned: 0,
@@ -112,7 +109,6 @@ function RouteComponent(): ReactNode {
                 <LeaderboardTable
                   rankedBy="itemCount"
                   rows={entry.topByCount}
-                  limit={PREVIEW_ROWS}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   rowIdKey="entryId"
@@ -132,7 +128,6 @@ function RouteComponent(): ReactNode {
                 <LeaderboardTable
                   rankedBy="totalSpent"
                   rows={entry.topBySpend}
-                  limit={PREVIEW_ROWS}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
                   rowIdKey="entryId"
@@ -167,7 +162,6 @@ function RouteComponent(): ReactNode {
               <LeaderboardTable
                 rankedBy="itemCount"
                 rows={shops.topByCount}
-                limit={PREVIEW_ROWS}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="shop"
@@ -187,7 +181,6 @@ function RouteComponent(): ReactNode {
               <LeaderboardTable
                 rankedBy="totalSpent"
                 rows={shops.topBySpend}
-                limit={PREVIEW_ROWS}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="shop"
@@ -221,7 +214,6 @@ function RouteComponent(): ReactNode {
               <LeaderboardTable
                 rankedBy="itemCount"
                 rows={scales.topByCount}
-                limit={PREVIEW_ROWS}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="scale"
@@ -244,7 +236,6 @@ function RouteComponent(): ReactNode {
               <LeaderboardTable
                 rankedBy="totalSpent"
                 rows={scales.topBySpend}
-                limit={PREVIEW_ROWS}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
                 rowIdKey="scale"

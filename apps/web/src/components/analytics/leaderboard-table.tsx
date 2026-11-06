@@ -108,7 +108,6 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
 
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
-  limit,
   columns,
   formatCell,
   rowIdKey,
@@ -117,8 +116,6 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rankedBy,
 }: {
   readonly rows: readonly TRow[];
-  /** Shows only the first rows, for a preview of a longer ranking. */
-  readonly limit?: number;
   readonly columns: readonly LeaderboardColumn[];
   readonly formatCell?: (column: string, value: CellValue) => CellValue;
   readonly rowIdKey: RowIdKey<TRow>;
@@ -128,7 +125,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   readonly rankedBy: "itemCount" | "totalSpent";
 }): ReactNode {
   const navigate = useNavigate();
-  const tableData = useMemo(() => rows.slice(0, limit), [limit, rows]);
+  const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
     () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
     [rankedBy, tableData],
