@@ -69,6 +69,8 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
+// The root test script runs every package, so replay root tests directly.
+const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
   test: testReplays = [],
@@ -158,22 +160,10 @@ async function installedVersion(packageDir: string, dependency: string) {
   throw new Error(`${dependency} is not installed in this checkout. Run bun install.`);
 }
 
-async function runTest(checkout: string, testFile: string, source?: string): Promise<TestRun> {
-  if (source !== undefined) {
-    const pinnedFile = path.join(
-      path.dirname(testFile),
-      `.replay-${process.pid}-${path.basename(testFile)}`,
-    );
-    try {
-      await Bun.write(path.join(checkout, pinnedFile), source);
-      return await runTest(checkout, pinnedFile);
-    } finally {
-      await rm(path.join(checkout, pinnedFile), { force: true });
-    }
-  }
+async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
-  const command = packageDir === "." ? "bun test" : scripts.test;
+  const command = packageDir === "." ? ROOT_TEST_COMMAND : scripts.test;
   const { exitCode, stdout, stderr } =
     await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
@@ -445,6 +435,24 @@ async function checkOut(revision: string, harness?: TestHarness) {
   }
 }
 
+async function commitWorkingTree() {
+  const index = path.join(worktree, ".replay-index");
+  try {
+    const tree = await $`git add -A && git write-tree`
+      .cwd(root)
+      .env({ ...process.env, GIT_INDEX_FILE: index })
+      .quiet()
+      .text();
+    const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
+      .cwd(root)
+      .quiet()
+      .text();
+    return commit.trim();
+  } finally {
+    await rm(index, { force: true });
+  }
+}
+
 try {
   for (const replay of selectedLint) {
     const typeAware = builtinRule(replay.rule)?.type_aware ?? false;
@@ -477,14 +485,11 @@ try {
     const workingTree = replay.fix === "WORKTREE";
     const base = workingTree ? replay.base : `${replay.fix}^`;
     if (!base) throw new Error("A WORKTREE replay needs a base revision");
+    const fix = workingTree ? await commitWorkingTree() : replay.fix;
     await checkOut(base, harness);
     const before = await runTest(worktree, replay.test);
-    if (!workingTree) await checkOut(replay.fix, harness);
-    const after = await runTest(
-      workingTree ? root : worktree,
-      replay.test,
-      workingTree ? harness.testSource?.source : undefined,
-    );
+    await checkOut(fix, harness);
+    const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
     const didNotFlip = replay.fixed.filter((name) => !flipped.includes(name));
