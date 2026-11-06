@@ -1328,6 +1328,25 @@
       "bug": "a WORKTREE replay without a base failed only mid-run, after HEAD and earlier replays had run",
       "test": "scripts/replay-config.test.ts",
       "fixed": ["a WORKTREE replay without a base revision is rejected"]
+    },
+    {
+      "fix": "2e10404d",
+      "bug": "the section and shop tables sized columns to their content, so the headers shifted when data loaded",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table holds every column but the name to a fixed width, loading or loaded",
+        "a long section name stays on one truncated line and keeps the full name in its title"
+      ]
+    },
+    {
+      "fix": "2e10404d",
+      "bug": "the section and shop tables sized columns to their content, so the headers shifted when data loaded",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": [
+        "the collection Shops table holds every column but the shop to a fixed width",
+        "the orders Shops table holds every column but the shop to a fixed width",
+        "the shipping Shops table holds every column but the shop to a fixed width"
+      ]
     }
   ],
   "lint": [
