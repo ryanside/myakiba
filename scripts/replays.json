@@ -1136,7 +1136,10 @@
       "fix": "d338a94b",
       "bug": "a fresh snapshot index dropped tracked files that matched ignore rules",
       "test": "scripts/replay.test.ts",
-      "fixed": ["a WORKTREE replay keeps tracked files even when Git ignores them"]
+      "fixed": [
+        "a WORKTREE replay keeps tracked files even when Git ignores them",
+        "a WORKTREE replay keeps tracked ignored files with no index file"
+      ]
     },
     {
       "fix": "79e474c1",
@@ -1212,6 +1215,29 @@
         "edit-order sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width",
         "collection item sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width"
       ]
+    },
+    {
+      "fix": "feed6ec4",
+      "bug": "a WORKTREE snapshot crashed with ENOTDIR when a flagged file's directory had been replaced by a regular file",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a WORKTREE replay captures a directory replaced by a file with assume-unchanged and preserves the real index",
+        "a WORKTREE replay captures a directory replaced by a file with skip-worktree and preserves the real index"
+      ]
+    },
+    {
+      "fix": "f75b6184",
+      "bug": "a deleted assume-unchanged file stayed in the WORKTREE snapshot",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a WORKTREE replay captures assume-unchanged deletions and keeps missing sparse files"
+      ]
+    },
+    {
+      "fix": "5adeea02",
+      "bug": "with no index file, a WORKTREE snapshot dropped tracked files that match .gitignore",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay keeps tracked ignored files with no index file"]
     }
   ],
   "lint": [
