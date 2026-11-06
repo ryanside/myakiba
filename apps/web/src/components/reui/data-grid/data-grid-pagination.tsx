@@ -170,7 +170,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
         <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
           {paginationInfo}
         </div>
-        {(pageCount > 1 || isPastEnd) && (
+        {(pageCount > 1 || offset > 0) && (
           <div className="order-1 flex items-center space-x-1 sm:order-2">
             <Button
               size="icon-sm"
