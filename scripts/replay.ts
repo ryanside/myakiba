@@ -8,7 +8,14 @@ type TestReplay = {
   base?: string;
   bug: string;
   test: string;
+  testAt?: string;
   fixed: string[];
+};
+
+type TestHarness = {
+  packageDir: string;
+  files: string[];
+  testSource?: { file: string; source: string };
 };
 
 type LintReplay = {
@@ -151,11 +158,24 @@ async function installedVersion(packageDir: string, dependency: string) {
   throw new Error(`${dependency} is not installed in this checkout. Run bun install.`);
 }
 
-async function runTest(checkout: string, testFile: string): Promise<TestRun> {
+async function runTest(checkout: string, testFile: string, source?: string): Promise<TestRun> {
+  if (source !== undefined) {
+    const pinnedFile = path.join(
+      path.dirname(testFile),
+      `.replay-${process.pid}-${path.basename(testFile)}`,
+    );
+    try {
+      await Bun.write(path.join(checkout, pinnedFile), source);
+      return await runTest(checkout, pinnedFile);
+    } finally {
+      await rm(path.join(checkout, pinnedFile), { force: true });
+    }
+  }
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
+  const command = packageDir === "." ? "bun test" : scripts.test;
   const { exitCode, stdout, stderr } =
-    await $`sh -c ${`${scripts.test} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
+    await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
       .nothrow()
       .quiet();
@@ -382,23 +402,30 @@ async function install(revision: string) {
   }
 }
 
-async function harnessOf(testFile: string) {
+async function harnessOf({ test: testFile, testAt }: TestReplay): Promise<TestHarness> {
   const packageDir = await packageDirOf(testFile);
   const files =
     await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
       .cwd(root)
       .text();
-  return { packageDir, files: files.split("\n").filter(Boolean) };
+  const testSource =
+    testAt === undefined
+      ? undefined
+      : { file: testFile, source: await $`git show ${`${testAt}:${testFile}`}`.cwd(root).text() };
+  return { packageDir, files: files.split("\n").filter(Boolean), testSource };
 }
 
-async function checkOut(revision: string, harness?: { packageDir: string; files: string[] }) {
+async function checkOut(revision: string, harness?: TestHarness) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   if (harness === undefined) return;
   await install(revision);
 
-  const { packageDir, files } = harness;
+  const { packageDir, files, testSource } = harness;
   for (const file of files)
-    await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
+    await Bun.write(
+      path.join(worktree, file),
+      file === testSource?.file ? testSource.source : Bun.file(path.join(root, file)),
+    );
 
   const head = await readPackage(path.join(root, packageDir));
   const atRevision = await readPackage(path.join(worktree, packageDir));
@@ -446,14 +473,18 @@ try {
   }
 
   for (const replay of selected) {
-    const harness = await harnessOf(replay.test);
+    const harness = await harnessOf(replay);
     const workingTree = replay.fix === "WORKTREE";
     const base = workingTree ? replay.base : `${replay.fix}^`;
     if (!base) throw new Error("A WORKTREE replay needs a base revision");
     await checkOut(base, harness);
     const before = await runTest(worktree, replay.test);
     if (!workingTree) await checkOut(replay.fix, harness);
-    const after = await runTest(workingTree ? root : worktree, replay.test);
+    const after = await runTest(
+      workingTree ? root : worktree,
+      replay.test,
+      workingTree ? harness.testSource?.source : undefined,
+    );
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
     const didNotFlip = replay.fixed.filter((name) => !flipped.includes(name));

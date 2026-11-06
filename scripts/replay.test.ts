@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { $ } from "bun";
 
@@ -29,16 +29,17 @@ async function fixture() {
   const commit = async (message: string) => {
     await git("add", ".");
     await git("commit", "--no-verify", "-qm", message);
-    return (await git("rev-parse", "HEAD")).text().trim();
+    const revision = await git("rev-parse", "HEAD");
+    return revision.text().trim();
   };
   const source = (era: string, fixed: boolean) =>
     write("src/value.ts", `export const value = ${JSON.stringify({ era, fixed })};\n`);
-  const assertions = (era: string) =>
+  const assertions = (era: string, name = testName) =>
     write(
       testFile,
       `import { expect, test } from "bun:test";
 import { value } from "./value";
-test(${JSON.stringify(testName)}, () => {
+test(${JSON.stringify(name)}, () => {
   expect(value).toEqual(${JSON.stringify({ era, fixed: true })});
 });
 `,
@@ -69,10 +70,14 @@ test(${JSON.stringify(testName)}, () => {
         test: [{ ...entry, bug: "fixture bug", test: testFile, fixed: [testName] }],
       }),
     );
-    const result = await $`bun scripts/replay.ts`.cwd(dir).env(gitEnv).nothrow().quiet();
+    const result = await $`bun ${path.join(dir, "scripts/replay.ts")}`
+      .cwd(dir)
+      .env(gitEnv)
+      .nothrow()
+      .quiet();
     return { exitCode: result.exitCode, output: `${result.stdout}${result.stderr}` };
   };
-  return { base, fix, source, assertions, run };
+  return { dir, base, fix, source, assertions, run };
 }
 
 test("testAt uses the pinned test at both the parent and fix while HEAD uses current assertions", async () => {
@@ -105,4 +110,21 @@ test("a WORKTREE replay detects a real behavior change", async () => {
   const { exitCode, output } = await repo.run({ fix: "WORKTREE", base: repo.base });
   expect(exitCode, output).toBe(0);
   expect(output).toContain("every replay matched");
+}, 30_000);
+
+test("a pinned WORKTREE replay uses the same assertions on both sides and preserves the working test", async () => {
+  const repo = await fixture();
+  await repo.source("old", true);
+  await repo.assertions("old", "current assertions");
+  const original = await Bun.file(path.join(repo.dir, testFile)).text();
+  const { exitCode, output } = await repo.run({
+    fix: "WORKTREE",
+    base: repo.base,
+    testAt: repo.fix,
+  });
+  expect(exitCode, output).toBe(0);
+  expect(output).toContain("every replay matched");
+  expect(await Bun.file(path.join(repo.dir, testFile)).text()).toBe(original);
+  const files = await readdir(path.join(repo.dir, "src"));
+  expect(files.toSorted()).toEqual(["value.test.ts", "value.ts"]);
 }, 30_000);
