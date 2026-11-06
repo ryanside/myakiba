@@ -21,7 +21,11 @@ import { OrdersToolbar } from "./orders-toolbar";
 import { OrdersActionBar } from "./orders-action-bar";
 import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
-import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
+import {
+  createOrdersColumns,
+  OrderItemSelectionContext,
+  OrderPendingContext,
+} from "./orders-columns";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
@@ -155,6 +159,11 @@ export default function OrdersDataGrid() {
     {},
   );
 
+  const pendingContextValue = useMemo(
+    () => ({ isOrderPending, isCollectionItemPending }),
+    [isOrderPending, isCollectionItemPending],
+  );
+
   const columns = useMemo(
     () =>
       createOrdersColumns({
@@ -165,8 +174,6 @@ export default function OrdersDataGrid() {
         currency,
         locale,
         dateFormat,
-        isOrderPending,
-        isCollectionItemPending,
       }),
     [
       handleEditItem,
@@ -176,8 +183,6 @@ export default function OrdersDataGrid() {
       currency,
       locale,
       dateFormat,
-      isCollectionItemPending,
-      isOrderPending,
     ],
   );
 
@@ -284,71 +289,73 @@ export default function OrdersDataGrid() {
         </div>
       ) : null}
       <div className="space-y-4">
-        <OrderItemSelectionContext value={itemSelectionContextValue}>
-          <DataGrid
-            table={table}
-            isLoading={isPending}
-            recordCount={totalCount}
-            tableLayout={{
-              dense: viewMode === "compact",
-              columnsPinnable: true,
-              columnsResizable: true,
-              columnsMovable: true,
-              columnsVisibility: true,
-            }}
-          >
-            <div className="w-full space-y-2.5">
-              {(() => {
-                if (isTableView) {
+        <OrderPendingContext value={pendingContextValue}>
+          <OrderItemSelectionContext value={itemSelectionContextValue}>
+            <DataGrid
+              table={table}
+              isLoading={isPending}
+              recordCount={totalCount}
+              tableLayout={{
+                dense: viewMode === "compact",
+                columnsPinnable: true,
+                columnsResizable: true,
+                columnsMovable: true,
+                columnsVisibility: true,
+              }}
+            >
+              <div className="w-full space-y-2.5">
+                {(() => {
+                  if (isTableView) {
+                    return (
+                      <DataGridContainer>
+                        <ScrollArea horizontal>
+                          <DataGridTable />
+                        </ScrollArea>
+                      </DataGridContainer>
+                    );
+                  }
+                  if (viewMode === "gallery") {
+                    return (
+                      <OrdersGalleryGrid
+                        orders={orders}
+                        tileSize={cardWidth}
+                        galleryLayout={galleryLayout}
+                        rowSelection={orderSelection}
+                        onRowSelectionChange={setOrderSelection}
+                        onEditOrder={handleEditOrder}
+                        onDeleteOrders={handleDeleteOrders}
+                        currency={currency}
+                        isOrderPending={isOrderPending}
+                        isLoading={isPending}
+                      />
+                    );
+                  }
                   return (
-                    <DataGridContainer>
-                      <ScrollArea horizontal>
-                        <DataGridTable />
-                      </ScrollArea>
-                    </DataGridContainer>
-                  );
-                }
-                if (viewMode === "gallery") {
-                  return (
-                    <OrdersGalleryGrid
+                    <OrdersCardGrid
                       orders={orders}
-                      tileSize={cardWidth}
-                      galleryLayout={galleryLayout}
+                      cardWidth={cardWidth}
                       rowSelection={orderSelection}
                       onRowSelectionChange={setOrderSelection}
                       onEditOrder={handleEditOrder}
                       onDeleteOrders={handleDeleteOrders}
                       currency={currency}
+                      locale={locale}
                       isOrderPending={isOrderPending}
                       isLoading={isPending}
                     />
                   );
-                }
-                return (
-                  <OrdersCardGrid
-                    orders={orders}
-                    cardWidth={cardWidth}
-                    rowSelection={orderSelection}
-                    onRowSelectionChange={setOrderSelection}
-                    onEditOrder={handleEditOrder}
-                    onDeleteOrders={handleDeleteOrders}
-                    currency={currency}
-                    locale={locale}
-                    isOrderPending={isOrderPending}
-                    isLoading={isPending}
-                  />
-                );
-              })()}
-              <div className="flex items-center justify-between">
-                <div className="flex-1 text-sm text-muted-foreground">
-                  {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                  {table.getFilteredRowModel().rows.length} row(s) selected
+                })()}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                    {table.getFilteredRowModel().rows.length} row(s) selected
+                  </div>
+                  <DataGridPagination offset={offset} />
                 </div>
-                <DataGridPagination offset={offset} />
               </div>
-            </div>
-          </DataGrid>
-        </OrderItemSelectionContext>
+            </DataGrid>
+          </OrderItemSelectionContext>
+        </OrderPendingContext>
       </div>
     </>
   );

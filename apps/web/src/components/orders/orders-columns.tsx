@@ -1,11 +1,11 @@
 import { createContext } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -47,8 +47,26 @@ interface OrdersColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
+}
+
+interface OrdersPendingState {
   isOrderPending: (orderId: string) => boolean;
   isCollectionItemPending: (collectionId: string) => boolean;
+}
+
+export const OrderPendingContext = createContext<OrdersPendingState>({
+  isOrderPending: () => false,
+  isCollectionItemPending: () => false,
+});
+
+function withOrderPending(
+  render: (context: CellContext<Order, unknown>, pending: OrdersPendingState) => ReactNode,
+) {
+  return (context: CellContext<Order, unknown>) => (
+    <OrderPendingContext.Consumer>
+      {(pending) => render(context, pending)}
+    </OrderPendingContext.Consumer>
+  );
 }
 
 export function createOrdersColumns({
@@ -59,8 +77,6 @@ export function createOrdersColumns({
   currency,
   locale,
   dateFormat,
-  isOrderPending,
-  isCollectionItemPending,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   return [
     {
@@ -120,14 +136,20 @@ export function createOrdersColumns({
               }
 
               return (
-                <OrderItemSubDataGrid
-                  orderId={row.orderId}
-                  selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
-                  setSelectedOrderIdByCollectionId={itemSelection.setSelectedOrderIdByCollectionId}
-                  onEditItem={onEditItem}
-                  onDeleteItem={onDeleteItem}
-                  isCollectionItemPending={isCollectionItemPending}
-                />
+                <OrderPendingContext.Consumer>
+                  {({ isCollectionItemPending }) => (
+                    <OrderItemSubDataGrid
+                      orderId={row.orderId}
+                      selectedOrderIdByCollectionId={itemSelection.selectedOrderIdByCollectionId}
+                      setSelectedOrderIdByCollectionId={
+                        itemSelection.setSelectedOrderIdByCollectionId
+                      }
+                      onEditItem={onEditItem}
+                      onDeleteItem={onDeleteItem}
+                      isCollectionItemPending={isCollectionItemPending}
+                    />
+                  )}
+                </OrderPendingContext.Consumer>
               );
             }}
           </OrderItemSelectionContext.Consumer>
@@ -140,7 +162,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         return (
           <div className="flex items-center gap-3 pe-4">
@@ -195,7 +217,7 @@ export function createOrdersColumns({
             </Link>
           </div>
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -210,25 +232,27 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: ({ row }) => (
-        <InlineTextCell
-          label="Shop"
-          value={row.original.shop}
-          disabled={isOrderPending(row.original.orderId)}
-          onSubmit={async (newValue) => {
-            const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
-            void createdAt;
-            void updatedAt;
-            await onEditOrder(
-              {
-                ...orderWithoutTimestamps,
-                shop: newValue,
-              },
-              ["shop"] as CascadeOptions,
-            );
-          }}
-        />
-      ),
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
+        return (
+          <InlineTextCell
+            label="Shop"
+            value={row.original.shop}
+            disabled={isOrderPending(row.original.orderId)}
+            onSubmit={async (newValue) => {
+              const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
+              void createdAt;
+              void updatedAt;
+              await onEditOrder(
+                {
+                  ...orderWithoutTimestamps,
+                  shop: newValue,
+                },
+                ["shop"] as CascadeOptions,
+              );
+            }}
+          />
+        );
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -243,7 +267,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -268,7 +292,7 @@ export function createOrdersColumns({
             />
           </div>
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -284,7 +308,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -307,7 +331,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -322,7 +346,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -344,7 +368,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -360,7 +384,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -382,7 +406,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -398,7 +422,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -420,7 +444,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -436,7 +460,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collection Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -458,7 +482,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -490,7 +514,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Total" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         const inputs = [
@@ -548,7 +572,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -567,7 +591,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Fee" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -591,7 +615,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -609,7 +633,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Taxes" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -633,7 +657,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -651,7 +675,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Duties" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -675,7 +699,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -693,7 +717,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Tariffs" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -717,7 +741,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -735,7 +759,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Misc Fees" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -759,7 +783,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -776,7 +800,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const status = row.original.status;
         const isPending = isOrderPending(row.original.orderId);
         return (
@@ -800,7 +824,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -812,7 +836,7 @@ export function createOrdersColumns({
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, { isOrderPending }) => {
         const order = row.original;
         const isPending = isOrderPending(order.orderId);
         return (
@@ -824,7 +848,7 @@ export function createOrdersColumns({
             currency={currency}
           />
         );
-      },
+      }),
       size: 72,
       enableSorting: false,
       enableHiding: false,
