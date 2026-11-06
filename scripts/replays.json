@@ -1318,6 +1318,16 @@
       ]
     },
     {
+      "fix": "9e6239b9",
+      "bug": "the table skeletons left the expand column blank and drew full-width bars that read as a solid band",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "a section placeholder row shows a visible bar where the expand chevron sits",
+        "section placeholder bars are about as wide as the text they stand in for",
+        "leaderboard placeholder bars are about as wide as the text they stand in for"
+      ]
+    },
+    {
       "fix": "e584fedb",
       "bug": "the list heading's more/less toggle read as more words of the description",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
