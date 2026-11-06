@@ -463,6 +463,29 @@ async function checkOut(revision: string, harness?: TestHarness) {
   }
 }
 
+function flagged(entries: string[], tag: RegExp) {
+  return entries.filter((entry) => tag.test(entry)).map((entry) => entry.slice(2));
+}
+
+function presentInWorkingTree(file: string) {
+  try {
+    return lstatSync(path.join(root, file), { throwIfNoEntry: false }) !== undefined;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOTDIR") return false;
+    throw error;
+  }
+}
+
+async function clearIndexFlag(
+  indexEnv: Record<string, string | undefined>,
+  flag: "assume-unchanged" | "skip-worktree",
+  paths: string[],
+) {
+  if (paths.length === 0) return;
+  const input = Buffer.from(`${paths.join("\0")}\0`);
+  await $`git update-index --no-${flag} -z --stdin < ${input}`.cwd(root).env(indexEnv).quiet();
+}
+
 async function commitWorkingTree() {
   const index = path.join(worktree, ".replay-index");
   try {
@@ -474,32 +497,13 @@ async function commitWorkingTree() {
     else await $`git read-tree HEAD`.cwd(root).env(indexEnv).quiet();
     const indexListing = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
     const entries = indexListing.split("\0");
-    const assumed = entries.filter((entry) => /^[a-z] /.test(entry)).map((entry) => entry.slice(2));
-    if (assumed.length > 0) {
-      const input = Buffer.from(`${assumed.join("\0")}\0`);
-      await $`git update-index --no-assume-unchanged -z --stdin < ${input}`
-        .cwd(root)
-        .env(indexEnv)
-        .quiet();
-    }
-    const present = entries
-      .filter((entry) => /^[Ss] /.test(entry))
-      .map((entry) => entry.slice(2))
-      .filter((file) => {
-        try {
-          return lstatSync(path.join(root, file), { throwIfNoEntry: false });
-        } catch (error) {
-          if (error instanceof Error && "code" in error && error.code === "ENOTDIR") return false;
-          throw error;
-        }
-      });
-    if (present.length > 0) {
-      const input = Buffer.from(`${present.join("\0")}\0`);
-      await $`git update-index --no-skip-worktree -z --stdin < ${input}`
-        .cwd(root)
-        .env(indexEnv)
-        .quiet();
-    }
+    // assume-unchanged is a hint; skip-worktree means intended absence, so keep it on missing files.
+    await clearIndexFlag(indexEnv, "assume-unchanged", flagged(entries, /^[a-z] /));
+    await clearIndexFlag(
+      indexEnv,
+      "skip-worktree",
+      flagged(entries, /^[Ss] /).filter(presentInWorkingTree),
+    );
     const tree = await $`git add -A && git write-tree`.cwd(root).env(indexEnv).quiet().text();
     const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
       .cwd(root)
