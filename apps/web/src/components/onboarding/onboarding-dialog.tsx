@@ -80,7 +80,7 @@ const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
 const PANEL_MIN_HEIGHT = "min-h-[440px]";
 const EASE_OUT = "ease-[cubic-bezier(0.23,1,0.32,1)]";
-const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-1 starting:blur-[2px]`;
+const ENTER_TRANSITION = `transition-[opacity,translate,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-(--rise) starting:blur-[2px]`;
 
 const appRouteApi = getRouteApi("/(app)");
 
