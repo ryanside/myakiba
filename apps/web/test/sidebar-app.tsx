@@ -10,6 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { RouterAppContext } from "@/routes/__root";
 import { signedInSession } from "./session";
@@ -99,10 +100,12 @@ export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resol
     id: "(app)",
     beforeLoad: appRoute.options.beforeLoad,
     component: () => (
-      <SidebarProvider>
-        <AppSidebar />
-        <Outlet />
-      </SidebarProvider>
+      <OnboardingProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <Outlet />
+        </SidebarProvider>
+      </OnboardingProvider>
     ),
   });
   const dashboard = createRoute({

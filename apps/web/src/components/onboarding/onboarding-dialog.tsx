@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { createContext, use, useCallback, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -13,13 +13,7 @@ import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -90,17 +84,24 @@ const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${E
 
 const appRouteApi = getRouteApi("/(app)");
 
-type OnboardingDialogProps = {
-  readonly renderTrigger: React.ReactElement;
-  /** Only one mounted dialog may open on its own for a new account, or two would stack. */
-  readonly opensForNewAccount?: boolean;
+const OpenOnboardingContext = createContext<(() => void) | null>(null);
+
+function useOpenOnboarding(): () => void {
+  const openOnboarding = use(OpenOnboardingContext);
+  if (!openOnboarding) throw new Error("useOpenOnboarding needs an OnboardingProvider above it.");
+  return openOnboarding;
+}
+
+type OnboardingProviderProps = {
+  readonly children: React.ReactNode;
 };
 
-function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: OnboardingDialogProps) {
+/** The app shell mounts this once, outside the sidebar, whose phone and desktop trees swap at the breakpoint and would unmount the dialog. */
+function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.
   const isNewAccount = session.user.hasSeenOnboarding === false;
-  const [open, setOpen] = useState(opensForNewAccount && isNewAccount);
+  const [open, setOpen] = useState(isNewAccount);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const [currentStep, setCurrentStep] = useState(FIRST_STEP);
 
@@ -191,6 +192,8 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
     [close, form, sessionUsername, sessionCurrency, sessionDateFormat],
   );
 
+  const openOnboarding = useCallback(() => handleOpenChange(true), [handleOpenChange]);
+
   const handleBack = useCallback(() => {
     if (isFirst) return;
     goToStep(currentStep - 1);
@@ -217,10 +220,9 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
   );
 
   return (
-    <>
+    <OpenOnboardingContext value={openOnboarding}>
+      {children}
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger render={renderTrigger} />
-
         <DialogContent
           className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
           showCloseButton={false}
@@ -380,7 +382,7 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
         </DialogContent>
       </Dialog>
       <SyncActionSheet syncType={syncSheetType} onSyncTypeChange={setSyncSheetType} />
-    </>
+    </OpenOnboardingContext>
   );
 }
 
@@ -531,4 +533,4 @@ function StepFooter({
   );
 }
 
-export { OnboardingDialog };
+export { OnboardingProvider, useOpenOnboarding };

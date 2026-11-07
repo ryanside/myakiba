@@ -24,7 +24,16 @@ globalThis.fetch = Object.assign(
   { preconnect: realFetch.preconnect },
 );
 
-const { OnboardingDialog } = await import("./onboarding-dialog");
+const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+
+function OpenOnboardingButton({ label }: { readonly label: string }) {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      {label}
+    </button>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -56,16 +65,11 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
       },
     }),
     component: () => (
-      <>
+      <OnboardingProvider>
         <h1>Dashboard</h1>
-        <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />
-        {withAboutCopy ? (
-          <OnboardingDialog
-            opensForNewAccount={false}
-            renderTrigger={<button type="button">Open Getting Started</button>}
-          />
-        ) : null}
-      </>
+        <OpenOnboardingButton label="Getting Started" />
+        {withAboutCopy ? <OpenOnboardingButton label="Open Getting Started" /> : null}
+      </OnboardingProvider>
     ),
   });
   const dashboard = createRoute({ getParentRoute: () => app, path: "/dashboard" });
