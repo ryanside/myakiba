@@ -1416,6 +1416,20 @@
         "after the checkbox is done, a stalled check still fails after 15 seconds and says what to do",
         "after the checkbox times out, a stalled check still fails after 15 seconds and says what to do"
       ]
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the UI polish pass turned page backgrounds off for a browser with no saved preference",
+      "test": "apps/web/src/components/page-background.test.tsx",
+      "fixed": ["page background > a browser with no saved preference shows the background"],
+      "testAt": "e36c5068"
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the Page backgrounds switch read off for a browser with no saved preference",
+      "test": "apps/web/src/components/settings/appearance.test.tsx",
+      "fixed": ["the Page backgrounds switch is on in a browser with no saved preference"],
+      "testAt": "e36c5068"
     }
   ],
   "lint": [
