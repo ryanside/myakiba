@@ -161,3 +161,48 @@ test("Getting Started opens at the welcome step even with a step left in local s
 
   expect(await screen.findByRole("dialog", { name: "Welcome to myakiba." })).toBeTruthy();
 });
+
+async function continueToAddItems() {
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  return screen.findByRole("dialog", { name: "Bring in your items." });
+}
+
+function classTokens(element: HTMLElement) {
+  return element.className.split(/\s+/);
+}
+
+test("the add items step points to the + button in the top bar, not the sidebar", async () => {
+  await openDashboard(false);
+  const dialog = await continueToAddItems();
+
+  expect(dialog.textContent).toContain("the + button at the top right");
+  expect(dialog.textContent).not.toContain("sidebar");
+});
+
+test("every onboarding footer button is the standard button height", async () => {
+  await openDashboard(false);
+  const welcomeFooter = ["Close", "Continue"].map((name) => screen.getByRole("button", { name }));
+  for (const button of welcomeFooter) {
+    expect(classTokens(button), `${button.textContent} on the welcome step`).toContain("h-8");
+  }
+
+  await continueToAddItems();
+  for (const name of ["Close", "Back", "Get started"]) {
+    expect(classTokens(screen.getByRole("button", { name })), `${name} on the last step`).toContain(
+      "h-8",
+    );
+  }
+});
+
+test("the add items option cards take a card corner, not a pill", async () => {
+  await openDashboard(false);
+  await continueToAddItems();
+
+  for (const name of [/Add to collection/, /Create order/, /Import MyFigureCollection CSV/]) {
+    const tokens = classTokens(screen.getByRole("button", { name }));
+    expect(tokens, `${name} is still a pill`).not.toContain("rounded-full");
+    expect(tokens).toContain("rounded-xl");
+  }
+});
