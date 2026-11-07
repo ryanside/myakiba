@@ -40,7 +40,7 @@ export function BackLink({ text, font, className, ...navigationProps }: BackLink
     <>
       <HugeiconsIcon
         icon={BackIcon}
-        className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:-translate-x-0.5")}
+        className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:-translate-x-(--nudge)")}
         aria-hidden
       />
       {text}
