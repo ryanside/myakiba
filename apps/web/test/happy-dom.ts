@@ -5,7 +5,13 @@ GlobalRegistrator.register();
 
 declare global {
   interface Window {
-    readonly happyDOM: { readonly setInnerWidth: (width: number) => void };
+    readonly happyDOM: {
+      readonly setInnerWidth: (width: number) => void;
+      readonly settings: {
+        enableJavaScriptEvaluation: boolean;
+        suppressInsecureJavaScriptEnvironmentWarning: boolean;
+      };
+    };
   }
 }
 // Testing Library advances fake timers only when it finds a global jest.
