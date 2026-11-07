@@ -18,10 +18,12 @@ export async function snapshotWorkingTree(repo: string) {
     if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
     else await $`git read-tree HEAD`.cwd(repo).env(indexEnv).quiet();
     const tree = await $`git add -A && git write-tree`.cwd(repo).env(indexEnv).quiet().text();
-    const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
-      .cwd(repo)
-      .quiet()
-      .text();
+    // A fresh CI checkout has no Git identity. Identity env vars still win over these.
+    const commit =
+      await $`git -c user.name=replay -c user.email=replay@localhost commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
+        .cwd(repo)
+        .quiet()
+        .text();
     return commit.trim();
   } finally {
     await rm(scratch, { recursive: true, force: true });
