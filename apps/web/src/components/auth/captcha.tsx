@@ -10,7 +10,8 @@ type CaptchaState =
   | { readonly kind: "ready"; readonly token: string }
   | { readonly kind: "failed" };
 
-const CHECKING: CaptchaState = { kind: "checking" };
+// A new object for each check, so the deadline effect below restarts for every one of them.
+const checking = (): CaptchaState => ({ kind: "checking" });
 const FAILED: CaptchaState = { kind: "failed" };
 const CHECK_LIMIT_MS = 15_000;
 
@@ -20,12 +21,13 @@ const CHECK_LIMIT_MS = 15_000;
  * a submit made while the invisible check runs goes through when the check passes. It resolves
  * `null` when the check failed; `<Captcha>` then tells the user what to do. A check that has not
  * answered 15 s after it started counts as failed, so a stalled script never leaves a submit
- * hanging. A visible checkbox stops that clock: the user may take as long as they need.
+ * hanging. Each new challenge gets its own 15 s. A visible checkbox stops the clock, so the user
+ * may take as long as they need, and the clock starts again once the checkbox closes or times out.
  */
 export function useCaptcha() {
-  const current = useRef<CaptchaState>(CHECKING);
+  const current = useRef<CaptchaState>(checking());
   const waiter = useRef<((token: string | null) => void) | null>(null);
-  const [state, setState] = useState<CaptchaState>(CHECKING);
+  const [state, setState] = useState<CaptchaState>(checking);
   const [waiting, setWaiting] = useState(false);
   const [challenge, setChallenge] = useState(0);
 
@@ -35,7 +37,7 @@ export function useCaptcha() {
   };
 
   const spend = (token: string) => {
-    enter(CHECKING);
+    enter(checking());
     setChallenge((count) => count + 1);
     return token;
   };
@@ -47,6 +49,10 @@ export function useCaptcha() {
     waiter.current = null;
     setWaiting(false);
     resolve(next.kind === "ready" ? spend(next.token) : null);
+  };
+
+  const leaveInteractive = () => {
+    if (current.current.kind === "interactive") enter(checking());
   };
 
   const giveUp = useEffectEvent(() => settle(FAILED));
@@ -66,7 +72,7 @@ export function useCaptcha() {
     });
   };
 
-  return { token, state, waiting, challenge, settle } as const;
+  return { token, state, waiting, challenge, settle, leaveInteractive } as const;
 }
 
 type CaptchaHandle = ReturnType<typeof useCaptcha>;
@@ -87,7 +93,7 @@ function noticeFor({ state, waiting }: CaptchaHandle) {
  */
 export function Captcha({ captcha }: { readonly captcha: CaptchaHandle }) {
   const { resolvedTheme } = useTheme();
-  const { settle } = captcha;
+  const { settle, leaveInteractive } = captcha;
   const fail = () => settle(FAILED);
   return (
     <div className="grid gap-2">
@@ -95,8 +101,10 @@ export function Captcha({ captcha }: { readonly captcha: CaptchaHandle }) {
         key={captcha.challenge}
         siteKey={env.VITE_TURNSTILE_SITE_KEY}
         onSuccess={(token) => settle({ kind: "ready", token })}
-        onExpire={() => settle(CHECKING)}
+        onExpire={() => settle(checking())}
         onBeforeInteractive={() => settle({ kind: "interactive" })}
+        onAfterInteractive={leaveInteractive}
+        onTimeout={leaveInteractive}
         onError={fail}
         onUnsupported={fail}
         scriptOptions={{ onError: fail }}
