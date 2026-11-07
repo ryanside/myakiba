@@ -86,7 +86,7 @@ export function ItemHero({
             targets={item ? [{ type: "item", id: item.id }] : []}
             targetTitle={item?.title ?? ""}
             renderTrigger={
-              <Button variant="outline" size="xs" disabled={isLoading}>
+              <Button variant="outline" disabled={isLoading}>
                 <HugeiconsIcon icon={FolderAddIcon} data-icon="inline-start" />
                 Add Item to List
               </Button>
