@@ -44,7 +44,7 @@ async function repo(files: Record<string, string>) {
       show: (file: string) => git("show", `${commit}:${file}`),
     };
   }
-  return { git, write, remove, indexPath, snapshot };
+  return { dir, git, write, remove, indexPath, snapshot };
 }
 
 test("a snapshot commits edits, deletions and untracked files on top of HEAD", async () => {
@@ -95,4 +95,27 @@ test("a snapshot of a checkout with no index file starts from HEAD", async () =>
   const { files, show } = await snapshot();
   expect(files).toEqual([".gitignore", "src/ignored.ts", "src/value.ts"]);
   expect(await show("src/value.ts")).toBe("new\n");
+});
+
+test("a snapshot commits on a machine with no Git identity", async () => {
+  const { dir, git, write } = await repo({ "src/value.ts": "old\n" });
+  await git("config", "--unset", "user.name");
+  await git("config", "--unset", "user.email");
+  await write("src/value.ts", "new\n");
+  const home = await mkdtemp(path.join(tmpdir(), "worktree-snapshot-home-"));
+  repos.push(home);
+  // CI hosts have no domain name, so Git cannot guess an email there. This makes any host behave so.
+  await Bun.write(path.join(home, ".gitconfig"), "[user]\n\tuseConfigOnly = true\n");
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !/^(GIT_|EMAIL$)/.test(name)),
+  );
+  const script = `import { snapshotWorkingTree } from ${JSON.stringify(path.join(import.meta.dir, "worktree-snapshot.ts"))};
+console.log(await snapshotWorkingTree(process.cwd()));`;
+  const result = await $`bun -e ${script}`
+    .cwd(dir)
+    .env({ ...env, HOME: home, XDG_CONFIG_HOME: home, GIT_CONFIG_NOSYSTEM: "1" })
+    .nothrow()
+    .quiet();
+  expect(result.exitCode, result.stderr.toString()).toBe(0);
+  expect(await git("show", `${result.stdout.toString().trim()}:src/value.ts`)).toBe("new\n");
 });
