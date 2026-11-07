@@ -18,7 +18,10 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
+        "flex size-full flex-col overflow-hidden rounded-(--radius-outer)! bg-popover p-1 text-popover-foreground",
+        // Full bleed in its popover or dialog, so it takes that corner. Its field and items sit 8px in:
+        // its own padding plus the field wrapper's or the group's.
+        "[--inset:--spacing(2)] [--radius-outer:var(--radius-lg)] in-data-[slot=dialog-content]:[--radius-outer:var(--radius-xl)]",
         "in-data-[slot=dialog-content]:bg-transparent in-data-[slot=dialog-content]:p-0",
         className,
       )}
@@ -70,7 +73,7 @@ function CommandInput({
     <div data-slot="command-input-wrapper" className="p-1 pb-0 in-data-[slot=dialog-content]:p-0">
       <InputGroup
         className={cn(
-          "h-8! rounded-lg! border-border/40 bg-background/90 shadow-none! *:data-[slot=input-group-addon]:pl-2!",
+          "h-8! rounded-inner! border-border/40 bg-background/90 shadow-none! *:data-[slot=input-group-addon]:pl-2!",
           "in-data-[slot=dialog-content]:h-12! in-data-[slot=dialog-content]:rounded-none! in-data-[slot=dialog-content]:border-0 in-data-[slot=dialog-content]:border-b in-data-[slot=dialog-content]:border-foreground/10 in-data-[slot=dialog-content]:bg-transparent! in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:ring-0 in-data-[slot=dialog-content]:*:data-[slot=input-group-addon]:pl-4!",
         )}
       >
@@ -159,7 +162,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:inset-ring-1 data-selected:inset-ring-ring data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-inner px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:inset-ring-1 data-selected:inset-ring-ring data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
         className,
       )}
       {...props}
