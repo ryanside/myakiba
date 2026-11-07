@@ -31,6 +31,8 @@ const cloudflare = {
   fail: () => act(() => widget?.onError?.("300010")),
   blockScript: () => act(() => widget?.scriptOptions?.onError?.()),
   askForClick: () => act(() => widget?.onBeforeInteractive?.()),
+  finishClick: () => act(() => widget?.onAfterInteractive?.()),
+  timeOutClick: () => act(() => widget?.onTimeout?.()),
 };
 
 type Sent = { readonly path: string; readonly captcha: string | null };
@@ -219,6 +221,62 @@ test("the 15 second limit never cuts off a user looking at Cloudflare's checkbox
   await cloudflare.pass("clicked");
   await act(async () => {});
   expect(sent).toEqual([{ path: "/api/auth/sign-in/email", captcha: "clicked" }]);
+});
+
+test("a renewed check gets its own 15 seconds", async () => {
+  jest.useFakeTimers();
+  await openSignIn();
+  submitSignIn();
+  await act(async () => jest.advanceTimersByTime(14_000));
+  await cloudflare.pass("first");
+  await act(async () => {});
+  expect(screen.getByText("Invalid email or password")).toBeDefined();
+
+  fireEvent.click(screen.getByRole("button", { name: /^Sign in/ }));
+  await act(async () => {});
+  expect(screen.getByText("Checking your browser…")).toBeDefined();
+  await act(async () => jest.advanceTimersByTime(14_000));
+  expect(screen.queryByText(/couldn't run the browser check/i)).toBeNull();
+
+  await act(async () => jest.advanceTimersByTime(1000));
+  expect(screen.getByText(/couldn't run the browser check/i).textContent).toMatch(
+    /reload the page/i,
+  );
+  expect(sent.map((request) => request.captcha)).toEqual(["first"]);
+});
+
+test.each([
+  ["after the checkbox is done", cloudflare.finishClick],
+  ["after the checkbox times out", cloudflare.timeOutClick],
+])("%s, a stalled check still fails after 15 seconds and says what to do", async (_, leave) => {
+  jest.useFakeTimers();
+  await openSignIn();
+  submitSignIn();
+  await cloudflare.askForClick();
+  await act(async () => jest.advanceTimersByTime(60_000));
+
+  await leave();
+  expect(screen.getByText("Checking your browser…")).toBeDefined();
+  await act(async () => jest.advanceTimersByTime(14_000));
+  expect(screen.queryByText(/couldn't run the browser check/i)).toBeNull();
+
+  await act(async () => jest.advanceTimersByTime(1000));
+  expect(screen.getByText(/couldn't run the browser check/i).textContent).toMatch(
+    /reload the page/i,
+  );
+  expect(sent).toEqual([]);
+});
+
+test("a checkbox that reports done after its token arrived still signs in with that token", async () => {
+  await openSignIn();
+  await cloudflare.askForClick();
+  await cloudflare.pass("clicked");
+  await cloudflare.finishClick();
+
+  submitSignIn();
+  await waitFor(() =>
+    expect(sent).toEqual([{ path: "/api/auth/sign-in/email", captcha: "clicked" }]),
+  );
 });
 
 test("a widget that recovers after an error clears the message and signs in", async () => {
