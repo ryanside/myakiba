@@ -37,8 +37,6 @@ const { AppSidebar } = await import("@/components/sidebar/app-sidebar");
 const { Route: appRoute } = await import("@/routes/(app)/route");
 
 beforeEach(() => {
-  // Page backgrounds are opt-in; these tests cover the warmed and decoded photos.
-  localStorage.setItem("appearance:pageBackgrounds", "true");
   globalThis.requestAnimationFrame = (renderFrame) => {
     const handle = ++nextFrame;
     frames.set(handle, renderFrame);
