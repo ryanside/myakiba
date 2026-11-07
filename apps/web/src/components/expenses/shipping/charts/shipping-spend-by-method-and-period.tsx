@@ -10,7 +10,6 @@ import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard
 import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
-  formatAxisCurrency,
   shippingMethodChartConfig,
   shippingMethodKeys,
   useShippingMethodVisibility,
@@ -78,7 +77,9 @@ export function ShippingSpendByMethodAndPeriod({
         <EvilBarChart.Grid />
         <EvilBarChart.XAxis dataKey="bucket" />
         <EvilBarChart.YAxis
-          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

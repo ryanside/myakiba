@@ -17,6 +17,7 @@ import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { itemDestination } from "@/lib/item-destination";
+import { shownMessageOf } from "@/lib/api-response";
 
 type OrdersExpansion = Extract<ShopExpansionResponse, { scope: "orders" }>;
 type ShippingExpansion = Extract<ShopExpansionResponse, { scope: "shipping" }>;
@@ -63,7 +64,9 @@ export function ShopTableRowExpansion({
   if (isError) {
     return (
       <div className="w-full border-t border-border/30 bg-muted/30 p-4">
-        <p className="animate-data-in text-sm text-destructive">Failed to load: {error.message}</p>
+        <p className="animate-data-in text-sm text-destructive">
+          Failed to load: {shownMessageOf(error)}
+        </p>
       </div>
     );
   }

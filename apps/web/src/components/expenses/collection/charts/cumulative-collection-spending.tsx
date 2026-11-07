@@ -5,20 +5,16 @@ import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { EvilAreaChart } from "@/components/evilcharts/charts/recharts-area-chart";
 import type { ChartConfig } from "@/components/evilcharts/ui/recharts-chart";
 import { ChartTooltip, ChartTooltipContent } from "@/components/evilcharts/ui/recharts-tooltip";
-import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard-shell";
+import { ChartSection } from "@/components/expenses/dashboard-shell";
 import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
   EXPENSE_CHART_DOT_MAX_POINTS,
-  formatAxisCurrency,
 } from "@/components/expenses/chart-utils";
 
 const config = {
   collectionItems: { label: "Collection Items", colors: { light: [EXPENSE_CHART_COLORS[0]] } },
 } satisfies ChartConfig;
-const legend = [
-  { key: "collectionItems", label: "Collection Items", color: EXPENSE_CHART_COLORS[0] },
-] as const;
 
 export function CumulativeCollectionSpending({
   data,
@@ -37,7 +33,6 @@ export function CumulativeCollectionSpending({
     <ChartSection
       title="Collection spending"
       selector={selector}
-      legend={<ChartSeriesLegend items={legend} />}
       isEmpty={!isLoading && data.length === 0}
       emptyMessage="No dated collection spending for these filters."
     >
@@ -51,7 +46,9 @@ export function CumulativeCollectionSpending({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

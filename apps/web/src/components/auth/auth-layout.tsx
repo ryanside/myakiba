@@ -20,9 +20,11 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       </div>
       <div aria-hidden className="hidden p-3 lg:block">
         <div className="relative h-full overflow-hidden rounded-3xl bg-muted">
+          {/* Lazy loading avoids fetching the desktop-only image while its panel is hidden. */}
           <img
             src={akihabara}
             alt=""
+            loading="lazy"
             className="absolute inset-0 size-full object-cover saturate-[.85] [image-rendering:pixelated]"
           />
           <p className="absolute bottom-6 left-6 rounded-full bg-background/80 px-3 py-1.5 text-sm text-foreground backdrop-blur">

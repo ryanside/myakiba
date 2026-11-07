@@ -1,35 +1,14 @@
-import { createContext, useState } from "react";
+import { createContext } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowRight01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  FolderAddIcon,
-  Loading03Icon,
-  MoreHorizontalIcon,
-  PackageIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
+import { ArrowRight01Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import type { ColumnDef, Row } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { OrderForm } from "./order-form";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
 import { SelectCell } from "../cells/select-cell";
@@ -48,8 +27,10 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
-import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
+import { withOrderPending } from "./order-pending-context";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -59,127 +40,6 @@ export const OrderItemSelectionContext = createContext<{
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
 
-function ExpandButton({ row }: { readonly row: Row<Order> }) {
-  const isExpanded = row.getIsExpanded();
-
-  return row.getCanExpand() ? (
-    <Button
-      onClick={row.getToggleExpandedHandler()}
-      size="icon-sm"
-      variant="ghost"
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={ArrowRight01Icon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
-      />
-    </Button>
-  ) : null;
-}
-
-function OrderActionsCell({
-  order,
-  isPending,
-  onEditOrder,
-  onDeleteOrders,
-  currency,
-}: Pick<OrdersColumnsParams, "onEditOrder" | "onDeleteOrders" | "currency"> & {
-  readonly order: Order;
-  readonly isPending: boolean;
-}): React.JSX.Element {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [addToListsOpen, setAddToListsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  return (
-    <>
-      <div className="flex items-center justify-end gap-0.5">
-        <OrderForm
-          renderTrigger={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              disabled={isPending}
-              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
-            >
-              <HugeiconsIcon icon={Edit03Icon} />
-              <span className="sr-only">Edit order</span>
-            </Button>
-          }
-          type="edit-order"
-          orderData={order}
-          callbackFn={onEditOrder}
-          currency={currency}
-        />
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger
-            render={
-              <Button variant="ghost" size="icon-sm" disabled={isPending}>
-                <span className="sr-only">Open menu</span>
-                <HugeiconsIcon
-                  icon={isPending ? Loading03Icon : MoreHorizontalIcon}
-                  className={cn(isPending && "animate-spin")}
-                />
-              </Button>
-            }
-          />
-          {menuOpen ? (
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLinkItem
-                  render={<Link to="/orders/$id" params={{ id: order.orderId }} />}
-                >
-                  <HugeiconsIcon icon={ViewIcon} />
-                  View details
-                </DropdownMenuLinkItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setAddToListsOpen(true);
-                  }}
-                >
-                  <HugeiconsIcon icon={FolderAddIcon} />
-                  Add to List
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setDeleteOpen(true);
-                  }}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} />
-                  Delete order
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          ) : null}
-        </DropdownMenu>
-      </div>
-      <AddToListsDialog
-        open={addToListsOpen}
-        onOpenChange={setAddToListsOpen}
-        targets={[{ type: "order", id: order.orderId }]}
-        targetTitle={order.title}
-      />
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete order?"
-        description='This will permanently delete this order and all its items. Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-        onConfirm={() => onDeleteOrders(new Set([order.orderId]))}
-      />
-    </>
-  );
-}
-
 interface OrdersColumnsParams {
   onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
@@ -188,8 +48,6 @@ interface OrdersColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
-  isOrderPending: (orderId: string) => boolean;
-  isCollectionItemPending: (collectionId: string) => boolean;
 }
 
 export function createOrdersColumns({
@@ -200,8 +58,6 @@ export function createOrdersColumns({
   currency,
   locale,
   dateFormat,
-  isOrderPending,
-  isCollectionItemPending,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   return [
     {
@@ -244,7 +100,7 @@ export function createOrdersColumns({
     {
       id: "expand",
       header: () => null,
-      cell: ({ row }) => <ExpandButton row={row} />,
+      cell: ({ row }) => <RowExpandButton row={row} />,
       size: 24,
       enableSorting: false,
       enableHiding: false,
@@ -267,7 +123,6 @@ export function createOrdersColumns({
                   setSelectedOrderIdByCollectionId={itemSelection.setSelectedOrderIdByCollectionId}
                   onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
-                  isCollectionItemPending={isCollectionItemPending}
                 />
               );
             }}
@@ -281,7 +136,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
         return (
           <div className="flex items-center gap-3 pe-4">
@@ -303,7 +158,7 @@ export function createOrdersColumns({
               <InlineTextCell
                 label="Order title"
                 value={order.title}
-                disabled={isOrderPending(order.orderId)}
+                disabled={isPending}
                 onSubmit={async (newValue) => {
                   const { createdAt, updatedAt, ...orderWithoutTimestamps } = order;
                   void createdAt;
@@ -336,7 +191,7 @@ export function createOrdersColumns({
             </Link>
           </div>
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -351,11 +206,11 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: ({ row }) => (
+      cell: withOrderPending(({ row }, isPending) => (
         <InlineTextCell
           label="Shop"
           value={row.original.shop}
-          disabled={isOrderPending(row.original.orderId)}
+          disabled={isPending}
           onSubmit={async (newValue) => {
             const { createdAt, updatedAt, ...orderWithoutTimestamps } = row.original;
             void createdAt;
@@ -369,7 +224,7 @@ export function createOrdersColumns({
             );
           }}
         />
-      ),
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -384,9 +239,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <div className="space-y-px">
             <SelectCell
@@ -409,7 +263,7 @@ export function createOrdersColumns({
             />
           </div>
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -425,9 +279,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverReleaseDateCell
             value={order.releaseDate}
@@ -448,7 +301,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -463,9 +316,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.orderDate}
@@ -485,7 +337,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -501,9 +353,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.paymentDate}
@@ -523,7 +374,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -539,9 +390,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.shippingDate}
@@ -561,7 +411,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -577,9 +427,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collection Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <PopoverDatePickerCell
             value={order.collectionDate}
@@ -599,7 +448,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -615,21 +464,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Items" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const { itemCount } = row.original;
-        return (
-          <Button
-            type="button"
-            variant="ghost"
-            className="pr-0 tabular-nums"
-            aria-expanded={row.getIsExpanded()}
-            onClick={() => row.getToggleExpandedHandler()()}
-          >
-            {itemCount}
-            <span className="sr-only"> items</span>
-          </Button>
-        );
-      },
+      cell: ({ row }) => <OrderItemCountCell row={row} />,
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -645,9 +480,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Total" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         const inputs = [
           {
             title: "Shipping",
@@ -703,7 +537,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -722,9 +556,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Fee" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Shipping fee"
@@ -746,7 +579,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -764,9 +597,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Taxes" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Taxes"
@@ -788,7 +620,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -806,9 +638,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Duties" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Duties"
@@ -830,7 +661,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -848,9 +679,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Tariffs" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Tariffs"
@@ -872,7 +702,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -890,9 +720,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Misc Fees" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <InlineCurrencyCell
             label="Other fees"
@@ -914,7 +743,7 @@ export function createOrdersColumns({
             disabled={isPending}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -931,9 +760,8 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const status = row.original.status;
-        const isPending = isOrderPending(row.original.orderId);
         return (
           <SelectCell
             label="Status"
@@ -955,7 +783,7 @@ export function createOrdersColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -967,9 +795,8 @@ export function createOrdersColumns({
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withOrderPending(({ row }, isPending) => {
         const order = row.original;
-        const isPending = isOrderPending(order.orderId);
         return (
           <OrderActionsCell
             order={order}
@@ -979,7 +806,7 @@ export function createOrdersColumns({
             currency={currency}
           />
         );
-      },
+      }),
       size: 72,
       enableSorting: false,
       enableHiding: false,

@@ -48,6 +48,7 @@ import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { getCategoryColor } from "@/lib/category-colors";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
@@ -420,7 +421,7 @@ function FiltersDraft({
                             )}
                             {entrySearch.length > 0 && isEntriesError && (
                               <CommandEmpty>
-                                Could not load entries. {entriesError.message}
+                                Could not load entries. {shownMessageOf(entriesError)}
                               </CommandEmpty>
                             )}
                             {entrySearch.length > 0 && isEntriesPending && !isEntriesError && (

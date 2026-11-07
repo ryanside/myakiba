@@ -1,3 +1,4 @@
+import { shownMessageOf } from "@/lib/api-response";
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -17,10 +18,10 @@ export const STATE_ICON_CLASS_NAME =
 
 export function LoadError({
   title,
-  message,
+  error,
 }: {
   readonly title: string;
-  readonly message: string;
+  readonly error: Error | null;
 }): React.JSX.Element {
   return (
     <Empty className={STATE_PANEL_CLASS_NAME}>
@@ -30,7 +31,7 @@ export function LoadError({
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
         <EmptyDescription>
-          <span className="block">{message}</span>
+          <span className="block">{shownMessageOf(error)}</span>
           Reload the page to try again.
         </EmptyDescription>
       </EmptyHeader>

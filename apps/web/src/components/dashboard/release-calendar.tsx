@@ -12,6 +12,7 @@ import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface ReleaseCalendarProps {
   readonly className?: string;
@@ -139,16 +140,18 @@ function ReleaseCalendar({
           )}
         </div>
       </FrameHeader>
-      <FramePanel className="flex flex-col shadow-none! border-none">
+      <FramePanel className="flex flex-col">
         {(() => {
           if (isPending) return <ReleaseCalendarSkeleton />;
-          if (isError) return <ReleaseCalendarError message={error.message} onRetry={refetch} />;
+          if (isError) return <ReleaseCalendarError error={error} onRetry={refetch} />;
           if (grouped.length > 0) {
             return (
-              <div className="animate-data-in -mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
-                {grouped.map(([dateKey, items]) => (
-                  <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
-                ))}
+              <div className="animate-data-in">
+                <div className="-mx-(--frame-panel-p) max-h-56 overflow-y-auto pb-6 scroll-fade-b">
+                  {grouped.map(([dateKey, items]) => (
+                    <DateGroup key={dateKey} dateKey={dateKey} items={items} currency={currency} />
+                  ))}
+                </div>
               </div>
             );
           }
@@ -220,15 +223,15 @@ function DateGroup({
 }
 
 function ReleaseCalendarError({
-  message,
+  error,
   onRetry,
 }: {
-  readonly message: string;
+  readonly error: Error;
   readonly onRetry: () => void;
 }): React.ReactNode {
   return (
     <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
-      <p className="text-xs text-destructive">{message}</p>
+      <p className="text-xs text-destructive">{shownMessageOf(error)}</p>
       <Button variant="ghost" size="xs" onClick={onRetry}>
         Retry
       </Button>

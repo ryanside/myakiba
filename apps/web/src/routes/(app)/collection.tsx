@@ -33,14 +33,15 @@ export const Route = createFileRoute("/(app)/collection")({
 
 function RouteComponent() {
   const { currency, locale } = useUserPreferences();
-  const { isPending, isError, totalCount, totalValue, totalItemsThisMonth } = useCollectionQuery();
+  const { isPending, isError, error, totalCount, totalValue, totalItemsThisMonth } =
+    useCollectionQuery();
   const averageItemCost = totalCount > 0 ? Math.round(totalValue / totalCount) : 0;
 
   if (isError) {
     return (
       <div className="mx-auto flex flex-col gap-8 max-w-352">
         <PageHeader title="Collection" />
-        <LoadError title="Couldn't load your Collection" message="The server didn't answer." />
+        <LoadError title="Couldn't load your Collection" error={error} />
       </div>
     );
   }

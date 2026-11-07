@@ -104,7 +104,7 @@ function RouteComponent(): ReactElement {
       <div className="flex flex-col gap-2">
         <div className="flex flex-row flex-wrap items-center gap-4">
           {activeTab === "overview" ? (
-            <h1 className="display font-heading text-[1.375rem] leading-8 font-medium">
+            <h1 className="page-title">
               Welcome back
               <span className="hidden sm:inline">
                 , {session?.user.username}{" "}
@@ -117,7 +117,7 @@ function RouteComponent(): ReactElement {
               role="group"
               aria-label="Select month"
             >
-              <h1 className="min-w-28 shrink-0 text-left display font-heading text-[1.375rem] leading-8 font-medium tabular-nums">
+              <h1 className="min-w-28 shrink-0 text-left page-title tabular-nums">
                 {monthYearLabel.format(visibleMonth)}
               </h1>
               <Button

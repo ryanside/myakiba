@@ -37,6 +37,7 @@ import type {
 } from "@/components/sync/sync-launcher-options";
 import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
+import { shownMessageOf } from "@/lib/api-response";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -328,7 +329,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search orders"
-                    subtitle={searchError instanceof Error ? searchError.message : undefined}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&
@@ -377,7 +378,7 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search items"
-                    subtitle={searchError instanceof Error ? searchError.message : undefined}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&

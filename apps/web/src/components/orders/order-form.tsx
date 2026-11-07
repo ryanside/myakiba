@@ -600,15 +600,11 @@ function OrderFormContent(
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
               children={([isSubmitting]) => (
-                <SheetClose>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full flex-1"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
+                <SheetClose
+                  disabled={isSubmitting}
+                  render={<Button type="button" variant="outline" />}
+                >
+                  Cancel
                 </SheetClose>
               )}
             />
@@ -664,10 +660,11 @@ function OrderFormContent(
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
-              <DialogClose>
-                <Button variant="outline" type="button" disabled={isSubmitting}>
-                  Cancel
-                </Button>
+              <DialogClose
+                disabled={isSubmitting}
+                render={<Button variant="outline" type="button" />}
+              >
+                Cancel
               </DialogClose>
             )}
           />

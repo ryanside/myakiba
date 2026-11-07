@@ -327,6 +327,11 @@ body {
   color: var(--color-muted-foreground);
 }
 
+/* A group's name in a nav or settings list: a smaller, tighter, fainter eyebrow. */
+@utility group-label {
+  @apply eyebrow text-[0.6875rem] tracking-tight text-muted-foreground/70;
+}
+
 @utility decorative {
   font-family: var(--font-orbitron);
   font-weight: 500;
@@ -337,6 +342,15 @@ body {
 /* Titles and large figures: Inter tightened as display type, like marked.dev's page titles. */
 @utility display {
   letter-spacing: -0.02em;
+}
+
+@utility page-title {
+  @apply display font-heading text-[1.375rem] leading-8 font-medium;
+}
+
+/* Popovers, menus and selects scale and fade in from their anchor. */
+@utility popup-motion {
+  @apply origin-(--transform-origin) transition-[opacity,scale] duration-200 ease-out data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0;
 }
 
 @utility animate-appear {

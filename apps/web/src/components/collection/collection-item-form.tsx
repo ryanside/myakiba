@@ -46,6 +46,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { shownMessageOf } from "@/lib/api-response";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -106,10 +107,14 @@ function CollectionItemFormContent({
   return (
     <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          try {
+            await form.handleSubmit();
+          } catch {
+            // The mutation reports the error and the sheet keeps the draft.
+          }
         }}
       >
         <SheetHeader>
@@ -386,7 +391,7 @@ function CollectionItemFormContent({
                         )}
                         {releasesError && (
                           <div className="p-3 text-sm text-destructive">
-                            {releasesError.message}
+                            {shownMessageOf(releasesError)}
                           </div>
                         )}
                         {releasesData?.releases.map((release) => (
@@ -615,15 +620,11 @@ function CollectionItemFormContent({
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
-              <SheetClose>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex-1"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
+              <SheetClose
+                disabled={isSubmitting}
+                render={<Button type="button" variant="outline" />}
+              >
+                Cancel
               </SheetClose>
             )}
           />

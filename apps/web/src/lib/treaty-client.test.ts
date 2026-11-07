@@ -1,34 +1,13 @@
 import { afterAll, expect, test } from "bun:test";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { signedInSession } from "../../test/session";
 
 let sessionRequests = 0;
 let apiRequests = 0;
 let signedIn = true;
 let sessionStatus = 200;
 let held: Promise<null> | null = null;
-const session = {
-  session: {
-    id: "revoked-session",
-    token: "test-token",
-    userId: "revoked-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "revoked-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-};
+const session = signedInSession();
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = Object.assign(
@@ -58,7 +37,7 @@ afterAll(() => {
 
 test("a burst of API 401s checks the session once and signs a revoked session out", async () => {
   const authState = renderHook(() => authClient.useSession());
-  await waitFor(() => expect(authState.result.current.data?.user.id).toBe("revoked-user"));
+  await waitFor(() => expect(authState.result.current.data?.user.id).toBe(session.user.id));
 
   signedIn = false;
   sessionRequests = 0;

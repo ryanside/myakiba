@@ -2,10 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRead } from "@/data/client";
 import { expenses } from "@/data/resources/expenses";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
-import type { ColumnDef, ExpandedState, Row } from "@tanstack/react-table";
+import type { ColumnDef, ExpandedState } from "@tanstack/react-table";
 import type {
   ExpenseFilters,
   ExpenseScope,
@@ -14,29 +12,23 @@ import type {
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
+import {
+  DataTable,
+  DataTableEmpty,
+  DATA_TABLE_NUMBER_META,
+} from "@/components/data-table/data-table";
+import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { shownMessageOf } from "@/lib/api-response";
 
 const PAGE_SIZE = 10;
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
-const TABULAR_COLUMN_IDS = new Set([
-  "spend",
-  "share",
-  "itemCount",
-  "averageItemCost",
-  "orderCount",
-  "averageOrder",
-  "orderItemCount",
-  "fees",
-  "averageShipping",
-]);
 
 export function ShopTable({
   scope,
@@ -103,7 +95,7 @@ export function ShopTable({
     <ExpensePanel title="Shops" headerAction={shopSearchInput} className="min-w-0">
       {query.isError ? (
         <div className="flex h-64 items-center justify-center">
-          <p className="text-sm text-destructive">Error: {query.error.message}</p>
+          <p className="text-sm text-destructive">Error: {shownMessageOf(query.error)}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4" aria-busy={query.isPending}>
@@ -172,13 +164,7 @@ function ShopsTable({
     [currency, locale],
   );
   const columns = useMemo<ColumnDef<ExpenseShopRow>[]>(
-    () =>
-      // Figures sit right-aligned under right-aligned headers, as in every other table.
-      getColumns({ scope, offset, formatCurrency }).map((column) =>
-        column.id !== undefined && TABULAR_COLUMN_IDS.has(column.id)
-          ? { ...column, meta: { ...column.meta, headerClassName: "text-right" } }
-          : column,
-      ),
+    () => getColumns({ scope, offset, formatCurrency }),
     [formatCurrency, offset, scope],
   );
   const table = useReactTable({
@@ -218,7 +204,6 @@ function ShopsTable({
         cn(
           columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
           columnId === EXPAND_COLUMN_ID && "w-8",
-          TABULAR_COLUMN_IDS.has(columnId) && "text-right tabular-nums",
         )
       }
     />
@@ -235,7 +220,12 @@ function getColumns({
   formatCurrency: (value: number) => string;
 }): ColumnDef<ExpenseShopRow>[] {
   const columns: ColumnDef<ExpenseShopRow>[] = [
-    { id: EXPAND_COLUMN_ID, header: "", cell: ({ row }) => <ExpandButton row={row} />, size: 32 },
+    {
+      id: EXPAND_COLUMN_ID,
+      header: "",
+      cell: ({ row }) => <RowExpandButton row={row} />,
+      size: 32,
+    },
     { id: ROW_NUMBER_COLUMN_ID, header: "#", cell: ({ row }) => offset + row.index + 1, size: 40 },
     { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
     {
@@ -244,6 +234,7 @@ function getColumns({
       header: "Spend",
       cell: ({ getValue }) => formatCurrency(Number(getValue())),
       size: 96,
+      meta: DATA_TABLE_NUMBER_META,
     },
     {
       id: "share",
@@ -251,6 +242,7 @@ function getColumns({
       header: "Share",
       cell: ({ getValue }) => `${Number(getValue()).toFixed(1)}%`,
       size: 72,
+      meta: DATA_TABLE_NUMBER_META,
     },
   ];
 
@@ -261,6 +253,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "collection" ? row.itemCount : 0),
         header: "Items",
         size: 64,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageItemCost",
@@ -268,6 +261,7 @@ function getColumns({
         header: "Average Item Cost",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   } else if (scope === "orders") {
@@ -277,6 +271,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "orders" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageOrder",
@@ -284,12 +279,14 @@ function getColumns({
         header: "Average Order",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 104,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "orderItemCount",
         accessorFn: (row) => (row.scope === "orders" ? row.orderItemCount : 0),
         header: "Order Items",
         size: 88,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "fees",
@@ -297,6 +294,7 @@ function getColumns({
         header: "Fees",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 88,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   } else {
@@ -306,6 +304,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "shipping" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
+        meta: DATA_TABLE_NUMBER_META,
       },
       {
         id: "averageShipping",
@@ -313,33 +312,10 @@ function getColumns({
         header: "Average Shipping",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
+        meta: DATA_TABLE_NUMBER_META,
       },
     );
   }
 
   return columns;
-}
-
-function ExpandButton({ row }: { readonly row: Row<ExpenseShopRow> }): ReactNode {
-  const isExpanded = row.getIsExpanded();
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={(event) => {
-        event.stopPropagation();
-        row.toggleExpanded();
-      }}
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={ArrowRight01Icon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
-      />
-    </Button>
-  );
 }

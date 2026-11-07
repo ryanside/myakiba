@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import {
   MediaCard,
   MediaCardBody,
@@ -29,7 +30,6 @@ interface OrdersCardGridProps {
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly currency: Currency;
   readonly locale: string;
-  readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -42,9 +42,9 @@ export function OrdersCardGrid({
   onDeleteOrders,
   currency,
   locale,
-  isOrderPending,
   isLoading,
 }: OrdersCardGridProps): React.JSX.Element {
+  const { isOrderPending } = useOrderPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {

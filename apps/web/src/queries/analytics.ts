@@ -1,4 +1,5 @@
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { requireData } from "@/lib/api-response";
+import { app } from "@/lib/treaty-client";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
 import type {
@@ -40,17 +41,7 @@ function getAnalyticsSectionApiPath(sectionName: AnalyticsSection) {
 }
 
 export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
-  const { data, error } = await app.api.analytics.get();
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get analytics"));
-  }
-
-  if (!data) {
-    throw new Error("Failed to get analytics");
-  }
-
-  return data;
+  return requireData(app.api.analytics.get(), "Failed to get analytics");
 }
 
 export async function getAnalyticsSection(
@@ -67,16 +58,10 @@ export async function getAnalyticsSection(
     order: filters.order,
   };
 
-  const { data, error } = await app.api.analytics({ sectionName: apiSectionName }).get({ query });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get analytics section"));
-  }
-
-  if (!data?.analytics) {
-    throw new Error("Failed to get analytics section");
-  }
-
+  const data = await requireData(
+    app.api.analytics({ sectionName: apiSectionName }).get({ query }),
+    "Failed to get analytics section",
+  );
   return data.analytics;
 }
 
@@ -91,19 +76,10 @@ export async function getAnalyticsSectionItems(
     offset: filters.offset ?? 0,
   };
 
-  const { data, error } = await app.api.analytics({ sectionName: apiSectionName }).items.get({
-    query,
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get analytics section items"));
-  }
-
-  if (!data?.items) {
-    throw new Error("Failed to get analytics section items");
-  }
-
-  return data;
+  return requireData(
+    app.api.analytics({ sectionName: apiSectionName }).items.get({ query }),
+    "Failed to get analytics section items",
+  );
 }
 
 export async function getAnalyticsSectionRelationships(
@@ -117,17 +93,8 @@ export async function getAnalyticsSectionRelationships(
     limit: filters.limit ?? 5,
     offset: filters.offset ?? 0,
   };
-  const { data, error } = await app.api
-    .analytics({ sectionName: apiSectionName })
-    .relationships.get({ query });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get analytics section relationships"));
-  }
-
-  if (!data?.items) {
-    throw new Error("Failed to get analytics section relationships");
-  }
-
-  return data;
+  return requireData(
+    app.api.analytics({ sectionName: apiSectionName }).relationships.get({ query }),
+    "Failed to get analytics section relationships",
+  );
 }

@@ -1,12 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AddSquareIcon,
-  ArrowDown02Icon,
-  ArrowUp02Icon,
-  MinusSignSquareIcon,
-  UnfoldMoreIcon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown02Icon, ArrowUp02Icon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
 import {
@@ -20,7 +14,6 @@ import type {
   ColumnDef,
   ExpandedState,
   OnChangeFn,
-  Row,
   SortingState,
 } from "@tanstack/react-table";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
@@ -30,7 +23,7 @@ import type {
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
-import { Button } from "@/components/ui/button";
+import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
@@ -52,7 +45,7 @@ function createSectionColumns({
     {
       id: EXPAND_COLUMN_ID,
       header: "",
-      cell: ({ row }) => <ExpandButton row={row} />,
+      cell: ({ row }) => <RowExpandButton row={row} />,
       size: 32,
     },
     {
@@ -231,26 +224,4 @@ function getSortPresentation(sorted: false | "asc" | "desc") {
   }
 
   return { icon: UnfoldMoreIcon, nextDirection: "ascending" } as const;
-}
-
-function ExpandButton({ row }: { readonly row: Row<AnalyticsSectionRow> }): ReactNode {
-  const isExpanded = row.getIsExpanded();
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={(event) => {
-        event.stopPropagation();
-        row.toggleExpanded();
-      }}
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={isExpanded ? MinusSignSquareIcon : AddSquareIcon}
-        className="size-3.5 text-muted-foreground transition-transform duration-200 ease-out"
-      />
-    </Button>
-  );
 }

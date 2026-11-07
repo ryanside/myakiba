@@ -22,6 +22,7 @@ import * as z from "zod";
 import type { RouterAppContext } from "@/routes/__root";
 import { createSessionSource } from "@/lib/session";
 import type { Session, SessionSource } from "@/lib/session";
+import { signedInSession } from "../../../test/session";
 
 await mock.module("@/lib/page-background", () => ({
   downloadPageBackground: () => {},
@@ -42,33 +43,11 @@ let endingSession = false;
 let deletingAccount = false;
 let dashboardRenders = 0;
 let shellRenders = 0;
-const session = {
-  session: {
-    id: "navigation-session",
-    token: "test-token",
-    userId: "navigation-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "navigation-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-} satisfies NonNullable<Session>;
-const otherSession = {
-  session: { ...session.session, id: "other-session", userId: "other-user" },
-  user: { ...session.user, id: "other-user", name: "Other collector", username: "other" },
-} satisfies NonNullable<Session>;
+const session = signedInSession();
+const otherSession = signedInSession({
+  session: { id: "other-session", userId: "other-user" },
+  user: { id: "other-user", name: "Other collector", username: "other" },
+});
 let account: NonNullable<Session> = session;
 let ownerLoads = 0;
 

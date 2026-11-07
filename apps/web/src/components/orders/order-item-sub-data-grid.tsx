@@ -28,6 +28,7 @@ import { orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { shownMessageOf } from "@/lib/api-response";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [
@@ -47,7 +48,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
-  isCollectionItemPending,
   heading,
   wrapped = true,
   isLoading = false,
@@ -57,7 +57,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   onEditItem: (values: CollectionItemFormValues) => Promise<void>;
   onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
-  isCollectionItemPending: (collectionId: string) => boolean;
   heading?: ReactNode;
   wrapped?: boolean;
   isLoading?: boolean;
@@ -128,9 +127,8 @@ export function OrderItemSubDataGrid({
         currency,
         locale,
         dateFormat,
-        isCollectionItemPending,
       }),
-    [currency, locale, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
+    [currency, locale, dateFormat, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({
@@ -183,7 +181,7 @@ export function OrderItemSubDataGrid({
   const grid =
     isError && !isLoading ? (
       <p className="animate-data-in py-3 text-center text-sm text-destructive">
-        Failed to load order items: {error.message}
+        Failed to load order items: {shownMessageOf(error)}
       </p>
     ) : (
       <DataGrid
@@ -195,7 +193,6 @@ export function OrderItemSubDataGrid({
         tableLayout={{
           dense: true,
           rowBorder: true,
-          headerBackground: true,
           headerBorder: true,
           columnsPinnable: true,
           columnsResizable: true,

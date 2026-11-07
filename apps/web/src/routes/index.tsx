@@ -144,7 +144,7 @@ function HomeComponent() {
                   Get started
                   <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
                 </Button>
-                <div className="px-2 text-start text-xs text-muted-foreground italic">
+                <div className="px-2 text-start text-xs text-muted-foreground">
                   <p>*in early development</p>
                 </div>{" "}
               </div>

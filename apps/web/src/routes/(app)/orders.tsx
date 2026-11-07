@@ -33,14 +33,14 @@ export const Route = createFileRoute("/(app)/orders")({
 
 function RouteComponent() {
   const { currency, locale } = useUserPreferences();
-  const { isError, isPending, totalCount, totalSpent, activeOrders, unpaidCosts } =
+  const { isError, error, isPending, totalCount, totalSpent, activeOrders, unpaidCosts } =
     useOrdersQuery();
 
   if (isError) {
     return (
       <div className="mx-auto flex flex-col gap-8 max-w-[88rem]">
         <PageHeader title="Orders" />
-        <LoadError title="Couldn't load your Orders" message="The server didn't answer." />
+        <LoadError title="Couldn't load your Orders" error={error} />
       </div>
     );
   }

@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { shownMessageOf } from "@/lib/api-response";
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 
@@ -117,7 +118,7 @@ function RouteComponent(): ReactNode {
 
       {isError ? (
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {shownMessageOf(error)}</div>
         </div>
       ) : (
         <>

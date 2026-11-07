@@ -385,6 +385,46 @@ function OrderCard({
   );
 }
 
+interface OrderColumnProps {
+  readonly columnId: OrderStatus;
+  readonly orders: readonly DashboardKanbanOrder[];
+  readonly isLoading: boolean;
+  readonly currency: Currency;
+  readonly dateFormat: DateFormat;
+  readonly isOverlay?: boolean;
+  readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+}
+
+function ColumnBody({
+  orders,
+  isLoading,
+  currency,
+  dateFormat,
+  asHandle,
+  onDateChange,
+}: Pick<OrderColumnProps, "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange"> & {
+  readonly asHandle: boolean;
+}) {
+  if (isLoading) return <Loader className="justify-start pt-4" />;
+  if (orders.length === 0) {
+    return (
+      <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
+        No orders
+      </p>
+    );
+  }
+  return orders.map((order) => (
+    <OrderCard
+      key={order.orderId}
+      order={order}
+      currency={currency}
+      dateFormat={dateFormat}
+      asHandle={asHandle}
+      onDateChange={onDateChange}
+    />
+  ));
+}
+
 function OrderColumn({
   columnId,
   orders,
@@ -393,15 +433,7 @@ function OrderColumn({
   dateFormat,
   isOverlay,
   onDateChange,
-}: {
-  columnId: OrderStatus;
-  orders: readonly DashboardKanbanOrder[];
-  isLoading: boolean;
-  currency: Currency;
-  dateFormat: DateFormat;
-  isOverlay?: boolean;
-  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
-}) {
+}: OrderColumnProps) {
   const col = COLUMNS[columnId];
 
   return (
@@ -423,24 +455,14 @@ function OrderColumn({
           value={columnId}
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
         >
-          {isLoading ? <Loader className="justify-start pt-4" /> : null}
-          {!isLoading && orders.length === 0 ? (
-            <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
-              No orders
-            </p>
-          ) : null}
-          {isLoading
-            ? null
-            : orders.map((order) => (
-                <OrderCard
-                  key={order.orderId}
-                  order={order}
-                  currency={currency}
-                  dateFormat={dateFormat}
-                  asHandle={!isOverlay}
-                  onDateChange={onDateChange}
-                />
-              ))}
+          <ColumnBody
+            orders={orders}
+            isLoading={isLoading}
+            currency={currency}
+            dateFormat={dateFormat}
+            asHandle={!isOverlay}
+            onDateChange={onDateChange}
+          />
         </KanbanColumnContent>
       </Frame>
     </KanbanColumn>

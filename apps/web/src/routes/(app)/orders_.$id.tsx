@@ -1,17 +1,20 @@
 import type { ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { BackLink } from "@/components/ui/back-link";
 import { OrderDetailItems } from "@/components/orders/order-detail-items";
 import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
+import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
+import { shownMessageOf } from "@/lib/api-response";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -39,12 +42,18 @@ function RouteComponent(): ReactNode {
     handleDeleteItems,
     handleMoveItem,
     handleSplit,
+    isOrderPending,
     isCollectionItemPending,
     isDeletingOrders,
     isDeletingItems,
     isMovingItems,
     isSplitting,
   } = useOrdersMutations();
+
+  const pendingContextValue = useMemo(
+    () => ({ isOrderPending, isCollectionItemPending }),
+    [isOrderPending, isCollectionItemPending],
+  );
 
   const { data: order, isPending, isError, error: orderError } = useRead(orders.detail, id);
 
@@ -66,7 +75,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-3">
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          {orderError.message}
+          {shownMessageOf(orderError, ORDER_LOAD_FAILED)}
         </div>
       </div>
     );
@@ -96,16 +105,17 @@ function RouteComponent(): ReactNode {
         dateFormat={dateFormat}
       />
 
-      <OrderDetailItems
-        orderId={id}
-        order={order}
-        isLoading={isPending}
-        selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
-        setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
-        onEditItem={handleEditItem}
-        onDeleteItem={handleDeleteItem}
-        isCollectionItemPending={isCollectionItemPending}
-      />
+      <OrderPendingContext value={pendingContextValue}>
+        <OrderDetailItems
+          orderId={id}
+          order={order}
+          isLoading={isPending}
+          selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
+          setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
+          onEditItem={handleEditItem}
+          onDeleteItem={handleDeleteItem}
+        />
+      </OrderPendingContext>
 
       <div className="flex flex-col gap-4 pb-2">
         {order?.notes ? (

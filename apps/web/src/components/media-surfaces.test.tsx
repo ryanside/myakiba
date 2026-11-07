@@ -11,7 +11,6 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseOrder, ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { itemDatabaseSearchSchema } from "@myakiba/contracts/search/schema";
@@ -22,6 +21,7 @@ import { CalendarItemRow } from "./calendar/calendar-item-row";
 import { CalendarOrderRow } from "./calendar/calendar-order-row";
 import { CollectionCardGrid } from "./collection/collection-card-grid";
 import { CollectionGalleryGrid } from "./collection/collection-gallery-grid";
+import { CollectionPendingContext } from "./collection/collection-pending-context";
 import OrderKanban from "./dashboard/order-kanban";
 import { ReleaseCalendar } from "./dashboard/release-calendar";
 import { DataTable } from "./data-table/data-table";
@@ -32,6 +32,7 @@ import { ListMemberGrid } from "./lists/list-member-grid";
 import { Appearance } from "./settings/appearance";
 import { OrdersCardGrid } from "./orders/orders-card-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
+import { OrderPendingContext } from "./orders/order-pending-context";
 import { DataGrid } from "./reui/data-grid/data-grid";
 import { DataGridTable } from "./reui/data-grid/data-grid-table";
 import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
@@ -44,6 +45,7 @@ import type { AnalyticsSectionRow } from "@/queries/analytics";
 import type { CalendarItem, CalendarOrder } from "@/queries/calendar";
 import type { DashboardKanbanOrder, ReleaseItem } from "@/queries/dashboard";
 import { Route as ListsRoute } from "@/routes/(app)/lists";
+import { collectionItem } from "../../test/collection-item";
 
 afterEach(() => {
   cleanup();
@@ -84,37 +86,14 @@ const members = [
   },
 ] satisfies ComponentProps<typeof ListMemberGrid>["members"];
 
-const collectionItem = {
-  id: "collection-1",
-  orderId: null,
-  itemId: "item-1",
+const ownedItem = collectionItem({
   itemExternalId: 123,
-  itemTitle: "Hatsune Miku",
   itemImage: image,
   itemCategory: "Prepainted",
   itemScale: "1/7",
-  status: "Owned",
-  count: 1,
-  score: "0",
   price: 12_000,
   shop: "AmiAmi",
-  condition: "New",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-  shippingMethod: "n/a",
-  tags: [],
-  notes: "",
-  releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseType: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-} satisfies CollectionItem;
+});
 
 const order = {
   orderId: "order-1",
@@ -286,7 +265,7 @@ function listDetail(viewMode: MediaViewMode): ReactNode {
 }
 
 const collectionProps = {
-  items: [collectionItem],
+  items: [ownedItem],
   rowSelection: {},
   onRowSelectionChange: () => {},
   onEditCollectionItem: noop,
@@ -295,8 +274,6 @@ const collectionProps = {
   onAddCollectionItemsToNewOrder: noop,
   currency: "JPY",
   dateFormat: "MM/DD/YYYY",
-  isCollectionPending: () => false,
-  isCollectionOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -307,7 +284,6 @@ const ordersProps = {
   onEditOrder: noop,
   onDeleteOrders: noop,
   currency: "JPY",
-  isOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -391,7 +367,13 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   await router.load();
   return render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <OrderPendingContext
+        value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+      >
+        <CollectionPendingContext value={{ isItemPending: () => false }}>
+          <RouterProvider router={router} />
+        </CollectionPendingContext>
+      </OrderPendingContext>
     </QueryClientProvider>,
   );
 }

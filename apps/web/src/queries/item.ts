@@ -1,39 +1,29 @@
-import { app, getErrorMessage, getUserErrorMessage } from "@/lib/treaty-client";
+import { requireData } from "@/lib/api-response";
+import { app, getErrorMessage } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
 
 export async function getItem(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).get();
-  if (error) {
-    if (error.status === 404) return null;
-    throw new Error(getUserErrorMessage(error, "Failed to get item"));
-  }
-  return data;
+  const response = await app.api.item({ id: externalId }).get();
+  if (response.error?.status === 404) return null;
+  return requireData(response, "Failed to get item");
 }
 
 export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
-  const { data, error } = await app.api.item({ id: itemId }).releases.get();
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get item releases"));
-  }
-
-  return data;
+  return requireData(app.api.item({ id: itemId }).releases.get(), "Failed to get item releases");
 }
 
 export async function getItemRelatedOrders(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).orders.get();
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get item related orders"));
-  }
-  return data;
+  return requireData(
+    app.api.item({ id: externalId }).orders.get(),
+    "Failed to get item related orders",
+  );
 }
 
 export async function getItemRelatedCollection(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).collection.get();
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to get item related collection"));
-  }
-  return data;
+  return requireData(
+    app.api.item({ id: externalId }).collection.get(),
+    "Failed to get item related collection",
+  );
 }
 
 export async function getResyncStatus(externalId: number) {

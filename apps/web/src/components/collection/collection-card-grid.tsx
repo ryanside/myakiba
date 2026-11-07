@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
+import { useCollectionPending } from "@/components/collection/collection-pending-context";
 import {
   CategoryLabel,
   MediaCard,
@@ -12,6 +13,7 @@ import {
 } from "@/components/media-tile";
 import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -40,8 +42,6 @@ interface CollectionCardGridProps {
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-  readonly isCollectionPending: (collectionId: string) => boolean;
-  readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -57,10 +57,9 @@ export function CollectionCardGrid({
   currency,
   locale,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
+  const { isItemPending } = useCollectionPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -99,7 +98,6 @@ export function CollectionCardGrid({
     <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle}>
       {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         const itemLink = itemDestination(item.itemId, item.itemExternalId);
 
         return (
@@ -108,7 +106,7 @@ export function CollectionCardGrid({
               item={item}
               itemSize={cardWidth}
               variant="card"
-              isPending={isPending}
+              isPending={isItemPending(item.id)}
               isSelected={isSelected}
               onEditCollectionItem={onEditCollectionItem}
               onDeleteCollectionItems={onDeleteCollectionItems}
@@ -137,7 +135,7 @@ export function CollectionCardGrid({
             <MediaCardBody>
               <span className="flex min-w-0 items-center justify-between gap-2">
                 <CategoryLabel category={item.itemCategory} />
-                {item.itemScale && item.itemScale !== "n/a" ? (
+                {item.itemScale && item.itemScale !== NO_SCALE ? (
                   <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>

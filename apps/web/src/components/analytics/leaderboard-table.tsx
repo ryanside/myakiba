@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { DataTable } from "@/components/data-table/data-table";
+import { DataTable, DATA_TABLE_NUMBER_META } from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -16,35 +16,36 @@ type RowIdKey<TRow> = {
   [Key in keyof TRow]-?: TRow[Key] extends string | number ? Key : never;
 }[keyof TRow];
 
-const COLUMN_LABELS = new Map<string, string>([
-  ["name", "Name"],
-  ["itemCount", "Count"],
-  ["totalSpent", "Spent"],
-  ["shop", "Shop"],
-  ["scale", "Scale"],
-]);
+type ColumnSpec = {
+  readonly label: string;
+  /** Number columns: [plain, with a bar] header widths and the figure's minimum width. */
+  readonly number?: {
+    readonly widths: readonly [string, string];
+    readonly figureWidth: string;
+  };
+};
 
-const NUMERIC_COLUMNS: ReadonlySet<string> = new Set(["itemCount", "totalSpent"]);
-
-// [plain, with a bar] widths for each number column.
-const COLUMN_WIDTHS = {
+const COLUMN_SPECS = {
+  name: { label: "Name" },
+  shop: { label: "Shop" },
+  scale: { label: "Scale" },
   // Bars only fit once the table has a full-width column, from lg; below that the figures stand alone.
-  itemCount: ["w-16", "w-16 lg:w-36"],
-  totalSpent: ["w-24", "w-24 lg:w-44"],
-} as const satisfies Readonly<Record<string, readonly [string, string]>>;
+  itemCount: {
+    label: "Count",
+    number: { widths: ["w-16", "w-16 lg:w-36"], figureWidth: "min-w-6" },
+  },
+  totalSpent: {
+    label: "Spent",
+    number: { widths: ["w-24", "w-24 lg:w-44"], figureWidth: "min-w-18" },
+  },
+} as const satisfies Readonly<Record<string, ColumnSpec>>;
 
-function columnWidth(column: string, withBar: boolean): string | undefined {
-  if (column !== "itemCount" && column !== "totalSpent") return undefined;
-  return COLUMN_WIDTHS[column][withBar ? 1 : 0];
-}
+export type LeaderboardColumn = keyof typeof COLUMN_SPECS;
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 
-// The overview previews each ranking; "View all" opens the full table.
-const PREVIEW_ROWS = 5;
-
 function leaderboardColumns<TRow extends Record<string, CellValue>>(
-  columns: readonly string[],
+  columns: readonly LeaderboardColumn[],
   formatCell: ((column: string, value: CellValue) => CellValue) | undefined,
   barColumn: string,
   barMax: number,
@@ -56,41 +57,52 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
       cell: ({ row }) => row.index + 1,
       meta: { headerClassName: "w-8" },
     },
-    ...columns.map((column): ColumnDef<TRow, CellValue> => ({
-      id: column,
-      accessorFn: (row) => row[column] ?? null,
-      header: COLUMN_LABELS.get(column) ?? column,
-      // Fixed widths keep every section's columns on the same lines.
-      meta: NUMERIC_COLUMNS.has(column)
-        ? {
-            headerClassName: cn("text-right", columnWidth(column, column === barColumn)),
-            cellClassName: "text-right tabular-nums",
+    ...columns.map((column): ColumnDef<TRow, CellValue> => {
+      const spec: ColumnSpec = COLUMN_SPECS[column];
+      return {
+        id: column,
+        accessorFn: (row) => row[column] ?? null,
+        header: spec.label,
+        // Fixed widths keep every section's columns on the same lines.
+        meta: spec.number
+          ? {
+              headerClassName: cn(
+                DATA_TABLE_NUMBER_META.headerClassName,
+                spec.number.widths[column === barColumn ? 1 : 0],
+              ),
+              cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
+            }
+          : undefined,
+        cell: ({ getValue }) => {
+          const value = getValue();
+          const shown = (formatCell ? formatCell(column, value) : value) ?? "—";
+          if (!spec.number) {
+            return (
+              <span className="block truncate" title={String(shown)}>
+                {shown}
+              </span>
+            );
           }
-        : undefined,
-      cell: ({ getValue }) => {
-        const value = getValue();
-        const shown = (formatCell ? formatCell(column, value) : value) ?? "—";
-        if (column !== barColumn || barMax <= 0) return shown;
+          if (column !== barColumn || barMax <= 0) return shown;
 
-        return (
-          <span className="inline-flex items-center justify-end gap-2">
-            <span
-              aria-hidden
-              className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
-            >
+          return (
+            <span className="inline-flex items-center justify-end gap-2">
               <span
-                className="block h-full rounded-full bg-foreground/70"
-                style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
-              />
+                aria-hidden
+                className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
+              >
+                <span
+                  className="block h-full rounded-full bg-foreground/70"
+                  style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
+                />
+              </span>
+              {/* A fixed figure width keeps every bar starting on the same line. */}
+              <span className={cn("inline-block", spec.number.figureWidth)}>{shown}</span>
             </span>
-            {/* A fixed figure width keeps every bar starting on the same line. */}
-            <span className={cn("inline-block", column === "totalSpent" ? "min-w-18" : "min-w-6")}>
-              {shown}
-            </span>
-          </span>
-        );
-      },
-    })),
+          );
+        },
+      };
+    }),
   ];
 }
 
@@ -104,7 +116,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rankedBy,
 }: {
   readonly rows: readonly TRow[];
-  readonly columns: readonly string[];
+  readonly columns: readonly LeaderboardColumn[];
   readonly formatCell?: (column: string, value: CellValue) => CellValue;
   readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
@@ -113,10 +125,11 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   readonly rankedBy: "itemCount" | "totalSpent";
 }): ReactNode {
   const navigate = useNavigate();
-  const tableData = useMemo(() => rows.slice(0, PREVIEW_ROWS), [rows]);
+  // useReactTable takes a mutable array, so this copy only drops `readonly`.
+  const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
-    () => Math.max(0, ...rows.map((row) => Number(row[rankedBy] ?? 0))),
-    [rankedBy, rows],
+    () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
+    [rankedBy, tableData],
   );
   const tableColumns = useMemo(
     () => leaderboardColumns<TRow>(columns, formatCell, rankedBy, barMax),
@@ -134,7 +147,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
       table={table}
       tableClassName="table-fixed"
       isLoading={isLoading}
-      empty={<p className="text-muted-foreground text-xs italic">No data</p>}
+      empty={<p className="text-muted-foreground text-xs">No data</p>}
       onRowClick={(row) => {
         const rowNav = getRowNavigation?.(row.original);
 

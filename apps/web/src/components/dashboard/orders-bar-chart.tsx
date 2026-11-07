@@ -141,7 +141,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
   );
 
   return (
-    <Frame spacing="sm" className="min-h-[320px] " aria-busy={isLoading}>
+    <Frame spacing="sm" className="min-h-[320px]" aria-busy={isLoading}>
       <FrameHeader>
         {isLoading ? (
           <Skeleton className="h-4 my-1 w-32" />
@@ -152,7 +152,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
           </FrameTitle>
         )}
       </FrameHeader>
-      <FramePanel className="flex flex-col shadow-none! border-none">
+      <FramePanel className="flex flex-col">
         {/* The chart takes the row's height from its neighbours instead of setting it. */}
         <div className="relative min-h-56 flex-1">
           <div className="absolute inset-0">

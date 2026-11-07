@@ -47,7 +47,7 @@ export function ExpensePanel({
         <FrameTitle className="text-base">{title}</FrameTitle>
         {headerAction}
       </FrameHeader>
-      <FramePanel className={cn("border-none shadow-none!", panelClassName)}>{children}</FramePanel>
+      <FramePanel className={panelClassName}>{children}</FramePanel>
     </Frame>
   );
 }
@@ -64,7 +64,7 @@ export function KpiStrip({
 }): ReactNode {
   return (
     <Frame spacing="sm" aria-busy={isLoading}>
-      <FramePanel className="flex flex-col gap-6 border-none shadow-none! sm:flex-row sm:gap-10">
+      <FramePanel className="flex flex-col gap-6 sm:flex-row sm:gap-10">
         {items.map((item) => (
           <div key={item.title} className="min-w-0 flex-1">
             <p className="eyebrow">{item.title}</p>
@@ -123,8 +123,6 @@ export function ChartSeriesLegend<TKey extends string>({
   readonly visibleKeys?: ReadonlySet<TKey>;
   readonly onToggle?: (key: TKey) => void;
 }): ReactNode {
-  // One series needs no key; the chart title already names it.
-  if (items.length < 2) return null;
   return (
     <div className="flex flex-wrap items-center gap-1" aria-label="Chart series">
       {items.map((item) => {
@@ -176,18 +174,18 @@ export function ChartSection({
 }: {
   readonly title: string;
   readonly selector: ReactNode;
-  readonly legend: ReactNode;
+  readonly legend?: ReactNode;
   readonly children: ReactNode;
   readonly isEmpty: boolean;
   readonly emptyMessage: string;
 }): ReactNode {
   return (
-    <Frame spacing="sm" className="h-[340px] ">
+    <Frame spacing="sm" className="h-[340px]">
       <FrameHeader className="gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
         <FrameTitle className="text-base">{title}</FrameTitle>
         {selector}
       </FrameHeader>
-      <FramePanel className="flex min-h-0 flex-1 flex-col gap-1 border-none shadow-none!">
+      <FramePanel className="flex min-h-0 flex-1 flex-col gap-1">
         {isEmpty ? (
           <p className="m-auto text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (

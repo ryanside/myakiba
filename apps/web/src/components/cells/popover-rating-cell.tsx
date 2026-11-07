@@ -6,6 +6,7 @@ import { useState } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { cn } from "@/lib/utils";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
 
 interface PopoverRatingCellProps {
   value: string;
@@ -31,11 +32,7 @@ export function PopoverRatingCell({ value, onSubmit, disabled = false }: Popover
             className={cn(CELL_TRIGGER_CLASS_NAME, "justify-start text-foreground")}
             disabled={disabled}
           >
-            {Number(displayValue) === 0 ? (
-              <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-            ) : (
-              displayValue
-            )}
+            {Number(displayValue) === 0 ? <EmptyValue /> : displayValue}
           </Button>
         }
       />

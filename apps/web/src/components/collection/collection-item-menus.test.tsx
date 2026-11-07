@@ -1,4 +1,4 @@
-import { afterEach, mock, test } from "bun:test";
+import { afterEach, expect, mock, test } from "bun:test";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import {
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
+import { CollectionPendingContext } from "./collection-pending-context";
 
 const realSearch = await import("@/queries/search");
 await mock.module("@/queries/search", () => ({
@@ -64,14 +65,12 @@ const handlers = {
   dateFormat: "MM/DD/YYYY",
 } as const;
 
-function RowActions(): ReactNode {
+function ActionsCell(): ReactNode {
   const table = useReactTable({
     data: [item],
     columns: createCollectionColumns({
       ...handlers,
       locale: "en-US",
-      isCollectionPending: () => false,
-      isCollectionOrderPending: () => false,
     }),
     getCoreRowModel: getCoreRowModel(),
   });
@@ -80,6 +79,14 @@ function RowActions(): ReactNode {
     .rows[0]?.getVisibleCells()
     .find((visible) => visible.column.id === "actions");
   return cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null;
+}
+
+function RowActions(): ReactNode {
+  return (
+    <CollectionPendingContext value={{ isItemPending: () => false }}>
+      <ActionsCell />
+    </CollectionPendingContext>
+  );
 }
 
 const MENUS: readonly (readonly [string, () => ReactNode])[] = [
@@ -135,3 +142,9 @@ for (const [name, Menu] of MENUS) {
     });
   });
 }
+
+test("refuses to render without a pending provider", () => {
+  expect(() => render(<ActionsCell />)).toThrow(
+    "Collection rows must render inside CollectionDataGrid, or provide CollectionPendingContext",
+  );
+});

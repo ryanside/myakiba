@@ -49,6 +49,7 @@ import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/cons
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { shownMessageOf } from "@/lib/api-response";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger?: React.ReactElement;
@@ -299,7 +300,7 @@ function UnifiedItemMoveFormContent({
                               )}
                               {orderSearchError && (
                                 <CommandEmpty>
-                                  Could not load orders. {orderSearchError.message}
+                                  Could not load orders. {shownMessageOf(orderSearchError)}
                                 </CommandEmpty>
                               )}
                               {orderSearch.title.length > 0 &&
@@ -381,10 +382,11 @@ function UnifiedItemMoveFormContent({
               <existingOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />
@@ -761,10 +763,11 @@ function UnifiedItemMoveFormContent({
               <newOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />

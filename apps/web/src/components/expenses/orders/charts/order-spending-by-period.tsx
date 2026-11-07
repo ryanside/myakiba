@@ -10,7 +10,6 @@ import { ChartSection, ChartSeriesLegend } from "@/components/expenses/dashboard
 import {
   EXPENSE_CHART_BRUSH_MIN_POINTS,
   EXPENSE_CHART_COLORS,
-  formatAxisCurrency,
 } from "@/components/expenses/chart-utils";
 
 type SpendKey = "total" | "orderItems" | "fees";
@@ -74,7 +73,9 @@ export function OrderSpendingByPeriod({
         <EvilBarChart.Grid />
         <EvilBarChart.XAxis dataKey="bucket" />
         <EvilBarChart.YAxis
-          tickFormatter={(value) => formatAxisCurrency(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

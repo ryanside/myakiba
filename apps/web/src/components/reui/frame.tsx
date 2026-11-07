@@ -5,10 +5,13 @@ import { cn } from "@/lib/utils";
 
 const frameVariants = cva(
   [
-    // One opaque surface: the header is a title on the card, not a band around an inner card.
+    // Header and panels sit on the frame's surface, with no band or inner card.
     "relative flex flex-col gap-0 p-0 rounded-(--frame-radius)",
     "[--frame-radius:var(--radius-2xl)]",
-    "[--frame-panel-bg:transparent] [--frame-panel-border-color:transparent] [--frame-border-color:var(--color-border)]",
+    "[--frame-panel-bg:transparent] [--frame-border-color:var(--color-border)]",
+    "data-[spacing=sm]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-0.5",
+    "data-[spacing=default]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-1",
+    "data-[spacing=lg]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-2",
   ],
   {
     variants: {
@@ -26,30 +29,10 @@ const frameVariants = cva(
           "[--frame-panel-p:--spacing(4)] [--frame-panel-header-px:--spacing(4)] [--frame-panel-header-py:--spacing(3)] [--frame-panel-footer-px:--spacing(4)] [--frame-panel-footer-py:--spacing(3)]",
         lg: "[--frame-panel-p:--spacing(5)] [--frame-panel-header-px:--spacing(5)] [--frame-panel-header-py:--spacing(4)] [--frame-panel-footer-px:--spacing(5)] [--frame-panel-footer-py:--spacing(4)]",
       },
-      stacked: {
-        true: [
-          "gap-0 *:has-[+[data-slot=frame-panel]]:rounded-b-none",
-          "*:has-[+[data-slot=frame-panel]]:before:hidden",
-          "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:rounded-t-none",
-          "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:border-t-0",
-          "[&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:border-t-0",
-        ],
-        false: [
-          "data-[spacing=sm]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-0.5",
-          "data-[spacing=default]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-1",
-          "data-[spacing=lg]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-2",
-        ],
-      },
-      dense: {
-        true: "p-0 gap-0 border-[var(--frame-border-color)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px",
-        false: "",
-      },
     },
     defaultVariants: {
       variant: "default",
       spacing: "default",
-      stacked: false,
-      dense: false,
     },
   },
 );
@@ -58,13 +41,11 @@ function Frame({
   className,
   variant,
   spacing,
-  stacked,
-  dense,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof frameVariants>) {
   return (
     <div
-      className={cn(frameVariants({ variant, spacing, stacked, dense }), className)}
+      className={cn(frameVariants({ variant, spacing }), className)}
       data-slot="frame"
       data-spacing={spacing}
       {...props}
@@ -76,10 +57,7 @@ function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "relative grow overflow-hidden rounded-(--frame-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-radius)-1px)] before:shadow-black/5",
-        "dark:bg-clip-border dark:before:shadow-white/5",
-        "p-(--frame-panel-p)",
+        "relative grow overflow-hidden rounded-(--frame-radius) bg-(--frame-panel-bg) p-(--frame-panel-p)",
         className,
       )}
       data-slot="frame-panel"

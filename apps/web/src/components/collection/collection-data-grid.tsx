@@ -21,6 +21,7 @@ import { CollectionActionBar } from "./collection-action-bar";
 import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
+import { CollectionPendingContext } from "./collection-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
@@ -140,6 +141,13 @@ export const CollectionDataGrid = () => {
     {},
   );
 
+  const pendingContextValue = useMemo(
+    () => ({
+      isItemPending: (id: string) => isCollectionPending(id) || isCollectionOrderPending(id),
+    }),
+    [isCollectionPending, isCollectionOrderPending],
+  );
+
   const columns = useMemo(
     () =>
       createCollectionColumns({
@@ -150,8 +158,6 @@ export const CollectionDataGrid = () => {
         currency,
         locale,
         dateFormat,
-        isCollectionPending,
-        isCollectionOrderPending,
       }),
     [
       currency,
@@ -161,8 +167,6 @@ export const CollectionDataGrid = () => {
       handleDeleteCollectionItems,
       handleAddCollectionItemsToOrder,
       handleAddCollectionItemsToNewOrder,
-      isCollectionPending,
-      isCollectionOrderPending,
     ],
   );
 
@@ -240,7 +244,7 @@ export const CollectionDataGrid = () => {
   });
 
   return (
-    <>
+    <CollectionPendingContext value={pendingContextValue}>
       <div className="flex w-full flex-wrap items-center gap-2">
         <div className="flex flex-1 flex-wrap items-center gap-2">
           <CollectionToolbar />
@@ -309,8 +313,6 @@ export const CollectionDataGrid = () => {
                     onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
                     currency={currency}
                     dateFormat={dateFormat}
-                    isCollectionPending={isCollectionPending}
-                    isCollectionOrderPending={isCollectionOrderPending}
                     isLoading={isPending}
                   />
                 );
@@ -328,8 +330,6 @@ export const CollectionDataGrid = () => {
                   currency={currency}
                   locale={locale}
                   dateFormat={dateFormat}
-                  isCollectionPending={isCollectionPending}
-                  isCollectionOrderPending={isCollectionOrderPending}
                   isLoading={isPending}
                 />
               );
@@ -344,6 +344,6 @@ export const CollectionDataGrid = () => {
           </div>
         </DataGrid>
       </div>
-    </>
+    </CollectionPendingContext>
   );
 };

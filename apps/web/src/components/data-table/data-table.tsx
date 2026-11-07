@@ -1,12 +1,18 @@
 import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
-import type { Column, Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
+import { ariaSort } from "@/components/data-table/aria-sort";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
+
+export const DATA_TABLE_NUMBER_META = {
+  headerClassName: "text-right",
+  cellClassName: "text-right tabular-nums",
+} as const;
 
 type DataTableVariant = "default" | "sized";
 
@@ -73,7 +79,7 @@ function TableHeader<TData extends RowData>({
           {headerGroup.headers.map((header) => (
             <th
               key={header.id}
-              aria-sort={getAriaSort(header.column)}
+              aria-sort={ariaSort(header.column.getIsSorted())}
               className={cn(
                 "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
                 header.column.columnDef.meta?.headerClassName,
@@ -89,16 +95,6 @@ function TableHeader<TData extends RowData>({
       ))}
     </thead>
   );
-}
-
-function getAriaSort<TData extends RowData>(
-  column: Column<TData>,
-): "ascending" | "descending" | "none" | undefined {
-  const sorted = column.getIsSorted();
-
-  if (sorted === "asc") return "ascending";
-  if (sorted === "desc") return "descending";
-  return column.getCanSort() ? "none" : undefined;
 }
 
 function TableBody<TData extends RowData>({

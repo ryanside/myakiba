@@ -1,3 +1,4 @@
+import { requireData } from "@/lib/api-response";
 import type {
   ItemDatabaseSearch,
   ItemDatabaseSearchResponse,
@@ -7,7 +8,7 @@ import type {
   SearchOrdersQuery,
   SearchOrdersResponse,
 } from "@myakiba/contracts/search/schema";
-import { app, getUserErrorMessage } from "@/lib/treaty-client";
+import { app } from "@/lib/treaty-client";
 
 export type OrderCommandMatch = {
   readonly id: string;
@@ -21,13 +22,10 @@ export type CommandSearchResults = {
 };
 
 export async function searchCommandResults(search: string): Promise<CommandSearchResults> {
-  const { data, error } = await app.api.search.command.get({
-    query: { search },
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to search orders and items"));
-  }
+  const data = await requireData(
+    app.api.search.command.get({ query: { search } }),
+    "Failed to search orders and items",
+  );
 
   return {
     orderMatches: data.searchData.orderResults.map((order) => ({
@@ -42,37 +40,13 @@ export async function searchCommandResults(search: string): Promise<CommandSearc
 export async function getItemDatabaseItems(
   params: ItemDatabaseSearch,
 ): Promise<ItemDatabaseSearchResponse> {
-  const { data, error } = await app.api.search.items.get({
-    query: params,
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to search item database"));
-  }
-
-  return data;
+  return requireData(app.api.search.items.get({ query: params }), "Failed to search item database");
 }
 
 export async function searchEntries(params: SearchEntriesQuery): Promise<SearchEntriesResponse> {
-  const { data, error } = await app.api.search.entries.get({
-    query: params,
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to search entries"));
-  }
-
-  return data;
+  return requireData(app.api.search.entries.get({ query: params }), "Failed to search entries");
 }
 
 export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrdersResponse> {
-  const { data, error } = await app.api.search.orders.get({
-    query: params,
-  });
-
-  if (error) {
-    throw new Error(getUserErrorMessage(error, "Failed to search orders"));
-  }
-
-  return data;
+  return requireData(app.api.search.orders.get({ query: params }), "Failed to search orders");
 }

@@ -2,6 +2,7 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef } from "react";
+import { ActiveDot } from "@/components/active-dot";
 import { cn } from "@/lib/utils";
 import { hasLostFocus } from "./settings-content";
 import { SETTINGS_NAV_GROUPS, SETTINGS_SECTIONS } from "./settings-registry";
@@ -40,10 +41,7 @@ function NavGroup({
   return (
     <div className="flex flex-col gap-1">
       {label ? (
-        <p
-          id={labelId}
-          className="eyebrow flex h-6 items-center px-3 text-[0.6875rem] tracking-tight text-muted-foreground/70 md:px-2"
-        >
+        <p id={labelId} className="group-label flex h-6 items-center px-3 md:px-2">
           {label}
         </p>
       ) : null}
@@ -99,12 +97,7 @@ function NavItem({
             {section.description}
           </span>
         </span>
-        {isCurrent ? (
-          <span
-            aria-hidden
-            className="hidden size-1.5 shrink-0 rounded-full bg-foreground md:block"
-          />
-        ) : null}
+        {isCurrent ? <ActiveDot className="hidden md:block" /> : null}
         <HugeiconsIcon
           icon={ArrowRight01Icon}
           className="size-4 shrink-0 text-muted-foreground md:hidden"

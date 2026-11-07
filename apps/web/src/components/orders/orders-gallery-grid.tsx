@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import { cn } from "@/lib/utils";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
@@ -22,7 +23,6 @@ interface OrdersGalleryGridProps {
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
   readonly currency: Currency;
-  readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -35,9 +35,9 @@ export function OrdersGalleryGrid({
   onEditOrder,
   onDeleteOrders,
   currency,
-  isOrderPending,
   isLoading,
 }: OrdersGalleryGridProps): React.JSX.Element {
+  const { isOrderPending } = useOrderPending();
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {

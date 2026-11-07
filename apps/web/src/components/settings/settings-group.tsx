@@ -21,10 +21,7 @@ export function SettingsGroup({ children, title, variant = "rows" }: SettingsGro
 
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-2">
-      <h3
-        id={titleId}
-        className="eyebrow flex h-6 items-center text-[0.6875rem] tracking-tight text-muted-foreground/70"
-      >
+      <h3 id={titleId} className="group-label flex h-6 items-center">
         {title}
       </h3>
       {variant === "cards" ? children : <div className={ROWS_CLASS_NAME}>{children}</div>}

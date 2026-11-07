@@ -46,6 +46,7 @@ import {
 } from "@/hooks/use-lists";
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
+import { shownMessageOf } from "@/lib/api-response";
 
 type ListOptionsForTargets = NonNullable<Awaited<ReturnType<typeof getListOptionsForTargets>>>;
 
@@ -448,7 +449,7 @@ export function AddToListsDialog({
 
           {isError ? (
             <p className="py-6 text-center text-sm text-destructive" role="alert">
-              {error.message}
+              {shownMessageOf(error)}
             </p>
           ) : null}
 

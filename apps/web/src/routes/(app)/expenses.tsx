@@ -117,7 +117,7 @@ function RouteComponent(): ReactNode {
         {activeQuery.error ? (
           <LoadError
             title={`Couldn't load ${TAB_LABELS[tab]} expenses`}
-            message="The server didn't answer."
+            error={activeQuery.error}
           />
         ) : (
           <>

@@ -74,7 +74,7 @@ export function ShopBreakdown({
           </FrameTitle>
         )}
       </FrameHeader>
-      <FramePanel className="flex flex-col gap-3 shadow-none! border-none">
+      <FramePanel className="flex flex-col gap-3">
         <BreakdownChart
           data={entries}
           isLoading={Boolean(isLoading)}

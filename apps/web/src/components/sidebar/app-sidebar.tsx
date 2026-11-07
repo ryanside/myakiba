@@ -3,7 +3,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -11,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useEffect } from "react";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { ActiveDot } from "@/components/active-dot";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
@@ -101,12 +101,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <nav aria-label="Main">
           {NAV_GROUPS.map((group) => (
             <SidebarGroup key={group.label} className="px-0 py-2">
-              <SidebarGroupLabel
+              <div
                 id={`nav-group-${group.label.toLowerCase()}`}
-                className="eyebrow h-6 px-2 text-[0.6875rem] tracking-tight text-muted-foreground/70"
+                className="group-label flex h-6 shrink-0 items-center px-2"
               >
                 {group.label}
-              </SidebarGroupLabel>
+              </div>
               <SidebarMenu
                 className="gap-0"
                 aria-labelledby={`nav-group-${group.label.toLowerCase()}`}
@@ -124,9 +124,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         render={<Link to={item.url} preload="intent" />}
                       >
                         <span>{item.title}</span>
-                        {isActive ? (
-                          <span aria-hidden className="size-1.5 rounded-full bg-foreground" />
-                        ) : null}
+                        {isActive ? <ActiveDot /> : null}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );

@@ -15,6 +15,7 @@ import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
 import { getResyncStatus, requestResync } from "@/queries/item";
+import { shownMessageOf } from "@/lib/api-response";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -93,7 +94,7 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col items-center justify-center gap-y-4">
         <BackLink fallbackTo="/collection" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          Error: {itemError.message}
+          Error: {shownMessageOf(itemError)}
         </div>
       </div>
     );
@@ -134,7 +135,7 @@ function RouteComponent(): ReactNode {
           ordersList={ordersList}
           isPending={isPending || isPendingItemRelatedCollection}
           isError={isErrorItemRelatedCollection}
-          errorMessage={errorItemRelatedCollection?.message}
+          error={errorItemRelatedCollection}
           onSyncCollection={() => setSyncType("collection")}
           onSyncOrder={() => setSyncType("order")}
           onEditCollectionItem={handleEditCollectionItem}

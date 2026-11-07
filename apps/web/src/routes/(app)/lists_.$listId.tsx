@@ -213,12 +213,7 @@ function RouteComponent(): React.JSX.Element {
         <MediaViewSkeletons viewMode={viewMode} count={viewMode === "list" ? 4 : 5} />
       ) : null}
 
-      {hasInitialError ? (
-        <LoadError
-          title="Couldn't load this List"
-          message={loadError?.message ?? "Failed to load List"}
-        />
-      ) : null}
+      {hasInitialError ? <LoadError title="Couldn't load this List" error={loadError} /> : null}
 
       {!isPending && !hasInitialError && totalCount === 0 ? (
         <Empty className={STATE_PANEL_CLASS_NAME}>

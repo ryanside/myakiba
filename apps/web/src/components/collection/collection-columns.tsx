@@ -14,6 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
+import { EmptyValue } from "@/components/cells/empty-value";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import CollectionItemForm from "./collection-item-form";
+import { withCollectionPending } from "./collection-pending-context";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
@@ -40,7 +42,7 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { CategoryLabel } from "@/components/media-tile";
+import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
@@ -63,8 +65,6 @@ interface CollectionColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
-  isCollectionPending: (collectionId: string) => boolean;
-  isCollectionOrderPending: (collectionId: string) => boolean;
 }
 
 function CollectionActionsCell({
@@ -106,7 +106,7 @@ function CollectionActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
@@ -231,8 +231,6 @@ export function createCollectionColumns({
   currency,
   locale,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
   return [
     {
@@ -320,11 +318,7 @@ export function createCollectionColumns({
       ),
       cell: (info) => {
         const scale = info.getValue() as string | null;
-        return scale && scale !== NO_SCALE ? (
-          scale
-        ) : (
-          <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-        );
+        return scale && scale !== NO_SCALE ? scale : <EmptyValue />;
       },
       enableSorting: true,
       enableHiding: true,
@@ -340,9 +334,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCountCell
             label="Count"
@@ -356,7 +349,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -372,9 +365,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Score" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <PopoverRatingCell
             value={item.score}
@@ -387,7 +379,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -403,9 +395,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineTextCell
             label="Shop"
@@ -420,7 +411,7 @@ export function createCollectionColumns({
             previewClassName="text-sm"
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -436,9 +427,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineCurrencyCell
             label="Price"
@@ -455,7 +445,7 @@ export function createCollectionColumns({
             zeroAsEmpty
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -471,9 +461,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <InlineReleaseCell
             releaseId={item.releaseId}
@@ -496,7 +485,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -512,10 +501,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const orderDate = row.original.orderDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={orderDate}
@@ -529,7 +516,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -545,10 +532,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const paymentDate = row.original.paymentDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={paymentDate}
@@ -562,7 +547,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -578,10 +563,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const shippingDate = row.original.shippingDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={shippingDate}
@@ -595,7 +578,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -611,10 +594,8 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collected" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const collectionDate = row.original.collectionDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
         return (
           <PopoverDatePickerCell
             value={collectionDate}
@@ -628,7 +609,7 @@ export function createCollectionColumns({
             }}
           />
         );
-      },
+      }),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -641,9 +622,8 @@ export function createCollectionColumns({
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <CollectionActionsCell
             item={item}
@@ -656,7 +636,7 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
           />
         );
-      },
+      }),
       size: 72,
       enableSorting: false,
       enableHiding: false,

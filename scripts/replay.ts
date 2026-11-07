@@ -1,14 +1,39 @@
 import { $ } from "bun";
-import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { lstatSync } from "node:fs";
+import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-type TestReplay = {
+type TestReplayEntry = {
   fix: string;
   base?: string;
   bug: string;
   test: string;
   fixed: string[];
+  testAt?: string;
+  atHead?: string[];
+};
+type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
+  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
+
+function parseTestReplay(
+  { testAt, atHead, ...replay }: TestReplayEntry,
+  index: number,
+): TestReplay {
+  const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
+  if (atHead !== undefined && testAt === undefined) {
+    throw invalid("atHead requires testAt");
+  }
+  if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
+    throw invalid("atHead must not be empty and must be a list of test names");
+  }
+  return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
+}
+
+type TestHarness = {
+  packageDir: string;
+  files: string[];
+  testSource?: { file: string; source: string };
 };
 
 type LintReplay = {
@@ -62,20 +87,23 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
+// The root test script runs every package, so replay root tests directly.
+const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
-  test: testReplays = [],
+  test: testEntries = [],
   lint: lintReplays = [],
   knip: knipReplays = [],
   types: typesReplays = [],
   fixtures: fixtureReplays = [],
 }: {
-  test?: TestReplay[];
+  test?: TestReplayEntry[];
   lint?: LintReplay[];
   knip?: KnipReplay[];
   types?: TypesReplay[];
   fixtures?: TypesFixture[];
 } = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
+const testReplays = testEntries.map(parseTestReplay);
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
@@ -154,8 +182,9 @@ async function installedVersion(packageDir: string, dependency: string) {
 async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
+  const command = packageDir === "." ? ROOT_TEST_COMMAND : scripts.test;
   const { exitCode, stdout, stderr } =
-    await $`sh -c ${`${scripts.test} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
+    await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
       .nothrow()
       .quiet();
@@ -317,12 +346,21 @@ const difference = (left: string[], right: string[]) => {
 
 for (const testFile of new Set(selected.map((replay) => replay.test))) {
   const run = await runTest(root, testFile);
+  const required = selected
+    .filter((replay) => replay.test === testFile)
+    .flatMap((replay) => (replay.testAt === undefined ? [] : replay.atHead));
+  const notPassed = [...new Set(required)].filter((name) => !run.passed.includes(name));
   const pass =
     run.exitCode === 0 &&
     run.failed.length === 0 &&
     run.skipped.length === 0 &&
-    run.passed.length > 0;
-  report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+    run.passed.length > 0 &&
+    notPassed.length === 0;
+  report(
+    pass,
+    `head  ${testFile}`,
+    pass ? [] : [...notPassed.map((name) => `      not passed at head: ${name}`), tail(run.output)],
+  );
 }
 
 if (knipMode) {
@@ -382,23 +420,30 @@ async function install(revision: string) {
   }
 }
 
-async function harnessOf(testFile: string) {
+async function harnessOf({ test: testFile, testAt }: TestReplay): Promise<TestHarness> {
   const packageDir = await packageDirOf(testFile);
   const files =
     await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
       .cwd(root)
       .text();
-  return { packageDir, files: files.split("\n").filter(Boolean) };
+  const testSource =
+    testAt === undefined
+      ? undefined
+      : { file: testFile, source: await $`git show ${`${testAt}:${testFile}`}`.cwd(root).text() };
+  return { packageDir, files: files.split("\n").filter(Boolean), testSource };
 }
 
-async function checkOut(revision: string, harness?: { packageDir: string; files: string[] }) {
+async function checkOut(revision: string, harness?: TestHarness) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   if (harness === undefined) return;
   await install(revision);
 
-  const { packageDir, files } = harness;
+  const { packageDir, files, testSource } = harness;
   for (const file of files)
-    await Bun.write(path.join(worktree, file), Bun.file(path.join(root, file)));
+    await Bun.write(
+      path.join(worktree, file),
+      file === testSource?.file ? testSource.source : Bun.file(path.join(root, file)),
+    );
 
   const head = await readPackage(path.join(root, packageDir));
   const atRevision = await readPackage(path.join(worktree, packageDir));
@@ -415,6 +460,58 @@ async function checkOut(revision: string, harness?: { packageDir: string; files:
       }),
     );
     await $`bun add --dev --no-save ${specs}`.cwd(path.join(worktree, packageDir)).quiet();
+  }
+}
+
+function flagged(entries: string[], tag: RegExp) {
+  return entries.filter((entry) => tag.test(entry)).map((entry) => entry.slice(2));
+}
+
+function presentInWorkingTree(file: string) {
+  try {
+    return lstatSync(path.join(root, file), { throwIfNoEntry: false }) !== undefined;
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOTDIR") return false;
+    throw error;
+  }
+}
+
+async function clearIndexFlag(
+  indexEnv: Record<string, string | undefined>,
+  flag: "assume-unchanged" | "skip-worktree",
+  paths: string[],
+) {
+  if (paths.length === 0) return;
+  const input = Buffer.from(`${paths.join("\0")}\0`);
+  await $`git update-index --no-${flag} -z --stdin < ${input}`.cwd(root).env(indexEnv).quiet();
+}
+
+async function commitWorkingTree() {
+  const index = path.join(worktree, ".replay-index");
+  try {
+    const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
+    const realIndexPath = path.resolve(root, realIndex.trim());
+    // Keep force-staged ignored files and preserve absent sparse paths.
+    const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
+    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
+    else await $`git read-tree HEAD`.cwd(root).env(indexEnv).quiet();
+    const indexListing = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
+    const entries = indexListing.split("\0");
+    // assume-unchanged is a hint; skip-worktree means intended absence, so keep it on missing files.
+    await clearIndexFlag(indexEnv, "assume-unchanged", flagged(entries, /^[a-z] /));
+    await clearIndexFlag(
+      indexEnv,
+      "skip-worktree",
+      flagged(entries, /^[Ss] /).filter(presentInWorkingTree),
+    );
+    const tree = await $`git add -A && git write-tree`.cwd(root).env(indexEnv).quiet().text();
+    const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
+      .cwd(root)
+      .quiet()
+      .text();
+    return commit.trim();
+  } finally {
+    await rm(index, { force: true });
   }
 }
 
@@ -446,14 +543,15 @@ try {
   }
 
   for (const replay of selected) {
-    const harness = await harnessOf(replay.test);
+    const harness = await harnessOf(replay);
     const workingTree = replay.fix === "WORKTREE";
     const base = workingTree ? replay.base : `${replay.fix}^`;
     if (!base) throw new Error("A WORKTREE replay needs a base revision");
+    const fix = workingTree ? await commitWorkingTree() : replay.fix;
     await checkOut(base, harness);
     const before = await runTest(worktree, replay.test);
-    if (!workingTree) await checkOut(replay.fix, harness);
-    const after = await runTest(workingTree ? root : worktree, replay.test);
+    await checkOut(fix, harness);
+    const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
     const didNotFlip = replay.fixed.filter((name) => !flipped.includes(name));

@@ -54,7 +54,7 @@ export function ShippingSummary({
   }
 
   return (
-    <ExpensePanel title="Summary" className="h-full lg:h-[340px]">
+    <ExpensePanel title="Summary" className="h-full lg:min-h-[340px]">
       <div className="flex h-full flex-col gap-6" aria-busy={isLoading}>
         <div className="flex flex-col gap-1">
           <p className="eyebrow">Shipping Spend</p>

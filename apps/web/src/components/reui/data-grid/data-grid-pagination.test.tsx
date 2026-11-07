@@ -10,11 +10,13 @@ function Pager({
   recordCount,
   pageIndex,
   offset,
+  sizes,
   onPageIndexChange,
 }: {
   recordCount: number;
   pageIndex: number;
   offset?: number;
+  sizes?: number[];
   onPageIndexChange?: (pageIndex: number) => void;
 }) {
   const pagination = { pageIndex, pageSize: 10 };
@@ -30,7 +32,7 @@ function Pager({
   });
   return (
     <DataGridProvider table={table} recordCount={recordCount}>
-      <DataGridPagination offset={offset} />
+      <DataGridPagination offset={offset} {...(sizes === undefined ? {} : { sizes })} />
     </DataGridProvider>
   );
 }
@@ -107,8 +109,24 @@ describe("DataGridPagination at an offset that is not a page start", () => {
     expect(screen.getByText("0 of 7")).toBeTruthy();
   });
 
+  test("a short result at an offset past its first row names the rows from that offset", () => {
+    render(<Pager recordCount={5} pageIndex={0} offset={2} />);
+    expect(screen.getByText("3 - 5 of 5")).toBeTruthy();
+  });
+
+  test("a short result at an offset can return to its first row", () => {
+    expect(pageRequestedBy("1", { recordCount: 5, pageIndex: 0, offset: 2 })).toBe(0);
+  });
+
   test("an offset inside the rows names the rows from that offset", () => {
     render(<Pager recordCount={50} pageIndex={1} offset={15} />);
     expect(screen.getByText("16 - 25 of 50")).toBeTruthy();
+  });
+});
+
+describe("DataGridPagination with page sizes in any order", () => {
+  test("a result larger than the smallest page size keeps its footer", () => {
+    render(<Pager recordCount={8} pageIndex={0} sizes={[24, 6]} />);
+    expect(screen.getByText("1 - 8 of 8")).toBeTruthy();
   });
 });

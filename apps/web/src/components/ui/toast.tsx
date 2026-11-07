@@ -16,15 +16,25 @@ import {
 
 const baseToast = ToastPrimitive.createToastManager();
 
+function isText(value: React.ReactNode): value is string {
+  return typeof value === "string";
+}
+
 // A failed save rolls back its edit, so an error stays until dismissed unless its caller sets a timeout.
 const toast: typeof baseToast = {
   ...baseToast,
-  add: (options) =>
-    baseToast.add(
-      options.type === "error" && options.timeout === undefined
-        ? { ...options, timeout: 0 }
-        : options,
-    ),
+  add: (options) => {
+    if (options.type !== "error") return baseToast.add(options);
+
+    const { title, description } = options;
+    const isPlainText = isText(title) && (description === undefined || isText(description));
+    const id =
+      options.id ?? (isPlainText ? `error:${JSON.stringify([title, description])}` : undefined);
+    // Close before adding, so Base UI removes the ending toast with this id and puts the new one in front. An in-place update would keep its old place.
+    if (id !== undefined) baseToast.close(id);
+
+    return baseToast.add({ ...options, id, timeout: options.timeout ?? 0 });
+  },
 };
 const DEFAULT_TOAST_ACTION_RENDER = <Button variant="outline" size="sm" />;
 const DEFAULT_TOAST_CLOSE_RENDER = <Button variant="ghost" size="icon-sm" />;

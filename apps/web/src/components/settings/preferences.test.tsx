@@ -12,21 +12,10 @@ import {
 import { addDays, format } from "date-fns";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { User } from "@/lib/auth-client";
+import { signedInSession } from "../../../test/session";
 import { DEFAULT_SUCCESS_DURATION } from "@/components/ui/status-button";
 
-const user = {
-  id: "collector",
-  name: "collector",
-  username: "collector",
-  email: "collector@example.com",
-  emailVerified: true,
-  currency: "USD",
-  dateFormat: "MM/DD/YYYY",
-  hasSeenOnboarding: true,
-  banned: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} satisfies User;
+const user = signedInSession().user;
 
 const SAVED = { currency: "USD", dateFormat: "MM/DD/YYYY" };
 let server = { ...SAVED };

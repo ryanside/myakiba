@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -10,9 +10,13 @@ import {
 } from "@tanstack/react-router";
 import { PageBackground } from "@/components/page-background";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.removeItem("appearance:pageBackgrounds");
+});
 // Page backgrounds are opt-in; these tests cover the photo each page shows when they are on.
 beforeEach(() => localStorage.setItem("appearance:pageBackgrounds", "true"));
+afterAll(() => expect(localStorage.getItem("appearance:pageBackgrounds")).toBeNull());
 
 async function backgroundAt(pathname: string) {
   const root = createRootRoute({

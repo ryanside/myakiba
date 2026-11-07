@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 /** A page's search field: a grey pill with a magnifier, as tall as the 32px toolbar buttons beside it. */
 export function SearchPill({
   className,
+  ref,
   ...props
 }: ComponentProps<typeof DebouncedInput>): React.JSX.Element {
   return (
@@ -18,6 +19,7 @@ export function SearchPill({
       />
       <DebouncedInput
         {...props}
+        ref={ref}
         className="h-8 rounded-full border-transparent bg-muted ps-9 pe-3.5 shadow-none dark:bg-muted"
       />
     </div>

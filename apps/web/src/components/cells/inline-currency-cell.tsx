@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
   formatCurrencyFromMinorUnits,
@@ -6,9 +6,10 @@ import {
   parseMoneyToMinorUnits,
 } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
-import { usePendingValue } from "@/hooks/use-pending-value";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { cn } from "@/lib/utils";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
 
 interface InlineCurrencyCellProps {
   /** What the cell holds, such as "Price", for its accessible name. */
@@ -31,54 +32,36 @@ export function InlineCurrencyCell({
   zeroAsEmpty = false,
   label,
 }: InlineCurrencyCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingValue, setEditingValue] = useState("");
-  const [displayValue, submit] = usePendingValue(value, onSubmit);
-
-  const handleEdit = useCallback(() => {
-    setEditingValue(minorUnitsToMajorString(displayValue));
-    setIsEditing(true);
-  }, [displayValue]);
-
-  const handleCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    setIsEditing(false);
-    if (editingValue === "") return;
-    const nextValue = parseMoneyToMinorUnits(editingValue);
-    if (nextValue === displayValue) return;
-    await submit(nextValue);
-  }, [displayValue, editingValue, submit]);
+  const edit = useInlineEdit({
+    label,
+    value,
+    onSubmit,
+    disabled,
+    format: (minorUnits) =>
+      zeroAsEmpty && minorUnits === 0
+        ? ""
+        : formatCurrencyFromMinorUnits(minorUnits, currency, locale),
+    toDraft: minorUnitsToMajorString,
+    parse: (draft) => (draft === "" ? null : parseMoneyToMinorUnits(draft)),
+  });
 
   const handleInputRef = useCallback((node: HTMLInputElement | null) => {
     node?.focus();
   }, []);
 
-  if (isEditing) {
+  if (edit.draft !== null) {
     return (
       <MaskInput
+        {...edit.editorHandlers}
         ref={handleInputRef}
         mask="currency"
         currency={currency}
         locale={locale}
-        value={editingValue}
+        value={edit.draft}
         onValueChange={(_, unmaskedValue) => {
-          setEditingValue(unmaskedValue);
+          edit.setDraft(unmaskedValue);
         }}
         aria-label={label}
-        // Leaving the cell keeps what was typed, as the Shop cell does.
-        onBlur={() => {
-          if (!disabled) void handleSubmit();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            handleSubmit();
-          } else if (e.key === "Escape") {
-            handleCancel();
-          }
-        }}
         className={CELL_EDITOR_CLASS_NAME}
       />
     );
@@ -86,17 +69,13 @@ export function InlineCurrencyCell({
 
   return (
     <Button
-      onClick={handleEdit}
+      onClick={edit.handleOpen}
       className={cn(CELL_TRIGGER_CLASS_NAME, "h-8 justify-start text-foreground")}
       variant="ghost"
       disabled={disabled}
-      aria-label={`${zeroAsEmpty && displayValue === 0 ? "Empty" : formatCurrencyFromMinorUnits(displayValue, currency, locale)}, edit ${label}`}
+      aria-label={edit.triggerLabel}
     >
-      {zeroAsEmpty && displayValue === 0 ? (
-        <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-      ) : (
-        formatCurrencyFromMinorUnits(displayValue, currency, locale)
-      )}
+      {edit.shownText || <EmptyValue />}
     </Button>
   );
 }

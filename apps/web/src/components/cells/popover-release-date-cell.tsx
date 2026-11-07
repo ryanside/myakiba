@@ -24,6 +24,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
+import { EmptyValue } from "./empty-value";
+import { shownMessageOf } from "@/lib/api-response";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;
@@ -82,7 +84,7 @@ function ReleaseSelect({
   if (isError) {
     return (
       <div className="border-b p-2">
-        <p className="text-destructive flex h-7 items-center text-xs">{error.message}</p>
+        <p className="text-destructive flex h-7 items-center text-xs">{shownMessageOf(error)}</p>
       </div>
     );
   }
@@ -189,12 +191,7 @@ export function PopoverReleaseDateCell({
       {triggerVariant === "outline" && (
         <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" />
       )}
-      {formattedDisplay ??
-        (placeholder ? (
-          <span>{placeholder}</span>
-        ) : (
-          <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
-        ))}
+      {formattedDisplay ?? (placeholder ? <span>{placeholder}</span> : <EmptyValue />)}
     </Button>
   );
 
