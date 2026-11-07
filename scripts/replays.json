@@ -1469,6 +1469,17 @@
       "fixed": [
         "an entrance transitions each property it starts from, and Reduce motion keeps it from moving"
       ]
+    },
+    {
+      "fix": "67676e81",
+      "bug": "a new user started on the Dark theme instead of following the OS, the theme controls read Dark, and the homepage toggle offered the theme already shown",
+      "test": "apps/web/src/components/theme-default.test.tsx",
+      "fixed": [
+        "a fresh browser on a light OS > paints the OS theme before the app loads",
+        "a fresh browser on a light OS > shows the OS theme and every theme control reads System",
+        "a fresh browser on a light OS > the homepage theme toggle offers the theme the page is not showing",
+        "a fresh browser on a dark OS > shows the OS theme and every theme control reads System"
+      ]
     }
   ],
   "lint": [
