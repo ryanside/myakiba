@@ -1364,6 +1364,12 @@
         "Button press > a pointer press hands the button's width to the press",
         "Button press > a key press hands the button's width to the press"
       ]
+    },
+    {
+      "fix": "b9876b38",
+      "bug": "the Orders row used the same chevron to expand the row and to open the order's page",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": ["draws the row's open-order link with a different icon from its expand button"]
     }
   ],
   "lint": [
