@@ -1452,6 +1452,23 @@
       "bug": "a WORKTREE snapshot could keep the old text of a same-size edit made in the second Git last wrote the index",
       "test": "scripts/worktree-snapshot.test.ts",
       "fixed": ["a snapshot keeps a same-size edit made in the second Git last wrote the index"]
+    },
+    {
+      "fix": "272cd9a8",
+      "bug": "sparkle trail glyphs grew from scale 0 and kept scaling under Reduce motion",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "a hidden sparkle glyph > starts a little smaller with motion on, never from nothing",
+        "a hidden sparkle glyph > keeps its full size under Reduce motion, so it only fades"
+      ]
+    },
+    {
+      "fix": "8931284d",
+      "bug": "the onboarding step rise transitioned transform while the class set translate, so it never played, and Reduce motion did not stop it",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "an entrance transitions each property it starts from, and Reduce motion keeps it from moving"
+      ]
     }
   ],
   "lint": [
