@@ -11,7 +11,6 @@ afterEach(async () => {
   await Promise.all(repos.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-/** A repository with one commit holding `files`, ignored or not. */
 async function repo(files: Record<string, string>) {
   const dir = await mkdtemp(path.join(tmpdir(), "worktree-snapshot-test-"));
   repos.push(dir);
@@ -32,7 +31,6 @@ async function repo(files: Record<string, string>) {
   const index = Bun.file(indexPath);
   const readIndex = async () => ((await index.exists()) ? index.bytes() : undefined);
 
-  /** Snapshots the working tree and checks that the real index, or its absence, is unchanged. */
   async function snapshot() {
     const before = await readIndex();
     const commit = await snapshotWorkingTree(dir);
