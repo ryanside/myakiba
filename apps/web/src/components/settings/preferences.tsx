@@ -144,10 +144,10 @@ function FormatPreview({ currency, dateFormat }: Formats) {
       </div>
       <figure
         aria-label="Example order"
-        className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl bg-background p-3 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_oklch(0_0_0/0.06)] xl:w-72 dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
+        className="flex w-full shrink-0 flex-col gap-2.5 rounded-(--radius-outer) bg-background p-(--inset) [--inset:--spacing(3)] [--radius-outer:var(--radius-xl)] shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_oklch(0_0_0/0.06)] xl:w-72 dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-inner border border-border">
             <HugeiconsIcon
               icon={PackageIcon}
               className="size-4 text-muted-foreground"

@@ -289,7 +289,9 @@ function OrderCard({
   const content = (
     <div
       className={cn(
-        "animate-data-in relative rounded-xl p-3",
+        "animate-data-in relative rounded-(--radius-outer) p-3 [--radius-outer:var(--radius-xl)]",
+        // The thumbnail sits inside the padding and the tile's 1px border.
+        "[--inset:calc(--spacing(3)+1px)]",
         TILE_SURFACE_CLASS_NAME,
         TILE_HOVER_CLASS_NAME,
         // Lanes stack many cards, so each takes a fainter lift than a lone tile.
@@ -304,7 +306,7 @@ function OrderCard({
             fallbackIcon={
               <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
             }
-            className="size-12 shrink-0 rounded-md [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
+            className="size-12 shrink-0 rounded-inner [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
           />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <Link
