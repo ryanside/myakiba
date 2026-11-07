@@ -164,7 +164,6 @@ export function BreakdownChart<TData extends BreakdownChartData>({
 
   return (
     <div className="flex flex-1 flex-col gap-3">
-      {/* A data readout, so it opens on contact. */}
       <TooltipProvider delay={0}>
         <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm">
           {items.map((item) => {
@@ -192,7 +191,6 @@ export function BreakdownChart<TData extends BreakdownChartData>({
         </div>
       </TooltipProvider>
 
-      {/* The scrollable legend's scroll-fade-b sets its own animation, so every legend fades in from a wrapper. */}
       <div className="animate-data-in">{legend}</div>
     </div>
   );

@@ -96,7 +96,6 @@ type OnboardingProviderProps = {
   readonly children: React.ReactNode;
 };
 
-/** The app shell mounts this once, outside the sidebar, whose phone and desktop trees swap at the breakpoint and would unmount the dialog. */
 function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.

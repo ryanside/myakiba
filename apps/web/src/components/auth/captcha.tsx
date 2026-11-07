@@ -10,7 +10,6 @@ type CaptchaState =
   | { readonly kind: "ready"; readonly token: string }
   | { readonly kind: "failed" };
 
-// A new object for each check, so the deadline effect below restarts for every one of them.
 const checking = (): CaptchaState => ({ kind: "checking" });
 const FAILED: CaptchaState = { kind: "failed" };
 const CHECK_LIMIT_MS = 15_000;
@@ -107,7 +106,6 @@ export function Captcha({ captcha }: { readonly captcha: CaptchaHandle }) {
         options={{
           size: "flexible",
           theme: resolvedTheme === "dark" ? "dark" : "light",
-          // Most visitors pass silently; the widget appears only when Cloudflare needs input.
           appearance: "interaction-only",
           refreshExpired: "auto",
           refreshTimeout: "auto",

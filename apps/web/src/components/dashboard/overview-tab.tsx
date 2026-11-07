@@ -98,7 +98,6 @@ export function OverviewTab({
         <ReleaseCalendar currency={currency} />
       </div>
 
-      {/* The heading belongs to its board, so they sit together rather than a section apart. */}
       <section className="flex flex-col gap-3">
         <SectionHeading title="In progress" scope="Recent and upcoming" />
         <OrderKanban

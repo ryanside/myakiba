@@ -29,8 +29,6 @@ test("the Shops table's sideways scroller never scrolls down while its rows fade
   expect(scroller?.classList.contains("overflow-y-hidden")).toBe(true);
 });
 
-// The browser shared out an auto-layout table's spare width by content, so the columns moved
-// when the placeholder bars gave way to shop names and figures.
 test("the Shops table holds each column to a fixed share of its width in every scope", () => {
   const sizesByScope = {
     collection: [40, 40, 150, 96, 72, 64, 120],

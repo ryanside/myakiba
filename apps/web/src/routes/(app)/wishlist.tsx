@@ -68,7 +68,6 @@ function RouteComponent(): React.JSX.Element {
         title="Wishlist"
         meta={isPending || hasInitialError ? null : formatCount(totalCount, "Item", "Items")}
         actions={
-          // A filter and a view switch look alike, so space keeps them from reading as one control.
           <div className="flex items-center gap-4">
             <ToggleGroup
               value={[releaseStatus]}

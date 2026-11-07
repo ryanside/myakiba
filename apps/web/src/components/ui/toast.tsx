@@ -20,7 +20,6 @@ function isText(value: React.ReactNode): value is string {
   return typeof value === "string";
 }
 
-// A failed save rolls back its edit, so an error stays until dismissed unless its caller sets a timeout.
 const toast: typeof baseToast = {
   ...baseToast,
   add: (options) => {

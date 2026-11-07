@@ -290,11 +290,9 @@ function OrderCard({
     <div
       className={cn(
         "animate-data-in relative rounded-(--radius-outer) p-3 [--radius-outer:var(--radius-xl)]",
-        // The thumbnail sits inside the padding and the tile's 1px border.
         "[--inset:calc(--spacing(3)+1px)]",
         TILE_SURFACE_CLASS_NAME,
         TILE_HOVER_CLASS_NAME,
-        // Lanes stack many cards, so each takes a fainter lift than a lone tile.
         "shadow-[0_1px_1px_oklch(0_0_0/0.03)] dark:shadow-none",
       )}
     >

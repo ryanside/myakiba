@@ -18,7 +18,6 @@ export function useToolbarSearch(resetFilters: () => Promise<void>) {
     } catch {
       toast.add({ type: "error", title: "Failed to reset filters. Please try again." });
     } finally {
-      // Wait for the cleared value before focusing, because focused inputs defer outside changes.
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   };

@@ -57,7 +57,6 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<number>();
     render(<InlineCountCell label="Count" value={1} onSubmit={onSubmit} />);
 
-    // scripts/replay.ts runs this test against 2ca2fcb2, whose count button has no aria-label yet.
     const countButtonName = screen.getByRole("button").hasAttribute("aria-label")
       ? "1, edit Count"
       : "1";

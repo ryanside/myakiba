@@ -1,14 +1,11 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
 
-// Rows carry their own 16px inset, so the list is pulled out by the same amount and its text
-// starts on the group title's edge. Rows are parted by their padding, not by rules or cards.
 const ROWS_CLASS_NAME = "-mx-4 flex flex-col";
 
 type SettingsGroupProps = {
   readonly children: ReactNode;
   readonly title?: string;
-  /** `rows` sets children as rows. `cards` sets children as they are, such as the theme picker. */
   readonly variant?: "rows" | "cards";
 };
 

@@ -384,14 +384,12 @@ type Surface = "card" | "gallery" | "row" | "panel";
 // changes there. Nothing else, so hover never moves a shadow, ring or transform. A card or a
 // gallery tile strengthens the edge it already has, and a row, which has none, is tinted.
 const LANGUAGE = {
-  // Cards have no frame, so like gallery tiles they hover on the photo's edge.
   card: { on: "image", changes: [{ target: "::after", property: "border-color" }] },
   gallery: {
     on: "image",
     changes: [{ target: "::after", property: "border-color" }],
   },
   row: { on: "tile", changes: [{ target: "self", property: "background-color" }] },
-  // A kanban card keeps its frame on the tinted column, so hover strengthens that edge.
   panel: { on: "tile", changes: [{ target: "self", property: "border-color" }] },
 } as const satisfies Record<
   Surface,

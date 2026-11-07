@@ -9,7 +9,6 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          // Disabled reads as a quiet grey pill, not a faded black one.
           "bg-primary text-primary-foreground hover:bg-primary/85 aria-expanded:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
         outline:
           "border-border bg-card text-foreground hover:bg-muted aria-expanded:bg-muted dark:border-input dark:bg-transparent dark:hover:bg-muted",

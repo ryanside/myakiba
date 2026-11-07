@@ -190,7 +190,6 @@
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Motion tokens. Reduced motion overrides the scales and distances, so things fade but never move. */
 :root {
   --motion-press: 150ms;
   --motion-hover: 150ms;
@@ -208,8 +207,6 @@
   --motion-data-in: 250ms;
   --press-scale: 0.97;
   --press-scale-text: 0.96;
-  /* The most, in px, a press narrows a button. 0.97 reaches it at about 170px wide, so a
-     full-width button narrows by 5px, not 18px. Button hands its width over as --press-width. */
   --press-travel: 5;
   --popup-from: 0.95;
   --tooltip-from: 0.97;
@@ -246,7 +243,6 @@
   scroll-behavior: auto !important;
 }
 
-/* Skeletons sit still. Spinners keep turning: a frozen one reads as a hung page. */
 :root[data-reduce-motion] .animate-pulse {
   animation: none;
 }
@@ -342,7 +338,6 @@ body {
 }
 
 @layer base {
-  /* The page is the only scrollbar: inner scrollers still scroll, but draw no bar. */
   * {
     @apply border-border outline-ring/50;
     scrollbar-width: none;
@@ -357,7 +352,6 @@ body {
   }
   html {
     @apply font-sans;
-    /* Weights stop at medium; never let the browser fake a bold or an italic. */
     font-synthesis: none;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
@@ -372,13 +366,6 @@ body {
   }
 }
 
-/*
- * Orbitron, always lowercase, has exactly two jobs:
- *   eyebrow    — a small label that names a group of content: sidebar and settings groups,
- *                metric names over a figure, captions over a list, and item detail's groups.
- *   decorative — the typeface alone, for analytics section names, its one display use.
- * Headings, data, column headers and key–value labels stay in Inter.
- */
 @utility eyebrow {
   font-family: var(--font-orbitron);
   font-size: var(--text-xs);
@@ -389,7 +376,6 @@ body {
   color: var(--color-muted-foreground);
 }
 
-/* A group's name in a nav or settings list: a smaller, tighter, fainter eyebrow. */
 @utility group-label {
   @apply eyebrow text-[0.6875rem] tracking-tight text-muted-foreground/70;
 }
@@ -401,7 +387,6 @@ body {
   letter-spacing: 0;
 }
 
-/* Titles and large figures: Inter tightened as display type, like marked.dev's page titles. */
 @utility display {
   letter-spacing: -0.02em;
 }
@@ -410,8 +395,6 @@ body {
   @apply display font-heading text-[1.375rem] leading-8 font-medium;
 }
 
-/* Concentric corners. A rounded parent sets --radius-outer to its corner and --inset to the even gap
-   around a rounded child, and the child's corner runs parallel to the parent's. */
 @utility rounded-inner {
   border-radius: max(0px, calc(var(--radius-outer) - var(--inset)));
 }
@@ -425,7 +408,6 @@ body {
   transition-timing-function: ease, ease, ease, var(--ease-out);
 }
 
-/* Pills and icon buttons: the colour fade plus a press. */
 @utility press {
   @apply color-motion;
   &:active:not(:disabled, [data-disabled]) {
@@ -433,7 +415,6 @@ body {
   }
 }
 
-/* Links and headers: a smaller target presses a little deeper for the same visible travel. */
 @utility press-text {
   @apply color-motion;
   &:active:not(:disabled, [data-disabled]) {
@@ -441,13 +422,10 @@ body {
   }
 }
 
-/* A field built from a button (a date picker, a form combobox, a cell trigger) keeps its colour
-   fade but does not press: a field answers with its focus state. */
 @utility press-none {
   --press-scale: 1;
 }
 
-/* Popovers, menus and selects scale and fade in from their anchor, and leave a little faster. */
 @utility popup-motion {
   transform-origin: var(--transform-origin);
   transition-property: opacity, scale;
@@ -481,7 +459,6 @@ body {
   }
 }
 
-/* Dialogs are not anchored to a trigger, so they scale from their centre. */
 @utility modal-motion {
   transition-property: opacity, scale;
   transition-duration: var(--motion-modal-in);
@@ -496,7 +473,6 @@ body {
   }
 }
 
-/* A backdrop fades on its surface's timing: a dialog's by default, a sheet's when it sets the variables. */
 @utility backdrop-motion {
   transition-property: opacity;
   transition-duration: var(--backdrop-in, var(--motion-modal-in));
@@ -510,7 +486,6 @@ body {
   }
 }
 
-/* A sheet slides fully in from its edge on the drawer curve. */
 @utility sheet-motion {
   transition-property: translate, opacity;
   transition-duration: var(--motion-sheet-in);
@@ -536,8 +511,6 @@ body {
   }
 }
 
-/* Toasts arrive on Sonner's ease and leave on the strong ease-out. Under reduced motion the stack
-   jumps and only the opacity fades. */
 @utility toast-motion {
   transition-property: transform, opacity, height;
   transition-duration: var(--toast-move, var(--motion-toast-in)), var(--motion-toast-in), 150ms;
@@ -555,7 +528,6 @@ body {
   }
 }
 
-/* Collapsible and accordion panels: the one sanctioned height transition. */
 @utility collapse-motion {
   height: var(--collapsible-panel-height, var(--accordion-panel-height));
   overflow: hidden;
@@ -569,7 +541,6 @@ body {
   }
 }
 
-/* A checkbox tick or radio dot fades and grows in, and leaves a little faster. */
 @utility tick-motion {
   transition-property: opacity, scale;
   transition-duration: 150ms;
@@ -584,15 +555,12 @@ body {
   }
 }
 
-/* The disclosure chevron turns on its panel's timing. */
 @utility collapse-chevron {
   transition-property: rotate;
   transition-duration: var(--motion-collapse);
   transition-timing-function: var(--ease-out);
 }
 
-/* A control sliding or turning to its new state, as a switch thumb or a row chevron does. Under
-   reduced motion it snaps there. */
 @utility move-motion {
   transition-property: translate, rotate, scale;
   transition-duration: var(--motion-move);

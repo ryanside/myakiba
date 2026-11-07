@@ -81,7 +81,6 @@ const LIGHT_VARIANT_MAP = new Map<BadgeVariant, BadgeVariant>([
   ["focus", "focus-light"],
 ]);
 
-/** A status badge in its tinted form, which reads quieter than a solid fill in both themes. */
 function ThemedBadge({ variant, ...props }: BadgeProps) {
   const resolvedVariant = variant ? (LIGHT_VARIANT_MAP.get(variant) ?? variant) : variant;
   return <Badge variant={resolvedVariant} {...props} />;

@@ -15,8 +15,6 @@ interface InlineTextCellProps {
   disabled?: boolean;
 }
 
-// Select everything, with the caret at the start, so a long value opens on its first words
-// instead of scrolled to its end.
 function selectFromStart(event: FocusEvent<HTMLInputElement>): void {
   const field = event.currentTarget;
   field.setSelectionRange(0, field.value.length, "backward");

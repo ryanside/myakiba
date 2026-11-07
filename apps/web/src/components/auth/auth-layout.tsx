@@ -19,7 +19,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       </div>
       <div aria-hidden className="hidden p-3 lg:block">
         <div className="relative h-full overflow-hidden rounded-3xl bg-muted">
-          {/* Lazy loading avoids fetching the desktop-only image while its panel is hidden. */}
           <img
             src={akihabara}
             alt=""

@@ -25,14 +25,11 @@ export const ROW_LINK_CLASS_NAME = cn(
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
 );
 
-// A row's secondary action waits for hover or focus on the row, where the device can hover.
 export const ROW_ACTION_CLASS_NAME =
   "text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100";
 
-// Cards and gallery tiles have no frame, so hover strengthens the photo's edge, instantly.
 export const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
 
-// Cards have no frame, so the photo fills its square and carries the card's shape.
 export const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-2xl";
 
 const ROW_IMAGE_CLASS_NAME = "size-16 rounded-md";
@@ -248,7 +245,6 @@ export function MediaRow({
       <DropIndicator placement={dropIndicator} geometry={ROW_DROP} />
       <div
         className={cn(
-          // The hover tint wraps the thumbnail, so its corner is the thumbnail's plus the inset.
           "group/item relative min-w-0 flex cursor-pointer items-center [--inset:--spacing(2)] rounded-[calc(var(--radius-md)+var(--inset))]",
           ROW_HOVER_CLASS_NAME,
           // Half outside and half inside, so adjacent selected rows overlap into one 2 px edge.
@@ -363,8 +359,6 @@ export function MediaGallerySkeleton(): React.JSX.Element {
   return <Skeleton className={cn("shrink-0", GALLERY_IMAGE_CLASS_NAME)} />;
 }
 
-// Cards have no frame, so space alone separates them: room across, and more between rows than
-// between a card's own lines. Every card grid uses this, whatever sizes its columns.
 export const CARD_GRID_GAP_CLASS_NAME = "gap-x-5 gap-y-8";
 
 // Gallery matches Collection's and Orders' square gallery at their default 180 px tile size.

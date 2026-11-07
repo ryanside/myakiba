@@ -20,8 +20,6 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-// An inline button sits 6px inside the field's outer edge on every side (a 24px button in the 36px
-// field, a 28px one in the 40px field), so its radius is the field's radius less 6px.
 const inputGroupAddonVariants = cva(
   "flex h-auto cursor-text items-center justify-center gap-2 py-1.5 text-sm font-medium text-muted-foreground select-none group-data-[disabled=true]/input-group:opacity-50 [&>button]:rounded-[calc(var(--radius-xl)-6px)] [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
   {

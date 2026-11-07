@@ -66,7 +66,6 @@ export function CalendarMonthGrid({
     const gridStart = new Date(year, month - 1, 1 - leadingDays);
 
     const daysInMonth = new Date(year, month, 0).getDate();
-    // Only the weeks this month touches, so no row is all next-month days.
     const cellCount = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
     const cells = Array.from({ length: cellCount }, (_, idx) => {
       const date = new Date(gridStart);

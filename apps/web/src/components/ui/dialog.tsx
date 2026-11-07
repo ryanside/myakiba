@@ -49,7 +49,6 @@ function DialogContent({
   showCloseButton?: boolean;
   /** When true, the backdrop is rendered even when this dialog is nested (e.g. inside a Sheet), so clicking outside still closes the dialog. */
   forceRenderBackdrop?: boolean;
-  /** Opens and closes without motion, for a dialog the keyboard opens many times a day. */
   instant?: boolean;
 }) {
   return (

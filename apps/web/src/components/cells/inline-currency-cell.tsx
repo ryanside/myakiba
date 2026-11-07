@@ -19,7 +19,6 @@ interface InlineCurrencyCellProps {
   onSubmit: (newValue: number) => Promise<void>;
   locale: string;
   disabled?: boolean;
-  /** Shows a dash for zero, for columns where zero means the price is unknown. */
   zeroAsEmpty?: boolean;
 }
 

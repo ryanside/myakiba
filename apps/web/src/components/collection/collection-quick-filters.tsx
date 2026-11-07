@@ -28,7 +28,6 @@ export function CollectionQuickFilters(): React.ReactElement {
     <QuickFilterChips
       options={GROUP_LABELS}
       selected={activeGroupLabels}
-      // A category picked in the filter dialog is a filter even when it fills no whole group.
       isAll={(filters.category?.length ?? 0) === 0}
       onChange={handleChange}
     />

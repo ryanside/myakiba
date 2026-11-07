@@ -27,7 +27,6 @@ function presses(element: Element): boolean {
   );
 }
 
-// A field trigger opens a menu, a listbox or a picker in place of typing.
 function pressingFieldTriggers(container: HTMLElement): string[] {
   return [...container.querySelectorAll("[aria-haspopup], [role=combobox]")]
     .filter(presses)

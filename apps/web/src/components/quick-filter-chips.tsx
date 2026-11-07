@@ -1,6 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-// "All" is pressed while no filter is on; pressing it clears the filters.
 const ALL = "All";
 
 export function QuickFilterChips<T extends string>({

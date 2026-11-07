@@ -70,7 +70,6 @@ export function Preferences({ user }: { user: User }) {
         </SettingsRow>
 
         <SettingsRow setting="date-format">
-          {/* Two rows of 28px pills 2px inside the track, so its corner is the pill's 14px plus 2px. */}
           <ToggleGroup
             aria-label="Date format"
             variant="segmented"

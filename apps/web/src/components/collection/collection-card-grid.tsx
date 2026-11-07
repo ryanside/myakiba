@@ -143,7 +143,6 @@ export function CollectionCardGrid({
               </span>
               <MediaCardTitle as="h3" title={item.itemTitle} destination={itemLink} />
               <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
-                {/* An unpriced item says so plainly instead of claiming it cost $0.00. */}
                 {item.price > 0 ? (
                   <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
                     {formatCurrencyFromMinorUnits(item.price, currency, locale)}

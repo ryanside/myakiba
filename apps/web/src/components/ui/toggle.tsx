@@ -21,10 +21,8 @@ const toggleVariants = cva(
         lg: "h-9 min-w-9 px-2.5",
       },
     },
-    // A segmented option sits inside a 2px track, so the whole control matches a 32px button.
     compoundVariants: [
       { variant: "segmented", size: "default", class: "h-7 min-w-7 px-3" },
-      // Chips and segments stay fully round; the small size's corner radius is for square toggles.
       { variant: ["pill", "segmented"], class: "rounded-full" },
     ],
     defaultVariants: {

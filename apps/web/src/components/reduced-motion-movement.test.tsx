@@ -29,7 +29,6 @@ function tokensIn(opening: string): Map<string, string> {
 const motionOn = tokensIn(":root");
 const reduced = tokensIn(":root[data-reduce-motion]");
 
-/** Whether the element's transition moves it over time, rather than snapping, under Reduce motion. */
 function movesUnderReducedMotion(element: Element): boolean {
   const classes = [...element.classList];
   if (classes.some((name) => /^(transition|duration)(-|$)/.test(name))) return true;
@@ -42,7 +41,6 @@ function movesUnderReducedMotion(element: Element): boolean {
   });
 }
 
-/** The scale an element's classes give it, with the motion tokens of one mode. */
 function scaleOf(element: Element, mode: "motion on" | "reduced"): number | undefined {
   for (const name of element.classList) {
     const token = /^scale-\((--[\w-]+)\)$/.exec(name)?.[1];

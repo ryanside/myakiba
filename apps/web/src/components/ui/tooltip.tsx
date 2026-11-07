@@ -4,8 +4,6 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 
 import { cn } from "@/lib/utils";
 
-// The first tooltip waits, so passing over a control does not flash one. Its neighbours then open
-// instantly, through the provider's shared delay group.
 const TOOLTIP_DELAY_MS = 300;
 
 function TooltipProvider({ delay = TOOLTIP_DELAY_MS, ...props }: TooltipPrimitive.Provider.Props) {

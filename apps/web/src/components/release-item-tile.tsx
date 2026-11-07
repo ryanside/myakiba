@@ -40,7 +40,6 @@ export function ReleaseItemTile({
   const date = item.latestRelease
     ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
     : "No release";
-  // Release dates are date-only strings, so they compare in order against today's local day.
   let releaseLabel = date;
   if (item.latestRelease) {
     const upcoming = item.latestRelease.date >= format(new Date(), "yyyy-MM-dd");
