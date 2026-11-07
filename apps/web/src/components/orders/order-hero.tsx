@@ -45,13 +45,13 @@ export function OrderHero({
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3" aria-busy="true">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div className="flex min-w-0 items-start gap-4">
             <Skeleton className="size-20 shrink-0 rounded-xl" />
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-2">
               <div className="flex flex-wrap items-center gap-3">
                 <Skeleton className="h-8 w-52 max-w-[45vw]" />
-                <Skeleton className="h-7 w-18 rounded-full" />
+                <Skeleton className="h-5 w-16" />
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <Skeleton className="h-4 w-24" />
@@ -103,7 +103,7 @@ function LoadedOrderHero({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div className="flex min-w-0 items-start gap-4">
           <ImageThumbnail
             images={order.images}
@@ -111,11 +111,12 @@ function LoadedOrderHero({
             fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-7" />}
             className="animate-data-in size-20 shrink-0 rounded-xl ring-1 ring-foreground/10"
             showRemainingCount
+            decorative
           />
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="animate-data-in display text-2xl font-medium">{order.title}</h1>
-              <span className="animate-data-in inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="animate-data-in display text-2xl leading-tight font-medium break-words text-pretty">
+              <h1 className="inline">{order.title}</h1>
+              <span className="ml-3 inline-flex items-center gap-1.5 align-middle text-sm font-medium tracking-normal whitespace-nowrap text-foreground">
                 <span
                   aria-hidden
                   className={cn("size-1.5 rounded-full", ORDER_STATUS_COLORS[order.status])}
