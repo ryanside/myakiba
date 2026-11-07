@@ -57,3 +57,10 @@ test("the Reduce motion setting says it keeps fades and drops movement", async (
 
   expect(await screen.findByText("Replace movement with simple fades.")).toBeDefined();
 });
+
+test("the Page backgrounds switch is on in a browser with no saved preference", async () => {
+  renderAppearance();
+
+  const toggle = await screen.findByRole("switch", { name: "Page backgrounds" });
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+});

@@ -48,4 +48,14 @@ describe("page background", () => {
   test("an item page shows no background", async () => {
     expect(await backgroundAt("/item/1093283")).toBe(null);
   });
+
+  test("a browser with no saved preference shows the background", async () => {
+    localStorage.removeItem("appearance:pageBackgrounds");
+    expect(await backgroundAt("/orders")).toContain("17-night-calendar-bitgrain.webp");
+  });
+
+  test("a browser that turned backgrounds off shows none", async () => {
+    localStorage.setItem("appearance:pageBackgrounds", "false");
+    expect(await backgroundAt("/orders")).toBe(null);
+  });
 });
