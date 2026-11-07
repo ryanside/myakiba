@@ -10,20 +10,23 @@ type ItemControlsSize = "xs" | "sm" | "md" | "lg";
 
 const ItemControlsContext = createContext<ItemControlsMaterial | null>(null);
 
-// Controls that float over a photo, in cards and galleries alike: a semi-transparent dark pill.
+// Controls that float over a photo, in cards and galleries alike: a semi-transparent dark pill. It
+// sits --inset from the photo's corner, so its corner is the photo's (--radius-outer, set by the
+// tile) less that inset.
 const FLOATING_CLASS_NAME =
-  "bg-black/60 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)]";
+  "absolute top-(--inset) right-(--inset) [--controls-radius:max(0px,calc(var(--radius-outer)-var(--inset)))] bg-black/60 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)]";
 
-const CARD_PLACEMENT_CLASS_NAME = cn("absolute top-3 right-3", FLOATING_CLASS_NAME);
+const CARD_PLACEMENT_CLASS_NAME = cn(FLOATING_CLASS_NAME, "[--inset:--spacing(3)]");
 
 // A list row has no dead space between its controls, so every point of the row either is a
 // control or opens the row.
-const ROW_PLACEMENT_CLASS_NAME = "mr-1.5 gap-0 p-0";
+const ROW_PLACEMENT_CLASS_NAME =
+  "mr-1.5 gap-0 p-0 [--controls-radius:12px] pointer-coarse:[--controls-radius:13px]";
 
 // The square ::before and the square selection root make the whole control box clickable, so
 // rounded corners leave no dead space between adjacent controls.
 const controlBaseClassName =
-  "relative size-8 cursor-pointer rounded-[10px] border-transparent bg-transparent shadow-none [--press-scale:var(--press-scale-text)] before:absolute before:-inset-px focus-visible:border-transparent focus-visible:ring-2";
+  "relative size-8 cursor-pointer rounded-[calc(var(--controls-radius)-var(--controls-pad))] border-transparent bg-transparent shadow-none [--press-scale:var(--press-scale-text)] before:absolute before:-inset-px focus-visible:border-transparent focus-visible:ring-2";
 
 const selectionBaseClassName =
   "size-8 cursor-pointer rounded-none border-transparent bg-transparent shadow-none outline-none press-text after:pointer-events-none after:top-1/2 after:right-auto after:bottom-auto after:left-1/2 after:size-5 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-[6px] after:opacity-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:after:opacity-100 aria-invalid:border-transparent aria-invalid:ring-0 aria-invalid:aria-checked:border-transparent data-checked:border-transparent data-checked:bg-transparent dark:bg-transparent dark:aria-invalid:border-transparent dark:aria-invalid:ring-0 dark:data-checked:bg-transparent";
@@ -53,14 +56,14 @@ function ItemControls({
         data-slot="item-controls"
         data-size={size}
         className={cn(
-          "z-20 flex shrink-0 items-center gap-px rounded-[12px] p-0.5 pointer-coarse:rounded-[13px]",
-          variant === "media" && cn("absolute top-2 right-2", FLOATING_CLASS_NAME),
+          "z-20 flex shrink-0 items-center gap-px rounded-(--controls-radius) p-(--controls-pad) [--controls-pad:2px]",
+          variant === "media" && cn(FLOATING_CLASS_NAME, "[--inset:--spacing(2)]"),
           size === "md" &&
-            "top-1.5 right-1.5 rounded-[11px] [&_[data-slot=item-control]]:size-7 [&_[data-slot=item-selection]]:size-7 [&_[data-slot=item-control]]:rounded-[9px] [&_[data-slot=item-selection]]:rounded-[9px] [&_svg]:size-3.5",
+            "[--inset:--spacing(1.5)] [&_[data-slot=item-control]]:size-7 [&_[data-slot=item-selection]]:size-7 [&_svg]:size-3.5",
           size === "sm" &&
-            "top-1 right-1 rounded-[9px] p-px [&_[data-slot=item-control]]:size-6 [&_[data-slot=item-selection]]:size-6 [&_[data-slot=item-control]]:rounded-[8px] [&_[data-slot=item-selection]]:rounded-[8px] [&_svg]:size-3.5",
+            "[--controls-pad:1px] [--inset:--spacing(1)] [&_[data-slot=item-control]]:size-6 [&_[data-slot=item-selection]]:size-6 [&_svg]:size-3.5",
           size === "xs" &&
-            "top-1 right-1 rounded-[8px] p-px [&_[data-slot=item-control]]:size-5 [&_[data-slot=item-selection]]:size-5 [&_[data-slot=item-control]]:rounded-[7px] [&_[data-slot=item-selection]]:rounded-[7px] [&_svg]:size-3",
+            "[--controls-pad:1px] [--inset:--spacing(1)] [&_[data-slot=item-control]]:size-5 [&_[data-slot=item-selection]]:size-5 [&_svg]:size-3",
           !active &&
             variant !== "row" &&
             "pointer-fine:pointer-events-none pointer-fine:opacity-0 pointer-fine:group-hover/item:pointer-events-auto pointer-fine:group-hover/item:opacity-100 pointer-fine:group-has-[:focus-visible]/item:pointer-events-auto pointer-fine:group-has-[:focus-visible]/item:opacity-100",
@@ -89,7 +92,7 @@ function ItemControl({ className, ...props }: ComponentProps<typeof Button>): Re
         controlBaseClassName,
         material === "media"
           ? "text-white hover:bg-white/15 hover:text-white hover:shadow-[inset_0_0_0_1px_oklch(1_0_0/0.1)] focus-visible:text-white focus-visible:ring-white/60 active:bg-white/20 active:text-white aria-expanded:bg-white/15 aria-expanded:text-white data-popup-open:bg-white/15 data-popup-open:text-white"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/60 active:bg-muted aria-expanded:bg-muted aria-expanded:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground pointer-coarse:size-10 pointer-coarse:rounded-[11px]",
+          : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/60 active:bg-muted aria-expanded:bg-muted aria-expanded:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground pointer-coarse:size-10",
         className,
       )}
     />

@@ -106,7 +106,7 @@ export function OrdersGalleryGrid({
         />
 
         {imageCount > 4 ? (
-          <div className="absolute bottom-1.5 right-1.5 z-20 rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+          <div className="absolute right-(--inset) bottom-(--inset) z-20 rounded-inner [--inset:--spacing(1.5)] bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
             +{imageCount - 4}
           </div>
         ) : null}

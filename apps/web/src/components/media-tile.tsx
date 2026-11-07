@@ -119,7 +119,7 @@ export function MediaCard({
       <div
         className={cn(
           // No frame: the rounded photo is the tile's surface, after marked.dev.
-          "group/item relative min-w-0 flex h-full flex-col rounded-2xl",
+          "group/item relative min-w-0 flex h-full flex-col rounded-2xl [--radius-outer:var(--radius-2xl)]",
           selected && "ring-2 ring-primary ring-offset-4 ring-offset-background",
           TILE_FOCUS_CLASS_NAME,
           className,
@@ -326,7 +326,7 @@ export function MediaGalleryTile({
       <DropIndicator placement={dropIndicator} geometry={GALLERY_DROP} />
       <div
         className={cn(
-          "group/item relative min-w-0 overflow-hidden rounded-lg",
+          "group/item relative min-w-0 overflow-hidden rounded-lg [--radius-outer:var(--radius-lg)]",
           selected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
           TILE_FOCUS_CLASS_NAME,
           className,
