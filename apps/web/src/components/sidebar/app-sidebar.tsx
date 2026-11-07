@@ -12,7 +12,7 @@ import { useEffect } from "react";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { ActiveDot } from "@/components/active-dot";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
 
 type NavItem = {
@@ -80,6 +80,7 @@ const navMainUrls = NAV_GROUPS.flatMap((group) => group.items.map((item) => item
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  const openOnboarding = useOpenOnboarding();
   useWarmDestinations(navMainUrls);
 
   return (
@@ -135,16 +136,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </nav>
       </SidebarContent>
       <SidebarFooter className="gap-1 px-5 pb-5">
-        <OnboardingDialog
-          renderTrigger={
-            <button
-              type="button"
-              className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring color-motion hover:text-foreground focus-visible:outline-2"
-            >
-              Getting started
-            </button>
-          }
-        />
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={openOnboarding}
+          className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring color-motion hover:text-foreground focus-visible:outline-2"
+        >
+          Getting started
+        </button>
         <SidebarMenu className="gap-0">
           {FOOTER_LINKS.map((link) => (
             <SidebarMenuItem key={link.title}>

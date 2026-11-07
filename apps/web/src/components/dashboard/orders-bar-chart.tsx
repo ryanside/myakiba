@@ -153,7 +153,6 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
         )}
       </FrameHeader>
       <FramePanel className="flex flex-col">
-        {/* The chart takes the row's height from its neighbours instead of setting it. */}
         <div className="relative min-h-56 flex-1">
           <div className="absolute inset-0">
             <OrderChartContext value={orderChart}>
@@ -214,7 +213,6 @@ function OrderBarsChart({
           dataKey="month"
           tickLine={false}
           tickMargin={10}
-          // The baseline lets a month with no orders read as zero.
           axisLine={{ stroke: "var(--border)" }}
           tickFormatter={(value: string) => value.slice(0, 3)}
           interval={0}

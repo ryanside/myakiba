@@ -6,7 +6,6 @@ const analyticsRelationshipsLimitSchema = paginationLimitSchema.max(25);
 
 export const analyticsSectionSchema = z.enum(ANALYTICS_SECTIONS);
 
-/** The most rows each analytics overview leaderboard holds. */
 export const ANALYTICS_LEADERBOARD_SIZE = 5;
 
 /**

@@ -119,7 +119,6 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((prevOpen) => !prevOpen) : setOpen((prevOpen) => !prevOpen);
   }, [isMobile, setOpen, setOpenMobile]);
 
-  // The keyboard shortcut snaps the sidebar; a click on the toggle still slides it.
   const [instant, setInstant] = React.useState(false);
 
   React.useEffect(() => {

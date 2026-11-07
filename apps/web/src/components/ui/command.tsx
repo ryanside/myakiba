@@ -19,8 +19,6 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
       data-slot="command"
       className={cn(
         "flex size-full flex-col overflow-hidden rounded-(--radius-outer)! bg-popover p-1 text-popover-foreground",
-        // Full bleed in its popover or dialog, so it takes that corner. Its field and items sit 8px in:
-        // its own padding plus the field wrapper's or the group's.
         "[--inset:--spacing(2)] [--radius-outer:var(--radius-lg)] in-data-[slot=dialog-content]:[--radius-outer:var(--radius-xl)]",
         "in-data-[slot=dialog-content]:bg-transparent in-data-[slot=dialog-content]:p-0",
         className,

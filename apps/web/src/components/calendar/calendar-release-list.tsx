@@ -258,7 +258,6 @@ function FilteredReleaseList<TItem>({
   const emptyLabel = isFilteringEmpty ? emptyFilteredLabel : emptyMonthLabel;
 
   return (
-    // The list fades in from outside its scroll area, so the scrollbar fades in with the rows.
     <div className="animate-data-in flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto pb-6 scroll-fade-b">
         <CalendarReleaseList

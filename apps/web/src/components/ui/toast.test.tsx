@@ -11,7 +11,6 @@ function Timeouts(): React.JSX.Element {
   );
 }
 
-// A failed save rolls back its edit, so its error must stay readable until the user dismisses it.
 test("an error toast stays until dismissed, while other toasts still time out", () => {
   render(
     <Toaster>

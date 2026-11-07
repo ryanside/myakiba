@@ -144,7 +144,6 @@ function SortableList({
       <div
         data-folder-host
         className={cn(
-          // The selection wraps the folder front, whose corner is 6% of the folder's width.
           "[--inset:--spacing(1.5)] [--radius-outer:calc(0.06*(100cqw-2*var(--inset))+var(--inset))]",
           "group/item relative rounded-(--radius-outer) px-(--inset) pt-[15%] pb-(--inset) outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
           selected && "bg-foreground/[0.045] ring-2 ring-primary",

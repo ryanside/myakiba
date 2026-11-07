@@ -72,7 +72,6 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
   const smallestPageSize = mergedProps.sizes?.length ? Math.min(...mergedProps.sizes) : pageSize;
   const hasOtherPages = pageCount > 1 || offset > 0;
-  // Nothing to page through: every row fits on the smallest page size.
   const fitsOnSmallestPage = recordCount > 0 && !hasOtherPages && recordCount <= smallestPageSize;
 
   const currentGroupStart =

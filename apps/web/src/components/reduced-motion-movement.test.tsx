@@ -29,7 +29,6 @@ function tokensIn(opening: string): Map<string, string> {
 const motionOn = tokensIn(":root");
 const reduced = tokensIn(":root[data-reduce-motion]");
 
-/** Whether the element's transition moves it over time, rather than snapping, under Reduce motion. */
 function movesUnderReducedMotion(element: Element): boolean {
   const classes = [...element.classList];
   if (classes.some((name) => /^(transition|duration)(-|$)/.test(name))) return true;
@@ -42,7 +41,6 @@ function movesUnderReducedMotion(element: Element): boolean {
   });
 }
 
-/** The scale an element's classes give it, with the motion tokens of one mode. */
 function scaleOf(element: Element, mode: "motion on" | "reduced"): number | undefined {
   for (const name of element.classList) {
     const token = /^scale-\((--[\w-]+)\)$/.exec(name)?.[1];
@@ -124,4 +122,43 @@ test("a hover nudge moves by the --nudge distance, which Reduce motion sets to n
   expect(nudges.length).toBeGreaterThan(0);
   expect(nudges.filter((nudge) => !nudge.endsWith("-(--nudge)"))).toEqual([]);
   expect(reduced.get("--nudge")).toBe("0px");
+});
+
+/** Tailwind v4 sets these with their own properties, not `transform`. */
+const PROPERTY_OF = [
+  [/^-?translate-/, "translate"],
+  [/^-?scale-/, "scale"],
+  [/^-?rotate-/, "rotate"],
+  [/^blur/, "filter"],
+  [/^opacity-/, "opacity"],
+] as const;
+
+const STILL = new Set(["0px", "0%", "0deg", "1"]);
+
+test("an entrance transitions each property it starts from, and Reduce motion keeps it from moving", () => {
+  const starts = sources(src)
+    .filter((file) => !SCRAPER.test(path.relative(src, file)))
+    .flatMap((file) =>
+      readFileSync(file, "utf-8")
+        .split("\n")
+        .flatMap((line) => {
+          const transitioned = /transition-\[([^\]]+)\]/.exec(line)?.[1]?.split(",") ?? [];
+          return [...line.matchAll(/starting:([^\s"'`]+)/g)].map(([, start = ""]) => ({
+            where: `${path.relative(src, file)}: starting:${start}`,
+            property: PROPERTY_OF.find(([pattern]) => pattern.test(start))?.[1],
+            token: /-\((--[\w-]+)\)$/.exec(start)?.[1],
+            transitioned,
+          }));
+        }),
+    );
+  expect(starts.length).toBeGreaterThan(0);
+
+  const problems = starts.flatMap(({ where, property, token, transitioned }) => [
+    ...(property && transitioned.includes(property) ? [] : [`${where} is not transitioned`]),
+    ...(["translate", "scale", "rotate"].includes(property ?? "") &&
+    !STILL.has(reduced.get(token ?? "") ?? "")
+      ? [`${where} still moves under Reduce motion`]
+      : []),
+  ]);
+  expect(problems).toEqual([]);
 });

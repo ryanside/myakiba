@@ -9,7 +9,6 @@ interface KPICardProps {
   readonly isLoading?: boolean;
 }
 
-/** One figure in a {@link KPIGroup}: a small label and the value. */
 export function KPICard({
   title,
   value,
@@ -38,7 +37,6 @@ export function KPICard({
   );
 }
 
-/** A row of KPI figures on the page itself, spaced apart with no boxes or rules. */
 export function KPIGroup({ children }: { readonly children: ReactNode }): ReactNode {
   return <div className="grid grid-cols-2 gap-x-10 gap-y-5 lg:grid-cols-4">{children}</div>;
 }

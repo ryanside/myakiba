@@ -42,14 +42,12 @@ export async function requireData<Data>(
   return data;
 }
 
-/** A visible character: not whitespace and not an invisible format character such as U+200B. */
 const serverMessage = z.string().regex(/[^\s\p{Cf}]/u);
 
 function isRejection(error: Error | null): error is ApiError {
   return error instanceof ApiError && error.status >= 400 && error.status < 500;
 }
 
-/** Only a 4xx text body with visible text is a message the server wrote for the user. */
 function userMessageOf(error: Error | null): string | undefined {
   if (!isRejection(error)) return undefined;
   const message = serverMessage.safeParse(error.cause);

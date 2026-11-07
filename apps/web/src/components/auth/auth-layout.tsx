@@ -6,7 +6,6 @@ type AuthLayoutProps = {
   readonly children: ReactNode;
 };
 
-/** The form on the left; on wide screens the pixel-art street fills a rounded panel on the right. */
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -20,16 +19,12 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       </div>
       <div aria-hidden className="hidden p-3 lg:block">
         <div className="relative h-full overflow-hidden rounded-3xl bg-muted">
-          {/* Lazy loading avoids fetching the desktop-only image while its panel is hidden. */}
           <img
             src={akihabara}
             alt=""
             loading="lazy"
             className="absolute inset-0 size-full object-cover saturate-[.85] [image-rendering:pixelated]"
           />
-          <p className="absolute bottom-6 left-6 rounded-full bg-background/80 px-3 py-1.5 text-sm text-foreground backdrop-blur">
-            Your collection, every release, every order.
-          </p>
         </div>
       </div>
     </div>

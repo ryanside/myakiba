@@ -9,7 +9,7 @@ import { BackLink } from "@/components/ui/back-link";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Captcha } from "@/components/auth/captcha";
+import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
 import { AuthLayout } from "@/components/auth/auth-layout";
@@ -24,23 +24,24 @@ function RouteComponent() {
   const [sentEmail, setSentEmail] = useState("");
 
   const { status, run } = useButtonStatus();
+  const captcha = useCaptcha();
   const form = useForm({
     defaultValues: {
       email: "",
-      turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      await handleForgotPassword(value.email, value.turnstileToken);
+      const captchaToken = await captcha.token();
+      if (captchaToken === null) return;
+      await handleForgotPassword(value.email, captchaToken);
     },
     validators: {
       onSubmit: z.object({
         email: z.email({ error: "Invalid email address" }),
-        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
 
-  const handleForgotPassword = async (email: string, turnstileToken: string) => {
+  const handleForgotPassword = async (email: string, captchaToken: string) => {
     await run(
       () =>
         authClient.requestPasswordReset(
@@ -50,7 +51,7 @@ function RouteComponent() {
           },
           {
             headers: {
-              "x-captcha-response": turnstileToken,
+              "x-captcha-response": captchaToken,
             },
             onSuccess: () => {
               setSentEmail(email);
@@ -148,13 +149,7 @@ function RouteComponent() {
             )}
           </form.Field>
 
-          <form.Field name="turnstileToken">
-            {(field) => (
-              <div className="space-y-2">
-                <Captcha onSuccess={field.handleChange} />
-              </div>
-            )}
-          </form.Field>
+          <Captcha captcha={captcha} />
 
           <form.Subscribe>
             {(state) => (

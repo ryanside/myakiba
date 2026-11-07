@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 function ScrollArea({
   className,
   children,
-  // Only the scraper's grids still pass this; with no drawn scrollbar it changes nothing.
   horizontal: _horizontal,
   ...props
 }: ScrollAreaPrimitive.Root.Props & { horizontal?: boolean }) {

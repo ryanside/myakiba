@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { env } from "@myakiba/env/web";
 import { Link } from "@tanstack/react-router";
 import type { ComponentType, SVGProps } from "react";
-import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRead } from "@/data/client";
@@ -19,6 +19,8 @@ const DISCORD = "https://discord.gg/VKHVvhcC2z";
 const COMMIT = /^[\da-f]{7,40}$/i;
 
 export function About() {
+  const openOnboarding = useOpenOnboarding();
+
   return (
     <>
       <SettingsGroup title="This version">
@@ -27,14 +29,9 @@ export function About() {
       </SettingsGroup>
       <SettingsGroup title="Help">
         <SettingsRow setting="getting-started" inline>
-          <OnboardingDialog
-            opensForNewAccount={false}
-            renderTrigger={
-              <Button variant="outline" size="sm">
-                Open
-              </Button>
-            }
-          />
+          <Button variant="outline" size="sm" aria-haspopup="dialog" onClick={openOnboarding}>
+            Open
+          </Button>
         </SettingsRow>
         <ExternalRow setting="discord" href={DISCORD} logo={DiscordLogo} label="Join Discord" />
         <ExternalRow setting="github" href={REPOSITORY} logo={GitHubLogo} label="Open GitHub" />

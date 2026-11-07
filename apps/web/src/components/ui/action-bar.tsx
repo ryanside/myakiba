@@ -89,8 +89,6 @@ function useFocusContext(consumerName: string) {
 
 type PresenceState = "starting" | "open" | "ending" | "closed";
 
-// Keeps the bar mounted through its exit, with Base UI's data-starting-style and data-ending-style
-// convention, so CSS transitions run both ways and an interrupted one retargets.
 function usePresence(
   open: boolean,
   elementRef: React.RefObject<HTMLElement | null>,
@@ -104,8 +102,6 @@ function usePresence(
     else if (state !== "closed") setState("ending");
   }
 
-  // Runs after every render: the element can mount a render after the bar opens, once its portal
-  // container exists.
   useIsomorphicLayoutEffect(() => {
     const element = elementRef.current;
     if (state !== "starting" || !element) return;
@@ -124,12 +120,10 @@ function usePresence(
       try {
         await Promise.all(finished);
       } catch {
-        // Reopening cancels the exit; the bar stays.
         return;
       }
       if (!cancelled) setState("closed");
     }
-    // It never rejects: a cancelled exit is caught above.
     void unmountAfterExit();
     return () => {
       cancelled = true;
@@ -174,7 +168,6 @@ function ActionBar(props: ActionBarProps) {
   const [mounted, setMounted] = React.useState(false);
   const rootRef = React.useRef<RootElement>(null);
   const presence = usePresence(open, rootRef);
-  // While the bar leaves, it keeps showing what it showed while open, not an empty selection.
   const [shownChildren, setShownChildren] = React.useState(children);
   if (open && children !== shownChildren) setShownChildren(children);
 

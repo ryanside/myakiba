@@ -10,9 +10,6 @@ type ItemControlsSize = "xs" | "sm" | "md" | "lg";
 
 const ItemControlsContext = createContext<ItemControlsMaterial | null>(null);
 
-// Controls that float over a photo, in cards and galleries alike: a semi-transparent dark pill. It
-// sits --inset from the photo's corner, so its corner is the photo's (--radius-outer, set by the
-// tile) less that inset.
 const FLOATING_CLASS_NAME =
   "absolute top-(--inset) right-(--inset) [--controls-radius:max(0px,calc(var(--radius-outer)-var(--inset)))] bg-black/60 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)]";
 

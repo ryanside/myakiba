@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, rm, stat, utimes } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -14,14 +14,20 @@ export async function snapshotWorkingTree(repo: string) {
     const realIndex = await $`git rev-parse --git-path index`.cwd(repo).text();
     const realIndexPath = path.resolve(repo, realIndex.trim());
     const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
-    // Start from the real index so force-staged ignored files stay in the snapshot.
-    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
-    else await $`git read-tree HEAD`.cwd(repo).env(indexEnv).quiet();
+    // Start from the real index so force-staged ignored files stay in the snapshot. The copy keeps
+    // the index's mtime, or Git trusts the stat of a file edited in the second it wrote the index.
+    if (await Bun.file(realIndexPath).exists()) {
+      const { atime, mtime } = await stat(realIndexPath);
+      await copyFile(realIndexPath, index);
+      await utimes(index, atime, mtime);
+    } else await $`git read-tree HEAD`.cwd(repo).env(indexEnv).quiet();
     const tree = await $`git add -A && git write-tree`.cwd(repo).env(indexEnv).quiet().text();
-    const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
-      .cwd(repo)
-      .quiet()
-      .text();
+    // A fresh CI checkout has no Git identity. Identity env vars still win over these.
+    const commit =
+      await $`git -c user.name=replay -c user.email=replay@localhost commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
+        .cwd(repo)
+        .quiet()
+        .text();
     return commit.trim();
   } finally {
     await rm(scratch, { recursive: true, force: true });

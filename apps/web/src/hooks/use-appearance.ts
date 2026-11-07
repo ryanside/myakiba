@@ -2,18 +2,17 @@ import { useSyncExternalStore } from "react";
 import * as z from "zod";
 import { readLocalStorage, useLocalStorage } from "@/hooks/use-local-storage";
 
-// Page photos are opt-in: the default interface is plain, after marked.dev and recent.design.
 const PAGE_BACKGROUNDS_KEY = "appearance:pageBackgrounds";
 const REDUCE_MOTION_KEY = "appearance:reduceMotion";
 const DEVICE_REDUCES_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 const flag = z.boolean();
 
 export function usePageBackgrounds() {
-  return useLocalStorage(PAGE_BACKGROUNDS_KEY, false, flag);
+  return useLocalStorage(PAGE_BACKGROUNDS_KEY, true, flag);
 }
 
 export function pageBackgroundsEnabled(): boolean {
-  return readLocalStorage(PAGE_BACKGROUNDS_KEY, false, flag);
+  return readLocalStorage(PAGE_BACKGROUNDS_KEY, true, flag);
 }
 
 function subscribeToDeviceMotion(onStoreChange: () => void): () => void {

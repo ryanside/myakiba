@@ -9,7 +9,6 @@ import { ordersPage } from "../../../test/order";
 
 afterEach(cleanup);
 
-/** The grid edits optimistically without filters and marks the order pending with them. */
 const lists = { unfiltered: "/orders", filtered: "/orders?order=asc" } as const;
 
 const pages = [

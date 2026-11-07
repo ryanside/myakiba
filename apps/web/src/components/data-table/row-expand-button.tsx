@@ -29,7 +29,6 @@ export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): R
   );
 }
 
-/** Stands in for the expand button in a loading row: its box, with a bar where the chevron sits. */
 export const ROW_EXPAND_SKELETON = (
   <div className="flex size-7 items-center justify-center">
     <Skeleton className="size-3 rounded-sm" />

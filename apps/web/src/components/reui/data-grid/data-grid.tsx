@@ -68,7 +68,6 @@ export interface DataGridProps<TData extends object> {
     rowBorder?: boolean;
     rowRounded?: boolean;
     stripped?: boolean;
-    /** Ignored. The header row has no background. Scraper grids still pass it. */
     headerBackground?: boolean;
     headerBorder?: boolean;
     headerSticky?: boolean;
@@ -190,10 +189,6 @@ function DataGridContainer({ children, className }: { children: ReactNode; class
   );
 }
 
-/**
- * Column meta for number columns: values and header end on the cell's right edge, so
- * digits and decimals line up. Inline-edit cells render a button, which this right-aligns too.
- */
 const NUMERIC_COLUMN_META = {
   headerClassName:
     "pe-6 [&>div:not([data-slot=column-resize-handle])]:justify-end [&_button]:-me-3 [&_button]:ms-0 [&_button]:flex-row-reverse",

@@ -42,8 +42,6 @@ function createSectionColumns({
   readonly locale: string;
   readonly offset: number;
 }): ColumnDef<AnalyticsSectionRow>[] {
-  // Below 440 px the expand button and the figures need more than their size's share, so the
-  // narrow table gets its own shares.
   return [
     {
       id: EXPAND_COLUMN_ID,

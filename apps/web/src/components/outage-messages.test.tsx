@@ -124,7 +124,6 @@ const collectionItem = {
 
 type Surface = {
   readonly name: string;
-  /** The read's internal fallback, which a user must never see. */
   readonly diagnostic: string;
   readonly ui: () => ReactElement;
   readonly open?: (user: User) => Promise<void>;

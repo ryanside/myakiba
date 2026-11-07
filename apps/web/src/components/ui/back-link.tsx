@@ -21,7 +21,6 @@ type BackLinkProps = {
     })
 );
 
-// Back, "view all" and other arrow links: a colour fade, a text press and a 2px arrow nudge on hover.
 export const ARROW_LINK_CLASS_NAME =
   "group/link cursor-pointer relative flex items-center gap-1.5 w-fit py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground press-text outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 

@@ -47,7 +47,6 @@ function withoutTimestamps({ createdAt: _createdAt, updatedAt: _updatedAt, ...or
   return order;
 }
 
-// Editing a field the order shares with its items carries the change to the items too.
 function cascadeFor(field: keyof Order): CascadeOptions {
   const option = ORDER_CASCADE_OPTIONS.find((candidate) => candidate === field);
   return option ? [option] : [];
@@ -413,7 +412,6 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      // Wide enough for a seven-figure total in any currency; figures never truncate.
       size: 128,
       meta: {
         ...NUMERIC_COLUMN_META,

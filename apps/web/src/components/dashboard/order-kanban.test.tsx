@@ -576,8 +576,6 @@ describe("reconciling the board with a fetch", () => {
 });
 
 describe("the board's scrolling", () => {
-  // The board scrolls sideways only. A part that scrolls vertically shows a bar whenever a
-  // spinner's turning corners or a card's entry slide pokes past its bottom edge.
   const SCROLL_CLASSES = [
     "overflow-auto",
     "overflow-scroll",

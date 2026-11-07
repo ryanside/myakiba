@@ -4,7 +4,6 @@ import type { ComponentProps } from "react";
 import { DebouncedInput } from "@/components/debounced-input";
 import { cn } from "@/lib/utils";
 
-/** A page's search field: a grey pill with a magnifier, as tall as the 32px toolbar buttons beside it. */
 export function SearchPill({
   className,
   ref,

@@ -28,11 +28,8 @@ type RowIdKey<TRow> = {
 
 type ColumnSpec = {
   readonly label: string;
-  /** The loading bar; text columns without one get DataTable's lines of text. */
   readonly skeleton?: ReactNode;
-  /** Money columns hold minor units and show in the user's currency. */
   readonly format?: "money";
-  /** Number columns: [plain, with a bar] header widths. */
   readonly number?: { readonly widths: readonly [string, string] };
 };
 
@@ -40,7 +37,6 @@ const COLUMN_SPECS = {
   name: { label: "Name" },
   shop: { label: "Shop" },
   scale: { label: "Scale", skeleton: <CellSkeleton className="w-8" /> },
-  // Bars only fit once the table has a full-width column, from lg; below that the figures stand alone.
   itemCount: {
     label: "Count",
     skeleton: DATA_TABLE_SKELETON.count,
@@ -96,7 +92,6 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
         id: column,
         accessorFn: (row) => row[column] ?? null,
         header: spec.label,
-        // Fixed widths keep every section's columns on the same lines.
         meta: spec.number
           ? {
               headerClassName: cn(
@@ -133,7 +128,6 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>({
                   style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
                 />
               </span>
-              {/* Each figure reserves the widest figure's width, so the bars line up and sit against their figures. */}
               <span
                 data-widest={widestBarFigure}
                 className="inline-grid justify-items-end before:invisible before:col-start-1 before:row-start-1 before:content-[attr(data-widest)]"
@@ -161,12 +155,10 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
   readonly isLoading?: boolean;
-  /** The column the rows are ranked by; its values get a proportional bar. */
   readonly rankedBy: RankedBy;
 }): ReactNode {
   const navigate = useNavigate();
   const { currency, locale } = useUserPreferences();
-  // useReactTable takes a mutable array, so this copy only drops `readonly`.
   const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
     () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
@@ -197,7 +189,6 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     data: tableData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
-    // The rows arrive ranked; declaring the order sets aria-sort on the ranked header without re-sorting.
     manualSorting: true,
     state: { sorting: [{ id: rankedBy, desc: true }] },
     getRowId: (row) => String(row[rowIdKey]),

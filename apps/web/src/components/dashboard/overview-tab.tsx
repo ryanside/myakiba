@@ -98,7 +98,6 @@ export function OverviewTab({
         <ReleaseCalendar currency={currency} />
       </div>
 
-      {/* The heading belongs to its board, so they sit together rather than a section apart. */}
       <section className="flex flex-col gap-3">
         <SectionHeading title="In progress" scope="Recent and upcoming" />
         <OrderKanban
@@ -113,7 +112,6 @@ export function OverviewTab({
   );
 }
 
-/** A section label inside a page. */
 function SectionHeading({ title, scope }: { readonly title: string; readonly scope: string }) {
   return (
     <div className="flex items-baseline gap-2.5">

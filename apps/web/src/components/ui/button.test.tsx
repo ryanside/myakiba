@@ -12,7 +12,6 @@ function renderButton(width: number, onPointerDown?: () => void): HTMLElement {
 }
 
 describe("Button press", () => {
-  // The press stylesheet caps how far a button narrows, so it needs the button's width.
   test("a pointer press hands the button's width to the press", () => {
     const button = renderButton(600);
     fireEvent.pointerDown(button);

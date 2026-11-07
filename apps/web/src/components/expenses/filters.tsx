@@ -141,7 +141,6 @@ export function ExpensesFilters({
   }
 
   return (
-    // One wrapping row of controls at their own widths; nothing stretches to fill the line.
     <div className="flex flex-wrap items-center gap-2">
       <Field className="w-auto">
         <ToggleGroup

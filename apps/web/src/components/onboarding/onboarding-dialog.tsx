@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { createContext, use, useCallback, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -13,13 +13,7 @@ import { toast } from "@/components/ui/toast";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -75,7 +69,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     step: 3,
     eyebrow: "Add items",
     title: "Bring in your items.",
-    description: "You can always add more later through the + button in the sidebar.",
+    description: "You can always add more later through the + button at the top right.",
   },
 ];
 
@@ -86,21 +80,27 @@ const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
 const PANEL_MIN_HEIGHT = "min-h-[440px]";
 const EASE_OUT = "ease-[cubic-bezier(0.23,1,0.32,1)]";
-const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-1 starting:blur-[2px]`;
+const ENTER_TRANSITION = `transition-[opacity,translate,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-(--rise) starting:blur-[2px]`;
 
 const appRouteApi = getRouteApi("/(app)");
 
-type OnboardingDialogProps = {
-  readonly renderTrigger: React.ReactElement;
-  /** Only one mounted dialog may open on its own for a new account, or two would stack. */
-  readonly opensForNewAccount?: boolean;
+const OpenOnboardingContext = createContext<(() => void) | null>(null);
+
+function useOpenOnboarding(): () => void {
+  const openOnboarding = use(OpenOnboardingContext);
+  if (!openOnboarding) throw new Error("useOpenOnboarding needs an OnboardingProvider above it.");
+  return openOnboarding;
+}
+
+type OnboardingProviderProps = {
+  readonly children: React.ReactNode;
 };
 
-function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: OnboardingDialogProps) {
+function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.
   const isNewAccount = session.user.hasSeenOnboarding === false;
-  const [open, setOpen] = useState(opensForNewAccount && isNewAccount);
+  const [open, setOpen] = useState(isNewAccount);
   const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
   const [currentStep, setCurrentStep] = useState(FIRST_STEP);
 
@@ -191,6 +191,8 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
     [close, form, sessionUsername, sessionCurrency, sessionDateFormat],
   );
 
+  const openOnboarding = useCallback(() => handleOpenChange(true), [handleOpenChange]);
+
   const handleBack = useCallback(() => {
     if (isFirst) return;
     goToStep(currentStep - 1);
@@ -217,10 +219,9 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
   );
 
   return (
-    <>
+    <OpenOnboardingContext value={openOnboarding}>
+      {children}
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogTrigger render={renderTrigger} />
-
         <DialogContent
           className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
           showCloseButton={false}
@@ -380,7 +381,7 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
         </DialogContent>
       </Dialog>
       <SyncActionSheet syncType={syncSheetType} onSyncTypeChange={setSyncSheetType} />
-    </>
+    </OpenOnboardingContext>
   );
 }
 
@@ -416,7 +417,7 @@ const SYNC_OPTIONS: readonly SyncOption[] = [
     id: "collection",
     icon: LibraryIcon,
     title: SYNC_OPTION_META.collection.title,
-    description: SYNC_OPTION_META.collection.description,
+    description: "Paste MyFigureCollection item links or IDs to add to your collection.",
   },
   {
     id: "order",
@@ -453,7 +454,7 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
       variant="outline"
       onClick={() => onSelect(option.id)}
       className={cn(
-        "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
+        "group relative h-auto justify-start gap-3.5 whitespace-normal rounded-xl px-4 py-3 text-left",
         "animate-data-in",
       )}
     >
@@ -507,17 +508,17 @@ function StepFooter({
 
   return (
     <div className="flex items-center justify-between gap-2 border-t bg-background px-4 py-3">
-      <Button variant="ghost" size="sm" onClick={onSkip} disabled={isSaving}>
+      <Button variant="ghost" onClick={onSkip} disabled={isSaving}>
         {skipLabel}
       </Button>
       <div className="flex items-center gap-2">
         {!isFirst && (
-          <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
+          <Button variant="outline" onClick={onBack} disabled={isSaving}>
             <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}
-        <Button size="sm" onClick={onContinue} disabled={isSaving || !canContinue}>
+        <Button onClick={onContinue} disabled={isSaving || !canContinue}>
           {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
@@ -531,4 +532,4 @@ function StepFooter({
   );
 }
 
-export { OnboardingDialog };
+export { OnboardingProvider, useOpenOnboarding };

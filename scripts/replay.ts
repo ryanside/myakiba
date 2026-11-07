@@ -37,7 +37,6 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
-// The root test script runs every package, so replay root tests directly.
 const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {

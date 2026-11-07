@@ -8,15 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
-/** Widths a loading text bar cycles through by row, so the placeholder reads as lines of text. */
 const TEXT_SKELETON_WIDTHS = ["w-28", "w-20", "w-36", "w-24", "w-32"] as const;
 
-/** A loading bar as wide as the text it stands in for; inline, so the cell's text alignment places it. */
 export function CellSkeleton({ className }: { readonly className?: string }): ReactNode {
   return <Skeleton className={cn("inline-block h-3 max-w-full align-middle", className)} />;
 }
 
-/** Loading bars for the figures a column shows, sized like that figure. */
 export const DATA_TABLE_SKELETON = {
   rank: <CellSkeleton className="w-4" />,
   count: <CellSkeleton className="w-5" />,

@@ -13,34 +13,28 @@
       ]
     },
     {
-      "fix": "667c8154",
-      "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
-      "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
-      "fixed": [
-        "the phone sidebar closes after a link opens another page",
-        "the phone sidebar closes after a link to the current page"
-      ]
-    },
-    {
       "fix": "2d8c17ce",
       "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
       "fixed": [
         "a new account that opens Getting Started right away saves that it has seen onboarding",
         "a new account sees the welcome as soon as the dashboard renders"
-      ]
+      ],
+      "testAt": "3cc4dbf2"
     },
     {
       "fix": "92b71fdb",
       "bug": "Getting Started resumed a step saved in this browser instead of opening at the welcome step",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
-      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"]
+      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"],
+      "testAt": "3cc4dbf2"
     },
     {
       "fix": "f8da3c4a",
       "bug": "an account signed in before the deploy saw the welcome dialog because its cached session had no onboarding key",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
-      "fixed": ["an account signed in before the deploy keeps the welcome dialog closed"]
+      "fixed": ["an account signed in before the deploy keeps the welcome dialog closed"],
+      "testAt": "3cc4dbf2"
     },
     {
       "fix": "5cb016f3",
@@ -51,7 +45,8 @@
         "a new account sees the welcome dialog and saves that it has seen onboarding",
         "a new account that opens Getting Started right away saves that it has seen onboarding",
         "a new account that dismisses the welcome with Escape saves that it has seen onboarding"
-      ]
+      ],
+      "testAt": "3cc4dbf2"
     },
     {
       "fix": "f74b2615",
@@ -559,22 +554,6 @@
       "fixed": ["Google signup opens consent without navigating through the signed-out app"]
     },
     {
-      "fix": "a3acade9",
-      "bug": "the first sidebar click waited for destination code, and an already loaded page could render in the click frame before the clicked item painted",
-      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
-      "fixed": [
-        "a sidebar destination opens on the click without waiting for its code to load",
-        "the clicked sidebar item turns active before the page renders",
-        "a page change finishes if the tab becomes hidden before its frame"
-      ]
-    },
-    {
-      "fix": "71ecea79",
-      "bug": "a sidebar link sat inside its menu button, so part of the hover area missed the link",
-      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
-      "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"]
-    },
-    {
       "fix": "9a8047a1",
       "bug": "the dashboard order reference-line spring rebuilt bars every frame, interrupting their entrance growth and detaching the pressed bar before its first click",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
@@ -593,12 +572,6 @@
         "POST /api/auth/delete-user logs 401 and keeps Better Auth's response",
         "GET /api/auth/callback/google logs 302 and keeps Better Auth's response"
       ]
-    },
-    {
-      "fix": "ebab2322",
-      "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
-      "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
-      "fixed": ["every active-state style on the active sidebar item matches its attribute"]
     },
     {
       "fix": "7da6de43",
@@ -1388,6 +1361,131 @@
       "bug": "the Orders row used the same chevron to expand the row and to open the order's page",
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
       "fixed": ["draws the row's open-order link with a different icon from its expand button"]
+    },
+    {
+      "fix": "3cc4dbf2",
+      "bug": "the onboarding add items cards were pills, its footer buttons were the small size, and its copy pointed to a + in the sidebar",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "the add items step points to the + button in the top bar, not the sidebar",
+        "every onboarding footer button is the standard button height",
+        "the add items option cards take a card corner, not a pill"
+      ],
+      "testAt": "3cc4dbf2"
+    },
+    {
+      "fix": "1fa632de",
+      "bug": "the onboarding dialog lived in the sidebar, so the phone breakpoint swap unmounted it and lost its step",
+      "test": "apps/web/src/components/onboarding/onboarding-breakpoint.test.tsx",
+      "fixed": [
+        "the onboarding dialog stays open on its step when the window narrows to a phone and widens back",
+        "a new account on a phone sees the welcome dialog with the sidebar closed"
+      ]
+    },
+    {
+      "fix": "879cb6ab",
+      "bug": "a submit before Cloudflare answered was blocked or sent an empty, expired or spent captcha token, and a failed check said nothing useful",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "submitting before Cloudflare answers waits, then signs in with the token",
+        "an expired token is never sent; the refreshed one is",
+        "a second try after a wrong password waits for a fresh token instead of reusing the spent one",
+        "a waiting submit continues once the user completes Cloudflare's challenge",
+        "a blocked Cloudflare script says what happened and what to do, and sends nothing",
+        "a widget error says what happened and what to do, and sends nothing",
+        "a widget that recovers after an error clears the message and signs in",
+        "sign up waits for the token instead of sending an empty one",
+        "forgot password waits for the token instead of sending an empty one"
+      ],
+      "testAt": "879cb6ab"
+    },
+    {
+      "fix": "657a95f1",
+      "bug": "a captcha check that never answered left the submit waiting forever",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "a check that never answers stops the waiting submit after 15 seconds and says what to do"
+      ]
+    },
+    {
+      "fix": "6954ae83",
+      "bug": "a renewed captcha check inherited the previous check's deadline, and a check that left the checkbox had no deadline at all",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "a renewed check gets its own 15 seconds",
+        "after the checkbox is done, a stalled check still fails after 15 seconds and says what to do",
+        "after the checkbox times out, a stalled check still fails after 15 seconds and says what to do"
+      ]
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the UI polish pass turned page backgrounds off for a browser with no saved preference",
+      "test": "apps/web/src/components/page-background.test.tsx",
+      "fixed": ["page background > a browser with no saved preference shows the background"],
+      "testAt": "e36c5068"
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the Page backgrounds switch read off for a browser with no saved preference",
+      "test": "apps/web/src/components/settings/appearance.test.tsx",
+      "fixed": ["the Page backgrounds switch is on in a browser with no saved preference"],
+      "testAt": "e36c5068"
+    },
+    {
+      "fix": "3d6d8316",
+      "bug": "under Reduce motion the switch thumb still slid, the row chevron still turned and hover arrows still nudged",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "under Reduce motion, controls snap to their new state > the switch thumb",
+        "under Reduce motion, controls snap to their new state > the row expand chevron",
+        "a hover nudge moves by the --nudge distance, which Reduce motion sets to nothing"
+      ]
+    },
+    {
+      "fix": "8ba3b276",
+      "bug": "a WORKTREE replay failed on a machine with no Git identity, such as a fresh CI checkout",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot commits on a machine with no Git identity"]
+    },
+    {
+      "fix": "c16cca6c",
+      "bug": "a WORKTREE snapshot could keep the old text of a same-size edit made in the second Git last wrote the index",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot keeps a same-size edit made in the second Git last wrote the index"]
+    },
+    {
+      "fix": "272cd9a8",
+      "bug": "sparkle trail glyphs grew from scale 0 and kept scaling under Reduce motion",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "a hidden sparkle glyph > starts a little smaller with motion on, never from nothing",
+        "a hidden sparkle glyph > keeps its full size under Reduce motion, so it only fades"
+      ]
+    },
+    {
+      "fix": "8931284d",
+      "bug": "the onboarding step rise transitioned transform while the class set translate, so it never played, and Reduce motion did not stop it",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "an entrance transitions each property it starts from, and Reduce motion keeps it from moving"
+      ]
+    },
+    {
+      "fix": "67676e81",
+      "bug": "a new user started on the Dark theme instead of following the OS, the theme controls read Dark, and the homepage toggle offered the theme already shown",
+      "test": "apps/web/src/components/theme-default.test.tsx",
+      "fixed": [
+        "a fresh browser on a light OS > paints the OS theme before the app loads",
+        "a fresh browser on a light OS > shows the OS theme and every theme control reads System",
+        "a fresh browser on a light OS > the homepage theme toggle offers the theme the page is not showing",
+        "a fresh browser on a dark OS > shows the OS theme and every theme control reads System"
+      ]
+    },
+    {
+      "fix": "beaaa113",
+      "bug": "a release tile kept saying Releases after midnight until something else re-rendered it",
+      "test": "apps/web/src/components/release-item-tile.test.tsx",
+      "fixed": ["a tile releasing today reads Released after midnight passes with no other update"]
     }
   ],
   "lint": [

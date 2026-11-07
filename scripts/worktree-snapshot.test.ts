@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { $ } from "bun";
@@ -11,7 +11,6 @@ afterEach(async () => {
   await Promise.all(repos.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-/** A repository with one commit holding `files`, ignored or not. */
 async function repo(files: Record<string, string>) {
   const dir = await mkdtemp(path.join(tmpdir(), "worktree-snapshot-test-"));
   repos.push(dir);
@@ -32,7 +31,6 @@ async function repo(files: Record<string, string>) {
   const index = Bun.file(indexPath);
   const readIndex = async () => ((await index.exists()) ? index.bytes() : undefined);
 
-  /** Snapshots the working tree and checks that the real index, or its absence, is unchanged. */
   async function snapshot() {
     const before = await readIndex();
     const commit = await snapshotWorkingTree(dir);
@@ -44,7 +42,7 @@ async function repo(files: Record<string, string>) {
       show: (file: string) => git("show", `${commit}:${file}`),
     };
   }
-  return { git, write, remove, indexPath, snapshot };
+  return { dir, git, write, remove, indexPath, snapshot };
 }
 
 test("a snapshot commits edits, deletions and untracked files on top of HEAD", async () => {
@@ -95,4 +93,41 @@ test("a snapshot of a checkout with no index file starts from HEAD", async () =>
   const { files, show } = await snapshot();
   expect(files).toEqual([".gitignore", "src/ignored.ts", "src/value.ts"]);
   expect(await show("src/value.ts")).toBe("new\n");
+});
+
+test("a snapshot keeps a same-size edit made in the second Git last wrote the index", async () => {
+  const { dir, git, indexPath, snapshot } = await repo({ "src/value.ts": "old\n" });
+  const file = path.join(dir, "src/value.ts");
+  const second = new Date("2001-01-01T00:00:00Z");
+  await git("config", "core.trustctime", "false");
+  await utimes(file, second, second);
+  await git("update-index", "--refresh");
+  await utimes(indexPath, second, second);
+  await writeFile(file, "new\n");
+  await utimes(file, second, second);
+  const { show } = await snapshot();
+  expect(await show("src/value.ts")).toBe("new\n");
+});
+
+test("a snapshot commits on a machine with no Git identity", async () => {
+  const { dir, git, write } = await repo({ "src/value.ts": "old\n" });
+  await git("config", "--unset", "user.name");
+  await git("config", "--unset", "user.email");
+  await write("src/value.ts", "new\n");
+  const home = await mkdtemp(path.join(tmpdir(), "worktree-snapshot-home-"));
+  repos.push(home);
+  // CI hosts have no domain name, so Git cannot guess an email there. This makes any host behave so.
+  await Bun.write(path.join(home, ".gitconfig"), "[user]\n\tuseConfigOnly = true\n");
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !/^(GIT_|EMAIL$)/.test(name)),
+  );
+  const script = `import { snapshotWorkingTree } from ${JSON.stringify(path.join(import.meta.dir, "worktree-snapshot.ts"))};
+console.log(await snapshotWorkingTree(process.cwd()));`;
+  const result = await $`bun -e ${script}`
+    .cwd(dir)
+    .env({ ...env, HOME: home, XDG_CONFIG_HOME: home, GIT_CONFIG_NOSYSTEM: "1" })
+    .nothrow()
+    .quiet();
+  expect(result.exitCode, result.stderr.toString()).toBe(0);
+  expect(await git("show", `${result.stdout.toString().trim()}:src/value.ts`)).toBe("new\n");
 });

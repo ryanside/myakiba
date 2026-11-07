@@ -8,6 +8,7 @@ import { version } from "@/data/resources/version";
 import { SessionUnavailable } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { PageBackground } from "@/components/page-background";
 import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -95,39 +96,41 @@ function RouteComponent() {
       >
         Skip to content
       </a>
-      <SidebarProvider className="flex flex-col" defaultOpen>
-        <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
-          <AppSidebar />
-          <SidebarInset className="page-background-surface">
-            <PageBackground />
-            <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
-              <div className="flex min-w-0 items-center gap-2">
-                <SidebarTrigger className="-ml-1" />
-                <AppCommand />
-                <SyncStatusWidget />
+      <OnboardingProvider>
+        <SidebarProvider className="flex flex-col" defaultOpen>
+          <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
+            <AppSidebar />
+            <SidebarInset className="page-background-surface">
+              <PageBackground />
+              <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
+                <div className="flex min-w-0 items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <AppCommand />
+                  <SyncStatusWidget />
+                </div>
+                <div className="flex items-center gap-2">
+                  <SyncWidget
+                    side="right"
+                    TriggerWrapper={
+                      <Button variant="default" size="icon" aria-label="Add">
+                        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                      </Button>
+                    }
+                  />
+                  <UserMenu session={session} />
+                </div>
+              </header>
+              <div
+                id="main-content"
+                tabIndex={-1}
+                className="h-full w-full min-w-0 max-w-full overflow-x-hidden px-4 pt-4 pb-12 outline-none md:px-8"
+              >
+                <Outlet />
               </div>
-              <div className="flex items-center gap-2">
-                <SyncWidget
-                  side="right"
-                  TriggerWrapper={
-                    <Button variant="default" size="icon" aria-label="Add">
-                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                    </Button>
-                  }
-                />
-                <UserMenu session={session} />
-              </div>
-            </header>
-            <div
-              id="main-content"
-              tabIndex={-1}
-              className="h-full w-full min-w-0 max-w-full overflow-x-hidden px-4 pt-4 pb-12 outline-none md:px-8"
-            >
-              <Outlet />
-            </div>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </OnboardingProvider>
     </div>
   );
 }

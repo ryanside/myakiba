@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
 
-/**
- * A page title with its grey count on the same line, after recent.design:
- * "Lists  4 Lists". Actions sit at the far end of the row.
- */
 export function PageHeader({
   title,
   titleAccessory,
