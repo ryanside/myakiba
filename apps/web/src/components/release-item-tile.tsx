@@ -10,10 +10,10 @@ import {
   MediaViewTile,
 } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { useToday } from "@/hooks/use-today";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { ItemDestination } from "@/lib/item-destination";
 import { formatReleasePrice } from "@/lib/locale";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 type ReleaseItem = Pick<ItemDatabaseItem, "title" | "image" | "category" | "latestRelease">;
@@ -30,6 +30,7 @@ export function ReleaseItemTile({
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
 }): React.JSX.Element {
+  const today = useToday();
   const releasePrice = formatReleasePrice(
     item.latestRelease?.price,
     item.latestRelease?.priceCurrency,
@@ -42,7 +43,7 @@ export function ReleaseItemTile({
     : "No release";
   let releaseLabel = date;
   if (item.latestRelease) {
-    const upcoming = item.latestRelease.date >= format(new Date(), "yyyy-MM-dd");
+    const upcoming = item.latestRelease.date >= today;
     releaseLabel = `${upcoming ? "Releases" : "Released"} ${date}`;
   }
   const priceTone = priced ? "font-medium text-foreground" : "text-muted-foreground";
