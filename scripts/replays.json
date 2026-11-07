@@ -1408,7 +1408,7 @@
       ]
     },
     {
-      "fix": "44161df7",
+      "fix": "6954ae83",
       "bug": "a renewed captcha check inherited the previous check's deadline, and a check that left the checkbox had no deadline at all",
       "test": "apps/web/src/components/auth/captcha.test.tsx",
       "fixed": [
