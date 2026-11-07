@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Captcha } from "@/components/auth/captcha";
+import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
@@ -54,13 +54,15 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   };
 
   const { status, run } = useButtonStatus();
+  const captcha = useCaptcha();
   const form = useForm({
     defaultValues: {
       email: "",
       password: "",
-      turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
+      const captchaToken = await captcha.token();
+      if (captchaToken === null) return;
       await run(
         () =>
           authClient.signIn.email(
@@ -70,7 +72,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
             },
             {
               headers: {
-                "x-captcha-response": value.turnstileToken,
+                "x-captcha-response": captchaToken,
               },
               onSuccess: () => {
                 window.location.assign(getAuthRedirectUrl(redirectTo));
@@ -98,7 +100,6 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
       onSubmit: z.object({
         email: z.email({ error: "Invalid email address" }),
         password: z.string().min(8, "Password must be at least 8 characters"),
-        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
@@ -194,13 +195,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
           )}
         </form.Field>
 
-        <form.Field name="turnstileToken">
-          {(field) => (
-            <div className="space-y-2">
-              <Captcha onSuccess={field.handleChange} />
-            </div>
-          )}
-        </form.Field>
+        <Captcha captcha={captcha} />
 
         <form.Subscribe>
           {(state) => (

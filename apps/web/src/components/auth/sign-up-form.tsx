@@ -8,7 +8,7 @@ import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-bu
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { FieldError } from "../ui/field";
-import { Captcha } from "@/components/auth/captcha";
+import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
@@ -57,14 +57,16 @@ export default function SignUpForm() {
   };
 
   const { status, run } = useButtonStatus();
+  const captcha = useCaptcha();
   const form = useForm({
     defaultValues: {
       username: "",
       email: "",
       password: "",
-      turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
+      const captchaToken = await captcha.token();
+      if (captchaToken === null) return;
       await run(
         () =>
           authClient.signUp.email(
@@ -77,7 +79,7 @@ export default function SignUpForm() {
             },
             {
               headers: {
-                "x-captcha-response": value.turnstileToken,
+                "x-captcha-response": captchaToken,
               },
               onSuccess: () => {
                 navigate({
@@ -104,7 +106,6 @@ export default function SignUpForm() {
           .max(30, "Username must be less than 30 characters"),
         email: z.email({ error: "Invalid email address" }),
         password: z.string().min(8, "Password must be at least 8 characters"),
-        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
@@ -249,13 +250,7 @@ export default function SignUpForm() {
           )}
         </form.Field>
 
-        <form.Field name="turnstileToken">
-          {(field) => (
-            <div className="space-y-2">
-              <Captcha onSuccess={field.handleChange} />
-            </div>
-          )}
-        </form.Field>
+        <Captcha captcha={captcha} />
 
         <form.Subscribe>
           {(state) => (
