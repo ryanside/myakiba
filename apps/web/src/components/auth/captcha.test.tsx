@@ -1,4 +1,4 @@
-import { afterAll, afterEach, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, expect, jest, mock, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { TurnstileProps } from "@marsidev/react-turnstile";
 import { useEffect } from "react";
@@ -55,6 +55,7 @@ const { default: SignUpForm } = await import("./sign-up-form");
 const { Route: forgotPasswordRoute } = await import("@/routes/(auth)/forgot-password");
 
 afterEach(() => {
+  jest.useRealTimers();
   cleanup();
   window.location.href = initialURL;
   sent.length = 0;
@@ -177,6 +178,47 @@ test.each([
   await act(async () => {});
   expect(sent).toEqual([]);
   expectNoCaptchaJargon();
+});
+
+test("a check that never answers stops the waiting submit after 15 seconds and says what to do", async () => {
+  jest.useFakeTimers();
+  await openSignIn();
+  submitSignIn();
+  await act(async () => {});
+  expect(screen.getByText("Checking your browser…")).toBeDefined();
+
+  await act(async () => jest.advanceTimersByTime(14_000));
+  expect(screen.queryByText(/couldn't run the browser check/i)).toBeNull();
+
+  await act(async () => jest.advanceTimersByTime(1000));
+  expect(screen.getByText(/couldn't run the browser check/i).textContent).toMatch(
+    /reload the page/i,
+  );
+  expect(screen.queryByText("Checking your browser…")).toBeNull();
+  expect(sent).toEqual([]);
+
+  await cloudflare.pass("late");
+  expect(screen.queryByText(/couldn't run the browser check/i)).toBeNull();
+  expect(sent).toEqual([]);
+  await act(async () => jest.advanceTimersByTime(1000));
+  submitSignIn();
+  await act(async () => {});
+  expect(sent).toEqual([{ path: "/api/auth/sign-in/email", captcha: "late" }]);
+});
+
+test("the 15 second limit never cuts off a user looking at Cloudflare's checkbox", async () => {
+  jest.useFakeTimers();
+  await openSignIn();
+  submitSignIn();
+  await cloudflare.askForClick();
+
+  await act(async () => jest.advanceTimersByTime(60_000));
+  expect(screen.getByText("Complete the check above to continue.")).toBeDefined();
+  expect(screen.queryByText(/couldn't run the browser check/i)).toBeNull();
+
+  await cloudflare.pass("clicked");
+  await act(async () => {});
+  expect(sent).toEqual([{ path: "/api/auth/sign-in/email", captcha: "clicked" }]);
 });
 
 test("a widget that recovers after an error clears the message and signs in", async () => {
