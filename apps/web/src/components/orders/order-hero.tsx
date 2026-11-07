@@ -76,7 +76,13 @@ export function OrderHero({
   if (!order) return null;
 
   return (
-    <LoadedOrderHero order={order} {...{ currency, dateFormat, onEditOrder, onDeleteOrder }} />
+    <LoadedOrderHero
+      order={order}
+      currency={currency}
+      dateFormat={dateFormat}
+      onEditOrder={onEditOrder}
+      onDeleteOrder={onDeleteOrder}
+    />
   );
 }
 
