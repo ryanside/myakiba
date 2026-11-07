@@ -44,7 +44,7 @@
     <!-- Prevent flash of white by applying theme before first paint -->
     <script>
       (function () {
-        var t = localStorage.getItem("vite-ui-theme") || "dark";
+        var t = localStorage.getItem("vite-ui-theme") || "system";
         if (t === "system")
           t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         document.documentElement.classList.add(t);
