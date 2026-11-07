@@ -1,4 +1,3 @@
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef } from "react";
@@ -7,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { hasLostFocus } from "./settings-content";
 import { SETTINGS_NAV_GROUPS, SETTINGS_SECTIONS } from "./settings-registry";
 import type { SettingsSectionId } from "./settings-registry";
+import { NavigateIcon } from "@/lib/icons";
 
 export function SettingsNav({
   current,
@@ -84,7 +84,7 @@ function NavItem({
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
           // From md up the list reads like the app sidebar: plain text rows, the current one dotted.
-          "md:h-8 md:gap-2 md:rounded-md md:px-2 md:py-0 md:text-sm md:transition-colors md:duration-150 md:ease-out md:hover:bg-transparent md:hover:text-foreground",
+          "md:h-8 md:gap-2 md:rounded-md md:px-2 md:py-0 md:text-sm md:color-motion md:hover:bg-transparent md:hover:text-foreground",
           isCurrent ? "md:font-medium md:text-foreground" : "md:text-muted-foreground",
         )}
       >
@@ -99,7 +99,7 @@ function NavItem({
         </span>
         {isCurrent ? <ActiveDot className="hidden md:block" /> : null}
         <HugeiconsIcon
-          icon={ArrowRight01Icon}
+          icon={NavigateIcon}
           className="size-4 shrink-0 text-muted-foreground md:hidden"
           aria-hidden="true"
         />

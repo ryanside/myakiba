@@ -108,7 +108,7 @@ export const SETTINGS = {
   "reduce-motion": {
     section: "appearance",
     title: "Reduce motion",
-    description: "Turn off animations and transitions across myakiba.",
+    description: "Replace movement with simple fades.",
     keywords: ["animation", "accessibility", "transition", "calm", "vestibular"],
   },
   "view-collection": {

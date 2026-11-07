@@ -601,7 +601,21 @@ function tokens(element: Element): string[] {
 
 const css = readFileSync(new URL("../index.css", import.meta.url), "utf-8");
 
-function themeTokens(selector: string): ReadonlyMap<string, string> {
+function treeTokens(element: Element): Set<string> {
+  const defined = new Set<string>();
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    for (const className of node.classList) {
+      const name = /^\[(--[\w-]+):/.exec(splitVariants(className).utility)?.[1];
+      if (name) defined.add(name);
+    }
+    for (const match of (node.getAttribute("style") ?? "").matchAll(/(--[\w-]+)\s*:/g)) {
+      defined.add(match[1] ?? "");
+    }
+  }
+  return defined;
+}
+
+function declarations(selector: string): ReadonlyMap<string, string> {
   const start = css.indexOf(`${selector} {`);
   const block = css.slice(start, css.indexOf("\n}", start));
   return new Map(
@@ -618,7 +632,12 @@ function isTranslucent(color: string | undefined): boolean {
   return /\btransparent\b/.test(color) || (alpha !== undefined && Number(alpha) < 1);
 }
 
-const THEMES = { light: themeTokens(":root,\n.light"), dark: themeTokens(".dark") };
+const THEMES = { light: declarations(":root,\n.light"), dark: declarations(".dark") };
+const SHARED = new Set(
+  [":root", "@theme static", "@theme inline"].flatMap((selector) => [
+    ...declarations(selector).keys(),
+  ]),
+);
 
 async function surfaces(screen: (typeof SCREENS)[number]): Promise<Element[]> {
   const { container } = await renderScreen(screen.ui(), screen.storage);
@@ -648,9 +667,17 @@ describe.each(SCREENS)("$name", (screen) => {
 
   test("every token the surface reads is defined in light and dark", async () => {
     for (const element of await surfaces(screen)) {
+      const local = treeTokens(element);
       for (const token of tokens(element)) {
-        expect(THEMES.light.has(token)).toBe(true);
-        expect(THEMES.dark.has(token)).toBe(true);
+        const unthemed =
+          !THEMES.light.has(token) &&
+          !THEMES.dark.has(token) &&
+          (local.has(token) || SHARED.has(token));
+        expect({
+          token,
+          light: unthemed || THEMES.light.has(token),
+          dark: unthemed || THEMES.dark.has(token),
+        }).toEqual({ token, light: true, dark: true });
       }
     }
   });

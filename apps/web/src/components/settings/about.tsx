@@ -1,4 +1,4 @@
-import { ArrowUpRight01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { env } from "@myakiba/env/web";
 import { Link } from "@tanstack/react-router";
@@ -12,6 +12,7 @@ import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
 import { SettingsGroup } from "./settings-group";
 import type { SettingId } from "./settings-registry";
 import { SettingsRow } from "./settings-row";
+import { ExternalIcon } from "@/lib/icons";
 
 const REPOSITORY = "https://github.com/ryanside/myakiba";
 const DISCORD = "https://discord.gg/VKHVvhcC2z";
@@ -133,7 +134,7 @@ function ExternalRow({
         {label}
         <span className="sr-only"> (opens in a new tab)</span>
         <HugeiconsIcon
-          icon={ArrowUpRight01Icon}
+          icon={ExternalIcon}
           data-icon="inline-end"
           aria-hidden="true"
           className="text-muted-foreground"

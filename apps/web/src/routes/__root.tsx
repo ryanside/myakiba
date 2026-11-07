@@ -2,6 +2,7 @@ import { ThemeProvider } from "next-themes";
 import { MotionGlobalConfig } from "motion/react";
 import { useLayoutEffect } from "react";
 import { Toaster } from "@/components/ui/toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useMotionPreference } from "@/hooks/use-appearance";
@@ -41,9 +42,11 @@ function RootComponent() {
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] min-h-dvh">
-          <Outlet />
-        </div>
+        <TooltipProvider>
+          <div className="grid grid-rows-[auto_1fr] min-h-dvh">
+            <Outlet />
+          </div>
+        </TooltipProvider>
         <Toaster />
       </ThemeProvider>
       {import.meta.env.DEV && <TanStackRouterDevtools position="bottom-right" />}{" "}

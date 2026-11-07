@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { format, subMonths } from "date-fns";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, FilterResetIcon } from "@hugeicons/core-free-icons";
+import { FilterResetIcon } from "@hugeicons/core-free-icons";
 import type { ExpenseFilters } from "@myakiba/contracts/expenses/schema";
 import { Button } from "@/components/ui/button";
+import { FieldTrigger } from "@/components/ui/field-trigger";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   DropdownMenu,
@@ -175,12 +176,7 @@ export function ExpensesFilters({
       <Field className="w-36 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button variant="outline" className="w-full justify-between" type="button">
-                {multiSelectDisplay(filters.shop, "Shops")}
-                <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-              </Button>
-            }
+            render={<FieldTrigger>{multiSelectDisplay(filters.shop, "Shops")}</FieldTrigger>}
           />
           <DropdownMenuContent className="w-(--anchor-width)">
             <ScrollArea className="max-h-56" aria-busy={isLoading}>

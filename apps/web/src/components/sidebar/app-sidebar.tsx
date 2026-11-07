@@ -120,7 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton
                         isActive={isActive}
-                        className="h-8 gap-2 px-2 text-sm text-muted-foreground transition-colors duration-150 ease-out hover:bg-transparent hover:text-foreground active:bg-transparent data-active:bg-transparent data-active:font-medium data-active:text-foreground"
+                        className="h-8 gap-2 px-2 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent data-active:bg-transparent data-active:font-medium data-active:text-foreground"
                         render={<Link to={item.url} preload="intent" />}
                       >
                         <span>{item.title}</span>
@@ -139,7 +139,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           renderTrigger={
             <button
               type="button"
-              className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring transition-colors hover:text-foreground focus-visible:outline-2"
+              className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring color-motion hover:text-foreground focus-visible:outline-2"
             >
               Getting started
             </button>

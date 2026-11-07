@@ -7,7 +7,7 @@ import type { CustomComponents, DayButton } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeftIcon, ArrowRightIcon, ArrowDownIcon } from "@hugeicons/core-free-icons";
+import { DisclosureIcon, NextIcon, PreviousIcon } from "@/lib/icons";
 
 function CalendarRoot({
   className,
@@ -22,9 +22,9 @@ function CalendarChevron({
   orientation,
   ...props
 }: React.ComponentProps<CustomComponents["Chevron"]>) {
-  let icon = ArrowDownIcon;
-  if (orientation === "left") icon = ArrowLeftIcon;
-  else if (orientation === "right") icon = ArrowRightIcon;
+  let icon = DisclosureIcon;
+  if (orientation === "left") icon = PreviousIcon;
+  else if (orientation === "right") icon = NextIcon;
 
   return (
     <HugeiconsIcon icon={icon} strokeWidth={2} className={cn("size-4", className)} {...props} />

@@ -139,12 +139,14 @@ function SortableList({
   }
 
   return (
-    <div ref={setNodeRef} className="relative">
+    <div ref={setNodeRef} className="@container relative">
       <DropIndicator placement={dropIndicator} geometry={FOLDER_DROP} />
       <div
         data-folder-host
         className={cn(
-          "group/item relative rounded-[1.75rem] px-1.5 pt-[15%] pb-1.5 outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
+          // The selection wraps the folder front, whose corner is 6% of the folder's width.
+          "[--inset:--spacing(1.5)] [--radius-outer:calc(0.06*(100cqw-2*var(--inset))+var(--inset))]",
+          "group/item relative rounded-(--radius-outer) px-(--inset) pt-[15%] pb-(--inset) outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
           selected && "bg-foreground/[0.045] ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}

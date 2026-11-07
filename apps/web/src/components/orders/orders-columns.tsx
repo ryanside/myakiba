@@ -1,7 +1,7 @@
 import { createContext } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, PackageIcon } from "@hugeicons/core-free-icons";
+import { PackageIcon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
@@ -33,6 +33,7 @@ import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
 import { withOrderPending } from "./order-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
+import { NavigateIcon } from "@/lib/icons";
 
 const SHIPPING_METHOD_OPTIONS = [...SHIPPING_METHODS];
 const ORDER_STATUS_OPTIONS = [...ORDER_STATUSES];
@@ -189,7 +190,7 @@ export function createOrdersColumns({
             aria-label={`View ${order.title}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" strokeWidth={2} />
+            <HugeiconsIcon icon={NavigateIcon} className="size-3.5" strokeWidth={2} />
           </Link>
         </div>
       )),

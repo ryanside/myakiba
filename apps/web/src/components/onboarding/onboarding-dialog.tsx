@@ -3,9 +3,6 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  ArrowRight02Icon,
   FileUploadIcon,
   LibraryIcon,
   Loading03Icon,
@@ -45,6 +42,7 @@ import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useRouter } from "@tanstack/react-router";
+import { NavigateIcon, NextIcon, PreviousIcon } from "@/lib/icons";
 
 type StepId = "welcome" | "preferences" | "sync";
 
@@ -456,9 +454,6 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
       onClick={() => onSelect(option.id)}
       className={cn(
         "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
-        "transition-[transform] duration-100",
-        EASE_OUT,
-        "active:scale-[0.98]",
         "animate-data-in",
       )}
     >
@@ -470,13 +465,13 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
         <span className="text-xs text-muted-foreground">{option.description}</span>
       </span>
       <HugeiconsIcon
-        icon={ArrowRight02Icon}
+        icon={NavigateIcon}
         strokeWidth={2}
         className={cn(
           "size-4 shrink-0 text-muted-foreground",
-          "transition-[transform,color] duration-200",
+          "transition-[translate,color] duration-200",
           EASE_OUT,
-          "group-hover:translate-x-0.5 group-hover:text-foreground",
+          "group-hover:translate-x-(--nudge) group-hover:text-foreground",
         )}
       />
     </Button>
@@ -505,7 +500,7 @@ function StepFooter({
   const getContinueIcon = () => {
     if (isSaving) return Loading03Icon;
     if (isLast) return Tick02Icon;
-    return ArrowRight01Icon;
+    return NextIcon;
   };
   const continueIcon = getContinueIcon();
   const skipLabel = "Close";
@@ -518,7 +513,7 @@ function StepFooter({
       <div className="flex items-center gap-2">
         {!isFirst && (
           <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" strokeWidth={2} />
+            <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}

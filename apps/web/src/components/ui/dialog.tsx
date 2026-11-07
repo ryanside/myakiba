@@ -29,7 +29,7 @@ function DialogOverlay({ className, forceRender, ...props }: DialogPrimitive.Bac
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 transition-opacity duration-200 ease-out supports-backdrop-filter:backdrop-blur-xs data-starting-style:opacity-0 data-ending-style:opacity-0",
+        "fixed inset-0 isolate z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs",
         className,
       )}
       forceRender={forceRender}
@@ -43,19 +43,26 @@ function DialogContent({
   children,
   showCloseButton = true,
   forceRenderBackdrop = false,
+  instant = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
   /** When true, the backdrop is rendered even when this dialog is nested (e.g. inside a Sheet), so clicking outside still closes the dialog. */
   forceRenderBackdrop?: boolean;
+  /** Opens and closes without motion, for a dialog the keyboard opens many times a day. */
+  instant?: boolean;
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay forceRender={forceRenderBackdrop} />
+      <DialogOverlay
+        forceRender={forceRenderBackdrop}
+        className={instant ? undefined : "backdrop-motion"}
+      />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl bg-background p-4 text-sm ring-1 ring-foreground/10 transition-[opacity,scale] duration-200 ease-out outline-none sm:max-w-sm data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.96] data-ending-style:opacity-0",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl bg-background p-4 text-sm ring-1 ring-foreground/10 outline-none sm:max-w-sm",
+          !instant && "modal-motion",
           className,
         )}
         {...props}
@@ -93,7 +100,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-2xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

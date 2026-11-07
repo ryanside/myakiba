@@ -119,10 +119,14 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((prevOpen) => !prevOpen) : setOpen((prevOpen) => !prevOpen);
   }, [isMobile, setOpen, setOpenMobile]);
 
+  // The keyboard shortcut snaps the sidebar; a click on the toggle still slides it.
+  const [instant, setInstant] = React.useState(false);
+
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
+        setInstant(true);
         toggleSidebar();
       }
     };
@@ -130,6 +134,19 @@ function SidebarProvider({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
+
+  React.useEffect(() => {
+    if (!instant) return;
+    // Two frames: the toggled width is painted before the transition comes back.
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setInstant(false));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [instant]);
 
   const state = open ? "expanded" : "collapsed";
 
@@ -150,6 +167,7 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
+        data-instant={instant || undefined}
         style={
           {
             "--sidebar-width": SIDEBAR_WIDTH,
@@ -237,7 +255,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] relative w-(--sidebar-width) bg-transparent",
+          "transition-[width] duration-200 ease-drawer group-data-instant/sidebar-wrapper:duration-0 motion-reduce:duration-0 relative w-(--sidebar-width) bg-transparent",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -250,7 +268,7 @@ function Sidebar({
         data-side={side}
         inert={state === "collapsed" && collapsible === "offcanvas"}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-drawer group-data-instant/sidebar-wrapper:duration-0 motion-reduce:duration-0 data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
@@ -424,7 +442,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-left text-sm transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 focus-visible:ring-2 peer/menu-button group/menu-button flex w-full items-center overflow-hidden outline-hidden disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4.5 [&_svg]:shrink-0 [&>span:last-child]:truncate [&>a]:flex [&>a]:items-center [&>a]:gap-2 [&>a]:min-w-0 [&>a]:flex-1 [&>a>span:last-child]:truncate",
+  "ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-left text-sm color-motion group-has-data-[sidebar=menu-action]/menu-item:pr-8 focus-visible:ring-2 peer/menu-button group/menu-button flex w-full items-center overflow-hidden outline-hidden disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4.5 [&_svg]:shrink-0 [&>span:last-child]:truncate [&>a]:flex [&>a]:items-center [&>a]:gap-2 [&>a]:min-w-0 [&>a]:flex-1 [&>a>span:last-child]:truncate",
   {
     variants: {
       variant: {

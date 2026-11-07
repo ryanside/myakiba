@@ -87,6 +87,58 @@ function useFocusContext(consumerName: string) {
   return context;
 }
 
+type PresenceState = "starting" | "open" | "ending" | "closed";
+
+// Keeps the bar mounted through its exit, with Base UI's data-starting-style and data-ending-style
+// convention, so CSS transitions run both ways and an interrupted one retargets.
+function usePresence(
+  open: boolean,
+  elementRef: React.RefObject<HTMLElement | null>,
+): PresenceState {
+  const [state, setState] = React.useState<PresenceState>(open ? "starting" : "closed");
+  const [previousOpen, setPreviousOpen] = React.useState(open);
+
+  if (open !== previousOpen) {
+    setPreviousOpen(open);
+    if (open) setState(state === "ending" ? "open" : "starting");
+    else if (state !== "closed") setState("ending");
+  }
+
+  // Runs after every render: the element can mount a render after the bar opens, once its portal
+  // container exists.
+  useIsomorphicLayoutEffect(() => {
+    const element = elementRef.current;
+    if (state !== "starting" || !element) return;
+    // Lay out the starting style before leaving it, so the entrance transitions from it.
+    element.getBoundingClientRect();
+    setState("open");
+  });
+
+  React.useEffect(() => {
+    if (state !== "ending") return;
+    let cancelled = false;
+    const finished = (elementRef.current?.getAnimations() ?? []).map(
+      (animation) => animation.finished,
+    );
+    async function unmountAfterExit(): Promise<void> {
+      try {
+        await Promise.all(finished);
+      } catch {
+        // Reopening cancels the exit; the bar stays.
+        return;
+      }
+      if (!cancelled) setState("closed");
+    }
+    // It never rejects: a cancelled exit is caught above.
+    void unmountAfterExit();
+    return () => {
+      cancelled = true;
+    };
+  }, [state, elementRef]);
+
+  return state;
+}
+
 interface ActionBarProps extends DivProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -115,12 +167,17 @@ function ActionBar(props: ActionBarProps) {
     className,
     style,
     ref,
+    children,
     ...rootProps
   } = props;
 
   const [mounted, setMounted] = React.useState(false);
-
   const rootRef = React.useRef<RootElement>(null);
+  const presence = usePresence(open, rootRef);
+  // While the bar leaves, it keeps showing what it showed while open, not an empty selection.
+  const [shownChildren, setShownChildren] = React.useState(children);
+  if (open && children !== shownChildren) setShownChildren(children);
+
   const composedRef = useComposedRefs(ref, rootRef);
 
   const propsRef = useAsRef({
@@ -164,7 +221,7 @@ function ActionBar(props: ActionBarProps) {
 
   const portalContainer = portalContainerProp ?? (mounted ? globalThis.document?.body : null);
 
-  if (!portalContainer || !open) return null;
+  if (!portalContainer || presence === "closed") return null;
 
   const RootPrimitive = "div";
 
@@ -178,14 +235,18 @@ function ActionBar(props: ActionBarProps) {
           data-side={side}
           data-align={align}
           data-orientation={orientation}
+          data-starting-style={presence === "starting" ? "" : undefined}
+          data-ending-style={presence === "ending" ? "" : undefined}
+          inert={presence === "ending"}
           dir={dir}
           {...rootProps}
           ref={composedRef}
           className={cn(
             "fixed z-50 rounded-lg border bg-card shadow-lg outline-none",
-            "fade-in-0 zoom-in-95 animate-in duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]",
-            "data-[side=bottom]:slide-in-from-bottom-4 data-[side=top]:slide-in-from-top-4",
-            "motion-reduce:animate-none motion-reduce:transition-none",
+            "transition-[opacity,transform] duration-200 ease-out data-ending-style:duration-150",
+            "data-starting-style:opacity-0 data-ending-style:opacity-0",
+            "data-[side=bottom]:data-starting-style:[transform:translateY(var(--bar-rise))] data-[side=bottom]:data-ending-style:[transform:translateY(var(--bar-rise))]",
+            "data-[side=top]:data-starting-style:[transform:translateY(calc(var(--bar-rise)*-1))] data-[side=top]:data-ending-style:[transform:translateY(calc(var(--bar-rise)*-1))]",
             orientation === "horizontal"
               ? "flex flex-row items-center gap-2 px-2 py-1.5"
               : "flex flex-col items-start gap-2 px-1.5 py-2",
@@ -201,7 +262,9 @@ function ActionBar(props: ActionBarProps) {
             ...(align === "end" && { right: `${alignOffset}px` }),
             ...style,
           }}
-        />,
+        >
+          {open ? children : shownChildren}
+        </RootPrimitive>,
         portalContainer,
       )}
     </ActionBarContext.Provider>

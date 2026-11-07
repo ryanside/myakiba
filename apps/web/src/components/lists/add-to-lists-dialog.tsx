@@ -1,6 +1,5 @@
 import { useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { ExternalLinkIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { listInputSchema } from "@myakiba/contracts/lists/schema";
 import type { ListTarget } from "@myakiba/contracts/lists/schema";
@@ -47,6 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
 import { shownMessageOf } from "@/lib/api-response";
+import { ExternalIcon } from "@/lib/icons";
 
 type ListOptionsForTargets = NonNullable<Awaited<ReturnType<typeof getListOptionsForTargets>>>;
 
@@ -207,7 +207,7 @@ function ListOptionRow({
               "size-4.5 rounded-sm",
             )}
           >
-            <HugeiconsIcon icon={ExternalLinkIcon} className="size-3" aria-hidden="true" />
+            <HugeiconsIcon icon={ExternalIcon} className="size-3" aria-hidden="true" />
           </Link>
         </div>
         {list.memberCount > 0 ? (

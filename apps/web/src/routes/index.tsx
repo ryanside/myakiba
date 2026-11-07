@@ -9,11 +9,11 @@ import { TextLoop } from "@/components/homepage/text-loop";
 import { TyperHeadline } from "@/components/homepage/typer-headline";
 import { Button } from "@/components/ui/button";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useTheme } from "next-themes";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import BounceCards from "@/components/bounce-cards";
+import { NavigateIcon } from "@/lib/icons";
 
 const HERO_ITEM_IMAGES = [
   "/example-item1.webp",
@@ -142,7 +142,7 @@ function HomeComponent() {
                   nativeButton={false}
                 >
                   Get started
-                  <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+                  <HugeiconsIcon icon={NavigateIcon} data-icon="inline-end" />
                 </Button>
                 <div className="px-2 text-start text-xs text-muted-foreground">
                   <p>*in early development</p>

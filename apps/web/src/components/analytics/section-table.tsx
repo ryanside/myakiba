@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown02Icon, ArrowUp02Icon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
+import { ICON_SWAP } from "@/lib/motion";
 import {
   functionalUpdate,
   getCoreRowModel,
@@ -28,6 +28,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
@@ -204,19 +205,12 @@ function SortableHeader({
     <button
       type="button"
       onClick={column.getToggleSortingHandler()}
-      className="-my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm text-left transition-[color,scale] duration-150 ease-out hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96]"
+      className="-my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm text-left press-text hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={`Sort by ${title}, ${nextDirection}`}
     >
       <span>{title}</span>
       <AnimatePresence initial={false} mode="popLayout">
-        <m.span
-          key={sorted || "none"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-          className="inline-flex"
-        >
+        <m.span key={sorted || "none"} {...ICON_SWAP} className="inline-flex">
           <HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5" />
         </m.span>
       </AnimatePresence>
@@ -226,12 +220,12 @@ function SortableHeader({
 
 function getSortPresentation(sorted: false | "asc" | "desc") {
   if (sorted === "asc") {
-    return { icon: ArrowUp02Icon, nextDirection: "descending" } as const;
+    return { icon: SortAscendingIcon, nextDirection: "descending" } as const;
   }
 
   if (sorted === "desc") {
-    return { icon: ArrowDown02Icon, nextDirection: "default" } as const;
+    return { icon: SortDescendingIcon, nextDirection: "default" } as const;
   }
 
-  return { icon: UnfoldMoreIcon, nextDirection: "ascending" } as const;
+  return { icon: UnsortedIcon, nextDirection: "ascending" } as const;
 }

@@ -63,14 +63,14 @@ export default function UserMenu({ session }: { session: Session }) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-60" align="start" sideOffset={8}>
-        <div className="flex bg-linear-to-br from-background via-muted to-background rounded-sm outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
+        <div className="flex bg-linear-to-br from-background via-muted to-background rounded-inner outline outline-border items-center gap-2 px-2 py-1.5 text-sm">
           <span className="text-foreground text-sm font-medium">{session.user.username}</span>
         </div>
         <div className="py-2.5">
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full" aria-label="Theme">
               {THEME_OPTIONS.map(({ value, label }) => (
-                <TabsTrigger key={value} value={value} aria-label={label} className="h-6 flex-1">
+                <TabsTrigger key={value} value={value} aria-label={label} className="flex-1">
                   <HugeiconsIcon icon={THEME_ICONS[value]} className="size-4" aria-hidden="true" />
                 </TabsTrigger>
               ))}

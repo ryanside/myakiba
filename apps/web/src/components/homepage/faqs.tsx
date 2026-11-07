@@ -44,7 +44,7 @@ export default function FAQsSection() {
         <Accordion className="mt-8">
           {FAQ_ITEMS.map((item) => (
             <AccordionItem key={item.id} value={item.id}>
-              <AccordionTrigger className="cursor-pointer text-sm hover:no-underline">
+              <AccordionTrigger className="cursor-pointer text-sm">
                 {item.question}
               </AccordionTrigger>
               <AccordionContent>

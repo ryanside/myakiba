@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
   DialogDescription,
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
+import { FieldTrigger } from "@/components/ui/field-trigger";
 import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCurrencyLocale } from "@/lib/locale";
 import { getCategoryColor } from "@/lib/category-colors";
 import { shownMessageOf } from "@/lib/api-response";
+import { DisclosureIcon } from "@/lib/icons";
 
 interface FiltersFormProps {
   renderTrigger: ReactElement;
@@ -209,10 +211,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "shipping method")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -249,10 +250,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "condition")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -287,10 +287,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "category")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
@@ -392,11 +391,11 @@ function FiltersDraft({
                             role="combobox"
                             aria-controls={entriesListId}
                             aria-expanded={entriesPopoverOpen}
-                            className="w-full justify-between"
+                            className="press-none w-full justify-between"
                           >
                             Select entries...
                             <HugeiconsIcon
-                              icon={ArrowDown01Icon}
+                              icon={DisclosureIcon}
                               data-icon="inline-end"
                               className="shrink-0 opacity-50"
                             />
@@ -828,10 +827,9 @@ function FiltersDraft({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
-                      <Button variant="outline" className="w-full justify-between" type="button">
+                      <FieldTrigger>
                         {getMultiSelectDisplay(field.state.value, "currency")}
-                        <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-                      </Button>
+                      </FieldTrigger>
                     }
                   />
                   <DropdownMenuContent className="w-(--anchor-width)">
