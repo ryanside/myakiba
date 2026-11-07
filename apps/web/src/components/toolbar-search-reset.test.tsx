@@ -70,12 +70,20 @@ async function renderToolbar(url: string) {
     router,
     input: () => screen.getByPlaceholderText<HTMLInputElement>("Search"),
     resetButton: () => screen.getByRole("button", { name: "Reset Filters" }),
+    queryResetButton: () => screen.queryByRole("button", { name: "Reset Filters" }),
   };
 }
 
 describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
+  test("is hidden while nothing is filtered, sorted or typed", async () => {
+    const { queryResetButton } = await renderToolbar(path);
+    expect(queryResetButton()).toBeNull();
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
-    const { user, router, input, resetButton } = await renderToolbar(`${path}?search=Ram`);
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
+      `${path}?search=Ram`,
+    );
     await user.click(input());
     await act(() => router.navigate({ to: ".", search: (prev) => ({ ...prev, search: "Rem" }) }));
     await user.type(input(), "x");
@@ -85,12 +93,13 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      focused: document.activeElement === resetButton(),
-    }).toEqual({ search: undefined, shown: "", focused: true });
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
   });
 
   test("drops a first search typed just before Reset, though Reset leaves the search unchanged", async () => {
-    const { user, router, input, resetButton } = await renderToolbar(path);
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(path);
     await user.type(input(), "mi");
     await user.click(resetButton());
     await wait(SETTLE_MS);
@@ -98,7 +107,8 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      focused: document.activeElement === resetButton(),
-    }).toEqual({ search: undefined, shown: "", focused: true });
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
   });
 });

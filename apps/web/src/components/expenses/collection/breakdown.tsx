@@ -50,7 +50,11 @@ export function Breakdown({
     [data?.breakdown],
   );
   return (
-    <ExpensePanel title="Breakdown" className="min-h-80" panelClassName="flex flex-col gap-3">
+    <ExpensePanel
+      title="Spend by category"
+      className="min-h-80"
+      panelClassName="flex flex-col gap-3"
+    >
       <BreakdownChart
         data={entries}
         isLoading={isLoading}

@@ -148,19 +148,15 @@ test("the preview shows an example order in the chosen formats before they are s
 });
 
 const saveSettles = () =>
-  screen.findByRole(
-    "button",
-    { name: "Save preferences" },
-    { timeout: DEFAULT_SUCCESS_DURATION * 2 },
-  );
+  screen.findByRole("button", { name: "Save formats" }, { timeout: DEFAULT_SUCCESS_DURATION * 2 });
 
-test("Save preferences sends both changed formats in one update", async () => {
+test("Save formats sends both changed formats in one update", async () => {
   renderPreferences();
   await screen.findByRole("button", { name: "YYYY/MM/DD" });
 
   await chooseCurrency("EUR");
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
   await waitFor(() =>
     expect(savedChanges).toEqual([{ currency: "EUR", dateFormat: "YYYY/MM/DD" }]),
@@ -172,7 +168,7 @@ test("after Save the form keeps the saved formats while the session catches up",
   await screen.findByRole("button", { name: "YYYY/MM/DD" });
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
   await waitFor(() => expect(savedChanges).toHaveLength(1));
   await saveSettles();
   act(() => renderAgain());
@@ -180,9 +176,7 @@ test("after Save the form keeps the saved formats while the session catches up",
   expect(screen.getByRole("button", { name: "YYYY/MM/DD" }).getAttribute("aria-pressed")).toBe(
     "true",
   );
-  expect(
-    screen.getByRole("button", { name: "Save preferences" }).hasAttribute("disabled"),
-  ).toBeTrue();
+  expect(screen.getByRole("button", { name: "Save formats" }).hasAttribute("disabled")).toBeTrue();
 });
 
 test("a format saved elsewhere replaces the one shown, and Save sends only what changed here", async () => {
@@ -192,12 +186,10 @@ test("a format saved elsewhere replaces the one shown, and Save sends only what 
   act(() => setSession({ ...user, dateFormat: "YYYY/MM/DD" }));
 
   expect(pressed("YYYY/MM/DD")).toBeTrue();
-  expect(
-    screen.getByRole("button", { name: "Save preferences" }).hasAttribute("disabled"),
-  ).toBeTrue();
+  expect(screen.getByRole("button", { name: "Save formats" }).hasAttribute("disabled")).toBeTrue();
 
   await chooseCurrency("EUR");
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
   await waitFor(() => expect(savedChanges).toEqual([{ currency: "EUR" }]));
 });
@@ -212,7 +204,7 @@ test("a format saved elsewhere keeps an unsaved edit to the other format", async
   expect(pressed("DD/MM/YYYY")).toBeTrue();
   expect(screen.getByRole("button", { name: "Display currency" }).textContent).toStartWith("EUR");
 
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
   await waitFor(() => expect(savedChanges).toEqual([{ dateFormat: "DD/MM/YYYY" }]));
 });
@@ -223,7 +215,7 @@ test("the formats refuse edits while a save is in flight", async () => {
 
   holdNextSave = true;
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
   await screen.findByRole("button", { busy: true });
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
@@ -237,9 +229,7 @@ test("the formats refuse edits while a save is in flight", async () => {
   sessionCatchesUp();
 
   expect(pressed("DD/MM/YYYY")).toBeTrue();
-  expect(
-    screen.getByRole("button", { name: "Save preferences" }).hasAttribute("disabled"),
-  ).toBeTrue();
+  expect(screen.getByRole("button", { name: "Save formats" }).hasAttribute("disabled")).toBeTrue();
   expect(savedChanges).toEqual([{ dateFormat: "DD/MM/YYYY" }]);
 });
 
@@ -249,7 +239,7 @@ test("a save still in flight after leaving Settings and coming back blocks a sec
 
   holdNextSave = true;
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
   await screen.findByRole("button", { busy: true });
 
   await act(() => router.navigate({ to: "/dashboard" }));
@@ -266,7 +256,7 @@ test("a save still in flight after leaving Settings and coming back blocks a sec
   expect(pressed("DD/MM/YYYY")).toBeTrue();
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
   await waitFor(() => expect(server).toEqual({ currency: "USD", dateFormat: "YYYY/MM/DD" }));
   expect(savedChanges).toEqual([{ dateFormat: "DD/MM/YYYY" }, { dateFormat: "YYYY/MM/DD" }]);

@@ -1,8 +1,7 @@
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ITEM_CATEGORY_GROUPS } from "@myakiba/contracts/shared/constants";
 import type { ItemDatabaseItem } from "@myakiba/contracts/search/schema";
-import type { Category, Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import type { ComponentProps } from "react";
 import {
   CategoryLabel,
@@ -14,13 +13,8 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import type { ItemDestination } from "@/lib/item-destination";
 import { formatReleasePrice } from "@/lib/locale";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-const CATEGORY_GROUP_BY_CATEGORY = Object.fromEntries(
-  Object.entries(ITEM_CATEGORY_GROUPS).flatMap(([group, categories]) =>
-    categories.map((category) => [category, group]),
-  ),
-) as Readonly<Record<Category, keyof typeof ITEM_CATEGORY_GROUPS>>;
 
 type ReleaseItem = Pick<ItemDatabaseItem, "title" | "image" | "category" | "latestRelease">;
 
@@ -46,7 +40,12 @@ export function ReleaseItemTile({
   const date = item.latestRelease
     ? formatDateOnlyForDisplay(item.latestRelease.date, dateFormat)
     : "No release";
-  const group = item.category ? CATEGORY_GROUP_BY_CATEGORY[item.category] : null;
+  // Release dates are date-only strings, so they compare in order against today's local day.
+  let releaseLabel = date;
+  if (item.latestRelease) {
+    const upcoming = item.latestRelease.date >= format(new Date(), "yyyy-MM-dd");
+    releaseLabel = `${upcoming ? "Releases" : "Released"} ${date}`;
+  }
   const priceTone = priced ? "font-medium text-foreground" : "text-muted-foreground";
 
   return (
@@ -68,16 +67,13 @@ export function ReleaseItemTile({
       }
       card={
         <>
-          <span className="flex min-w-0 items-center justify-between gap-2">
-            <CategoryLabel category={item.category} />
-            {group ? (
-              <span className="shrink-0 text-xs leading-4 text-muted-foreground">{group}</span>
-            ) : null}
-          </span>
+          <CategoryLabel category={item.category} />
           <MediaCardTitle title={item.title} destination={destination} />
-          <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
+          <span className="mt-auto flex min-w-0 flex-col gap-1 pt-2">
             <span className={cn("text-sm leading-5 tabular-nums", priceTone)}>{price}</span>
-            <span className="text-xs leading-4 text-muted-foreground tabular-nums">{date}</span>
+            <span className="truncate text-xs leading-4 text-muted-foreground tabular-nums">
+              {releaseLabel}
+            </span>
           </span>
         </>
       }
@@ -85,14 +81,7 @@ export function ReleaseItemTile({
         <>
           <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 self-stretch py-0.5">
             <MediaRowTitle title={item.title} destination={destination} />
-            <span className="flex min-w-0 flex-col">
-              {group ? (
-                <span className="truncate text-[11px] leading-4 text-muted-foreground">
-                  {group}
-                </span>
-              ) : null}
-              <CategoryLabel category={item.category} />
-            </span>
+            <CategoryLabel category={item.category} />
             {/* Narrow rows show the release facts here instead of in their own column. */}
             <span className="flex min-w-0 items-baseline gap-2 text-xs leading-4 text-muted-foreground tabular-nums sm:hidden">
               <span className={cn(priced && "font-medium text-foreground")}>{price}</span>

@@ -1,4 +1,9 @@
-import { Delete02Icon, Edit03Icon, FolderOpenIcon } from "@hugeicons/core-free-icons";
+import {
+  Delete02Icon,
+  Edit03Icon,
+  FolderOpenIcon,
+  MoreHorizontalIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { BackLink } from "@/components/ui/back-link";
@@ -11,6 +16,12 @@ import { LIST_HEADING_CLASS_NAME, ListHeading } from "@/components/lists/list-he
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Folder } from "@/components/ui/folder";
 import {
   Empty,
@@ -31,7 +42,7 @@ import {
 } from "@/hooks/use-lists";
 import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useSelection } from "@/hooks/use-selection";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/(app)/lists_/$listId")({
   component: RouteComponent,
@@ -42,6 +53,7 @@ export const Route = createFileRoute("/(app)/lists_/$listId")({
 });
 
 function RouteComponent(): React.JSX.Element {
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { listId } = Route.useParams();
   const navigate = useNavigate();
   const listQuery = useListQuery(listId);
@@ -81,7 +93,7 @@ function RouteComponent(): React.JSX.Element {
   );
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6" aria-busy={isPending}>
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-6" aria-busy={isPending}>
       <div className="flex flex-col gap-1">
         <BackLink to="/lists" text="All Lists" font="sans" className="self-start" />
 
@@ -133,9 +145,8 @@ function RouteComponent(): React.JSX.Element {
                     <HugeiconsIcon icon={Edit03Icon} data-icon="inline-start" />
                     Edit
                   </Button>
-                  <Button variant="destructive" disabled>
-                    <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
-                    Delete
+                  <Button variant="outline" size="icon" disabled aria-label="More List actions">
+                    <HugeiconsIcon icon={MoreHorizontalIcon} />
                   </Button>
                 </>
               ) : null}
@@ -157,13 +168,24 @@ function RouteComponent(): React.JSX.Element {
                       await updateList({ listId, ...input });
                     }}
                   />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button variant="outline" size="icon" aria-label="More List actions">
+                          <HugeiconsIcon icon={MoreHorizontalIcon} />
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                        <HugeiconsIcon icon={Delete02Icon} />
+                        Delete List
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <ConfirmDialog
-                    renderTrigger={
-                      <Button variant="destructive">
-                        <HugeiconsIcon icon={Delete02Icon} data-icon="inline-start" />
-                        Delete
-                      </Button>
-                    }
+                    open={deleteOpen}
+                    onOpenChange={setDeleteOpen}
                     title="Delete List?"
                     description="This removes the List. Its Items, Collection Items, and Orders will not be deleted."
                     onConfirm={async () => {

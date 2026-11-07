@@ -4,9 +4,9 @@
 @import "shadcn/tailwind.css";
 
 .typeset-docs {
-  --typeset-font-body: var(--font-instrument-sans);
-  --typeset-font-heading: var(--font-instrument-sans);
-  --typeset-font-mono: var(--font-instrument-sans);
+  --typeset-font-body: var(--font-inter);
+  --typeset-font-heading: var(--font-inter);
+  --typeset-font-mono: var(--font-inter);
   --typeset-size: 15px;
   --typeset-leading: 1.75;
   --typeset-flow: 1.25em;
@@ -18,7 +18,7 @@
 
 :root,
 .light {
-  --font-instrument-sans: "Instrument Sans Variable", sans-serif;
+  --font-inter: "Inter Variable", sans-serif;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.25 0 89.9);
@@ -49,7 +49,7 @@
   --chart-8: var(--color-orange-600);
   --chart-9: var(--color-indigo-600);
   --chart-10: var(--color-fuchsia-600);
-  --sidebar: oklch(0.984 0 89.9);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.25 0 89.9);
   --sidebar-primary: oklch(0.35 0 89.9);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -57,8 +57,8 @@
   --sidebar-accent-foreground: oklch(0.25 0 89.9);
   --sidebar-border: oklch(0.925 0 89.9);
   --sidebar-ring: oklch(0.925 0 89.9);
-  --radius: 0.625rem;
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --radius: 0.75rem;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
@@ -91,10 +91,6 @@
   --warning-foreground: var(--color-amber-700);
   --invert: var(--color-zinc-900);
   --invert-foreground: var(--color-zinc-50);
-
-  --control: oklch(1 0 0 / 0.62);
-  --control-edge: oklch(0.25 0 0 / 0.12);
-  --control-pressed: color-mix(in oklab, var(--foreground) 14%, var(--control));
 
   --tile-edge: oklch(0 0 0 / 0.06);
   --tile-edge-hover: oklch(0 0 0 / 0.08);
@@ -135,7 +131,7 @@
   --chart-8: var(--color-orange-600);
   --chart-9: var(--color-indigo-600);
   --chart-10: var(--color-fuchsia-600);
-  --sidebar: oklch(0.11 0 89.9);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.98 0 0);
   --sidebar-primary-foreground: oklch(0.12 0 89.9);
@@ -143,7 +139,7 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.28 0 89.9);
   --sidebar-ring: oklch(0.45 0 89.9);
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
@@ -177,10 +173,6 @@
   --invert: var(--color-zinc-700);
   --invert-foreground: var(--color-zinc-50);
 
-  --control: color-mix(in oklab, var(--input) 55%, transparent);
-  --control-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
-  --control-pressed: color-mix(in oklab, var(--foreground) 22%, var(--control));
-
   --tile-edge: oklch(1 0 0 / 0.08);
   --tile-edge-hover: oklch(1 0 0 / 0.13);
   --tile-lift: 0 0 #0000;
@@ -191,6 +183,15 @@
 }
 
 @theme inline {
+  /* Motion curves. Tailwind's built-in ease-out and ease-in-out are too weak for UI. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Inter sets wider than its size suggests, so body copy runs at 13px, as on recent.design and marked.dev. */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: calc(1.25 / 0.8125);
+  /* At 12px and below Inter closes up, so small text gets a touch of air. */
+  --text-xs--letter-spacing: 0.01em;
   --font-sans: var(--font-sans);
   --font-orbitron: var(--font-orbitron);
   --font-serif: var(--font-serif);
@@ -216,9 +217,6 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
-  --color-control: var(--control);
-  --color-control-edge: var(--control-edge);
-  --color-control-pressed: var(--control-pressed);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -299,6 +297,8 @@ body {
   }
   html {
     @apply font-sans;
+    /* Weights stop at medium; never let the browser fake a bold or an italic. */
+    font-synthesis: none;
     scrollbar-gutter: stable;
   }
 }
@@ -308,6 +308,35 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+}
+
+/*
+ * Orbitron, always lowercase, has exactly two jobs:
+ *   eyebrow    — a small label that names a group of content: sidebar and settings groups,
+ *                metric names over a figure, captions over a list, and item detail's groups.
+ *   decorative — the typeface alone, for analytics section names, its one display use.
+ * Headings, data, column headers and key–value labels stay in Inter.
+ */
+@utility eyebrow {
+  font-family: var(--font-orbitron);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--color-muted-foreground);
+}
+
+@utility decorative {
+  font-family: var(--font-orbitron);
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0;
+}
+
+/* Titles and large figures: Inter tightened as display type, like marked.dev's page titles. */
+@utility display {
+  letter-spacing: -0.02em;
 }
 
 @utility animate-appear {

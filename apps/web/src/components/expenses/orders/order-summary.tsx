@@ -23,14 +23,14 @@ export function OrderSummary({
   ];
 
   return (
-    <ExpensePanel title="Summary" className="h-full lg:h-[400px]">
+    <ExpensePanel title="Summary" className="h-full lg:h-[340px]">
       <div className="flex h-full flex-col gap-8" aria-busy={isLoading}>
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-muted-foreground">Order Spend</p>
+          <p className="eyebrow">Order Spend</p>
           {isLoading ? (
             <Skeleton className="my-1 h-10 w-40" />
           ) : (
-            <p className="animate-data-in text-3xl font-medium tabular-nums">
+            <p className="display animate-data-in text-3xl font-medium tabular-nums">
               {formatCurrencyFromMinorUnits(data?.summary.spend ?? 0, currency, locale)}
             </p>
           )}
@@ -57,7 +57,7 @@ export function OrderSummary({
                 <Skeleton className="h-3 w-36" />
               ) : (
                 <p className="animate-data-in text-xs text-muted-foreground">
-                  {(row.value?.percentage ?? 0).toFixed(1)}%
+                  {(row.value?.percentage ?? 0).toFixed(1)}% of order spend
                 </p>
               )}
             </div>

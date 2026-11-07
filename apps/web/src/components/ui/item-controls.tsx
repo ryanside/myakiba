@@ -10,8 +10,11 @@ type ItemControlsSize = "xs" | "sm" | "md" | "lg";
 
 const ItemControlsContext = createContext<ItemControlsMaterial | null>(null);
 
-const CARD_PLACEMENT_CLASS_NAME =
-  "absolute top-3 right-3 bg-background/95 shadow-[0_0_0_1px_oklch(0_0_0/0.08),0_2px_8px_oklch(0_0_0/0.12)] dark:shadow-[0_0_0_1px_oklch(1_0_0/0.12),0_2px_8px_oklch(0_0_0/0.24)]";
+// Controls that float over a photo, in cards and galleries alike: a semi-transparent dark pill.
+const FLOATING_CLASS_NAME =
+  "bg-black/60 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)]";
+
+const CARD_PLACEMENT_CLASS_NAME = cn("absolute top-3 right-3", FLOATING_CLASS_NAME);
 
 // A list row has no dead space between its controls, so every point of the row either is a
 // control or opens the row.
@@ -45,14 +48,13 @@ function ItemControls({
   readonly children: ReactNode;
 }): React.JSX.Element {
   return (
-    <ItemControlsContext value={variant === "media" ? "media" : "surface"}>
+    <ItemControlsContext value={variant === "row" ? "surface" : "media"}>
       <div
         data-slot="item-controls"
         data-size={size}
         className={cn(
           "z-20 flex shrink-0 items-center gap-px rounded-[12px] p-0.5 pointer-coarse:rounded-[13px]",
-          variant === "media" &&
-            "absolute top-2 right-2 bg-black/60 shadow-[0_0_0_1px_oklch(1_0_0/0.16),0_1px_2px_oklch(0_0_0/0.2),0_8px_24px_oklch(0_0_0/0.16)]",
+          variant === "media" && cn("absolute top-2 right-2", FLOATING_CLASS_NAME),
           size === "md" &&
             "top-1.5 right-1.5 rounded-[11px] [&_[data-slot=item-control]]:size-7 [&_[data-slot=item-selection]]:size-7 [&_[data-slot=item-control]]:rounded-[9px] [&_[data-slot=item-selection]]:rounded-[9px] [&_svg]:size-3.5",
           size === "sm" &&

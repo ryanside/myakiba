@@ -393,9 +393,7 @@ type StepHeaderProps = {
 function StepHeader({ meta }: StepHeaderProps) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="text-xs font-medium text-muted-foreground font-orbitron lowercase">
-        {meta.eyebrow}
-      </div>
+      <div className="eyebrow">{meta.eyebrow}</div>
       <DialogTitle className="tracking-tight text-xl leading-tight font-medium">
         {meta.title}
       </DialogTitle>

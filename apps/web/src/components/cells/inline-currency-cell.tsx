@@ -7,13 +7,19 @@ import {
 } from "@myakiba/utils/currency";
 import { Button } from "../ui/button";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { cn } from "@/lib/utils";
+import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface InlineCurrencyCellProps {
+  /** What the cell holds, such as "Price", for its accessible name. */
+  label: string;
   value: number;
   currency: string;
   onSubmit: (newValue: number) => Promise<void>;
   locale: string;
   disabled?: boolean;
+  /** Shows a dash for zero, for columns where zero means the price is unknown. */
+  zeroAsEmpty?: boolean;
 }
 
 export function InlineCurrencyCell({
@@ -22,6 +28,8 @@ export function InlineCurrencyCell({
   onSubmit,
   locale,
   disabled,
+  zeroAsEmpty = false,
+  label,
 }: InlineCurrencyCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editingValue, setEditingValue] = useState("");
@@ -40,8 +48,9 @@ export function InlineCurrencyCell({
     setIsEditing(false);
     if (editingValue === "") return;
     const nextValue = parseMoneyToMinorUnits(editingValue);
+    if (nextValue === displayValue) return;
     await submit(nextValue);
-  }, [editingValue, submit]);
+  }, [displayValue, editingValue, submit]);
 
   const handleInputRef = useCallback((node: HTMLInputElement | null) => {
     node?.focus();
@@ -58,7 +67,11 @@ export function InlineCurrencyCell({
         onValueChange={(_, unmaskedValue) => {
           setEditingValue(unmaskedValue);
         }}
-        onBlur={handleCancel}
+        aria-label={label}
+        // Leaving the cell keeps what was typed, as the Shop cell does.
+        onBlur={() => {
+          if (!disabled) void handleSubmit();
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             handleSubmit();
@@ -66,7 +79,7 @@ export function InlineCurrencyCell({
             handleCancel();
           }
         }}
-        className="h-8 w-full text-foreground pl-0"
+        className={CELL_EDITOR_CLASS_NAME}
       />
     );
   }
@@ -74,11 +87,16 @@ export function InlineCurrencyCell({
   return (
     <Button
       onClick={handleEdit}
-      className="w-full justify-start text-foreground pl-0"
+      className={cn(CELL_TRIGGER_CLASS_NAME, "h-8 justify-start text-foreground")}
       variant="ghost"
       disabled={disabled}
+      aria-label={`${zeroAsEmpty && displayValue === 0 ? "Empty" : formatCurrencyFromMinorUnits(displayValue, currency, locale)}, edit ${label}`}
     >
-      {formatCurrencyFromMinorUnits(displayValue, currency, locale)}
+      {zeroAsEmpty && displayValue === 0 ? (
+        <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+      ) : (
+        formatCurrencyFromMinorUnits(displayValue, currency, locale)
+      )}
     </Button>
   );
 }

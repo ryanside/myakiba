@@ -89,13 +89,19 @@ function RouteComponent() {
 
   return (
     <div className="[--header-height:calc(--spacing(14))] max-w-full overflow-x-hidden">
-      <SidebarProvider className="flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to content
+      </a>
+      <SidebarProvider className="flex flex-col" defaultOpen>
         <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
           <AppSidebar />
           <SidebarInset className="page-background-surface">
             <PageBackground />
-            <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
-              <div className="flex items-center">
+            <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
+              <div className="flex min-w-0 items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
                 <AppCommand />
                 <SyncStatusWidget />
@@ -104,16 +110,19 @@ function RouteComponent() {
                 <SyncWidget
                   side="right"
                   TriggerWrapper={
-                    <Button variant="default" size="sm">
-                      <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                      <span>Add</span>
+                    <Button variant="default" size="icon" aria-label="Add">
+                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                     </Button>
                   }
                 />
                 <UserMenu session={session} />
               </div>
             </header>
-            <div className="h-full w-full min-w-0 max-w-full overflow-x-hidden p-6">
+            <div
+              id="main-content"
+              tabIndex={-1}
+              className="h-full w-full min-w-0 max-w-full overflow-x-hidden px-4 pt-4 pb-12 outline-none md:px-8"
+            >
               <Outlet />
             </div>
           </SidebarInset>

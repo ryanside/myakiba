@@ -25,7 +25,7 @@ const bodyCellSpacingVariants = cva("", {
   variants: {
     size: {
       dense: "px-2 py-1.5",
-      default: "px-3 py-2",
+      default: "px-3 py-2.5",
     },
   },
   defaultVariants: {
@@ -102,8 +102,8 @@ function DataGridTableHeadRow<TData>({
     <tr
       key={headerGroup.id}
       className={cn(
-        "bg-muted/40",
-        props.tableLayout?.headerBorder && "[&>th]:border-b",
+        "bg-transparent",
+        props.tableLayout?.headerBorder && "[&>th]:border-b [&>th]:border-border/70",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "bg-transparent",
         props.tableLayout?.headerBackground === false && "bg-transparent",
@@ -140,6 +140,7 @@ function DataGridTableHeadRowCell<TData>({
     <th
       key={header.id}
       ref={dndRef}
+      aria-sort={ariaSort(column.getIsSorted())}
       style={{
         ...((props.tableLayout?.width === "fixed" || props.tableLayout?.columnsResizable) && {
           width: header.getSize(),
@@ -178,7 +179,7 @@ function DataGridTableHeadRowCellResize<TData>({ header }: { header: Header<TDat
         onMouseDown: header.getResizeHandler(),
         onTouchStart: header.getResizeHandler(),
         className:
-          "absolute top-0 h-full w-4 cursor-col-resize user-select-none touch-none -end-2 z-10 flex justify-center before:absolute before:w-px before:inset-y-0 before:bg-border before:-translate-x-px",
+          "absolute top-0 h-full w-4 cursor-col-resize user-select-none touch-none -end-2 z-10 flex justify-center before:absolute before:w-px before:inset-y-0 before:bg-border before:-translate-x-px before:opacity-0 hover:before:opacity-100",
       }}
     />
   );
@@ -214,7 +215,8 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
         props.onRowClick && "cursor-pointer",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
-          "border-border border-b [&:not(:last-child)>td]:border-b",
+          // Rows are separated by space and the hover tint, not rules.
+          "",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",
@@ -300,7 +302,8 @@ function DataGridTableBodyRow<TData>({
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
-          "border-border border-b [&:not(:last-child)>td]:border-b",
+          // Rows are separated by space and the hover tint, not rules.
+          "",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",
@@ -585,3 +588,9 @@ export {
   DataGridTableRowSelectAll,
   DataGridTableRowSpacer,
 };
+
+function ariaSort(sorted: false | "asc" | "desc"): "ascending" | "descending" | undefined {
+  if (sorted === "asc") return "ascending";
+  if (sorted === "desc") return "descending";
+  return undefined;
+}

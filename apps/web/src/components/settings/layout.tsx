@@ -54,7 +54,8 @@ function ViewRow({ setting, page }: (typeof VIEW_ROWS)[number]) {
     <SettingsRow setting={setting}>
       <ToggleGroup
         aria-label={`${SETTINGS[setting].title} view`}
-        variant="outline"
+        variant="segmented"
+        spacing={0.5}
         value={[view]}
         onValueChange={(next) => {
           const mode = modes.find((candidate) => candidate === next[0]);

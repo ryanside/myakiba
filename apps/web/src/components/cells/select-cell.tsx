@@ -8,6 +8,7 @@ import {
 } from "../ui/select";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { useMemo } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
 
@@ -18,6 +19,8 @@ type ColoredOption = {
 };
 
 interface SelectCellProps {
+  /** What the cell holds, such as "Status", for the combobox's accessible name. */
+  label: string;
   value: string;
   options: readonly string[];
   onSubmit: (value: string) => Promise<void>;
@@ -25,7 +28,11 @@ interface SelectCellProps {
   colorMap?: Readonly<Record<string, string>>;
 }
 
+// In a table row the select reads as plain text; its chrome appears on hover and focus.
+export const quietSelectTrigger = `${CELL_TRIGGER_CLASS_NAME} border-transparent bg-transparent dark:bg-transparent hover:border-input dark:hover:bg-input/30 focus-visible:border-ring data-popup-open:border-input dark:data-popup-open:bg-input/30 [&>svg]:opacity-0 hover:[&>svg]:opacity-100 focus-visible:[&>svg]:opacity-100 data-popup-open:[&>svg]:opacity-100`;
+
 export function SelectCell({
+  label,
   value,
   options,
   onSubmit,
@@ -56,7 +63,7 @@ export function SelectCell({
           disabled={disabled}
           items={coloredItems}
         >
-          <SelectTrigger>
+          <SelectTrigger className={quietSelectTrigger} aria-label={label}>
             <SelectValue>
               {(item: ColoredOption) => (
                 <span className="flex items-center gap-2">
@@ -92,7 +99,7 @@ export function SelectCell({
         }}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger className={quietSelectTrigger} aria-label={label}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

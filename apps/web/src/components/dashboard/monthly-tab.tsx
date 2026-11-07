@@ -4,9 +4,9 @@ import { CostBreakdown } from "@/components/dashboard/cost-breakdown";
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
 import { ShopBreakdown } from "@/components/dashboard/shop-breakdown";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { KPICard } from "@/components/ui/kpi-card";
+import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
+import { LoadError } from "@/components/page-states";
 import type { MonthlyData } from "@/queries/dashboard";
 
 interface MonthlyTabProps {
@@ -36,12 +36,10 @@ export function MonthlyTab({
 }: MonthlyTabProps): ReactElement {
   if (isError) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>Failed to load monthly data: {error?.message}</CardDescription>
-        </CardHeader>
-      </Card>
+      <LoadError
+        title="Couldn't load this month"
+        message={error?.message ?? "The server didn't answer."}
+      />
     );
   }
 
@@ -67,16 +65,10 @@ export function MonthlyTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          title="Total Items"
-          subtitle="items in orders this month"
-          value={itemCount}
-          isLoading={isLoading}
-        />
+      <KPIGroup>
+        <KPICard title="Total Items" value={itemCount} isLoading={isLoading} />
         <KPICard
           title="Total Orders"
-          subtitle="orders releasing this month"
           value={orderCount}
           subvalueTitle="unpaid"
           subvalue={unpaidOrderCount}
@@ -84,18 +76,16 @@ export function MonthlyTab({
         />
         <KPICard
           title="Paid Costs"
-          subtitle="total paid order costs"
           value={formatCurrencyFromMinorUnits(paidAmount, currency, locale)}
           isLoading={isLoading}
         />
         <KPICard
           title="Unpaid Costs"
-          subtitle="total unpaid order costs"
           value={formatCurrencyFromMinorUnits(unpaidAmount, currency, locale)}
           isLoading={isLoading}
         />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      </KPIGroup>
+      <div className="mt-2 grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-3">
         <ShopBreakdown
           data={shopBreakdown}
           currency={currency}

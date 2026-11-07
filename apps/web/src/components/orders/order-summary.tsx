@@ -4,6 +4,7 @@ import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Timeline,
   TimelineItem,
@@ -77,7 +78,7 @@ export function OrderSummary({
     { step: 1, title: "Ordered", date: order?.orderDate },
     { step: 2, title: "Paid", date: order?.paymentDate },
     { step: 3, title: "Shipped", date: order?.shippingDate },
-    { step: 4, title: "Collected", date: order?.collectionDate },
+    { step: 4, title: "Owned", date: order?.collectionDate },
   ] as const;
 
   const costRows = [
@@ -92,9 +93,9 @@ export function OrderSummary({
   ];
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[3fr_2fr]" aria-busy={isLoading}>
-      <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-medium text-muted-foreground">Progress</h2>
+    <div className="grid gap-x-12 gap-y-8 lg:grid-cols-[3fr_2fr]" aria-busy={isLoading}>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-base font-medium text-foreground">Progress</h2>
         <Timeline orientation="horizontal" value={isLoading ? 0 : activeStep}>
           {timelineSteps.map(({ step, title, date }) => {
             let dateContent: ReactNode = "—";
@@ -104,17 +105,30 @@ export function OrderSummary({
             } else {
               dateContent = (
                 <span className="animate-data-in">
-                  {date ? formatDateOnlyForDisplay(date, dateFormat) : "—"}
+                  {date ? (
+                    formatDateOnlyForDisplay(date, dateFormat)
+                  ) : (
+                    <span className="text-muted-foreground">Pending</span>
+                  )}
                 </span>
               );
             }
 
             return (
               <TimelineItem key={step} step={step}>
-                <TimelineIndicator />
+                <TimelineIndicator
+                  className={cn(
+                    "group-data-completed/timeline-item:bg-primary",
+                    !isLoading && step === activeStep && "ring-4 ring-primary/15",
+                  )}
+                />
                 <TimelineSeparator />
                 <TimelineHeader>
-                  <TimelineTitle>{title}</TimelineTitle>
+                  <TimelineTitle
+                    className={cn(!isLoading && step > activeStep && "text-muted-foreground")}
+                  >
+                    {title}
+                  </TimelineTitle>
                 </TimelineHeader>
                 <TimelineDate>{dateContent}</TimelineDate>
               </TimelineItem>
@@ -124,7 +138,7 @@ export function OrderSummary({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-xs font-medium text-muted-foreground">Cost Breakdown</h2>
+        <h2 className="text-base font-medium text-foreground">Cost breakdown</h2>
         <div className="flex flex-col gap-2.5">
           {isLoading
             ? ["Items", "Shipping"].map((label) => (
@@ -144,7 +158,7 @@ export function OrderSummary({
                 />
               ))}
         </div>
-        <div className="flex min-h-7 items-center justify-between">
+        <div className="flex min-h-7 items-center justify-between pt-2">
           <span className="text-sm font-medium">Total</span>
           {isLoading ? (
             <Skeleton className="h-6 w-24" />

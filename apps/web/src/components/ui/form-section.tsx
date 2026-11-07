@@ -24,7 +24,7 @@ function FormSection({
         className={cn(
           "group/trigger flex w-full items-center gap-2 py-1 cursor-pointer select-none",
           "text-xs font-normal tracking-wide",
-          "text-muted-foreground/70 hover:text-muted-foreground",
+          "text-muted-foreground hover:text-muted-foreground",
           "transition-colors duration-150",
         )}
       >

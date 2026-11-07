@@ -7,9 +7,9 @@ import { Button } from "../ui/button";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Captcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
-import { env } from "@myakiba/env/web";
+import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 function GoogleIcon() {
@@ -104,21 +104,27 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center justify-center gap-2">
-        <div className="text-xl font-medium flex items-center gap-2">
-          <span>Login to</span>
-          <MyAkibaLogo size="full" className="size-28 inline-block" />
-        </div>
-        <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link to="/signup" className="text-foreground underline">
-            Register
-          </Link>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
+        <MyAkibaLogo size="full" className="my-0 h-5 w-[6.5rem]" />
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[1.375rem] leading-8 font-medium tracking-tight">Sign in</h1>
+          <p className="text-[0.9375rem] text-muted-foreground">
+            New to myakiba?{" "}
+            <Link to="/signup" className="font-medium text-foreground underline underline-offset-4">
+              Create an account
+            </Link>
+          </p>
         </div>
       </div>
 
-      <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
+      <Button
+        variant="outline"
+        size="lg"
+        type="button"
+        className="w-full"
+        onClick={handleGoogleAuth}
+      >
         <GoogleIcon />
         Continue with Google
       </Button>
@@ -141,8 +147,11 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
               <Label htmlFor={field.name}>Email</Label>
               <Input
                 id={field.name}
+                className="h-10"
                 name={field.name}
                 type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -159,11 +168,19 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         <form.Field name="password">
           {(field) => (
             <div className="space-y-2">
-              <Label htmlFor={field.name}>Password</Label>
-              <Input
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor={field.name}>Password</Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <PasswordInput
                 id={field.name}
                 name={field.name}
-                type="password"
+                autoComplete="current-password"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -173,11 +190,6 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
                   {error?.message}
                 </p>
               ))}
-              <div className="flex items-center justify-end">
-                <Link to="/forgot-password" className="text-sm text-muted-foreground underline">
-                  Forgot password?
-                </Link>
-              </div>
             </div>
           )}
         </form.Field>
@@ -185,7 +197,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         <form.Field name="turnstileToken">
           {(field) => (
             <div className="space-y-2">
-              <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+              <Captcha onSuccess={field.handleChange} />
             </div>
           )}
         </form.Field>
@@ -194,11 +206,12 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
           {(state) => (
             <StatusButton
               type="submit"
+              size="lg"
               className="w-full"
               status={formSubmitStatus(status, state.isSubmitting)}
               disabled={!state.canSubmit}
             >
-              Login
+              Sign in
             </StatusButton>
           )}
         </form.Subscribe>

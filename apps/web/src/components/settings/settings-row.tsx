@@ -76,8 +76,9 @@ export function SettingsRow({
     <div
       {...anchor}
       className={cn(
-        "flex gap-3 px-4 py-3.5 sm:items-center sm:justify-between sm:gap-8",
-        inline ? "items-center justify-between gap-6" : "flex-col sm:flex-row",
+        // Beside the settings menu the column is narrow until xl, so wide controls stack under their label.
+        "flex gap-3 px-4 py-3.5 xl:items-center xl:justify-between xl:gap-8",
+        inline ? "items-center justify-between gap-6" : "flex-col xl:flex-row",
         anchorClassName,
       )}
     >

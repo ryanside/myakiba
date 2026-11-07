@@ -21,9 +21,9 @@ import { CollectionActionBar } from "./collection-action-bar";
 import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
+import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
-import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import {
@@ -38,6 +38,8 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
 const DEFAULT_VISIBILITY: VisibilityState = {
+  itemScale: false,
+  count: false,
   orderDate: false,
   paymentDate: false,
   shippingDate: false,

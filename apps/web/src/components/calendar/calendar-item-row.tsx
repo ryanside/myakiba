@@ -41,7 +41,9 @@ export function CalendarItemRow({
         />
       </MediaImage>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
+        <p className="truncate text-sm leading-tight font-medium" title={item.title}>
+          {item.title}
+        </p>
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           {item.category != null && <CategoryLabel category={item.category} />}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (

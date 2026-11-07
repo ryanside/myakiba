@@ -8,9 +8,9 @@ import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-bu
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { FieldError } from "../ui/field";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Captcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
-import { env } from "@myakiba/env/web";
+import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
 function GoogleIcon() {
@@ -111,20 +111,28 @@ export default function SignUpForm() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center justify-center gap-2">
-        <div className="text-xl font-medium flex items-center gap-2">
-          <span>Welcome to</span>
-          <MyAkibaLogo size="full" className="size-28 inline-block" />
-        </div>
-        <div className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-foreground underline">
-            Login
-          </Link>
+      <div className="flex flex-col gap-6">
+        <MyAkibaLogo size="full" className="my-0 h-5 w-[6.5rem]" />
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[1.375rem] leading-8 font-medium tracking-tight">
+            Create your account
+          </h1>
+          <p className="text-[0.9375rem] text-muted-foreground">
+            Already have one?{" "}
+            <Link to="/login" className="font-medium text-foreground underline underline-offset-4">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
 
-      <Button variant="outline" type="button" className="w-full" onClick={handleGoogleAuth}>
+      <Button
+        variant="outline"
+        size="lg"
+        type="button"
+        className="w-full"
+        onClick={handleGoogleAuth}
+      >
         <GoogleIcon />
         Continue with Google
       </Button>
@@ -172,6 +180,7 @@ export default function SignUpForm() {
               <Label htmlFor={field.name}>Username</Label>
               <Input
                 id={field.name}
+                className="h-10"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -193,6 +202,7 @@ export default function SignUpForm() {
               <Label htmlFor={field.name}>Email</Label>
               <Input
                 id={field.name}
+                className="h-10"
                 name={field.name}
                 type="email"
                 value={field.state.value}
@@ -217,10 +227,10 @@ export default function SignUpForm() {
           {(field) => (
             <div className="space-y-2">
               <Label htmlFor={field.name}>Password</Label>
-              <Input
+              <PasswordInput
                 id={field.name}
                 name={field.name}
-                type="password"
+                autoComplete="new-password"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -242,7 +252,7 @@ export default function SignUpForm() {
         <form.Field name="turnstileToken">
           {(field) => (
             <div className="space-y-2">
-              <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+              <Captcha onSuccess={field.handleChange} />
             </div>
           )}
         </form.Field>
@@ -251,6 +261,7 @@ export default function SignUpForm() {
           {(state) => (
             <StatusButton
               type="submit"
+              size="lg"
               className="w-full"
               status={formSubmitStatus(status, state.isSubmitting)}
               disabled={!state.canSubmit}

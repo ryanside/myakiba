@@ -44,7 +44,7 @@ function ChangelogIndex() {
                 <Link
                   to="/changelog/$slug"
                   params={{ slug: entry.slug }}
-                  className="group -mx-3 flex flex-col gap-4 rounded-xl px-3 py-4 outline-none transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="group -mx-3 flex flex-col gap-4 rounded-xl px-3 py-4 outline-none transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <time
                     dateTime={entry.date}

@@ -65,7 +65,7 @@ export function ThemePreview({
           size={10}
           strokeWidth={1.75}
           className={
-            index === ACTIVE_NAV ? "text-sidebar-accent-foreground" : "text-muted-foreground/70"
+            index === ACTIVE_NAV ? "text-sidebar-accent-foreground" : "text-muted-foreground"
           }
         />
       ))}

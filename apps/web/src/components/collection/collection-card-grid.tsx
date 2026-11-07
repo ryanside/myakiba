@@ -8,7 +8,9 @@ import {
   MediaCardImage,
   MediaCardSkeleton,
   MediaCardTitle,
+  CARD_GRID_GAP_CLASS_NAME,
 } from "@/components/media-tile";
+import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -77,7 +79,7 @@ export function CollectionCardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={gridStyle} aria-hidden="true">
+      <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle} aria-hidden="true">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} imageClassName="aspect-4/5" />
         ))}
@@ -94,7 +96,7 @@ export function CollectionCardGrid({
   }
 
   return (
-    <div className="grid gap-3" style={gridStyle}>
+    <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle}>
       {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
         const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
@@ -135,7 +137,7 @@ export function CollectionCardGrid({
             <MediaCardBody>
               <span className="flex min-w-0 items-center justify-between gap-2">
                 <CategoryLabel category={item.itemCategory} />
-                {item.itemScale ? (
+                {item.itemScale && item.itemScale !== "n/a" ? (
                   <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>
@@ -143,9 +145,14 @@ export function CollectionCardGrid({
               </span>
               <MediaCardTitle as="h3" title={item.itemTitle} destination={itemLink} />
               <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
-                <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
-                  {formatCurrencyFromMinorUnits(item.price, currency, locale)}
-                </span>
+                {/* An unpriced item says so plainly instead of claiming it cost $0.00. */}
+                {item.price > 0 ? (
+                  <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
+                    {formatCurrencyFromMinorUnits(item.price, currency, locale)}
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-xs leading-5 text-muted-foreground">No price</span>
+                )}
                 {item.shop && !isCompact ? (
                   <span
                     className="min-w-0 truncate text-xs leading-4 text-muted-foreground"

@@ -44,7 +44,7 @@ export function CalendarToolbar({
 }: CalendarToolbarProps): ReactNode {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex items-center" role="group" aria-label="Select month">
+      <div className="inline-flex items-center gap-1.5" role="group" aria-label="Select month">
         <Button
           type="button"
           variant="ghost"
@@ -71,7 +71,6 @@ export function CalendarToolbar({
           aria-label="Year"
           value={year}
           onChange={(event) => onChangeYear(Number(event.target.value))}
-          className="ml-1"
         >
           {yearOptions.map((y) => (
             <NativeSelectOption key={y} value={y}>
@@ -91,7 +90,7 @@ export function CalendarToolbar({
       </div>
 
       <Tabs value={view} onValueChange={onChangeView} className="ml-auto shrink-0">
-        <TabsList variant="line">
+        <TabsList>
           <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>

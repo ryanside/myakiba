@@ -1,16 +1,6 @@
 import type { ReactNode } from "react";
-import { PackageIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { ItemSyncActions } from "@/components/item/item-sync-actions";
-import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
-import {
-  Empty,
-  EmptyContent,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty";
+import { LoadError } from "@/components/page-states";
 import { CollectionItemCard } from "@/components/item/collection-item-card";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
@@ -74,18 +64,16 @@ export function ItemCollection({
         )}
 
         {!isPending && !isError && collectionItems.length === 0 && (
-          <Empty className={STATE_PANEL_CLASS_NAME}>
-            <EmptyHeader>
-              <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
-                <HugeiconsIcon icon={PackageIcon} className="size-5" aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>Not in your collection</EmptyTitle>
-              <EmptyDescription>Add this item to your collection or a new order.</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <ItemSyncActions onSyncCollection={onSyncCollection} onSyncOrder={onSyncOrder} />
-            </EmptyContent>
-          </Empty>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-pretty text-muted-foreground">
+              Not in your collection yet. Add it to your collection, or start a new order with it.
+            </p>
+            <ItemSyncActions
+              onSyncCollection={onSyncCollection}
+              onSyncOrder={onSyncOrder}
+              className="justify-start"
+            />
+          </div>
         )}
 
         {!isError && (isPending || (item && collectionItems.length > 0)) ? (

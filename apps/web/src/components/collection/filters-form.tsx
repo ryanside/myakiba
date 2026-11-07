@@ -1,10 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowDown01Icon,
-  ArrowUpDownIcon,
-  Cancel01Icon,
-  Loading03Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
   DialogDescription,
@@ -400,7 +395,7 @@ function FiltersDraft({
                           >
                             Select entries...
                             <HugeiconsIcon
-                              icon={ArrowUpDownIcon}
+                              icon={ArrowDown01Icon}
                               data-icon="inline-end"
                               className="shrink-0 opacity-50"
                             />

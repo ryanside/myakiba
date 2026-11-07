@@ -37,10 +37,7 @@ export function ExpensePanel({
   readonly headerAction?: ReactNode;
 }): ReactNode {
   return (
-    <Frame
-      spacing="sm"
-      className={cn("border-none shadow-xs! ring-1 ring-foreground/10", className)}
-    >
+    <Frame spacing="sm" className={className}>
       <FrameHeader
         className={cn(
           "gap-2 sm:flex-row sm:items-center sm:justify-between",
@@ -50,9 +47,7 @@ export function ExpensePanel({
         <FrameTitle className="text-base">{title}</FrameTitle>
         {headerAction}
       </FrameHeader>
-      <FramePanel className={cn("m-1 mt-0 border-none shadow-none!", panelClassName)}>
-        {children}
-      </FramePanel>
+      <FramePanel className={cn("border-none shadow-none!", panelClassName)}>{children}</FramePanel>
     </Frame>
   );
 }
@@ -68,19 +63,17 @@ export function KpiStrip({
   readonly isLoading: boolean;
 }): ReactNode {
   return (
-    <Frame
-      spacing="sm"
-      className="border-none shadow-xs! ring-1 ring-foreground/10"
-      aria-busy={isLoading}
-    >
-      <FramePanel className="m-1 flex flex-col divide-y divide-border border-none p-0 shadow-none! sm:flex-row sm:divide-x sm:divide-y-0">
+    <Frame spacing="sm" aria-busy={isLoading}>
+      <FramePanel className="flex flex-col gap-6 border-none shadow-none! sm:flex-row sm:gap-10">
         {items.map((item) => (
-          <div key={item.title} className="min-w-0 flex-1 px-4 py-4 sm:px-6">
-            <p className="text-xs text-muted-foreground">{item.title}</p>
+          <div key={item.title} className="min-w-0 flex-1">
+            <p className="eyebrow">{item.title}</p>
             {isLoading ? (
               <Skeleton className="mt-2 h-7 w-20" />
             ) : (
-              <p className="animate-data-in mt-1 text-2xl font-medium tabular-nums">{item.value}</p>
+              <p className="animate-data-in display mt-1 text-2xl font-medium tabular-nums">
+                {item.value}
+              </p>
             )}
           </div>
         ))}
@@ -105,7 +98,7 @@ export function ChartSelector<TValue extends string>({
         if (nextValue !== null) onValueChange(nextValue);
       }}
     >
-      <SelectTrigger className="w-full sm:w-56" aria-label="Select chart">
+      <SelectTrigger className="w-full sm:w-44" aria-label="Select chart">
         <SelectValue>{options.find((option) => option.value === value)?.label}</SelectValue>
       </SelectTrigger>
       <SelectContent align="end">
@@ -130,6 +123,8 @@ export function ChartSeriesLegend<TKey extends string>({
   readonly visibleKeys?: ReadonlySet<TKey>;
   readonly onToggle?: (key: TKey) => void;
 }): ReactNode {
+  // One series needs no key; the chart title already names it.
+  if (items.length < 2) return null;
   return (
     <div className="flex flex-wrap items-center gap-1" aria-label="Chart series">
       {items.map((item) => {
@@ -187,17 +182,17 @@ export function ChartSection({
   readonly emptyMessage: string;
 }): ReactNode {
   return (
-    <Frame spacing="sm" className="h-[400px] border-none shadow-xs! ring-1 ring-foreground/10">
+    <Frame spacing="sm" className="h-[340px] ">
       <FrameHeader className="gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
         <FrameTitle className="text-base">{title}</FrameTitle>
         {selector}
       </FrameHeader>
-      <FramePanel className="m-1 mt-0 flex min-h-0 flex-1 flex-col gap-1 border-none shadow-none!">
+      <FramePanel className="flex min-h-0 flex-1 flex-col gap-1 border-none shadow-none!">
         {isEmpty ? (
           <p className="m-auto text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <>
-            <div className="flex min-h-6 shrink-0 justify-end">{legend}</div>
+            <div className="flex min-h-6 shrink-0 justify-end empty:hidden">{legend}</div>
             <div className="min-h-0 w-full flex-1">{children}</div>
           </>
         )}

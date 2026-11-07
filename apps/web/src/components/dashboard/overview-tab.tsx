@@ -3,9 +3,9 @@ import { CollectionBreakdown } from "@/components/dashboard/collection-breakdown
 import OrderKanban from "@/components/dashboard/order-kanban";
 import { OrdersBarChart } from "@/components/dashboard/orders-bar-chart";
 import { ReleaseCalendar } from "@/components/dashboard/release-calendar";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { KPICard } from "@/components/ui/kpi-card";
+import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
+import { LoadError } from "@/components/page-states";
 import type { DashboardResponse } from "@/queries/dashboard";
 
 interface OverviewTabProps {
@@ -31,12 +31,10 @@ export function OverviewTab({
 }: OverviewTabProps) {
   if (isError) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-destructive">Error</CardTitle>
-          <CardDescription>Failed to load dashboard data: {error?.message}</CardDescription>
-        </CardHeader>
-      </Card>
+      <LoadError
+        title="Couldn't load the dashboard"
+        message={error?.message ?? "The server didn't answer."}
+      />
     );
   }
   const {
@@ -73,22 +71,15 @@ export function OverviewTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard
-          title="Total Items"
-          subtitle="all collection items"
-          value={collectionStats.totalItems}
-          isLoading={isLoading}
-        />
+      <KPIGroup>
+        <KPICard title="Total Items" value={collectionStats.totalItems} isLoading={isLoading} />
         <KPICard
           title="Total Spent"
-          subtitle="based on paid collection & orders"
           value={formatCurrencyFromMinorUnits(totalSpent, currency, locale)}
           isLoading={isLoading}
         />
         <KPICard
           title="Active Orders"
-          subtitle="orders not yet collected"
           value={ordersSummary.totalActiveOrderCount}
           subvalueTitle="unpaid"
           subvalue={unpaidOrderCount}
@@ -96,12 +87,11 @@ export function OverviewTab({
         />
         <KPICard
           title="Unpaid Costs"
-          subtitle="costs with status 'Ordered'"
           value={formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
           isLoading={isLoading}
         />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      </KPIGroup>
+      <div className="mt-2 grid grid-cols-1 gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)]">
         <CollectionBreakdown
           data={categoriesOwned}
           currency={currency}
@@ -113,13 +103,37 @@ export function OverviewTab({
         <ReleaseCalendar currency={currency} />
       </div>
 
-      <OrderKanban
-        orders={orders}
-        ordersUpdatedAt={dataUpdatedAt}
-        isLoading={isLoading}
-        currency={currency}
-        dateFormat={dateFormat}
-      />
+      {/* The heading belongs to its board, so they sit together rather than a section apart. */}
+      <section className="flex flex-col gap-3">
+        <SectionHeading title="In progress" scope={boardWindow(new Date())} />
+        <OrderKanban
+          orders={orders}
+          ordersUpdatedAt={dataUpdatedAt}
+          isLoading={isLoading}
+          currency={currency}
+          dateFormat={dateFormat}
+        />
+      </section>
     </>
   );
+}
+
+/** A section label inside a page. */
+function SectionHeading({ title, scope }: { readonly title: string; readonly scope: string }) {
+  return (
+    <div className="flex items-baseline gap-2.5">
+      <h2 className="text-[1.0625rem] font-medium tracking-tight">{title}</h2>
+      <p className="text-sm text-muted-foreground">{scope}</p>
+    </div>
+  );
+}
+
+const MONTH_SHORT = new Intl.DateTimeFormat(undefined, { month: "short" });
+
+// The board holds orders released or ordered from two months back to two months ahead; saying so
+// keeps it from reading as every active order.
+function boardWindow(today: Date): string {
+  const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+  const end = new Date(today.getFullYear(), today.getMonth() + 2, 1);
+  return `Released or ordered ${MONTH_SHORT.format(start)} – ${MONTH_SHORT.format(end)}`;
 }

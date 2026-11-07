@@ -27,11 +27,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<string>();
     render(<InlineTextCell label="Shop" value="AmiAmi" onSubmit={onSubmit} />);
 
-    fireEvent.focus(screen.getByRole("button", { name: "Edit Shop" }));
+    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/ }));
     fireEvent.change(screen.getByLabelText("Shop"), { target: { value: "HLJ" } });
     fireEvent.keyDown(screen.getByLabelText("Shop"), { key: "Enter" });
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Edit Shop" }).textContent).toBe("AmiAmi"),
+      expect(screen.getByRole("button", { name: /edit Shop$/ }).textContent).toBe("AmiAmi"),
     );
     await settle();
 
@@ -42,11 +42,11 @@ describe("a failed cell edit", () => {
     const { writes, onSubmit } = failingWrite<string>();
     render(<InlineTextCell label="Shop" value="AmiAmi" onSubmit={onSubmit} />);
 
-    fireEvent.focus(screen.getByRole("button", { name: "Edit Shop" }));
+    fireEvent.focus(screen.getByRole("button", { name: /edit Shop$/ }));
     fireEvent.change(screen.getByLabelText("Shop"), { target: { value: "HLJ" } });
     fireEvent.blur(screen.getByLabelText("Shop"));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Edit Shop" }).textContent).toBe("AmiAmi"),
+      expect(screen.getByRole("button", { name: /edit Shop$/ }).textContent).toBe("AmiAmi"),
     );
     await settle();
 
@@ -55,12 +55,14 @@ describe("a failed cell edit", () => {
 
   test("pressing Enter in a count cell leaves no unhandled rejection", async () => {
     const { writes, onSubmit } = failingWrite<number>();
-    render(<InlineCountCell value={1} onSubmit={onSubmit} />);
+    render(<InlineCountCell label="Count" value={1} onSubmit={onSubmit} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "1" }));
+    fireEvent.click(screen.getByRole("button", { name: "1, edit Count" }));
     fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "3" } });
     fireEvent.keyDown(screen.getByRole("spinbutton"), { key: "Enter" });
-    await waitFor(() => expect(screen.getByRole("button", { name: "1" })).toBeDefined());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1, edit Count" })).toBeDefined(),
+    );
     await settle();
 
     expect(writes).toEqual([3]);

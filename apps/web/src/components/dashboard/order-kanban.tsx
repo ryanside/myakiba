@@ -292,6 +292,8 @@ function OrderCard({
         "animate-data-in relative rounded-xl p-3",
         TILE_SURFACE_CLASS_NAME,
         TILE_HOVER_CLASS_NAME,
+        // Lanes stack many cards, so each takes a fainter lift than a lone tile.
+        "shadow-[0_1px_1px_oklch(0_0_0/0.03)] dark:shadow-none",
       )}
     >
       <div className="flex flex-col gap-3">
@@ -314,7 +316,11 @@ function OrderCard({
               {order.title}
             </Link>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {order.shop ? <span className="truncate">{order.shop}</span> : null}
+              {order.shop ? (
+                <span className="truncate" title={order.shop}>
+                  {order.shop}
+                </span>
+              ) : null}
               <span className="ml-auto shrink-0 font-medium tabular-nums text-foreground">
                 {formatCurrencyFromMinorUnits(order.total, currency, locale)}
               </span>
@@ -331,13 +337,11 @@ function OrderCard({
                 variant="ghost"
                 className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
               >
-                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                  {label}
-                </span>
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    dateValue ? "text-foreground" : "text-muted-foreground/60",
+                    dateValue ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
                   {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
@@ -402,11 +406,12 @@ function OrderColumn({
 
   return (
     <KanbanColumn value={columnId}>
-      <Frame spacing="sm" className="h-full min-h-0">
-        <FrameHeader className="flex flex-row items-center gap-2">
+      {/* A lane is a heading over its cards, with no surface of its own, like the rest of the dashboard. */}
+      <Frame variant="ghost" spacing="sm" className="h-full min-h-0">
+        <FrameHeader className="flex flex-row items-center gap-2 px-0.5 pt-0">
           <div className={cn("size-2 rounded-full", col.color)} />
           <FrameTitle>{col.title}</FrameTitle>
-          <Badge variant="outline" size="sm" className="ml-auto">
+          <Badge variant="outline" size="sm" className="ml-auto tabular-nums">
             {isLoading ? (
               <Skeleton className="size-2" />
             ) : (
@@ -418,20 +423,24 @@ function OrderColumn({
           value={columnId}
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
         >
-          {isLoading ? (
-            <Loader className="justify-start pt-4" />
-          ) : (
-            orders.map((order) => (
-              <OrderCard
-                key={order.orderId}
-                order={order}
-                currency={currency}
-                dateFormat={dateFormat}
-                asHandle={!isOverlay}
-                onDateChange={onDateChange}
-              />
-            ))
-          )}
+          {isLoading ? <Loader className="justify-start pt-4" /> : null}
+          {!isLoading && orders.length === 0 ? (
+            <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
+              No orders
+            </p>
+          ) : null}
+          {isLoading
+            ? null
+            : orders.map((order) => (
+                <OrderCard
+                  key={order.orderId}
+                  order={order}
+                  currency={currency}
+                  dateFormat={dateFormat}
+                  asHandle={!isOverlay}
+                  onDateChange={onDateChange}
+                />
+              ))}
         </KanbanColumnContent>
       </Frame>
     </KanbanColumn>
@@ -631,7 +640,7 @@ function OrderKanbanBoard({
       className="flex min-h-0 flex-1 flex-col overflow-x-auto"
     >
       <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
-      <KanbanBoard className="min-h-0 min-w-[1300px] flex-1 gap-2.5 sm:grid-cols-4">
+      <KanbanBoard className="min-h-0 min-w-[960px] flex-1 gap-3 sm:grid-cols-4">
         {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
             key={columnId}

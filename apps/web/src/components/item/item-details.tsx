@@ -83,7 +83,7 @@ export function ItemDetails({
         <Badge key={entry.id} variant="secondary" className="animate-data-in whitespace-normal">
           {entry.sourceLabel ?? entry.name}
           {annotations.length > 0 ? (
-            <span className="text-muted-foreground ml-1">({annotations.join(" · ")})</span>
+            <span className="text-muted-foreground ml-1">({annotations.join(", ")})</span>
           ) : null}
         </Badge>
       );
@@ -164,9 +164,7 @@ export function ItemDetails({
           <dl className="space-y-3">
             {[...relatedFields].map(([category, entries]) => (
               <div key={category}>
-                <dt className="text-xs font-medium leading-6 text-muted-foreground/70">
-                  {category}
-                </dt>
+                <dt className="eyebrow leading-6">{category}</dt>
                 <dd className="mt-1.5 flex flex-wrap gap-1.5">{entries}</dd>
               </div>
             ))}
@@ -181,7 +179,7 @@ export function ItemDetails({
             {specifications.map(({ label, value }) =>
               !item || value !== null ? (
                 <div key={label}>
-                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dt className="eyebrow">{label}</dt>
                   <dd className="mt-0.5 text-sm font-medium">
                     {item ? (
                       <span className="animate-data-in">{value}</span>

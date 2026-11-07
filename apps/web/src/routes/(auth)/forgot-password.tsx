@@ -9,10 +9,9 @@ import { BackLink } from "@/components/ui/back-link";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Captcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
-import { env } from "@myakiba/env/web";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 
@@ -152,7 +151,7 @@ function RouteComponent() {
           <form.Field name="turnstileToken">
             {(field) => (
               <div className="space-y-2">
-                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
+                <Captcha onSuccess={field.handleChange} />
               </div>
             )}
           </form.Field>

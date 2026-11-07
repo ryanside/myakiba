@@ -15,7 +15,7 @@ import { AverageOrderCostsByPeriod } from "./charts/average-order-costs-by-perio
 import { AverageOrderCostsToDate } from "./charts/average-order-costs-to-date";
 
 const options = [
-  { value: "cumulative", label: "Cumulative Spending" },
+  { value: "cumulative", label: "Cumulative" },
   { value: "period", label: "Spending by Period" },
   { value: "average-period", label: "Average Costs by Period" },
   { value: "average-to-date", label: "Average Costs to Date" },
@@ -115,7 +115,7 @@ export default function OrdersTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-3">
+      <div className="grid items-stretch gap-x-10 gap-y-6 lg:grid-cols-3">
         <OrderSummary data={data} isLoading={isLoading} currency={currency} locale={locale} />
         <div className="min-w-0 lg:col-span-2">{chartNode}</div>
       </div>
@@ -156,7 +156,7 @@ export default function OrdersTab({
           },
         ]}
       />
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div className="grid items-start gap-x-10 gap-y-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <ShopTable
             scope="orders"

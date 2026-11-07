@@ -63,7 +63,7 @@ export function ShopBreakdown({
   const shopCount = entries.length;
 
   return (
-    <Frame spacing="sm" className="border-none ring-1 ring-foreground/10 shadow-xs! min-h-[320px]">
+    <Frame spacing="sm" className="min-h-[320px]">
       <FrameHeader>
         {isLoading ? (
           <Skeleton className="h-4 my-1 w-32" />
@@ -74,7 +74,7 @@ export function ShopBreakdown({
           </FrameTitle>
         )}
       </FrameHeader>
-      <FramePanel className="space-y-3 shadow-none! border-none m-1 mt-0">
+      <FramePanel className="flex flex-col gap-3 shadow-none! border-none">
         <BreakdownChart
           data={entries}
           isLoading={Boolean(isLoading)}

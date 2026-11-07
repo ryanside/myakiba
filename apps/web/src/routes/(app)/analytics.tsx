@@ -56,7 +56,7 @@ function RouteComponent(): ReactNode {
 
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-5xl">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl font-orbitron font-medium">
@@ -77,7 +77,7 @@ function RouteComponent(): ReactNode {
   const scales = analytics?.scales ?? { uniqueOwned: 0, topByCount: [], topBySpend: [] };
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-5xl">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl font-orbitron font-medium">
@@ -87,7 +87,7 @@ function RouteComponent(): ReactNode {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-12">
         {entries.map((entry, idx) => (
           <Section
             key={entry.category}
@@ -107,6 +107,7 @@ function RouteComponent(): ReactNode {
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
+                  rankedBy="itemCount"
                   rows={entry.topByCount}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
@@ -125,6 +126,7 @@ function RouteComponent(): ReactNode {
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
+                  rankedBy="totalSpent"
                   rows={entry.topBySpend}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
                   formatCell={formatCell}
@@ -158,6 +160,7 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
+                rankedBy="itemCount"
                 rows={shops.topByCount}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
@@ -176,6 +179,7 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
+                rankedBy="totalSpent"
                 rows={shops.topBySpend}
                 columns={SHOP_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
@@ -208,6 +212,7 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
+                rankedBy="itemCount"
                 rows={scales.topByCount}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}
@@ -229,6 +234,7 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
+                rankedBy="totalSpent"
                 rows={scales.topBySpend}
                 columns={SCALE_LEADERBOARD_COLUMNS}
                 formatCell={formatCell}

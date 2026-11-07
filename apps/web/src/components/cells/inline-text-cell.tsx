@@ -1,9 +1,11 @@
 import { useState } from "react";
+import type { FocusEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface InlineTextCellProps {
   label: string;
@@ -12,6 +14,14 @@ interface InlineTextCellProps {
   validate?: (value: string) => boolean | string;
   previewClassName?: string;
   disabled?: boolean;
+}
+
+// Select everything, with the caret at the start, so a long value opens on its first words
+// instead of scrolled to its end.
+function selectFromStart(event: FocusEvent<HTMLInputElement>): void {
+  const field = event.currentTarget;
+  field.setSelectionRange(0, field.value.length, "backward");
+  field.scrollLeft = 0;
 }
 
 export function InlineTextCell({
@@ -62,7 +72,7 @@ export function InlineTextCell({
           value={editingValue}
           disabled={disabled}
           onClick={(event) => event.stopPropagation()}
-          onFocus={(event) => event.currentTarget.select()}
+          onFocus={selectFromStart}
           onChange={(event) => setEditingValue(event.target.value)}
           onBlur={() => {
             if (!disabled) void handleSubmit(editingValue);
@@ -74,22 +84,27 @@ export function InlineTextCell({
               void handleSubmit(editingValue);
             }
           }}
-          className="h-auto rounded-sm px-0 shadow-xs focus-visible:border-input focus-visible:ring-1 focus-visible:ring-ring disabled:bg-transparent dark:bg-transparent dark:disabled:bg-transparent"
+          className={CELL_EDITOR_CLASS_NAME}
         />
       ) : (
         <Button
           type="button"
           variant="ghost"
-          aria-label={`Edit ${label}`}
+          aria-label={`${displayValue || "Empty"}, edit ${label}`}
           disabled={disabled}
           onClick={(event) => event.stopPropagation()}
           onFocus={handleEdit}
           className={cn(
-            "h-auto min-h-7 w-full cursor-text justify-start truncate rounded-sm px-0 py-1 text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
+            CELL_TRIGGER_CLASS_NAME,
+            "h-8 cursor-text justify-start truncate text-left text-base font-normal transition-colors focus-visible:border-transparent focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-auto disabled:opacity-100 md:text-sm dark:hover:bg-muted",
             previewClassName,
           )}
         >
-          {displayValue}
+          {displayValue ? (
+            <span className="truncate">{displayValue}</span>
+          ) : (
+            <span className="text-muted-foreground/60 dark:text-muted-foreground/40">—</span>
+          )}
         </Button>
       )}
     </div>

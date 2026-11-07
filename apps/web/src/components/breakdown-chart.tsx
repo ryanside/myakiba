@@ -47,7 +47,7 @@ const CHART_VARIANTS = {
   },
   scrollable: {
     legendClassName:
-      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto",
+      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto pb-4 scroll-fade-b",
     rowClassName:
       "flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col",
@@ -123,7 +123,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-1 flex-col gap-3">
       <TooltipProvider>
         <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm">
           {items.map((item) => {

@@ -18,7 +18,7 @@ import { AverageCollectionItemCostByPeriod } from "./charts/average-collection-i
 import { AverageCollectionItemCostToDate } from "./charts/average-collection-item-cost-to-date";
 
 const options = [
-  { value: "cumulative", label: "Cumulative Spending" },
+  { value: "cumulative", label: "Cumulative" },
   { value: "period", label: "Spending by Period" },
   { value: "average-period", label: "Average Cost by Period" },
   { value: "average-to-date", label: "Average Cost to Date" },
@@ -106,7 +106,7 @@ export default function CollectionTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid items-stretch gap-4 lg:grid-cols-3">
+      <div className="grid items-stretch gap-x-10 gap-y-6 lg:grid-cols-3">
         <CollectionSummary data={data} isLoading={isLoading} currency={currency} locale={locale} />
         <div className="min-w-0 lg:col-span-2">{chartNode}</div>
       </div>
@@ -139,7 +139,7 @@ export default function CollectionTab({
           },
         ]}
       />
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div className="grid items-start gap-x-10 gap-y-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <ShopTable
             scope="collection"

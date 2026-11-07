@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ArrowUpDownIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,7 +54,7 @@ export function CurrencySelect({
               <span className="text-muted-foreground">{` — ${CURRENCY_LABELS[value]}`}</span>
             </span>
             <HugeiconsIcon
-              icon={ArrowUpDownIcon}
+              icon={ArrowDown01Icon}
               data-icon="inline-end"
               className="shrink-0 text-muted-foreground"
             />

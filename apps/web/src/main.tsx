@@ -1,4 +1,4 @@
-import "@fontsource-variable/instrument-sans/index.css";
+import "@fontsource-variable/inter/opsz.css";
 import "@fontsource-variable/orbitron/index.css";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Loading03Icon } from "@hugeicons/core-free-icons";

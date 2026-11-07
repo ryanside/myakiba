@@ -50,11 +50,11 @@ export const Route = createFileRoute("/(app)/lists")({
 
 // Firefox applies the @3xl gaps one style pass late, and the reduced-motion rule would animate the jump.
 const FOLDER_GRID_CLASS_NAME =
-  "grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-8 @3xl:gap-y-6";
+  "-mt-6 grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-6 @3xl:gap-y-0 @6xl:grid-cols-4";
 
 const FOLDER_DROP = {
-  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[17px]",
-  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[17px]",
+  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[13px]",
+  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[13px]",
 };
 
 function SortableList({
@@ -302,7 +302,7 @@ function RouteComponent(): React.JSX.Element {
   );
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-6">
       <PageHeader
         title="Lists"
         meta={isPending || (isError && !data) ? null : formatCount(totalCount, "List", "Lists")}

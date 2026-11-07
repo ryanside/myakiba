@@ -1,129 +1,60 @@
 import {
-  Add01Icon,
-  Calendar01Icon,
-  Home01Icon,
-  ChartColumnIcon,
-  CreditCardIcon,
-  LibraryIcon,
-  PackageIcon,
-  Settings01Icon,
-  Clock02Icon,
-  CheckListIcon,
-  DatabaseIcon,
-  Folder01Icon,
-  StarIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
-
-import { NavMain } from "@/components/sidebar/nav-main";
-import { NavSecondary } from "@/components/sidebar/nav-secondary";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import { useEffect } from "react";
 import { Link, useLocation, useRouter } from "@tanstack/react-router";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
 import { downloadPageBackground } from "@/lib/page-background";
-import SyncWidget from "../sync/sync-widget";
-import { Button } from "../ui/button";
 
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: Home01Icon,
-    },
-    {
-      title: "Analytics",
-      url: "/analytics",
-      icon: ChartColumnIcon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
-      title: "Expenses",
-      url: "/expenses",
-      icon: CreditCardIcon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
-      title: "Orders",
-      url: "/orders",
-      icon: PackageIcon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
-      title: "Collection",
-      url: "/collection",
-      icon: LibraryIcon,
-    },
-    {
-      title: "Wishlist",
-      url: "/wishlist",
-      icon: StarIcon,
-    },
-    {
-      title: "Lists",
-      url: "/lists",
-      icon: Folder01Icon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
-      title: "Item Database",
-      url: "/items",
-      icon: DatabaseIcon,
-    },
-    {
-      title: "Calendar",
-      url: "/calendar",
-      icon: Calendar01Icon,
-    },
-    {
-      title: "Import history",
-      url: "/sync",
-      icon: Clock02Icon,
-      pathnameMatch: "prefix" as const,
-    },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings01Icon,
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Changelog",
-      url: "/changelog" as const,
-      icon: Clock02Icon,
-      iconType: "hugeicon" as const,
-      external: false as const,
-    },
-    {
-      title: "Discord",
-      url: "https://discord.gg/VKHVvhcC2z",
-      icon: DiscordLogo,
-      iconType: "component" as const,
-      external: true as const,
-    },
-    {
-      title: "GitHub",
-      url: "https://github.com/ryanside/myakiba",
-      icon: GitHubLogo,
-      iconType: "component" as const,
-      external: true as const,
-    },
-  ],
+type NavItem = {
+  readonly title: string;
+  readonly url: string;
+  readonly pathnameMatch?: "prefix";
 };
+
+const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly NavItem[] }[] = [
+  {
+    label: "Overview",
+    items: [
+      { title: "Dashboard", url: "/dashboard" },
+      { title: "Calendar", url: "/calendar" },
+      { title: "Analytics", url: "/analytics", pathnameMatch: "prefix" },
+      { title: "Expenses", url: "/expenses", pathnameMatch: "prefix" },
+    ],
+  },
+  {
+    label: "Library",
+    items: [
+      { title: "Collection", url: "/collection" },
+      { title: "Orders", url: "/orders", pathnameMatch: "prefix" },
+      { title: "Wishlist", url: "/wishlist" },
+      { title: "Lists", url: "/lists", pathnameMatch: "prefix" },
+      { title: "Item Database", url: "/items" },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { title: "Import history", url: "/sync", pathnameMatch: "prefix" },
+      { title: "Settings", url: "/settings" },
+    ],
+  },
+];
+
+const FOOTER_LINKS = [
+  { title: "Changelog", url: "/changelog", external: false },
+  { title: "Discord", url: "https://discord.gg/VKHVvhcC2z", external: true },
+  { title: "GitHub", url: "https://github.com/ryanside/myakiba", external: true },
+] as const;
 
 function useWarmDestinations(urls: readonly string[]) {
   const router = useRouter();
@@ -145,71 +76,100 @@ function useWarmDestinations(urls: readonly string[]) {
   }, [router, urls]);
 }
 
-const navMainUrls = data.navMain.map((item) => item.url);
+const navMainUrls = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.url));
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   useWarmDestinations(navMainUrls);
 
   return (
-    <Sidebar variant="inset" collapsible="icon" {...props}>
-      <SidebarRail className="hover:after:bg-transparent" />
-      <SidebarHeader className="py-0">
+    <Sidebar variant="sidebar" collapsible="offcanvas" {...props}>
+      <SidebarHeader className="px-3 pt-4 pb-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              size="lg"
-              className="flex justify-start items-center bg-transparent! group-data-[collapsible=icon]:p-0! w-full"
+              aria-label="myakiba dashboard"
+              className="h-9 w-fit px-2 hover:bg-transparent active:bg-transparent"
               render={<Link to="/dashboard" />}
             >
-              <MyAkibaLogo
-                size="icon"
-                className="ml-2 scale-175 opacity-0 group-data-[collapsible=icon]:opacity-100 transition-opacity duration-100 ease-in-out"
-              />
-              <MyAkibaLogo
-                size="full"
-                className="ml-1 scale-500 opacity-100 group-data-[collapsible=icon]:opacity-0 transition-opacity duration-100 ease-in-out"
-              />
+              <MyAkibaLogo size="full" className="my-0 h-[1.125rem]! w-[5.75rem]!" />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-0">
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SyncWidget
-                TriggerWrapper={
-                  <SidebarMenuButton
-                    className="transition-colors hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-open:hover:bg-primary/90 data-open:hover:text-primary-foreground"
-                    tooltip="Add"
-                    render={
-                      <Button variant="default" className="justify-start">
-                        <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                        <span>Add</span>
-                      </Button>
-                    }
-                  />
-                }
-              />
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-        <NavMain items={data.navMain} location={location} />
+      <SidebarContent className="gap-0 px-3">
+        <nav aria-label="Main">
+          {NAV_GROUPS.map((group) => (
+            <SidebarGroup key={group.label} className="px-0 py-2">
+              <SidebarGroupLabel
+                id={`nav-group-${group.label.toLowerCase()}`}
+                className="eyebrow h-6 px-2 text-[0.6875rem] tracking-tight text-muted-foreground/70"
+              >
+                {group.label}
+              </SidebarGroupLabel>
+              <SidebarMenu
+                className="gap-0"
+                aria-labelledby={`nav-group-${group.label.toLowerCase()}`}
+              >
+                {group.items.map((item) => {
+                  const isActive =
+                    item.pathnameMatch === "prefix"
+                      ? location.pathname.startsWith(item.url)
+                      : location.pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        className="h-8 gap-2 px-2 text-sm text-muted-foreground transition-colors duration-150 ease-out hover:bg-transparent hover:text-foreground active:bg-transparent data-active:bg-transparent data-active:font-medium data-active:text-foreground"
+                        render={<Link to={item.url} preload="intent" />}
+                      >
+                        <span>{item.title}</span>
+                        {isActive ? (
+                          <span aria-hidden className="size-1.5 rounded-full bg-foreground" />
+                        ) : null}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
+        </nav>
       </SidebarContent>
-      <SidebarFooter className="px-0">
-        <NavSecondary items={data.navSecondary} className="mt-auto text-muted-foreground">
-          <SidebarMenuItem>
-            <OnboardingDialog
-              renderTrigger={
-                <SidebarMenuButton size="sm">
-                  <HugeiconsIcon icon={CheckListIcon} />
-                  <span>Getting Started</span>
-                </SidebarMenuButton>
-              }
-            />
-          </SidebarMenuItem>
-        </NavSecondary>
+      <SidebarFooter className="gap-1 px-5 pb-5">
+        <OnboardingDialog
+          renderTrigger={
+            <button
+              type="button"
+              className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring transition-colors hover:text-foreground focus-visible:outline-2"
+            >
+              Getting started
+            </button>
+          }
+        />
+        <SidebarMenu className="gap-0">
+          {FOOTER_LINKS.map((link) => (
+            <SidebarMenuItem key={link.title}>
+              <SidebarMenuButton
+                size="sm"
+                className="h-7 px-0 text-[0.8125rem] text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent"
+                render={
+                  link.external ? (
+                    (renderProps) => (
+                      <a {...renderProps} href={link.url} target="_blank" rel="noopener noreferrer">
+                        {renderProps.children}
+                      </a>
+                    )
+                  ) : (
+                    <Link to={link.url} />
+                  )
+                }
+              >
+                {link.title}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );

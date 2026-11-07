@@ -419,7 +419,7 @@ test("saved preferences reach the route context without a page reload", async ()
   const requests = sessionRequests;
 
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
   await screen.findByText("Preferences updated successfully");
   await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
   check.resolve(null);
