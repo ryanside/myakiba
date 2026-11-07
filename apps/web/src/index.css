@@ -204,6 +204,7 @@
   --motion-toast-in: 400ms;
   --motion-toast-out: 200ms;
   --motion-collapse: 200ms;
+  --motion-move: 150ms;
   --motion-data-in: 250ms;
   --press-scale: 0.97;
   --press-scale-text: 0.96;
@@ -220,6 +221,7 @@
   --rise: 3px;
   --appear-rise: 8px;
   --bar-rise: 8px;
+  --nudge: 0.125rem;
 }
 
 :root[data-reduce-motion] {
@@ -235,7 +237,9 @@
   --rise: 0px;
   --appear-rise: 0px;
   --bar-rise: 0px;
+  --nudge: 0px;
   --motion-collapse: 0ms;
+  --motion-move: 0ms;
 }
 
 :root[data-reduce-motion] * {
@@ -584,6 +588,14 @@ body {
 @utility collapse-chevron {
   transition-property: rotate;
   transition-duration: var(--motion-collapse);
+  transition-timing-function: var(--ease-out);
+}
+
+/* A control sliding or turning to its new state, as a switch thumb or a row chevron does. Under
+   reduced motion it snaps there. */
+@utility move-motion {
+  transition-property: translate, rotate, scale;
+  transition-duration: var(--motion-move);
   transition-timing-function: var(--ease-out);
 }
 

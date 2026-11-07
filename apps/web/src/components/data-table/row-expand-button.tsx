@@ -23,10 +23,7 @@ export function RowExpandButton<TData>({ row }: { readonly row: Row<TData> }): R
     >
       <HugeiconsIcon
         icon={ExpandIcon}
-        className={cn(
-          "text-muted-foreground transition-transform duration-150 ease-out",
-          isExpanded && "rotate-90",
-        )}
+        className={cn("text-muted-foreground move-motion", isExpanded && "rotate-90")}
       />
     </Button>
   );

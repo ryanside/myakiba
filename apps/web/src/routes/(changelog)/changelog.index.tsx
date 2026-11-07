@@ -78,7 +78,7 @@ function ChangelogIndex() {
                       icon={NavigateIcon}
                       className={cn(
                         ARROW_ICON_CLASS_NAME,
-                        "group-hover:translate-x-0.5 size-3 mt-0.5",
+                        "group-hover:translate-x-(--nudge) size-3 mt-0.5",
                       )}
                       aria-hidden
                     />

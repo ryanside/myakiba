@@ -471,7 +471,7 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
           "size-4 shrink-0 text-muted-foreground",
           "transition-[translate,color] duration-200",
           EASE_OUT,
-          "group-hover:translate-x-0.5 group-hover:text-foreground",
+          "group-hover:translate-x-(--nudge) group-hover:text-foreground",
         )}
       />
     </Button>
