@@ -285,10 +285,13 @@ body {
 }
 
 @layer base {
+  /* The page is the only scrollbar: inner scrollers still scroll, but draw no bar. */
   * {
     @apply border-border outline-ring/50;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-width: none;
+  }
+  :where(:not(html, body))::-webkit-scrollbar {
+    display: none;
   }
   body {
     @apply bg-background text-foreground;
@@ -299,6 +302,8 @@ body {
     @apply font-sans;
     /* Weights stop at medium; never let the browser fake a bold or an italic. */
     font-synthesis: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
     scrollbar-gutter: stable;
   }
 }

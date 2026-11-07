@@ -3,8 +3,16 @@ import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { cn } from "@/lib/utils";
-import { DataTable, DATA_TABLE_NUMBER_META } from "@/components/data-table/data-table";
+import {
+  CellSkeleton,
+  DataTable,
+  DATA_TABLE_NUMBER_META,
+  DATA_TABLE_SKELETON,
+} from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -12,31 +20,37 @@ export interface RowNavigation {
 }
 
 type CellValue = string | number | null;
+type RankedBy = "itemCount" | "totalSpent";
+type Preferences = Pick<ReturnType<typeof useUserPreferences>, "currency" | "locale">;
 type RowIdKey<TRow> = {
   [Key in keyof TRow]-?: TRow[Key] extends string | number ? Key : never;
 }[keyof TRow];
 
 type ColumnSpec = {
   readonly label: string;
-  /** Number columns: [plain, with a bar] header widths and the figure's minimum width. */
-  readonly number?: {
-    readonly widths: readonly [string, string];
-    readonly figureWidth: string;
-  };
+  /** The loading bar; text columns without one get DataTable's lines of text. */
+  readonly skeleton?: ReactNode;
+  /** Money columns hold minor units and show in the user's currency. */
+  readonly format?: "money";
+  /** Number columns: [plain, with a bar] header widths. */
+  readonly number?: { readonly widths: readonly [string, string] };
 };
 
 const COLUMN_SPECS = {
   name: { label: "Name" },
   shop: { label: "Shop" },
-  scale: { label: "Scale" },
+  scale: { label: "Scale", skeleton: <CellSkeleton className="w-8" /> },
   // Bars only fit once the table has a full-width column, from lg; below that the figures stand alone.
   itemCount: {
     label: "Count",
-    number: { widths: ["w-16", "w-16 lg:w-36"], figureWidth: "min-w-6" },
+    skeleton: DATA_TABLE_SKELETON.count,
+    number: { widths: ["w-16", "w-16 lg:w-36"] },
   },
   totalSpent: {
     label: "Spent",
-    number: { widths: ["w-24", "w-24 lg:w-44"], figureWidth: "min-w-18" },
+    format: "money",
+    skeleton: DATA_TABLE_SKELETON.money,
+    number: { widths: ["w-24", "w-24 lg:w-44"] },
   },
 } as const satisfies Readonly<Record<string, ColumnSpec>>;
 
@@ -44,18 +58,37 @@ export type LeaderboardColumn = keyof typeof COLUMN_SPECS;
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 
-function leaderboardColumns<TRow extends Record<string, CellValue>>(
-  columns: readonly LeaderboardColumn[],
-  formatCell: ((column: string, value: CellValue) => CellValue) | undefined,
-  barColumn: string,
-  barMax: number,
-): ColumnDef<TRow, CellValue>[] {
+function formatCell(
+  spec: ColumnSpec,
+  value: CellValue,
+  { currency, locale }: Preferences,
+): string | number {
+  return (
+    (spec.format === "money" && value !== null
+      ? formatCurrencyFromMinorUnits(Number(value), currency, locale)
+      : value) ?? "—"
+  );
+}
+
+function leaderboardColumns<TRow extends Record<string, CellValue>>({
+  columns,
+  barColumn,
+  barMax,
+  widestBarFigure,
+  currency,
+  locale,
+}: Preferences & {
+  readonly columns: readonly LeaderboardColumn[];
+  readonly barColumn: RankedBy;
+  readonly barMax: number;
+  readonly widestBarFigure: string;
+}): ColumnDef<TRow, CellValue>[] {
   return [
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => row.index + 1,
-      meta: { headerClassName: "w-8" },
+      meta: { headerClassName: "w-8", skeleton: DATA_TABLE_SKELETON.rank },
     },
     ...columns.map((column): ColumnDef<TRow, CellValue> => {
       const spec: ColumnSpec = COLUMN_SPECS[column];
@@ -70,12 +103,16 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
                 DATA_TABLE_NUMBER_META.headerClassName,
                 spec.number.widths[column === barColumn ? 1 : 0],
               ),
-              cellClassName: DATA_TABLE_NUMBER_META.cellClassName,
+              cellClassName: cn(
+                DATA_TABLE_NUMBER_META.cellClassName,
+                column !== barColumn && "text-muted-foreground",
+              ),
+              skeleton: spec.skeleton,
             }
-          : undefined,
+          : { skeleton: spec.skeleton },
         cell: ({ getValue }) => {
           const value = getValue();
-          const shown = (formatCell ? formatCell(column, value) : value) ?? "—";
+          const shown = formatCell(spec, value, { currency, locale });
           if (!spec.number) {
             return (
               <span className="block truncate" title={String(shown)}>
@@ -86,7 +123,7 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
           if (column !== barColumn || barMax <= 0) return shown;
 
           return (
-            <span className="inline-flex items-center justify-end gap-2">
+            <span className="flex items-center justify-end gap-1.5">
               <span
                 aria-hidden
                 className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
@@ -96,8 +133,13 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
                   style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
                 />
               </span>
-              {/* A fixed figure width keeps every bar starting on the same line. */}
-              <span className={cn("inline-block", spec.number.figureWidth)}>{shown}</span>
+              {/* Each figure reserves the widest figure's width, so the bars line up and sit against their figures. */}
+              <span
+                data-widest={widestBarFigure}
+                className="inline-grid justify-items-end before:invisible before:col-start-1 before:row-start-1 before:content-[attr(data-widest)]"
+              >
+                <span className="col-start-1 row-start-1">{shown}</span>
+              </span>
             </span>
           );
         },
@@ -109,7 +151,6 @@ function leaderboardColumns<TRow extends Record<string, CellValue>>(
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
   columns,
-  formatCell,
   rowIdKey,
   getRowNavigation,
   isLoading = false,
@@ -117,28 +158,48 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
 }: {
   readonly rows: readonly TRow[];
   readonly columns: readonly LeaderboardColumn[];
-  readonly formatCell?: (column: string, value: CellValue) => CellValue;
   readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
   readonly isLoading?: boolean;
   /** The column the rows are ranked by; its values get a proportional bar. */
-  readonly rankedBy: "itemCount" | "totalSpent";
+  readonly rankedBy: RankedBy;
 }): ReactNode {
   const navigate = useNavigate();
+  const { currency, locale } = useUserPreferences();
   // useReactTable takes a mutable array, so this copy only drops `readonly`.
   const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
     () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
     [rankedBy, tableData],
   );
+  const widestBarFigure = useMemo(
+    () =>
+      tableData
+        .map((row) =>
+          String(formatCell(COLUMN_SPECS[rankedBy], row[rankedBy] ?? null, { currency, locale })),
+        )
+        .reduce((widest, figure) => (figure.length > widest.length ? figure : widest), ""),
+    [currency, locale, rankedBy, tableData],
+  );
   const tableColumns = useMemo(
-    () => leaderboardColumns<TRow>(columns, formatCell, rankedBy, barMax),
-    [barMax, columns, formatCell, rankedBy],
+    () =>
+      leaderboardColumns<TRow>({
+        columns,
+        barColumn: rankedBy,
+        barMax,
+        widestBarFigure,
+        currency,
+        locale,
+      }),
+    [barMax, columns, currency, locale, rankedBy, widestBarFigure],
   );
   const table = useReactTable({
     data: tableData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    // The rows arrive ranked; declaring the order sets aria-sort on the ranked header without re-sorting.
+    manualSorting: true,
+    state: { sorting: [{ id: rankedBy, desc: true }] },
     getRowId: (row) => String(row[rowIdKey]),
   });
 
@@ -147,6 +208,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
       table={table}
       tableClassName="table-fixed"
       isLoading={isLoading}
+      skeletonRowCount={ANALYTICS_LEADERBOARD_SIZE}
       empty={<p className="text-muted-foreground text-xs">No data</p>}
       onRowClick={(row) => {
         const rowNav = getRowNavigation?.(row.original);

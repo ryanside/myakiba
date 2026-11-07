@@ -1,11 +1,15 @@
 import { afterEach, expect, test } from "bun:test";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { createOrdersColumns } from "./orders-columns";
 import { OrderPendingContext } from "./order-pending-context";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  edits.length = 0;
+});
 
 function order(orderId: string): Order {
   return {
@@ -33,8 +37,12 @@ function order(orderId: string): Order {
   };
 }
 
+const edits: [EditedOrder, CascadeOptions][] = [];
+
 const columns = createOrdersColumns({
-  onEditOrder: async () => {},
+  onEditOrder: async (values, cascade) => {
+    edits.push([values, cascade]);
+  },
   onDeleteOrders: async () => {},
   onEditItem: async () => {},
   onDeleteItem: async () => {},
@@ -43,7 +51,13 @@ const columns = createOrdersColumns({
   dateFormat: "MM/DD/YYYY",
 });
 
-function StatusCells({ orders }: { readonly orders: readonly Order[] }) {
+function ColumnCells({
+  orders,
+  columnId,
+}: {
+  readonly orders: readonly Order[];
+  readonly columnId: string;
+}) {
   const table = useReactTable({
     data: [...orders],
     columns,
@@ -51,7 +65,7 @@ function StatusCells({ orders }: { readonly orders: readonly Order[] }) {
     getRowId: (row) => row.orderId,
   });
   return table.getRowModel().rows.map((row) => {
-    const cell = row.getAllCells().find(({ column }) => column.id === "status");
+    const cell = row.getAllCells().find(({ column }) => column.id === columnId);
     return (
       <div key={row.id} data-testid={row.id}>
         {cell ? flexRender(cell.column.columnDef.cell, cell.getContext()) : null}
@@ -68,7 +82,7 @@ test("disables only the pending order's cells", () => {
         isCollectionItemPending: () => false,
       }}
     >
-      <StatusCells orders={[order("saving"), order("idle")]} />
+      <ColumnCells orders={[order("saving"), order("idle")]} columnId="status" />
     </OrderPendingContext>,
   );
 
@@ -78,7 +92,43 @@ test("disables only the pending order's cells", () => {
 });
 
 test("refuses to render without a pending provider", () => {
-  expect(() => render(<StatusCells orders={[order("saving")]} />)).toThrow(
+  expect(() => render(<ColumnCells orders={[order("saving")]} columnId="status" />)).toThrow(
     "Order rows must render inside OrdersDataGrid or the order detail page, or provide OrderPendingContext",
   );
+});
+
+const { createdAt: _createdAt, updatedAt: _updatedAt, ...savedOrder } = order("o1");
+
+test("saves a shop edit without timestamps, cascading the shop to its items", async () => {
+  render(
+    <OrderPendingContext
+      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+    >
+      <ColumnCells orders={[order("o1")]} columnId="shop" />
+    </OrderPendingContext>,
+  );
+
+  fireEvent.focus(screen.getByRole("button", { name: "AmiAmi, edit Shop" }));
+  const editor = screen.getByRole("textbox", { name: "Shop" });
+  fireEvent.change(editor, { target: { value: "HLJ" } });
+  fireEvent.keyDown(editor, { key: "Enter" });
+
+  await waitFor(() => expect(edits).toEqual([[{ ...savedOrder, shop: "HLJ" }, ["shop"]]]));
+});
+
+test("saves a fee edit without cascading", async () => {
+  render(
+    <OrderPendingContext
+      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+    >
+      <ColumnCells orders={[order("o1")]} columnId="taxes" />
+    </OrderPendingContext>,
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "$0.00, edit Taxes" }));
+  const editor = screen.getByRole("textbox", { name: "Taxes" });
+  fireEvent.change(editor, { target: { value: "5" } });
+  fireEvent.keyDown(editor, { key: "Enter" });
+
+  await waitFor(() => expect(edits).toEqual([[{ ...savedOrder, taxes: 500 }, []]]));
 });

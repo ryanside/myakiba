@@ -1,71 +1,21 @@
 import { $ } from "bun";
-import { lstatSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-type TestReplayEntry = {
-  fix: string;
-  base?: string;
-  bug: string;
-  test: string;
-  fixed: string[];
-  testAt?: string;
-  atHead?: string[];
-};
-type TestReplay = Omit<TestReplayEntry, "testAt" | "atHead"> &
-  ({ testAt: string; atHead: string[] } | { testAt?: never; atHead?: never });
-
-function parseTestReplay(
-  { testAt, atHead, ...replay }: TestReplayEntry,
-  index: number,
-): TestReplay {
-  const invalid = (message: string) => new Error(`scripts/replays.json test[${index}]: ${message}`);
-  if (atHead !== undefined && testAt === undefined) {
-    throw invalid("atHead requires testAt");
-  }
-  if (atHead !== undefined && (!Array.isArray(atHead) || atHead.length === 0)) {
-    throw invalid("atHead must not be empty and must be a list of test names");
-  }
-  return testAt === undefined ? replay : { ...replay, testAt, atHead: atHead ?? replay.fixed };
-}
+import type {
+  KnipReplay,
+  LintReplay,
+  TestReplay,
+  TypesFixture,
+  TypesReplay,
+} from "./replay-config";
+import { parseReplays } from "./replay-config";
+import { snapshotWorkingTree } from "./worktree-snapshot";
 
 type TestHarness = {
   packageDir: string;
   files: string[];
   testSource?: { file: string; source: string };
-};
-
-type LintReplay = {
-  fix: string;
-  bug: string;
-  rule: string;
-  atParent: string[];
-  atFix: string[];
-};
-
-type KnipReplay = {
-  fix: string;
-  bug: string;
-  reports: string[];
-};
-
-type TypesReplay = {
-  name: string;
-  fix: string;
-  bug: string;
-  package: string;
-  config: string[];
-  errors: string[];
-};
-
-/** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
-type TypesFixture = {
-  name: string;
-  bug: string;
-  package: string;
-  file: string;
-  errors: string[];
 };
 
 type LintRule = string | [string, ...unknown[]];
@@ -91,19 +41,12 @@ const root = path.resolve(import.meta.dir, "..");
 const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
-  test: testEntries = [],
-  lint: lintReplays = [],
-  knip: knipReplays = [],
-  types: typesReplays = [],
-  fixtures: fixtureReplays = [],
-}: {
-  test?: TestReplayEntry[];
-  lint?: LintReplay[];
-  knip?: KnipReplay[];
-  types?: TypesReplay[];
-  fixtures?: TypesFixture[];
-} = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
-const testReplays = testEntries.map(parseTestReplay);
+  test: testReplays,
+  lint: lintReplays,
+  knip: knipReplays,
+  types: typesReplays,
+  fixtures: fixtureReplays,
+} = parseReplays(await Bun.file(path.join(import.meta.dir, "replays.json")).json());
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
@@ -463,58 +406,6 @@ async function checkOut(revision: string, harness?: TestHarness) {
   }
 }
 
-function flagged(entries: string[], tag: RegExp) {
-  return entries.filter((entry) => tag.test(entry)).map((entry) => entry.slice(2));
-}
-
-function presentInWorkingTree(file: string) {
-  try {
-    return lstatSync(path.join(root, file), { throwIfNoEntry: false }) !== undefined;
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOTDIR") return false;
-    throw error;
-  }
-}
-
-async function clearIndexFlag(
-  indexEnv: Record<string, string | undefined>,
-  flag: "assume-unchanged" | "skip-worktree",
-  paths: string[],
-) {
-  if (paths.length === 0) return;
-  const input = Buffer.from(`${paths.join("\0")}\0`);
-  await $`git update-index --no-${flag} -z --stdin < ${input}`.cwd(root).env(indexEnv).quiet();
-}
-
-async function commitWorkingTree() {
-  const index = path.join(worktree, ".replay-index");
-  try {
-    const realIndex = await $`git rev-parse --git-path index`.cwd(root).text();
-    const realIndexPath = path.resolve(root, realIndex.trim());
-    // Keep force-staged ignored files and preserve absent sparse paths.
-    const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
-    if (await Bun.file(realIndexPath).exists()) await copyFile(realIndexPath, index);
-    else await $`git read-tree HEAD`.cwd(root).env(indexEnv).quiet();
-    const indexListing = await $`git ls-files -v -z`.cwd(root).env(indexEnv).text();
-    const entries = indexListing.split("\0");
-    // assume-unchanged is a hint; skip-worktree means intended absence, so keep it on missing files.
-    await clearIndexFlag(indexEnv, "assume-unchanged", flagged(entries, /^[a-z] /));
-    await clearIndexFlag(
-      indexEnv,
-      "skip-worktree",
-      flagged(entries, /^[Ss] /).filter(presentInWorkingTree),
-    );
-    const tree = await $`git add -A && git write-tree`.cwd(root).env(indexEnv).quiet().text();
-    const commit = await $`git commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
-      .cwd(root)
-      .quiet()
-      .text();
-    return commit.trim();
-  } finally {
-    await rm(index, { force: true });
-  }
-}
-
 try {
   for (const replay of selectedLint) {
     const typeAware = builtinRule(replay.rule)?.type_aware ?? false;
@@ -542,13 +433,14 @@ try {
     );
   }
 
+  let worktreeSnapshot: Promise<string> | undefined;
   for (const replay of selected) {
     const harness = await harnessOf(replay);
-    const workingTree = replay.fix === "WORKTREE";
-    const base = workingTree ? replay.base : `${replay.fix}^`;
-    if (!base) throw new Error("A WORKTREE replay needs a base revision");
-    const fix = workingTree ? await commitWorkingTree() : replay.fix;
-    await checkOut(base, harness);
+    const fix =
+      replay.fix === "WORKTREE"
+        ? await (worktreeSnapshot ??= snapshotWorkingTree(root))
+        : replay.fix;
+    await checkOut(replay.base, harness);
     const before = await runTest(worktree, replay.test);
     await checkOut(fix, harness);
     const after = await runTest(worktree, replay.test);

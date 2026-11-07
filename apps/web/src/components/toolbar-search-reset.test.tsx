@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,8 +14,12 @@ import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/schema";
 import { CollectionToolbar } from "./collection/collection-toolbar";
 import { OrdersToolbar } from "./orders/orders-toolbar";
+import { toast } from "./ui/toast";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mock.restore();
+});
 
 // The app route awaits a session check on every navigation, so a reset reaches the search box only after the 200 ms debounce.
 const SESSION_CHECK_MS = 250;
@@ -231,5 +235,23 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
       search: router.state.location.search.search,
       shown: input().value,
     }).toEqual({ search: undefined, shown: "" });
+  });
+
+  test("shows an error and returns focus to the search when Reset's navigation rejects", async () => {
+    const { user, router, input, resetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    const added = spyOn(toast, "add");
+    spyOn(router, "navigate").mockRejectedValue(new Error("Navigation failed"));
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      toasts: added.mock.calls.map(([options]) => options),
+      searchFocused: document.activeElement === input(),
+    }).toEqual({
+      toasts: [{ type: "error", title: "Failed to reset filters. Please try again." }],
+      searchFocused: true,
+    });
   });
 });

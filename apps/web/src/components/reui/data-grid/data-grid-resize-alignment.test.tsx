@@ -56,7 +56,7 @@ test("numeric and text columns keep the resize line centered on the handle", () 
   renderGridWithStyles();
   for (const name of ["Name", "Price"]) {
     const header = screen.getByRole("columnheader", { name });
-    const handle = header.querySelector(".cursor-col-resize");
+    const handle = header.querySelector("[data-slot=column-resize-handle]");
     if (!handle) throw new Error(`Missing resize handle for ${name}`);
     expect(getComputedStyle(handle).justifyContent).toBe("center");
   }
@@ -69,7 +69,7 @@ test("numeric header labels stay right aligned and text labels keep their alignm
     ["Price", "flex-end"],
   ] as const) {
     const header = screen.getByRole("columnheader", { name });
-    const label = header.querySelector("div:not(.cursor-col-resize)");
+    const label = header.querySelector("div:not([data-slot=column-resize-handle])");
     if (!label) throw new Error(`Missing label for ${name}`);
     expect(getComputedStyle(label).justifyContent).toBe(alignment);
   }

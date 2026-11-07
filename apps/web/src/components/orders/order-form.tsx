@@ -652,9 +652,7 @@ function OrderFormContent(
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[70vh] py-4 no-scrollbar scroll-fade-b">
-          {formFields}
-        </div>
+        <div className="overflow-y-auto max-h-[70vh] py-4 scroll-fade-b">{formFields}</div>
 
         <DialogFooter>
           <form.Subscribe

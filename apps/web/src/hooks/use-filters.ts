@@ -27,9 +27,10 @@ export function useFilters<T extends RouteIds<RegisteredRouter["routeTree"]>>(
         offset: shouldResetOffset ? 0 : prev.offset,
         ...partialFilters,
       }),
+      replace: true,
     });
   };
-  const resetFilters = () => navigate({ to: ".", search: {} });
+  const resetFilters = () => navigate({ to: ".", search: {}, replace: true });
 
   return { filters, setFilters, resetFilters };
 }

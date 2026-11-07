@@ -64,6 +64,7 @@ export function ItemDatabase(): React.JSX.Element {
                 navigate({
                   to: ".",
                   search: (previous) => ({ ...previous, page: 1 }),
+                  replace: true,
                 })
               }
             >
@@ -109,6 +110,7 @@ export function ItemDatabase(): React.JSX.Element {
                 query: value.toString() || undefined,
                 page: 1,
               }),
+              replace: true,
             })
           }
           placeholder="Search by title, MFC ID, or entry"
@@ -143,6 +145,7 @@ export function ItemDatabase(): React.JSX.Element {
                   ...previous,
                   page: Math.floor(nextOffset / search.pageSize) + 1,
                 }),
+                replace: true,
               })
             }
           />

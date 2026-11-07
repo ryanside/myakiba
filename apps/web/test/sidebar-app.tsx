@@ -65,7 +65,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  localStorage.removeItem("appearance:pageBackgrounds");
   for (const image of images) image.dispatchEvent(new Event("load"));
   images.length = 0;
   decodedImages.length = 0;

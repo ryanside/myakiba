@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
@@ -7,8 +6,6 @@ import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
 import { Section } from "@/components/analytics/section";
 import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section-utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { shownMessageOf } from "@/lib/api-response";
 
 const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
@@ -38,22 +35,10 @@ export const Route = createFileRoute("/(app)/analytics")({
 });
 
 function RouteComponent(): ReactNode {
-  const { currency, locale } = useUserPreferences();
   const { isPending, isError, data, error } = useRead(analyticsResource.overview);
 
   const analytics = data?.analytics;
   const isLoading = isPending;
-
-  const formatCell = useCallback(
-    (column: string, value: string | number | null): string | number | null => {
-      if (column === "totalSpent" && value !== null) {
-        return formatCurrencyFromMinorUnits(Number(value), currency, locale);
-      }
-
-      return value;
-    },
-    [currency, locale],
-  );
 
   if (isError) {
     return (
@@ -111,7 +96,6 @@ function RouteComponent(): ReactNode {
                   rankedBy="itemCount"
                   rows={entry.topByCount}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
@@ -130,7 +114,6 @@ function RouteComponent(): ReactNode {
                   rankedBy="totalSpent"
                   rows={entry.topBySpend}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
@@ -164,7 +147,6 @@ function RouteComponent(): ReactNode {
                 rankedBy="itemCount"
                 rows={shops.topByCount}
                 columns={SHOP_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -183,7 +165,6 @@ function RouteComponent(): ReactNode {
                 rankedBy="totalSpent"
                 rows={shops.topBySpend}
                 columns={SHOP_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -216,7 +197,6 @@ function RouteComponent(): ReactNode {
                 rankedBy="itemCount"
                 rows={scales.topByCount}
                 columns={SCALE_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -238,7 +218,6 @@ function RouteComponent(): ReactNode {
                 rankedBy="totalSpent"
                 rows={scales.topBySpend}
                 columns={SCALE_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={

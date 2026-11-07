@@ -16,8 +16,9 @@ import {
   DataTable,
   DataTableEmpty,
   DATA_TABLE_NUMBER_META,
+  DATA_TABLE_SKELETON,
 } from "@/components/data-table/data-table";
-import { RowExpandButton } from "@/components/data-table/row-expand-button";
+import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
 import { SearchPill } from "@/components/search-pill";
 import { ExpensePanel } from "@/components/expenses/dashboard-shell";
@@ -201,10 +202,7 @@ function ShopsTable({
         />
       )}
       getCellClassName={(_, columnId) =>
-        cn(
-          columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-          columnId === EXPAND_COLUMN_ID && "w-8",
-        )
+        columnId === ROW_NUMBER_COLUMN_ID ? "text-muted-foreground" : undefined
       }
     />
   );
@@ -224,17 +222,24 @@ function getColumns({
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 32,
+      size: 40,
+      meta: { skeleton: ROW_EXPAND_SKELETON },
     },
-    { id: ROW_NUMBER_COLUMN_ID, header: "#", cell: ({ row }) => offset + row.index + 1, size: 40 },
-    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop" },
+    {
+      id: ROW_NUMBER_COLUMN_ID,
+      header: "#",
+      cell: ({ row }) => offset + row.index + 1,
+      size: 40,
+      meta: { skeleton: DATA_TABLE_SKELETON.rank },
+    },
+    { id: "shop", accessorFn: (row) => row.shop || "Unassigned", header: "Shop", size: 150 },
     {
       id: "spend",
       accessorFn: (row) => row.spend,
       header: "Spend",
       cell: ({ getValue }) => formatCurrency(Number(getValue())),
       size: 96,
-      meta: DATA_TABLE_NUMBER_META,
+      meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
     },
     {
       id: "share",
@@ -242,7 +247,7 @@ function getColumns({
       header: "Share",
       cell: ({ getValue }) => `${Number(getValue()).toFixed(1)}%`,
       size: 72,
-      meta: DATA_TABLE_NUMBER_META,
+      meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.percent },
     },
   ];
 
@@ -253,7 +258,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "collection" ? row.itemCount : 0),
         header: "Items",
         size: 64,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageItemCost",
@@ -261,7 +266,7 @@ function getColumns({
         header: "Average Item Cost",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   } else if (scope === "orders") {
@@ -271,7 +276,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "orders" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageOrder",
@@ -279,14 +284,14 @@ function getColumns({
         header: "Average Order",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 104,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
       {
         id: "orderItemCount",
         accessorFn: (row) => (row.scope === "orders" ? row.orderItemCount : 0),
         header: "Order Items",
         size: 88,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "fees",
@@ -294,7 +299,7 @@ function getColumns({
         header: "Fees",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 88,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   } else {
@@ -304,7 +309,7 @@ function getColumns({
         accessorFn: (row) => (row.scope === "shipping" ? row.orderCount : 0),
         header: "Orders",
         size: 64,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.count },
       },
       {
         id: "averageShipping",
@@ -312,7 +317,7 @@ function getColumns({
         header: "Average Shipping",
         cell: ({ getValue }) => formatCurrency(Number(getValue())),
         size: 120,
-        meta: DATA_TABLE_NUMBER_META,
+        meta: { ...DATA_TABLE_NUMBER_META, skeleton: DATA_TABLE_SKELETON.money },
       },
     );
   }

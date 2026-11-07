@@ -155,7 +155,7 @@ function DataGridTableHeadRowCell<TData>({
         props.tableLayout?.columnsResizable && column.getCanResize() && "truncate",
         props.tableLayout?.columnsPinnable &&
           column.getCanPin() &&
-          "[&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted/90 data-pinned:backdrop-blur-xs [&:not([data-pinned]):has(+[data-pinned])_div.cursor-col-resize:last-child]:opacity-0 [&[data-last-col=left]_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s!",
+          "[&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted/90 data-pinned:backdrop-blur-xs [&:not([data-pinned]):has(+[data-pinned])_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-last-col=left]_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s!",
         header.column.columnDef.meta?.headerClassName,
         column.getIndex() === 0 || column.getIndex() === header.headerGroup.headers.length - 1
           ? props.tableClassNames?.edgeCell
@@ -173,6 +173,7 @@ function DataGridTableHeadRowCellResize<TData>({ header }: { header: Header<TDat
   return (
     <div
       {...{
+        "data-slot": "column-resize-handle",
         onDoubleClick: () => column.resetSize(),
         onMouseDown: header.getResizeHandler(),
         onTouchStart: header.getResizeHandler(),

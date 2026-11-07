@@ -62,6 +62,7 @@ function RouteComponent(): ReactNode {
     (next: ExpenseFilters): void => {
       navigate({
         search: { ...next, tab: tab === "collection" ? undefined : tab },
+        replace: true,
         resetScroll: false,
       });
     },
@@ -70,6 +71,7 @@ function RouteComponent(): ReactNode {
   const clearFilters = useCallback((): void => {
     navigate({
       search: { tab: tab === "collection" ? undefined : tab },
+      replace: true,
       resetScroll: false,
     });
   }, [navigate, tab]);

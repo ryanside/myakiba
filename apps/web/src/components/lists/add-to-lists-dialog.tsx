@@ -326,7 +326,7 @@ function AddToListsForm({
             return lists.length > 0 ? (
               <FieldSet>
                 <FieldLegend className="sr-only">Lists</FieldLegend>
-                <ScrollArea className="max-h-72 pr-3 [&_[data-slot=scroll-area-scrollbar]]:hidden">
+                <ScrollArea className="max-h-72 pr-3">
                   <FieldGroup className="gap-3">
                     {lists.map((list) => (
                       <form.Subscribe key={list.id} selector={(state) => state.isSubmitting}>

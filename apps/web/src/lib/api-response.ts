@@ -45,16 +45,26 @@ export async function requireData<Data>(
 /** A visible character: not whitespace and not an invisible format character such as U+200B. */
 const serverMessage = z.string().regex(/[^\s\p{Cf}]/u);
 
+function isRejection(error: Error | null): error is ApiError {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500;
+}
+
 /** Only a 4xx text body with visible text is a message the server wrote for the user. */
 function userMessageOf(error: Error | null): string | undefined {
-  if (!(error instanceof ApiError) || error.status < 400 || error.status >= 500) return undefined;
+  if (!isRejection(error)) return undefined;
   const message = serverMessage.safeParse(error.cause);
   return message.success ? message.data : undefined;
 }
 
 const NO_ANSWER_MESSAGE = "The server didn't answer.";
+const REJECTED_MESSAGE = "The server rejected this request.";
 
-/** The server's message for the user, or `fallback` when it wrote none. */
-export function shownMessageOf(error: Error | null, fallback = NO_ANSWER_MESSAGE): string {
-  return userMessageOf(error) ?? fallback;
+/**
+ * The server's message for the user, else `fallback`, else a message for how the request failed:
+ * a 4xx without text, such as a validation body, was rejected, and anything else got no answer.
+ */
+export function shownMessageOf(error: Error | null, fallback?: string): string {
+  return (
+    userMessageOf(error) ?? fallback ?? (isRejection(error) ? REJECTED_MESSAGE : NO_ANSWER_MESSAGE)
+  );
 }

@@ -96,7 +96,7 @@ export function SortCombobox({
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList id={listboxId} hideScrollbar={false}>
+          <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
               {columns.map((column) => {

@@ -71,9 +71,9 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
 
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
   const smallestPageSize = mergedProps.sizes?.length ? Math.min(...mergedProps.sizes) : pageSize;
+  const hasOtherPages = pageCount > 1 || offset > 0;
   // Nothing to page through: every row fits on the smallest page size.
-  const fitsOnSmallestPage =
-    recordCount > 0 && offset === 0 && pageCount <= 1 && recordCount <= smallestPageSize;
+  const fitsOnSmallestPage = recordCount > 0 && !hasOtherPages && recordCount <= smallestPageSize;
 
   const currentGroupStart =
     Math.floor(Math.min(pageIndex, lastPageIndex) / paginationMoreLimit) * paginationMoreLimit;
@@ -170,7 +170,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
         <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
           {paginationInfo}
         </div>
-        {(pageCount > 1 || offset > 0) && (
+        {hasOtherPages && (
           <div className="order-1 flex items-center space-x-1 sm:order-2">
             <Button
               size="icon-sm"

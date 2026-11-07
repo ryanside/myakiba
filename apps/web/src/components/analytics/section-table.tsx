@@ -22,8 +22,8 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
-import { RowExpandButton } from "@/components/data-table/row-expand-button";
+import { DataTable, DataTableEmpty, DATA_TABLE_SKELETON } from "@/components/data-table/data-table";
+import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
@@ -41,25 +41,31 @@ function createSectionColumns({
   readonly locale: string;
   readonly offset: number;
 }): ColumnDef<AnalyticsSectionRow>[] {
+  // Below 440 px the expand button and the figures need more than their size's share, so the
+  // narrow table gets its own shares.
   return [
     {
       id: EXPAND_COLUMN_ID,
       header: "",
       cell: ({ row }) => <RowExpandButton row={row} />,
-      size: 32,
+      size: 40,
+      meta: { headerClassName: "max-[440px]:w-[11.2%]", skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
       size: 40,
+      meta: { headerClassName: "max-[440px]:w-[9.7%]", skeleton: DATA_TABLE_SKELETON.rank },
     },
     {
       id: "name",
       accessorFn: (row) => row.name,
       header: ({ column }) => <SortableHeader column={column} title="name" />,
       cell: ({ getValue }) => getValue() ?? "—",
+      size: 150,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[32.7%]" },
     },
     {
       id: "itemCount",
@@ -68,6 +74,7 @@ function createSectionColumns({
       cell: ({ getValue }) => getValue() ?? "—",
       size: 80,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[20.6%]", skeleton: DATA_TABLE_SKELETON.count },
     },
     {
       id: "totalSpent",
@@ -79,6 +86,7 @@ function createSectionColumns({
       },
       size: 100,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[25.8%]", skeleton: DATA_TABLE_SKELETON.money },
     },
   ];
 }
@@ -87,6 +95,7 @@ export function SectionTable({
   rows,
   sectionName,
   offset,
+  pageSize,
   isLoading,
   sort,
   order,
@@ -95,6 +104,7 @@ export function SectionTable({
   readonly rows: readonly AnalyticsSectionRow[];
   readonly sectionName: AnalyticsSection;
   readonly offset: number;
+  readonly pageSize: number;
   readonly isLoading: boolean;
   readonly sort?: AnalyticsSectionSort;
   readonly order?: AnalyticsSectionSortOrder;
@@ -159,6 +169,7 @@ export function SectionTable({
       <DataTable
         table={table}
         isLoading={isLoading}
+        skeletonRowCount={pageSize}
         empty={<DataTableEmpty title={`No ${sectionName} found`} />}
         variant="sized"
         onRowClick={(row) => row.toggleExpanded()}
@@ -168,7 +179,6 @@ export function SectionTable({
         getCellClassName={(_, columnId) =>
           cn(
             columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-            columnId === EXPAND_COLUMN_ID && "w-8",
             (columnId === ROW_NUMBER_COLUMN_ID ||
               columnId === "itemCount" ||
               columnId === "totalSpent") &&

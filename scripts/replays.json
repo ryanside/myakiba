@@ -274,7 +274,8 @@
         "Reset Filters on /orders > drops a first search typed just before Reset, though Reset leaves the search unchanged",
         "Reset Filters on /collection > drops text typed after an outside change when Reset comes within the debounce",
         "Reset Filters on /collection > drops a first search typed just before Reset, though Reset leaves the search unchanged"
-      ]
+      ],
+      "testAt": "21ded567"
     },
     {
       "fix": "c4d771e6",
@@ -718,7 +719,8 @@
       "fix": "c05a2273",
       "bug": "short multiline List descriptions hid saved line breaks without offering expansion",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
-      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"],
+      "testAt": "c05a2273"
     },
     {
       "fix": "df1c043f",
@@ -908,7 +910,8 @@
       "fixed": [
         "Reset Filters on /orders > hides when an outside change clears a search typed and committed here",
         "Reset Filters on /collection > hides when an outside change clears a search typed and committed here"
-      ]
+      ],
+      "testAt": "9184d20a"
     },
     {
       "fix": "09df27eb",
@@ -951,7 +954,8 @@
       "fix": "883f7844",
       "bug": "number column headers pushed their resize line about 7px past the column border",
       "test": "apps/web/src/components/reui/data-grid/data-grid-resize-alignment.test.tsx",
-      "fixed": ["numeric and text columns keep the resize line centered on the handle"]
+      "fixed": ["numeric and text columns keep the resize line centered on the handle"],
+      "testAt": "883f7844"
     },
     {
       "fix": "1bf403dc",
@@ -985,7 +989,8 @@
         "Reset Filters on /collection > keeps Reset while an outside clear is deferred by the focused search",
         "Reset Filters on /orders > hides Reset when blur applies a deferred outside clear",
         "Reset Filters on /collection > hides Reset when blur applies a deferred outside clear"
-      ]
+      ],
+      "testAt": "1760b4ea"
     },
     {
       "fix": "b9e77e3e",
@@ -1064,7 +1069,8 @@
       "fixed": [
         "Reset Filters on /orders > clears a deferred search and restores focus when Reset is shown only for its text",
         "Reset Filters on /collection > clears a deferred search and restores focus when Reset is shown only for its text"
-      ]
+      ],
+      "testAt": "0dc2bd69"
     },
     {
       "fix": "8f8b0e1c",
@@ -1121,7 +1127,8 @@
       "fix": "cd4459a4",
       "bug": "a pinned WORKTREE replay wrote a temporary test into the working checkout that could survive interruption",
       "test": "scripts/replay.test.ts",
-      "fixed": ["a pinned WORKTREE replay never writes into the working checkout"]
+      "fixed": ["a pinned WORKTREE replay never writes into the working checkout"],
+      "testAt": "cd4459a4"
     },
     {
       "fix": "a7cbcf57",
@@ -1130,7 +1137,8 @@
       "fixed": [
         "a pinned replay fails when its guarding test no longer passes at HEAD",
         "a pinned replay fails when an explicit HEAD alias is missing"
-      ]
+      ],
+      "testAt": "a7cbcf57"
     },
     {
       "fix": "d338a94b",
@@ -1139,13 +1147,18 @@
       "fixed": [
         "a WORKTREE replay keeps tracked files even when Git ignores them",
         "a WORKTREE replay keeps tracked ignored files with no index file"
-      ]
+      ],
+      "testAt": "5adeea02",
+      "atHead": ["a WORKTREE replay detects a real behavior change"]
     },
     {
       "fix": "79e474c1",
       "bug": "a failed Reset left focus on the page body instead of the remounted search field",
-      "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
-      "fixed": ["a rejected Reset navigation restores focus to the remounted search field"]
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > shows an error and returns focus to the search when Reset's navigation rejects",
+        "Reset Filters on /collection > shows an error and returns focus to the search when Reset's navigation rejects"
+      ]
     },
     {
       "fix": "28c946cc",
@@ -1154,13 +1167,17 @@
       "fixed": [
         "a pinned replay rejects an empty HEAD alias list before running tests",
         "an unpinned replay rejects HEAD aliases before running tests"
-      ]
+      ],
+      "testAt": "28c946cc",
+      "atHead": ["a pinned replay fails when an explicit HEAD alias is missing"]
     },
     {
       "fix": "e1cffa5d",
       "bug": "WORKTREE snapshots dropped force-staged ignored files that were not yet committed",
       "test": "scripts/replay.test.ts",
-      "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"]
+      "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"],
+      "testAt": "e1cffa5d",
+      "atHead": ["a WORKTREE replay detects a real behavior change"]
     },
     {
       "fix": "875312fc",
@@ -1187,16 +1204,9 @@
       "fix": "920dab4b",
       "bug": "a WORKTREE replay crashed with ENOENT in a checkout that had no index file yet",
       "test": "scripts/replay.test.ts",
-      "fixed": ["a WORKTREE replay works in a checkout with no index file"]
-    },
-    {
-      "fix": "d8fefa04",
-      "bug": "WORKTREE snapshots copied assume-unchanged and skip-worktree bits from the real index, so edits to those files never reached the snapshot",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures edits with assume-unchanged and preserves the real index",
-        "a WORKTREE replay captures edits with skip-worktree and preserves the real index"
-      ]
+      "fixed": ["a WORKTREE replay works in a checkout with no index file"],
+      "testAt": "920dab4b",
+      "atHead": ["a WORKTREE replay detects a real behavior change"]
     },
     {
       "fix": "611d239c",
@@ -1217,27 +1227,12 @@
       ]
     },
     {
-      "fix": "feed6ec4",
-      "bug": "a WORKTREE snapshot crashed with ENOTDIR when a flagged file's directory had been replaced by a regular file",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures a directory replaced by a file with assume-unchanged and preserves the real index",
-        "a WORKTREE replay captures a directory replaced by a file with skip-worktree and preserves the real index"
-      ]
-    },
-    {
-      "fix": "f75b6184",
-      "bug": "a deleted assume-unchanged file stayed in the WORKTREE snapshot",
-      "test": "scripts/replay.test.ts",
-      "fixed": [
-        "a WORKTREE replay captures assume-unchanged deletions and keeps missing sparse files"
-      ]
-    },
-    {
       "fix": "5adeea02",
       "bug": "with no index file, a WORKTREE snapshot dropped tracked files that match .gitignore",
       "test": "scripts/replay.test.ts",
-      "fixed": ["a WORKTREE replay keeps tracked ignored files with no index file"]
+      "fixed": ["a WORKTREE replay keeps tracked ignored files with no index file"],
+      "testAt": "5adeea02",
+      "atHead": ["a WORKTREE replay detects a real behavior change"]
     },
     {
       "fix": "037f912d",
@@ -1255,6 +1250,119 @@
       "bug": "the account menu's theme tablist had no accessible name",
       "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
       "fixed": ["the account menu's theme tablist has an accessible name"]
+    },
+    {
+      "fix": "24a766af",
+      "bug": "every search, filter, sort and page change pushed a history entry, so Back stepped through filter states instead of leaving the page",
+      "test": "apps/web/src/components/filter-history.test.tsx",
+      "fixed": [
+        "changing a page's own search state leaves Back pointing at the previous page > analytics section search, then its Back link",
+        "changing a page's own search state leaves Back pointing at the previous page > orders search and Reset Filters, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Item Database search, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Wishlist release filter, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Calendar month change, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Expenses date preset, then browser Back"
+      ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "Elysia split a comma in a free-text query value into an array and JSON-parsed bracketed values, so searching \",\" answered 422",
+      "test": "apps/server/src/boundary/query-text.test.ts",
+      "fixed": [
+        "a free-text query value reaches the route as the text the client sent > search=%2C",
+        "a free-text query value reaches the route as the text the client sent > search=a,b",
+        "a free-text query value reaches the route as the text the client sent > search=a%2Cb",
+        "a free-text query value reaches the route as the text the client sent > search=%5B1%5D",
+        "a free-text query value reaches the route as the text the client sent > search=%7B%7D"
+      ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "an analytics section search containing a comma answered 422",
+      "test": "apps/server/src/routers/analytics/rankings.test.ts",
+      "fixed": [
+        "a section search for %2C answers with no rows",
+        "a section search for a,b answers with no rows"
+      ]
+    },
+    {
+      "fix": "c6ea6429",
+      "bug": "a 4xx without a usable message showed \"The server didn't answer.\" although the server answered",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection load errors > shows the rejected-request message for a 422 validation body",
+        "Orders load errors > shows the rejected-request message for a 422 validation body",
+        "Expenses load errors > shows the rejected-request message for a 422 validation body",
+        "Lists load errors > shows the rejected-request message for a 422 validation body",
+        "List detail load errors > shows the rejected-request message for a 422 validation body",
+        "Wishlist load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard overview load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard monthly load errors > shows the rejected-request message for a 422 validation body",
+        "Item Database load errors > shows the rejected-request message for a 422 validation body",
+        "an analytics section rejected with a 422 validation body says so"
+      ]
+    },
+    {
+      "fix": "55c4b80d",
+      "bug": "the analytics table skeletons drew 10 short rows, so the loaded section table and leaderboards shifted the layout",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table shows a placeholder row for each row of the page while it loads",
+        "a section placeholder row holds the box of the expand button that replaces it",
+        "a leaderboard shows a placeholder row for each row the board can hold while it loads"
+      ]
+    },
+    {
+      "fix": "9e6239b9",
+      "bug": "the table skeletons left the expand column blank and drew full-width bars that read as a solid band",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "a section placeholder row shows a visible bar where the expand chevron sits",
+        "section placeholder bars are about as wide as the text they stand in for",
+        "leaderboard placeholder bars are about as wide as the text they stand in for"
+      ]
+    },
+    {
+      "fix": "e584fedb",
+      "bug": "the list heading's more/less toggle read as more words of the description",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+    },
+    {
+      "fix": "dd00a72f",
+      "bug": "each kanban lane was its own scroll area, so the turning spinner and the entering cards showed a scrollbar before any card was visible",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "the board's scrolling > no part of the board scrolls vertically while its lanes load or after their cards arrive"
+      ]
+    },
+    {
+      "fix": "073dd622",
+      "bug": "the calendar's release list faded its rows in inside the scroll area, so the scrollbar was fully drawn before the rows",
+      "test": "apps/web/src/components/calendar/calendar-release-list.test.tsx",
+      "fixed": [
+        "the calendar's release list > fades in around its scroll area, so the scrollbar appears with the rows instead of ahead of them"
+      ]
+    },
+    {
+      "fix": "bdd9a415",
+      "bug": "a WORKTREE replay without a base failed only mid-run, after HEAD and earlier replays had run",
+      "test": "scripts/replay-config.test.ts",
+      "fixed": ["a WORKTREE replay without a base revision is rejected"]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table holds each column to the same share of its width while loading and once loaded"
+      ]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table holds each column to a fixed share of its width in every scope"]
     }
   ],
   "lint": [
