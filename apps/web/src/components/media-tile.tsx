@@ -249,7 +249,8 @@ export function MediaRow({
       <DropIndicator placement={dropIndicator} geometry={ROW_DROP} />
       <div
         className={cn(
-          "group/item relative min-w-0 flex cursor-pointer items-center rounded-md",
+          // The hover tint wraps the thumbnail, so its corner is the thumbnail's plus the inset.
+          "group/item relative min-w-0 flex cursor-pointer items-center [--inset:--spacing(2)] rounded-[calc(var(--radius-md)+var(--inset))]",
           ROW_HOVER_CLASS_NAME,
           // Half outside and half inside, so adjacent selected rows overlap into one 2 px edge.
           selected && "ring-1 ring-primary inset-ring-1 inset-ring-primary",
@@ -271,7 +272,9 @@ export function MediaRow({
         onClickCapture={followUntouchedPress}
         onAuxClickCapture={followUntouchedPress}
       >
-        <div className="flex min-w-0 flex-1 items-center gap-3 p-2 outline-none">{children}</div>
+        <div className="flex min-w-0 flex-1 items-center gap-3 p-(--inset) outline-none">
+          {children}
+        </div>
         {controls}
       </div>
     </>

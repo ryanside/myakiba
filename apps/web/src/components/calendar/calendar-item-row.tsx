@@ -26,7 +26,7 @@ export function CalendarItemRow({
     <Link
       {...itemDestination(item.itemId, item.itemExternalId)}
       className={cn(
-        "flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5",
+        "flex min-w-0 items-center gap-2.5 overflow-hidden p-(--inset) [--inset:--spacing(1.5)] rounded-[calc(var(--radius-md)+var(--inset))]",
         ROW_LINK_CLASS_NAME,
       )}
     >

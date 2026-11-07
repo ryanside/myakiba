@@ -23,7 +23,7 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
       to="/orders/$id"
       params={{ id: order.orderId }}
       className={cn(
-        "grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden rounded-md p-1.5",
+        "grid grid-cols-[auto_1fr_auto] items-center gap-2.5 overflow-hidden p-(--inset) [--inset:--spacing(1.5)] rounded-[calc(var(--radius-md)+var(--inset))]",
         ROW_LINK_CLASS_NAME,
       )}
     >
