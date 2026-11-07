@@ -1430,6 +1430,28 @@
       "test": "apps/web/src/components/settings/appearance.test.tsx",
       "fixed": ["the Page backgrounds switch is on in a browser with no saved preference"],
       "testAt": "e36c5068"
+    },
+    {
+      "fix": "3d6d8316",
+      "bug": "under Reduce motion the switch thumb still slid, the row chevron still turned and hover arrows still nudged",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "under Reduce motion, controls snap to their new state > the switch thumb",
+        "under Reduce motion, controls snap to their new state > the row expand chevron",
+        "a hover nudge moves by the --nudge distance, which Reduce motion sets to nothing"
+      ]
+    },
+    {
+      "fix": "8ba3b276",
+      "bug": "a WORKTREE replay failed on a machine with no Git identity, such as a fresh CI checkout",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot commits on a machine with no Git identity"]
+    },
+    {
+      "fix": "c16cca6c",
+      "bug": "a WORKTREE snapshot could keep the old text of a same-size edit made in the second Git last wrote the index",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot keeps a same-size edit made in the second Git last wrote the index"]
     }
   ],
   "lint": [
