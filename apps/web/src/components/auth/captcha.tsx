@@ -1,6 +1,6 @@
 import { Turnstile } from "@marsidev/react-turnstile";
 import { useTheme } from "next-themes";
-import { useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { env } from "@myakiba/env/web";
 import { cn } from "@/lib/utils";
 
@@ -11,12 +11,16 @@ type CaptchaState =
   | { readonly kind: "failed" };
 
 const CHECKING: CaptchaState = { kind: "checking" };
+const FAILED: CaptchaState = { kind: "failed" };
+const CHECK_LIMIT_MS = 15_000;
 
 /**
  * Tracks one form's Turnstile token. `token()` hands out the current token and starts a fresh
  * challenge, because Cloudflare accepts each token once. With no token yet it waits for one, so
  * a submit made while the invisible check runs goes through when the check passes. It resolves
- * `null` when the check failed; `<Captcha>` then tells the user what to do.
+ * `null` when the check failed; `<Captcha>` then tells the user what to do. A check that has not
+ * answered 15 s after it started counts as failed, so a stalled script never leaves a submit
+ * hanging. A visible checkbox stops that clock: the user may take as long as they need.
  */
 export function useCaptcha() {
   const current = useRef<CaptchaState>(CHECKING);
@@ -44,6 +48,13 @@ export function useCaptcha() {
     setWaiting(false);
     resolve(next.kind === "ready" ? spend(next.token) : null);
   };
+
+  const giveUp = useEffectEvent(() => settle(FAILED));
+  useEffect(() => {
+    if (state.kind !== "checking") return;
+    const limit = setTimeout(giveUp, CHECK_LIMIT_MS);
+    return () => clearTimeout(limit);
+  }, [state]);
 
   const token = (): Promise<string | null> => {
     const now = current.current;
@@ -77,7 +88,7 @@ function noticeFor({ state, waiting }: CaptchaHandle) {
 export function Captcha({ captcha }: { readonly captcha: CaptchaHandle }) {
   const { resolvedTheme } = useTheme();
   const { settle } = captcha;
-  const fail = () => settle({ kind: "failed" });
+  const fail = () => settle(FAILED);
   return (
     <div className="grid gap-2">
       <Turnstile
