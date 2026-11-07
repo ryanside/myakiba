@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { $ } from "bun";
@@ -94,6 +94,20 @@ test("a snapshot of a checkout with no index file starts from HEAD", async () =>
   await write("src/value.ts", "new\n");
   const { files, show } = await snapshot();
   expect(files).toEqual([".gitignore", "src/ignored.ts", "src/value.ts"]);
+  expect(await show("src/value.ts")).toBe("new\n");
+});
+
+test("a snapshot keeps a same-size edit made in the second Git last wrote the index", async () => {
+  const { dir, git, indexPath, snapshot } = await repo({ "src/value.ts": "old\n" });
+  const file = path.join(dir, "src/value.ts");
+  const second = new Date("2001-01-01T00:00:00Z");
+  await git("config", "core.trustctime", "false");
+  await utimes(file, second, second);
+  await git("update-index", "--refresh");
+  await utimes(indexPath, second, second);
+  await writeFile(file, "new\n");
+  await utimes(file, second, second);
+  const { show } = await snapshot();
   expect(await show("src/value.ts")).toBe("new\n");
 });
 
