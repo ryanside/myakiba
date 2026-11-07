@@ -11,9 +11,7 @@ const toggleVariants = cva(
       variant: {
         default: "bg-transparent",
         outline: "border border-input bg-transparent hover:bg-muted",
-        // A filter chip: grey until chosen, then black, after recent.design's category pills.
         pill: "rounded-full bg-muted px-3 text-foreground hover:bg-[color-mix(in_oklab,var(--color-foreground)_8%,var(--color-muted))] aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary/90 data-pressed:bg-primary data-pressed:text-primary-foreground data-pressed:hover:bg-primary/90",
-        // A single choice among a few options: a grey track with the chosen option raised.
         segmented:
           "rounded-full bg-transparent text-muted-foreground hover:bg-transparent hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs data-pressed:bg-background data-pressed:text-foreground data-pressed:shadow-xs dark:aria-pressed:bg-input dark:data-pressed:bg-input",
       },

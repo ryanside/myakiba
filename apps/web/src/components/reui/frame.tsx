@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 
 const frameVariants = cva(
   [
-    // Header and panels sit on the frame's surface, with no band or inner card.
     "relative flex flex-col gap-0 p-0 rounded-(--frame-radius)",
     "[--frame-radius:var(--radius-2xl)]",
     "[--frame-panel-bg:transparent] [--frame-border-color:var(--color-border)]",
@@ -16,7 +15,6 @@ const frameVariants = cva(
   {
     variants: {
       variant: {
-        // A section on the page: no box or rule, content flush with the column edge.
         default: "-mx-(--frame-panel-p) rounded-none",
         inverse:
           "[--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)] border border-[var(--frame-border-color)] bg-background bg-clip-padding",

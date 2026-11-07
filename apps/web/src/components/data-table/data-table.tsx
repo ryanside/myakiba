@@ -16,7 +16,6 @@ export function CellSkeleton({ className }: { readonly className?: string }): Re
   return <Skeleton className={cn("inline-block h-3 max-w-full align-middle", className)} />;
 }
 
-/** Loading bars for the figures a column shows, sized like that figure. */
 export const DATA_TABLE_SKELETON = {
   rank: <CellSkeleton className="w-4" />,
   count: <CellSkeleton className="w-5" />,
