@@ -70,6 +70,7 @@ export function Preferences({ user }: { user: User }) {
         </SettingsRow>
 
         <SettingsRow setting="date-format">
+          {/* Two rows of 28px pills 2px inside the track, so its corner is the pill's 14px plus 2px. */}
           <ToggleGroup
             aria-label="Date format"
             variant="segmented"
@@ -80,7 +81,7 @@ export function Preferences({ user }: { user: User }) {
               if (dateFormat) edit({ dateFormat });
             }}
             disabled={anySaveInFlight}
-            className="grid w-full grid-cols-2 rounded-2xl xl:flex xl:w-auto xl:justify-end xl:rounded-full"
+            className="grid w-full grid-cols-2 data-[variant=segmented]:rounded-[16px] xl:flex xl:w-auto xl:justify-end xl:data-[variant=segmented]:rounded-full"
           >
             {DATE_FORMATS.map((format) => (
               <ToggleGroupItem key={format} value={format} className="tabular-nums">

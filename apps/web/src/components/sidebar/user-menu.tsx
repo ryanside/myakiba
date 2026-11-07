@@ -70,7 +70,7 @@ export default function UserMenu({ session }: { session: Session }) {
           <Tabs value={theme ?? "system"} onValueChange={(v) => setTheme(v)}>
             <TabsList className="w-full" aria-label="Theme">
               {THEME_OPTIONS.map(({ value, label }) => (
-                <TabsTrigger key={value} value={value} aria-label={label} className="h-6 flex-1">
+                <TabsTrigger key={value} value={value} aria-label={label} className="flex-1">
                   <HugeiconsIcon icon={THEME_ICONS[value]} className="size-4" aria-hidden="true" />
                 </TabsTrigger>
               ))}
