@@ -27,9 +27,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             loading="lazy"
             className="absolute inset-0 size-full object-cover saturate-[.85] [image-rendering:pixelated]"
           />
-          <p className="absolute bottom-6 left-6 rounded-full bg-background/80 px-3 py-1.5 text-sm text-foreground backdrop-blur">
-            Your collection, every release, every order.
-          </p>
         </div>
       </div>
     </div>
