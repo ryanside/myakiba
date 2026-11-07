@@ -406,6 +406,12 @@ body {
   @apply display font-heading text-[1.375rem] leading-8 font-medium;
 }
 
+/* Concentric corners. A rounded parent sets --radius-outer to its corner and --inset to the even gap
+   around a rounded child, and the child's corner runs parallel to the parent's. */
+@utility rounded-inner {
+  border-radius: max(0px, calc(var(--radius-outer) - var(--inset)));
+}
+
 /* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant.
    Scale is listed so the press utilities build on it, and a press stacked on it keeps its transition. */
 @utility color-motion {
