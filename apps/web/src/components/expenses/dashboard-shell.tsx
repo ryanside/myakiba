@@ -67,7 +67,7 @@ export function KpiStrip({
       <FramePanel className="grid grid-cols-2 gap-x-10 gap-y-3 pt-0 sm:flex sm:gap-10">
         {items.map((item) => (
           <div key={item.title} className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <p className="eyebrow">{item.title}</p>
+            <p className="text-xs text-muted-foreground">{item.title}</p>
             {isLoading ? (
               <Skeleton className="my-1 h-4 w-16" />
             ) : (
