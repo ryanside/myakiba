@@ -36,7 +36,7 @@ export function SparkleTrail() {
         <span
           key={i}
           className={`transition-[opacity,scale] duration-300 ${
-            i < visibleCount ? "scale-100 opacity-100" : "scale-0 opacity-0"
+            i < visibleCount ? "scale-100 opacity-100" : "scale-(--tick-from) opacity-0"
           }`}
         >
           {char}
