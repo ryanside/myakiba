@@ -64,16 +64,14 @@ export function KpiStrip({
 }): ReactNode {
   return (
     <Frame spacing="sm" aria-busy={isLoading}>
-      <FramePanel className="flex flex-col gap-6 sm:flex-row sm:gap-10">
+      <FramePanel className="grid grid-cols-2 gap-x-10 gap-y-3 pt-0 sm:flex sm:gap-10">
         {items.map((item) => (
-          <div key={item.title} className="min-w-0 flex-1">
-            <p className="eyebrow">{item.title}</p>
+          <div key={item.title} className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p className="text-xs text-muted-foreground">{item.title}</p>
             {isLoading ? (
-              <Skeleton className="mt-2 h-7 w-20" />
+              <Skeleton className="my-1 h-4 w-16" />
             ) : (
-              <p className="animate-data-in display mt-1 text-2xl font-medium tabular-nums">
-                {item.value}
-              </p>
+              <p className="animate-data-in text-base font-medium tabular-nums">{item.value}</p>
             )}
           </div>
         ))}
