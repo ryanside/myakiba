@@ -418,7 +418,7 @@ const SYNC_OPTIONS: readonly SyncOption[] = [
     id: "collection",
     icon: LibraryIcon,
     title: SYNC_OPTION_META.collection.title,
-    description: SYNC_OPTION_META.collection.description,
+    description: "Paste MyFigureCollection item links or IDs to add to your collection.",
   },
   {
     id: "order",
