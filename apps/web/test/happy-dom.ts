@@ -2,6 +2,12 @@ import { afterEach, jest } from "bun:test";
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
 GlobalRegistrator.register();
+
+declare global {
+  interface Window {
+    readonly happyDOM: { readonly setInnerWidth: (width: number) => void };
+  }
+}
 // Testing Library advances fake timers only when it finds a global jest.
 Object.assign(globalThis, { jest });
 
