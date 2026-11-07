@@ -87,10 +87,6 @@ function noticeFor({ state, waiting }: CaptchaHandle) {
     : "Checking your browser…";
 }
 
-/**
- * The Turnstile challenge, sized to its form and drawn in the app's theme, with a status line
- * that explains a wait or a failure. Most visitors never see either.
- */
 export function Captcha({ captcha }: { readonly captcha: CaptchaHandle }) {
   const { resolvedTheme } = useTheme();
   const { settle, leaveInteractive } = captcha;

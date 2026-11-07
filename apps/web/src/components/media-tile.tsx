@@ -118,7 +118,6 @@ export function MediaCard({
       <DropIndicator placement={dropIndicator} geometry={CARD_DROP} />
       <div
         className={cn(
-          // No frame: the rounded photo is the tile's surface, after marked.dev.
           "group/item relative min-w-0 flex h-full flex-col rounded-2xl [--radius-outer:var(--radius-2xl)]",
           selected && "ring-2 ring-primary ring-offset-4 ring-offset-background",
           TILE_FOCUS_CLASS_NAME,

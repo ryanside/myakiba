@@ -6,7 +6,6 @@ type AuthLayoutProps = {
   readonly children: ReactNode;
 };
 
-/** The form on the left; on wide screens the pixel-art street fills a rounded panel on the right. */
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

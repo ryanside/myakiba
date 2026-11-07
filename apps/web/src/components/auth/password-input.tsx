@@ -5,7 +5,6 @@ import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 
-/** A password field with a button that shows or hides what was typed. */
 export function PasswordInput(props: Omit<ComponentProps<"input">, "type">) {
   const [visible, setVisible] = useState(false);
   return (

@@ -16,13 +16,7 @@ export function SectionShell({
   readonly className?: string;
 }): ReactNode {
   return (
-    <div
-      className={cn(
-        // No box: the section sits on the page, and its glow fades out on every side.
-        "relative isolate",
-        className,
-      )}
-    >
+    <div className={cn("relative isolate", className)}>
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-x-8 -inset-y-6 -z-10 opacity-10 mask-x-from-80% mask-y-from-75%"

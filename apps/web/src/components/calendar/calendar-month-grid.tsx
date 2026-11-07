@@ -194,7 +194,6 @@ function CalendarDayCellContent({
         >
           {dayNumber}
         </span>
-        {/* The count says how much is due; the thumbnails only say what. */}
         {bucket != null && bucket.thumbs.length > 0 ? (
           <span
             aria-hidden

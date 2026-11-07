@@ -113,7 +113,6 @@ export function OverviewTab({
   );
 }
 
-/** A section label inside a page. */
 function SectionHeading({ title, scope }: { readonly title: string; readonly scope: string }) {
   return (
     <div className="flex items-baseline gap-2.5">

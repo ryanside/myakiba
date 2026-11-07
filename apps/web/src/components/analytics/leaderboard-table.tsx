@@ -166,7 +166,6 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
 }): ReactNode {
   const navigate = useNavigate();
   const { currency, locale } = useUserPreferences();
-  // useReactTable takes a mutable array, so this copy only drops `readonly`.
   const tableData = useMemo(() => [...rows], [rows]);
   const barMax = useMemo(
     () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
