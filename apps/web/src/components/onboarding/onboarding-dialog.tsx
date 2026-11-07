@@ -75,7 +75,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     step: 3,
     eyebrow: "Add items",
     title: "Bring in your items.",
-    description: "You can always add more later through the + button in the sidebar.",
+    description: "You can always add more later through the + button at the top right.",
   },
 ];
 
@@ -453,7 +453,7 @@ function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
       variant="outline"
       onClick={() => onSelect(option.id)}
       className={cn(
-        "group relative h-auto justify-start gap-3.5 whitespace-normal px-4 py-3 text-left",
+        "group relative h-auto justify-start gap-3.5 whitespace-normal rounded-xl px-4 py-3 text-left",
         "animate-data-in",
       )}
     >
@@ -507,17 +507,17 @@ function StepFooter({
 
   return (
     <div className="flex items-center justify-between gap-2 border-t bg-background px-4 py-3">
-      <Button variant="ghost" size="sm" onClick={onSkip} disabled={isSaving}>
+      <Button variant="ghost" onClick={onSkip} disabled={isSaving}>
         {skipLabel}
       </Button>
       <div className="flex items-center gap-2">
         {!isFirst && (
-          <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
+          <Button variant="outline" onClick={onBack} disabled={isSaving}>
             <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}
-        <Button size="sm" onClick={onContinue} disabled={isSaving || !canContinue}>
+        <Button onClick={onContinue} disabled={isSaving || !canContinue}>
           {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
