@@ -247,13 +247,13 @@ function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
           aria-controls={open ? detailsPanelId(id) : undefined}
           onClick={() => toggleDetails(id)}
         >
-          Details
           <HugeiconsIcon
             icon={ExpandIcon}
-            data-icon="inline-end"
-            className={cn("collapse-chevron", open && "rotate-90")}
+            data-icon="inline-start"
+            className={cn("text-muted-foreground move-motion", open && "rotate-90")}
             aria-hidden="true"
           />
+          Details
         </Button>
       )}
       <Button
