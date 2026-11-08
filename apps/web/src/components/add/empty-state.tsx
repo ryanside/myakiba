@@ -1,4 +1,3 @@
-import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { STORE_NAMES } from "@/components/extension/extension-notice";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { useExtensionStatus } from "@/lib/extension-gate";
+import { ExternalIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { FRAME_WIDTH } from "./row-fields";
 
@@ -80,7 +80,7 @@ export function EmptyState() {
             className={buttonVariants()}
           >
             {install.label}
-            <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" aria-hidden="true" />
+            <HugeiconsIcon icon={ExternalIcon} data-icon="inline-end" aria-hidden="true" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : null}
