@@ -3,6 +3,7 @@ import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constant
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { Result } from "better-result";
 import type { FocusEvent, ReactNode } from "react";
+import { CELL_TRIGGER_CLASS_NAME } from "@/components/cells/cell-trigger";
 import { SelectCell } from "@/components/cells/select-cell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -65,16 +66,15 @@ export function fieldsFor(kind: DestinationForm["kind"]): readonly Field[] {
 }
 
 export const THUMBNAIL = "size-8 shrink-0 rounded-md";
-/** Spans the table's frame, whatever it scrolled to. 100cqw is the frame with its 1px borders. */
-export const FRAME_WIDTH = "sticky start-0 w-[calc(100cqw-2px)]";
+/** Spans the table's frame, whatever it scrolled to. */
+export const FRAME_WIDTH = "sticky start-0 w-[100cqw]";
 /** An Item's title and MFC number, which every other kind of row matches so none moves its rows. */
 export const ROW_CONTENT = "min-h-[37px]";
 
 // Reads and edits as the Collection grid's Price and Count cells do: plain text, a surface on hover,
-// the app's Input while typing. It stays an input throughout, so the table's keys and an issue's focus
-// always find it. A touch screen has no hover, so there it always shows its edge.
-const INLINE_CELL =
-  "cursor-text border-transparent bg-transparent pl-0 font-medium text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:bg-control focus-visible:font-normal dark:hover:bg-muted/50 [@media(hover:none)]:border-control-edge [@media(hover:none)]:bg-control [@media(hover:none)]:pl-2.5";
+// the grid's editor while typing. It stays an input throughout, so the table's keys and an issue's
+// focus always find it. A touch screen has no hover, so there it always shows its edge.
+const INLINE_CELL = `${CELL_TRIGGER_CLASS_NAME} h-8 cursor-text border-transparent bg-transparent font-medium text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:border-transparent focus-visible:bg-muted focus-visible:font-normal focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent dark:hover:bg-muted/50 dark:focus-visible:bg-muted [@media(hover:none)]:border-input`;
 
 const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
 

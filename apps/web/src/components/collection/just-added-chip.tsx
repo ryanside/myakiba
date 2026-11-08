@@ -9,14 +9,11 @@ export function JustAddedChip({
   readonly onShowAll: () => void;
 }) {
   return (
-    <p className="flex w-fit flex-wrap items-center gap-x-1.5 rounded-lg bg-muted px-2.5 py-1 text-sm">
+    <p className="flex min-h-7 w-fit flex-wrap items-center gap-x-2 rounded-full bg-muted px-3 py-1 text-sm">
       {count === 1
         ? "Showing the item you just added"
         : `Showing the ${count} items you just added`}
-      <span aria-hidden="true" className="text-muted-foreground">
-        ·
-      </span>
-      <Button variant="link" size="xs" className="h-auto px-0 text-sm" onClick={onShowAll}>
+      <Button variant="link" className="h-auto px-0" onClick={onShowAll}>
         Show all
       </Button>
     </p>

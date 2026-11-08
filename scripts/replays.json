@@ -1,6 +1,16 @@
 {
   "test": [
     {
+      "fix": "fb844501e118ac4db502c841913449bbead8b497",
+      "bug": "A picked date replaced the native field label with its placeholder, hiding the field name from screen readers.",
+      "test": "apps/web/src/components/ui/date-picker.test.tsx",
+      "fixed": [
+        "a labelled date picker keeps its field name before and after picking a date",
+        "an unlabelled date picker keeps its placeholder with the picked date",
+        "each labelled picker describes its own value"
+      ]
+    },
+    {
       "fix": "e282d97979060ea7b4676670c2b4ecd2b4d81a8c",
       "bug": "The Add sentence mounted a second Lists picker for its narrowest width, so a popup opened before a resize stayed with the hidden trigger, in the corner, offering what that trigger did.",
       "test": "apps/web/src/components/add/destination-sentence.test.tsx",

@@ -13,7 +13,7 @@ import { AddSearch, NARROW_HIDDEN } from "./add-search";
  */
 export function SearchRow({ controller: c }: { readonly controller: AddController }) {
   return (
-    <div className="flex items-center justify-between gap-1 border-t bg-muted/40 py-1 ps-8.5 pe-2">
+    <div className="flex items-center justify-between gap-1 border-t border-border/70 py-1 ps-8.5 pe-2">
       <a
         href={mfcSearchUrl("")}
         target="_blank"

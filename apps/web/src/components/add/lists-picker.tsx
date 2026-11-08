@@ -1,4 +1,4 @@
-import { Add01Icon, Folder01Icon, StarIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Folder01Icon, StarIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_COMMIT_LISTS } from "@myakiba/contracts/add/constants";
 import { useEffect, useId, useState } from "react";
@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { useListMutations, useListsQuery } from "@/hooks/use-lists";
+import { DisclosureIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import type { ListInput } from "@myakiba/contracts/lists/schema";
 import { namedTargets } from "./commit-input";
@@ -53,7 +54,7 @@ export function ListsPicker({
   const held = namedTargets(wishlist.checked ? "Wishlist" : null, chosen);
   const heldName = held === null ? "Wishlist and Lists" : `Also on ${held}`;
   const rowClass =
-    "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50";
+    "flex cursor-pointer items-center gap-2.5 rounded-inner px-2 py-1 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50";
   let tip = `Lists: ${titlesOf(chosen)}`;
   if (folded) tip = heldName;
   else if (chosen.length === 0) tip = name;
@@ -80,7 +81,7 @@ export function ListsPicker({
                   type="button"
                   variant="outline"
                   disabled={disabled}
-                  className="max-w-56 min-w-0 shrink justify-between pr-2"
+                  className="max-w-56 min-w-0 shrink justify-between press-none pr-2"
                 >
                   {/* One trigger with a face for each width, so the popup it opened stays with it.
                   The stylesheet shows one face, and the name is the words of the face it shows. */}
@@ -93,7 +94,7 @@ export function ListsPicker({
                       {name}
                     </span>
                     <HugeiconsIcon
-                      icon={UnfoldMoreIcon}
+                      icon={DisclosureIcon}
                       strokeWidth={2}
                       className={cn("shrink-0 text-muted-foreground", WORDS_ONLY)}
                       aria-hidden="true"
@@ -130,7 +131,7 @@ export function ListsPicker({
         />
         <PopoverContent
           aria-label={folded ? "Wishlist and Lists" : "Lists"}
-          className="w-72 max-w-[calc(100vw-2rem)] gap-0 p-1"
+          className="w-72 max-w-[calc(100vw-2rem)] gap-0 rounded-(--radius-outer) p-(--inset) [--inset:--spacing(1)] [--radius-outer:var(--radius-lg)]"
           align="end"
         >
           {folded ? (
@@ -180,7 +181,7 @@ export function ListsPicker({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="w-full"
+                  className="w-full rounded-inner"
                   disabled={isFetchingNextPage}
                   onClick={() => fetchNextPage()}
                 >
@@ -192,7 +193,7 @@ export function ListsPicker({
           <Button
             type="button"
             variant="ghost"
-            className="mt-1 w-full justify-start"
+            className="mt-1 w-full justify-start rounded-inner has-data-[icon=inline-start]:pl-2"
             onClick={() => {
               setOpen(false);
               setCreating(true);

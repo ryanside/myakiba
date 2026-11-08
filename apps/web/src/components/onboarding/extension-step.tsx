@@ -53,7 +53,7 @@ function InstallStatus({
   const spinning = status.kind === "checking";
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg bg-muted/45 p-4 ring-1 ring-foreground/8">
+    <div className="flex flex-col gap-4 rounded-xl border p-4">
       <p className={cn("flex items-center gap-2 text-sm font-medium", line.tone)} role="status">
         <HugeiconsIcon
           icon={spinning ? Loading03Icon : line.icon}
@@ -65,7 +65,7 @@ function InstallStatus({
       {link ? (
         <div className="flex flex-wrap items-center gap-2">
           <ExtensionLink link={link} />
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+          <Button variant="outline" onClick={() => window.location.reload()}>
             Reload page
           </Button>
           <span className="text-xs text-muted-foreground">

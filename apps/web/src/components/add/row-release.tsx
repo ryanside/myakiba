@@ -126,7 +126,7 @@ export function ReleaseField({
                     {formatDateOnlyForDisplay(option.date, c.dateFormat)}
                   </span>
                   {option.type ? (
-                    <span className="rounded bg-muted/60 px-1.5 py-px text-xs text-muted-foreground/80">
+                    <span className="rounded bg-muted/60 px-1.5 py-px text-xs text-muted-foreground">
                       {option.type}
                     </span>
                   ) : null}

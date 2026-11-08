@@ -7,7 +7,6 @@ import { extensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionAvailability } from "@/lib/extension-availability";
 import type { ExtensionStatus } from "@/lib/extension-bridge";
 import { useExtensionStatus } from "@/lib/extension-gate";
-import { EASE_OUT_CSS } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 import { FRAME_WIDTH } from "./row-fields";
 
@@ -67,9 +66,8 @@ export function EmptyState() {
       <div
         ref={glide}
         inert={!known}
-        style={{ transitionTimingFunction: EASE_OUT_CSS }}
         className={cn(
-          "flex flex-col items-center gap-4 transition-opacity duration-200",
+          "flex flex-col items-center gap-4 transition-opacity duration-(--motion-data-in) ease-out",
           !known && "opacity-0",
         )}
       >

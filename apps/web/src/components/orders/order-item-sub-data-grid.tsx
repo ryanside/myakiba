@@ -245,7 +245,9 @@ export function OrderItemSubDataGrid({
               </Button>
             }
           />
-          <AddLink search={{ to: `order:${orderId}` }} size="sm" />
+          <AddLink search={{ to: `order:${orderId}` }} size="sm">
+            Add
+          </AddLink>
         </div>
       </div>
       {grid}

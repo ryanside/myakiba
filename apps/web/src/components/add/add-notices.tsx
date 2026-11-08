@@ -82,7 +82,7 @@ function ErrorNotice({
 
 function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
   return (
-    <Alert role="note" className="transition-colors hover:bg-muted">
+    <Alert role="note" className="color-motion hover:bg-muted">
       <HugeiconsIcon
         icon={ArrowUpRight01Icon}
         className="text-muted-foreground"
@@ -94,7 +94,7 @@ function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
           href={mfcItemUrl(mfcItemId)}
           target="_blank"
           rel="noopener noreferrer"
-          className="outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+          className="outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-ring"
         >
           MFC item #{mfcItemId} is not in myakiba yet. Open it on MyFigureCollection and click{" "}
           <span className="font-medium">Pick for myakiba</span>.

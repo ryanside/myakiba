@@ -157,3 +157,26 @@ test("a control whose words show whole has no tooltip", async () => {
   await user.hover(within(sentence()).getByRole("button", { name: "Lists" }));
   expect(tooltip()).toBeNull();
 });
+
+test("the destination menu opens without motion from the keyboard, and with it from a pointer", async () => {
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  const destination = within(sentence()).getByRole("combobox", { name: "Where these go" });
+  const menu = () => document.querySelector<HTMLElement>('[data-slot="select-content"]');
+
+  // A key pressed this soon before the click would make the click count as the key's doing.
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
+  await user.click(destination);
+  await screen.findByRole("listbox");
+  expect(menu()?.dataset.instant).toBeUndefined();
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+
+  destination.focus();
+  await user.keyboard("{ArrowDown}");
+  await screen.findByRole("listbox");
+  expect(menu()?.dataset.instant).toBe("");
+});

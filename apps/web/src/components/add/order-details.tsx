@@ -1,4 +1,4 @@
-import { Edit03Icon, PackageIcon, UnfoldMoreIcon } from "@hugeicons/core-free-icons";
+import { Edit03Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
@@ -7,10 +7,10 @@ import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import { DebouncedInput } from "@/components/debounced-input";
-import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError } from "@/components/ui/field";
+import { FieldTrigger } from "@/components/ui/field-trigger";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -300,17 +300,15 @@ function ExistingOrderPicker({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button
+            <FieldTrigger
               id={fieldId}
-              type="button"
-              variant="outline"
               role="combobox"
               aria-label="Order"
               aria-expanded={open}
               aria-controls={listId}
               aria-invalid={issue === undefined ? undefined : true}
               aria-describedby={issue === undefined ? undefined : `${fieldId}-error`}
-              className="w-full max-w-md min-w-0 justify-between font-normal"
+              className="max-w-md min-w-0 font-normal"
             >
               <span
                 className={cn("min-w-0 truncate", order === null && "text-muted-foreground")}
@@ -318,14 +316,7 @@ function ExistingOrderPicker({
               >
                 {order ? (order.title ?? "Loading the Order…") : "Choose an Order"}
               </span>
-              <HugeiconsIcon
-                icon={UnfoldMoreIcon}
-                data-icon="inline-end"
-                strokeWidth={2}
-                className="shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-            </Button>
+            </FieldTrigger>
           }
         />
         <PopoverContent
