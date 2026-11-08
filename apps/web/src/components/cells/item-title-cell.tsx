@@ -7,7 +7,7 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 
-const FOCUS_RING = "outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+const FOCUS_RING = "outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /** An Item's picture, title and MFC number. What follows the number comes in as `children`. */
 export function ItemTitleCell({
@@ -28,7 +28,7 @@ export function ItemTitleCell({
 }) {
   const destination = itemDestination(itemId, externalId);
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 pe-4">
       <Link
         {...destination}
         {...(walkedByKeys
