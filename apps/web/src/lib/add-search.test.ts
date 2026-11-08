@@ -13,12 +13,31 @@ test("reads every preset a link can carry", () => {
   ).toEqual({ to: "order:abc12345", item: "abc12345", mfc: 98_777, q: "miku", from: "mfc" });
 });
 
-test.each([{ to: "elsewhere" }, { to: "order:NOPE" }, { item: "x" }, { mfc: "-1" }, { from: "x" }])(
-  "refuses %j",
-  (search) => {
-    expect(addSearchSchema.safeParse(search).success).toBe(false);
-  },
-);
+const link = {
+  to: "order:abc12345",
+  item: "abc12345",
+  mfc: "98777",
+  q: "miku",
+  from: "mfc",
+  returnTo: "/collection",
+};
+
+test.each([
+  ["to", "elsewhere"],
+  ["to", "order:NOPE"],
+  ["item", "verify-item-1"],
+  ["item", "x"],
+  ["item", ["abc12345", "def67890"]],
+  ["mfc", "-1"],
+  ["mfc", "abc"],
+  ["q", "a".repeat(201)],
+  ["from", "x"],
+])("ignores the malformed %s %j and keeps the rest of the link", (key, value) => {
+  expect(addSearchSchema.parse({ ...link, [key]: value })).toEqual({
+    ...addSearchSchema.parse(link),
+    [key]: undefined,
+  });
+});
 
 test("keeps a path on this site to return to", () => {
   expect(addSearchSchema.parse({ returnTo: "/collection?page=2" }).returnTo).toBe(
