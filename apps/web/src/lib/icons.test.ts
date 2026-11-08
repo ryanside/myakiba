@@ -8,14 +8,18 @@ const scraperCode = ["components/sync/", "components/settings/data-transfer/"];
 const mapped = new Set<unknown>(Object.values(icons));
 const glyphs = new Map<string, unknown>(Object.entries(hugeicons));
 const hugeiconsImport = /import\s*\{([^}]*)\}\s*from\s*"@hugeicons\/core-free-icons"/g;
-const directionGlyph =
-  /^(Circle|Square)?(Arrows?|Chevrons?|Direction|Move)(Big|Move|Out)?(Up|Down|Left|Right|Diagonal|Horizontal|Vertical|First|Last)/;
+const directionName =
+  /^(Circle|Square)?(Fading)?(Arrows?|Chevrons?|Direction|Move)(Big|Move|Out)?(Up|Down|Left|Right|Top|Bottom)|^(Circle|Square)?(Arrows?|Chevrons?)(Diagonal|Horizontal|Vertical|First|Last)/;
+// Hugeicons exports one glyph under several names, so an alias such as NewTab is caught by its glyph.
+const directionGlyphs = new Set(
+  [...glyphs].filter(([name]) => directionName.test(name)).map(([, glyph]) => glyph),
+);
 
 function bypassesOf(source: string): string[] {
   return [...source.matchAll(hugeiconsImport)]
     .flatMap(([, names = ""]) => names.split(","))
     .map((name) => name.trim().split(/\s+as\s+/)[0] ?? "")
-    .filter((name) => directionGlyph.test(name) || mapped.has(glyphs.get(name)));
+    .filter((name) => directionGlyphs.has(glyphs.get(name)) || mapped.has(glyphs.get(name)));
 }
 
 test("picks every direction icon by meaning from lib/icons", async () => {
@@ -35,7 +39,9 @@ test("finds a direction icon imported straight from hugeicons", () => {
         'import { ArrowRightIcon as Next } from "@hugeicons/core-free-icons";\n' +
         'import { ArrowUpRight01Icon, MoveLeftIcon, ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";\n' +
         'import { ArrowDiagonalIcon, ChevronFirstIcon, ChevronLastIcon, SquareArrowVerticalIcon } from "@hugeicons/core-free-icons";\n' +
-        'import { BowArrowIcon, PinOffIcon, DragDropVerticalIcon, ArrowExpandIcon } from "@hugeicons/core-free-icons";',
+        'import { MoveTopIcon, NewTab, CircleFadingArrowUpIcon } from "@hugeicons/core-free-icons";\n' +
+        'import { BowArrowIcon, PinOffIcon, DragDropVerticalIcon, ArrowExpandIcon } from "@hugeicons/core-free-icons";\n' +
+        'import { MoveDiagonal, MoveDiagonal2, ArrowTurnBackwardIcon as Reset } from "@hugeicons/core-free-icons";',
     ),
   ).toEqual([
     "ArrowRight01Icon",
@@ -46,5 +52,8 @@ test("finds a direction icon imported straight from hugeicons", () => {
     "ChevronFirstIcon",
     "ChevronLastIcon",
     "SquareArrowVerticalIcon",
+    "MoveTopIcon",
+    "NewTab",
+    "CircleFadingArrowUpIcon",
   ]);
 });
