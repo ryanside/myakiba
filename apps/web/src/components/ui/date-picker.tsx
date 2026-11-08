@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Calendar01Icon } from "@hugeicons/core-free-icons";
 import { format } from "date-fns";
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export function DatePicker({
   className,
 }: DatePickerProps) {
   const dateValue = value ? parseDateOnly(value) : undefined;
+  const valueId = useId();
 
   const handleSelect = (date: Date | undefined): void => {
     if (!onChange) return;
@@ -54,12 +56,11 @@ export function DatePicker({
               className,
             )}
             title={dateValue ? format(dateValue, "PPP") : undefined}
-            aria-label={
-              placeholder && dateValue ? `${placeholder}, ${format(dateValue, "PPP")}` : undefined
-            }
+            aria-describedby={valueId}
           >
             <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" className="shrink-0" />
-            <span className="min-w-0 flex-1 truncate">
+            {dateValue && <span className="sr-only">{placeholder}, </span>}
+            <span id={valueId} className="min-w-0 flex-1 truncate">
               {dateValue ? format(dateValue, "PP") : placeholder}
             </span>
           </Button>
