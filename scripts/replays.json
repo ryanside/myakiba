@@ -24,7 +24,9 @@
       "fix": "4424d2c743e1558d011ccff2864dbc2c7f37fbaf",
       "bug": "InlineTextCell's h-auto made its preview and input 30px against every other control's 32px.",
       "test": "apps/web/src/components/cells/inline-text-cell.test.tsx",
-      "fixed": ["the preview and the input are the app's 32px controls, with no size of their own"]
+      "fixed": ["the preview and the input are the app's 32px controls, with no size of their own"],
+      "testAt": "4424d2c743e1558d011ccff2864dbc2c7f37fbaf",
+      "reason": "The merge rebuilt the cell on main's useInlineEdit, so HEAD's copy lists the input's size classes in another order; the fix's own test checks the same 32px sizes."
     },
     {
       "fix": "98b4cc7656193373eaa8294da7fbfa81c7fcde30",
@@ -194,13 +196,17 @@
       "test": "apps/web/src/components/cells/inline-text-cell.test.tsx",
       "fixed": [
         "focus comes back to the preview once a save stops disabling it, and the next focus edits"
-      ]
+      ],
+      "testAt": "6e73342427ee04b4b3ad4a6df32c191672818fd6",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "bb7e128f1d1ec9fefc6fd9bae90feb7276851ead",
       "bug": "Enter and Escape in the Order title dropped keyboard focus to the page.",
       "test": "apps/web/src/components/add/add-flow.test.tsx",
-      "fixed": ["Enter and Escape in the Order title keep focus on it, without reopening it"]
+      "fixed": ["Enter and Escape in the Order title keep focus on it, without reopening it"],
+      "testAt": "bb7e128f1d1ec9fefc6fd9bae90feb7276851ead",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "e4e2e1e6c41670da39b0e8c14e6021d6c3aeb09a",
@@ -321,7 +327,9 @@
       "fix": "34a4b720e6db668f6017bd3a0ea61d93acd294bd",
       "bug": "The verification email sent at sign-in lost the protected deep link and returned to the site root.",
       "test": "apps/web/src/components/auth/deep-link.test.tsx",
-      "fixed": ["the verification email sent at sign-in returns to the deep link"]
+      "fixed": ["the verification email sent at sign-in returns to the deep link"],
+      "testAt": "34a4b720e6db668f6017bd3a0ea61d93acd294bd",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "cf4c7e622d56e3484022fe22e62d2767aaf3eb2f",
@@ -332,7 +340,9 @@
         "registering from a protected deep link preserves its email verification destination",
         "signed-in login and signup visitors keep relative destinations and refuse external ones",
         "Google login and signup callbacks preserve safe deep links"
-      ]
+      ],
+      "testAt": "cf4c7e622d56e3484022fe22e62d2767aaf3eb2f",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "f74b261547a6796ae7983514763ac9932c5f5bb1",
@@ -634,7 +644,9 @@
         "Reset Filters on /orders > drops a first search typed just before Reset, though Reset leaves the search unchanged",
         "Reset Filters on /collection > drops text typed after an outside change when Reset comes within the debounce",
         "Reset Filters on /collection > drops a first search typed just before Reset, though Reset leaves the search unchanged"
-      ]
+      ],
+      "testAt": "21ded567",
+      "reason": "Main pinned this test to the fix, because later toolbar tests assert Reset's rejected-navigation toast, which the fix's revisions do not have."
     },
     {
       "fix": "c4d771e68831a21aad0da689c31215eeb4274c0c",
@@ -879,7 +891,8 @@
         "DataGridPagination at an offset that is not a page start > an empty result at an offset inside page 1 offers page 1",
         "DataGridPagination at an offset that is not a page start > previous from an offset past the rows of page 1 goes to page 1",
         "DataGridPagination at an offset that is not a page start > an offset past the rows of the only page shows no rows of the total",
-        "DataGridPagination at an offset that is not a page start > an offset inside the rows names the rows from that offset"
+        "DataGridPagination at an offset that is not a page start > an offset inside the rows names the rows from that offset",
+        "DataGridPagination at an offset that is not a page start > a short result at an offset past its first row names the rows from that offset"
       ]
     },
     {
@@ -942,13 +955,17 @@
         "a sidebar destination opens on the click without waiting for its code to load",
         "the clicked sidebar item turns active before the page renders",
         "a page change finishes if the tab becomes hidden before its frame"
-      ]
+      ],
+      "testAt": "a3acade9311caddf175de5ac5b3ad49c0e142b73",
+      "reason": "Main retired this entry because every revision of the test imports test/sidebar-app.tsx, which now needs OnboardingProvider. The pin takes that harness from the fix's revision instead, and HEAD keeps the same test names."
     },
     {
       "fix": "71ecea7978816ff9774b5bb6dede6af628efd673",
       "bug": "a sidebar link sat inside its menu button, so part of the hover area missed the link",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
-      "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"]
+      "fixed": ["every sidebar link is the whole menu button, so its hover area is its hit area"],
+      "testAt": "71ecea7978816ff9774b5bb6dede6af628efd673",
+      "reason": "Main retired this entry because every revision of the test imports test/sidebar-app.tsx, which now needs OnboardingProvider. The pin takes that harness from the fix's revision instead, and HEAD keeps the same test names."
     },
     {
       "fix": "9a8047a14a017f29140ab0d576d327d8247bc238",
@@ -973,7 +990,9 @@
       "fix": "ebab2322988880da373c829954cc6446a1abf0ea",
       "bug": "the active sidebar item's data-[active=true] styles never matched Base UI's data-active=\"\", so its outline never showed",
       "test": "apps/web/src/components/sidebar/app-sidebar.test.tsx",
-      "fixed": ["every active-state style on the active sidebar item matches its attribute"]
+      "fixed": ["every active-state style on the active sidebar item matches its attribute"],
+      "testAt": "ebab2322988880da373c829954cc6446a1abf0ea",
+      "reason": "Main retired this entry because every revision of the test imports test/sidebar-app.tsx, which now needs OnboardingProvider. The pin takes that harness from the fix's revision instead, and HEAD keeps the same test names."
     },
     {
       "fix": "7da6de432f1f93417aae6c55457bbab6295524fc",
@@ -1117,7 +1136,11 @@
       "fix": "444213950d6442f4f070fb06c1a2859d4be234ea",
       "bug": "onboarding opened in a second tab cleared the flag that reopens the first tab at the extension step",
       "test": "apps/web/src/components/onboarding/extension-step.test.tsx",
-      "fixed": ["onboarding opened in a second tab leaves the first tab's extension step to reopen"]
+      "fixed": [
+        "onboarding opened in a second tab leaves the first tab's extension step to reopen"
+      ],
+      "testAt": "444213950d6442f4f070fb06c1a2859d4be234ea",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "35c7296c12bb87bc242be9d4fd6ecc08f8915714",
@@ -2056,19 +2079,25 @@
       "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the inline currency cell saved an amount past the safe integer range as a rounded number",
       "test": "apps/web/src/components/cells/inline-currency-cell.test.tsx",
-      "fixed": ["an amount too large to save keeps the cell editing and marked invalid"]
+      "fixed": ["an amount too large to save keeps the cell editing and marked invalid"],
+      "testAt": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the fees popover cell saved a fee past the safe integer range as a rounded number",
       "test": "apps/web/src/components/cells/popover-multi-input-cell.test.tsx",
-      "fixed": ["a fee too large to save keeps the popover open, marked invalid"]
+      "fixed": ["a fee too large to save keeps the popover open, marked invalid"],
+      "testAt": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
       "bug": "the collection item form saved a price past the safe integer range as a rounded number",
       "test": "apps/web/src/components/collection/collection-item-form.test.tsx",
-      "fixed": ["a price too large to save shows a field error and saves nothing"]
+      "fixed": ["a price too large to save shows a field error and saves nothing"],
+      "testAt": "6eb50af5c42b4bfd4398a172c6e507952843d3b0",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "9600a085a9b473b076cf80f7595e222765568e58",
@@ -2108,7 +2137,8 @@
       "bug": "a defect read through call() showed its raw message under the write's failure toast",
       "test": "apps/web/src/data/command-failure-toasts.test.tsx",
       "fixed": [
-        "a defect while a write's answer is read shows the safe text under its title, never its message"
+        "a defect while a write's answer is read shows the safe text under its title, never its message",
+        "a defect in a Kanban status write shows retry advice and the safe text, never its message"
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
@@ -2557,7 +2587,9 @@
       "fix": "9f24050e28f099e156018f29c0dd02e105cffabb",
       "bug": "HEAD preflight attempted a deleted historical test file despite an explicit replacement head group.",
       "test": "scripts/replay-head.test.ts",
-      "fixed": ["a replay head remap replaces a deleted historical test file"]
+      "fixed": ["a replay head remap replaces a deleted historical test file"],
+      "testAt": "9f24050e28f099e156018f29c0dd02e105cffabb",
+      "reason": "Pinned at its fix because HEAD's copy also copies main's replay-config.ts and worktree-snapshot.ts, which the fix's revision does not have."
     },
     {
       "fix": "90fcfa1f913c58ebd82bbc1a873ee24052fed49c",
@@ -2787,7 +2819,9 @@
       "fixed": [
         "currency formatting normalizes the full-width yen sign",
         "compact currency formatting rounds chart axes to at most one decimal"
-      ]
+      ],
+      "testAt": "2c83af1a",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "1f921f85",
@@ -2931,6 +2965,34 @@
         "Dashboard monthly diagnostics > keeps the diagnostic fallback apart from the 400 user message",
         "Item Database diagnostics > keeps the diagnostic fallback apart from the 400 user message",
         "Wishlist diagnostics > separates diagnostics from the 400 user message"
+      ],
+      "testAt": "cf1ae1534f0b40587a4d526f6adbc815b25b5f47",
+      "reason": "Pinned to main's last copy of this test, which loads at the fix's revisions, because the merge rewrote HEAD's copy for the branch's Result reads.",
+      "atHead": [
+        "Collection diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Collection diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Orders diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Orders diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Collection expenses diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Collection expenses diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Order expenses diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Order expenses diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Lists diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Lists diagnostics > keeps the diagnostic apart from the 503 user message",
+        "List detail diagnostics > keeps the diagnostic apart from the 400 user message",
+        "List detail diagnostics > keeps the diagnostic apart from the 503 user message",
+        "List members diagnostics > keeps the diagnostic apart from the 400 user message",
+        "List members diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Dashboard overview diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Dashboard overview diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Dashboard monthly diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Dashboard monthly diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Item Database diagnostics > keeps the diagnostic apart from the 400 user message",
+        "Item Database diagnostics > keeps the diagnostic apart from the 503 user message",
+        "Wishlist diagnostics > separates diagnostics from the 400 user message",
+        "Wishlist diagnostics > separates diagnostics from the 503 user message"
       ]
     },
     {
@@ -3104,7 +3166,9 @@
         "move to an existing order footer > has no nested button and Cancel closes the form",
         "move to a new order footer > has no nested button and Cancel closes the form",
         "collection item sheet footer > has no nested button and Cancel closes the form"
-      ]
+      ],
+      "testAt": "715db89a25b9ccc4fab662c0eda4d35c02b7485b",
+      "reason": "Pinned to main's last copy of this test, because the merge added the branch's WriteFailed cases to HEAD's copy, which the fix's revisions cannot load."
     },
     {
       "fix": "920dab4b",
@@ -3131,7 +3195,9 @@
       "fixed": [
         "edit-order sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width",
         "collection item sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width"
-      ]
+      ],
+      "testAt": "9a853b04",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "5adeea02",
@@ -3242,7 +3308,9 @@
       "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
       "fixed": [
         "the board's scrolling > no part of the board scrolls vertically while its lanes load or after their cards arrive"
-      ]
+      ],
+      "testAt": "dd00a72f",
+      "reason": "Pinned at its fix because the merge with main changed this test file for the other side's code, so HEAD's copy no longer loads at the fix's revisions."
     },
     {
       "fix": "073dd622",
@@ -3320,7 +3388,9 @@
       "fixed": [
         "the onboarding dialog stays open on its step when the window narrows to a phone and widens back",
         "a new account on a phone sees the welcome dialog with the sidebar closed"
-      ]
+      ],
+      "testAt": "1fa632de",
+      "reason": "Pinned at its fix because HEAD's copy walks the merged dialog's extension step, which main's revisions do not have."
     },
     {
       "fix": "879cb6ab",
@@ -3403,6 +3473,11 @@
       "fixed": [
         "a hidden sparkle glyph > starts a little smaller with motion on, never from nothing",
         "a hidden sparkle glyph > keeps its full size under Reduce motion, so it only fades"
+      ],
+      "testAt": "272cd9a8",
+      "reason": "Pinned at its fix: the merge deleted SparkleTrail with Import History, so HEAD has no sparkle glyph to test. The rule that a scale entrance starts from a token Reduce motion stills is guarded at HEAD by the entrance check.",
+      "atHead": [
+        "an entrance transitions each property it starts from, and Reduce motion keeps it from moving"
       ]
     },
     {
