@@ -69,7 +69,7 @@ function RouteComponent(): React.JSX.Element {
         title="Wishlist"
         meta={isPending || hasInitialError ? null : formatCount(totalCount, "Item", "Items")}
         actions={
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <ToggleGroup
               value={[releaseStatus]}
               variant="segmented"

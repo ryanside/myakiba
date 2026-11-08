@@ -89,12 +89,7 @@ export function ExtensionNotice({
   readonly className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex items-start gap-3 rounded-lg bg-muted/45 p-3 text-left ring-1 ring-foreground/8",
-        className,
-      )}
-    >
+    <div className={cn("flex items-start gap-3 rounded-xl border p-4 text-left", className)}>
       <HugeiconsIcon
         icon={PuzzleIcon}
         strokeWidth={2}
@@ -122,7 +117,7 @@ export function ExtensionLink({
       href={link.href}
       target="_blank"
       rel="noreferrer"
-      className={cn(buttonVariants({ size: "sm" }), className)}
+      className={cn(buttonVariants(), className)}
     >
       {link.label}
       <span className="sr-only"> (opens in a new tab)</span>
