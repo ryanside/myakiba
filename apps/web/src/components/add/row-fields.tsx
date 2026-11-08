@@ -246,6 +246,7 @@ export function RowField({
         <LabeledField id={id} label={cellLabel} className={cellGap}>
           <SelectCell
             id={id}
+            label={`${field.label} for ${title}`}
             value={overrides.condition ?? shared?.condition ?? "New"}
             options={CONDITIONS}
             onSubmit={async (condition) => {

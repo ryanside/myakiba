@@ -16,6 +16,8 @@ import { FieldError } from "@/components/ui/field";
 import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
+import { cn } from "@/lib/utils";
+import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface PopoverInput {
   readonly title: string;
@@ -81,7 +83,7 @@ export function PopoverMultiInputCell({
         render={
           <Button
             variant="ghost"
-            className="w-full justify-start text-foreground pl-0"
+            className={cn(CELL_TRIGGER_CLASS_NAME, "justify-start text-foreground")}
             disabled={disabled}
           >
             {formattedTotal}

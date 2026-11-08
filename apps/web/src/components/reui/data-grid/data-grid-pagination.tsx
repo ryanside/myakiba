@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 interface DataGridPaginationProps {
   sizes?: number[];
@@ -70,6 +70,9 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
   const paginationInfo = from > recordCount ? `0 of ${recordCount}` : pageInfo;
 
   const paginationMoreLimit = mergedProps?.moreLimit || 5;
+  const smallestPageSize = mergedProps.sizes?.length ? Math.min(...mergedProps.sizes) : pageSize;
+  const hasOtherPages = pageCount > 1 || offset > 0;
+  const fitsOnSmallestPage = recordCount > 0 && !hasOtherPages && recordCount <= smallestPageSize;
 
   const currentGroupStart =
     Math.floor(Math.min(pageIndex, lastPageIndex) / paginationMoreLimit) * paginationMoreLimit;
@@ -131,6 +134,8 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
     return null;
   };
 
+  if (fitsOnSmallestPage) return <div data-slot="data-grid-pagination" />;
+
   return (
     <div
       data-slot="data-grid-pagination"
@@ -148,7 +153,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
             table.setPageSize(newPageSize);
           }}
         >
-          <SelectTrigger className="w-14" size="sm">
+          <SelectTrigger className="w-auto min-w-14 gap-1" size="sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent side="top" className="min-w-18">
@@ -164,7 +169,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
         <div className="text-muted-foreground text-sm order-2 text-nowrap sm:order-1">
           {paginationInfo}
         </div>
-        {(pageCount > 1 || isPastEnd) && (
+        {hasOtherPages && (
           <div className="order-1 flex items-center space-x-1 sm:order-2">
             <Button
               size="icon-sm"
@@ -174,7 +179,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
               disabled={offset === 0}
             >
               <span className="sr-only">{mergedProps.previousPageLabel}</span>
-              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4" />
+              <HugeiconsIcon icon={PreviousIcon} strokeWidth={2} className="size-4" />
             </Button>
 
             {renderEllipsisPrevButton()}
@@ -191,7 +196,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
               disabled={!table.getCanNextPage()}
             >
               <span className="sr-only">{mergedProps.nextPageLabel}</span>
-              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+              <HugeiconsIcon icon={NextIcon} strokeWidth={2} className="size-4" />
             </Button>
           </div>
         )}

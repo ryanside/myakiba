@@ -113,7 +113,7 @@ async function changePassword() {
 async function savePreferences() {
   renderSettings(() => <Preferences user={user} />);
   fireEvent.click(await screen.findByRole("button", { name: "DD/MM/YYYY" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 }
 
 async function saveProfile() {

@@ -9,10 +9,9 @@ import { BackLink } from "@/components/ui/back-link";
 import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
-import { env } from "@myakiba/env/web";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -26,29 +25,30 @@ function RouteComponent() {
   const [sentEmail, setSentEmail] = useState("");
 
   const { status, run } = useButtonStatus();
+  const captcha = useCaptcha();
   const form = useForm({
     defaultValues: {
       email: "",
-      turnstileToken: "",
     },
     onSubmit: async ({ value }) => {
-      await handleForgotPassword(value.email, value.turnstileToken);
+      const captchaToken = await captcha.token();
+      if (captchaToken === null) return;
+      await handleForgotPassword(value.email, captchaToken);
     },
     validators: {
       onSubmit: z.object({
         email: z.email({ error: "Invalid email address" }),
-        turnstileToken: z.string({ error: "Captcha is required" }),
       }),
     },
   });
 
-  const handleForgotPassword = async (email: string, turnstileToken: string) => {
+  const handleForgotPassword = async (email: string, captchaToken: string) => {
     const requested = await run(
       () =>
         decodeAuth(() =>
           authClient.requestPasswordReset(
             { email, redirectTo: getAuthRedirectUrl("/reset-password") },
-            { headers: { "x-captcha-response": turnstileToken } },
+            { headers: { "x-captcha-response": captchaToken } },
           ),
         ),
       (result) => result.isOk(),
@@ -137,13 +137,7 @@ function RouteComponent() {
             )}
           </form.Field>
 
-          <form.Field name="turnstileToken">
-            {(field) => (
-              <div className="space-y-2">
-                <Turnstile siteKey={env.VITE_TURNSTILE_SITE_KEY} onSuccess={field.handleChange} />
-              </div>
-            )}
-          </form.Field>
+          <Captcha captcha={captcha} />
 
           <form.Subscribe>
             {(state) => (

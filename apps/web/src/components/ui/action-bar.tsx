@@ -87,6 +87,52 @@ function useFocusContext(consumerName: string) {
   return context;
 }
 
+type PresenceState = "starting" | "open" | "ending" | "closed";
+
+function usePresence(
+  open: boolean,
+  elementRef: React.RefObject<HTMLElement | null>,
+): PresenceState {
+  const [state, setState] = React.useState<PresenceState>(open ? "starting" : "closed");
+  const [previousOpen, setPreviousOpen] = React.useState(open);
+
+  if (open !== previousOpen) {
+    setPreviousOpen(open);
+    if (open) setState(state === "ending" ? "open" : "starting");
+    else if (state !== "closed") setState("ending");
+  }
+
+  useIsomorphicLayoutEffect(() => {
+    const element = elementRef.current;
+    if (state !== "starting" || !element) return;
+    // Lay out the starting style before leaving it, so the entrance transitions from it.
+    element.getBoundingClientRect();
+    setState("open");
+  });
+
+  React.useEffect(() => {
+    if (state !== "ending") return;
+    let cancelled = false;
+    const finished = (elementRef.current?.getAnimations() ?? []).map(
+      (animation) => animation.finished,
+    );
+    async function unmountAfterExit(): Promise<void> {
+      try {
+        await Promise.all(finished);
+      } catch {
+        return;
+      }
+      if (!cancelled) setState("closed");
+    }
+    void unmountAfterExit();
+    return () => {
+      cancelled = true;
+    };
+  }, [state, elementRef]);
+
+  return state;
+}
+
 interface ActionBarProps extends DivProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -115,12 +161,16 @@ function ActionBar(props: ActionBarProps) {
     className,
     style,
     ref,
+    children,
     ...rootProps
   } = props;
 
   const [mounted, setMounted] = React.useState(false);
-
   const rootRef = React.useRef<RootElement>(null);
+  const presence = usePresence(open, rootRef);
+  const [shownChildren, setShownChildren] = React.useState(children);
+  if (open && children !== shownChildren) setShownChildren(children);
+
   const composedRef = useComposedRefs(ref, rootRef);
 
   const propsRef = useAsRef({
@@ -164,7 +214,7 @@ function ActionBar(props: ActionBarProps) {
 
   const portalContainer = portalContainerProp ?? (mounted ? globalThis.document?.body : null);
 
-  if (!portalContainer || !open) return null;
+  if (!portalContainer || presence === "closed") return null;
 
   const RootPrimitive = "div";
 
@@ -178,14 +228,18 @@ function ActionBar(props: ActionBarProps) {
           data-side={side}
           data-align={align}
           data-orientation={orientation}
+          data-starting-style={presence === "starting" ? "" : undefined}
+          data-ending-style={presence === "ending" ? "" : undefined}
+          inert={presence === "ending"}
           dir={dir}
           {...rootProps}
           ref={composedRef}
           className={cn(
             "fixed z-50 rounded-lg border bg-card shadow-lg outline-none",
-            "fade-in-0 zoom-in-95 animate-in duration-250 [animation-timing-function:cubic-bezier(0.16,1,0.3,1)]",
-            "data-[side=bottom]:slide-in-from-bottom-4 data-[side=top]:slide-in-from-top-4",
-            "motion-reduce:animate-none motion-reduce:transition-none",
+            "transition-[opacity,transform] duration-200 ease-out data-ending-style:duration-150",
+            "data-starting-style:opacity-0 data-ending-style:opacity-0",
+            "data-[side=bottom]:data-starting-style:[transform:translateY(var(--bar-rise))] data-[side=bottom]:data-ending-style:[transform:translateY(var(--bar-rise))]",
+            "data-[side=top]:data-starting-style:[transform:translateY(calc(var(--bar-rise)*-1))] data-[side=top]:data-ending-style:[transform:translateY(calc(var(--bar-rise)*-1))]",
             orientation === "horizontal"
               ? "flex w-max max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-center gap-2 px-2 py-1.5"
               : "flex flex-col items-start gap-2 px-1.5 py-2",
@@ -201,7 +255,9 @@ function ActionBar(props: ActionBarProps) {
             ...(align === "end" && { right: `${alignOffset}px` }),
             ...style,
           }}
-        />,
+        >
+          {open ? children : shownChildren}
+        </RootPrimitive>,
         portalContainer,
       )}
     </ActionBarContext.Provider>
@@ -587,7 +643,7 @@ function ActionBarClose(props: ActionBarCloseProps) {
       data-slot="action-bar-close"
       {...closeProps}
       className={cn(
-        "rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "rounded-xs opacity-70 outline-none hover:opacity-100 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       onClick={onCloseClick}

@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, spyOn, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { toast } from "@/components/ui/toast";
@@ -81,7 +81,8 @@ async function confirmDelete(deleteAnswer: () => Response) {
     </QueryClientProvider>,
   );
   await screen.findByRole("heading", { name: "Alpha Order" });
-  act(() => screen.getByRole("button", { name: "Delete" }).click());
+  fireEvent.click(screen.getByRole("button", { name: "More order actions" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "Delete order" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("Delete order?")).toBeTruthy();
   act(() => within(dialog).getByRole("button", { name: "Delete" }).click());

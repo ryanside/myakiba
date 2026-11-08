@@ -34,11 +34,14 @@ import { InlineCountCell } from "../cells/inline-count-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { InlineReleaseCell } from "../cells/inline-release-cell";
+import { withOrderItemPending } from "./order-pending-context";
+import { editableCell } from "@/components/data-table/row-pending";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { CategoryLabel } from "@/components/media-tile";
+import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import type { Saving } from "@/data/client";
 import { itemDestination } from "@/lib/item-destination";
 
@@ -49,7 +52,6 @@ interface OrderItemSubColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
-  isCollectionItemPending: (collectionId: string) => boolean;
 }
 
 function OrderItemActionsCell({
@@ -79,7 +81,7 @@ function OrderItemActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
@@ -166,8 +168,11 @@ export function createOrderItemSubColumns({
   currency,
   locale,
   dateFormat,
-  isCollectionItemPending,
 }: OrderItemSubColumnsParams): ColumnDef<OrderItem>[] {
+  const editItem = editableCell(withOrderItemPending, (item, field, value) =>
+    onEditItem({ ...item, [field]: value }),
+  );
+
   return [
     {
       id: "select",
@@ -220,7 +225,7 @@ export function createOrderItemSubColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 450,
+      size: 300,
       meta: {
         skeleton: (
           <div className="flex items-center gap-3">
@@ -238,20 +243,9 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
-        return (
-          <PopoverDatePickerCell
-            value={item.orderDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditItem({ ...item, orderDate: newValue });
-            }}
-          />
-        );
-      },
+      cell: editItem("orderDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.orderDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -265,33 +259,26 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
-        return (
-          <InlineReleaseCell
-            releaseId={item.releaseId}
-            itemId={item.itemId}
-            fallback={{
-              releaseDate: item.releaseDate,
-              releaseType: item.releaseType,
-              releasePrice: item.releasePrice,
-              releaseCurrency: item.releaseCurrency,
-              releaseBarcode: item.releaseBarcode,
-            }}
-            currency={currency}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newReleaseId) => {
-              return onEditItem({ ...item, releaseId: newReleaseId });
-            }}
-          />
-        );
-      },
+      cell: editItem("releaseId", (item, edit) => (
+        <InlineReleaseCell
+          releaseId={item.releaseId}
+          itemId={item.itemId}
+          fallback={{
+            releaseDate: item.releaseDate,
+            releaseType: item.releaseType,
+            releasePrice: item.releasePrice,
+            releaseCurrency: item.releaseCurrency,
+            releaseBarcode: item.releaseBarcode,
+          }}
+          currency={currency}
+          dateFormat={dateFormat}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 110,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -301,24 +288,15 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
-        return (
-          <InlineCountCell
-            value={item.count}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditItem({ ...item, count: newValue });
-            }}
-          />
-        );
-      },
+      cell: editItem("count", (item, edit) => (
+        <InlineCountCell label="Count" value={item.count} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 70,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6 w-10" />,
       },
     },
@@ -327,28 +305,20 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Status" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
-        return (
-          <SelectCell
-            value={item.status}
-            options={[...ORDER_STATUSES]}
-            colorMap={ORDER_STATUS_COLORS}
-            disabled={isPending}
-            onSubmit={async (value) => {
-              return onEditItem({
-                ...item,
-                status: value as OrderStatus,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("status", (item, { disabled, onSubmit }) => (
+        <SelectCell
+          label="Status"
+          value={item.status}
+          options={[...ORDER_STATUSES]}
+          colorMap={ORDER_STATUS_COLORS}
+          disabled={disabled}
+          onSubmit={(value) => onSubmit(value as OrderStatus)}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 105,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -359,35 +329,30 @@ export function createOrderItemSubColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
-        return (
-          <InlineCurrencyCell
-            value={item.price}
-            currency={currency}
-            onSubmit={async (newValue) => {
-              return onEditItem({ ...item, price: newValue });
-            }}
-            locale={locale}
-            disabled={isPending}
-          />
-        );
-      },
+      cell: editItem("price", (item, edit) => (
+        <InlineCurrencyCell
+          label="Price"
+          value={item.price}
+          currency={currency}
+          locale={locale}
+          {...edit}
+          zeroAsEmpty
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
       size: 95,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withOrderItemPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionItemPending(item.id);
         return (
           <OrderItemActionsCell
             item={item}
@@ -399,8 +364,8 @@ export function createOrderItemSubColumns({
             dateFormat={dateFormat}
           />
         );
-      },
-      size: 56,
+      }),
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

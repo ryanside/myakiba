@@ -1,11 +1,13 @@
 import { Fragment } from "react";
-import { ArrowRight02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChangelogCoverImage } from "@/components/changelog/changelog-mdx";
+import { ARROW_ICON_CLASS_NAME } from "@/components/ui/back-link";
 import { Separator } from "@/components/ui/separator";
 import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
+import { cn } from "@/lib/utils";
 import "@/components/changelog/changelog.css";
+import { NavigateIcon } from "@/lib/icons";
 
 export const Route = createFileRoute("/(changelog)/changelog/")({
   component: ChangelogIndex,
@@ -44,7 +46,7 @@ function ChangelogIndex() {
                 <Link
                   to="/changelog/$slug"
                   params={{ slug: entry.slug }}
-                  className="group -mx-3 flex flex-col gap-4 rounded-xl px-3 py-4 outline-none transition-colors duration-150 hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="group -mx-3 flex flex-col gap-4 rounded-xl px-3 py-4 outline-none color-motion hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <time
                     dateTime={entry.date}
@@ -73,8 +75,11 @@ function ChangelogIndex() {
                   <span className="flex min-h-10 w-fit items-center gap-1.5 text-sm">
                     Read more
                     <HugeiconsIcon
-                      icon={ArrowRight02Icon}
-                      className="transition-transform duration-150 group-hover:translate-x-0.5 size-3 mt-0.5"
+                      icon={NavigateIcon}
+                      className={cn(
+                        ARROW_ICON_CLASS_NAME,
+                        "group-hover:translate-x-(--nudge) size-3 mt-0.5",
+                      )}
                       aria-hidden
                     />
                   </span>

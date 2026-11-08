@@ -9,7 +9,7 @@ import {
 import type { IconSvgElement } from "@hugeicons/react";
 
 export const SETTINGS_NAV_GROUPS = [
-  { label: null, sections: ["preferences", "appearance", "layout"] },
+  { label: "General", sections: ["preferences", "appearance", "layout"] },
   { label: "Account", sections: ["profile", "account"] },
   { label: null, sections: ["about"] },
 ] as const satisfies readonly {
@@ -75,7 +75,8 @@ export const SETTINGS = {
   currency: {
     section: "preferences",
     title: "Display currency",
-    description: "Prices and totals across myakiba show in this currency.",
+    description:
+      "Your spending and totals show in this currency. Release prices keep the currency they were listed in.",
     keywords: ["money", "price", "cost", "usd", "jpy", "yen", "eur"],
   },
   "date-format": {
@@ -99,7 +100,7 @@ export const SETTINGS = {
   "reduce-motion": {
     section: "appearance",
     title: "Reduce motion",
-    description: "Turn off animations and transitions across myakiba.",
+    description: "Replace movement with simple fades.",
     keywords: ["animation", "accessibility", "transition", "calm", "vestibular"],
   },
   "view-collection": {

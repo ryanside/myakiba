@@ -17,7 +17,7 @@ function ChangelogLayout() {
         >
           <Link
             to="/"
-            className="flex min-h-10 items-center rounded-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex min-h-10 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="myakiba home"
           >
             <MyAkibaLogo size="full" className="my-0 h-auto w-24" />

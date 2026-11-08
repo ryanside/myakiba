@@ -12,8 +12,10 @@ import { items } from "@/data/resources/item";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
+import { shownMessageOf } from "@/data/api";
 
 type ReleaseFallback = {
   readonly releaseDate: string | null;
@@ -74,10 +76,10 @@ export function InlineReleaseCell({
         }}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger className={QUIET_SELECT_TRIGGER_CLASS_NAME}>
           <SelectValue placeholder="Select release">
             {displayReleaseId && displayData.date && (
-              <span className="text-sm font-medium">
+              <span className="text-sm tabular-nums">
                 {formatDateOnlyForDisplay(displayData.date, dateFormat)}
               </span>
             )}
@@ -91,7 +93,7 @@ export function InlineReleaseCell({
             </div>
           )}
           {releasesError && (
-            <div className="p-3 text-sm text-destructive">{releasesError.message}</div>
+            <div className="p-3 text-sm text-destructive">{shownMessageOf(releasesError)}</div>
           )}
           {releasesData?.releases.map((release) => (
             <SelectItem key={release.id} value={release.id} className="py-2.5">
@@ -101,7 +103,7 @@ export function InlineReleaseCell({
                     {formatDateOnlyForDisplay(release.date, dateFormat)}
                   </span>
                   {release.type && (
-                    <span className="text-xs text-muted-foreground/80 bg-muted/60 px-1.5 py-px rounded">
+                    <span className="text-xs text-muted-foreground bg-muted/60 px-1.5 py-px rounded">
                       {release.type}
                     </span>
                   )}

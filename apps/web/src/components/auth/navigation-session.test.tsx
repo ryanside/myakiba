@@ -10,30 +10,9 @@ import {
 } from "@tanstack/react-router";
 import type { RouterAppContext } from "@/routes/__root";
 import type { Session } from "@/lib/session";
+import { signedInSession } from "../../../test/session";
 
-const session = {
-  session: {
-    id: "navigation-session",
-    token: "test-token",
-    userId: "navigation-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "navigation-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-} satisfies NonNullable<Session>;
+const session = signedInSession();
 
 let sessionRequests = 0;
 const realFetch = globalThis.fetch;

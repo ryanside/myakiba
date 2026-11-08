@@ -9,9 +9,9 @@ import { OverviewTab } from "@/components/dashboard/overview-tab";
 import { Button } from "@/components/ui/button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { randomKaomoji } from "@/lib/kaomoji";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 function getCurrentVisibleMonth(): Date {
   const now = new Date();
@@ -96,14 +96,19 @@ function RouteComponent(): ReactElement {
   );
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-[88rem] flex-col gap-4 md:min-h-[calc(100dvh-7rem)]">
-      <div className="flex flex-col gap-2 mb-2">
-        <div className="flex flex-row items-start gap-4">
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-[88rem] flex-col gap-8 md:min-h-[calc(100dvh-7rem)]"
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row flex-wrap items-center gap-4">
           {activeTab === "overview" ? (
-            <h1 className="text-2xl tracking-tight font-heading font-medium">
-              Welcome
+            <h1 className="page-title">
+              Welcome back
               <span className="hidden sm:inline">
-                , {session?.user.username} {kaomoji}
+                , {session?.user.username}{" "}
+                <span className="text-[0.8em] font-normal text-muted-foreground">{kaomoji}</span>
               </span>
             </h1>
           ) : (
@@ -112,7 +117,7 @@ function RouteComponent(): ReactElement {
               role="group"
               aria-label="Select month"
             >
-              <h1 className="w-28 min-w-0 shrink-0 truncate text-left text-2xl tracking-tight font-heading font-medium tabular-nums">
+              <h1 className="min-w-28 shrink-0 text-left page-title tabular-nums">
                 {monthYearLabel.format(visibleMonth)}
               </h1>
               <Button
@@ -122,7 +127,7 @@ function RouteComponent(): ReactElement {
                 onClick={() => shiftMonth(-1)}
                 aria-label="Previous month"
               >
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5" />
+                <HugeiconsIcon icon={PreviousIcon} strokeWidth={2} className="size-3.5" />
               </Button>
               <Button
                 type="button"
@@ -131,44 +136,46 @@ function RouteComponent(): ReactElement {
                 onClick={() => shiftMonth(1)}
                 aria-label="Next month"
               >
-                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5" />
+                <HugeiconsIcon icon={NextIcon} strokeWidth={2} className="size-3.5" />
               </Button>
             </div>
           )}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="ml-auto shrink-0">
-            <TabsList variant="line">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <TabsList className="ml-auto shrink-0">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="monthly">Monthly</TabsTrigger>
+          </TabsList>
         </div>
       </div>
-      {activeTab === "overview" && (
-        <OverviewTab
-          data={data}
-          dataUpdatedAt={dataUpdatedAt}
-          isLoading={isPending}
-          isError={isError}
-          error={error}
-          currency={userCurrency}
-          locale={userLocale}
-          dateFormat={dateFormat}
-        />
-      )}
-      {activeTab === "monthly" && (
-        <MonthlyTab
-          data={monthlyData}
-          dataUpdatedAt={monthlyDataUpdatedAt}
-          isLoading={monthlyIsPending}
-          isError={monthlyIsError}
-          error={monthlyError}
-          currency={userCurrency}
-          locale={userLocale}
-          dateFormat={dateFormat}
-          month={selectedMonth}
-          year={selectedYear}
-        />
-      )}
-    </div>
+      <TabsContent value="overview" className="flex flex-col gap-8 text-base">
+        {activeTab === "overview" && (
+          <OverviewTab
+            data={data}
+            dataUpdatedAt={dataUpdatedAt}
+            isLoading={isPending}
+            isError={isError}
+            error={error}
+            currency={userCurrency}
+            locale={userLocale}
+            dateFormat={dateFormat}
+          />
+        )}
+      </TabsContent>
+      <TabsContent value="monthly" className="flex flex-col gap-8 text-base">
+        {activeTab === "monthly" && (
+          <MonthlyTab
+            data={monthlyData}
+            dataUpdatedAt={monthlyDataUpdatedAt}
+            isLoading={monthlyIsPending}
+            isError={monthlyIsError}
+            error={monthlyError}
+            currency={userCurrency}
+            locale={userLocale}
+            dateFormat={dateFormat}
+            month={selectedMonth}
+            year={selectedYear}
+          />
+        )}
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -1,5 +1,6 @@
-import { ArrowLeft01Icon, PaintBucketIcon } from "@hugeicons/core-free-icons";
+import { PaintBucketIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { PreviousIcon } from "@/lib/icons";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -371,7 +372,7 @@ export function FillMenu({
                 }, 50);
               }}
             >
-              <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" aria-hidden="true" />
+              <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" aria-hidden="true" />
               All fields
             </Button>
             <FillForm

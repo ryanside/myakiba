@@ -17,7 +17,7 @@
       "@paralleldrive/cuid2": "^3.3.0",
       "dotenv": "^17.2.4",
       "uuid": "^14.0.2",
-      "better-auth": "^1.6.23",
+      "better-auth": "^1.7.16",
       "elysia": "^1.4.25",
       "date-fns": "^4.1.0",
       "evlog": "^2.26.0",
@@ -48,7 +48,7 @@
     "redis:down": "turbo run redis:down -F @myakiba/redis",
     "check": "oxfmt --check . && bun scripts/check-rule-table.ts && bun scripts/lint-budget.ts",
     "knip": "bun scripts/knip-budget.ts",
-    "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm",
+    "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-g3hv-75wg-m249",
     "fix": "ultracite fix",
     "prepare": "husky",
     "doctor": "npx react-doctor@latest",
@@ -68,7 +68,7 @@
     "ultracite": "7.10.7"
   },
   "overrides": {
-    "@better-auth/core": "1.6.23",
+    "@better-auth/core": "1.7.16",
     "@esbuild-kit/core-utils": {
       "esbuild": "0.25.12"
     }

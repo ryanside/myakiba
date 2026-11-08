@@ -52,11 +52,11 @@ export const Route = createFileRoute("/(app)/lists")({
 
 // Firefox applies the @3xl gaps one style pass late, and the reduced-motion rule would animate the jump.
 const FOLDER_GRID_CLASS_NAME =
-  "grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-8 @3xl:gap-y-6";
+  "-mt-6 grid grid-cols-2 gap-3 transition-none @3xl:grid-cols-3 @3xl:gap-x-6 @3xl:gap-y-0 @6xl:grid-cols-4";
 
 const FOLDER_DROP = {
-  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[17px]",
-  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[17px]",
+  before: "inset-y-2 -left-[7px] w-0.5 @3xl:-left-[13px]",
+  after: "inset-y-2 -right-[7px] w-0.5 @3xl:-right-[13px]",
 };
 
 function SortableList({
@@ -141,12 +141,13 @@ function SortableList({
   }
 
   return (
-    <div ref={setNodeRef} className="relative">
+    <div ref={setNodeRef} className="@container relative">
       <DropIndicator placement={dropIndicator} geometry={FOLDER_DROP} />
       <div
         data-folder-host
         className={cn(
-          "group/item relative rounded-[1.75rem] px-1.5 pt-[15%] pb-1.5 outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
+          "[--inset:--spacing(1.5)] [--radius-outer:calc(0.06*(100cqw-2*var(--inset))+var(--inset))]",
+          "group/item relative rounded-(--radius-outer) px-(--inset) pt-[15%] pb-(--inset) outline-offset-2 outline-ring has-[a:focus-visible]:outline-2",
           selected && "bg-foreground/[0.045] ring-2 ring-primary",
           entranceAnimationActive && "animate-data-in",
         )}
@@ -306,7 +307,7 @@ function RouteComponent(): React.JSX.Element {
   );
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex max-w-[88rem] flex-col gap-6">
       <PageHeader
         title="Lists"
         meta={isPending || (isError && !data) ? null : formatCount(totalCount, "List", "Lists")}
@@ -340,9 +341,7 @@ function RouteComponent(): React.JSX.Element {
 
       {isPending && viewMode === "list" ? <MediaViewSkeletons viewMode="list" count={4} /> : null}
 
-      {isError && !data ? (
-        <LoadError title="Couldn't load your Lists" message={error.message} />
-      ) : null}
+      {isError && !data ? <LoadError title="Couldn't load your Lists" error={error} /> : null}
 
       {!isPending && data && lists.length === 0 ? (
         <Empty className={STATE_PANEL_CLASS_NAME}>

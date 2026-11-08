@@ -39,15 +39,17 @@ interface BreakdownChartProps<TData extends BreakdownChartData> {
   readonly variant?: "default" | "scrollable";
 }
 
+const STACKED_LEGEND_CLASS_NAME = "flex flex-col gap-0.5";
+
 const CHART_VARIANTS = {
   default: {
-    legendClassName: "animate-data-in flex flex-col gap-0.5",
+    legendClassName: STACKED_LEGEND_CLASS_NAME,
     rowClassName: "flex cursor-default items-center gap-2.5 py-1 transition-opacity duration-200",
-    skeletonLegendClassName: "flex flex-col gap-0.5",
+    skeletonLegendClassName: STACKED_LEGEND_CLASS_NAME,
   },
   scrollable: {
     legendClassName:
-      "animate-data-in -mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto",
+      "-mx-(--frame-panel-p) flex max-h-50 flex-col gap-0 overflow-y-auto pb-4 scroll-fade-b",
     rowClassName:
       "flex items-center gap-2.5 px-(--frame-panel-p) py-1 transition-opacity duration-200",
     skeletonLegendClassName: "flex flex-col",
@@ -122,9 +124,47 @@ export function BreakdownChart<TData extends BreakdownChartData>({
     );
   }
 
+  const legend = (
+    <div className={variantStyles.legendClassName}>
+      {items.map((item) => {
+        const isHovered = hoveredItemId === item.id;
+        const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
+        const state: BreakdownChartRenderState<TData> = {
+          item,
+          isHovered,
+          isOtherHovered,
+          rowProps: {
+            className: variantStyles.rowClassName,
+            style: { opacity: isOtherHovered ? 0.4 : 1 },
+            onMouseEnter: () => setHoveredItemId(item.id),
+            onMouseLeave: () => setHoveredItemId(null),
+          },
+          markerProps: {
+            className: "h-4 shrink-0 rounded-full transition-[width] duration-200",
+            style: {
+              backgroundColor: item.color,
+              width: isHovered ? "0.5rem" : "0.375rem",
+            },
+          },
+        };
+
+        if (children) {
+          return <Fragment key={item.id}>{children(state)}</Fragment>;
+        }
+
+        return (
+          <div key={item.id} {...state.rowProps}>
+            <div {...state.markerProps} />
+            <DefaultLegendItem item={item} />
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col gap-3">
-      <TooltipProvider>
+    <div className="flex flex-1 flex-col gap-3">
+      <TooltipProvider delay={0}>
         <div className="animate-data-in flex h-2.5 w-full overflow-hidden rounded-sm">
           {items.map((item) => {
             const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
@@ -151,41 +191,7 @@ export function BreakdownChart<TData extends BreakdownChartData>({
         </div>
       </TooltipProvider>
 
-      <div className={variantStyles.legendClassName}>
-        {items.map((item) => {
-          const isHovered = hoveredItemId === item.id;
-          const isOtherHovered = hoveredItemId !== null && hoveredItemId !== item.id;
-          const state: BreakdownChartRenderState<TData> = {
-            item,
-            isHovered,
-            isOtherHovered,
-            rowProps: {
-              className: variantStyles.rowClassName,
-              style: { opacity: isOtherHovered ? 0.4 : 1 },
-              onMouseEnter: () => setHoveredItemId(item.id),
-              onMouseLeave: () => setHoveredItemId(null),
-            },
-            markerProps: {
-              className: "h-4 shrink-0 rounded-full transition-[width] duration-200",
-              style: {
-                backgroundColor: item.color,
-                width: isHovered ? "0.5rem" : "0.375rem",
-              },
-            },
-          };
-
-          if (children) {
-            return <Fragment key={item.id}>{children(state)}</Fragment>;
-          }
-
-          return (
-            <div key={item.id} {...state.rowProps}>
-              <div {...state.markerProps} />
-              <DefaultLegendItem item={item} />
-            </div>
-          );
-        })}
-      </div>
+      <div className="animate-data-in">{legend}</div>
     </div>
   );
 }

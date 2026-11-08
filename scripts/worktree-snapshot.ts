@@ -1,0 +1,35 @@
+import { $ } from "bun";
+import { copyFile, mkdtemp, rm, stat, utimes } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+/**
+ * Commits the working tree of `repo` on top of HEAD, leaving its index untouched, and returns the commit.
+ * Index flags carry over, so changes to assume-unchanged or skip-worktree files are not captured.
+ */
+export async function snapshotWorkingTree(repo: string) {
+  const scratch = await mkdtemp(path.join(tmpdir(), "myakiba-snapshot-"));
+  try {
+    const index = path.join(scratch, "index");
+    const realIndex = await $`git rev-parse --git-path index`.cwd(repo).text();
+    const realIndexPath = path.resolve(repo, realIndex.trim());
+    const indexEnv = { ...process.env, GIT_INDEX_FILE: index };
+    // Start from the real index so force-staged ignored files stay in the snapshot. The copy keeps
+    // the index's mtime, or Git trusts the stat of a file edited in the second it wrote the index.
+    if (await Bun.file(realIndexPath).exists()) {
+      const { atime, mtime } = await stat(realIndexPath);
+      await copyFile(realIndexPath, index);
+      await utimes(index, atime, mtime);
+    } else await $`git read-tree HEAD`.cwd(repo).env(indexEnv).quiet();
+    const tree = await $`git add -A && git write-tree`.cwd(repo).env(indexEnv).quiet().text();
+    // A fresh CI checkout has no Git identity. Identity env vars still win over these.
+    const commit =
+      await $`git -c user.name=replay -c user.email=replay@localhost commit-tree ${tree.trim()} -p HEAD -m ${"Replay WORKTREE"}`
+        .cwd(repo)
+        .quiet()
+        .text();
+    return commit.trim();
+  } finally {
+    await rm(scratch, { recursive: true, force: true });
+  }
+}

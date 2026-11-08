@@ -57,7 +57,7 @@ export function CumulativeOrderSpending({
   };
   return (
     <ChartSection
-      title="Cumulative Order Spending"
+      title="Order spending"
       selector={selector}
       legend={<ChartSeriesLegend items={legend} visibleKeys={visibleKeys} onToggle={toggle} />}
       isEmpty={!isLoading && data.length === 0}
@@ -74,7 +74,9 @@ export function CumulativeOrderSpending({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

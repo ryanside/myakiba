@@ -1,5 +1,4 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowUp01Icon, ArrowUpDownIcon } from "@hugeicons/core-free-icons";
 import { useId, useState } from "react";
 import type { ReactElement } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
 export type SortableColumn = {
   id: string;
@@ -56,20 +56,20 @@ export function SortCombobox({
     if (currentSort?.columnId !== columnId) return null;
 
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} className="ml-auto size-4 text-primary" />
+      <HugeiconsIcon icon={SortDescendingIcon} className="ml-auto size-4 text-primary" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} className="ml-auto size-4 text-primary" />
+      <HugeiconsIcon icon={SortAscendingIcon} className="ml-auto size-4 text-primary" />
     );
   };
 
   const getSortButtonIcon = (): React.ReactElement => {
     if (!currentSort) {
-      return <HugeiconsIcon icon={ArrowUpDownIcon} data-icon="inline-start" />;
+      return <HugeiconsIcon icon={UnsortedIcon} data-icon="inline-start" />;
     }
     return currentSort.direction === "desc" ? (
-      <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-start" />
+      <HugeiconsIcon icon={SortDescendingIcon} data-icon="inline-start" />
     ) : (
-      <HugeiconsIcon icon={ArrowUp01Icon} data-icon="inline-start" />
+      <HugeiconsIcon icon={SortAscendingIcon} data-icon="inline-start" />
     );
   };
 
@@ -86,7 +86,7 @@ export function SortCombobox({
       className="justify-between"
     >
       {getSortButtonIcon()}
-      <span className="hidden md:block">{currentColumnName || "Sort By"}</span>
+      <span className="max-md:sr-only">{currentColumnName || "Sort"}</span>
     </Button>
   );
 
@@ -96,7 +96,7 @@ export function SortCombobox({
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
-          <CommandList id={listboxId} hideScrollbar={false}>
+          <CommandList id={listboxId}>
             <CommandEmpty>No column found.</CommandEmpty>
             <CommandGroup>
               {columns.map((column) => {

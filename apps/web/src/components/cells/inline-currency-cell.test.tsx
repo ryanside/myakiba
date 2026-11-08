@@ -11,6 +11,7 @@ function renderCell() {
   const writes: number[] = [];
   render(
     <InlineCurrencyCell
+      label="Price"
       value={1000}
       currency="USD"
       locale="en-US"
@@ -24,7 +25,7 @@ function renderCell() {
 }
 
 function enter(amount: string) {
-  act(() => screen.getByRole("button", { name: "$10.00" }).click());
+  act(() => screen.getByRole("button", { name: "$10.00, edit Price" }).click());
   const input = screen.getByRole("textbox");
   fireEvent.change(input, { target: { value: amount } });
   fireEvent.keyDown(input, { key: "Enter" });

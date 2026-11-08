@@ -73,7 +73,9 @@ export function OrderSpendingByPeriod({
         <EvilBarChart.Grid />
         <EvilBarChart.XAxis dataKey="bucket" />
         <EvilBarChart.YAxis
-          tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

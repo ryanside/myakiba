@@ -92,6 +92,7 @@ function stampInfiniteRead<F extends PersistedFamily, Input, Identity, Page exte
           settle(() =>
             call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
               fallback: spec.failure,
+              empty: spec.failure,
             }),
           ),
         initialPageParam: 0,

@@ -44,7 +44,6 @@ export function ItemRefreshButton({
   const button = (
     <GatedButton
       variant="outline"
-      size="xs"
       disabled={isDisabled}
       icon={Refresh01Icon}
       pending={isPending}

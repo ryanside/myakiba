@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { itemDestination } from "@/lib/item-destination";
+import { shownMessageOf } from "@/data/api";
 
 const SECTION_ITEM_PAGE_SIZE = 6;
 
@@ -96,7 +97,9 @@ function ExpandedRowItems({
   }
 
   if (isError) {
-    return <p className="text-xs text-destructive">Failed to load items: {error?.message}</p>;
+    return (
+      <p className="text-xs text-destructive">Failed to load items: {shownMessageOf(error)}</p>
+    );
   }
 
   if (!data || data.items.length === 0) {

@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
+import { useCollectionPending } from "@/components/collection/collection-pending-context";
 import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -34,8 +35,6 @@ interface CollectionGalleryGridProps {
   ) => Saving;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
-  readonly isCollectionPending: (collectionId: string) => boolean;
-  readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -51,10 +50,9 @@ export function CollectionGalleryGrid({
   onAddCollectionItemsToNewOrder,
   currency,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
   isLoading,
 }: CollectionGalleryGridProps): React.JSX.Element {
+  const { isItemPending } = useCollectionPending();
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {
@@ -101,7 +99,6 @@ export function CollectionGalleryGrid({
 
   const tiles = items.map((item) => {
     const isSelected = !!rowSelection[item.id];
-    const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
 
     return (
       <MediaGalleryTile
@@ -113,7 +110,7 @@ export function CollectionGalleryGrid({
           item={item}
           itemSize={tileSize}
           variant="media"
-          isPending={isPending}
+          isPending={isItemPending(item.id)}
           isSelected={isSelected}
           onEditCollectionItem={onEditCollectionItem}
           onDeleteCollectionItems={onDeleteCollectionItems}

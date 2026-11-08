@@ -6,11 +6,15 @@ import { app } from "@/lib/treaty-client";
 export function getLists(limit: number, offset: number) {
   return call(app.api.lists.get({ query: { limit, offset } }), {
     fallback: "Failed to get lists",
+    empty: "Failed to get lists",
   });
 }
 
 export function createList(input: ListInput) {
-  return call(app.api.lists.post(input), { fallback: "Failed to create list" });
+  return call(app.api.lists.post(input), {
+    fallback: "Failed to create list",
+    empty: "Failed to create list",
+  });
 }
 
 export function moveLists(intent: PositionOrderInput) {
@@ -34,7 +38,10 @@ export function deleteLists(listIds: readonly string[]) {
 }
 
 export function getList(listId: string) {
-  return call(app.api.lists({ listId }).get(), { fallback: "Failed to get list" });
+  return call(app.api.lists({ listId }).get(), {
+    fallback: "Failed to get list",
+    empty: "Failed to get list",
+  });
 }
 
 export function getListMembers(listId: string, limit: number, offset: number) {
@@ -42,7 +49,7 @@ export function getListMembers(listId: string, limit: number, offset: number) {
     app.api.lists({ listId }).members.get({
       query: { limit, offset },
     }),
-    { fallback: "Failed to load List" },
+    { fallback: "Failed to load List", empty: "Failed to load List" },
   );
 }
 
@@ -51,7 +58,7 @@ export function getListOptionsForTargets(targets: readonly ListTarget[]) {
     app.api.lists.targets.options.post({
       targets: [...targets],
     }),
-    { fallback: "Failed to get List options" },
+    { fallback: "Failed to get List options", empty: "Failed to get List options" },
   );
 }
 

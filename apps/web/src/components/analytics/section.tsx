@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ARROW_ICON_CLASS_NAME, ARROW_LINK_CLASS_NAME } from "@/components/ui/back-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { NavigateIcon } from "@/lib/icons";
 
 export function SectionShell({
   gradientColor,
@@ -15,15 +16,10 @@ export function SectionShell({
   readonly className?: string;
 }): ReactNode {
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden ring-1 ring-foreground/10 rounded-xl p-4 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/15 shadow-xs",
-        className,
-      )}
-    >
+    <div className={cn("relative isolate", className)}>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-10"
+        className="pointer-events-none absolute -inset-x-8 -inset-y-6 -z-10 opacity-10 mask-x-from-80% mask-y-from-75%"
         style={{
           background: `radial-gradient(125% 125% at 50% 0%, transparent 40%, ${gradientColor} 60%, transparent 80%)`,
         }}
@@ -68,14 +64,11 @@ export function Section({
       </div>
       <div className="relative">{children}</div>
       {link ? (
-        <Link
-          to={link.to}
-          className="font-orbitron lowercase group/link relative flex items-center gap-1.5 w-fit ml-auto py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground"
-        >
+        <Link to={link.to} className={cn(ARROW_LINK_CLASS_NAME, "font-orbitron lowercase ml-auto")}>
           {link.label}
           <HugeiconsIcon
-            icon={ArrowRight01Icon}
-            className="size-3.5 transition-transform duration-150 ease-out group-hover/link:translate-x-0.5"
+            icon={NavigateIcon}
+            className={cn(ARROW_ICON_CLASS_NAME, "group-hover/link:translate-x-(--nudge)")}
           />
         </Link>
       ) : null}

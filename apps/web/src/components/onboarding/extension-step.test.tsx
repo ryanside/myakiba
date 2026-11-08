@@ -35,7 +35,16 @@ await mock.module("@tanstack/react-router", () => ({
 }));
 
 const { ExtensionStep } = await import("./extension-step");
-const { OnboardingDialog } = await import("./onboarding-dialog");
+const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+
+function GettingStartedButton() {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      Getting Started
+    </button>
+  );
+}
 
 const ONBOARDING_KEY = "myakiba:onboarding-v2";
 const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
@@ -48,7 +57,9 @@ function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
 function renderOnboarding() {
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />
+      <OnboardingProvider>
+        <GettingStartedButton />
+      </OnboardingProvider>
     </QueryClientProvider>,
   );
 }

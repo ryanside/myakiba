@@ -1,7 +1,6 @@
 import type { InferOk } from "better-result";
 import { useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { ExternalLinkIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { listInputSchema } from "@myakiba/contracts/lists/schema";
 import type { ListTarget } from "@myakiba/contracts/lists/schema";
@@ -54,6 +53,8 @@ import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
+import { ExternalIcon } from "@/lib/icons";
 
 type ListOptionsForTargets = NonNullable<
   InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
@@ -220,7 +221,7 @@ function ListOptionRow({
               "size-4.5 rounded-sm",
             )}
           >
-            <HugeiconsIcon icon={ExternalLinkIcon} className="size-3" aria-hidden="true" />
+            <HugeiconsIcon icon={ExternalIcon} className="size-3" aria-hidden="true" />
           </Link>
         </div>
         {list.memberCount > 0 ? (
@@ -326,7 +327,7 @@ function AddToListsForm({
             return lists.length > 0 ? (
               <FieldSet>
                 <FieldLegend className="sr-only">Lists</FieldLegend>
-                <ScrollArea className="max-h-72 pr-3 [&_[data-slot=scroll-area-scrollbar]]:hidden">
+                <ScrollArea className="max-h-72 pr-3">
                   <FieldGroup className="gap-3">
                     {lists.map((list) => (
                       <form.Subscribe key={list.id} selector={(state) => state.isSubmitting}>
@@ -449,7 +450,7 @@ export function AddToListsDialog({
 
           {isError ? (
             <p className="py-6 text-center text-sm text-destructive" role="alert">
-              {error.message}
+              {shownMessageOf(error)}
             </p>
           ) : null}
 

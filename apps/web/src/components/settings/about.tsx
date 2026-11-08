@@ -1,9 +1,9 @@
-import { ArrowUpRight01Icon, RefreshIcon } from "@hugeicons/core-free-icons";
+import { RefreshIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { env } from "@myakiba/env/web";
 import { Link } from "@tanstack/react-router";
 import type { ComponentType, SVGProps } from "react";
-import { OnboardingDialog } from "@/components/onboarding/onboarding-dialog";
+import { useOpenOnboarding } from "@/components/onboarding/onboarding-dialog";
 import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useRead } from "@/data/client";
@@ -12,12 +12,15 @@ import { changelogEntries, formatChangelogDate } from "@/lib/changelog";
 import { SettingsGroup } from "./settings-group";
 import type { SettingId } from "./settings-registry";
 import { SettingsRow } from "./settings-row";
+import { ExternalIcon } from "@/lib/icons";
 
 const REPOSITORY = "https://github.com/ryanside/myakiba";
 const DISCORD = "https://discord.gg/VKHVvhcC2z";
 const COMMIT = /^[\da-f]{7,40}$/i;
 
 export function About() {
+  const openOnboarding = useOpenOnboarding();
+
   return (
     <>
       <SettingsGroup title="This version">
@@ -26,14 +29,9 @@ export function About() {
       </SettingsGroup>
       <SettingsGroup title="Help">
         <SettingsRow setting="getting-started" inline>
-          <OnboardingDialog
-            opensForNewAccount={false}
-            renderTrigger={
-              <Button variant="outline" size="sm">
-                Open
-              </Button>
-            }
-          />
+          <Button variant="outline" size="sm" aria-haspopup="dialog" onClick={openOnboarding}>
+            Open
+          </Button>
         </SettingsRow>
         <ExternalRow setting="discord" href={DISCORD} logo={DiscordLogo} label="Join Discord" />
         <ExternalRow setting="github" href={REPOSITORY} logo={GitHubLogo} label="Open GitHub" />
@@ -133,7 +131,7 @@ function ExternalRow({
         {label}
         <span className="sr-only"> (opens in a new tab)</span>
         <HugeiconsIcon
-          icon={ArrowUpRight01Icon}
+          icon={ExternalIcon}
           data-icon="inline-end"
           aria-hidden="true"
           className="text-muted-foreground"

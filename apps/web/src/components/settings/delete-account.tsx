@@ -97,7 +97,7 @@ export function DeleteAccount() {
             </DialogDescription>
           </DialogHeader>
           {needsFreshSignIn ? (
-            <div className="-mx-4 rounded-xl bg-muted/50">
+            <div className="-mx-4 rounded-(--radius-outer) bg-muted/50 [--inset:--spacing(4)] [--radius-outer:var(--radius-xl)] **:data-[slot=fresh-sign-in-icon]:rounded-inner">
               <FreshSignInNotice
                 title="Sign in again to delete your account"
                 description="For your security, myakiba deletes an account only within a day of signing in. Nothing was deleted."

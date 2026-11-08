@@ -27,7 +27,8 @@ await mock.module("@tanstack/react-router", () => ({
 const { ExtensionRequiredDialog } =
   await import("@/components/extension/extension-required-dialog");
 const { dismissMissingExtension } = await import("@/lib/extension-gate");
-const { OnboardingDialog } = await import("@/components/onboarding/onboarding-dialog");
+const { OnboardingProvider, useOpenOnboarding } =
+  await import("@/components/onboarding/onboarding-dialog");
 
 export type User = ReturnType<typeof userEvent.setup>;
 
@@ -58,8 +59,21 @@ export const noop = () => {};
 
 export const ADD_STEP_TITLE = "Pick your first items.";
 
+function GettingStartedButton() {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      Getting Started
+    </button>
+  );
+}
+
 export function onboardingDialog() {
-  return <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />;
+  return (
+    <OnboardingProvider>
+      <GettingStartedButton />
+    </OnboardingProvider>
+  );
 }
 
 /** Getting Started opens at the welcome step, so this walks to the given step. */

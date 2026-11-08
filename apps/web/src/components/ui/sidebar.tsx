@@ -26,7 +26,7 @@ import { PanelLeftIcon } from "@hugeicons/core-free-icons";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "15.5rem";
+const SIDEBAR_WIDTH = "14rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -119,10 +119,13 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((prevOpen) => !prevOpen) : setOpen((prevOpen) => !prevOpen);
   }, [isMobile, setOpen, setOpenMobile]);
 
+  const [instant, setInstant] = React.useState(false);
+
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
+        setInstant(true);
         toggleSidebar();
       }
     };
@@ -130,6 +133,19 @@ function SidebarProvider({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
+
+  React.useEffect(() => {
+    if (!instant) return;
+    // Two frames: the toggled width is painted before the transition comes back.
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setInstant(false));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [instant]);
 
   const state = open ? "expanded" : "collapsed";
 
@@ -150,6 +166,7 @@ function SidebarProvider({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
+        data-instant={instant || undefined}
         style={
           {
             "--sidebar-width": SIDEBAR_WIDTH,
@@ -237,7 +254,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "transition-[width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] relative w-(--sidebar-width) bg-transparent",
+          "transition-[width] duration-200 ease-drawer group-data-instant/sidebar-wrapper:duration-0 motion-reduce:duration-0 relative w-(--sidebar-width) bg-transparent",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -248,11 +265,12 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         data-side={side}
+        inert={state === "collapsed" && collapsible === "offcanvas"}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed inset-y-0 z-10 hidden h-dvh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-drawer group-data-instant/sidebar-wrapper:duration-0 motion-reduce:duration-0 data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
           className,
         )}
         {...props}
@@ -288,32 +306,6 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       <HugeiconsIcon icon={PanelLeftIcon} className="cn-rtl-flip" />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
-  );
-}
-
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar();
-
-  return (
-    <button
-      type="button"
-      data-sidebar="rail"
-      data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
-      className={cn(
-        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all duration-150 ease-out group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex -translate-x-1/2",
-        "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full hover:group-data-[collapsible=offcanvas]:bg-sidebar",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
-        className,
-      )}
-      {...props}
-    />
   );
 }
 
@@ -399,30 +391,6 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function SidebarGroupLabel({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"div"> & React.ComponentProps<"div">) {
-  return useRender({
-    defaultTagName: "div",
-    props: mergeProps<"div">(
-      {
-        className: cn(
-          "text-sidebar-foreground/70 ring-sidebar-ring h-8 rounded-md px-2 text-xs font-medium transition-[margin,opacity] duration-150 ease-out group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 flex shrink-0 items-center outline-hidden [&>svg]:shrink-0",
-          className,
-        ),
-      },
-      props,
-    ),
-    render,
-    state: {
-      slot: "sidebar-group-label",
-      sidebar: "group-label",
-    },
-  });
-}
-
 function SidebarGroupAction({
   className,
   render,
@@ -450,17 +418,6 @@ function SidebarGroupAction({
   });
 }
 
-function SidebarGroupContent({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="sidebar-group-content"
-      data-sidebar="group-content"
-      className={cn("text-sm w-full", className)}
-      {...props}
-    />
-  );
-}
-
 function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
   return (
     <ul
@@ -484,7 +441,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-left text-sm transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 focus-visible:ring-2 peer/menu-button group/menu-button flex w-full items-center overflow-hidden outline-hidden disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4.5 [&_svg]:shrink-0 [&>span:last-child]:truncate [&>a]:flex [&>a]:items-center [&>a]:gap-2 [&>a]:min-w-0 [&>a]:flex-1 [&>a>span:last-child]:truncate",
+  "ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-md p-2 text-left text-sm color-motion group-has-data-[sidebar=menu-action]/menu-item:pr-8 focus-visible:ring-2 peer/menu-button group/menu-button flex w-full items-center overflow-hidden outline-hidden disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4.5 [&_svg]:shrink-0 [&>span:last-child]:truncate [&>a]:flex [&>a]:items-center [&>a]:gap-2 [&>a]:min-w-0 [&>a]:flex-1 [&>a>span:last-child]:truncate",
   {
     variants: {
       variant: {
@@ -715,8 +672,6 @@ export {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInput,
   SidebarInset,
@@ -730,7 +685,6 @@ export {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,

@@ -1,6 +1,5 @@
 import {
   Add01Icon,
-  ArrowRight01Icon,
   LibraryIcon,
   Loading03Icon,
   PackageIcon,
@@ -31,6 +30,8 @@ import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import type { CommandSearchResults } from "@/queries/search";
 import { itemDestination } from "@/lib/item-destination";
+import { shownMessageOf } from "@/data/api";
+import { NavigateIcon } from "@/lib/icons";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -273,7 +274,7 @@ export function AppCommand(): React.JSX.Element {
           <CommandInput
             value={inputValue}
             onValueChange={setInputValue}
-            placeholder="Search pages, actions, orders, or items..."
+            placeholder="Search pages, actions, orders, or items…"
           />
           <CommandList className="max-h-104 mx-2">
             {hasVisibleResults ? null : <CommandEmpty>No results found.</CommandEmpty>}
@@ -315,14 +316,14 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search orders"
-                    subtitle={searchError?.message}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&
                 !isSearchLoading &&
                 !searchError &&
                 orderMatches.length === 0 ? (
-                  <StatusCommandItem title={`No orders matched "${query}"`} />
+                  <StatusCommandItem title={`No orders matched “${query}”`} />
                 ) : null}
                 {isSearchPending
                   ? null
@@ -348,7 +349,7 @@ export function AppCommand(): React.JSX.Element {
                   value={`orders-all-${query}`}
                   title={`View all orders for "${query}"`}
                   subtitle="Open the full orders page with this query"
-                  leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
+                  leading={<CommandLeadIcon icon={NavigateIcon} />}
                   onSelect={handleViewAllOrders}
                 />
               </CommandGroup>
@@ -364,14 +365,14 @@ export function AppCommand(): React.JSX.Element {
                 {!isSearchPending && searchError ? (
                   <StatusCommandItem
                     title="Could not search items"
-                    subtitle={searchError?.message}
+                    subtitle={shownMessageOf(searchError)}
                   />
                 ) : null}
                 {!isSearchPending &&
                 !isSearchLoading &&
                 !searchError &&
                 itemMatches.length === 0 ? (
-                  <StatusCommandItem title={`No items matched "${query}"`} />
+                  <StatusCommandItem title={`No items matched “${query}”`} />
                 ) : null}
                 {isSearchPending
                   ? null
@@ -380,11 +381,7 @@ export function AppCommand(): React.JSX.Element {
                         key={item.itemId}
                         value={`item-${item.itemId}`}
                         title={item.itemTitle}
-                        subtitle={
-                          item.itemExternalId
-                            ? `MFC #${item.itemExternalId}${item.itemCategory ? ` • ${item.itemCategory}` : ""}`
-                            : (item.itemCategory ?? "Open item details")
-                        }
+                        subtitle={item.itemCategory ?? "Open item details"}
                         leading={
                           <ImageThumbnail
                             images={item.itemImage ? [item.itemImage] : []}
@@ -400,7 +397,7 @@ export function AppCommand(): React.JSX.Element {
                   value={`items-all-${query}`}
                   title={`View all items for "${query}"`}
                   subtitle="Open the collection page with this query"
-                  leading={<CommandLeadIcon icon={ArrowRight01Icon} />}
+                  leading={<CommandLeadIcon icon={NavigateIcon} />}
                   onSelect={handleViewAllItems}
                 />
               </CommandGroup>

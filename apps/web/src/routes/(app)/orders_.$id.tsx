@@ -1,18 +1,21 @@
 import type { ReactNode } from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { BackLink } from "@/components/ui/back-link";
 import { OrderDetailItems } from "@/components/orders/order-detail-items";
 import { OrderHero } from "@/components/orders/order-hero";
 import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar";
+import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
 import type { Saving } from "@/data/client";
+import { shownMessageOf } from "@/data/api";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -40,12 +43,18 @@ function RouteComponent(): ReactNode {
     handleDeleteItems,
     handleMoveItem,
     handleSplit,
+    isOrderPending,
     isCollectionItemPending,
     isDeletingOrders,
     isDeletingItems,
     isMovingItems,
     isSplitting,
   } = useOrdersMutations();
+
+  const pendingContextValue = useMemo(
+    () => ({ isOrderPending, isCollectionItemPending }),
+    [isOrderPending, isCollectionItemPending],
+  );
 
   const { data: order, isPending, isError, error: orderError } = useRead(orders.detail, id);
 
@@ -68,19 +77,17 @@ function RouteComponent(): ReactNode {
       <div className="flex flex-col gap-3">
         <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
         <div className="animate-data-in text-lg font-medium text-destructive">
-          {orderError.message}
+          {shownMessageOf(orderError, ORDER_LOAD_FAILED)}
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="flex flex-col gap-8 min-h-full mx-auto max-w-352"
-      aria-busy={isPending}
-      aria-live="polite"
-    >
-      {isPending ? <span className="sr-only">Loading order details</span> : null}
+    <div className="flex flex-col gap-8 min-h-full mx-auto max-w-352" aria-busy={isPending}>
+      <span role="status" className="sr-only">
+        {isPending ? "Loading order details" : ""}
+      </span>
       <BackLink fallbackTo="/orders" text="Back" font="sans" className="self-start" />
 
       <OrderHero
@@ -100,28 +107,29 @@ function RouteComponent(): ReactNode {
         dateFormat={dateFormat}
       />
 
-      <OrderDetailItems
-        orderId={id}
-        order={order}
-        isLoading={isPending}
-        selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
-        setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
-        onEditItem={handleEditItem}
-        onDeleteItem={handleDeleteItem}
-        isCollectionItemPending={isCollectionItemPending}
-      />
+      <OrderPendingContext value={pendingContextValue}>
+        <OrderDetailItems
+          orderId={id}
+          order={order}
+          isLoading={isPending}
+          selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
+          setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
+          onEditItem={handleEditItem}
+          onDeleteItem={handleDeleteItem}
+        />
+      </OrderPendingContext>
 
       <div className="flex flex-col gap-4 pb-2">
         {order?.notes ? (
           <section className="animate-data-in flex flex-col gap-1.5">
-            <h2 className="text-xs font-medium text-muted-foreground">Notes</h2>
+            <h2 className="text-base font-medium text-foreground">Notes</h2>
             <p className="max-w-prose text-sm leading-relaxed text-pretty wrap-break-word whitespace-pre-wrap text-muted-foreground">
               {order.notes}
             </p>
           </section>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/60">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {isPending ? (
             <>
               <span className="flex items-center gap-1">

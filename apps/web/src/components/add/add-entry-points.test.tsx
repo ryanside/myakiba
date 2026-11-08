@@ -29,7 +29,7 @@ test("an item page offers the Add page with that Item as a row, preset from cont
       ordersList={[]}
       isPending={false}
       isError={false}
-      errorMessage={undefined}
+      error={null}
       onEditCollectionItem={pending}
       onDeleteCollectionItems={pending}
       onMoveToExistingOrder={pending}

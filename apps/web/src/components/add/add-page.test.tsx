@@ -543,7 +543,7 @@ test("Keep on Item Database alone clears the rows with no request and says where
 test("a new Order's title shows it can be edited, with the title as the one control", async () => {
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=order-new`);
-  const title = await screen.findByRole("button", { name: "Edit Order title" });
+  const title = await screen.findByRole("button", { name: /edit Order title$/ });
   const pencil = title.querySelector("svg");
   expect(pencil?.getAttribute("aria-hidden")).toBe("true");
 

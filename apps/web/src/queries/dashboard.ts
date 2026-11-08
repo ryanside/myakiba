@@ -18,7 +18,10 @@ export type ReleaseCalendarData = NonNullable<
 export type ReleaseItem = ReleaseCalendarData["releaseCalendar"]["releases"][number];
 
 export function getDashboard(): Promise<Result<DashboardResponse, ApiFailure>> {
-  return call(app.api.dashboard.get(), { fallback: "Failed to get dashboard" });
+  return call(app.api.dashboard.get(), {
+    fallback: "Failed to get dashboard",
+    empty: "Failed to get dashboard",
+  });
 }
 
 export function getMonthlyDashboard(
@@ -29,7 +32,7 @@ export function getMonthlyDashboard(
     app.api.dashboard["monthly"].get({
       query: { month, year },
     }),
-    { fallback: "Failed to get monthly dashboard" },
+    { fallback: "Failed to get monthly dashboard", empty: "Failed to get monthly dashboard" },
   );
 }
 
@@ -39,6 +42,7 @@ export function getReleaseCalendar(
 ): Promise<Result<ReleaseCalendarData, ApiFailure>> {
   return call(app.api.dashboard["release-calendar"].get({ query: { month, year } }), {
     fallback: "Failed to get release calendar",
+    empty: "Failed to get release calendar",
     invalid: "Invalid month or year",
   });
 }

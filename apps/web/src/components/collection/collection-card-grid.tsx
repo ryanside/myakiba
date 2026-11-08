@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { CollectionItemControls } from "@/components/collection/collection-item-controls";
+import { useCollectionPending } from "@/components/collection/collection-pending-context";
 import {
   CategoryLabel,
   MediaCard,
@@ -8,8 +9,11 @@ import {
   MediaCardImage,
   MediaCardSkeleton,
   MediaCardTitle,
+  CARD_GRID_GAP_CLASS_NAME,
 } from "@/components/media-tile";
+import { cn } from "@/lib/utils";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -39,8 +43,6 @@ interface CollectionCardGridProps {
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-  readonly isCollectionPending: (collectionId: string) => boolean;
-  readonly isCollectionOrderPending: (collectionId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -56,10 +58,9 @@ export function CollectionCardGrid({
   currency,
   locale,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
   isLoading,
 }: CollectionCardGridProps): React.JSX.Element {
+  const { isItemPending } = useCollectionPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -78,7 +79,7 @@ export function CollectionCardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={gridStyle} aria-hidden="true">
+      <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle} aria-hidden="true">
         {Array.from({ length: 12 }).map((_, i) => (
           <MediaCardSkeleton key={i} imageClassName="aspect-4/5" />
         ))}
@@ -95,10 +96,9 @@ export function CollectionCardGrid({
   }
 
   return (
-    <div className="grid gap-3" style={gridStyle}>
+    <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle}>
       {items.map((item) => {
         const isSelected = !!rowSelection[item.id];
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         const itemLink = itemDestination(item.itemId, item.itemExternalId);
 
         return (
@@ -107,7 +107,7 @@ export function CollectionCardGrid({
               item={item}
               itemSize={cardWidth}
               variant="card"
-              isPending={isPending}
+              isPending={isItemPending(item.id)}
               isSelected={isSelected}
               onEditCollectionItem={onEditCollectionItem}
               onDeleteCollectionItems={onDeleteCollectionItems}
@@ -136,7 +136,7 @@ export function CollectionCardGrid({
             <MediaCardBody>
               <span className="flex min-w-0 items-center justify-between gap-2">
                 <CategoryLabel category={item.itemCategory} />
-                {item.itemScale ? (
+                {item.itemScale && item.itemScale !== NO_SCALE ? (
                   <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                     {item.itemScale}
                   </span>
@@ -144,9 +144,13 @@ export function CollectionCardGrid({
               </span>
               <MediaCardTitle as="h3" title={item.itemTitle} destination={itemLink} />
               <span className="mt-auto flex min-w-0 items-baseline justify-between gap-2 pt-1">
-                <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
-                  {formatCurrencyFromMinorUnits(item.price, currency, locale)}
-                </span>
+                {item.price > 0 ? (
+                  <span className="shrink-0 text-sm leading-5 font-medium tabular-nums">
+                    {formatCurrencyFromMinorUnits(item.price, currency, locale)}
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-xs leading-5 text-muted-foreground">No price</span>
+                )}
                 {item.shop && !isCompact ? (
                   <span
                     className="min-w-0 truncate text-xs leading-4 text-muted-foreground"

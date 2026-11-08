@@ -1,35 +1,42 @@
-import { useEffect, useRef, useState } from "react";
-import type { FocusEvent, InputHTMLAttributes } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FocusEvent, InputHTMLAttributes, Ref } from "react";
+import { composeRefs } from "@/lib/compose-refs";
 import { Input } from "./ui/input";
 import { CommandInput } from "./ui/command";
 
 export function DebouncedInput({
   value: initialValue,
   onChange,
+  onTextChange,
   debounce = 200,
   isCommandInput = false,
+  ref,
   ...props
 }: {
   value: string | number;
   onChange: (value: string | number) => void;
+  onTextChange?: (text: string) => void;
   debounce?: number;
   isCommandInput?: boolean;
+  ref?: Ref<HTMLInputElement>;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "onChange">) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const commandInputRef = useRef<HTMLInputElement | null>(null);
+  const composedRef = useMemo(() => composeRefs(inputRef, ref), [ref]);
   // eslint-disable-next-line react/hook-use-state -- Capture the initial value for uncontrolled input defaults (until 2027-04-16, approved by root, pending operator review)
   const [defaultValue] = useState(initialValue);
   const onChangeRef = useRef(onChange);
+  const onTextChangeRef = useRef(onTextChange);
   const pendingLocalAcknowledgementsRef = useRef(new Set<string>());
   const pendingExternalValueRef = useRef<string | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onTextChangeRef.current = onTextChange;
+  }, [onChange, onTextChange]);
 
   useEffect(() => {
-    const inputElement = isCommandInput ? commandInputRef.current : inputRef.current;
+    const inputElement = inputRef.current;
     const nextValue = String(initialValue);
 
     if (!inputElement) return;
@@ -50,7 +57,8 @@ export function DebouncedInput({
     if (inputElement.value !== nextValue) {
       inputElement.value = nextValue;
     }
-  }, [initialValue, isCommandInput]);
+    onTextChangeRef.current?.(nextValue);
+  }, [initialValue]);
 
   useEffect(() => {
     return () => {
@@ -97,6 +105,7 @@ export function DebouncedInput({
 
     pendingExternalValueRef.current = null;
     pendingLocalAcknowledgementsRef.current.clear();
+    onTextChangeRef.current?.(event.currentTarget.value);
     props.onBlur?.(event);
   };
 
@@ -104,10 +113,13 @@ export function DebouncedInput({
     return (
       <CommandInput
         {...props}
-        ref={commandInputRef}
+        ref={composedRef}
         defaultValue={String(defaultValue)}
         onBlur={handleBlur}
-        onValueChange={handleValueChange}
+        onValueChange={(value) => {
+          onTextChangeRef.current?.(value);
+          handleValueChange(value);
+        }}
       />
     );
   }
@@ -115,10 +127,11 @@ export function DebouncedInput({
   return (
     <Input
       {...props}
-      ref={inputRef}
+      ref={composedRef}
       defaultValue={defaultValue}
       onBlur={handleBlur}
       onChange={(e) => {
+        onTextChangeRef.current?.(e.target.value);
         if (e.target.value === "") {
           handleValueChange("");
           return;

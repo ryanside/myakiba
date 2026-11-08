@@ -8,6 +8,7 @@ import { version } from "@/data/resources/version";
 import { SessionUnavailable as SessionUnavailableView } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { PageBackground } from "@/components/page-background";
 import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -90,31 +91,42 @@ function RouteComponent() {
 
   return (
     <div className="[--header-height:calc(--spacing(14))] w-full min-w-0 max-w-full overflow-x-clip">
-      <SidebarProvider className="flex flex-col">
-        <div className="flex min-w-0 max-w-full flex-1 overflow-x-clip">
-          <AppSidebar />
-          <SidebarInset tabIndex={-1} className="page-background-surface outline-none">
-            <PageBackground />
-            <header className="flex h-12 shrink-0 items-center justify-between gap-2 px-4">
-              <div className="flex items-center">
-                <SidebarTrigger className="-ml-1" />
-                <AppCommand />
-                <ExtensionPromptPopover />
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to content
+      </a>
+      <OnboardingProvider>
+        <SidebarProvider className="flex flex-col" defaultOpen>
+          <div className="flex min-w-0 max-w-full flex-1 overflow-x-clip">
+            <AppSidebar />
+            <SidebarInset tabIndex={-1} className="page-background-surface outline-none">
+              <PageBackground />
+              <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
+                <div className="flex min-w-0 items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <AppCommand />
+                  <ExtensionPromptPopover />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link to="/add" className={buttonVariants({ size: "icon" })} aria-label="Add">
+                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                  </Link>
+                  <UserMenu session={session} />
+                </div>
+              </header>
+              <div
+                id="main-content"
+                tabIndex={-1}
+                className="h-full w-full min-w-0 max-w-full overflow-x-clip px-4 pt-4 pb-12 outline-none md:px-8"
+              >
+                <Outlet />
               </div>
-              <div className="flex items-center gap-2">
-                <Link to="/add" className={buttonVariants({ variant: "default", size: "sm" })}>
-                  <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" strokeWidth={2} />
-                  <span>Add</span>
-                </Link>
-                <UserMenu session={session} />
-              </div>
-            </header>
-            <div className="h-full w-full min-w-0 max-w-full overflow-x-clip p-6">
-              <Outlet />
-            </div>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </OnboardingProvider>
       <ExtensionRequiredDialog />
     </div>
   );

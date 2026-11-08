@@ -130,8 +130,10 @@ function DeviceRow({
             </span>
           ) : null}
         </div>
-        <p className="text-[13px] leading-snug text-muted-foreground tabular-nums">
-          {details.join(" · ")}
+        <p className="flex flex-wrap gap-x-3 text-[13px] leading-snug text-muted-foreground tabular-nums">
+          {details.map((detail) => (
+            <span key={detail}>{detail}</span>
+          ))}
         </p>
       </div>
       {isCurrent ? null : (

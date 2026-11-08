@@ -54,6 +54,7 @@ import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
@@ -118,7 +119,7 @@ function CollectionItemFormContent({
           <SheetTitle>Edit Item</SheetTitle>
           <SheetDescription>{itemData.itemTitle}</SheetDescription>
         </SheetHeader>
-        <div className="overflow-y-auto max-h-[70vh] px-2">
+        <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">
           <div className="flex flex-col gap-3 p-2">
             <FormSection title="Basics">
               <div className="grid grid-cols-2 gap-3">
@@ -369,7 +370,7 @@ function CollectionItemFormContent({
                         )}
                         {releasesError && (
                           <div className="p-3 text-sm text-destructive">
-                            {releasesError.message}
+                            {shownMessageOf(releasesError)}
                           </div>
                         )}
                         {releasesData?.releases.map((release) => (
@@ -598,15 +599,11 @@ function CollectionItemFormContent({
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
-              <SheetClose>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full flex-1"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
+              <SheetClose
+                disabled={isSubmitting}
+                render={<Button type="button" variant="outline" />}
+              >
+                Cancel
               </SheetClose>
             )}
           />

@@ -287,9 +287,11 @@ function OrderCard({
   const content = (
     <div
       className={cn(
-        "animate-data-in relative rounded-xl p-3",
+        "animate-data-in relative rounded-(--radius-outer) p-3 [--radius-outer:var(--radius-xl)]",
+        "[--inset:calc(--spacing(3)+1px)]",
         TILE_SURFACE_CLASS_NAME,
         TILE_HOVER_CLASS_NAME,
+        "shadow-[0_1px_1px_oklch(0_0_0/0.03)] dark:shadow-none",
       )}
     >
       <div className="flex flex-col gap-3">
@@ -300,7 +302,7 @@ function OrderCard({
             fallbackIcon={
               <HugeiconsIcon icon={PackageIcon} className="size-4 text-muted-foreground" />
             }
-            className="size-12 shrink-0 rounded-md [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
+            className="size-12 shrink-0 rounded-inner [&_img]:pointer-events-none [&_img]:outline [&_img]:outline-black/10 dark:[&_img]:outline-white/10"
           />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <Link
@@ -312,7 +314,11 @@ function OrderCard({
               {order.title}
             </Link>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {order.shop ? <span className="truncate">{order.shop}</span> : null}
+              {order.shop ? (
+                <span className="truncate" title={order.shop}>
+                  {order.shop}
+                </span>
+              ) : null}
               <span className="ml-auto shrink-0 font-medium tabular-nums text-foreground">
                 {formatCurrencyFromMinorUnits(order.total, currency, locale)}
               </span>
@@ -327,15 +333,13 @@ function OrderCard({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
+                className="press-none h-auto w-full justify-between gap-2 rounded px-1.5 py-1 text-left font-normal"
               >
-                <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                  {label}
-                </span>
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
                 <span
                   className={cn(
                     "text-xs tabular-nums",
-                    dateValue ? "text-foreground" : "text-muted-foreground/60",
+                    dateValue ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
                   {dateValue ? formatDateOnlyForDisplay(dateValue, dateFormat) : "—"}
@@ -385,6 +389,46 @@ function OrderCard({
   );
 }
 
+interface OrderColumnProps {
+  readonly columnId: OrderStatus;
+  readonly orders: readonly DashboardKanbanOrder[];
+  readonly isLoading: boolean;
+  readonly currency: Currency;
+  readonly dateFormat: DateFormat;
+  readonly isOverlay?: boolean;
+  readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+}
+
+function ColumnBody({
+  orders,
+  isLoading,
+  currency,
+  dateFormat,
+  asHandle,
+  onDateChange,
+}: Pick<OrderColumnProps, "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange"> & {
+  readonly asHandle: boolean;
+}) {
+  if (isLoading) return <Loader className="justify-start pt-4" />;
+  if (orders.length === 0) {
+    return (
+      <p className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-foreground/10 px-3 text-center text-xs text-muted-foreground">
+        No orders
+      </p>
+    );
+  }
+  return orders.map((order) => (
+    <OrderCard
+      key={order.orderId}
+      order={order}
+      currency={currency}
+      dateFormat={dateFormat}
+      asHandle={asHandle}
+      onDateChange={onDateChange}
+    />
+  ));
+}
+
 function OrderColumn({
   columnId,
   orders,
@@ -393,24 +437,16 @@ function OrderColumn({
   dateFormat,
   isOverlay,
   onDateChange,
-}: {
-  columnId: OrderStatus;
-  orders: readonly DashboardKanbanOrder[];
-  isLoading: boolean;
-  currency: Currency;
-  dateFormat: DateFormat;
-  isOverlay?: boolean;
-  onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
-}) {
+}: OrderColumnProps) {
   const col = COLUMNS[columnId];
 
   return (
     <KanbanColumn value={columnId}>
-      <Frame spacing="sm" className="h-full min-h-0">
-        <FrameHeader className="flex flex-row items-center gap-2">
+      <Frame variant="ghost" spacing="sm" className="h-full min-h-0">
+        <FrameHeader className="flex flex-row items-center gap-2 px-0.5 pt-0">
           <div className={cn("size-2 rounded-full", col.color)} />
           <FrameTitle>{col.title}</FrameTitle>
-          <Badge variant="outline" size="sm" className="ml-auto">
+          <Badge variant="outline" size="sm" className="ml-auto tabular-nums">
             {isLoading ? (
               <Skeleton className="size-2" />
             ) : (
@@ -418,24 +454,15 @@ function OrderColumn({
             )}
           </Badge>
         </FrameHeader>
-        <KanbanColumnContent
-          value={columnId}
-          className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-0.5"
-        >
-          {isLoading ? (
-            <Loader className="justify-start pt-4" />
-          ) : (
-            orders.map((order) => (
-              <OrderCard
-                key={order.orderId}
-                order={order}
-                currency={currency}
-                dateFormat={dateFormat}
-                asHandle={!isOverlay}
-                onDateChange={onDateChange}
-              />
-            ))
-          )}
+        <KanbanColumnContent value={columnId} className="flex flex-1 flex-col gap-2 p-0.5">
+          <ColumnBody
+            orders={orders}
+            isLoading={isLoading}
+            currency={currency}
+            dateFormat={dateFormat}
+            asHandle={!isOverlay}
+            onDateChange={onDateChange}
+          />
         </KanbanColumnContent>
       </Frame>
     </KanbanColumn>
@@ -630,10 +657,10 @@ function OrderKanbanBoard({
       onValueChange={setColumns}
       onMove={handleMove}
       getItemValue={(item) => item.orderId}
-      className="flex min-h-0 flex-1 flex-col overflow-x-auto"
+      className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
     >
       <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
-      <KanbanBoard className="min-h-0 min-w-[1300px] flex-1 gap-2.5 sm:grid-cols-4">
+      <KanbanBoard className="min-h-0 min-w-[960px] flex-1 gap-3 sm:grid-cols-4">
         {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
             key={columnId}

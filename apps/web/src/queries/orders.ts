@@ -168,9 +168,11 @@ export function moveItem(
   );
 }
 
+export const ORDER_LOAD_FAILED = "Couldn't load this order. Check your connection and try again.";
+
 export function getOrder(orderId: string): Promise<Result<Order, ApiFailure>> {
   return call(app.api.orders({ orderId }).get(), {
-    fallback: "Couldn't load this order. Check your connection and try again.",
+    fallback: ORDER_LOAD_FAILED,
     empty: "Failed to get order",
   });
 }

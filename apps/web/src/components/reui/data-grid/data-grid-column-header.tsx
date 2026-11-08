@@ -5,6 +5,8 @@ import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import type { Column } from "@tanstack/react-table";
 import type { HTMLAttributes, ReactNode } from "react";
 
+import { AnimatePresence, motion } from "motion/react";
+import { ICON_SWAP } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,17 +24,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowDown02Icon,
-  ArrowUp02Icon,
-  UnfoldMoreIcon,
   Tick02Icon,
   ArrowLeft03Icon,
   ArrowRight03Icon,
-  ArrowLeft02Icon,
-  ArrowRight02Icon,
+  MoveLeftIcon,
+  MoveRightIcon,
   DragDropVerticalIcon,
   PinOffIcon,
 } from "@hugeicons/core-free-icons";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
+
+const SORT_ICONS = { asc: SortAscendingIcon, desc: SortDescendingIcon } as const;
 
 interface DataGridColumnHeaderProps<TData, TValue> extends HTMLAttributes<HTMLDivElement> {
   column: Column<TData, TValue>;
@@ -85,38 +87,22 @@ function DataGridColumnHeaderInner<TData, TValue>({
     className,
   );
 
-  const renderSortIcon = (): ReactNode => {
-    if (!canSort) return null;
-    if (isSorted === "desc") {
-      return (
-        <HugeiconsIcon
-          icon={ArrowDown02Icon}
-          data-icon="inline-end"
-          strokeWidth={2}
-          className="size-3.25"
-        />
-      );
-    }
-    if (isSorted === "asc") {
-      return (
-        <HugeiconsIcon
-          icon={ArrowUp02Icon}
-          data-icon="inline-end"
-          strokeWidth={2}
-          className="size-3.25"
-        />
-      );
-    }
-    return (
-      <HugeiconsIcon
-        icon={UnfoldMoreIcon}
+  const sortIcon = canSort ? (
+    <AnimatePresence initial={false} mode="popLayout">
+      <motion.span
+        key={isSorted || "none"}
+        {...ICON_SWAP}
         data-icon="inline-end"
-        strokeWidth={2}
-        className="mt-px size-3.25"
-      />
-    );
-  };
-  const sortIcon = renderSortIcon();
+        className={cn("inline-flex", !isSorted && "mt-px")}
+      >
+        <HugeiconsIcon
+          icon={isSorted ? SORT_ICONS[isSorted] : UnsortedIcon}
+          strokeWidth={2}
+          className="size-3.25"
+        />
+      </motion.span>
+    </AnimatePresence>
+  ) : null;
 
   const hasControls =
     props.tableLayout?.columnsMovable ||
@@ -155,7 +141,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           }}
           disabled={!canSort}
         >
-          <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} className="size-3.5!" />
+          <HugeiconsIcon icon={SortAscendingIcon} strokeWidth={2} className="size-3.5!" />
           <span className="grow">Asc</span>
           {isSorted === "asc" && (
             <HugeiconsIcon
@@ -176,7 +162,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           }}
           disabled={!canSort}
         >
-          <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} className="size-3.5!" />
+          <HugeiconsIcon icon={SortDescendingIcon} strokeWidth={2} className="size-3.5!" />
           <span className="grow">Desc</span>
           {isSorted === "desc" && (
             <HugeiconsIcon
@@ -258,7 +244,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           disabled={!canMoveLeft || isPinned !== false}
         >
           <HugeiconsIcon
-            icon={ArrowLeft02Icon}
+            icon={MoveLeftIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
@@ -279,7 +265,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           disabled={!canMoveRight || isPinned !== false}
         >
           <HugeiconsIcon
-            icon={ArrowRight02Icon}
+            icon={MoveRightIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"

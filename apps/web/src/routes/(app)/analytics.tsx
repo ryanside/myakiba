@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
@@ -7,8 +6,7 @@ import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
 import { Section } from "@/components/analytics/section";
 import { SECTION_GRADIENT_COLORS } from "@/components/analytics/section-utils";
-import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { shownMessageOf } from "@/data/api";
 
 const ENTRY_LEADERBOARD_COLUMNS = ["name", "itemCount", "totalSpent"] as const;
 const SHOP_LEADERBOARD_COLUMNS = ["shop", "itemCount", "totalSpent"] as const;
@@ -37,26 +35,14 @@ export const Route = createFileRoute("/(app)/analytics")({
 });
 
 function RouteComponent(): ReactNode {
-  const { currency, locale } = useUserPreferences();
   const { isPending, isError, data, error } = useRead(analyticsResource.overview);
 
   const analytics = data?.analytics;
   const isLoading = isPending;
 
-  const formatCell = useCallback(
-    (column: string, value: string | number | null): string | number | null => {
-      if (column === "totalSpent" && value !== null) {
-        return formatCurrencyFromMinorUnits(Number(value), currency, locale);
-      }
-
-      return value;
-    },
-    [currency, locale],
-  );
-
   if (isError) {
     return (
-      <div className="flex flex-col gap-4 mx-auto max-w-5xl">
+      <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
         <div className="flex flex-col gap-2 mb-2">
           <div className="flex flex-row items-start gap-4">
             <h1 className="text-2xl font-orbitron font-medium">
@@ -66,7 +52,7 @@ function RouteComponent(): ReactNode {
           </div>
         </div>
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {shownMessageOf(error)}</div>
         </div>
       </div>
     );
@@ -77,7 +63,7 @@ function RouteComponent(): ReactNode {
   const scales = analytics?.scales ?? { uniqueOwned: 0, topByCount: [], topBySpend: [] };
 
   return (
-    <div className="flex flex-col gap-4 mx-auto max-w-5xl">
+    <div className="flex flex-col gap-4 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-start gap-4">
           <h1 className="text-2xl font-orbitron font-medium">
@@ -87,7 +73,7 @@ function RouteComponent(): ReactNode {
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-12">
         {entries.map((entry, idx) => (
           <Section
             key={entry.category}
@@ -107,9 +93,9 @@ function RouteComponent(): ReactNode {
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
                 <LeaderboardTable
+                  rankedBy="itemCount"
                   rows={entry.topByCount}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
@@ -125,9 +111,9 @@ function RouteComponent(): ReactNode {
               <div className="space-y-1">
                 <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
                 <LeaderboardTable
+                  rankedBy="totalSpent"
                   rows={entry.topBySpend}
                   columns={ENTRY_LEADERBOARD_COLUMNS}
-                  formatCell={formatCell}
                   rowIdKey="entryId"
                   isLoading={isLoading}
                   getRowNavigation={
@@ -158,9 +144,9 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
+                rankedBy="itemCount"
                 rows={shops.topByCount}
                 columns={SHOP_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -176,9 +162,9 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
+                rankedBy="totalSpent"
                 rows={shops.topBySpend}
                 columns={SHOP_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="shop"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -208,9 +194,9 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Count</h4>
               <LeaderboardTable
+                rankedBy="itemCount"
                 rows={scales.topByCount}
                 columns={SCALE_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={
@@ -229,9 +215,9 @@ function RouteComponent(): ReactNode {
             <div className="space-y-1">
               <h4 className="text-xs font-medium text-muted-foreground">Top by Spend</h4>
               <LeaderboardTable
+                rankedBy="totalSpent"
                 rows={scales.topBySpend}
                 columns={SCALE_LEADERBOARD_COLUMNS}
-                formatCell={formatCell}
                 rowIdKey="scale"
                 isLoading={isLoading}
                 getRowNavigation={

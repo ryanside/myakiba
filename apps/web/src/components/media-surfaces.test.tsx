@@ -12,7 +12,6 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseOrder, ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { itemDatabaseSearchSchema } from "@myakiba/contracts/search/schema";
@@ -23,6 +22,7 @@ import { CalendarItemRow } from "./calendar/calendar-item-row";
 import { CalendarOrderRow } from "./calendar/calendar-order-row";
 import { CollectionCardGrid } from "./collection/collection-card-grid";
 import { CollectionGalleryGrid } from "./collection/collection-gallery-grid";
+import { CollectionPendingContext } from "./collection/collection-pending-context";
 import OrderKanban from "./dashboard/order-kanban";
 import { ReleaseCalendar } from "./dashboard/release-calendar";
 import { DataTable } from "./data-table/data-table";
@@ -33,6 +33,7 @@ import { ListMemberGrid } from "./lists/list-member-grid";
 import { Appearance } from "./settings/appearance";
 import { OrdersCardGrid } from "./orders/orders-card-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
+import { OrderPendingContext } from "./orders/order-pending-context";
 import { DataGrid } from "./reui/data-grid/data-grid";
 import { DataGridTable } from "./reui/data-grid/data-grid-table";
 import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
@@ -45,6 +46,7 @@ import type { AnalyticsSectionRow } from "@/queries/analytics";
 import type { CalendarItem, CalendarOrder } from "@/queries/calendar";
 import type { DashboardKanbanOrder, ReleaseItem } from "@/queries/dashboard";
 import { Route as ListsRoute } from "@/routes/(app)/lists";
+import { collectionItem } from "../../test/collection-item";
 
 afterEach(() => {
   cleanup();
@@ -85,37 +87,14 @@ const members = [
   },
 ] satisfies ComponentProps<typeof ListMemberGrid>["members"];
 
-const collectionItem = {
-  id: "collection-1",
-  orderId: null,
-  itemId: "item-1",
+const ownedItem = collectionItem({
   itemExternalId: 123,
-  itemTitle: "Hatsune Miku",
   itemImage: image,
   itemCategory: "Prepainted",
   itemScale: "1/7",
-  status: "Owned",
-  count: 1,
-  score: "0",
   price: 12_000,
   shop: "AmiAmi",
-  condition: "New",
-  orderDate: null,
-  paymentDate: null,
-  shippingDate: null,
-  collectionDate: null,
-  shippingMethod: "n/a",
-  tags: [],
-  notes: "",
-  releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseType: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-} satisfies CollectionItem;
+});
 
 const order = {
   orderId: "order-1",
@@ -287,7 +266,7 @@ function listDetail(viewMode: MediaViewMode): ReactNode {
 }
 
 const collectionProps = {
-  items: [collectionItem],
+  items: [ownedItem],
   rowSelection: {},
   onRowSelectionChange: () => {},
   onEditCollectionItem: noop,
@@ -296,8 +275,6 @@ const collectionProps = {
   onAddCollectionItemsToNewOrder: noop,
   currency: "JPY",
   dateFormat: "MM/DD/YYYY",
-  isCollectionPending: () => false,
-  isCollectionOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -308,7 +285,6 @@ const ordersProps = {
   onEditOrder: noop,
   onDeleteOrders: noop,
   currency: "JPY",
-  isOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -392,23 +368,30 @@ async function renderScreen(ui: ReactNode, storage: Readonly<Record<string, stri
   await router.load();
   return render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <OrderPendingContext
+        value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+      >
+        <CollectionPendingContext value={{ isItemPending: () => false }}>
+          <RouterProvider router={router} />
+        </CollectionPendingContext>
+      </OrderPendingContext>
     </QueryClientProvider>,
   );
 }
 
-type Surface = "card" | "gallery" | "row";
+type Surface = "card" | "gallery" | "row" | "panel";
 
 // What hover may change on each surface type: the element it lands on and the properties it
 // changes there. Nothing else, so hover never moves a shadow, ring or transform. A card or a
 // gallery tile strengthens the edge it already has, and a row, which has none, is tinted.
 const LANGUAGE = {
-  card: { on: "tile", changes: [{ target: "self", property: "border-color" }] },
+  card: { on: "image", changes: [{ target: "::after", property: "border-color" }] },
   gallery: {
     on: "image",
     changes: [{ target: "::after", property: "border-color" }],
   },
   row: { on: "tile", changes: [{ target: "self", property: "background-color" }] },
+  panel: { on: "tile", changes: [{ target: "self", property: "border-color" }] },
 } as const satisfies Record<
   Surface,
   { readonly on: "tile" | "image"; readonly changes: readonly Change[] }
@@ -441,7 +424,7 @@ const SCREENS: readonly {
   },
   {
     name: "Dashboard order card",
-    surface: "card",
+    surface: "panel",
     ui: () => (
       <OrderKanban
         orders={[kanbanOrder]}
@@ -617,7 +600,21 @@ function tokens(element: Element): string[] {
 
 const css = readFileSync(new URL("../index.css", import.meta.url), "utf-8");
 
-function themeTokens(selector: string): ReadonlyMap<string, string> {
+function treeTokens(element: Element): Set<string> {
+  const defined = new Set<string>();
+  for (let node: Element | null = element; node; node = node.parentElement) {
+    for (const className of node.classList) {
+      const name = /^\[(--[\w-]+):/.exec(splitVariants(className).utility)?.[1];
+      if (name) defined.add(name);
+    }
+    for (const match of (node.getAttribute("style") ?? "").matchAll(/(--[\w-]+)\s*:/g)) {
+      defined.add(match[1] ?? "");
+    }
+  }
+  return defined;
+}
+
+function declarations(selector: string): ReadonlyMap<string, string> {
   const start = css.indexOf(`${selector} {`);
   const block = css.slice(start, css.indexOf("\n}", start));
   return new Map(
@@ -634,7 +631,12 @@ function isTranslucent(color: string | undefined): boolean {
   return /\btransparent\b/.test(color) || (alpha !== undefined && Number(alpha) < 1);
 }
 
-const THEMES = { light: themeTokens(":root,\n.light"), dark: themeTokens(".dark") };
+const THEMES = { light: declarations(":root,\n.light"), dark: declarations(".dark") };
+const SHARED = new Set(
+  [":root", "@theme static", "@theme inline"].flatMap((selector) => [
+    ...declarations(selector).keys(),
+  ]),
+);
 
 async function surfaces(screen: (typeof SCREENS)[number]): Promise<Element[]> {
   const { container } = await renderScreen(screen.ui(), screen.storage);
@@ -664,9 +666,17 @@ describe.each(SCREENS)("$name", (screen) => {
 
   test("every token the surface reads is defined in light and dark", async () => {
     for (const element of await surfaces(screen)) {
+      const local = treeTokens(element);
       for (const token of tokens(element)) {
-        expect(THEMES.light.has(token)).toBe(true);
-        expect(THEMES.dark.has(token)).toBe(true);
+        const unthemed =
+          !THEMES.light.has(token) &&
+          !THEMES.dark.has(token) &&
+          (local.has(token) || SHARED.has(token));
+        expect({
+          token,
+          light: unthemed || THEMES.light.has(token),
+          dark: unthemed || THEMES.dark.has(token),
+        }).toEqual({ token, light: true, dark: true });
       }
     }
   });
@@ -731,7 +741,7 @@ test.each(SCREENS_WITH_BARS)("$name control bars take no backdrop filter", async
   }
 });
 
-test("Settings theme cards take a card's hover, apart from their selected ring", async () => {
+test("Settings theme cards take a card's hover and show the choice in their radio dot", async () => {
   const wishlistGrid = SCREENS.find((screen) => screen.name === "Wishlist grid");
   if (!wishlistGrid) throw new Error("no Wishlist grid screen");
   const [card] = await surfaces(wishlistGrid);
@@ -743,9 +753,13 @@ test("Settings theme cards take a card's hover, apart from their selected ring",
   const themes = [...container.querySelectorAll('[role="radio"]')];
   expect(themes).toHaveLength(3);
   for (const theme of themes) {
-    expect(hoverClasses(theme)).toEqual(cardHover);
-    expect(motionClasses(theme)).toEqual([]);
-    expect(theme.classList).toContain("data-checked:ring-2");
+    const preview = theme.firstElementChild;
+    if (!preview) throw new Error("theme card has no preview");
+    expect(hoverClasses(preview)).toEqual(cardHover);
+    expect(motionClasses(preview)).toEqual([]);
+    expect([...theme.classList].some((name) => name.startsWith("data-checked:ring"))).toBe(false);
+    expect(theme.classList).toContain("group/item");
+    expect(theme.querySelector('[class~="group-data-checked/item:bg-primary"]')).not.toBeNull();
   }
 });
 

@@ -14,6 +14,7 @@ import { ItemTitleCell } from "@/components/cells/item-title-cell";
 import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
+import { EmptyValue } from "@/components/cells/empty-value";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
 import { writeClipboard } from "@/lib/clipboard";
 import CollectionItemForm from "./collection-item-form";
+import { withCollectionPending } from "./collection-pending-context";
+import { editableCell } from "@/components/data-table/row-pending";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverRatingCell } from "../cells/popover-rating-cell";
@@ -40,10 +43,12 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { CategoryLabel } from "@/components/media-tile";
+import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import type { Saving } from "@/data/client";
+import { NO_SCALE } from "@myakiba/contracts/shared/scale";
+import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionColumnsParams {
@@ -62,8 +67,6 @@ interface CollectionColumnsParams {
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
-  isCollectionPending: (collectionId: string) => boolean;
-  isCollectionOrderPending: (collectionId: string) => boolean;
 }
 
 function CollectionActionsCell({
@@ -105,7 +108,7 @@ function CollectionActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className="text-muted-foreground"
+              className={ROW_ACTION_CLASS_NAME}
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
@@ -229,9 +232,11 @@ export function createCollectionColumns({
   currency,
   locale,
   dateFormat,
-  isCollectionPending,
-  isCollectionOrderPending,
 }: CollectionColumnsParams): ColumnDef<CollectionItem>[] {
+  const editItem = editableCell(withCollectionPending, (item, field, value) =>
+    onEditCollectionItem({ ...item, [field]: value }),
+  );
+
   return [
     {
       id: "select",
@@ -282,7 +287,7 @@ export function createCollectionColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 450,
+      size: 420,
       meta: {
         skeleton: <Skeleton className="h-6 my-1.5 w-2/3" />,
       },
@@ -293,7 +298,10 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Scale" visibility={true} column={column} />
       ),
-      cell: (info) => (info.getValue() as string | null) || "n/a",
+      cell: (info) => {
+        const scale = info.getValue() as string | null;
+        return scale && scale !== NO_SCALE ? scale : <EmptyValue />;
+      },
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -308,27 +316,15 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Count" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        return (
-          <InlineCountCell
-            value={item.count}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...item,
-                count: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("count", (item, edit) => (
+        <InlineCountCell label="Count" value={item.count} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 65,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -338,27 +334,13 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Score" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        return (
-          <PopoverRatingCell
-            value={item.score}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...item,
-                score: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("score", (item, edit) => <PopoverRatingCell value={item.score} {...edit} />),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 68,
+      size: 88,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -368,28 +350,13 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        return (
-          <InlineTextCell
-            label="Shop"
-            value={item.shop}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...item,
-                shop: newValue,
-              });
-            }}
-            previewClassName="text-sm"
-          />
-        );
-      },
+      cell: editItem("shop", (item, edit) => (
+        <InlineTextCell label="Shop" value={item.shop} {...edit} previewClassName="text-sm" />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 120,
+      size: 168,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -401,29 +368,22 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Price" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        return (
-          <InlineCurrencyCell
-            value={item.price}
-            currency={currency}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...item,
-                price: newValue,
-              });
-            }}
-            locale={locale}
-            disabled={isPending}
-          />
-        );
-      },
+      cell: editItem("price", (item, edit) => (
+        <InlineCurrencyCell
+          label="Price"
+          value={item.price}
+          currency={currency}
+          locale={locale}
+          {...edit}
+          zeroAsEmpty
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
       size: 100,
       meta: {
+        ...NUMERIC_COLUMN_META,
         skeleton: <Skeleton className="h-6" />,
       },
     },
@@ -433,36 +393,26 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Release" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
-        return (
-          <InlineReleaseCell
-            releaseId={item.releaseId}
-            itemId={item.itemId}
-            fallback={{
-              releaseDate: item.releaseDate,
-              releaseType: item.releaseType,
-              releasePrice: item.releasePrice,
-              releaseCurrency: item.releaseCurrency,
-              releaseBarcode: item.releaseBarcode,
-            }}
-            currency={currency}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newReleaseId) => {
-              return onEditCollectionItem({
-                ...item,
-                releaseId: newReleaseId,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("releaseId", (item, edit) => (
+        <InlineReleaseCell
+          releaseId={item.releaseId}
+          itemId={item.itemId}
+          fallback={{
+            releaseDate: item.releaseDate,
+            releaseType: item.releaseType,
+            releasePrice: item.releasePrice,
+            releaseCurrency: item.releaseCurrency,
+            releaseBarcode: item.releaseBarcode,
+          }}
+          currency={currency}
+          dateFormat={dateFormat}
+          {...edit}
+        />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 110,
+      size: 136,
       meta: {
         headerTitle: "Release",
         skeleton: <Skeleton className="h-6" />,
@@ -474,24 +424,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Order Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const orderDate = row.original.orderDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
-        return (
-          <PopoverDatePickerCell
-            value={orderDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...row.original,
-                orderDate: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("orderDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.orderDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -507,24 +442,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Payment Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const paymentDate = row.original.paymentDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
-        return (
-          <PopoverDatePickerCell
-            value={paymentDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...row.original,
-                paymentDate: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("paymentDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.paymentDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -540,24 +460,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shipping Date" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const shippingDate = row.original.shippingDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
-        return (
-          <PopoverDatePickerCell
-            value={shippingDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...row.original,
-                shippingDate: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("shippingDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.shippingDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -573,24 +478,9 @@ export function createCollectionColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Collected" visibility={true} column={column} />
       ),
-      cell: ({ row }) => {
-        const collectionDate = row.original.collectionDate;
-        const isPending =
-          isCollectionPending(row.original.id) || isCollectionOrderPending(row.original.id);
-        return (
-          <PopoverDatePickerCell
-            value={collectionDate}
-            dateFormat={dateFormat}
-            disabled={isPending}
-            onSubmit={async (newValue) => {
-              return onEditCollectionItem({
-                ...row.original,
-                collectionDate: newValue,
-              });
-            }}
-          />
-        );
-      },
+      cell: editItem("collectionDate", (item, edit) => (
+        <PopoverDatePickerCell value={item.collectionDate} dateFormat={dateFormat} {...edit} />
+      )),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -603,9 +493,8 @@ export function createCollectionColumns({
     {
       id: "actions",
       header: () => null,
-      cell: ({ row }) => {
+      cell: withCollectionPending(({ row }, isPending) => {
         const item = row.original;
-        const isPending = isCollectionPending(item.id) || isCollectionOrderPending(item.id);
         return (
           <CollectionActionsCell
             item={item}
@@ -618,8 +507,8 @@ export function createCollectionColumns({
             dateFormat={dateFormat}
           />
         );
-      },
-      size: 56,
+      }),
+      size: 72,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,

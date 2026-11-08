@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFilters } from "@/hooks/use-filters";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { shownMessageOf } from "@/data/api";
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 
@@ -106,7 +107,7 @@ function RouteComponent(): ReactNode {
     : KPI_LABELS.map((kpiLabel) => ({ label: kpiLabel, value: "" }));
 
   return (
-    <div className="flex flex-col gap-6 mx-auto max-w-5xl">
+    <div className="flex flex-col gap-6 mx-auto max-w-[88rem]">
       <div className="flex flex-col gap-4">
         <BackLink fallbackTo="/analytics" text="Back" font="orbitron" />
         <h1 className="text-2xl font-orbitron font-medium lowercase">
@@ -117,7 +118,7 @@ function RouteComponent(): ReactNode {
 
       {isError ? (
         <div className="flex flex-col items-center justify-center h-64 gap-y-4">
-          <div className="text-lg font-medium text-destructive">Error: {error.message}</div>
+          <div className="text-lg font-medium text-destructive">Error: {shownMessageOf(error)}</div>
         </div>
       ) : (
         <>
@@ -156,6 +157,7 @@ function RouteComponent(): ReactNode {
                 rows={data?.rows ?? []}
                 sectionName={sectionName}
                 offset={offset}
+                pageSize={limit}
                 isLoading={isLoading}
                 sort={sort}
                 order={order}

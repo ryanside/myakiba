@@ -39,9 +39,11 @@ export function ShippingSummary({
           </span>
         </div>
         <Progress value={method.percentage} />
-        <p className="text-xs text-muted-foreground">
-          {method.orderCount} {method.orderCount === 1 ? "order" : "orders"},{" "}
-          {method.percentage.toFixed(1)}%
+        <p className="flex justify-between gap-4 text-xs text-muted-foreground tabular-nums">
+          <span>
+            {method.orderCount} {method.orderCount === 1 ? "order" : "orders"}
+          </span>
+          <span>{method.percentage.toFixed(1)}% of shipping spend</span>
         </p>
       </div>
     ));
@@ -52,14 +54,14 @@ export function ShippingSummary({
   }
 
   return (
-    <ExpensePanel title="Summary" className="h-full lg:h-[400px]">
+    <ExpensePanel title="Summary" className="h-full lg:min-h-[340px]">
       <div className="flex h-full flex-col gap-6" aria-busy={isLoading}>
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-muted-foreground">Shipping Spend</p>
+          <p className="eyebrow">Shipping Spend</p>
           {isLoading ? (
             <Skeleton className="my-1 h-10 w-40" />
           ) : (
-            <p className="animate-data-in text-3xl font-medium tabular-nums">
+            <p className="display animate-data-in text-3xl font-medium tabular-nums">
               {formatCurrencyFromMinorUnits(data?.summary.spend ?? 0, currency, locale)}
             </p>
           )}

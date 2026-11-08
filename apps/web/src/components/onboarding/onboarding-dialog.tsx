@@ -1,23 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, use, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  Loading03Icon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons";
+import { Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -43,6 +32,7 @@ import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
 import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 type StepId = "welcome" | "preferences" | "extension" | "add";
 
@@ -83,7 +73,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     step: 4,
     eyebrow: "Add items",
     title: "Pick your first items.",
-    description: "You can add more any time with the Add button in the header.",
+    description: "You can add more any time with the + button at the top right.",
   },
 ];
 
@@ -95,25 +85,30 @@ const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
 const PANEL_MIN_HEIGHT = "min-h-[440px]";
 const EASE_OUT = "ease-[cubic-bezier(0.23,1,0.32,1)]";
-const ENTER_TRANSITION = `transition-[opacity,transform,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-1 starting:blur-[2px]`;
+const ENTER_TRANSITION = `transition-[opacity,translate,filter] duration-200 ${EASE_OUT} starting:opacity-0 starting:translate-y-(--rise) starting:blur-[2px]`;
 
 const appRouteApi = getRouteApi("/(app)");
 
-type OnboardingDialogProps = {
-  readonly renderTrigger: React.ReactElement;
-  /** Only one mounted dialog may open on its own, for a new account or at the extension step after a reload, or two would stack. */
-  readonly opensForNewAccount?: boolean;
+const OpenOnboardingContext = createContext<(() => void) | null>(null);
+
+function useOpenOnboarding(): () => void {
+  const openOnboarding = use(OpenOnboardingContext);
+  if (!openOnboarding) throw new Error("useOpenOnboarding needs an OnboardingProvider above it.");
+  return openOnboarding;
+}
+
+type OnboardingProviderProps = {
+  readonly children: React.ReactNode;
 };
 
-function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: OnboardingDialogProps) {
+function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.
   const isNewAccount = session.user.hasSeenOnboarding === false;
   const { reopenAtExtensionStep, setExtensionStepOpen } = useOnboarding();
-  const reopensAtExtensionStep = opensForNewAccount && reopenAtExtensionStep;
-  const [open, setOpen] = useState(opensForNewAccount && (isNewAccount || reopenAtExtensionStep));
+  const [open, setOpen] = useState(isNewAccount || reopenAtExtensionStep);
   const [currentStep, setCurrentStep] = useState(
-    reopensAtExtensionStep ? EXTENSION_STEP : FIRST_STEP,
+    reopenAtExtensionStep ? EXTENSION_STEP : FIRST_STEP,
   );
 
   const router = useRouter();
@@ -205,6 +200,8 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
     [close, form, sessionUsername, sessionCurrency, sessionDateFormat],
   );
 
+  const openOnboarding = useCallback(() => handleOpenChange(true), [handleOpenChange]);
+
   const handleBack = useCallback(() => {
     if (isFirst) return;
     goToStep(currentStep - 1);
@@ -224,158 +221,163 @@ function OnboardingDialog({ renderTrigger, opensForNewAccount = true }: Onboardi
   }, [currentMeta.id, isLast, form, advance, close, navigate]);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={renderTrigger} />
-
-      <DialogContent
-        className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
-        showCloseButton={false}
-      >
-        <Stepper value={currentStep} onValueChange={setCurrentStep}>
-          <StepperNav className="flex gap-1.5 px-6 pt-5">
-            {STEPS.map((meta) => (
-              <StepperItem key={meta.id} step={meta.step} className="flex-1 overflow-hidden">
-                <StepperTrigger className="w-full" asChild>
-                  <StepperIndicator
-                    className={cn(
-                      "h-1 w-full rounded-full! bg-muted",
-                      `transition-colors duration-400 ${EASE_OUT}`,
-                      "data-[state=active]:bg-foreground data-[state=completed]:bg-foreground",
-                    )}
-                  >
-                    <span className="sr-only">{meta.eyebrow}</span>
-                  </StepperIndicator>
-                </StepperTrigger>
-              </StepperItem>
-            ))}
-          </StepperNav>
-
-          <StepperPanel className={cn("px-6 pt-5 pb-5", PANEL_MIN_HEIGHT)}>
-            {STEPS.map((meta) => (
-              <StepperContent
-                key={meta.id}
-                value={meta.step}
-                className={cn("flex flex-col gap-5", ENTER_TRANSITION)}
-              >
-                <StepHeader meta={meta} />
-                {meta.id === "preferences" ? (
-                  <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
-                    <form.Field
-                      name="username"
-                      asyncDebounceMs={1000}
-                      validators={{
-                        onChangeAsync: async ({ value }) => {
-                          if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
-                          if (value === sessionUsername) return;
-                          const checked = await decodeAuth(() =>
-                            authClient.isUsernameAvailable({ username: value }),
-                          );
-                          if (checked.isErr()) return checked.error.message;
-                          if (checked.value.available === false) return "Username is already taken";
-                        },
-                        onBlur: z
-                          .string()
-                          .min(MIN_USERNAME, `Username must be at least ${MIN_USERNAME} characters`)
-                          .max(
-                            MAX_USERNAME,
-                            `Username must be less than ${MAX_USERNAME} characters`,
-                          ),
-                      }}
+    <OpenOnboardingContext value={openOnboarding}>
+      {children}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent
+          className="sm:max-w-xl gap-0 overflow-hidden p-0 bg-background/80 backdrop-blur-sm"
+          showCloseButton={false}
+        >
+          <Stepper value={currentStep} onValueChange={setCurrentStep}>
+            <StepperNav className="flex gap-1.5 px-6 pt-5">
+              {STEPS.map((meta) => (
+                <StepperItem key={meta.id} step={meta.step} className="flex-1 overflow-hidden">
+                  <StepperTrigger className="w-full" asChild>
+                    <StepperIndicator
+                      className={cn(
+                        "h-1 w-full rounded-full! bg-muted",
+                        `transition-colors duration-400 ${EASE_OUT}`,
+                        "data-[state=active]:bg-foreground data-[state=completed]:bg-foreground",
+                      )}
                     >
-                      {(field) => (
-                        <div className="flex flex-col gap-1.5">
-                          <Label htmlFor={field.name}>Username</Label>
-                          <Input
-                            id={field.name}
-                            name={field.name}
-                            type="text"
-                            autoComplete="username"
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(event) => field.handleChange(event.target.value)}
-                            placeholder="Enter your username"
-                            maxLength={MAX_USERNAME}
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
-                    </form.Field>
+                      <span className="sr-only">{meta.eyebrow}</span>
+                    </StepperIndicator>
+                  </StepperTrigger>
+                </StepperItem>
+              ))}
+            </StepperNav>
 
-                    <form.Field name="currency">
-                      {(field) => (
-                        <div className="flex flex-col gap-2">
-                          <Label htmlFor={field.name}>Currency</Label>
-                          <CurrencySelect
-                            id={field.name}
-                            value={field.state.value}
-                            onValueChange={field.handleChange}
-                            onBlur={field.handleBlur}
-                            invalid={!field.state.meta.isValid}
-                          />
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
-                    </form.Field>
-
-                    <form.Field name="dateFormat">
-                      {(field) => (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex flex-col gap-1">
-                            <Label htmlFor={field.name}>Date format</Label>
-                            <span className="text-xs text-muted-foreground">
-                              e.g. {formatDateOnlyForDisplay(new Date(), field.state.value)}
-                            </span>
+            <StepperPanel className={cn("px-6 pt-5 pb-5", PANEL_MIN_HEIGHT)}>
+              {STEPS.map((meta) => (
+                <StepperContent
+                  key={meta.id}
+                  value={meta.step}
+                  className={cn("flex flex-col gap-5", ENTER_TRANSITION)}
+                >
+                  <StepHeader meta={meta} />
+                  {meta.id === "preferences" ? (
+                    <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
+                      <form.Field
+                        name="username"
+                        asyncDebounceMs={1000}
+                        validators={{
+                          onChangeAsync: async ({ value }) => {
+                            if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
+                            if (value === sessionUsername) return;
+                            const checked = await decodeAuth(() =>
+                              authClient.isUsernameAvailable({ username: value }),
+                            );
+                            if (checked.isErr()) return checked.error.message;
+                            if (checked.value.available === false)
+                              return "Username is already taken";
+                          },
+                          onBlur: z
+                            .string()
+                            .min(
+                              MIN_USERNAME,
+                              `Username must be at least ${MIN_USERNAME} characters`,
+                            )
+                            .max(
+                              MAX_USERNAME,
+                              `Username must be less than ${MAX_USERNAME} characters`,
+                            ),
+                        }}
+                      >
+                        {(field) => (
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor={field.name}>Username</Label>
+                            <Input
+                              id={field.name}
+                              name={field.name}
+                              type="text"
+                              autoComplete="username"
+                              value={field.state.value}
+                              onBlur={field.handleBlur}
+                              onChange={(event) => field.handleChange(event.target.value)}
+                              placeholder="Enter your username"
+                              maxLength={MAX_USERNAME}
+                            />
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
                           </div>
-                          <ToggleGroup
-                            id={field.name}
-                            variant="outline"
-                            spacing={1}
-                            value={[field.state.value]}
-                            onValueChange={(next) => {
-                              const [value] = next;
-                              if (value) field.handleChange(value as DateFormat);
-                            }}
-                            className="flex-wrap"
-                          >
-                            {DATE_FORMATS.map((option) => (
-                              <ToggleGroupItem key={option} value={option}>
-                                {option}
-                              </ToggleGroupItem>
-                            ))}
-                          </ToggleGroup>
-                          <FieldError className="text-xs" errors={field.state.meta.errors} />
-                        </div>
-                      )}
-                    </form.Field>
-                  </form>
-                ) : null}
-                {meta.id === "extension" ? <ExtensionStep /> : null}
-                {meta.id === "add" ? <AddStep /> : null}
-              </StepperContent>
-            ))}
-          </StepperPanel>
+                        )}
+                      </form.Field>
 
-          <form.Subscribe
-            selector={(state) => ({
-              isSubmitting: state.isSubmitting,
-              canSubmit: state.canSubmit,
-            })}
-          >
-            {({ isSubmitting, canSubmit }) => (
-              <StepFooter
-                isFirst={isFirst}
-                isLast={isLast}
-                isSaving={isSubmitting}
-                canContinue={currentMeta.id !== "preferences" || canSubmit}
-                onBack={handleBack}
-                onContinue={handleContinue}
-                onSkip={close}
-              />
-            )}
-          </form.Subscribe>
-        </Stepper>
-      </DialogContent>
-    </Dialog>
+                      <form.Field name="currency">
+                        {(field) => (
+                          <div className="flex flex-col gap-2">
+                            <Label htmlFor={field.name}>Currency</Label>
+                            <CurrencySelect
+                              id={field.name}
+                              value={field.state.value}
+                              onValueChange={field.handleChange}
+                              onBlur={field.handleBlur}
+                              invalid={!field.state.meta.isValid}
+                            />
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
+                          </div>
+                        )}
+                      </form.Field>
+
+                      <form.Field name="dateFormat">
+                        {(field) => (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-1">
+                              <Label htmlFor={field.name}>Date format</Label>
+                              <span className="text-xs text-muted-foreground">
+                                e.g. {formatDateOnlyForDisplay(new Date(), field.state.value)}
+                              </span>
+                            </div>
+                            <ToggleGroup
+                              id={field.name}
+                              variant="outline"
+                              spacing={1}
+                              value={[field.state.value]}
+                              onValueChange={(next) => {
+                                const [value] = next;
+                                if (value) field.handleChange(value as DateFormat);
+                              }}
+                              className="flex-wrap"
+                            >
+                              {DATE_FORMATS.map((option) => (
+                                <ToggleGroupItem key={option} value={option}>
+                                  {option}
+                                </ToggleGroupItem>
+                              ))}
+                            </ToggleGroup>
+                            <FieldError className="text-xs" errors={field.state.meta.errors} />
+                          </div>
+                        )}
+                      </form.Field>
+                    </form>
+                  ) : null}
+                  {meta.id === "extension" ? <ExtensionStep /> : null}
+                  {meta.id === "add" ? <AddStep /> : null}
+                </StepperContent>
+              ))}
+            </StepperPanel>
+
+            <form.Subscribe
+              selector={(state) => ({
+                isSubmitting: state.isSubmitting,
+                canSubmit: state.canSubmit,
+              })}
+            >
+              {({ isSubmitting, canSubmit }) => (
+                <StepFooter
+                  isFirst={isFirst}
+                  isLast={isLast}
+                  isSaving={isSubmitting}
+                  canContinue={currentMeta.id !== "preferences" || canSubmit}
+                  onBack={handleBack}
+                  onContinue={handleContinue}
+                  onSkip={close}
+                />
+              )}
+            </form.Subscribe>
+          </Stepper>
+        </DialogContent>
+      </Dialog>
+    </OpenOnboardingContext>
   );
 }
 
@@ -386,9 +388,7 @@ type StepHeaderProps = {
 function StepHeader({ meta }: StepHeaderProps) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="text-xs font-medium text-muted-foreground font-orbitron lowercase">
-        {meta.eyebrow}
-      </div>
+      <div className="eyebrow">{meta.eyebrow}</div>
       <DialogTitle className="tracking-tight text-xl leading-tight font-medium">
         {meta.title}
       </DialogTitle>
@@ -438,24 +438,24 @@ function StepFooter({
   const getContinueIcon = () => {
     if (isSaving) return Loading03Icon;
     if (isLast) return Tick02Icon;
-    return ArrowRight01Icon;
+    return NextIcon;
   };
   const continueIcon = getContinueIcon();
   const skipLabel = "Close";
 
   return (
     <div className="flex items-center justify-between gap-2 border-t bg-background px-4 py-3">
-      <Button variant="ghost" size="sm" onClick={onSkip} disabled={isSaving}>
+      <Button variant="ghost" onClick={onSkip} disabled={isSaving}>
         {skipLabel}
       </Button>
       <div className="flex items-center gap-2">
         {!isFirst && (
-          <Button variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" strokeWidth={2} />
+          <Button variant="outline" onClick={onBack} disabled={isSaving}>
+            <HugeiconsIcon icon={PreviousIcon} data-icon="inline-start" strokeWidth={2} />
             Back
           </Button>
         )}
-        <Button size="sm" onClick={onContinue} disabled={isSaving || !canContinue}>
+        <Button onClick={onContinue} disabled={isSaving || !canContinue}>
           {isLast ? "Get started" : "Continue"}
           <HugeiconsIcon
             icon={continueIcon}
@@ -469,4 +469,4 @@ function StepFooter({
   );
 }
 
-export { OnboardingDialog };
+export { OnboardingProvider, useOpenOnboarding };

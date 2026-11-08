@@ -35,10 +35,11 @@ test("a replay head remap replaces a deleted historical test file", async () => 
     await rm(path.join(root, "legacy.test.ts"));
     await $`git add .`.cwd(root).quiet();
     await $`git -c core.hooksPath=/dev/null commit --quiet -m rename`.cwd(root).quiet();
-    await Bun.write(
-      path.join(root, "scripts/replay.ts"),
-      Bun.file(path.join(import.meta.dir, "replay.ts")),
-    );
+    for (const script of ["replay.ts", "replay-config.ts", "worktree-snapshot.ts"])
+      await Bun.write(
+        path.join(root, "scripts", script),
+        Bun.file(path.join(import.meta.dir, script)),
+      );
     await Bun.write(
       path.join(root, "scripts/replays.json"),
       JSON.stringify({

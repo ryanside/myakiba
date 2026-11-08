@@ -33,17 +33,17 @@ test("focus comes back to the preview once a save stops disabling it, and the ne
   const held: (() => void)[] = [];
   render(<PendingCell onReady={(done) => held.push(done)} />);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Edit Title" }));
+  await user.click(screen.getByRole("button", { name: /edit Title$/ }));
   await user.keyboard("Summer{Enter}");
   await waitFor(() =>
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Edit Title" }).disabled).toBe(
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: /edit Title$/ }).disabled).toBe(
       true,
     ),
   );
 
   held[0]?.();
   await waitFor(() =>
-    expect(document.activeElement === screen.getByRole("button", { name: "Edit Title" })).toBe(
+    expect(document.activeElement === screen.getByRole("button", { name: /edit Title$/ })).toBe(
       true,
     ),
   );
@@ -63,14 +63,14 @@ test("focus that moved on during a save stays where it went", async () => {
     </>,
   );
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "Edit Title" }));
+  await user.click(screen.getByRole("button", { name: /edit Title$/ }));
   await user.keyboard("Summer{Enter}");
   const elsewhere = screen.getByRole("textbox", { name: "Elsewhere" });
   elsewhere.focus();
 
   held[0]?.();
   await waitFor(() =>
-    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Edit Title" }).disabled).toBe(
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: /edit Title$/ }).disabled).toBe(
       false,
     ),
   );
@@ -79,13 +79,13 @@ test("focus that moved on during a save stays where it went", async () => {
 
 test("the preview and the input are the app's 32px controls, with no size of their own", async () => {
   render(<InlineTextCell label="Title" value="Spring" onSubmit={async () => Result.ok()} />);
-  const preview = screen.getByRole("button", { name: "Edit Title" });
+  const preview = screen.getByRole("button", { name: /edit Title$/ });
   const sizes = (element: Element) =>
     element.className.split(/\s+/u).filter((name) => /^(?:h|min-h|py)-/u.test(name));
   expect(sizes(preview)).toEqual(["h-8"]);
 
   await userEvent.setup().click(preview);
-  expect(sizes(screen.getByRole("textbox"))).toEqual(["h-8", "py-1"]);
+  expect(sizes(screen.getByRole("textbox"))).toEqual(["py-1", "h-8"]);
 });
 
 test("an icon after the value is part of the one control, and clicking it edits", async () => {
@@ -97,7 +97,7 @@ test("an icon after the value is part of the one control, and clicking it edits"
       onSubmit={async () => Result.ok()}
     />,
   );
-  const preview = screen.getByRole("button", { name: "Edit Title" });
+  const preview = screen.getByRole("button", { name: /edit Title$/ });
   expect(screen.getAllByRole("button")).toHaveLength(1);
   expect(preview.lastElementChild).toBe(screen.getByTestId("pencil"));
 
@@ -114,17 +114,19 @@ test("a cell that fits its content leaves the row's width alone, and one that do
   const { unmount } = render(
     <InlineTextCell label="Title" value="Spring" onSubmit={async () => Result.ok()} />,
   );
-  expect(widths(screen.getByRole("button", { name: "Edit Title" }))).toEqual(["w-full"]);
-  await user.click(screen.getByRole("button", { name: "Edit Title" }));
-  expect(widths(screen.getByRole("textbox"))).toEqual(["w-full"]);
+  expect(widths(screen.getByRole("button", { name: /edit Title$/ }))).toEqual([
+    "w-[calc(100%+1rem)]",
+  ]);
+  await user.click(screen.getByRole("button", { name: /edit Title$/ }));
+  expect(widths(screen.getByRole("textbox"))).toEqual(["w-[calc(100%+1rem)]"]);
   expect(screen.getByRole("textbox").getAttribute("size")).toBeNull();
   unmount();
 
   render(
     <InlineTextCell label="Title" value="Spring" fitContent onSubmit={async () => Result.ok()} />,
   );
-  expect(widths(screen.getByRole("button", { name: "Edit Title" }))).toEqual(["w-fit"]);
-  await user.click(screen.getByRole("button", { name: "Edit Title" }));
+  expect(widths(screen.getByRole("button", { name: /edit Title$/ }))).toEqual(["w-fit"]);
+  await user.click(screen.getByRole("button", { name: /edit Title$/ }));
   const input = screen.getByRole("textbox");
   expect(widths(input)).toEqual(["w-auto"]);
   expect(input.getAttribute("size")).toBe("20");

@@ -1,9 +1,8 @@
-import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame";
+import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface KPICardProps {
   readonly title: string;
-  readonly subtitle?: string;
   readonly value: string | number | undefined;
   readonly subvalueTitle?: string;
   readonly subvalue?: string | number | undefined;
@@ -12,35 +11,32 @@ interface KPICardProps {
 
 export function KPICard({
   title,
-  subtitle,
   value,
   subvalueTitle,
   subvalue,
   isLoading,
-}: KPICardProps): React.ReactNode {
+}: KPICardProps): ReactNode {
   return (
-    <Frame className="border-none ring-1 ring-foreground/10 shadow-xs!" spacing="sm">
-      <FrameHeader>
-        <FrameTitle className="text-xs lowercase font-orbitron font-medium">{title}</FrameTitle>
-      </FrameHeader>
-      <FramePanel className="shadow-none! border-none flex m-0.5 mt-0 flex-col justify-end gap-1 before:rounded-(--frame-radius)">
-        {isLoading ? (
-          <Skeleton className="h-8 w-24" />
-        ) : (
-          <div className="flex items-baseline gap-2">
-            <p className="animate-data-in text-2xl font-medium tracking-tight text-foreground">
-              {value}
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <p className="eyebrow">{title}</p>
+      {isLoading ? (
+        <Skeleton className="my-1 h-6 w-24" />
+      ) : (
+        <div className="flex items-baseline gap-2">
+          <p className="animate-data-in display text-2xl leading-8 font-medium text-foreground tabular-nums">
+            {value}
+          </p>
+          {subvalueTitle && subvalue !== undefined && (
+            <p className="animate-data-in text-[0.8125rem] text-muted-foreground tabular-nums">
+              {subvalue} {subvalueTitle}
             </p>
-            {subvalueTitle && subvalue !== undefined && (
-              <div className="animate-data-in flex items-baseline gap-1">
-                <span className="text-xs text-muted-foreground tabular-nums">{subvalue}</span>
-                <span className="text-xs text-muted-foreground">{subvalueTitle}</span>
-              </div>
-            )}
-          </div>
-        )}
-        {subtitle && <p className="italic text-xs text-muted-foreground">{subtitle}</p>}
-      </FramePanel>
-    </Frame>
+          )}
+        </div>
+      )}
+    </div>
   );
+}
+
+export function KPIGroup({ children }: { readonly children: ReactNode }): ReactNode {
+  return <div className="grid grid-cols-2 gap-x-10 gap-y-5 lg:grid-cols-4">{children}</div>;
 }

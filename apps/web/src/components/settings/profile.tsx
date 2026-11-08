@@ -60,10 +60,7 @@ function CheckMessage({ check }: { readonly check: UsernameCheck }) {
     <span className={cn("inline-flex items-center gap-1", tone)}>
       <HugeiconsIcon
         icon={icon}
-        className={cn(
-          "size-3.5",
-          check.kind === "checking" && "animate-spin motion-reduce:animate-none",
-        )}
+        className={cn("size-3.5", check.kind === "checking" && "animate-spin")}
         strokeWidth={2}
         aria-hidden="true"
       />

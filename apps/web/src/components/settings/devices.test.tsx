@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import * as z from "zod";
-import type { User } from "@/lib/auth-client";
+import { signedInSession } from "../../../test/session";
 
 await mock.module("@/lib/auth-redirect-url", () => ({
   getAuthRedirectUrl: (path: string) => `http://localhost:3001${path}`,
@@ -18,19 +18,7 @@ await mock.module("@/lib/auth-redirect-url", () => ({
 const MAC_FIREFOX = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Firefox/131.0";
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari";
 
-const user = {
-  id: "collector",
-  name: "collector",
-  username: "collector",
-  email: "collector@example.com",
-  emailVerified: true,
-  currency: "USD",
-  dateFormat: "MM/DD/YYYY",
-  hasSeenOnboarding: true,
-  banned: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-} satisfies User;
+const user = signedInSession().user;
 
 const session = (id: string, userAgent: string) => ({
   id,

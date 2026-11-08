@@ -1,14 +1,8 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  AddSquareIcon,
-  ArrowDown02Icon,
-  ArrowUp02Icon,
-  MinusSignSquareIcon,
-  UnfoldMoreIcon,
-} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "motion/react";
+import { ICON_SWAP } from "@/lib/motion";
 import {
   functionalUpdate,
   getCoreRowModel,
@@ -20,7 +14,6 @@ import type {
   ColumnDef,
   ExpandedState,
   OnChangeFn,
-  Row,
   SortingState,
 } from "@tanstack/react-table";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
@@ -29,12 +22,13 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
-import { DataTable, DataTableEmpty } from "@/components/data-table/data-table";
-import { Button } from "@/components/ui/button";
+import { DataTable, DataTableEmpty, DATA_TABLE_SKELETON } from "@/components/data-table/data-table";
+import { RowExpandButton, ROW_EXPAND_SKELETON } from "@/components/data-table/row-expand-button";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { ExpandedRowContent } from "@/components/analytics/section-expanded-row";
+import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
@@ -52,21 +46,25 @@ function createSectionColumns({
     {
       id: EXPAND_COLUMN_ID,
       header: "",
-      cell: ({ row }) => <ExpandButton row={row} />,
-      size: 32,
+      cell: ({ row }) => <RowExpandButton row={row} />,
+      size: 40,
+      meta: { headerClassName: "max-[440px]:w-[11.2%]", skeleton: ROW_EXPAND_SKELETON },
     },
     {
       id: ROW_NUMBER_COLUMN_ID,
       header: "#",
       cell: ({ row }) => offset + row.index + 1,
       size: 40,
+      meta: { headerClassName: "max-[440px]:w-[9.7%]", skeleton: DATA_TABLE_SKELETON.rank },
     },
     {
       id: "name",
       accessorFn: (row) => row.name,
       header: ({ column }) => <SortableHeader column={column} title="name" />,
       cell: ({ getValue }) => getValue() ?? "—",
+      size: 150,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[32.7%]" },
     },
     {
       id: "itemCount",
@@ -75,6 +73,7 @@ function createSectionColumns({
       cell: ({ getValue }) => getValue() ?? "—",
       size: 80,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[20.6%]", skeleton: DATA_TABLE_SKELETON.count },
     },
     {
       id: "totalSpent",
@@ -86,6 +85,7 @@ function createSectionColumns({
       },
       size: 100,
       sortDescFirst: false,
+      meta: { headerClassName: "max-[440px]:w-[25.8%]", skeleton: DATA_TABLE_SKELETON.money },
     },
   ];
 }
@@ -94,6 +94,7 @@ export function SectionTable({
   rows,
   sectionName,
   offset,
+  pageSize,
   isLoading,
   sort,
   order,
@@ -102,6 +103,7 @@ export function SectionTable({
   readonly rows: readonly AnalyticsSectionRow[];
   readonly sectionName: AnalyticsSection;
   readonly offset: number;
+  readonly pageSize: number;
   readonly isLoading: boolean;
   readonly sort?: AnalyticsSectionSort;
   readonly order?: AnalyticsSectionSortOrder;
@@ -166,6 +168,7 @@ export function SectionTable({
       <DataTable
         table={table}
         isLoading={isLoading}
+        skeletonRowCount={pageSize}
         empty={<DataTableEmpty title={`No ${sectionName} found`} />}
         variant="sized"
         onRowClick={(row) => row.toggleExpanded()}
@@ -175,7 +178,6 @@ export function SectionTable({
         getCellClassName={(_, columnId) =>
           cn(
             columnId === ROW_NUMBER_COLUMN_ID && "text-muted-foreground",
-            columnId === EXPAND_COLUMN_ID && "w-8",
             (columnId === ROW_NUMBER_COLUMN_ID ||
               columnId === "itemCount" ||
               columnId === "totalSpent") &&
@@ -201,19 +203,12 @@ function SortableHeader({
     <button
       type="button"
       onClick={column.getToggleSortingHandler()}
-      className="-my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm text-left transition-[color,scale] duration-150 ease-out hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.96]"
+      className="-my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm text-left press-text hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={`Sort by ${title}, ${nextDirection}`}
     >
       <span>{title}</span>
       <AnimatePresence initial={false} mode="popLayout">
-        <m.span
-          key={sorted || "none"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-          className="inline-flex"
-        >
+        <m.span key={sorted || "none"} {...ICON_SWAP} className="inline-flex">
           <HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5" />
         </m.span>
       </AnimatePresence>
@@ -223,34 +218,12 @@ function SortableHeader({
 
 function getSortPresentation(sorted: false | "asc" | "desc") {
   if (sorted === "asc") {
-    return { icon: ArrowUp02Icon, nextDirection: "descending" } as const;
+    return { icon: SortAscendingIcon, nextDirection: "descending" } as const;
   }
 
   if (sorted === "desc") {
-    return { icon: ArrowDown02Icon, nextDirection: "default" } as const;
+    return { icon: SortDescendingIcon, nextDirection: "default" } as const;
   }
 
-  return { icon: UnfoldMoreIcon, nextDirection: "ascending" } as const;
-}
-
-function ExpandButton({ row }: { readonly row: Row<AnalyticsSectionRow> }): ReactNode {
-  const isExpanded = row.getIsExpanded();
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={(event) => {
-        event.stopPropagation();
-        row.toggleExpanded();
-      }}
-      aria-label={isExpanded ? "Collapse row" : "Expand row"}
-      aria-expanded={isExpanded}
-    >
-      <HugeiconsIcon
-        icon={isExpanded ? MinusSignSquareIcon : AddSquareIcon}
-        className="size-3.5 text-muted-foreground transition-transform duration-200 ease-out"
-      />
-    </Button>
-  );
+  return { icon: UnsortedIcon, nextDirection: "ascending" } as const;
 }

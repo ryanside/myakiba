@@ -13,7 +13,7 @@
     "test": "bun test --isolate --env-file=../../apps/server/test.env"
   },
   "dependencies": {
-    "@better-auth/infra": "^0.3.4",
+    "@better-auth/infra": "^0.4.26",
     "@myakiba/contracts": "workspace:*",
     "@myakiba/db": "workspace:*",
     "@myakiba/env": "workspace:*",
@@ -24,6 +24,7 @@
     "better-result": "catalog:",
     "dotenv": "catalog:",
     "evlog": "catalog:",
+    "jose": "^6.2.15",
     "resend": "^6.21.0",
     "zod": "catalog:"
   },

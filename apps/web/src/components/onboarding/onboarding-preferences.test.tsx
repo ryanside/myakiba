@@ -20,7 +20,16 @@ await mock.module("@tanstack/react-router", () => ({
   }),
   getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
 }));
-const { OnboardingDialog } = await import("./onboarding-dialog");
+const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+
+function GettingStartedButton() {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      Getting Started
+    </button>
+  );
+}
 
 const PREFERENCES_STEP_TITLE = "Set your username, currency, and date format.";
 
@@ -44,7 +53,9 @@ async function openPreferencesStep() {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <Toaster>
-        <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />
+        <OnboardingProvider>
+          <GettingStartedButton />
+        </OnboardingProvider>
       </Toaster>
     </QueryClientProvider>,
   );

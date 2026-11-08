@@ -29,6 +29,7 @@ import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { Saving } from "@/data/client";
+import { shownMessageOf } from "@/data/api";
 
 const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [
@@ -48,7 +49,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
-  isCollectionItemPending,
   heading,
   wrapped = true,
   isLoading = false,
@@ -58,7 +58,6 @@ export function OrderItemSubDataGrid({
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   onEditItem: (values: CollectionItemFormValues) => Saving;
   onDeleteItem: (orderId: string, itemId: string) => Saving;
-  isCollectionItemPending: (collectionId: string) => boolean;
   heading?: ReactNode;
   wrapped?: boolean;
   isLoading?: boolean;
@@ -84,7 +83,7 @@ export function OrderItemSubDataGrid({
   );
   const [columnVisibility, setColumnVisibility] = useLocalStorage<VisibilityState>(
     TABLE_LAYOUTS.orderItems.visibility,
-    {},
+    { orderDate: false },
   );
 
   const offset = pagination.pageIndex * pagination.pageSize;
@@ -129,9 +128,8 @@ export function OrderItemSubDataGrid({
         currency,
         locale,
         dateFormat,
-        isCollectionItemPending,
       }),
-    [currency, locale, dateFormat, isCollectionItemPending, onDeleteItem, onEditItem, orderId],
+    [currency, locale, dateFormat, onDeleteItem, onEditItem, orderId],
   );
 
   const subTable = useReactTable({
@@ -184,7 +182,7 @@ export function OrderItemSubDataGrid({
   const grid =
     isError && !isLoading ? (
       <p className="animate-data-in py-3 text-center text-sm text-destructive">
-        Failed to load order items: {error.message}
+        Failed to load order items: {shownMessageOf(error)}
       </p>
     ) : (
       <DataGrid
@@ -196,7 +194,6 @@ export function OrderItemSubDataGrid({
         tableLayout={{
           dense: true,
           rowBorder: true,
-          headerBackground: true,
           headerBorder: true,
           columnsPinnable: true,
           columnsResizable: true,
@@ -206,7 +203,7 @@ export function OrderItemSubDataGrid({
       >
         <div className="w-full space-y-2.5 overflow-x-auto">
           <DataGridContainer className={wrapped ? "bg-card" : undefined}>
-            <ScrollArea horizontal>
+            <ScrollArea>
               <DataGridTable />
             </ScrollArea>
           </DataGridContainer>
@@ -218,13 +215,10 @@ export function OrderItemSubDataGrid({
                   selected
                 </span>
               ) : (
-                <span>
-                  <span className="animate-data-in inline-block">
-                    {subTable.getFilteredSelectedRowModel().rows.length}
-                  </span>{" "}
-                  of <span className="animate-data-in inline-block">{totalCount}</span> item(s)
-                  selected
-                </span>
+                <SelectionSummary
+                  selected={subTable.getFilteredSelectedRowModel().rows.length}
+                  total={totalCount}
+                />
               )}
             </div>
             <DataGridPagination className="pb-1.5" />
@@ -261,4 +255,25 @@ export function OrderItemSubDataGrid({
   if (!wrapped) return content;
 
   return <DataGridExpandedPanel>{content}</DataGridExpandedPanel>;
+}
+
+function SelectionSummary({
+  selected,
+  total,
+}: {
+  readonly selected: number;
+  readonly total: number;
+}): React.JSX.Element {
+  if (selected === 0)
+    return (
+      <span className="sr-only">
+        {total} {total === 1 ? "item" : "items"}
+      </span>
+    );
+  return (
+    <span className="tabular-nums">
+      <span className="animate-data-in inline-block">{selected}</span> of{" "}
+      <span className="animate-data-in inline-block">{total}</span> selected
+    </span>
+  );
 }

@@ -28,6 +28,7 @@ export function searchCommandResults(
 ): Promise<Result<CommandSearchResults, ApiFailure>> {
   return call(app.api.search.command.get({ query: { search } }), {
     fallback: "Failed to search orders and items",
+    empty: "Failed to search orders and items",
   }).then(
     Result.map((data): CommandSearchResults => ({
       orderMatches: data.searchData.orderResults.map((order) => ({
@@ -47,7 +48,7 @@ export function getItemDatabaseItems(
     app.api.search.items.get({
       query: params,
     }),
-    { fallback: "Failed to search item database" },
+    { fallback: "Failed to search item database", empty: "Failed to search item database" },
   );
 }
 
@@ -58,7 +59,7 @@ export function searchEntries(
     app.api.search.entries.get({
       query: params,
     }),
-    { fallback: "Failed to search entries" },
+    { fallback: "Failed to search entries", empty: "Failed to search entries" },
   );
 }
 
@@ -69,6 +70,6 @@ export function searchOrders(
     app.api.search.orders.get({
       query: params,
     }),
-    { fallback: "Failed to search orders" },
+    { fallback: "Failed to search orders", empty: "Failed to search orders" },
   );
 }

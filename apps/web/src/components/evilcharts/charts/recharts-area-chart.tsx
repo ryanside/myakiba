@@ -39,7 +39,7 @@ import { motion } from "motion/react";
 import { useMotionPreference } from "@/hooks/use-appearance";
 import * as z from "zod";
 
-const STROKE_WIDTH = 0.8; // default series stroke — <Area strokeWidth> overrides it
+const STROKE_WIDTH = 1.5;
 const LOADING_AREA_DATA_KEY = "loading";
 const LOADING_ANIMATION_DURATION = 2000; // in milliseconds
 const STACK_ID = "evil-stacked";
@@ -252,7 +252,7 @@ type AreaProps = {
 function Area({
   dataKey,
   variant = "gradient",
-  strokeVariant = "dashed",
+  strokeVariant = "solid",
   strokeWidth = STROKE_WIDTH,
   curveType,
   animationType,

@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { format, subMonths } from "date-fns";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Refresh01Icon } from "@hugeicons/core-free-icons";
+import { FilterResetIcon } from "@hugeicons/core-free-icons";
 import type { ExpenseFilters } from "@myakiba/contracts/expenses/schema";
 import { Button } from "@/components/ui/button";
+import { FieldTrigger } from "@/components/ui/field-trigger";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   DropdownMenu,
@@ -140,48 +141,41 @@ export function ExpensesFilters({
   }
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <Field>
-          <ToggleGroup
-            variant="outline"
-            spacing={0}
-            value={selectedPreset ? [selectedPreset] : []}
-            onValueChange={handlePresetChange}
-            aria-label="Date range"
-          >
-            {DATE_PRESETS.map((preset) => (
-              <ToggleGroupItem key={preset.value} value={preset.value}>
-                {preset.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </Field>
-        <Field className="w-40 shrink-0">
-          <DatePicker
-            value={filters.dateStart ?? ""}
-            onChange={(value) => onChange({ ...filters, dateStart: value || undefined })}
-            placeholder="Start date"
-          />
-        </Field>
-        <Field className="w-40 shrink-0">
-          <DatePicker
-            value={filters.dateEnd ?? ""}
-            onChange={(value) => onChange({ ...filters, dateEnd: value || undefined })}
-            placeholder="End date"
-          />
-        </Field>
-      </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <Field className="w-auto">
+        <ToggleGroup
+          variant="segmented"
+          spacing={0.5}
+          value={selectedPreset ? [selectedPreset] : []}
+          onValueChange={handlePresetChange}
+          aria-label="Date range"
+        >
+          {DATE_PRESETS.map((preset) => (
+            <ToggleGroupItem key={preset.value} value={preset.value}>
+              {preset.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </Field>
+      <Field className="w-36 shrink-0">
+        <DatePicker
+          value={filters.dateStart ?? ""}
+          onChange={(value) => onChange({ ...filters, dateStart: value || undefined })}
+          placeholder="Start date"
+        />
+      </Field>
+      <Field className="w-36 shrink-0">
+        <DatePicker
+          value={filters.dateEnd ?? ""}
+          onChange={(value) => onChange({ ...filters, dateEnd: value || undefined })}
+          placeholder="End date"
+        />
+      </Field>
 
-      <Field className="w-full sm:w-48">
+      <Field className="w-36 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <Button variant="outline" className="w-full justify-between" type="button">
-                {multiSelectDisplay(filters.shop, "Shops")}
-                <HugeiconsIcon icon={ArrowDown01Icon} data-icon="inline-end" />
-              </Button>
-            }
+            render={<FieldTrigger>{multiSelectDisplay(filters.shop, "Shops")}</FieldTrigger>}
           />
           <DropdownMenuContent className="w-(--anchor-width)">
             <ScrollArea className="max-h-56" aria-busy={isLoading}>
@@ -191,14 +185,9 @@ export function ExpensesFilters({
         </DropdownMenu>
       </Field>
       {hasActiveFilters ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClear}
-          aria-label="Reset filters"
-        >
-          <HugeiconsIcon icon={Refresh01Icon} className="size-4" />
+        <Button type="button" variant="ghost" onClick={onClear} className="text-muted-foreground">
+          <HugeiconsIcon icon={FilterResetIcon} data-icon="inline-start" />
+          <span className="max-md:sr-only">Reset Filters</span>
         </Button>
       ) : null}
     </div>

@@ -8,6 +8,7 @@ import {
 } from "../ui/select";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { useMemo } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
 import type { Saving } from "@/data/client";
@@ -20,6 +21,8 @@ type ColoredOption<Value extends string> = {
 
 interface SelectCellProps<Value extends string> {
   id?: string;
+  /** What the cell holds, such as "Status", for the combobox's accessible name. */
+  label: string;
   value: Value;
   options: readonly Value[];
   onSubmit: (value: Value) => Saving;
@@ -29,6 +32,7 @@ interface SelectCellProps<Value extends string> {
 
 export function SelectCell<Value extends string>({
   id,
+  label,
   value,
   options,
   onSubmit,
@@ -59,7 +63,7 @@ export function SelectCell<Value extends string>({
           disabled={disabled}
           items={coloredItems}
         >
-          <SelectTrigger id={id}>
+          <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
             <SelectValue>
               {(item: ColoredOption<Value>) => (
                 <span className="flex items-center gap-2">
@@ -95,7 +99,7 @@ export function SelectCell<Value extends string>({
         }}
         disabled={disabled}
       >
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

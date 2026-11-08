@@ -540,20 +540,16 @@ function OrderFormContent(
               {orderData ? orderData.title : "Edit the selected order."}
             </SheetDescription>
           </SheetHeader>
-          <div className="overflow-y-auto max-h-[70vh] px-2">{formFields}</div>
+          <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">{formFields}</div>
           <SheetFooter className="flex flex-row w-full">
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}
               children={([isSubmitting]) => (
-                <SheetClose>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full flex-1"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
+                <SheetClose
+                  disabled={isSubmitting}
+                  render={<Button type="button" variant="outline" />}
+                >
+                  Cancel
                 </SheetClose>
               )}
             />
@@ -591,16 +587,17 @@ function OrderFormContent(
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[70vh] py-4 no-scrollbar">{formFields}</div>
+        <div className="overflow-y-auto max-h-[70vh] py-4 scroll-fade-b">{formFields}</div>
 
         <DialogFooter>
           <form.Subscribe
             selector={(state) => [state.isSubmitting]}
             children={([isSubmitting]) => (
-              <DialogClose>
-                <Button variant="outline" type="button" disabled={isSubmitting}>
-                  Cancel
-                </Button>
+              <DialogClose
+                disabled={isSubmitting}
+                render={<Button variant="outline" type="button" />}
+              >
+                Cancel
               </DialogClose>
             )}
           />

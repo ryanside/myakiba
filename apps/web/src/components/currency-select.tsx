@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import { ArrowUpDownIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CURRENCY_LABELS } from "@/lib/locale";
 import { CURRENCIES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import { DisclosureIcon } from "@/lib/icons";
 
 type CurrencySelectProps = {
   readonly id: string;
@@ -47,14 +47,14 @@ export function CurrencySelect({
             aria-invalid={invalid || undefined}
             disabled={disabled}
             onBlur={onBlur}
-            className="justify-between"
+            className="press-none justify-between"
           >
             <span className="min-w-0 truncate text-left">
               <span className="font-medium">{value}</span>
               <span className="text-muted-foreground">{` — ${CURRENCY_LABELS[value]}`}</span>
             </span>
             <HugeiconsIcon
-              icon={ArrowUpDownIcon}
+              icon={DisclosureIcon}
               data-icon="inline-end"
               className="shrink-0 text-muted-foreground"
             />

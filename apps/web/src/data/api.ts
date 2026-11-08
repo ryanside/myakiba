@@ -1,4 +1,4 @@
-import { Panic, Result } from "better-result";
+import { isTaggedError, Panic, Result, UnhandledException } from "better-result";
 import * as z from "zod";
 import { ApiInvalid } from "@/lib/errors/api-invalid";
 import { ApiNotFound } from "@/lib/errors/api-not-found";
@@ -171,4 +171,51 @@ export async function call(
     return Result.err(new ApiUnreadable({ cause: error, message: wording.fallback }));
   }
   return decode(answered, wording);
+}
+
+/** The text the server wrote for the user: a 4xx body with visible text. */
+function serverTextOf(failure: ApiFailure): string | undefined {
+  switch (failure._tag) {
+    case "ApiNotFound":
+    case "ApiInvalid":
+      return serverMessage.safeParse(failure.body).data;
+    case "ApiRejected":
+      return failure.status >= 400 ? serverMessage.safeParse(failure.body).data : undefined;
+    default:
+      return undefined;
+  }
+}
+
+function isApiFailure(error: Error): error is ApiFailure {
+  return (
+    error instanceof ApiUnreachable ||
+    error instanceof ApiNotFound ||
+    error instanceof ApiRejected ||
+    error instanceof ApiInvalid ||
+    error instanceof ApiServerError ||
+    error instanceof ApiUnreadable
+  );
+}
+
+function isRejection(failure: ApiFailure): boolean {
+  if (failure._tag === "ApiRejected") return failure.status >= 400;
+  return failure._tag === "ApiNotFound" || failure._tag === "ApiInvalid";
+}
+
+const NO_ANSWER_TEXT = "The server didn't answer.";
+const REJECTED_TEXT = "The server rejected this request.";
+
+/**
+ * What a screen shows for a failed request: the server's message for the user, else `fallback`,
+ * else how the request failed. A 4xx without text was rejected, and anything else got no answer.
+ * Another declared failure or a Panic shows its own message, which is safe text. The message of an
+ * untagged error or an UnhandledException is a diagnostic, so it is never shown.
+ */
+export function shownMessageOf(error: Error | null, fallback?: string): string {
+  if (error === null) return fallback ?? NO_ANSWER_TEXT;
+  if (isApiFailure(error)) {
+    return serverTextOf(error) ?? fallback ?? (isRejection(error) ? REJECTED_TEXT : NO_ANSWER_TEXT);
+  }
+  if (isTaggedError(error) && !UnhandledException.is(error)) return error.message;
+  return fallback ?? NO_ANSWER_TEXT;
 }

@@ -1,16 +1,6 @@
 import type { ReactNode } from "react";
-import { PackageIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { AddLink } from "@/components/add/add-link";
-import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
-import {
-  Empty,
-  EmptyContent,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  EmptyDescription,
-} from "@/components/ui/empty";
+import { LoadError } from "@/components/page-states";
 import { CollectionItemCard } from "@/components/item/collection-item-card";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
@@ -26,7 +16,7 @@ export function ItemCollection({
   ordersList,
   isPending,
   isError,
-  errorMessage,
+  error,
   onEditCollectionItem,
   onDeleteCollectionItems,
   onMoveToExistingOrder,
@@ -39,7 +29,7 @@ export function ItemCollection({
   readonly ordersList: readonly ItemRelatedOrder[];
   readonly isPending: boolean;
   readonly isError: boolean;
-  readonly errorMessage: string | undefined;
+  readonly error: Error | null;
   readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
   readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onMoveToExistingOrder: (
@@ -63,33 +53,22 @@ export function ItemCollection({
       <h2 className="text-xs font-medium text-muted-foreground">Your Collection</h2>
 
       <div className="mt-4">
-        {isError && (
-          <LoadError
-            title="Couldn't load your Collection"
-            message={errorMessage ?? "Failed to load collection"}
-          />
-        )}
+        {isError && <LoadError title="Couldn't load your Collection" error={error} />}
 
         {!isPending && !isError && collectionItems.length === 0 && (
-          <Empty className={STATE_PANEL_CLASS_NAME}>
-            <EmptyHeader>
-              <EmptyMedia variant="icon" className={STATE_ICON_CLASS_NAME}>
-                <HugeiconsIcon icon={PackageIcon} className="size-5" aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>Not in your collection</EmptyTitle>
-              <EmptyDescription>Add this item to your collection or a new order.</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              {item ? (
-                <div className="flex w-full flex-col justify-center gap-2 sm:flex-row">
-                  <AddLink search={{ item: item.id, to: "collection" }}>Add to collection</AddLink>
-                  <AddLink search={{ item: item.id, to: "order-new" }} variant="outline">
-                    Add to an order
-                  </AddLink>
-                </div>
-              ) : null}
-            </EmptyContent>
-          </Empty>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-pretty text-muted-foreground">
+              Not in your collection yet. Add it to your collection, or start a new order with it.
+            </p>
+            {item ? (
+              <div className="flex w-full flex-col justify-start gap-2 sm:flex-row">
+                <AddLink search={{ item: item.id, to: "collection" }}>Add to collection</AddLink>
+                <AddLink search={{ item: item.id, to: "order-new" }} variant="outline">
+                  Add to an order
+                </AddLink>
+              </div>
+            ) : null}
+          </div>
         )}
 
         {!isError && (isPending || (item && collectionItems.length > 0)) ? (

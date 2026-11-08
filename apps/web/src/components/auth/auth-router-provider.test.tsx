@@ -23,6 +23,7 @@ import * as z from "zod";
 import type { RouterAppContext } from "@/routes/__root";
 import { createSessionSource } from "@/lib/session";
 import type { Session, SessionSource } from "@/lib/session";
+import { signedInSession } from "../../../test/session";
 
 await mock.module("@/lib/page-background", () => ({
   downloadPageBackground: () => {},
@@ -43,33 +44,11 @@ let endingSession = false;
 let deletingAccount = false;
 let dashboardRenders = 0;
 let shellRenders = 0;
-const session = {
-  session: {
-    id: "navigation-session",
-    token: "test-token",
-    userId: "navigation-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "navigation-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-} satisfies NonNullable<Session>;
-const otherSession = {
-  session: { ...session.session, id: "other-session", userId: "other-user" },
-  user: { ...session.user, id: "other-user", name: "Other collector", username: "other" },
-} satisfies NonNullable<Session>;
+const session = signedInSession();
+const otherSession = signedInSession({
+  session: { id: "other-session", userId: "other-user" },
+  user: { id: "other-user", name: "Other collector", username: "other" },
+});
 let account: NonNullable<Session> = session;
 let ownerLoads = 0;
 
@@ -331,7 +310,7 @@ test("a page renders without an interstitial while the first session check is in
   const check = Promise.withResolvers<null>();
   held = check.promise;
   let refetching = Promise.resolve();
-  act(() => {
+  await act(async () => {
     refetching = authState.result.current.refetch();
   });
   expect(authState.result.current.isPending).toBe(true);
@@ -420,7 +399,7 @@ test("saved preferences reach the route context without a page reload", async ()
   const requests = sessionRequests;
 
   fireEvent.click(screen.getByRole("button", { name: "DD/MM/YYYY" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
   await screen.findByText("Preferences updated successfully");
   await waitFor(() => expect(sessionRequests).toBeGreaterThan(requests));
   check.resolve(null);

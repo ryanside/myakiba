@@ -26,7 +26,7 @@ export function CalendarItemRow({
     <Link
       {...itemDestination(item.itemId, item.itemExternalId)}
       className={cn(
-        "flex min-w-0 items-center gap-2.5 overflow-hidden rounded-md p-1.5",
+        "flex min-w-0 items-center gap-2.5 overflow-hidden p-(--inset) [--inset:--spacing(1.5)] rounded-[calc(var(--radius-md)+var(--inset))]",
         ROW_LINK_CLASS_NAME,
       )}
     >
@@ -41,7 +41,9 @@ export function CalendarItemRow({
         />
       </MediaImage>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm leading-tight font-medium">{item.title}</p>
+        <p className="truncate text-sm leading-tight font-medium" title={item.title}>
+          {item.title}
+        </p>
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           {item.category != null && <CategoryLabel category={item.category} />}
           {item.price != null && item.price > 0 && item.priceCurrency?.trim() && (

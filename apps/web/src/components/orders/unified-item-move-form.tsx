@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
 import { MoneyField } from "@/components/money-field";
-import { ArrowUpDownIcon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +55,8 @@ import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/s
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
+import { DisclosureIcon } from "@/lib/icons";
 
 type UnifiedItemMoveFormProps = {
   readonly renderTrigger?: React.ReactElement;
@@ -268,7 +270,7 @@ function UnifiedItemMoveFormContent({
                               role="combobox"
                               aria-controls={targetOrderListId}
                               aria-expanded={popoverOpen}
-                              className="w-full justify-between"
+                              className="press-none w-full justify-between"
                               type="button"
                             >
                               {field.state.value
@@ -276,7 +278,7 @@ function UnifiedItemMoveFormContent({
                                     ?.title || "Select target order"
                                 : "Select target order"}
                               <HugeiconsIcon
-                                icon={ArrowUpDownIcon}
+                                icon={DisclosureIcon}
                                 data-icon="inline-end"
                                 className="shrink-0 opacity-50"
                               />
@@ -300,7 +302,7 @@ function UnifiedItemMoveFormContent({
                               )}
                               {orderSearchError && (
                                 <CommandEmpty>
-                                  Could not load orders. {orderSearchError.message}
+                                  Could not load orders. {shownMessageOf(orderSearchError)}
                                 </CommandEmpty>
                               )}
                               {orderSearch.title.length > 0 &&
@@ -382,10 +384,11 @@ function UnifiedItemMoveFormContent({
               <existingOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />
@@ -406,7 +409,7 @@ function UnifiedItemMoveFormContent({
           </form>
         ) : (
           <form onSubmit={formSubmitHandler(newOrderForm)}>
-            <div className="overflow-y-auto w-full max-h-[60vh] py-2">
+            <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
               <div className="flex flex-col gap-3 px-4">
                 <FormSection title="Basics">
                   <div className="grid grid-cols-2 gap-3">
@@ -682,10 +685,11 @@ function UnifiedItemMoveFormContent({
               <newOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
-                  <DialogClose>
-                    <Button variant="outline" type="button" disabled={isSubmitting}>
-                      Cancel
-                    </Button>
+                  <DialogClose
+                    disabled={isSubmitting}
+                    render={<Button variant="outline" type="button" />}
+                  >
+                    Cancel
                   </DialogClose>
                 )}
               />

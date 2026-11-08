@@ -53,7 +53,10 @@ export function FreshSignInNotice({
   return (
     <div className="@container">
       <div className="flex flex-col items-start gap-3 px-4 py-4 @md:flex-row @md:items-center @md:gap-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+        <span
+          data-slot="fresh-sign-in-icon"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted"
+        >
           <HugeiconsIcon icon={SquareLockPasswordIcon} className="size-4" aria-hidden="true" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">

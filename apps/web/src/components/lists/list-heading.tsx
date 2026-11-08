@@ -26,7 +26,7 @@ export function ListHeading({
       setTruncated(lines.some((line) => line.scrollWidth > line.clientWidth));
     };
     const measureAfterFonts = async (): Promise<void> => {
-      // Instrument Sans swaps in after first paint and changes how much of a line fits.
+      // Inter swaps in after first paint and changes how much of a line fits.
       await document.fonts.ready;
       measure();
     };
@@ -42,10 +42,11 @@ export function ListHeading({
         type="button"
         aria-expanded={expanded}
         aria-controls={id}
+        aria-label={expanded ? "Show less" : "Show more"}
         onClick={() => setExpanded((current) => !current)}
-        className="relative shrink-0 rounded-sm font-medium text-foreground/70 underline-offset-4 outline-ring transition-colors duration-150 ease-out after:absolute after:-inset-x-1.5 after:-inset-y-1 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="relative shrink-0 rounded-sm font-medium text-muted-foreground underline-offset-4 outline-ring press-text after:absolute after:-inset-x-1.5 after:-inset-y-1 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-muted-foreground/70 dark:hover:text-foreground"
       >
-        {expanded ? "less" : "more"}
+        {expanded ? "[show less]" : "[show more]"}
       </button>
     ) : null;
 
@@ -53,10 +54,7 @@ export function ListHeading({
     <div id={id} className={cn(LIST_HEADING_CLASS_NAME, "animate-data-in")}>
       <h1
         ref={titleRef}
-        className={cn(
-          "font-heading text-2xl font-medium tracking-tight",
-          expanded ? "text-pretty [overflow-wrap:anywhere]" : "truncate",
-        )}
+        className={cn("page-title", expanded ? "text-pretty [overflow-wrap:anywhere]" : "truncate")}
       >
         {title}
       </h1>

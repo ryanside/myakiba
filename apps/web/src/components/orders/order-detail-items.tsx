@@ -13,7 +13,6 @@ export function OrderDetailItems({
   setSelectedOrderIdByCollectionId,
   onEditItem,
   onDeleteItem,
-  isCollectionItemPending,
 }: {
   readonly orderId: string;
   readonly order: Order | undefined;
@@ -22,16 +21,15 @@ export function OrderDetailItems({
   readonly setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
   readonly onEditItem: (values: CollectionItemFormValues) => Saving;
   readonly onDeleteItem: (orderId: string, itemId: string) => Saving;
-  readonly isCollectionItemPending: (collectionId: string) => boolean;
 }): ReactNode {
   if (isLoading) {
     return (
-      <section className="flex flex-1 flex-col gap-3" aria-busy="true">
+      <section className="flex flex-col gap-3" aria-busy="true">
         <OrderItemSubDataGrid
           isLoading
           wrapped={false}
           heading={
-            <h2 className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <h2 className="flex items-center gap-1 text-base font-medium text-foreground">
               Items (<Skeleton className="size-2 rounded-[2px]" />)
             </h2>
           }
@@ -40,7 +38,6 @@ export function OrderDetailItems({
           setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
-          isCollectionItemPending={isCollectionItemPending}
         />
       </section>
     );
@@ -49,11 +46,11 @@ export function OrderDetailItems({
   if (!order) return null;
 
   return (
-    <section className="flex flex-col gap-3 flex-1">
+    <section className="flex flex-col gap-3">
       <OrderItemSubDataGrid
         wrapped={false}
         heading={
-          <h2 className="text-xs font-medium text-muted-foreground">
+          <h2 className="text-base font-medium text-foreground">
             Items (<span className="animate-data-in">{order.itemCount}</span>)
           </h2>
         }
@@ -62,7 +59,6 @@ export function OrderDetailItems({
         setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
         onEditItem={onEditItem}
         onDeleteItem={onDeleteItem}
-        isCollectionItemPending={isCollectionItemPending}
       />
     </section>
   );

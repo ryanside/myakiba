@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { MediaGalleryLink, MediaGallerySkeleton, MediaGalleryTile } from "@/components/media-tile";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import { cn } from "@/lib/utils";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
@@ -23,7 +24,6 @@ interface OrdersGalleryGridProps {
   readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly currency: Currency;
-  readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -36,9 +36,9 @@ export function OrdersGalleryGrid({
   onEditOrder,
   onDeleteOrders,
   currency,
-  isOrderPending,
   isLoading,
 }: OrdersGalleryGridProps): React.JSX.Element {
+  const { isOrderPending } = useOrderPending();
   const toggleSelection = (id: string): void => {
     onRowSelectionChange((prev: RowSelectionState) => {
       if (prev[id]) {
@@ -107,7 +107,7 @@ export function OrdersGalleryGrid({
         />
 
         {imageCount > 4 ? (
-          <div className="absolute bottom-1.5 right-1.5 z-20 rounded-sm bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+          <div className="absolute right-(--inset) bottom-(--inset) z-20 rounded-inner [--inset:--spacing(1.5)] bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
             +{imageCount - 4}
           </div>
         ) : null}

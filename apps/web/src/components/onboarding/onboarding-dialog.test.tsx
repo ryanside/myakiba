@@ -24,7 +24,16 @@ globalThis.fetch = Object.assign(
   { preconnect: realFetch.preconnect },
 );
 
-const { OnboardingDialog } = await import("./onboarding-dialog");
+const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+
+function OpenOnboardingButton({ label }: { readonly label: string }) {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      {label}
+    </button>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -56,16 +65,11 @@ async function openDashboard(hasSeenOnboarding?: boolean, { withAboutCopy = fals
       },
     }),
     component: () => (
-      <>
+      <OnboardingProvider>
         <h1>Dashboard</h1>
-        <OnboardingDialog renderTrigger={<button type="button">Getting Started</button>} />
-        {withAboutCopy ? (
-          <OnboardingDialog
-            opensForNewAccount={false}
-            renderTrigger={<button type="button">Open Getting Started</button>}
-          />
-        ) : null}
-      </>
+        <OpenOnboardingButton label="Getting Started" />
+        {withAboutCopy ? <OpenOnboardingButton label="Open Getting Started" /> : null}
+      </OnboardingProvider>
     ),
   });
   const dashboard = createRoute({ getParentRoute: () => app, path: "/dashboard" });
@@ -183,4 +187,40 @@ test("the last step explains picking, then closes onboarding and goes to the Add
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+async function continueToAddItems() {
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  return screen.findByRole("dialog", { name: "Pick your first items." });
+}
+
+function classTokens(element: HTMLElement) {
+  return element.className.split(/\s+/);
+}
+
+test("the add items step points to the + button in the top bar, not the sidebar", async () => {
+  await openDashboard(false);
+  const dialog = await continueToAddItems();
+
+  expect(dialog.textContent).toContain("the + button at the top right");
+  expect(dialog.textContent).not.toContain("sidebar");
+});
+
+test("every onboarding footer button is the standard button height", async () => {
+  await openDashboard(false);
+  const welcomeFooter = ["Close", "Continue"].map((name) => screen.getByRole("button", { name }));
+  for (const button of welcomeFooter) {
+    expect(classTokens(button), `${button.textContent} on the welcome step`).toContain("h-8");
+  }
+
+  await continueToAddItems();
+  for (const name of ["Close", "Back", "Get started"]) {
+    expect(classTokens(screen.getByRole("button", { name })), `${name} on the last step`).toContain(
+      "h-8",
+    );
+  }
 });

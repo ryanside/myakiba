@@ -4,9 +4,9 @@
 @import "shadcn/tailwind.css";
 
 .typeset-docs {
-  --typeset-font-body: var(--font-instrument-sans);
-  --typeset-font-heading: var(--font-instrument-sans);
-  --typeset-font-mono: var(--font-instrument-sans);
+  --typeset-font-body: var(--font-inter);
+  --typeset-font-heading: var(--font-inter);
+  --typeset-font-mono: var(--font-inter);
   --typeset-size: 15px;
   --typeset-leading: 1.75;
   --typeset-flow: 1.25em;
@@ -18,7 +18,7 @@
 
 :root,
 .light {
-  --font-instrument-sans: "Instrument Sans Variable", sans-serif;
+  --font-inter: "Inter Variable", sans-serif;
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.25 0 89.9);
@@ -49,7 +49,7 @@
   --chart-8: var(--color-orange-600);
   --chart-9: var(--color-indigo-600);
   --chart-10: var(--color-fuchsia-600);
-  --sidebar: oklch(0.984 0 89.9);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.25 0 89.9);
   --sidebar-primary: oklch(0.35 0 89.9);
   --sidebar-primary-foreground: oklch(1 0 0);
@@ -57,8 +57,8 @@
   --sidebar-accent-foreground: oklch(0.25 0 89.9);
   --sidebar-border: oklch(0.925 0 89.9);
   --sidebar-ring: oklch(0.925 0 89.9);
-  --radius: 0.625rem;
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --radius: 0.75rem;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
@@ -91,10 +91,6 @@
   --warning-foreground: var(--color-amber-700);
   --invert: var(--color-zinc-900);
   --invert-foreground: var(--color-zinc-50);
-
-  --control: oklch(1 0 0 / 0.62);
-  --control-edge: oklch(0.25 0 0 / 0.12);
-  --control-pressed: color-mix(in oklab, var(--foreground) 14%, var(--control));
 
   --tile-edge: oklch(0 0 0 / 0.06);
   --tile-edge-hover: oklch(0 0 0 / 0.08);
@@ -135,7 +131,7 @@
   --chart-8: var(--color-orange-600);
   --chart-9: var(--color-indigo-600);
   --chart-10: var(--color-fuchsia-600);
-  --sidebar: oklch(0.11 0 89.9);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.98 0 0);
   --sidebar-primary-foreground: oklch(0.12 0 89.9);
@@ -143,7 +139,7 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.28 0 89.9);
   --sidebar-ring: oklch(0.45 0 89.9);
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, sans-serif, system-ui;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-orbitron: "Orbitron Variable", ui-sans-serif, sans-serif, system-ui;
   --font-serif: serif;
   --font-mono: ui-monospace, monospace;
@@ -177,10 +173,6 @@
   --invert: var(--color-zinc-700);
   --invert-foreground: var(--color-zinc-50);
 
-  --control: color-mix(in oklab, var(--input) 55%, transparent);
-  --control-edge: color-mix(in oklab, var(--foreground) 12%, transparent);
-  --control-pressed: color-mix(in oklab, var(--foreground) 22%, var(--control));
-
   --tile-edge: oklch(1 0 0 / 0.08);
   --tile-edge-hover: oklch(1 0 0 / 0.13);
   --tile-lift: 0 0 #0000;
@@ -190,7 +182,77 @@
   --row-hover: color-mix(in oklab, var(--muted) 50%, transparent);
 }
 
+/* Motion curves. Tailwind's built-in ease-out and ease-in-out are too weak for UI. Static, so the
+   motion utilities below can read them as variables. */
+@theme static {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root {
+  --motion-press: 150ms;
+  --motion-hover: 150ms;
+  --motion-tooltip: 125ms;
+  --motion-popup-in: 180ms;
+  --motion-popup-out: 130ms;
+  --motion-modal-in: 200ms;
+  --motion-modal-out: 150ms;
+  --motion-sheet-in: 300ms;
+  --motion-sheet-out: 200ms;
+  --motion-toast-in: 400ms;
+  --motion-toast-out: 200ms;
+  --motion-collapse: 200ms;
+  --motion-move: 150ms;
+  --motion-data-in: 250ms;
+  --press-scale: 0.97;
+  --press-scale-text: 0.96;
+  --press-travel: 5;
+  --popup-from: 0.95;
+  --tooltip-from: 0.97;
+  --modal-from: 0.96;
+  --tick-from: 0.9;
+  --sheet-from: 100%;
+  --sheet-from-opacity: 1;
+  --toast-from: -100%;
+  --rise: 3px;
+  --appear-rise: 8px;
+  --bar-rise: 8px;
+  --nudge: 0.125rem;
+}
+
+:root[data-reduce-motion] {
+  --press-scale: 1;
+  --press-scale-text: 1;
+  --popup-from: 1;
+  --tooltip-from: 1;
+  --modal-from: 1;
+  --tick-from: 1;
+  --sheet-from: 0%;
+  --sheet-from-opacity: 0;
+  --toast-from: 0%;
+  --rise: 0px;
+  --appear-rise: 0px;
+  --bar-rise: 0px;
+  --nudge: 0px;
+  --motion-collapse: 0ms;
+  --motion-move: 0ms;
+}
+
+:root[data-reduce-motion] * {
+  scroll-behavior: auto !important;
+}
+
+:root[data-reduce-motion] .animate-pulse {
+  animation: none;
+}
+
 @theme inline {
+  /* Inter sets wider than its size suggests, so body copy runs at 13px, as on recent.design and marked.dev. */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: calc(1.25 / 0.8125);
+  /* At 12px and below Inter closes up, so small text gets a touch of air. */
+  --text-xs--letter-spacing: 0.01em;
   --font-sans: var(--font-sans);
   --font-orbitron: var(--font-orbitron);
   --font-serif: var(--font-serif);
@@ -216,9 +278,6 @@
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
-  --color-control: var(--control);
-  --color-control-edge: var(--control-edge);
-  --color-control-pressed: var(--control-pressed);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
@@ -278,19 +337,13 @@ body {
   position: relative;
 }
 
-:root[data-reduce-motion] *,
-:root[data-reduce-motion] *::before,
-:root[data-reduce-motion] *::after {
-  animation: none !important;
-  scroll-behavior: auto !important;
-  transition: none !important;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-width: none;
+  }
+  :where(:not(html, body))::-webkit-scrollbar {
+    display: none;
   }
   body {
     @apply bg-background text-foreground;
@@ -299,6 +352,9 @@ body {
   }
   html {
     @apply font-sans;
+    font-synthesis: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
     scrollbar-gutter: stable;
   }
 }
@@ -306,24 +362,225 @@ body {
 @keyframes appear {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--appear-rise));
   }
 }
 
+@utility eyebrow {
+  font-family: var(--font-orbitron);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  color: var(--color-muted-foreground);
+}
+
+@utility group-label {
+  @apply eyebrow text-[0.6875rem] tracking-tight text-muted-foreground/70;
+}
+
+@utility decorative {
+  font-family: var(--font-orbitron);
+  font-weight: 500;
+  text-transform: lowercase;
+  letter-spacing: 0;
+}
+
+@utility display {
+  letter-spacing: -0.02em;
+}
+
+@utility page-title {
+  @apply display font-heading text-[1.375rem] leading-8 font-medium;
+}
+
+@utility rounded-inner {
+  border-radius: max(0px, calc(var(--radius-outer) - var(--inset)));
+}
+
+/* Colour, background and border fade on hover. Focus rings are box-shadow, so they stay instant.
+   Scale is listed so the press utilities build on it, and a press stacked on it keeps its transition. */
+@utility color-motion {
+  transition-property: color, background-color, border-color, scale;
+  transition-duration:
+    var(--motion-hover), var(--motion-hover), var(--motion-hover), var(--motion-press);
+  transition-timing-function: ease, ease, ease, var(--ease-out);
+}
+
+@utility press {
+  @apply color-motion;
+  &:active:not(:disabled, [data-disabled]) {
+    scale: max(var(--press-scale), 1 - var(--press-travel) / var(--press-width, 1));
+  }
+}
+
+@utility press-text {
+  @apply color-motion;
+  &:active:not(:disabled, [data-disabled]) {
+    scale: var(--press-scale-text);
+  }
+}
+
+@utility press-none {
+  --press-scale: 1;
+}
+
+@utility popup-motion {
+  transform-origin: var(--transform-origin);
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-popup-in);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--popup-from);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-popup-out);
+  }
+  &[data-instant] {
+    transition-duration: 0ms;
+  }
+}
+
+@utility tooltip-motion {
+  transform-origin: var(--transform-origin);
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-tooltip);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--tooltip-from);
+  }
+  &[data-instant] {
+    transition-duration: 0ms;
+  }
+}
+
+@utility modal-motion {
+  transition-property: opacity, scale;
+  transition-duration: var(--motion-modal-in);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--modal-from);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-modal-out);
+  }
+}
+
+@utility backdrop-motion {
+  transition-property: opacity;
+  transition-duration: var(--backdrop-in, var(--motion-modal-in));
+  transition-timing-function: var(--backdrop-ease, var(--ease-out));
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+  &[data-ending-style] {
+    transition-duration: var(--backdrop-out, var(--motion-modal-out));
+  }
+}
+
+@utility sheet-motion {
+  transition-property: translate, opacity;
+  transition-duration: var(--motion-sheet-in);
+  transition-timing-function: var(--ease-drawer);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: var(--sheet-from-opacity);
+  }
+  &[data-ending-style] {
+    transition-duration: var(--motion-sheet-out);
+  }
+  &[data-side="right"]:is([data-starting-style], [data-ending-style]) {
+    translate: var(--sheet-from) 0;
+  }
+  &[data-side="left"]:is([data-starting-style], [data-ending-style]) {
+    translate: calc(var(--sheet-from) * -1) 0;
+  }
+  &[data-side="bottom"]:is([data-starting-style], [data-ending-style]) {
+    translate: 0 var(--sheet-from);
+  }
+  &[data-side="top"]:is([data-starting-style], [data-ending-style]) {
+    translate: 0 calc(var(--sheet-from) * -1);
+  }
+}
+
+@utility toast-motion {
+  transition-property: transform, opacity, height;
+  transition-duration: var(--toast-move, var(--motion-toast-in)), var(--motion-toast-in), 150ms;
+  transition-timing-function: ease;
+  &[data-ending-style] {
+    transition-duration: var(--toast-move, var(--motion-toast-out)), var(--motion-toast-out), 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+  :root[data-reduce-motion] & {
+    --toast-move: 0ms;
+  }
+}
+
+@utility collapse-motion {
+  height: var(--collapsible-panel-height, var(--accordion-panel-height));
+  overflow: hidden;
+  transition-property: height, opacity;
+  transition-duration: var(--motion-collapse);
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+@utility tick-motion {
+  transition-property: opacity, scale;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    scale: var(--tick-from);
+  }
+  &[data-ending-style] {
+    transition-duration: 100ms;
+  }
+}
+
+@utility collapse-chevron {
+  transition-property: rotate;
+  transition-duration: var(--motion-collapse);
+  transition-timing-function: var(--ease-out);
+}
+
+@utility move-motion {
+  transition-property: translate, rotate, scale;
+  transition-duration: var(--motion-move);
+  transition-timing-function: var(--ease-out);
+}
+
 @utility animate-appear {
-  animation: appear 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: appear 600ms var(--ease-out) both;
   animation-delay: var(--appear-delay, 0ms);
 }
 
 @keyframes data-in {
   from {
     opacity: 0;
-    transform: translateY(3px);
+    transform: translateY(var(--rise));
   }
 }
 
 @utility animate-data-in {
-  animation: data-in 250ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: data-in var(--motion-data-in) var(--ease-out) both;
 }
 
 /* Opacity on the popup would turn off the backdrop blur of its `::before`, so only what it holds fades. */

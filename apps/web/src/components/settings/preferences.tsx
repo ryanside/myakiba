@@ -70,15 +70,15 @@ export function Preferences({ user }: { user: User }) {
         <SettingsRow setting="date-format">
           <ToggleGroup
             aria-label="Date format"
-            variant="outline"
-            spacing={1}
+            variant="segmented"
+            spacing={0.5}
             value={[draft.dateFormat]}
             onValueChange={(next) => {
               const dateFormat = DATE_FORMATS.find((format) => format === next[0]);
               if (dateFormat) edit({ dateFormat });
             }}
             disabled={anySaveInFlight}
-            className="w-full flex-wrap justify-start sm:w-auto sm:justify-end"
+            className="grid w-full grid-cols-2 data-[variant=segmented]:rounded-[16px] xl:flex xl:w-auto xl:justify-end xl:data-[variant=segmented]:rounded-full"
           >
             {DATE_FORMATS.map((format) => (
               <ToggleGroupItem key={format} value={format} className="tabular-nums">
@@ -91,13 +91,16 @@ export function Preferences({ user }: { user: User }) {
         <FormatPreview currency={draft.currency} dateFormat={draft.dateFormat} />
 
         <SettingsGroupFooter>
+          <p aria-live="polite" className="text-xs text-muted-foreground">
+            {dirty ? "Unsaved changes" : null}
+          </p>
           <StatusButton
             type="submit"
             status={anySaveInFlight ? "loading" : status}
             successLabel="Saved"
             disabled={anySaveInFlight || !dirty}
           >
-            Save preferences
+            Save formats
           </StatusButton>
         </SettingsGroupFooter>
       </SettingsGroup>
@@ -129,7 +132,7 @@ function FormatPreview({ currency, dateFormat }: Formats) {
   const today = parseDateOnly(useToday()) ?? new Date();
 
   return (
-    <div className="flex flex-col gap-3 bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+    <div className="flex flex-col gap-3 px-4 py-4 xl:flex-row xl:items-start xl:justify-between xl:gap-8">
       <div className="flex min-w-0 flex-col gap-0.5">
         <p className="text-sm font-medium">Preview</p>
         <p className="text-pretty text-[13px] leading-snug text-muted-foreground">
@@ -138,10 +141,10 @@ function FormatPreview({ currency, dateFormat }: Formats) {
       </div>
       <figure
         aria-label="Example order"
-        className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl bg-background p-3 shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_oklch(0_0_0/0.06)] sm:w-72 dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
+        className="flex w-full shrink-0 flex-col gap-2.5 rounded-(--radius-outer) bg-background p-(--inset) [--inset:--spacing(3)] [--radius-outer:var(--radius-xl)] shadow-[0_0_0_1px_oklch(0_0_0/0.06),0_1px_2px_oklch(0_0_0/0.06)] xl:w-72 dark:shadow-[0_0_0_1px_oklch(1_0_0/0.08)]"
       >
         <div className="flex items-center gap-2.5">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-inner border border-border">
             <HugeiconsIcon
               icon={PackageIcon}
               className="size-4 text-muted-foreground"

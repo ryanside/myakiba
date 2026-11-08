@@ -3,7 +3,16 @@ import type { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/data-table/data-table";
+import { ANALYTICS_LEADERBOARD_SIZE } from "@myakiba/contracts/analytics/schema";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
+import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { cn } from "@/lib/utils";
+import {
+  CellSkeleton,
+  DataTable,
+  DATA_TABLE_NUMBER_META,
+  DATA_TABLE_SKELETON,
+} from "@/components/data-table/data-table";
 
 export interface RowNavigation {
   to: string;
@@ -11,69 +20,188 @@ export interface RowNavigation {
 }
 
 type CellValue = string | number | null;
+type RankedBy = "itemCount" | "totalSpent";
+type Preferences = Pick<ReturnType<typeof useUserPreferences>, "currency" | "locale">;
 type RowIdKey<TRow> = {
   [Key in keyof TRow]-?: TRow[Key] extends string | number ? Key : never;
 }[keyof TRow];
 
-const COLUMN_LABELS = new Map<string, string>([
-  ["name", "name"],
-  ["itemCount", "count"],
-  ["totalSpent", "spent"],
-  ["shop", "shop"],
-  ["scale", "scale"],
-]);
+type ColumnSpec = {
+  readonly label: string;
+  readonly skeleton?: ReactNode;
+  readonly format?: "money";
+  readonly number?: { readonly widths: readonly [string, string] };
+};
+
+const COLUMN_SPECS = {
+  name: { label: "Name" },
+  shop: { label: "Shop" },
+  scale: { label: "Scale", skeleton: <CellSkeleton className="w-8" /> },
+  itemCount: {
+    label: "Count",
+    skeleton: DATA_TABLE_SKELETON.count,
+    number: { widths: ["w-16", "w-16 lg:w-36"] },
+  },
+  totalSpent: {
+    label: "Spent",
+    format: "money",
+    skeleton: DATA_TABLE_SKELETON.money,
+    number: { widths: ["w-24", "w-24 lg:w-44"] },
+  },
+} as const satisfies Readonly<Record<string, ColumnSpec>>;
+
+export type LeaderboardColumn = keyof typeof COLUMN_SPECS;
 
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
+
+function formatCell(
+  spec: ColumnSpec,
+  value: CellValue,
+  { currency, locale }: Preferences,
+): string | number {
+  return (
+    (spec.format === "money" && value !== null
+      ? formatCurrencyFromMinorUnits(Number(value), currency, locale)
+      : value) ?? "—"
+  );
+}
+
+function leaderboardColumns<TRow extends Record<string, CellValue>>({
+  columns,
+  barColumn,
+  barMax,
+  widestBarFigure,
+  currency,
+  locale,
+}: Preferences & {
+  readonly columns: readonly LeaderboardColumn[];
+  readonly barColumn: RankedBy;
+  readonly barMax: number;
+  readonly widestBarFigure: string;
+}): ColumnDef<TRow, CellValue>[] {
+  return [
+    {
+      id: ROW_NUMBER_COLUMN_ID,
+      header: "#",
+      cell: ({ row }) => row.index + 1,
+      meta: { headerClassName: "w-8", skeleton: DATA_TABLE_SKELETON.rank },
+    },
+    ...columns.map((column): ColumnDef<TRow, CellValue> => {
+      const spec: ColumnSpec = COLUMN_SPECS[column];
+      return {
+        id: column,
+        accessorFn: (row) => row[column] ?? null,
+        header: spec.label,
+        meta: spec.number
+          ? {
+              headerClassName: cn(
+                DATA_TABLE_NUMBER_META.headerClassName,
+                spec.number.widths[column === barColumn ? 1 : 0],
+              ),
+              cellClassName: cn(
+                DATA_TABLE_NUMBER_META.cellClassName,
+                column !== barColumn && "text-muted-foreground",
+              ),
+              skeleton: spec.skeleton,
+            }
+          : { skeleton: spec.skeleton },
+        cell: ({ getValue }) => {
+          const value = getValue();
+          const shown = formatCell(spec, value, { currency, locale });
+          if (!spec.number) {
+            return (
+              <span className="block truncate" title={String(shown)}>
+                {shown}
+              </span>
+            );
+          }
+          if (column !== barColumn || barMax <= 0) return shown;
+
+          return (
+            <span className="flex items-center justify-end gap-1.5">
+              <span
+                aria-hidden
+                className="h-1.5 w-20 overflow-hidden rounded-full bg-foreground/10 max-lg:hidden"
+              >
+                <span
+                  className="block h-full rounded-full bg-foreground/70"
+                  style={{ width: `${(Number(value ?? 0) / barMax) * 100}%` }}
+                />
+              </span>
+              <span
+                data-widest={widestBarFigure}
+                className="inline-grid justify-items-end before:invisible before:col-start-1 before:row-start-1 before:content-[attr(data-widest)]"
+              >
+                <span className="col-start-1 row-start-1">{shown}</span>
+              </span>
+            </span>
+          );
+        },
+      };
+    }),
+  ];
+}
 
 export function LeaderboardTable<TRow extends Record<string, CellValue>>({
   rows,
   columns,
-  formatCell,
   rowIdKey,
   getRowNavigation,
   isLoading = false,
+  rankedBy,
 }: {
   readonly rows: readonly TRow[];
-  readonly columns: readonly string[];
-  readonly formatCell?: (column: string, value: CellValue) => CellValue;
+  readonly columns: readonly LeaderboardColumn[];
   readonly rowIdKey: RowIdKey<TRow>;
   readonly getRowNavigation?: (row: TRow) => RowNavigation | undefined;
   readonly isLoading?: boolean;
+  readonly rankedBy: RankedBy;
 }): ReactNode {
   const navigate = useNavigate();
+  const { currency, locale } = useUserPreferences();
   const tableData = useMemo(() => [...rows], [rows]);
-  const tableColumns = useMemo<ColumnDef<TRow, CellValue>[]>(
-    () => [
-      {
-        id: ROW_NUMBER_COLUMN_ID,
-        header: "#",
-        cell: ({ row }) => row.index + 1,
-      },
-      ...columns.map((column): ColumnDef<TRow, CellValue> => ({
-        id: column,
-        accessorFn: (row) => row[column] ?? null,
-        header: COLUMN_LABELS.get(column) ?? column,
-        cell: ({ getValue }) => {
-          const value = getValue();
-
-          return (formatCell ? formatCell(column, value) : value) ?? "—";
-        },
-      })),
-    ],
-    [columns, formatCell],
+  const barMax = useMemo(
+    () => Math.max(0, ...tableData.map((row) => Number(row[rankedBy] ?? 0))),
+    [rankedBy, tableData],
+  );
+  const widestBarFigure = useMemo(
+    () =>
+      tableData
+        .map((row) =>
+          String(formatCell(COLUMN_SPECS[rankedBy], row[rankedBy] ?? null, { currency, locale })),
+        )
+        .reduce((widest, figure) => (figure.length > widest.length ? figure : widest), ""),
+    [currency, locale, rankedBy, tableData],
+  );
+  const tableColumns = useMemo(
+    () =>
+      leaderboardColumns<TRow>({
+        columns,
+        barColumn: rankedBy,
+        barMax,
+        widestBarFigure,
+        currency,
+        locale,
+      }),
+    [barMax, columns, currency, locale, rankedBy, widestBarFigure],
   );
   const table = useReactTable({
     data: tableData,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    manualSorting: true,
+    enableSorting: false,
+    state: { sorting: [{ id: rankedBy, desc: true }] },
     getRowId: (row) => String(row[rowIdKey]),
   });
 
   return (
     <DataTable
       table={table}
+      tableClassName="table-fixed"
       isLoading={isLoading}
-      empty={<p className="text-muted-foreground text-xs italic">No data</p>}
+      skeletonRowCount={ANALYTICS_LEADERBOARD_SIZE}
+      empty={<p className="text-muted-foreground text-xs">No data</p>}
       onRowClick={(row) => {
         const rowNav = getRowNavigation?.(row.original);
 

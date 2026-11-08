@@ -103,6 +103,7 @@ function SortableArtists() {
         rows={rows}
         sectionName="artists"
         offset={0}
+        pageSize={24}
         isLoading={false}
         sort={sort}
         order={order}

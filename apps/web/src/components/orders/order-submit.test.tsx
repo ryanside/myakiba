@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react/pure";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react/pure";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
+import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { Result } from "better-result";
 import type { Saving } from "@/data/client";
@@ -19,6 +20,7 @@ await mock.module("@/queries/search", () => ({
 
 const { OrderForm } = await import("./order-form");
 const { default: UnifiedItemMoveForm } = await import("./unified-item-move-form");
+const { default: CollectionItemForm } = await import("../collection/collection-item-form");
 
 const settle = () =>
   act(
@@ -118,6 +120,7 @@ type SubmitPath = {
   readonly render: (write: HeldWrite, clearSelections: () => void) => ReactElement;
   readonly submit: (user: ReturnType<typeof userEvent.setup>) => Promise<void>;
   readonly clearsSelection: boolean;
+  readonly checksWidths: boolean;
 };
 
 const trigger = <button type="button">Open</button>;
@@ -128,6 +131,7 @@ const clickSubmit = (name: string) => async (user: ReturnType<typeof userEvent.s
 const SUBMIT_PATHS: SubmitPath[] = [
   {
     name: "edit-order sheet",
+    checksWidths: true,
     render: (write) => (
       <OrderForm
         type="edit-order"
@@ -142,6 +146,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "merge dialog",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <OrderForm
         type="merge"
@@ -157,6 +162,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "move to an existing order",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <UnifiedItemMoveForm
         renderTrigger={trigger}
@@ -177,6 +183,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
   },
   {
     name: "move to a new order",
+    checksWidths: false,
     render: (write, clearSelections) => (
       <UnifiedItemMoveForm
         renderTrigger={trigger}
@@ -192,6 +199,50 @@ const SUBMIT_PATHS: SubmitPath[] = [
       await user.click(screen.getByRole("button", { name: "Move to New Order" }));
     },
     clearsSelection: true,
+  },
+];
+
+const collectionItem: CollectionItemFormValues = {
+  id: "ci-alpha",
+  orderId: "od-alpha",
+  itemId: "it-alpha",
+  itemExternalId: null,
+  itemTitle: "Alpha Figure",
+  itemImage: null,
+  status: "Ordered",
+  count: 1,
+  score: "0",
+  price: 0,
+  shop: "AmiAmi",
+  condition: "New",
+  orderDate: null,
+  paymentDate: null,
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "n/a",
+  tags: [],
+  notes: "",
+  releaseId: null,
+  releaseDate: null,
+  releasePrice: null,
+  releaseType: null,
+  releaseCurrency: null,
+  releaseBarcode: null,
+};
+
+const FOOTER_PATHS: Pick<SubmitPath, "name" | "render" | "checksWidths">[] = [
+  ...SUBMIT_PATHS,
+  {
+    name: "collection item sheet",
+    checksWidths: true,
+    render: (write) => (
+      <CollectionItemForm
+        renderTrigger={trigger}
+        itemData={collectionItem}
+        callbackFn={write.send}
+        currency="USD"
+      />
+    ),
   },
 ];
 
@@ -244,4 +295,54 @@ describe.each(SUBMIT_PATHS)("$name submit", (path) => {
       });
     }),
   );
+});
+
+describe.each(FOOTER_PATHS)("$name footer", (path) => {
+  test("has no nested button and Cancel closes the form", async () => {
+    const queryClient = new QueryClient();
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          {path.render(heldWrite(), () => {})}
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      if (path.name === "move to a new order") {
+        fireEvent.click(screen.getByRole("radio", { name: "New Order" }));
+      }
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.querySelectorAll('[data-slot$="footer"] button button').length).toBe(0);
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(formIsOpen()).toBe(false));
+    } finally {
+      cleanup();
+      queryClient.clear();
+    }
+  });
+});
+
+describe.each(FOOTER_PATHS.filter((path) => path.checksWidths))("$name footer widths", (path) => {
+  test("keeps Cancel content-sized and lets Update fill the remaining width", () => {
+    const queryClient = new QueryClient();
+    try {
+      render(
+        <QueryClientProvider client={queryClient}>
+          {path.render(heldWrite(), () => {})}
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Open" }));
+      const cancel = screen.getByRole("button", { name: "Cancel" });
+      const update = screen.getByRole("button", { name: "Update" });
+      expect(cancel.classList.contains("w-full")).toBe(false);
+      expect(cancel.classList.contains("flex-1")).toBe(false);
+      expect(update.classList.contains("w-full")).toBe(true);
+      expect(update.classList.contains("flex-1")).toBe(true);
+      expect(
+        screen.getByRole("dialog").querySelectorAll('[data-slot="sheet-footer"] button').length,
+      ).toBe(2);
+    } finally {
+      cleanup();
+      queryClient.clear();
+    }
+  });
 });

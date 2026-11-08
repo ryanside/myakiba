@@ -82,7 +82,7 @@ function DataGridColumnFilter<TData, TValue>({
             className="h-8"
           />
         </div>
-        <div className="max-h-[300px] overflow-y-auto">
+        <div className="max-h-[300px] overflow-y-auto scroll-fade-b">
           {filteredOptions.length === 0 ? (
             <div className="text-muted-foreground py-6 text-center text-sm">No results found.</div>
           ) : (

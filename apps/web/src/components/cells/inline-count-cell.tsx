@@ -1,54 +1,48 @@
-import { useCallback, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { usePendingValue } from "@/hooks/use-pending-value";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import type { Saving } from "@/data/client";
-import { runSubmit } from "@/lib/form-submit";
+import { cn } from "@/lib/utils";
+import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
 interface InlineCountCellProps {
+  /** What the cell holds, such as "Count", for its accessible name. */
+  label: string;
   value: number;
   onSubmit: (newValue: number) => Saving;
   disabled?: boolean;
 }
 
-export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCountCellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingValue, setEditingValue] = useState(1);
-  const [displayValue, submit] = usePendingValue(value, onSubmit);
+export function InlineCountCell({
+  label,
+  value,
+  onSubmit,
+  disabled = false,
+}: InlineCountCellProps) {
+  const edit = useInlineEdit({
+    label,
+    value,
+    onSubmit,
+    disabled,
+    format: String,
+    toDraft: (count) => count,
+    parse: (draft) => draft,
+  });
 
-  const handleEdit = useCallback(() => {
-    setEditingValue(displayValue);
-    setIsEditing(true);
-  }, [displayValue]);
-
-  const handleCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    setIsEditing(false);
-    await submit(editingValue);
-  }, [editingValue, submit]);
-
-  if (isEditing) {
+  if (edit.draft !== null) {
     return (
-      <div className="grid gap-2">
+      <div className="grid">
         <Input
+          {...edit.editorHandlers}
           id="count"
           name="count"
-          className="w-full text-foreground pl-0"
-          value={editingValue}
-          onBlur={handleCancel}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              void runSubmit(handleSubmit);
-            } else if (e.key === "Escape") {
-              handleCancel();
-            }
-          }}
+          aria-label={label}
+          autoFocus
+          className={CELL_EDITOR_CLASS_NAME}
+          value={edit.draft}
           type="number"
           min="1"
-          onChange={(e) => setEditingValue(Number.parseInt(e.target.value, 10) || 1)}
+          onChange={(e) => edit.setDraft(Number.parseInt(e.target.value, 10) || 1)}
           placeholder="1"
         />
       </div>
@@ -57,12 +51,13 @@ export function InlineCountCell({ value, onSubmit, disabled = false }: InlineCou
 
   return (
     <Button
-      onClick={handleEdit}
-      className="w-full justify-start text-foreground pl-0"
+      onClick={edit.handleOpen}
+      className={cn(CELL_TRIGGER_CLASS_NAME, "h-8 justify-start text-foreground")}
       variant="ghost"
       disabled={disabled}
+      aria-label={edit.triggerLabel}
     >
-      {displayValue}
+      {edit.shownText}
     </Button>
   );
 }

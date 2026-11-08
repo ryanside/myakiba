@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,8 +14,12 @@ import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { searchSchema as ordersSearchSchema } from "@myakiba/contracts/orders/schema";
 import { CollectionToolbar } from "./collection/collection-toolbar";
 import { OrdersToolbar } from "./orders/orders-toolbar";
+import { toast } from "./ui/toast";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  mock.restore();
+});
 
 // The app route awaits a session check on every navigation, so a reset reaches the search box only after the 200 ms debounce.
 const SESSION_CHECK_MS = 250;
@@ -70,10 +74,143 @@ async function renderToolbar(url: string) {
     router,
     input: () => screen.getByPlaceholderText<HTMLInputElement>("Search"),
     resetButton: () => screen.getByRole("button", { name: "Reset Filters" }),
+    queryResetButton: () => screen.queryByRole("button", { name: "Reset Filters" }),
   };
 }
 
 describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
+  test("is hidden while nothing is filtered, sorted or typed", async () => {
+    const { queryResetButton } = await renderToolbar(path);
+    expect(queryResetButton()).toBeNull();
+  });
+
+  test("shows as soon as text is typed before the search commits", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+
+    expect(router.state.location.search.search).toBeUndefined();
+    expect(queryResetButton()).not.toBeNull();
+  });
+
+  test("hides when an outside change clears a search typed and committed here", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+    await user.tab();
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect({
+      search: router.state.location.search.search,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+    }).toEqual({ search: undefined, shown: "", resetShown: false });
+  });
+
+  test("keeps Reset while an outside clear is deferred by the focused search", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect(input().value).toBe("mi");
+    expect(queryResetButton()).not.toBeNull();
+  });
+
+  test("clears a deferred search and the sort when Reset is clicked", async () => {
+    const { user, router, input, queryResetButton, resetButton } = await renderToolbar(
+      `${path}?order=asc`,
+    );
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    expect(router.state.location.search.search).toBe("mi");
+
+    await act(() => router.navigate({ to: path, search: { order: "asc" } }));
+    await wait(SETTLE_MS);
+    expect(input().value).toBe("mi");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      search: router.state.location.search.search,
+      order: router.state.location.search.order,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({
+      search: undefined,
+      order: undefined,
+      shown: "",
+      resetShown: false,
+      searchFocused: true,
+    });
+  });
+
+  test("clears a deferred search and restores focus when Reset is shown only for its text", async () => {
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    await act(() => router.navigate({ to: path, search: {} }));
+    await wait(SETTLE_MS);
+
+    expect(router.state.location.search.search).toBeUndefined();
+    expect(input().value).toBe("mi");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      search: router.state.location.search.search,
+      shown: input().value,
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ search: undefined, shown: "", resetShown: false, searchFocused: true });
+  });
+
+  test("hides Reset when blur applies a deferred outside clear", async () => {
+    const { user, router, input, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    await act(() => router.navigate({ to: path, search: {} }));
+    expect(queryResetButton()).not.toBeNull();
+
+    await user.tab();
+
+    expect(input().value).toBe("");
+    expect(queryResetButton()).toBeNull();
+  });
+
+  test("hides Reset and restores search focus after resetting text typed after an outside change", async () => {
+    const { user, router, input, resetButton, queryResetButton } = await renderToolbar(
+      `${path}?search=Ram`,
+    );
+    await user.click(input());
+    await act(() => router.navigate({ to: ".", search: (prev) => ({ ...prev, search: "Rem" }) }));
+    await user.type(input(), "x");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ resetShown: false, searchFocused: true });
+  });
+
+  test("hides Reset and restores search focus after resetting a first search within the debounce", async () => {
+    const { user, input, resetButton, queryResetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      resetShown: queryResetButton() !== null,
+      searchFocused: document.activeElement === input(),
+    }).toEqual({ resetShown: false, searchFocused: true });
+  });
+
   test("drops text typed after an outside change when Reset comes within the debounce", async () => {
     const { user, router, input, resetButton } = await renderToolbar(`${path}?search=Ram`);
     await user.click(input());
@@ -85,8 +222,7 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      focused: document.activeElement === resetButton(),
-    }).toEqual({ search: undefined, shown: "", focused: true });
+    }).toEqual({ search: undefined, shown: "" });
   });
 
   test("drops a first search typed just before Reset, though Reset leaves the search unchanged", async () => {
@@ -98,7 +234,24 @@ describe.each(["/orders", "/collection"])("Reset Filters on %s", (path) => {
     expect({
       search: router.state.location.search.search,
       shown: input().value,
-      focused: document.activeElement === resetButton(),
-    }).toEqual({ search: undefined, shown: "", focused: true });
+    }).toEqual({ search: undefined, shown: "" });
+  });
+
+  test("shows an error and returns focus to the search when Reset's navigation rejects", async () => {
+    const { user, router, input, resetButton } = await renderToolbar(path);
+    await user.type(input(), "mi");
+    await wait(SETTLE_MS);
+    const added = spyOn(toast, "add");
+    spyOn(router, "navigate").mockRejectedValue(new Error("Navigation failed"));
+    await user.click(resetButton());
+    await wait(SETTLE_MS);
+
+    expect({
+      toasts: added.mock.calls.map(([options]) => options),
+      searchFocused: document.activeElement === input(),
+    }).toEqual({
+      toasts: [{ type: "error", title: "Failed to reset filters. Please try again." }],
+      searchFocused: true,
+    });
   });
 });

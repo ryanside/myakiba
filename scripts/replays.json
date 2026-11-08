@@ -1677,34 +1677,31 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
-      "fix": "667c8154",
-      "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
-      "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
-      "fixed": [
-        "the phone sidebar closes after a link opens another page",
-        "the phone sidebar closes after a link to the current page"
-      ]
-    },
-    {
       "fix": "2d8c17ce",
       "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
       "fixed": [
         "a new account that opens Getting Started right away saves that it has seen onboarding",
         "a new account sees the welcome as soon as the dashboard renders"
-      ]
+      ],
+      "testAt": "3cc4dbf2",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "92b71fdb",
       "bug": "Getting Started resumed a step saved in this browser instead of opening at the welcome step",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
-      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"]
+      "fixed": ["Getting Started opens at the welcome step even with a step left in local storage"],
+      "testAt": "3cc4dbf2",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "f8da3c4a",
       "bug": "an account signed in before the deploy saw the welcome dialog because its cached session had no onboarding key",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
-      "fixed": ["an account signed in before the deploy keeps the welcome dialog closed"]
+      "fixed": ["an account signed in before the deploy keeps the welcome dialog closed"],
+      "testAt": "3cc4dbf2",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "5cb016f3",
@@ -1715,35 +1712,43 @@
         "a new account sees the welcome dialog and saves that it has seen onboarding",
         "a new account that opens Getting Started right away saves that it has seen onboarding",
         "a new account that dismisses the welcome with Escape saves that it has seen onboarding"
-      ]
+      ],
+      "testAt": "3cc4dbf2",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "0d3f95ce",
       "bug": "a dashboard order bar hover highlight replaced every bar node, so a press that began before the replacement lost its click",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "testAt": "0273bfdda03ad35f9c007f409ff4c3beb7781b8f",
       "fixed": [
         "a bar pressed while the hover highlight moves to it stays mounted and navigates on release"
-      ]
+      ],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "c6ab608d",
       "bug": "the dashboard order chart bars had no names and no keyboard path, and the chart's focus ring was hidden",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "testAt": "0273bfdda03ad35f9c007f409ff4c3beb7781b8f",
       "fixed": [
         "each order bar is a link named for its month and count, and only the highlighted month is a tab stop",
         "arrow keys move the order chart highlight between months and Enter opens the focused month",
         "tabbing out of the order chart returns the highlight to the current month"
-      ]
+      ],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "1b9f9b52",
       "bug": "hovering the dashboard order chart moved its tab stop off the focused month, a value refresh dropped keyboard focus, and the reference line ignored the OS reduced-motion setting",
       "test": "apps/web/src/components/dashboard/orders-bar-chart.test.tsx",
+      "testAt": "0273bfdda03ad35f9c007f409ff4c3beb7781b8f",
       "fixed": [
         "with reduced motion the order reference line jumps to the highlighted month",
         "a focused month keeps the tab stop and the Enter target while the pointer highlights another month",
         "a focused month keeps keyboard focus when the order counts refresh"
-      ]
+      ],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "2b3dcb21",
@@ -1762,7 +1767,9 @@
       "fixed": [
         "choosing Assign order in a collection card's actions menu closes the menu behind its dialog",
         "choosing Assign order in a collection table row's actions menu closes the menu behind its dialog"
-      ]
+      ],
+      "testAt": "2b3dcb21",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "a1a03661",
@@ -1789,7 +1796,9 @@
         "Orders masonry gallery > names each image link by its title alone",
         "Analytics section items > names each image link by its title alone",
         "Analytics shared item previews > names each image link by its title alone"
-      ]
+      ],
+      "testAt": "04b7cfe1",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "93ed9f38",
@@ -1825,7 +1834,9 @@
       "fix": "c05a2273",
       "bug": "short multiline List descriptions hid saved line breaks without offering expansion",
       "test": "apps/web/src/components/lists/list-heading.test.tsx",
-      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"],
+      "testAt": "c05a2273",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
     },
     {
       "fix": "df1c043f",
@@ -2734,6 +2745,690 @@
       ],
       "testAt": "a4e8b2a28121837aa51b25d92124300af7c6d908",
       "reason": "The extension's test harness at the head imports the picks code that came after this fix, so it cannot load against it."
+    },
+    {
+      "fix": "8a8c0c7c",
+      "bug": "Fees & Charges hid the server's missing-order message behind the diagnostic fallback",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "a failed Fees & Charges save > shows the server's message when the order no longer exists"
+      ],
+      "testAt": "8a8c0c7c",
+      "atHead": [
+        "a failed order edit from fees > shows the server's message when the order no longer exists"
+      ],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "327e6264",
+      "bug": "a one-method shipping chart hid its method name",
+      "test": "apps/web/src/components/expenses/dashboard-shell.test.tsx",
+      "fixed": ["a one-method shipping legend shows its method label"]
+    },
+    {
+      "fix": "327e6264",
+      "bug": "completed order timeline steps without recorded dates said Pending",
+      "test": "apps/web/src/components/orders/order-summary.test.tsx",
+      "fixed": [
+        "an Owned order without dates shows four completed undated steps",
+        "only future undated steps show Pending"
+      ]
+    },
+    {
+      "fix": "c083f8ad",
+      "bug": "the overview board recomputed the UTC server window in browser local time and described only some matching dates",
+      "test": "apps/web/src/components/dashboard/overview-tab.test.tsx",
+      "fixed": ["the overview board describes its scope without browser date math"]
+    },
+    {
+      "fix": "2c83af1a",
+      "bug": "the shared currency formatter left the full-width yen sign unnormalized",
+      "test": "packages/utils/src/currency.test.ts",
+      "fixed": [
+        "currency formatting normalizes the full-width yen sign",
+        "compact currency formatting rounds chart axes to at most one decimal"
+      ]
+    },
+    {
+      "fix": "1f921f85",
+      "bug": "inline cell editors used 13px text on phones, triggering iOS Safari focus zoom",
+      "test": "apps/web/src/components/cells/cell-editor-size.test.tsx",
+      "fixed": [
+        "an open cell editor is 16px on phones and 13px from md up > in a text cell",
+        "an open cell editor is 16px on phones and 13px from md up > in a count cell",
+        "an open cell editor is 16px on phones and 13px from md up > in a currency cell"
+      ]
+    },
+    {
+      "fix": "9184d20a",
+      "bug": "Reset Filters stayed visible after outside navigation cleared a locally typed and committed search",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > hides when an outside change clears a search typed and committed here",
+        "Reset Filters on /collection > hides when an outside change clears a search typed and committed here"
+      ],
+      "testAt": "9184d20a",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "09df27eb",
+      "bug": "the footer hid at a nonzero offset or when unsorted page sizes started with a larger size",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination at an offset that is not a page start > a short result at an offset past its first row names the rows from that offset",
+        "DataGridPagination with page sizes in any order > a result larger than the smallest page size keeps its footer"
+      ]
+    },
+    {
+      "fix": "08b02d5b",
+      "bug": "leaderboard names painted outside their cells and overlapped counts in narrow columns",
+      "test": "apps/web/src/components/analytics/leaderboard-table.test.tsx",
+      "fixed": ["a name cut short by its column keeps the full name in its title"]
+    },
+    {
+      "fix": "fb2931ee",
+      "bug": "a collapsed offcanvas sidebar left its links in the tab order and the accessibility tree",
+      "test": "apps/web/src/components/ui/sidebar.test.tsx",
+      "fixed": ["offcanvas sidebar links are inert only while collapsed"]
+    },
+    {
+      "fix": "7539a959",
+      "bug": "repeating the same error stacked identical persistent toasts, and dismissing one revealed an older copy",
+      "test": "apps/web/src/components/ui/toast.test.tsx",
+      "fixed": ["repeated errors leave one toast and dismiss without revealing an older copy"]
+    },
+    {
+      "fix": "555413c0",
+      "bug": "Collection, Orders and Expenses replaced the server's load error with a fixed sentence",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection load errors > shows the server's 400 text message",
+        "Orders load errors > shows the server's 400 text message",
+        "Expenses load errors > shows the server's 400 text message"
+      ]
+    },
+    {
+      "fix": "883f7844",
+      "bug": "number column headers pushed their resize line about 7px past the column border",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-resize-alignment.test.tsx",
+      "fixed": ["numeric and text columns keep the resize line centered on the handle"],
+      "testAt": "883f7844",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "1bf403dc",
+      "bug": "a repeated error updated its toast in place and stayed hidden behind newer errors",
+      "test": "apps/web/src/components/ui/toast.test.tsx",
+      "fixed": ["a repeated error returns to the visible front after newer errors"]
+    },
+    {
+      "fix": "344abfc9",
+      "bug": "a short result at a nonzero offset kept its footer but offered no way back to the skipped rows",
+      "test": "apps/web/src/components/reui/data-grid/data-grid-pagination.test.tsx",
+      "fixed": [
+        "DataGridPagination at an offset that is not a page start > a short result at an offset can return to its first row"
+      ]
+    },
+    {
+      "fix": "05a0158f",
+      "bug": "the two average collection cost charts showed a redundant one-item legend their siblings omit",
+      "test": "apps/web/src/components/expenses/collection/charts/collection-legends.test.tsx",
+      "fixed": [
+        "AverageCollectionItemCostByPeriod omits the redundant single-series legend",
+        "AverageCollectionItemCostToDate omits the redundant single-series legend"
+      ]
+    },
+    {
+      "fix": "1760b4ea",
+      "bug": "Reset Filters hid while a focused search still showed text an outside change had cleared",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > keeps Reset while an outside clear is deferred by the focused search",
+        "Reset Filters on /collection > keeps Reset while an outside clear is deferred by the focused search",
+        "Reset Filters on /orders > hides Reset when blur applies a deferred outside clear",
+        "Reset Filters on /collection > hides Reset when blur applies a deferred outside clear"
+      ],
+      "testAt": "1760b4ea",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "b9e77e3e",
+      "bug": "an outage showed the loader's internal fallback instead of \"The server didn't answer.\"",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection load errors > uses the server fallback for a 500 response",
+        "Collection load errors > uses the server fallback for a 503 response",
+        "Collection load errors > uses the server fallback for a network failure",
+        "Orders load errors > uses the server fallback for a 500 response",
+        "Orders load errors > uses the server fallback for a 503 response",
+        "Orders load errors > uses the server fallback for a network failure",
+        "Expenses load errors > uses the server fallback for a 500 response",
+        "Expenses load errors > uses the server fallback for a 503 response",
+        "Expenses load errors > uses the server fallback for a network failure",
+        "Collection with no response data > shows the server fallback instead of diagnostic text",
+        "Orders with no response data > shows the server fallback instead of diagnostic text"
+      ]
+    },
+    {
+      "fix": "11184510",
+      "bug": "outages lost their diagnostic text",
+      "test": "apps/web/src/queries/page-load-error.test.tsx",
+      "fixed": [
+        "Collection diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Collection diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Orders diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Orders diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Collection expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Order expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Order expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Shipping expenses diagnostics > keeps the diagnostic fallback apart from the 503 user message",
+        "Lists diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "List detail diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "List members diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Dashboard overview diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Dashboard monthly diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Item Database diagnostics > keeps the diagnostic fallback apart from the 400 user message",
+        "Wishlist diagnostics > separates diagnostics from the 400 user message"
+      ]
+    },
+    {
+      "fix": "11184510",
+      "bug": "six more pages showed internal \"Failed to …\" text during an outage, and Collection and Orders showed it for an empty response",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Lists load errors > uses the server fallback for a 500 response",
+        "Lists load errors > uses the server fallback for a 503 response",
+        "Lists load errors > uses the server fallback for a network failure",
+        "List detail load errors > uses the server fallback for a 500 response",
+        "List detail load errors > uses the server fallback for a 503 response",
+        "List detail load errors > uses the server fallback for a network failure",
+        "Wishlist load errors > uses the server fallback for a 500 response",
+        "Wishlist load errors > uses the server fallback for a 503 response",
+        "Wishlist load errors > uses the server fallback for a network failure",
+        "Dashboard overview load errors > uses the server fallback for a 500 response",
+        "Dashboard overview load errors > uses the server fallback for a 503 response",
+        "Dashboard overview load errors > uses the server fallback for a network failure",
+        "Dashboard monthly load errors > uses the server fallback for a 500 response",
+        "Dashboard monthly load errors > uses the server fallback for a 503 response",
+        "Dashboard monthly load errors > uses the server fallback for a network failure",
+        "Item Database load errors > uses the server fallback for a 500 response",
+        "Item Database load errors > uses the server fallback for a 503 response",
+        "Item Database load errors > uses the server fallback for a network failure",
+        "List member errors use the safe message for a 503 response",
+        "Collection with no response data > shows the server fallback instead of diagnostic text",
+        "Orders with no response data > shows the server fallback instead of diagnostic text"
+      ]
+    },
+    {
+      "fix": "0dc2bd69",
+      "bug": "a Reset shown only for deferred search text unmounted on pointerdown, so its click never ran and focus fell to the page",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > clears a deferred search and restores focus when Reset is shown only for its text",
+        "Reset Filters on /collection > clears a deferred search and restores focus when Reset is shown only for its text"
+      ],
+      "testAt": "0dc2bd69",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "8f8b0e1c",
+      "bug": "seventeen read error surfaces showed the read's internal fallback, such as \"Failed to get expense shops\", during an outage instead of \"The server didn't answer.\"",
+      "test": "apps/web/src/components/outage-messages.test.tsx",
+      "fixed": [
+        "Expenses Shops card > shows the outage message for a 503 response",
+        "Expenses shop row expansion > shows the outage message for a 503 response",
+        "Orders row expansion > shows the outage message for a 503 response",
+        "Dashboard release calendar > shows the outage message for a 503 response",
+        "Calendar page > shows the outage message for a 503 response",
+        "Analytics page > shows the outage message for a 503 response",
+        "Analytics section page > shows the outage message for a 503 response",
+        "Analytics section items > shows the outage message for a 503 response",
+        "Analytics shared entries > shows the outage message for a 503 response",
+        "Item page header > shows the outage message for a 503 response",
+        "Add to List dialog > shows the outage message for a 503 response",
+        "Collection release cell > shows the outage message for a 503 response",
+        "Order release date cell > shows the outage message for a 503 response",
+        "Collection item form release picker > shows the outage message for a 503 response",
+        "Collection filters entry search > shows the outage message for a 503 response",
+        "Move items order search > shows the outage message for a 503 response",
+        "Command menu search > shows the outage message for a 503 response"
+      ]
+    },
+    {
+      "fix": "e91c5b7f",
+      "bug": "a failed order edit showed two toasts, and the order edit dialogs never showed the server's text",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "a failed order edit from fees > shows the server's message when the order no longer exists",
+        "a failed order edit from fees > keeps the fallback when the server answers 503",
+        "a failed order edit from fees > keeps the fallback when the server cannot be reached",
+        "a failed order edit from dialog > shows the server's message when the order no longer exists"
+      ]
+    },
+    {
+      "fix": "b87a9ccf",
+      "testAt": "b87a9ccf",
+      "bug": "replay compatibility depended on the checkout folder instead of the test revision, so historical assertions drifted and WORKTREE could report false flips",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "testAt uses the pinned test at both the parent and fix while HEAD uses current assertions",
+        "a pinned WORKTREE replay uses the same assertions on both sides and preserves the working test"
+      ],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "9140476b",
+      "bug": "a rejected Reset navigation was dropped with no report",
+      "test": "apps/web/src/hooks/use-toolbar-search.test.tsx",
+      "fixed": ["a rejected Reset navigation reports an error without leaking its rejection"]
+    },
+    {
+      "fix": "cd4459a4",
+      "bug": "a pinned WORKTREE replay wrote a temporary test into the working checkout that could survive interruption",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a pinned WORKTREE replay never writes into the working checkout"],
+      "testAt": "cd4459a4",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "a7cbcf57",
+      "bug": "a pinned replay still passed after its guarding test or explicit HEAD alias disappeared",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a pinned replay fails when its guarding test no longer passes at HEAD",
+        "a pinned replay fails when an explicit HEAD alias is missing"
+      ],
+      "testAt": "a7cbcf57",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "d338a94b",
+      "bug": "a fresh snapshot index dropped tracked files that matched ignore rules",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a WORKTREE replay keeps tracked files even when Git ignores them",
+        "a WORKTREE replay keeps tracked ignored files with no index file"
+      ],
+      "testAt": "5adeea02",
+      "atHead": ["a WORKTREE replay detects a real behavior change"],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "79e474c1",
+      "bug": "a failed Reset left focus on the page body instead of the remounted search field",
+      "test": "apps/web/src/components/toolbar-search-reset.test.tsx",
+      "fixed": [
+        "Reset Filters on /orders > shows an error and returns focus to the search when Reset's navigation rejects",
+        "Reset Filters on /collection > shows an error and returns focus to the search when Reset's navigation rejects"
+      ]
+    },
+    {
+      "fix": "28c946cc",
+      "bug": "empty HEAD aliases disabled the pinned guard, and unpinned aliases were silently ignored",
+      "test": "scripts/replay.test.ts",
+      "fixed": [
+        "a pinned replay rejects an empty HEAD alias list before running tests",
+        "an unpinned replay rejects HEAD aliases before running tests"
+      ],
+      "testAt": "28c946cc",
+      "atHead": ["a pinned replay fails when an explicit HEAD alias is missing"],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "e1cffa5d",
+      "bug": "WORKTREE snapshots dropped force-staged ignored files that were not yet committed",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay keeps force-staged ignored files and preserves the real index"],
+      "testAt": "e1cffa5d",
+      "atHead": ["a WORKTREE replay detects a real behavior change"],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "875312fc",
+      "bug": "a failed save on a filtered or sorted Orders list remounted every cell, so the open Edit order sheet vanished with the user's draft",
+      "test": "apps/web/src/data/resources/order-fees-toast.test.tsx",
+      "fixed": [
+        "the edit order sheet on the filtered list > keeps the draft after a 404 response",
+        "the edit order sheet on the filtered list > keeps the draft after a 503 response"
+      ]
+    },
+    {
+      "fix": "734e0b51",
+      "bug": "form footers rendered a button inside a button",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "edit-order sheet footer > has no nested button and Cancel closes the form",
+        "merge dialog footer > has no nested button and Cancel closes the form",
+        "move to an existing order footer > has no nested button and Cancel closes the form",
+        "move to a new order footer > has no nested button and Cancel closes the form",
+        "collection item sheet footer > has no nested button and Cancel closes the form"
+      ]
+    },
+    {
+      "fix": "920dab4b",
+      "bug": "a WORKTREE replay crashed with ENOENT in a checkout that had no index file yet",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay works in a checkout with no index file"],
+      "testAt": "920dab4b",
+      "atHead": ["a WORKTREE replay detects a real behavior change"],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "611d239c",
+      "bug": "on a filtered list, a pending item save rebuilt the item and Collection grid columns, remounting the Edit item sheet so it vanished and lost its draft",
+      "test": "apps/web/src/data/resources/item-edit-draft.test.tsx",
+      "fixed": [
+        "the edit item sheet on filtered orders > keeps the typed draft after a failed save and updates pending controls",
+        "the edit item sheet on filtered collection > keeps the typed draft after a failed save and updates pending controls"
+      ]
+    },
+    {
+      "fix": "9a853b04",
+      "bug": "the sheet footer Cancel buttons stretched to half the footer instead of their content width",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "edit-order sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width",
+        "collection item sheet footer widths > keeps Cancel content-sized and lets Update fill the remaining width"
+      ]
+    },
+    {
+      "fix": "5adeea02",
+      "bug": "with no index file, a WORKTREE snapshot dropped tracked files that match .gitignore",
+      "test": "scripts/replay.test.ts",
+      "fixed": ["a WORKTREE replay keeps tracked ignored files with no index file"],
+      "testAt": "5adeea02",
+      "atHead": ["a WORKTREE replay detects a real behavior change"],
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "037f912d",
+      "bug": "the account menu's Light, Dark and System theme tabs were icon-only with no accessible name",
+      "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
+      "fixed": [
+        "the account menu's Light theme tab has an accessible name and sets the theme",
+        "the account menu's Dark theme tab has an accessible name and sets the theme",
+        "the account menu's System theme tab has an accessible name and sets the theme",
+        "each account menu theme tab shows its own icon"
+      ]
+    },
+    {
+      "fix": "e18f9201",
+      "bug": "the account menu's theme tablist had no accessible name",
+      "test": "apps/web/src/components/sidebar/user-menu.test.tsx",
+      "fixed": ["the account menu's theme tablist has an accessible name"]
+    },
+    {
+      "fix": "24a766af",
+      "bug": "every search, filter, sort and page change pushed a history entry, so Back stepped through filter states instead of leaving the page",
+      "test": "apps/web/src/components/filter-history.test.tsx",
+      "fixed": [
+        "changing a page's own search state leaves Back pointing at the previous page > analytics section search, then its Back link",
+        "changing a page's own search state leaves Back pointing at the previous page > orders search and Reset Filters, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Item Database search, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Wishlist release filter, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Calendar month change, then browser Back",
+        "changing a page's own search state leaves Back pointing at the previous page > Expenses date preset, then browser Back"
+      ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "Elysia split a comma in a free-text query value into an array and JSON-parsed bracketed values, so searching \",\" answered 422",
+      "test": "apps/server/src/boundary/query-text.test.ts",
+      "fixed": [
+        "a free-text query value reaches the route as the text the client sent > search=%2C",
+        "a free-text query value reaches the route as the text the client sent > search=a,b",
+        "a free-text query value reaches the route as the text the client sent > search=a%2Cb",
+        "a free-text query value reaches the route as the text the client sent > search=%5B1%5D",
+        "a free-text query value reaches the route as the text the client sent > search=%7B%7D"
+      ]
+    },
+    {
+      "fix": "2155e8a2",
+      "bug": "an analytics section search containing a comma answered 422",
+      "test": "apps/server/src/routers/analytics/rankings.test.ts",
+      "fixed": [
+        "a section search for %2C answers with no rows",
+        "a section search for a,b answers with no rows"
+      ]
+    },
+    {
+      "fix": "c6ea6429",
+      "bug": "a 4xx without a usable message showed \"The server didn't answer.\" although the server answered",
+      "test": "apps/web/src/components/page-load-error.test.tsx",
+      "fixed": [
+        "Collection load errors > shows the rejected-request message for a 422 validation body",
+        "Orders load errors > shows the rejected-request message for a 422 validation body",
+        "Expenses load errors > shows the rejected-request message for a 422 validation body",
+        "Lists load errors > shows the rejected-request message for a 422 validation body",
+        "List detail load errors > shows the rejected-request message for a 422 validation body",
+        "Wishlist load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard overview load errors > shows the rejected-request message for a 422 validation body",
+        "Dashboard monthly load errors > shows the rejected-request message for a 422 validation body",
+        "Item Database load errors > shows the rejected-request message for a 422 validation body",
+        "an analytics section rejected with a 422 validation body says so"
+      ]
+    },
+    {
+      "fix": "55c4b80d",
+      "bug": "the analytics table skeletons drew 10 short rows, so the loaded section table and leaderboards shifted the layout",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table shows a placeholder row for each row of the page while it loads",
+        "a section placeholder row holds the box of the expand button that replaces it",
+        "a leaderboard shows a placeholder row for each row the board can hold while it loads"
+      ]
+    },
+    {
+      "fix": "9e6239b9",
+      "bug": "the table skeletons left the expand column blank and drew full-width bars that read as a solid band",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "a section placeholder row shows a visible bar where the expand chevron sits",
+        "section placeholder bars are about as wide as the text they stand in for",
+        "leaderboard placeholder bars are about as wide as the text they stand in for"
+      ]
+    },
+    {
+      "fix": "e584fedb",
+      "bug": "the list heading's more/less toggle read as more words of the description",
+      "test": "apps/web/src/components/lists/list-heading.test.tsx",
+      "fixed": ["a short multiline description can be expanded to read its saved line breaks"]
+    },
+    {
+      "fix": "dd00a72f",
+      "bug": "each kanban lane was its own scroll area, so the turning spinner and the entering cards showed a scrollbar before any card was visible",
+      "test": "apps/web/src/components/dashboard/order-kanban.test.tsx",
+      "fixed": [
+        "the board's scrolling > no part of the board scrolls vertically while its lanes load or after their cards arrive"
+      ]
+    },
+    {
+      "fix": "073dd622",
+      "bug": "the calendar's release list faded its rows in inside the scroll area, so the scrollbar was fully drawn before the rows",
+      "test": "apps/web/src/components/calendar/calendar-release-list.test.tsx",
+      "fixed": [
+        "the calendar's release list > fades in around its scroll area, so the scrollbar appears with the rows instead of ahead of them"
+      ]
+    },
+    {
+      "fix": "bdd9a415",
+      "bug": "a WORKTREE replay without a base failed only mid-run, after HEAD and earlier replays had run",
+      "test": "scripts/replay-config.test.ts",
+      "fixed": ["a WORKTREE replay without a base revision is rejected"]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/analytics/table-skeleton.test.tsx",
+      "fixed": [
+        "the section table holds each column to the same share of its width while loading and once loaded"
+      ]
+    },
+    {
+      "fix": "b3328fd9",
+      "bug": "the section and shop tables sized columns from their content, so the headers moved when data loaded",
+      "test": "apps/web/src/components/expenses/shop-table.test.tsx",
+      "fixed": ["the Shops table holds each column to a fixed share of its width in every scope"]
+    },
+    {
+      "fix": "7ee19a9e",
+      "bug": "the filter dialogs' dropdown fields shrank on press like buttons",
+      "test": "apps/web/src/components/field-trigger-press.test.tsx",
+      "fixed": [
+        "field triggers keep still when pressed > collection filters",
+        "field triggers keep still when pressed > orders filters",
+        "field triggers keep still when pressed > expenses filters"
+      ]
+    },
+    {
+      "fix": "80200374",
+      "bug": "a wide button shrank by many pixels at the same press scale as a small one",
+      "test": "apps/web/src/components/ui/button.test.tsx",
+      "fixed": [
+        "Button press > a pointer press hands the button's width to the press",
+        "Button press > a key press hands the button's width to the press"
+      ]
+    },
+    {
+      "fix": "b9876b38",
+      "bug": "the Orders row used the same chevron to expand the row and to open the order's page",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": ["draws the row's open-order link with a different icon from its expand button"]
+    },
+    {
+      "fix": "3cc4dbf2",
+      "bug": "the onboarding add items cards were pills, its footer buttons were the small size, and its copy pointed to a + in the sidebar",
+      "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",
+      "fixed": [
+        "the add items step points to the + button in the top bar, not the sidebar",
+        "every onboarding footer button is the standard button height",
+        "the add items option cards take a card corner, not a pill"
+      ],
+      "testAt": "3cc4dbf2",
+      "reason": "Pinned to the test file before the dialog moved into OnboardingProvider. The merged dialog's Add step lists how to pick items and has no option cards, so only the copy and footer guards run at HEAD.",
+      "atHead": [
+        "the add items step points to the + button in the top bar, not the sidebar",
+        "every onboarding footer button is the standard button height"
+      ]
+    },
+    {
+      "fix": "1fa632de",
+      "bug": "the onboarding dialog lived in the sidebar, so the phone breakpoint swap unmounted it and lost its step",
+      "test": "apps/web/src/components/onboarding/onboarding-breakpoint.test.tsx",
+      "fixed": [
+        "the onboarding dialog stays open on its step when the window narrows to a phone and widens back",
+        "a new account on a phone sees the welcome dialog with the sidebar closed"
+      ]
+    },
+    {
+      "fix": "879cb6ab",
+      "bug": "a submit before Cloudflare answered was blocked or sent an empty, expired or spent captcha token, and a failed check said nothing useful",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "submitting before Cloudflare answers waits, then signs in with the token",
+        "an expired token is never sent; the refreshed one is",
+        "a second try after a wrong password waits for a fresh token instead of reusing the spent one",
+        "a waiting submit continues once the user completes Cloudflare's challenge",
+        "a blocked Cloudflare script says what happened and what to do, and sends nothing",
+        "a widget error says what happened and what to do, and sends nothing",
+        "a widget that recovers after an error clears the message and signs in",
+        "sign up waits for the token instead of sending an empty one",
+        "forgot password waits for the token instead of sending an empty one"
+      ],
+      "testAt": "879cb6ab",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "657a95f1",
+      "bug": "a captcha check that never answered left the submit waiting forever",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "a check that never answers stops the waiting submit after 15 seconds and says what to do"
+      ]
+    },
+    {
+      "fix": "6954ae83",
+      "bug": "a renewed captcha check inherited the previous check's deadline, and a check that left the checkbox had no deadline at all",
+      "test": "apps/web/src/components/auth/captcha.test.tsx",
+      "fixed": [
+        "a renewed check gets its own 15 seconds",
+        "after the checkbox is done, a stalled check still fails after 15 seconds and says what to do",
+        "after the checkbox times out, a stalled check still fails after 15 seconds and says what to do"
+      ]
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the UI polish pass turned page backgrounds off for a browser with no saved preference",
+      "test": "apps/web/src/components/page-background.test.tsx",
+      "fixed": ["page background > a browser with no saved preference shows the background"],
+      "testAt": "e36c5068",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "5a759f19",
+      "bug": "the Page backgrounds switch read off for a browser with no saved preference",
+      "test": "apps/web/src/components/settings/appearance.test.tsx",
+      "fixed": ["the Page backgrounds switch is on in a browser with no saved preference"],
+      "testAt": "e36c5068",
+      "reason": "Main pinned this test to the revision that recorded the fix, because later main commits changed its assertions or harness."
+    },
+    {
+      "fix": "3d6d8316",
+      "bug": "under Reduce motion the switch thumb still slid, the row chevron still turned and hover arrows still nudged",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "under Reduce motion, controls snap to their new state > the switch thumb",
+        "under Reduce motion, controls snap to their new state > the row expand chevron",
+        "a hover nudge moves by the --nudge distance, which Reduce motion sets to nothing"
+      ]
+    },
+    {
+      "fix": "8ba3b276",
+      "bug": "a WORKTREE replay failed on a machine with no Git identity, such as a fresh CI checkout",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot commits on a machine with no Git identity"]
+    },
+    {
+      "fix": "c16cca6c",
+      "bug": "a WORKTREE snapshot could keep the old text of a same-size edit made in the second Git last wrote the index",
+      "test": "scripts/worktree-snapshot.test.ts",
+      "fixed": ["a snapshot keeps a same-size edit made in the second Git last wrote the index"]
+    },
+    {
+      "fix": "272cd9a8",
+      "bug": "sparkle trail glyphs grew from scale 0 and kept scaling under Reduce motion",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "a hidden sparkle glyph > starts a little smaller with motion on, never from nothing",
+        "a hidden sparkle glyph > keeps its full size under Reduce motion, so it only fades"
+      ]
+    },
+    {
+      "fix": "8931284d",
+      "bug": "the onboarding step rise transitioned transform while the class set translate, so it never played, and Reduce motion did not stop it",
+      "test": "apps/web/src/components/reduced-motion-movement.test.tsx",
+      "fixed": [
+        "an entrance transitions each property it starts from, and Reduce motion keeps it from moving"
+      ]
+    },
+    {
+      "fix": "67676e81",
+      "bug": "a new user started on the Dark theme instead of following the OS, the theme controls read Dark, and the homepage toggle offered the theme already shown",
+      "test": "apps/web/src/components/theme-default.test.tsx",
+      "fixed": [
+        "a fresh browser on a light OS > paints the OS theme before the app loads",
+        "a fresh browser on a light OS > shows the OS theme and every theme control reads System",
+        "a fresh browser on a light OS > the homepage theme toggle offers the theme the page is not showing",
+        "a fresh browser on a dark OS > shows the OS theme and every theme control reads System"
+      ]
+    },
+    {
+      "fix": "beaaa113",
+      "bug": "a release tile kept saying Releases after midnight until something else re-rendered it",
+      "test": "apps/web/src/components/release-item-tile.test.tsx",
+      "fixed": ["a tile releasing today reads Released after midnight passes with no other update"]
     }
   ],
   "lint": [

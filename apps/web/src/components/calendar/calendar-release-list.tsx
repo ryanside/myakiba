@@ -59,7 +59,7 @@ function CalendarReleaseList<TItem>({
   }
 
   return (
-    <ol className="animate-data-in flex flex-col gap-5">
+    <ol className="flex flex-col gap-5">
       {groups.map(([date, dayItems]) => {
         const dayNumber = Number(date.slice(8, 10));
         const isSelected = isFilteringByDay && selectedDays.has(dayNumber);
@@ -80,7 +80,6 @@ function CalendarReleaseList<TItem>({
                 )}
                 {DATE_GROUP_LABEL_FORMATTER.format(new Date(`${date}T00:00:00`))}
               </span>
-              <div className="h-px flex-1 bg-border" />
             </div>
             <ul>
               {dayItems.map((item) => (
@@ -114,7 +113,7 @@ export function CalendarReleasePanel({
   if (isPending || !data) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" aria-busy="true">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-6 scroll-fade-b">
           <CalendarReleaseListSkeleton view={view} />
         </div>
       </div>
@@ -155,7 +154,6 @@ function CalendarReleaseListSkeleton({ view }: { readonly view: CalendarView }):
         <span className="flex h-4 shrink-0 items-center">
           <Skeleton className="h-3 w-20" />
         </span>
-        <div className="h-px flex-1 bg-border" />
       </div>
       <div>
         {CALENDAR_RELEASE_SKELETON_ROWS.map((row) =>
@@ -260,8 +258,8 @@ function FilteredReleaseList<TItem>({
   const emptyLabel = isFilteringEmpty ? emptyFilteredLabel : emptyMonthLabel;
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
+    <div className="animate-data-in flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6 scroll-fade-b">
         <CalendarReleaseList
           items={filteredRows}
           getDate={getDate}

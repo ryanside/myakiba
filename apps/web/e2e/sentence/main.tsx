@@ -1,4 +1,4 @@
-import "@fontsource-variable/instrument-sans/index.css";
+import "@fontsource-variable/inter/opsz.css";
 import "./sentence.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {

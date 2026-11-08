@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 function editTo(count: number) {
-  act(() => screen.getByRole("button", { name: "1" }).click());
+  act(() => screen.getByRole("button", { name: "1, edit Count" }).click());
   const input = screen.getByRole("spinbutton");
   fireEvent.change(input, { target: { value: String(count) } });
   fireEvent.keyDown(input, { key: "Enter" });
@@ -21,6 +21,7 @@ test("a count that saves reports nothing", async () => {
   const saved: number[] = [];
   render(
     <InlineCountCell
+      label="Count"
       value={1}
       onSubmit={async (count) => {
         saved.push(count);
@@ -36,7 +37,7 @@ test("a count that saves reports nothing", async () => {
 
 test("a count submit that rejects is reported as a defect", async () => {
   const rejection = new TypeError("onSubmit is not a function");
-  render(<InlineCountCell value={1} onSubmit={() => Promise.reject(rejection)} />);
+  render(<InlineCountCell label="Count" value={1} onSubmit={() => Promise.reject(rejection)} />);
   editTo(2);
 
   await waitFor(() => expect(consoleError).toHaveBeenCalledTimes(1));

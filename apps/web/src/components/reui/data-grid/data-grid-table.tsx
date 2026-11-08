@@ -25,7 +25,7 @@ const bodyCellSpacingVariants = cva("", {
   variants: {
     size: {
       dense: "px-2 py-1.5",
-      default: "px-3 py-2",
+      default: "px-3 py-2.5",
     },
   },
   defaultVariants: {
@@ -95,11 +95,8 @@ function DataGridTableHeadRow<TData>({
       key={headerGroup.id}
       data-row="head"
       className={cn(
-        "bg-muted/40",
-        props.tableLayout?.headerBorder && "[&>th]:border-b",
+        props.tableLayout?.headerBorder && "[&>th]:border-b [&>th]:border-border/70",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
-        props.tableLayout?.stripped && "bg-transparent",
-        props.tableLayout?.headerBackground === false && "bg-transparent",
         props.tableClassNames?.headerRow,
       )}
     >
@@ -151,7 +148,7 @@ function DataGridTableHeadRowCell<TData>({
         props.tableLayout?.columnsResizable && column.getCanResize() && "truncate",
         props.tableLayout?.columnsPinnable &&
           column.getCanPin() &&
-          "[&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted/90 data-pinned:backdrop-blur-xs [&:not([data-pinned]):has(+[data-pinned])_div.cursor-col-resize:last-child]:opacity-0 [&[data-last-col=left]_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_div.cursor-col-resize:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s!",
+          "[&[data-pinned][data-last-col]]:border-border data-pinned:bg-muted/90 data-pinned:backdrop-blur-xs [&:not([data-pinned]):has(+[data-pinned])_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-last-col=left]_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-pinned=left][data-last-col=left]]:border-e! [&[data-pinned=right]:last-child_[data-slot=column-resize-handle]:last-child]:opacity-0 [&[data-pinned=right][data-last-col=right]]:border-s!",
         header.column.columnDef.meta?.headerClassName,
         column.getIndex() === 0 || column.getIndex() === header.headerGroup.headers.length - 1
           ? props.tableClassNames?.edgeCell
@@ -169,11 +166,12 @@ function DataGridTableHeadRowCellResize<TData>({ header }: { header: Header<TDat
   return (
     <div
       {...{
+        "data-slot": "column-resize-handle",
         onDoubleClick: () => column.resetSize(),
         onMouseDown: header.getResizeHandler(),
         onTouchStart: header.getResizeHandler(),
         className:
-          "absolute top-0 h-full w-4 cursor-col-resize user-select-none touch-none -end-2 z-10 flex justify-center before:absolute before:w-px before:inset-y-0 before:bg-border before:-translate-x-px",
+          "absolute top-0 h-full w-4 cursor-col-resize user-select-none touch-none -end-2 z-10 flex justify-center before:absolute before:w-px before:inset-y-0 before:bg-border before:-translate-x-px before:opacity-0 hover:before:opacity-100",
       }}
     />
   );
@@ -207,9 +205,6 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
     <tr
       className={cn(
         props.onRowClick && "cursor-pointer",
-        !props.tableLayout?.stripped &&
-          props.tableLayout?.rowBorder &&
-          "border-border border-b [&:not(:last-child)>td]:border-b",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",
@@ -297,9 +292,6 @@ function DataGridTableBodyRow<TData>({
         ROW_HOVER_CLASS_NAME,
         isInteractive &&
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-        !props.tableLayout?.stripped &&
-          props.tableLayout?.rowBorder &&
-          "border-border border-b [&:not(:last-child)>td]:border-b",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
         props.tableLayout?.stripped && "odd:bg-muted/90 odd:hover:bg-muted hover:bg-transparent",
         table.options.enableRowSelection && "*:first:relative",

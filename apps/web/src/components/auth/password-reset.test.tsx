@@ -3,10 +3,11 @@ import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/toast";
 import { answerAuth, refuse, resetAuthAnswers, type } from "../../../test/better-auth";
+import { PassingTurnstile } from "../../../test/turnstile";
 
 configure({ asyncUtilTimeout: 3000 });
 
-await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: () => null }));
+await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: PassingTurnstile }));
 type Navigation = { readonly to: string; readonly search?: Record<string, string> };
 const navigations: Navigation[] = [];
 const realRouter = await import("@tanstack/react-router");

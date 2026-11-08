@@ -15,5 +15,8 @@ export type CalendarItem = CalendarItemsResponse["items"][number];
 export type CalendarOrder = CalendarOrdersResponse["orders"][number];
 
 export function getCalendar(query: CalendarQuery): Promise<Result<CalendarResponse, ApiFailure>> {
-  return call(app.api.calendar.get({ query }), { fallback: "Failed to get calendar" });
+  return call(app.api.calendar.get({ query }), {
+    fallback: "Failed to get calendar",
+    empty: "Failed to get calendar",
+  });
 }

@@ -72,7 +72,9 @@ const openDetails = async (user: User, title: string) => {
 };
 const pickDay = async (user: User, name: string) => {
   await user.click(screen.getByRole("button", { name }));
-  const [day] = await screen.findAllByRole("button", { name: /15th/u });
+  const [day] = await within(await screen.findByRole("grid")).findAllByRole("button", {
+    name: /15th/u,
+  });
   if (day === undefined) throw new Error(`no 15th in the ${name} calendar`);
   await user.click(day);
   await user.keyboard("{Escape}");
@@ -307,7 +309,7 @@ test("a new Order's title sits beside its picture in place of a heading, and wra
   expect(order.queryByText("Order details")).toBeNull();
   expect(order.queryByText(/Optional, and they apply/u)).toBeNull();
   expect(order.queryByText("Title")).toBeNull();
-  expect(order.getByRole("button", { name: "Edit Order title" })).toBeDefined();
+  expect(order.getByRole("button", { name: /edit Order title$/ })).toBeDefined();
   for (const group of ["Basics", "Dates", "Costs"]) {
     expect(order.getByRole("group", { name: group })).toBeDefined();
     expect(order.queryByText(group)).toBeNull();
@@ -319,19 +321,19 @@ test("typing on the prefilled Order title replaces it, and a cleared one falls b
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  const preview = screen.getByRole("button", { name: "Edit Order title" });
+  const preview = screen.getByRole("button", { name: /edit Order title$/ });
   expect(preview.textContent).toBe("Hatsune Miku + 1 more");
 
   await user.click(preview);
   await user.keyboard("Spring preorders{Enter}");
-  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe(
+  expect(screen.getByRole("button", { name: /edit Order title$/ }).textContent).toBe(
     "Spring preorders",
   );
 
-  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   await user.clear(screen.getByRole("textbox", { name: "Order title" }));
   await user.keyboard("{Enter}");
-  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe(
+  expect(screen.getByRole("button", { name: /edit Order title$/ }).textContent).toBe(
     "Hatsune Miku + 1 more",
   );
   await click(user, "Create order with 2");
@@ -345,17 +347,17 @@ test("Enter and Escape in the Order title keep focus on it, without reopening it
   openAddPage("/add?to=order-new");
   await rowsLoaded();
   const focusedOnPreview = () =>
-    document.activeElement === screen.queryByRole("button", { name: "Edit Order title" });
+    document.activeElement === screen.queryByRole("button", { name: /edit Order title$/ });
 
-  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   await user.keyboard("Spring{Enter}");
   await waitFor(() => expect(focusedOnPreview()).toBe(true));
   expect(screen.queryByRole("textbox", { name: "Order title" })).toBeNull();
 
-  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   await user.keyboard("Discarded{Escape}");
   await waitFor(() => expect(focusedOnPreview()).toBe(true));
-  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe("Spring");
+  expect(screen.getByRole("button", { name: /edit Order title$/ }).textContent).toBe("Spring");
 
   await user.keyboard("{Enter}");
   expect(await screen.findByRole("textbox", { name: "Order title" })).toBeDefined();
@@ -366,10 +368,12 @@ test("the Order title saves when focus leaves it, and Escape keeps the one it ha
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   await user.keyboard("Discarded{Escape}");
-  expect(screen.getByRole("button", { name: "Edit Order title" }).textContent).toBe("Hatsune Miku");
-  await user.click(screen.getByRole("button", { name: "Edit Order title" }));
+  expect(screen.getByRole("button", { name: /edit Order title$/ }).textContent).toBe(
+    "Hatsune Miku",
+  );
+  await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   await user.keyboard("Spring");
   await click(user, "Create order with 1");
   await waitFor(() => expect(server.commits).toHaveLength(1));
@@ -408,7 +412,7 @@ test("a New Order's status, Shipping Method and dates all reach the commit", asy
     "Collection Date",
   ]) {
     await pickDay(user, label);
-    expect(screen.getByRole("button", { name: label }).dataset.empty).toBe("false");
+    expect(screen.getByLabelText<HTMLButtonElement>(label).dataset.empty).toBe("false");
   }
 
   await click(user, "Create order with 1");

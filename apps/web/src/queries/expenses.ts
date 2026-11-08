@@ -16,6 +16,7 @@ import { app } from "@/lib/treaty-client";
 export function getExpenseFilterOptions(): Promise<Result<ExpenseFilterOptions, ApiFailure>> {
   return call(app.api.expenses["filter-options"].get(), {
     fallback: "Failed to get expense filter options",
+    empty: "Failed to get expense filter options",
   });
 }
 
@@ -24,6 +25,7 @@ export function getExpensesCollection(
 ): Promise<Result<ExpensesCollectionResponse, ApiFailure>> {
   return call(app.api.expenses.collection.get({ query: filters }), {
     fallback: "Failed to get collection expenses",
+    empty: "Failed to get collection expenses",
   });
 }
 
@@ -32,6 +34,7 @@ export function getExpensesOrders(
 ): Promise<Result<ExpensesOrdersResponse, ApiFailure>> {
   return call(app.api.expenses.orders.get({ query: filters }), {
     fallback: "Failed to get order expenses",
+    empty: "Failed to get order expenses",
   });
 }
 
@@ -40,6 +43,7 @@ export function getExpensesShipping(
 ): Promise<Result<ExpensesShippingResponse, ApiFailure>> {
   return call(app.api.expenses.shipping.get({ query: filters }), {
     fallback: "Failed to get shipping expenses",
+    empty: "Failed to get shipping expenses",
   });
 }
 
@@ -48,6 +52,7 @@ export function getExpensesShops(
 ): Promise<Result<ExpenseShopsResponse, ApiFailure>> {
   return call(app.api.expenses.shops.get({ query: filters }), {
     fallback: "Failed to get expense shops",
+    empty: "Failed to get expense shops",
   });
 }
 
@@ -57,6 +62,6 @@ export function getShopExpansion(
 ): Promise<Result<ShopExpansionResponse, ApiFailure>> {
   return call(
     app.api.expenses.shops({ shop: encodeURIComponent(shopId) }).expansion.get({ query: filters }),
-    { fallback: "Failed to get shop expansion" },
+    { fallback: "Failed to get shop expansion", empty: "Failed to get shop expansion" },
   );
 }

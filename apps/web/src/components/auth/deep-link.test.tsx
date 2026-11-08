@@ -11,8 +11,9 @@ import {
 import type { RouterAppContext } from "@/routes/__root";
 import { answerAuth, refuse, resetAuthAnswers, type } from "../../../test/better-auth";
 import { Toaster } from "@/components/ui/toast";
+import { PassingTurnstile } from "../../../test/turnstile";
 
-await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: () => null }));
+await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: PassingTurnstile }));
 const { Route: appRoute } = await import("@/routes/(app)/route");
 const { Route: loginRoute } = await import("@/routes/(auth)/login");
 const { Route: signupRoute } = await import("@/routes/(auth)/signup");
@@ -82,7 +83,7 @@ test("signing in restores a protected deep link's query and hash exactly", async
       expect(router.state.location.search.redirect).toBe(destination);
       type("Email", "collector@example.com");
       type("Password", "correct horse");
-      fireEvent.click(screen.getByRole("button", { name: "Login" }));
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
       await waitFor(() =>
         expect(assign).toHaveBeenLastCalledWith(`http://localhost:3001${destination}`),
       );
@@ -99,10 +100,10 @@ test("registering from a protected deep link preserves its email verification de
     Response.json(path === "/is-username-available" ? { available: true } : { token: null }),
   );
   const router = await open(destination);
-  fireEvent.click(screen.getByRole("link", { name: "Register" }));
+  fireEvent.click(screen.getByRole("link", { name: "Create an account" }));
   await screen.findByLabelText("Username");
   expect(router.state.location.search.redirect).toBe(destination);
-  const login = screen.getByRole("link", { name: "Login" });
+  const login = screen.getByRole("link", { name: "Sign in" });
   expect(
     new URL(login.getAttribute("href") ?? "", window.location.origin).searchParams.get("redirect"),
   ).toBe(destination);
@@ -126,7 +127,7 @@ test("the verification email sent at sign-in returns to the deep link", async ()
   await open(destination);
   type("Email", "collector@example.com");
   type("Password", "correct horse");
-  fireEvent.click(screen.getByRole("button", { name: "Login" }));
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
   await waitFor(() =>
     expect(requests.find(({ path }) => path === "/sign-in/email")?.body).toMatchObject({
       callbackURL: `http://localhost:3001${destination}`,
@@ -150,7 +151,7 @@ test("auth forms refuse external and non-relative return destinations", async ()
       await open(`/login?redirect=${encodeURIComponent(destination)}`);
       type("Email", "collector@example.com");
       type("Password", "correct horse");
-      fireEvent.click(screen.getByRole("button", { name: "Login" }));
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
       await waitFor(() =>
         expect(assign).toHaveBeenLastCalledWith(`http://localhost:3001${landing}`),
       );

@@ -51,7 +51,7 @@ export default defineConfig({
     tailwindcss(),
     tanstackRouter({ autoCodeSplitting: true }),
     react({ include: /\.(js|jsx|mdx|ts|tsx)$/ }),
-    preloadFont("instrument-sans-latin-wght-normal.woff2"),
+    preloadFont("inter-latin-opsz-normal.woff2"),
   ],
   resolve: {
     alias: {

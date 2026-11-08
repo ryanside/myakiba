@@ -90,8 +90,9 @@ async function authWrite<Answer extends Parameters<typeof decodeAuth>[0]>(
 /** Like the devices list, removing a sign-in method needs a recent sign-in. */
 type GoogleUnlink = { readonly kind: "unlinked" } | { readonly kind: "needs-fresh-sign-in" };
 
-async function unlinkGoogle(): Promise<Result<GoogleUnlink, AuthRequestFailed>> {
-  const unlinked = await decodeAuth(() => authClient.unlinkAccount({ providerId: "google" }));
+/** `accountId` is the local account row's `id`, not Google's account id. */
+async function unlinkGoogle(accountId: string): Promise<Result<GoogleUnlink, AuthRequestFailed>> {
+  const unlinked = await decodeAuth(() => authClient.unlinkAccount({ accountId }));
   if (unlinked.isOk()) return Result.ok({ kind: "unlinked" });
   if (isStaleSignIn(unlinked.error)) return Result.ok({ kind: "needs-fresh-sign-in" });
   return Result.err(withFallback(unlinked.error, "Couldn't disconnect Google"));
@@ -164,7 +165,7 @@ export const settings = {
   }),
   unlinkGoogle: defineCommand({
     invalidates: ["linkedAccounts", "accountType"],
-    persist: () => unlinkGoogle(),
+    persist: (accountId: string) => unlinkGoogle(accountId),
     successTitle: (_input, unlink) =>
       unlink.kind === "unlinked" ? "Google disconnected" : undefined,
     failureToast: messageAs("title", () => "Couldn't disconnect Google"),

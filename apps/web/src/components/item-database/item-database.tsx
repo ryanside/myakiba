@@ -1,11 +1,11 @@
 import { useRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
-import { InformationCircleIcon, PackageSearchIcon } from "@hugeicons/core-free-icons";
+import { PackageSearchIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ReactNode } from "react";
 import { DataTablePagination, pageRange } from "@/components/data-table/data-table-pagination";
-import { DebouncedInput } from "@/components/debounced-input";
+import { SearchPill } from "@/components/search-pill";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { MediaViewCollection, MediaViewSkeletons } from "@/components/media-tile";
 import { PageHeader, formatCount } from "@/components/page-header";
@@ -20,7 +20,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
@@ -42,7 +41,7 @@ export function ItemDatabase(): React.JSX.Element {
   if (isPending) {
     results = <MediaViewSkeletons viewMode={viewMode} count={viewMode === "list" ? 8 : 15} />;
   } else if (isError) {
-    results = <LoadError title="Couldn't load the Item Database" message={error.message} />;
+    results = <LoadError title="Couldn't load the Item Database" error={error} />;
   } else if (items.length === 0) {
     const isLaterPage = search.page > 1;
 
@@ -65,6 +64,7 @@ export function ItemDatabase(): React.JSX.Element {
                 navigate({
                   to: ".",
                   search: (previous) => ({ ...previous, page: 1 }),
+                  replace: true,
                 })
               }
             >
@@ -96,53 +96,36 @@ export function ItemDatabase(): React.JSX.Element {
     <>
       <PageHeader
         title="Item Database"
-        titleAccessory={
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button variant="ghost" size="icon-xs" aria-label="About the item database">
-                  <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
-                </Button>
-              }
-            />
-            <TooltipContent side="right" sideOffset={12}>
-              <div className="flex max-w-xs flex-col gap-1">
-                <h3 className="text-sm font-medium">dev note:</h3>
-                <p className="text-pretty">
-                  This is an early, simple version of the Item Database.
-                </p>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        }
         meta={isPending || isError ? null : formatCount(totalCount, "Item", "Items")}
-        actions={
-          <>
-            <ViewToggle
-              modes={VIEW_PREFERENCES.itemDatabase.modes}
-              value={viewMode}
-              onValueChange={setViewMode}
-            />
-            <AddLink search={{ to: "none" }} />
-          </>
-        }
       />
 
-      <DebouncedInput
-        value={search.query ?? ""}
-        onChange={(value) =>
-          navigate({
-            to: ".",
-            search: (previous) => ({
-              ...previous,
-              query: value.toString() || undefined,
-              page: 1,
-            }),
-          })
-        }
-        placeholder="Search by title, MFC ID, or entry"
-        className="w-full sm:max-w-sm"
-      />
+      <div className="flex w-full flex-wrap items-center gap-2">
+        <SearchPill
+          value={search.query ?? ""}
+          onChange={(value) =>
+            navigate({
+              to: ".",
+              search: (previous) => ({
+                ...previous,
+                query: value.toString() || undefined,
+                page: 1,
+              }),
+              replace: true,
+            })
+          }
+          placeholder="Search by title, MFC ID, or entry"
+          aria-label="Search the Item Database"
+          className="flex-1 sm:max-w-sm"
+        />
+        <div className="ml-auto flex items-center gap-2">
+          <ViewToggle
+            modes={VIEW_PREFERENCES.itemDatabase.modes}
+            value={viewMode}
+            onValueChange={setViewMode}
+          />
+          <AddLink search={{ to: "none" }} />
+        </div>
+      </div>
 
       {results}
 
@@ -162,6 +145,7 @@ export function ItemDatabase(): React.JSX.Element {
                   ...previous,
                   page: Math.floor(nextOffset / search.pageSize) + 1,
                 }),
+                replace: true,
               })
             }
           />

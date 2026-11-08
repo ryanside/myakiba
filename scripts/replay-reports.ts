@@ -78,12 +78,13 @@ export async function checkReplayCoverage(root: string, run: TestRun) {
       test: string;
       testAt?: string;
       fixed: string[];
+      atHead?: string[];
       head?: { test: string; fixed: string[]; reason: string }[];
     }[];
   } = await Bun.file(path.join(root, "scripts/replays.json")).json();
   const current = replays
     .filter((entry) => entry.testAt)
-    .flatMap((entry) => entry.head ?? [{ test: entry.test, fixed: entry.fixed }]);
+    .flatMap((entry) => entry.head ?? [{ test: entry.test, fixed: entry.atHead ?? entry.fixed }]);
   const { missing, reports } = await missingPassedTests(root, current, run);
   if (missing.length > 0)
     throw new Error(`Missing passed replay coverage in Bun JUnit reports:\n${missing.join("\n")}`);

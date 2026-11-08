@@ -1,12 +1,14 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { OrderControls } from "@/components/orders/order-controls";
+import { useOrderPending } from "@/components/orders/order-pending-context";
 import {
   MediaCard,
   MediaCardBody,
   MediaCardImage,
   MediaCardSkeleton,
   MediaCardTitle,
+  CARD_GRID_GAP_CLASS_NAME,
 } from "@/components/media-tile";
 import { ThemedBadge } from "@/components/reui/badge";
 import { getStatusVariant } from "@/lib/orders";
@@ -29,7 +31,6 @@ interface OrdersCardGridProps {
   readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly currency: Currency;
   readonly locale: string;
-  readonly isOrderPending: (orderId: string) => boolean;
   readonly isLoading: boolean;
 }
 
@@ -42,9 +43,9 @@ export function OrdersCardGrid({
   onDeleteOrders,
   currency,
   locale,
-  isOrderPending,
   isLoading,
 }: OrdersCardGridProps): React.JSX.Element {
+  const { isOrderPending } = useOrderPending();
   const isCompact = cardWidth < 180;
 
   const toggleSelection = (id: string): void => {
@@ -63,7 +64,7 @@ export function OrdersCardGrid({
 
   if (isLoading) {
     return (
-      <div className="grid gap-3" style={gridStyle} aria-hidden="true">
+      <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle} aria-hidden="true">
         {Array.from({ length: 8 }).map((_, i) => (
           <MediaCardSkeleton key={i} imageClassName="aspect-8/5" />
         ))}
@@ -80,7 +81,7 @@ export function OrdersCardGrid({
   }
 
   return (
-    <div className="grid gap-3" style={gridStyle}>
+    <div className={cn("grid", CARD_GRID_GAP_CLASS_NAME)} style={gridStyle}>
       {orders.map((order) => {
         const isSelected = !!rowSelection[order.orderId];
         const isPending = isOrderPending(order.orderId);
@@ -155,7 +156,7 @@ export function OrdersCardGrid({
                   {order.status}
                 </ThemedBadge>
                 <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
-                  {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
+                  {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
                 </span>
               </span>
               <MediaCardTitle as="h3" title={order.title} destination={destination} />

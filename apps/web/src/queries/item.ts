@@ -8,7 +8,10 @@ import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 
 /** The item's page, or null when it has no row: the screen shows its not-found view for that. */
 export function getItem(externalId: number) {
-  return call(app.api.item({ id: externalId }).get(), { fallback: "Failed to get item" }).then(
+  return call(app.api.item({ id: externalId }).get(), {
+    fallback: "Failed to get item",
+    empty: "Failed to get item",
+  }).then(
     Result.tryRecover((failure) =>
       ApiNotFound.is(failure) ? Result.ok(null) : Result.err(failure),
     ),
@@ -18,18 +21,21 @@ export function getItem(externalId: number) {
 export function getItemReleases(itemId: string): Promise<Result<ItemReleasesResponse, ApiFailure>> {
   return call(app.api.item({ id: itemId }).releases.get(), {
     fallback: "Failed to get item releases",
+    empty: "Failed to get item releases",
   });
 }
 
 export function getItemRelatedOrders(externalId: number) {
   return call(app.api.item({ id: externalId }).orders.get(), {
     fallback: "Failed to get item related orders",
+    empty: "Failed to get item related orders",
   });
 }
 
 export function getItemRelatedCollection(externalId: number) {
   return call(app.api.item({ id: externalId }).collection.get(), {
     fallback: "Failed to get item related collection",
+    empty: "Failed to get item related collection",
   });
 }
 

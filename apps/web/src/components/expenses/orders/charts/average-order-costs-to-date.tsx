@@ -74,7 +74,9 @@ export function AverageOrderCostsToDate({
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="bucket" />
         <EvilAreaChart.YAxis
-          tickFormatter={(value) => formatCurrencyFromMinorUnits(Number(value), currency, locale)}
+          tickFormatter={(value) =>
+            formatCurrencyFromMinorUnits(Number(value), currency, locale, { compact: true })
+          }
         />
         {isLoading ? null : (
           <ChartTooltip

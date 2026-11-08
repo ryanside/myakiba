@@ -10,20 +10,22 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
-import type { CollectionItem } from "@myakiba/contracts/collection/types";
 import type { ExpenseShopRow } from "@myakiba/contracts/expenses/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { ComponentProps, ReactNode } from "react";
 import { ExpandedRowContent } from "./analytics/section-expanded-row";
 import { SectionRelationships } from "./analytics/section-relationships";
 import { CollectionGalleryGrid } from "./collection/collection-gallery-grid";
+import { CollectionPendingContext } from "./collection/collection-pending-context";
 import { ShopTableRowExpansion } from "./expenses/shop-table-row-expansion";
 import { ListMemberGrid } from "./lists/list-member-grid";
 import { OrdersGalleryGrid } from "./orders/orders-gallery-grid";
+import { OrderPendingContext } from "./orders/order-pending-context";
 import { WishlistItemGrid } from "./wishlist/wishlist-item-grid";
 import { analytics } from "@/data/resources/analytics";
 import { expenses } from "@/data/resources/expenses";
 import type { AnalyticsSectionRow } from "@/queries/analytics";
+import { collectionItem } from "../../test/collection-item";
 
 afterEach(cleanup);
 
@@ -35,39 +37,17 @@ const ITEMS = [
 ] as const;
 const TITLES = ITEMS.map((item) => item.title);
 
-const collectionItems = ITEMS.map(
-  (item, index) =>
-    ({
-      id: `collection-${index}`,
-      orderId: null,
-      itemId: item.id,
-      itemExternalId: item.externalId,
-      itemTitle: item.title,
-      itemImage: item.image,
-      itemCategory: "Prepainted",
-      itemScale: null,
-      status: "Owned",
-      count: 1,
-      score: "0",
-      price: 12_000,
-      shop: "AmiAmi",
-      condition: "New",
-      orderDate: null,
-      paymentDate: null,
-      shippingDate: null,
-      collectionDate: null,
-      shippingMethod: "n/a",
-      tags: [],
-      notes: "",
-      releaseId: null,
-      releaseDate: null,
-      releasePrice: null,
-      releaseType: null,
-      releaseCurrency: null,
-      releaseBarcode: null,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-    }) satisfies CollectionItem,
+const collectionItems = ITEMS.map((item, index) =>
+  collectionItem({
+    id: `collection-${index}`,
+    itemId: item.id,
+    itemExternalId: item.externalId,
+    itemTitle: item.title,
+    itemImage: item.image,
+    itemCategory: "Prepainted",
+    price: 12_000,
+    shop: "AmiAmi",
+  }),
 );
 
 // A several-picture order and an order with none.
@@ -113,8 +93,6 @@ const collectionProps = {
   onAddCollectionItemsToNewOrder: noop,
   currency: "JPY",
   dateFormat: "MM/DD/YYYY",
-  isCollectionPending: () => false,
-  isCollectionOrderPending: () => false,
   isLoading: false,
 } as const;
 const ordersProps = {
@@ -125,7 +103,6 @@ const ordersProps = {
   onEditOrder: noop,
   onDeleteOrders: noop,
   currency: "JPY",
-  isOrderPending: () => false,
   isLoading: false,
 } as const;
 
@@ -226,7 +203,13 @@ async function renderGallery(ui: ReactNode) {
   await router.load();
   return render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <OrderPendingContext
+        value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+      >
+        <CollectionPendingContext value={{ isItemPending: () => false }}>
+          <RouterProvider router={router} />
+        </CollectionPendingContext>
+      </OrderPendingContext>
     </QueryClientProvider>,
   );
 }

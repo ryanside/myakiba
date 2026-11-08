@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
 
-/** A page built around a table: the width and rhythm its title, toolbar and grid share. */
-export const WORKSPACE_CLASS_NAME = "mx-auto flex w-full max-w-352 flex-col gap-4";
-
 export function PageHeader({
   title,
   titleAccessory,
@@ -15,16 +12,16 @@ export function PageHeader({
   readonly actions?: ReactNode;
 }): React.JSX.Element {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <h1 className="min-w-0 font-heading text-2xl font-medium tracking-tight break-words">
-            {title}
-          </h1>
+    <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-3">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex items-center gap-1.5">
+          <h1 className="min-w-0 page-title break-words">{title}</h1>
           {titleAccessory}
         </div>
         {meta === undefined ? null : (
-          <p className="mt-0.5 min-h-5 text-sm text-muted-foreground tabular-nums">{meta}</p>
+          <p className="min-h-6 text-[1.0625rem] leading-6 text-muted-foreground tabular-nums">
+            {meta}
+          </p>
         )}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

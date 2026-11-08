@@ -10,33 +10,12 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { RouterAppContext } from "@/routes/__root";
+import { signedInSession } from "./session";
 
-const session = {
-  session: {
-    id: "sidebar-session",
-    token: "test-token",
-    userId: "sidebar-user",
-    expiresAt: new Date(Date.now() + 3_600_000),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  user: {
-    id: "sidebar-user",
-    name: "Collector",
-    username: "collector",
-    email: "collector@example.com",
-    emailVerified: true,
-    currency: "USD",
-    dateFormat: "MM/DD/YYYY",
-    hasSeenOnboarding: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    banned: false,
-    role: "user",
-  },
-} satisfies NonNullable<Awaited<ReturnType<RouterAppContext["readSession"]>>["session"]>;
+const session = signedInSession();
 
 const realRequestAnimationFrame = globalThis.requestAnimationFrame;
 const realCancelAnimationFrame = globalThis.cancelAnimationFrame;
@@ -119,10 +98,12 @@ export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resol
     id: "(app)",
     beforeLoad: appRoute.options.beforeLoad,
     component: () => (
-      <SidebarProvider>
-        <AppSidebar />
-        <Outlet />
-      </SidebarProvider>
+      <OnboardingProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <Outlet />
+        </SidebarProvider>
+      </OnboardingProvider>
     ),
   });
   const dashboard = createRoute({

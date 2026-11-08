@@ -1,5 +1,6 @@
-import { ArrowDown01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { ExpandIcon } from "@/lib/icons";
 import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import type {
   CellContext,
@@ -248,12 +249,9 @@ function RowActions({ row: { id, item } }: { readonly row: ItemRow }) {
         >
           Details
           <HugeiconsIcon
-            icon={ArrowDown01Icon}
+            icon={ExpandIcon}
             data-icon="inline-end"
-            className={cn(
-              "transition-transform duration-150 ease-out motion-reduce:transition-none",
-              open && "rotate-180",
-            )}
+            className={cn("collapse-chevron", open && "rotate-90")}
             aria-hidden="true"
           />
         </Button>

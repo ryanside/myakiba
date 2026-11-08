@@ -2,57 +2,15 @@ import { $ } from "bun";
 import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-type TestReplay = {
-  fix: string;
-  base?: string;
-  bug: string;
-  test: string;
-  fixed: string[];
-  /**
-   * The revision to take the test harness from, when a later change renamed what the test
-   * uses so HEAD's copy can no longer run against the fix. Without it, the harness is HEAD's.
-   */
-  testAt?: string;
-  /** Current coverage when the historical harness uses names or files that HEAD renamed. */
-  head?: { test: string; fixed: string[]; reason: string }[];
-  /** Why historical coverage was partially retired or its harness pinned. */
-  reason?: string;
-};
-
-type LintReplay = {
-  fix: string;
-  bug: string;
-  rule: string;
-  atParent: string[];
-  atFix: string[];
-};
-
-type KnipReplay = {
-  fix: string;
-  bug: string;
-  reports: string[];
-};
-
-type TypesReplay = {
-  name: string;
-  fix: string;
-  bug: string;
-  package: string;
-  config: string[];
-  errors: string[];
-  /** The revision to take `config` from, when HEAD's copy no longer compiles against the fix. */
-  configAt?: string;
-};
-
-/** A type test whose `@ts-expect-error` lines must each fail with the listed error. */
-type TypesFixture = {
-  name: string;
-  bug: string;
-  package: string;
-  file: string;
-  errors: string[];
-};
+import type {
+  KnipReplay,
+  LintReplay,
+  TestReplay,
+  TypesFixture,
+  TypesReplay,
+} from "./replay-config";
+import { parseReplays } from "./replay-config";
+import { snapshotWorkingTree } from "./worktree-snapshot";
 
 type LintRule = string | [string, ...unknown[]];
 type LintConfig = {
@@ -73,20 +31,15 @@ type TestRun = {
 };
 
 const root = path.resolve(import.meta.dir, "..");
+const ROOT_TEST_COMMAND = "bun test";
 const oxlint = path.join(root, "node_modules/.bin/oxlint");
 const {
-  test: testReplays = [],
-  lint: lintReplays = [],
-  knip: knipReplays = [],
-  types: typesReplays = [],
-  fixtures: fixtureReplays = [],
-}: {
-  test?: TestReplay[];
-  lint?: LintReplay[];
-  knip?: KnipReplay[];
-  types?: TypesReplay[];
-  fixtures?: TypesFixture[];
-} = await Bun.file(path.join(import.meta.dir, "replays.json")).json();
+  test: testReplays,
+  lint: lintReplays,
+  knip: knipReplays,
+  types: typesReplays,
+  fixtures: fixtureReplays,
+} = parseReplays(await Bun.file(path.join(import.meta.dir, "replays.json")).json());
 const replaysByMode = {
   lint: lintReplays,
   knip: knipReplays,
@@ -165,7 +118,7 @@ async function installedVersion(packageDir: string, dependency: string) {
 async function runTest(checkout: string, testFile: string): Promise<TestRun> {
   const packageDir = await packageDirOf(testFile);
   const { scripts } = await readPackage(path.join(root, packageDir));
-  const command = packageDir === "." ? "bun test" : scripts.test;
+  const command = packageDir === "." ? ROOT_TEST_COMMAND : scripts.test;
   const { exitCode, stdout, stderr } =
     await $`sh -c ${`${command} "$@"`} sh ${`./${path.relative(packageDir, testFile)}`}`
       .cwd(path.join(checkout, packageDir))
@@ -331,12 +284,23 @@ for (const testFile of new Set(
   selected.flatMap((replay) => replay.head?.map((head) => head.test) ?? [replay.test]),
 )) {
   const run = await runTest(root, testFile);
+  const required = selected.flatMap((replay) => {
+    if (replay.head)
+      return replay.head.flatMap((head) => (head.test === testFile ? head.fixed : []));
+    return replay.test === testFile && replay.testAt !== undefined ? replay.atHead : [];
+  });
+  const notPassed = [...new Set(required)].filter((name) => !run.passed.includes(name));
   const pass =
     run.exitCode === 0 &&
     run.failed.length === 0 &&
     run.skipped.length === 0 &&
-    run.passed.length > 0;
-  report(pass, `head  ${testFile}`, pass ? [] : [tail(run.output)]);
+    run.passed.length > 0 &&
+    notPassed.length === 0;
+  report(
+    pass,
+    `head  ${testFile}`,
+    pass ? [] : [...notPassed.map((name) => `      not passed at head: ${name}`), tail(run.output)],
+  );
 }
 
 if (knipMode) {
@@ -480,15 +444,17 @@ try {
     );
   }
 
+  let worktreeSnapshot: Promise<string> | undefined;
   for (const replay of selected) {
     const harness = await harnessOf(replay.test, replay.testAt);
-    const workingTree = replay.fix === "WORKTREE";
-    const base = workingTree ? replay.base : `${replay.fix}^`;
-    if (!base) throw new Error("A WORKTREE replay needs a base revision");
-    await checkOut(base, harness);
+    const fix =
+      replay.fix === "WORKTREE"
+        ? await (worktreeSnapshot ??= snapshotWorkingTree(root))
+        : replay.fix;
+    await checkOut(replay.base, harness);
     const before = await runTest(worktree, replay.test);
-    if (!workingTree) await checkOut(replay.fix, harness);
-    const after = await runTest(workingTree ? root : worktree, replay.test);
+    await checkOut(fix, harness);
+    const after = await runTest(worktree, replay.test);
 
     const flipped = before.failed.filter((name) => after.passed.includes(name));
     const didNotFlip = replay.fixed.filter((name) => !flipped.includes(name));

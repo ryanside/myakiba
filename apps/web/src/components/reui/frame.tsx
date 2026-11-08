@@ -5,14 +5,17 @@ import { cn } from "@/lib/utils";
 
 const frameVariants = cva(
   [
-    "relative flex flex-col bg-muted/50 inset-shadow-2xs inset-shadow-white dark:inset-shadow-white/10 gap-0.75 p-0.75 rounded-(--frame-radius)",
-    "[--frame-radius:var(--radius-xl)]",
-    "[--frame-panel-bg:var(--color-card)] [--frame-panel-border-color:var(--color-border)] [--frame-border-color:var(--color-border)]",
+    "relative flex flex-col gap-0 p-0 rounded-(--frame-radius)",
+    "[--frame-radius:var(--radius-2xl)]",
+    "[--frame-panel-bg:transparent] [--frame-border-color:var(--color-border)]",
+    "data-[spacing=sm]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-0.5",
+    "data-[spacing=default]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-1",
+    "data-[spacing=lg]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-2",
   ],
   {
     variants: {
       variant: {
-        default: "border border-[var(--frame-border-color)] bg-clip-padding",
+        default: "-mx-(--frame-panel-p) rounded-none",
         inverse:
           "[--frame-panel-bg:color-mix(in_oklch,var(--color-muted)_40%,transparent)] border border-[var(--frame-border-color)] bg-background bg-clip-padding",
         ghost: "",
@@ -24,30 +27,10 @@ const frameVariants = cva(
           "[--frame-panel-p:--spacing(4)] [--frame-panel-header-px:--spacing(4)] [--frame-panel-header-py:--spacing(3)] [--frame-panel-footer-px:--spacing(4)] [--frame-panel-footer-py:--spacing(3)]",
         lg: "[--frame-panel-p:--spacing(5)] [--frame-panel-header-px:--spacing(5)] [--frame-panel-header-py:--spacing(4)] [--frame-panel-footer-px:--spacing(5)] [--frame-panel-footer-py:--spacing(4)]",
       },
-      stacked: {
-        true: [
-          "gap-0 *:has-[+[data-slot=frame-panel]]:rounded-b-none",
-          "*:has-[+[data-slot=frame-panel]]:before:hidden",
-          "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:rounded-t-none",
-          "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:border-t-0",
-          "[&:not(:has([data-slot=frame-panel-header]))_[data-slot=frame-panel]:is(:first-child)]:border-t-0",
-        ],
-        false: [
-          "data-[spacing=sm]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-0.5",
-          "data-[spacing=default]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-1",
-          "data-[spacing=lg]:*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-2",
-        ],
-      },
-      dense: {
-        true: "p-0 gap-0 border-[var(--frame-border-color)] [&_[data-slot=frame-panel]]:-mx-px [&_[data-slot=frame-panel]]:before:hidden [&_[data-slot=frame-panel]:last-child]:-mb-px",
-        false: "",
-      },
     },
     defaultVariants: {
       variant: "default",
       spacing: "default",
-      stacked: false,
-      dense: false,
     },
   },
 );
@@ -56,13 +39,11 @@ function Frame({
   className,
   variant,
   spacing,
-  stacked,
-  dense,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof frameVariants>) {
   return (
     <div
-      className={cn(frameVariants({ variant, spacing, stacked, dense }), className)}
+      className={cn(frameVariants({ variant, spacing }), className)}
       data-slot="frame"
       data-spacing={spacing}
       {...props}
@@ -74,10 +55,7 @@ function FramePanel({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "relative grow overflow-hidden rounded-(--frame-radius) border border-(--frame-panel-border-color) bg-(--frame-panel-bg) bg-clip-padding shadow-xs",
-        "before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--frame-radius)-1px)] before:shadow-black/5",
-        "dark:bg-clip-border dark:before:shadow-white/5",
-        "p-(--frame-panel-p)",
+        "relative grow overflow-hidden rounded-(--frame-radius) bg-(--frame-panel-bg) p-(--frame-panel-p)",
         className,
       )}
       data-slot="frame-panel"
@@ -99,13 +77,11 @@ function FrameHeader({ className, ...props }: React.ComponentProps<"header">) {
   );
 }
 
-function FrameTitle({ className, ...props }: React.ComponentProps<"div">) {
+function FrameTitle({ className, children, ...props }: React.ComponentProps<"h2">) {
   return (
-    <div
-      className={cn("text-sm font-medium", className)}
-      data-slot="frame-panel-title"
-      {...props}
-    />
+    <h2 className={cn("text-sm font-medium", className)} data-slot="frame-panel-title" {...props}>
+      {children}
+    </h2>
   );
 }
 
@@ -132,4 +108,4 @@ function FrameFooter({ className, ...props }: React.ComponentProps<"footer">) {
   );
 }
 
-export { Frame, FramePanel, FrameHeader, FrameTitle, FrameDescription, FrameFooter, frameVariants };
+export { Frame, FramePanel, FrameHeader, FrameTitle, FrameDescription, FrameFooter };

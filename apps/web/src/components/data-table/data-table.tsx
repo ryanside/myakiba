@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
@@ -8,7 +8,28 @@ import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
+const TEXT_SKELETON_WIDTHS = ["w-28", "w-20", "w-36", "w-24", "w-32"] as const;
 
+export function CellSkeleton({ className }: { readonly className?: string }): ReactNode {
+  return <Skeleton className={cn("inline-block h-3 max-w-full align-middle", className)} />;
+}
+
+export const DATA_TABLE_SKELETON = {
+  rank: <CellSkeleton className="w-4" />,
+  count: <CellSkeleton className="w-5" />,
+  percent: <CellSkeleton className="w-8" />,
+  money: <CellSkeleton className="w-12" />,
+} as const;
+
+export const DATA_TABLE_NUMBER_META = {
+  headerClassName: "text-right",
+  cellClassName: "text-right tabular-nums",
+} as const;
+
+/**
+ * `sized` fixes each column to its `size` as a share of all the sizes, so the columns hold still
+ * while rows load. A `w-*` class in a column's `headerClassName` overrides the share.
+ */
 type DataTableVariant = "default" | "sized";
 
 interface DataTableProps<TData extends RowData> {
@@ -43,7 +64,13 @@ export function DataTable<TData extends RowData>({
       aria-busy={isLoading}
       className={cn("transition-opacity duration-150", isLoading && "opacity-60", className)}
     >
-      <table className={cn("w-full border-collapse text-xs", tableClassName)}>
+      <table
+        className={cn(
+          "w-full border-collapse text-xs",
+          variant === "sized" && "table-fixed",
+          tableClassName,
+        )}
+      >
         <TableHeader table={table} variant={variant} />
         <TableBody
           table={table}
@@ -75,8 +102,18 @@ function TableHeader<TData extends RowData>({
             <th
               key={header.id}
               aria-sort={getAriaSort(header.column)}
-              className="border-b p-1.5 text-left font-medium text-muted-foreground"
-              style={variant === "sized" ? { width: header.column.getSize() } : undefined}
+              className={cn(
+                "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
+                variant === "sized" && "w-(--column-share)",
+                header.column.columnDef.meta?.headerClassName,
+              )}
+              style={
+                variant === "sized"
+                  ? ({
+                      "--column-share": `${(header.getSize() / table.getTotalSize()) * 100}%`,
+                    } as CSSProperties)
+                  : undefined
+              }
             >
               {header.isPlaceholder
                 ? null
@@ -110,10 +147,14 @@ function TableBody<TData extends RowData>({
     return (
       <tbody>
         {Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
-          <tr key={rowIndex} className="border-b border-border/50">
+          <tr key={rowIndex}>
             {columns.map((column) => (
-              <td key={column.id} className="p-1.5">
-                <Skeleton className="h-4 w-full" />
+              <td key={column.id} className={cn("p-1.5", column.columnDef.meta?.cellClassName)}>
+                {column.columnDef.meta?.skeleton ?? (
+                  <CellSkeleton
+                    className={TEXT_SKELETON_WIDTHS[rowIndex % TEXT_SKELETON_WIDTHS.length]}
+                  />
+                )}
               </td>
             ))}
           </tr>
@@ -154,7 +195,7 @@ function TableBody<TData extends RowData>({
               }
               tabIndex={isInteractive ? 0 : undefined}
               className={cn(
-                "animate-data-in border-b border-border/50",
+                "animate-data-in",
                 ROW_HOVER_CLASS_NAME,
                 isInteractive &&
                   "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
@@ -162,7 +203,14 @@ function TableBody<TData extends RowData>({
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className={cn("p-1.5", getCellClassName?.(row, cell.column.id))}>
+                <td
+                  key={cell.id}
+                  className={cn(
+                    "p-1.5",
+                    cell.column.columnDef.meta?.cellClassName,
+                    getCellClassName?.(row, cell.column.id),
+                  )}
+                >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
