@@ -7,7 +7,8 @@ import type { AddSearch } from "@/lib/add-search";
 
 /**
  * A way to the Add page. Its `search` presets the destination from where the user came, and the
- * page goes back there once a commit leaves it empty.
+ * page goes back there once a commit leaves it empty. Without `children` it is a toolbar's Add, which
+ * shows only its icon below `sm`, as main's toolbar Add does.
  */
 export function AddLink({
   search,
@@ -15,7 +16,7 @@ export function AddLink({
   size = "default",
   className,
   icon = true,
-  children = "Add",
+  children,
 }: {
   readonly search?: Omit<AddSearch, "returnTo">;
   readonly variant?: "default" | "outline";
@@ -30,6 +31,7 @@ export function AddLink({
       to="/add"
       search={{ ...search, returnTo }}
       className={buttonVariants({ variant, size, className })}
+      aria-label={children === undefined ? "Add" : undefined}
     >
       {icon ? (
         <HugeiconsIcon
@@ -39,7 +41,7 @@ export function AddLink({
           aria-hidden="true"
         />
       ) : null}
-      {children}
+      {children ?? <span className="hidden sm:inline">Add</span>}
     </Link>
   );
 }
