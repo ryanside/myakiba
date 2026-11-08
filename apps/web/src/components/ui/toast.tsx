@@ -53,7 +53,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
       className={cn(
         "pointer-events-none fixed inset-x-4 top-4 mx-auto w-auto max-w-sm outline-none sm:w-full",
         // F6 focuses this viewport, which has no height of its own, so its toasts show the focus.
-        "focus-visible:**:data-[slot=toast]:border-ring focus-visible:**:data-[slot=toast]:ring-[3px] focus-visible:**:data-[slot=toast]:ring-ring/50",
+        "focus-visible:**:data-[slot=toast]:border-ring focus-visible:**:data-[slot=toast]:ring-2 focus-visible:**:data-[slot=toast]:ring-ring",
         className,
       )}
       style={{ zIndex: Z_INDEX.toast }}
@@ -262,7 +262,7 @@ function ToastList() {
             {secondaryAction ? (
               <Button
                 variant="link"
-                size="xs"
+                size="sm"
                 className="w-fit px-0"
                 onClick={() => secondaryAction.onClick()}
               >
