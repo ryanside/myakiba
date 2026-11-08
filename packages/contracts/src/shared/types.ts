@@ -3,14 +3,12 @@ import type {
   CATEGORIES,
   COLLECTION_STATUSES,
   CONDITIONS,
+  CONTENT_LABELS,
   CURRENCIES,
   DATE_FORMATS,
   ENTRY_CATEGORIES,
   ORDER_STATUSES,
   SHIPPING_METHODS,
-  SYNC_SESSION_ITEM_STATUSES,
-  SYNC_SESSION_STATUSES,
-  SYNC_TYPES,
 } from "./constants";
 
 export type ShippingMethod = (typeof SHIPPING_METHODS)[number];
@@ -20,8 +18,6 @@ export type Condition = (typeof CONDITIONS)[number];
 export type Currency = (typeof CURRENCIES)[number];
 export type Category = (typeof CATEGORIES)[number];
 export type EntryCategory = (typeof ENTRY_CATEGORIES)[number];
+export type ContentLabel = (typeof CONTENT_LABELS)[number];
 export type DateFormat = (typeof DATE_FORMATS)[number];
-export type SyncType = (typeof SYNC_TYPES)[number];
-export type SyncSessionStatus = (typeof SYNC_SESSION_STATUSES)[number];
 export type AnalyticsSection = (typeof ANALYTICS_SECTIONS)[number];
-export type SyncSessionItemStatus = (typeof SYNC_SESSION_ITEM_STATUSES)[number];

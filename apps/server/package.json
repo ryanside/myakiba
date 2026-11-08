@@ -11,6 +11,7 @@
     "test": "bun test --isolate --env-file=test.env"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1115.0",
     "@elysiajs/cors": "^1.4.1",
     "@elysiajs/openapi": "^1.4.14",
     "@elysiajs/static": "^1.4.7",
@@ -18,10 +19,11 @@
     "@myakiba/contracts": "workspace:*",
     "@myakiba/db": "workspace:*",
     "@myakiba/env": "workspace:*",
+    "@myakiba/mfc": "workspace:*",
     "@myakiba/redis": "workspace:*",
     "@myakiba/utils": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
-    "bullmq": "catalog:",
+    "better-result": "catalog:",
     "date-fns": "catalog:",
     "drizzle-orm": "catalog:",
     "drizzle-zod": "catalog:",
@@ -32,6 +34,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@elysiajs/eden": "^1.4.8",
     "@myakiba/config": "workspace:*",
     "@types/bun": "catalog:",
     "drizzle-kit": "^0.31.9",

@@ -1,15 +1,8 @@
-import { createContext, use, useCallback, useState } from "react";
+import { createContext, use, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  FileUploadIcon,
-  LibraryIcon,
-  Loading03Icon,
-  PackageIcon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons";
-import { toast } from "@/components/ui/toast";
+import { Loading03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
@@ -27,18 +20,21 @@ import {
 } from "@/components/reui/stepper";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CurrencySelect } from "@/components/currency-select";
-import { authClient } from "@/lib/auth-client";
+import { useResourceMutation } from "@/data/client";
+import { settings } from "@/data/resources/settings";
+import { useOnboarding } from "@/hooks/use-onboarding";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { cn } from "@/lib/utils";
-import { SYNC_OPTION_META } from "@/lib/sync";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
+import { ExtensionStep } from "@/components/onboarding/extension-step";
+import { MissingExtensionNotice, pickExtensionCopy } from "@/components/extension/extension-notice";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { getRouteApi, useRouter } from "@tanstack/react-router";
-import { NavigateIcon, NextIcon, PreviousIcon } from "@/lib/icons";
+import { getRouteApi, useNavigate, useRouter } from "@tanstack/react-router";
+import { formSubmitHandler, runSubmit } from "@/lib/form-submit";
+import { NextIcon, PreviousIcon } from "@/lib/icons";
 
-type StepId = "welcome" | "preferences" | "sync";
+type StepId = "welcome" | "preferences" | "extension" | "add";
 
 type StepMeta = {
   readonly id: StepId;
@@ -65,16 +61,25 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     description: "Click continue to save your preferences.",
   },
   {
-    id: "sync",
+    id: "extension",
     step: 3,
+    eyebrow: "Extension",
+    title: "Install the myakiba extension.",
+    description:
+      "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
+  },
+  {
+    id: "add",
+    step: 4,
     eyebrow: "Add items",
-    title: "Bring in your items.",
-    description: "You can always add more later through the + button at the top right.",
+    title: "Pick your first items.",
+    description: "You can add more any time with the + button at the top right.",
   },
 ];
 
 const FIRST_STEP = 1;
 const LAST_STEP = STEPS.length;
+const EXTENSION_STEP = STEPS.find((meta) => meta.id === "extension")?.step ?? FIRST_STEP;
 const SAVE_FAILED = "Couldn't save onboarding.";
 const MIN_USERNAME = 3;
 const MAX_USERNAME = 30;
@@ -100,11 +105,15 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { session } = appRouteApi.useRouteContext();
   // Sessions from before the column existed have no key and count as onboarded.
   const isNewAccount = session.user.hasSeenOnboarding === false;
-  const [open, setOpen] = useState(isNewAccount);
-  const [syncSheetType, setSyncSheetType] = useState<LaunchableSyncType | null>(null);
-  const [currentStep, setCurrentStep] = useState(FIRST_STEP);
+  const { reopenAtExtensionStep, setExtensionStepOpen } = useOnboarding();
+  const [open, setOpen] = useState(isNewAccount || reopenAtExtensionStep);
+  const [currentStep, setCurrentStep] = useState(
+    reopenAtExtensionStep ? EXTENSION_STEP : FIRST_STEP,
+  );
 
   const router = useRouter();
+  const navigate = useNavigate();
+  const { run: updateUser } = useResourceMutation(settings.updateUser);
   const sessionUsername = session.user.username ?? "";
   const sessionCurrency = session.user.currency as Currency;
   const sessionDateFormat = session.user.dateFormat as DateFormat;
@@ -112,6 +121,14 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
   const currentMeta = STEPS.find((meta) => meta.step === currentStep) ?? STEPS[0];
   const isFirst = currentStep === FIRST_STEP;
   const isLast = currentStep === LAST_STEP;
+
+  const atExtensionStep = open && currentMeta.id === "extension";
+  const lastWrittenExtensionStep = useRef(atExtensionStep);
+  useEffect(() => {
+    if (lastWrittenExtensionStep.current === atExtensionStep) return;
+    lastWrittenExtensionStep.current = atExtensionStep;
+    setExtensionStepOpen(atExtensionStep);
+  }, [atExtensionStep, setExtensionStepOpen]);
 
   const goToStep = useCallback((next: number) => {
     setCurrentStep(Math.min(Math.max(next, FIRST_STEP), LAST_STEP));
@@ -139,18 +156,15 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
         return;
       }
 
-      const { error } = await authClient.updateUser({
-        username: trimmedUsername,
-        currency: value.currency,
-        dateFormat: value.dateFormat,
+      const updated = await updateUser({
+        changes: {
+          username: trimmedUsername,
+          currency: value.currency,
+          dateFormat: value.dateFormat,
+        },
+        fallback: "Couldn't save preferences.",
       });
-      if (error) {
-        toast.add({
-          type: "error",
-          title: error.message ?? "Couldn't save preferences.",
-        });
-        return;
-      }
+      if (updated.isErr()) return;
       await router.invalidate();
       advance();
     },
@@ -170,13 +184,8 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
     setOpen(false);
     setCurrentStep(FIRST_STEP);
     if (!isNewAccount) return;
-    try {
-      const { error } = await authClient.updateUser({ hasSeenOnboarding: true });
-      if (error) toast.add({ type: "error", title: error.message ?? SAVE_FAILED });
-    } catch {
-      toast.add({ type: "error", title: SAVE_FAILED });
-    }
-  }, [isNewAccount]);
+    await updateUser({ changes: { hasSeenOnboarding: true }, fallback: SAVE_FAILED });
+  }, [isNewAccount, updateUser]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -200,7 +209,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
 
   const handleContinue = useCallback(async () => {
     if (currentMeta.id === "preferences") {
-      await form.handleSubmit();
+      await runSubmit(() => form.handleSubmit());
       return;
     }
     if (!isLast) {
@@ -208,15 +217,8 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
       return;
     }
     await close();
-  }, [currentMeta.id, isLast, form, advance, close]);
-
-  const handleSelectSync = useCallback(
-    (type: LaunchableSyncType) => {
-      setSyncSheetType(type);
-      return close();
-    },
-    [close],
-  );
+    await navigate({ to: "/add" });
+  }, [currentMeta.id, isLast, form, advance, close, navigate]);
 
   return (
     <OpenOnboardingContext value={openOnboarding}>
@@ -254,14 +256,7 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                 >
                   <StepHeader meta={meta} />
                   {meta.id === "preferences" ? (
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        void form.handleSubmit();
-                      }}
-                      className="flex flex-col gap-4"
-                    >
+                    <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
                       <form.Field
                         name="username"
                         asyncDebounceMs={1000}
@@ -269,11 +264,12 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                           onChangeAsync: async ({ value }) => {
                             if (value.length < MIN_USERNAME || value.length > MAX_USERNAME) return;
                             if (value === sessionUsername) return;
-                            const { data, error } = await authClient.isUsernameAvailable({
-                              username: value,
-                            });
-                            if (data?.available === false) return "Username is already taken";
-                            if (error) return error.message;
+                            const checked = await decodeAuth(() =>
+                              authClient.isUsernameAvailable({ username: value }),
+                            );
+                            if (checked.isErr()) return checked.error.message;
+                            if (checked.value.available === false)
+                              return "Username is already taken";
                           },
                           onBlur: z
                             .string()
@@ -354,7 +350,8 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
                       </form.Field>
                     </form>
                   ) : null}
-                  {meta.id === "sync" ? <SyncFields onSelect={handleSelectSync} /> : null}
+                  {meta.id === "extension" ? <ExtensionStep /> : null}
+                  {meta.id === "add" ? <AddStep /> : null}
                 </StepperContent>
               ))}
             </StepperPanel>
@@ -380,7 +377,6 @@ function OnboardingProvider({ children }: OnboardingProviderProps) {
           </Stepper>
         </DialogContent>
       </Dialog>
-      <SyncActionSheet syncType={syncSheetType} onSyncTypeChange={setSyncSheetType} />
     </OpenOnboardingContext>
   );
 }
@@ -401,81 +397,22 @@ function StepHeader({ meta }: StepHeaderProps) {
   );
 }
 
-type SyncFieldsProps = {
-  readonly onSelect: (type: LaunchableSyncType) => void;
-};
-
-type SyncOption = {
-  readonly id: LaunchableSyncType;
-  readonly icon: typeof LibraryIcon;
-  readonly title: string;
-  readonly description: string;
-};
-
-const SYNC_OPTIONS: readonly SyncOption[] = [
-  {
-    id: "collection",
-    icon: LibraryIcon,
-    title: SYNC_OPTION_META.collection.title,
-    description: "Paste MyFigureCollection item links or IDs to add to your collection.",
-  },
-  {
-    id: "order",
-    icon: PackageIcon,
-    title: SYNC_OPTION_META.order.title,
-    description: SYNC_OPTION_META.order.description,
-  },
-  {
-    id: "csv",
-    icon: FileUploadIcon,
-    title: SYNC_OPTION_META.csv.title,
-    description: "Use your MyFigureCollection CSV export to import your items.",
-  },
-];
-
-function SyncFields({ onSelect }: SyncFieldsProps) {
+function AddStep() {
   return (
-    <div className="flex flex-col gap-2">
-      {SYNC_OPTIONS.map((option) => (
-        <SyncOptionCard key={option.id} option={option} onSelect={onSelect} />
-      ))}
+    <div className="flex flex-col gap-3 text-sm">
+      <MissingExtensionNotice copyOf={pickExtensionCopy} />
+      <ol className="flex list-decimal flex-col gap-2 pl-5 text-pretty">
+        <li>Open an item on MyFigureCollection.</li>
+        <li>
+          Click <span className="font-medium">Pick for myakiba</span>, next to MFC&apos;s own
+          buttons.
+        </li>
+        <li>Open the Add page, choose where your picks go and add them.</li>
+      </ol>
+      <p className="text-pretty text-muted-foreground">
+        Items already in myakiba can be added from the Add page&apos;s search.
+      </p>
     </div>
-  );
-}
-
-type SyncOptionCardProps = {
-  readonly option: SyncOption;
-  readonly onSelect: (type: LaunchableSyncType) => void;
-};
-
-function SyncOptionCard({ option, onSelect }: SyncOptionCardProps) {
-  return (
-    <Button
-      variant="outline"
-      onClick={() => onSelect(option.id)}
-      className={cn(
-        "group relative h-auto justify-start gap-3.5 whitespace-normal rounded-xl px-4 py-3 text-left",
-        "animate-data-in",
-      )}
-    >
-      <span className="flex size-9 shrink-0 items-center justify-center text-foreground">
-        <HugeiconsIcon icon={option.icon} strokeWidth={2} className="size-4" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium leading-snug">{option.title}</span>
-        <span className="text-xs text-muted-foreground">{option.description}</span>
-      </span>
-      <HugeiconsIcon
-        icon={NavigateIcon}
-        strokeWidth={2}
-        className={cn(
-          "size-4 shrink-0 text-muted-foreground",
-          "transition-[translate,color] duration-200",
-          EASE_OUT,
-          "group-hover:translate-x-(--nudge) group-hover:text-foreground",
-        )}
-      />
-    </Button>
   );
 }
 

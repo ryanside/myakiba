@@ -18,7 +18,6 @@ export const betterAuth = new Elysia({ name: "better-auth" }).macro({
       const session = await pending;
 
       if (!session) return status(401);
-
       return {
         user: session.user,
         session: session.session,

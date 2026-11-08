@@ -3,37 +3,50 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
+import type { Saving } from "@/data/client";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 type Write = { readonly name: string; finish: () => void; fail: () => void };
 const server = { inFlight: [] as Write[], finished: [] as string[] };
 
 const write =
   (name: string) =>
-  (..._args: unknown[]): Promise<void> =>
-    new Promise((resolve, reject) => {
+  (..._args: unknown[]) =>
+    new Promise((resolve) => {
       server.inFlight.push({
         name,
         finish: () => {
           server.finished.push(name);
-          resolve();
+          resolve(Result.ok(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () =>
+          resolve(
+            Result.err(
+              new ApiServerError({
+                status: 500,
+                body: `${name} rejected by server`,
+                message: `${name} rejected by server`,
+              }),
+            ),
+          ),
       });
     });
 
 await mock.module("@/queries/orders", () => ({
-  getOrders: async () => ({
-    items: [],
-    totalCount: 0,
-    totalSpent: 0,
-    activeOrders: 0,
-    unpaidCosts: 0,
-  }),
+  getOrders: async () =>
+    Result.ok({
+      items: [],
+      totalCount: 0,
+      totalSpent: 0,
+      activeOrders: 0,
+      unpaidCosts: 0,
+    }),
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },
-  getOrderItems: async () => ({ items: [], totalCount: 0 }),
-  getOrderItemReleases: async () => [],
+  getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
+  getOrderItemReleases: async () => Result.ok([]),
   mergeOrders: write("merge"),
   splitOrders: write("split"),
   editOrder: write("edit order"),
@@ -65,7 +78,7 @@ const cascade = [] as never;
 const ids = new Set(["a", "b"]);
 
 type Handlers = ReturnType<typeof useOrdersMutations>;
-const HANDLERS: readonly (readonly [string, (h: Handlers) => Promise<void>])[] = [
+const HANDLERS: readonly (readonly [string, (h: Handlers) => Saving])[] = [
   ["handleMerge", (h) => h.handleMerge(newOrder, cascade, ids)],
   ["handleSplit", (h) => h.handleSplit(newOrder, cascade, ids)],
   ["handleDeleteItems", (h) => h.handleDeleteItems(ids)],
@@ -121,14 +134,11 @@ describe.each(LISTS)(
 
     test.each(HANDLERS)("%s: a rejected write rejects the caller's await", async (_name, run) => {
       const handlers = renderOrdersPage(filters);
-      const call = run(handlers.current).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      const call = run(handlers.current).then((saved) => saved.status);
       await waitFor(() => expect(server.inFlight).toHaveLength(1));
       await act(async () => serverWrite().fail());
 
-      expect(await call).toBe("rejected");
+      expect(await call).toBe("error");
     });
   },
 );

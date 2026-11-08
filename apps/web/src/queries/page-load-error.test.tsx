@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient } from "@tanstack/react-query";
+import type { Result } from "better-result";
 import { LoadError } from "@/components/page-states";
 import { wishlist } from "@/data/resources/wishlist";
 import { getCollection } from "./collection";
@@ -22,13 +23,24 @@ function answerWith(status: number) {
   });
 }
 
-async function failureOf(load: () => Promise<object>): Promise<Error> {
+async function failureOf(load: () => Promise<Result<object, Error>>): Promise<Error> {
+  const result = await load();
+  if (result.isErr()) return result.error;
+  throw new Error("the load did not fail");
+}
+
+async function rejectionOf(load: () => Promise<object>): Promise<Error> {
   try {
     await load();
   } catch (error) {
     if (error instanceof Error) return error;
   }
   throw new Error("the load did not reject with an Error");
+}
+
+/** The failure keeps the server's answer for diagnosis, apart from the text a user sees. */
+function expectDiagnostic(error: Error, status: number) {
+  expect(error).toMatchObject({ status, body: "Server detail" });
 }
 
 function expectShownMessage(error: Error, status: number) {
@@ -57,15 +69,13 @@ const reads = [
 ] as const;
 
 describe.each(reads)("%s diagnostics", (_name, load, fallback) => {
-  test.each([400, 503])(
-    "keeps the diagnostic fallback apart from the %d user message",
-    async (status) => {
-      answerWith(status);
-      const error = await failureOf(load);
-      expect(error.message).toBe(fallback);
-      expectShownMessage(error, status);
-    },
-  );
+  test.each([400, 503])("keeps the diagnostic apart from the %d user message", async (status) => {
+    answerWith(status);
+    const error = await failureOf(load);
+    expectDiagnostic(error, status);
+    expect(error.message).toBe(status === 400 ? "Server detail" : fallback);
+    expectShownMessage(error, status);
+  });
 });
 
 describe("Wishlist diagnostics", () => {
@@ -73,12 +83,13 @@ describe("Wishlist diagnostics", () => {
     answerWith(status);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     try {
-      const error = await failureOf(() =>
+      const error = await rejectionOf(() =>
         client.fetchInfiniteQuery(
           wishlist.items.options({ releaseStatus: "all", today: "2026-11-05" }),
         ),
       );
-      expect(error.message).toBe("Failed to load Wishlist");
+      expectDiagnostic(error, status);
+      expect(error.message).toBe(status === 400 ? "Server detail" : "Failed to load Wishlist");
       expectShownMessage(error, status);
     } finally {
       client.clear();

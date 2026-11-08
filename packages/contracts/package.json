@@ -7,18 +7,19 @@
     "./shared/*": "./src/shared/*.ts",
     "./orders/*": "./src/orders/*.ts",
     "./collection/*": "./src/collection/*.ts",
-    "./sync/*": "./src/sync/*.ts",
     "./item/*": "./src/item/*.ts",
+    "./mfc-items/*": "./src/mfc-items/*.ts",
     "./expenses/*": "./src/expenses/*.ts",
     "./search/*": "./src/search/*.ts",
     "./calendar/*": "./src/calendar/*.ts",
     "./analytics/*": "./src/analytics/*.ts",
     "./lists/*": "./src/lists/*.ts",
     "./wishlist/*": "./src/wishlist/*.ts",
-    "./data-transfer/*": "./src/data-transfer/*.ts"
+    "./add/*": "./src/add/*.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
   },
   "dependencies": {
     "zod": "catalog:"

@@ -5,11 +5,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { Order } from "@myakiba/contracts/orders/types";
+import { Result } from "better-result";
+import type { Saving } from "@/data/client";
+import { WriteFailed } from "@/lib/errors/write-failed";
+
+type Answered = Awaited<Saving>;
 
 const realSearch = await import("@/queries/search");
+const targets = { orderIdsAndTitles: [{ id: "od-target", title: "Target Order", images: [] }] };
 await mock.module("@/queries/search", () => ({
   ...realSearch,
-  searchOrders: async () => ({ orderIdsAndTitles: [{ id: "od-target", title: "Target Order" }] }),
+  searchOrders: async () => Result.ok(targets),
 }));
 
 const { OrderForm } = await import("./order-form");
@@ -25,14 +31,14 @@ const settle = () =>
   );
 
 type HeldWrite = {
-  readonly send: (...args: unknown[]) => Promise<void>;
+  readonly send: (...args: unknown[]) => Saving;
   readonly calls: () => number;
   readonly finish: () => Promise<void>;
   readonly fail: () => Promise<void>;
 };
 
 function heldWrite(): HeldWrite {
-  const pending: { resolve: () => void; reject: (error: Error) => void }[] = [];
+  const pending: { resolve: (saved: Answered) => void }[] = [];
   const answer = async (respond: (write: (typeof pending)[number]) => void) => {
     const [write] = pending;
     if (!write) throw new Error("no write reached the server");
@@ -41,12 +47,16 @@ function heldWrite(): HeldWrite {
   };
   return {
     send: () =>
-      new Promise<void>((resolve, reject) => {
-        pending.push({ resolve, reject });
+      new Promise<Answered>((resolve) => {
+        pending.push({ resolve });
       }),
     calls: () => pending.length,
-    finish: () => answer((write) => write.resolve()),
-    fail: () => answer((write) => write.reject(new Error("write rejected by server"))),
+    finish: () => answer((write) => write.resolve(Result.ok())),
+    fail: () =>
+      answer((write) => {
+        const cause = new Error("write rejected by server");
+        write.resolve(Result.err(new WriteFailed({ cause, message: cause.message })));
+      }),
   };
 }
 
@@ -158,7 +168,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
         renderTrigger={trigger}
         selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
         onMoveToExisting={(...args) => write.send(...args)}
-        onMoveToNew={async () => {}}
+        onMoveToNew={async () => Result.ok()}
         clearSelections={clearSelections}
         currency="USD"
       />
@@ -178,7 +188,7 @@ const SUBMIT_PATHS: SubmitPath[] = [
       <UnifiedItemMoveForm
         renderTrigger={trigger}
         selectedItems={{ collectionIds: ids, orderIds: new Set(["od-alpha"]) }}
-        onMoveToExisting={async () => {}}
+        onMoveToExisting={async () => Result.ok()}
         onMoveToNew={(...args) => write.send(...args)}
         clearSelections={clearSelections}
         currency="USD"

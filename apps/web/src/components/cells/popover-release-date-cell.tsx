@@ -23,14 +23,15 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { EmptyValue } from "./empty-value";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 
 interface PopoverReleaseDateCellProps {
   readonly value: string | null;
   readonly dateFormat?: DateFormat;
-  readonly onSubmit: (newValue: string | null) => Promise<void>;
+  readonly onSubmit: (newValue: string | null) => Saving;
   readonly disabled?: boolean;
   readonly trigger?: ReactElement;
   readonly triggerVariant?: "ghost" | "outline";

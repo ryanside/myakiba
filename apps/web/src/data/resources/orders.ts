@@ -9,7 +9,7 @@ import type {
 } from "@myakiba/contracts/orders/schema";
 import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "../api";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { updateCollectionItem } from "@/queries/collection";
 import {
@@ -25,7 +25,8 @@ import {
   moveItem,
   splitOrders,
 } from "@/queries/orders";
-import { MoveNotFoundError } from "@/queries/move-not-found-error";
+import { Result } from "better-result";
+import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
 
@@ -62,7 +63,7 @@ type OnList = { readonly list: OrderFilters };
 
 export const editOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     cascadeOptions,
@@ -118,7 +119,7 @@ export const editOrderCommand = defineCommand({
       );
     }
 
-    return () => {
+    return Result.ok(() => {
       if (previousList) {
         queryClient.setQueryData<OrdersPage>(listKey, previousList);
       }
@@ -128,19 +129,20 @@ export const editOrderCommand = defineCommand({
           previousOrderDetail,
         );
       }
-    };
+    });
   },
   successTitle: () => "Order updated",
-  failureTitle: (_input, error) =>
-    shownMessageOf(error, "Failed to update order. Please try again."),
+  failureToast: (_input, failure) => ({
+    title: shownMessageOf(failure, "Failed to update order. Please try again."),
+  }),
 });
 
 export const deleteOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ orderIds }: { readonly orderIds: Set<string> } & OnList) => deleteOrders(orderIds),
   optimistic: async (queryClient, { orderIds, list }) => {
-    if (hasActiveFiltersOrSorting(list)) return;
+    if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });
@@ -155,18 +157,18 @@ export const deleteOrdersCommand = defineCommand({
       };
     });
 
-    return () => {
+    return Result.ok(() => {
       if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
-    };
+    });
   },
   successTitle: ({ orderIds }) =>
     orderIds.size === 1 ? "Order deleted" : `Successfully deleted ${orderIds.size} orders`,
-  failureTitle: () => "Failed to delete order(s). Please try again.",
+  failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
 });
 
 export const mergeOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     orderIds,
@@ -177,7 +179,7 @@ export const mergeOrdersCommand = defineCommand({
     readonly cascadeOptions: CascadeOptions;
   } & OnList) => mergeOrders(values, orderIds, cascadeOptions),
   optimistic: async (queryClient, { orderIds, list }) => {
-    if (hasActiveFiltersOrSorting(list)) return;
+    if (hasActiveFiltersOrSorting(list)) return Result.ok(null);
 
     const listKey = orders.list.key(list);
     await queryClient.cancelQueries({ queryKey: listKey });
@@ -188,17 +190,17 @@ export const mergeOrdersCommand = defineCommand({
       return { ...old, items: old.items.filter((order) => !orderIds.has(order.orderId)) };
     });
 
-    return () => {
+    return Result.ok(() => {
       if (previous) queryClient.setQueryData<OrdersPage>(listKey, previous);
-    };
+    });
   },
   successTitle: ({ orderIds }) => `Successfully merged ${orderIds.size} orders into one!`,
-  failureTitle: () => "Failed to merge orders. Please try again.",
+  failureToast: () => ({ title: "Failed to merge orders. Please try again." }),
 });
 
 export const splitOrdersCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     collectionIds,
@@ -210,17 +212,17 @@ export const splitOrdersCommand = defineCommand({
   }) => splitOrders(values, collectionIds, cascadeOptions),
   successTitle: ({ collectionIds }) =>
     `Successfully moved ${collectionIds.size} items to a new order!`,
-  failureTitle: () => "Failed to move items to a new order. Please try again.",
+  failureToast: () => ({ title: "Failed to move items to a new order. Please try again." }),
 });
 
 export const editOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
   optimistic: async (queryClient, { values, list }) => {
     const itemOrderId = values.orderId;
-    if (!itemOrderId) return;
+    if (!itemOrderId) return Result.ok(null);
 
     await queryClient.cancelQueries({ queryKey: orderItemsOf(itemOrderId) });
     const previousOrderItems = queryClient.getQueriesData<Page<OrderItem>>({
@@ -274,7 +276,7 @@ export const editOrderItemCommand = defineCommand({
       );
     }
 
-    return () => {
+    return Result.ok(() => {
       for (const [queryKey, data] of previousOrderItems) {
         queryClient.setQueryData(queryKey, data);
       }
@@ -284,15 +286,15 @@ export const editOrderItemCommand = defineCommand({
       if (previousOrderDetail) {
         queryClient.setQueryData<Order>(orderDetailKey, previousOrderDetail);
       }
-    };
+    });
   },
   successTitle: () => "Item updated",
-  failureTitle: () => "Failed to update item. Please try again.",
+  failureToast: () => ({ title: "Failed to update item. Please try again." }),
 });
 
 export const deleteOrderItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ orderId, itemId }: { readonly orderId: string; readonly itemId: string } & OnList) =>
     deleteOrderItem(orderId, itemId),
   optimistic: async (queryClient, { orderId, itemId, list }) => {
@@ -349,7 +351,7 @@ export const deleteOrderItemCommand = defineCommand({
       );
     }
 
-    return () => {
+    return Result.ok(() => {
       for (const [queryKey, data] of previousOrderItems) {
         queryClient.setQueryData(queryKey, data);
       }
@@ -359,25 +361,25 @@ export const deleteOrderItemCommand = defineCommand({
       if (previousOrderDetail) {
         queryClient.setQueryData<Order>(orderDetailKey, previousOrderDetail);
       }
-    };
+    });
   },
   successTitle: () => "Item deleted",
-  failureTitle: () => "Failed to delete item. Please try again.",
+  failureToast: () => ({ title: "Failed to delete item. Please try again." }),
 });
 
 export const deleteOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ collectionIds }: { readonly collectionIds: Set<string> }) =>
     deleteOrderItems(collectionIds),
   successTitle: ({ collectionIds }) =>
     collectionIds.size === 1 ? "Item deleted" : `Successfully deleted ${collectionIds.size} items`,
-  failureTitle: () => "Failed to delete items. Please try again.",
+  failureToast: () => ({ title: "Failed to delete items. Please try again." }),
 });
 
 export const moveOrderItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     targetOrderId,
     collectionIds,
@@ -389,6 +391,10 @@ export const moveOrderItemsCommand = defineCommand({
   }) => moveItem(targetOrderId, collectionIds, orderIds),
   successTitle: ({ collectionIds }) =>
     collectionIds.size === 1 ? "Item moved" : `Successfully moved ${collectionIds.size} items`,
-  failureTitle: (_input, error) =>
-    error instanceof MoveNotFoundError ? error.message : "Failed to move items. Please try again.",
+  failureToast: (_input, failure) => ({
+    title:
+      failure && MoveTargetGone.is(failure)
+        ? failure.message
+        : "Failed to move items. Please try again.",
+  }),
 });

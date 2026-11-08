@@ -1,4 +1,5 @@
 import { afterEach, expect, mock, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -57,10 +58,10 @@ const item: CollectionItem = {
 };
 
 const handlers = {
-  onEditCollectionItem: async () => {},
-  onDeleteCollectionItems: async () => {},
-  onAddCollectionItemsToOrder: async () => {},
-  onAddCollectionItemsToNewOrder: async () => {},
+  onEditCollectionItem: async () => Result.ok(),
+  onDeleteCollectionItems: async () => Result.ok(),
+  onAddCollectionItemsToOrder: async () => Result.ok(),
+  onAddCollectionItemsToNewOrder: async () => Result.ok(),
   currency: "USD",
   dateFormat: "MM/DD/YYYY",
 } as const;

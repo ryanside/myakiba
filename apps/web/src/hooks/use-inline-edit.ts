@@ -1,13 +1,15 @@
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import { toast } from "@/components/ui/toast";
+import type { Saving } from "@/data/client";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import { runSubmit } from "@/lib/form-submit";
 
 interface InlineEditOptions<Value, Draft extends string | number> {
   /** What the cell holds, such as "Shop", for the trigger's accessible name. */
   label: string;
   value: Value;
-  onSubmit: (value: Value) => Promise<void> | void;
+  onSubmit: (value: Value) => Saving;
   /** The text the trigger shows. An empty string reads as Empty. */
   format: (value: Value) => string;
   toDraft: (value: Value) => Draft;
@@ -67,11 +69,11 @@ function useInlineEdit<Value, Draft extends string | number>({
     handleOpen: () => setDraft(toDraft(shown)),
     editorHandlers: {
       onBlur: async () => {
-        if (!disabled) await save();
+        if (!disabled) await runSubmit(save);
       },
       onKeyDown: async (event) => {
         if (event.key === "Enter") {
-          await save();
+          await runSubmit(save);
         } else if (event.key === "Escape") {
           setDraft(null);
         }

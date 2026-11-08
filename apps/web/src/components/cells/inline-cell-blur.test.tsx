@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { InlineCountCell } from "./inline-count-cell";
 import { InlineCurrencyCell } from "./inline-currency-cell";
@@ -11,6 +12,7 @@ function recordedWrites<Value>() {
   const writes: Value[] = [];
   const onSubmit = async (value: Value) => {
     writes.push(value);
+    return Result.ok();
   };
   return { writes, onSubmit };
 }

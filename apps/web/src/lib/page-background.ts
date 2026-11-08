@@ -7,8 +7,8 @@ import wishlist from "@/assets/backgrounds/24-day-gachapon-bitgrain.webp";
 import lists from "@/assets/backgrounds/08-lists-bitgrain.webp";
 import items from "@/assets/backgrounds/72-autumn-crossing-bitgrain.webp";
 import calendar from "@/assets/backgrounds/83-train-station-display-bitgrain.webp";
-import sync from "@/assets/backgrounds/87-tokyo-power-lines-bitgrain.webp";
 import settings from "@/assets/backgrounds/10-settings-desk-bitgrain.webp";
+import add from "@/assets/backgrounds/87-tokyo-power-lines-bitgrain.webp";
 import { pageBackgroundsEnabled } from "@/hooks/use-appearance";
 
 const backgrounds: ReadonlyMap<string, string> = new Map([
@@ -21,8 +21,8 @@ const backgrounds: ReadonlyMap<string, string> = new Map([
   ["lists", lists],
   ["items", items],
   ["calendar", calendar],
-  ["sync", sync],
   ["settings", settings],
+  ["add", add],
 ]);
 
 const plainDetailSections: ReadonlySet<string> = new Set(["orders"]);

@@ -6,6 +6,8 @@ import {
   SHIPPING_METHODS,
 } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
+import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
+import { itemIdField } from "@myakiba/contracts/add/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
 import {
@@ -27,6 +29,7 @@ export const collectionQuerySchema = collectionSearchSchema.extend({
   scale: commaSeparatedStringArraySchema,
   tags: commaSeparatedStringArraySchema,
   condition: commaSeparatedConditionArray,
+  ids: commaSeparatedStringArraySchema.pipe(z.array(itemIdField).max(MAX_ADD_ROWS).optional()),
 });
 
 export type CollectionQuery = z.infer<typeof collectionQuerySchema>;

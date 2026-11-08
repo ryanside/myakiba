@@ -1,0 +1,308 @@
+import type * as z from "zod";
+import { Result, ResultDeserializationError } from "better-result";
+import {
+  BRIDGE_CHANNEL,
+  BRIDGE_PROTOCOL,
+  bridgeEventSchema,
+  pageItemCodec,
+} from "@myakiba/mfc/bridge";
+import type { ItemFetchErrorCode } from "@myakiba/contracts/mfc-items/fetch-errors";
+import type {
+  BridgePicture,
+  ItemFailure,
+  ItemPage,
+  bridgeRequestSchema,
+} from "@myakiba/mfc/bridge";
+import type { MfcItemId } from "@myakiba/mfc/page";
+import { ExtensionStopped } from "./errors/extension-stopped";
+import { MfcItemFetchFailed } from "./errors/mfc-item-fetch-failed";
+
+const HELLO_TIMEOUT_MS = 500;
+const HELLO_INTERVAL_MS = 100;
+const PICKS_ANSWER_MS = 5000;
+
+export type ExtensionStatus =
+  | { readonly kind: "checking" }
+  | { readonly kind: "absent" }
+  | { readonly kind: "outdated"; readonly extensionVersion: string }
+  | { readonly kind: "ready"; readonly extensionVersion: string };
+
+/** Why an item came back without its page. */
+export type ItemFetchFailure = MfcItemFetchFailed | ExtensionStopped;
+
+export type ExtensionFetchEvent =
+  | {
+      readonly type: "item";
+      readonly mfcItemId: MfcItemId;
+      readonly result: Result<ItemPage<Blob>, ItemFetchFailure>;
+    }
+  | {
+      readonly type: "status";
+      readonly state: "queued" | "fetching" | "needs_user" | "backing_off" | "unknown";
+      readonly untilMs: number | null;
+    };
+
+/** A pick the extension handed over, ready to upload. It stays in the extension until reported saved or discarded. */
+export type TakenPick = {
+  readonly mfcItemId: MfcItemId;
+  readonly title: string | null;
+  readonly pickedAt: number;
+  readonly page: File;
+  readonly picture: File | null;
+};
+
+type PickIds = readonly [MfcItemId, ...MfcItemId[]];
+
+export type ExtensionBridge = {
+  readonly status: () => ExtensionStatus;
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly probe: () => Promise<ExtensionStatus>;
+  readonly fetchItems: (
+    mfcItemIds: readonly MfcItemId[],
+    options: { readonly signal: AbortSignal },
+  ) => AsyncIterable<ExtensionFetchEvent>;
+  /** The picks kept for this browser context. No answer within 5 s reads as no picks. */
+  readonly takePicks: () => Promise<Result<readonly TakenPick[], ExtensionStopped>>;
+  readonly picksSaved: (mfcItemIds: PickIds) => Promise<Result<void, ExtensionStopped>>;
+  readonly picksDiscarded: (mfcItemIds: PickIds) => Promise<Result<void, ExtensionStopped>>;
+};
+
+type BridgeMessageEvent = {
+  readonly source: unknown;
+  readonly origin: string;
+  readonly data: unknown;
+};
+
+export type BridgeRequestMessage = z.input<typeof bridgeRequestSchema>;
+
+export type BridgeWindow = {
+  readonly location: { readonly origin: string };
+  readonly addEventListener: (
+    type: "message",
+    listener: (event: BridgeMessageEvent) => void,
+  ) => void;
+  readonly postMessage: (message: BridgeRequestMessage, targetOrigin: string) => void;
+};
+
+type ReceivedEvent = z.output<typeof bridgeEventSchema>["event"];
+
+type ReceivedItem = Result<ItemPage<BridgePicture>, ItemFailure<ItemFetchErrorCode | "unknown">>;
+
+type RunEvent =
+  | Exclude<ReceivedEvent, { readonly type: "announce" | "item" }>
+  | { readonly type: "item"; readonly mfcItemId: MfcItemId; readonly result: ReceivedItem };
+
+function statusFromAnnounce(
+  announce: Extract<ReceivedEvent, { type: "announce" }>,
+): ExtensionStatus {
+  const { extensionVersion, protocols } = announce;
+  return protocols.min <= BRIDGE_PROTOCOL && BRIDGE_PROTOCOL <= protocols.max
+    ? { kind: "ready", extensionVersion }
+    : { kind: "outdated", extensionVersion };
+}
+
+type PicksEvent = Extract<ReceivedEvent, { type: "picks" }>;
+
+function takenPick({ mfcItemId, title, pickedAt, html, picture }: PicksEvent["picks"][number]) {
+  return {
+    mfcItemId,
+    title,
+    pickedAt,
+    page: new File([html], "page.html", { type: "text/html" }),
+    picture: picture && new File([picture.bytes], "picture", { type: picture.contentType }),
+  } satisfies TakenPick;
+}
+
+export function createExtensionBridge(
+  win: BridgeWindow,
+  { picksAnswerMs = PICKS_ANSWER_MS }: { readonly picksAnswerMs?: number } = {},
+): ExtensionBridge {
+  const origin = win.location.origin;
+  const listeners = new Set<() => void>();
+  const runs = new Map<string, (event: RunEvent) => void>();
+  let status: ExtensionStatus = { kind: "checking" };
+  let probing: {
+    readonly hellos: ReadonlySet<string>;
+    readonly answer: (next: ExtensionStatus) => void;
+    readonly result: Promise<ExtensionStatus>;
+  } | null = null;
+
+  function setStatus(next: ExtensionStatus): void {
+    status = next;
+    for (const listener of listeners) listener();
+  }
+
+  function post(requestId: string, request: BridgeRequestMessage["request"]): void {
+    win.postMessage(
+      { channel: BRIDGE_CHANNEL, protocol: BRIDGE_PROTOCOL, requestId, request },
+      origin,
+    );
+  }
+
+  win.addEventListener("message", (message) => {
+    if (message.source !== win || message.origin !== origin) return;
+    const decoded = bridgeEventSchema.safeParse(message.data);
+    if (!decoded.success) return;
+    const { requestId, event } = decoded.data;
+    if (event.type === "announce") {
+      const next = statusFromAnnounce(event);
+      if (requestId !== null && probing?.hellos.has(requestId)) probing.answer(next);
+      else setStatus(next);
+      return;
+    }
+    const run = requestId === null ? undefined : runs.get(requestId);
+    if (run === undefined) return;
+    if (event.type !== "item") {
+      run(event);
+      return;
+    }
+    // The extension is released apart from this page, so a result the page cannot read is dropped like any unreadable event.
+    const read = pageItemCodec.deserialize(event.result);
+    if (read.isOk()) {
+      run({ ...event, result: Result.ok(read.value) });
+      return;
+    }
+    if (ResultDeserializationError.is(read.error)) return;
+    run({ ...event, result: Result.err(read.error) });
+  });
+
+  function probe(): Promise<ExtensionStatus> {
+    if (probing) return probing.result;
+    const hellos = new Set<string>();
+    let settle: (status: ExtensionStatus) => void = () => {};
+    const result = new Promise<ExtensionStatus>((resolve) => {
+      settle = resolve;
+    });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const answer = (next: ExtensionStatus) => {
+      clearTimeout(timer);
+      probing = null;
+      setStatus(next);
+      settle(next);
+    };
+    probing = { hellos, answer, result };
+    const deadline = Date.now() + HELLO_TIMEOUT_MS;
+    const hello = () => {
+      if (Date.now() >= deadline) {
+        // An update orphans the old content script, which then stays silent until the page reloads.
+        answer(status.kind === "outdated" ? status : { kind: "absent" });
+        return;
+      }
+      const requestId = crypto.randomUUID();
+      hellos.add(requestId);
+      post(requestId, { type: "hello" });
+      timer = setTimeout(hello, HELLO_INTERVAL_MS);
+    };
+    hello();
+    return result;
+  }
+
+  async function* fetchItems(
+    mfcItemIds: readonly MfcItemId[],
+    { signal }: { readonly signal: AbortSignal },
+  ): AsyncGenerator<ExtensionFetchEvent> {
+    const unanswered = new Set(mfcItemIds);
+    const inbox: RunEvent[] = [];
+    let wake: (() => void) | null = null;
+    const nextEvent = async (): Promise<RunEvent | undefined> => {
+      if (inbox.length === 0 && !signal.aborted) {
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = null;
+      }
+      return inbox.shift();
+    };
+    const requestId = crypto.randomUUID();
+    runs.set(requestId, (event) => {
+      inbox.push(event);
+      wake?.();
+    });
+    const onAbort = () => {
+      post(crypto.randomUUID(), { type: "cancel", targetRequestId: requestId });
+      wake?.();
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    try {
+      if (!signal.aborted) post(requestId, { type: "fetch-items", mfcItemIds: [...unanswered] });
+      while (unanswered.size > 0 && !signal.aborted) {
+        const event = await nextEvent();
+        if (event === undefined) continue;
+        if (event.type === "done") break;
+        if (event.type === "status") {
+          yield { type: "status", state: event.state, untilMs: event.untilMs };
+        } else if (event.type === "item" && unanswered.delete(event.mfcItemId)) {
+          const result = event.result
+            .map(({ html, picture }) => ({
+              html,
+              picture: picture && new Blob([picture.bytes], { type: picture.contentType }),
+            }))
+            .mapError(({ code }) => new MfcItemFetchFailed({ code }));
+          yield { type: "item", mfcItemId: event.mfcItemId, result };
+        }
+      }
+    } finally {
+      runs.delete(requestId);
+      signal.removeEventListener("abort", onAbort);
+    }
+    for (const mfcItemId of unanswered) {
+      yield { type: "item", mfcItemId, result: Result.err(new ExtensionStopped()) };
+    }
+  }
+
+  /** Sends one request and resolves with the first event `answer` reads, or with `silence` once the deadline passes. */
+  function ask<Answer>(
+    request: BridgeRequestMessage["request"],
+    answer: (event: RunEvent) => Answer | undefined,
+    silence: Answer,
+  ): Promise<Answer> {
+    const requestId = crypto.randomUUID();
+    return new Promise((resolve) => {
+      const settle = (value: Answer) => {
+        clearTimeout(timer);
+        runs.delete(requestId);
+        resolve(value);
+      };
+      const timer = setTimeout(() => settle(silence), picksAnswerMs);
+      runs.set(requestId, (event) => {
+        const value = answer(event);
+        if (value !== undefined) settle(value);
+      });
+      post(requestId, request);
+    });
+  }
+
+  const acknowledge = (type: "picks-saved" | "picks-discarded", mfcItemIds: PickIds) =>
+    ask(
+      { type, mfcItemIds: [...mfcItemIds] },
+      (event): Result<void, ExtensionStopped> | undefined => {
+        if (event.type !== "done") return undefined;
+        return event.reason === "complete" ? Result.ok() : Result.err(new ExtensionStopped());
+      },
+      Result.err(new ExtensionStopped()),
+    );
+
+  return {
+    status: () => status,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    probe,
+    fetchItems,
+    takePicks: () =>
+      ask(
+        { type: "take-picks" },
+        (event): Result<readonly TakenPick[], ExtensionStopped> | undefined => {
+          if (event.type === "picks") return Result.ok(event.picks.map(takenPick));
+          if (event.type === "done") return Result.err(new ExtensionStopped());
+          return undefined;
+        },
+        Result.ok([]),
+      ),
+    picksSaved: (mfcItemIds) => acknowledge("picks-saved", mfcItemIds),
+    picksDiscarded: (mfcItemIds) => acknowledge("picks-discarded", mfcItemIds),
+  };
+}
+
+export const extensionBridge = createExtensionBridge(window);

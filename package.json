@@ -14,14 +14,14 @@
       "drizzle-zod": "^0.8.3",
       "ioredis": "^6.0.0",
       "postgres": "^3.4.8",
-      "bullmq": "^6.1.2",
       "@paralleldrive/cuid2": "^3.3.0",
       "dotenv": "^17.2.4",
       "uuid": "^14.0.2",
       "better-auth": "^1.7.16",
       "elysia": "^1.4.25",
       "date-fns": "^4.1.0",
-      "evlog": "^2.26.0"
+      "evlog": "^2.26.0",
+      "better-result": "^3.0.1"
     }
   },
   "type": "module",
@@ -29,12 +29,11 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
-    "test": "turbo run test && bun test ./tools/oxlint/ ./scripts/",
+    "test": "bun scripts/run-tests.ts",
     "stop": "turbo run db:stop redis:stop",
     "dev:native": "turbo run dev -F native",
     "dev:web": "turbo run dev -F web",
     "dev:server": "turbo run dev -F server",
-    "dev:worker": "turbo run dev -F worker",
     "db:push": "turbo run db:push -F @myakiba/db",
     "db:push:interactive": "turbo run db:push:interactive -F @myakiba/db",
     "db:studio": "turbo run db:studio -F @myakiba/db",
@@ -52,7 +51,8 @@
     "audit": "bun audit --ignore=GHSA-67mh-4wv8-2f99 --ignore=GHSA-vfj7-8cjw-p6xm --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-g3hv-75wg-m249",
     "fix": "ultracite fix",
     "prepare": "husky",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "npx react-doctor@latest",
+    "test:tooling": "bun test ./tools/oxlint/ ./scripts/"
   },
   "dependencies": {},
   "devDependencies": {

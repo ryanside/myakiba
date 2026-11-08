@@ -1,0 +1,32 @@
+{
+  "name": "extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wxt build && wxt build -b firefox",
+    "zip": "wxt zip && wxt zip -b firefox",
+    "icons": "bun scripts/icons.ts",
+    "verify-sources": "bash scripts/verify-sources.sh",
+    "check-types": "tsc --noEmit",
+    "test": "bun test lib/",
+    "e2e": "bun test e2e/",
+    "check-manifest": "bun scripts/check-manifest.ts"
+  },
+  "dependencies": {
+    "@myakiba/contracts": "workspace:*",
+    "@myakiba/env": "workspace:*",
+    "@myakiba/mfc": "workspace:*",
+    "@myakiba/utils": "workspace:*",
+    "better-result": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@myakiba/config": "workspace:*",
+    "@types/bun": "catalog:",
+    "happy-dom": "^21.0.3",
+    "playwright": "1.64.1",
+    "tinyglobby": "0.2.17",
+    "wxt": "0.21.4"
+  }
+}

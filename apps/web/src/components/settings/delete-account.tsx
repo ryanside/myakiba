@@ -22,6 +22,7 @@ import {
 import { useState } from "react";
 import * as z from "zod";
 import { SettingsRow } from "./settings-row";
+import { formSubmitHandler } from "@/lib/form-submit";
 import { FreshSignInNotice } from "./sign-in-again";
 
 const CONFIRMATION_PHRASE = "delete my account";
@@ -39,21 +40,21 @@ export function DeleteAccount() {
       confirmationPhrase: "",
     },
     onSubmit: async ({ value }) => {
-      const { error } = await run(
+      const deleted = await run(
         () =>
           endSession(() =>
             authClient.deleteUser(hasCredentialAccount ? { password: value.password } : {}),
           ),
-        (result) => !result.error,
+        (ended) => ended.isOk(),
       );
-      if (isStaleSignIn(error)) {
-        setNeedsFreshSignIn(true);
-        return;
-      }
-      if (error) {
+      if (deleted.isErr()) {
+        if (isStaleSignIn(deleted.error)) {
+          setNeedsFreshSignIn(true);
+          return;
+        }
         toast.add({
           type: "error",
-          title: error.message || "Couldn't delete account. Try again.",
+          title: deleted.error.message || "Couldn't delete account. Try again.",
         });
         return;
       }
@@ -103,14 +104,7 @@ export function DeleteAccount() {
               />
             </div>
           ) : (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                return form.handleSubmit();
-              }}
-              className="flex flex-col gap-4"
-            >
+            <form onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
               {hasCredentialAccount ? (
                 <form.Field
                   name="password"

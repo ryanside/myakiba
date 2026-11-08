@@ -1,10 +1,15 @@
+import { Result } from "better-result";
+import { requireExtension } from "@/lib/extension-gate";
 import {
   getItem,
   getItemRelatedCollection,
   getItemRelatedOrders,
   getItemReleases,
+  getRefreshStatus,
 } from "@/queries/item";
-import { rootedRead } from "../client";
+import { refreshResultFamilies } from "../catalog";
+import { defineCommand, rootedRead, useResourceMutation } from "../client";
+import { refreshFailureText, refreshItemWithExtension } from "../item-refresh";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -29,4 +34,35 @@ export const items = {
     load: getItemReleases,
     ...cache,
   }),
+  refreshStatus: rootedRead("item", {
+    key: (externalId: number) => ["item", externalId, "refreshStatus"] as const,
+    load: getRefreshStatus,
+    staleTime: 1000 * 30,
+    retry: false,
+  }),
 };
+
+export const refreshItemCommand = defineCommand({
+  invalidates: refreshResultFamilies,
+  failureRefetchKeys: (externalId: number) => [
+    { queryKey: items.refreshStatus.key(externalId), exact: true },
+  ],
+  persist: (externalId: number) => refreshItemWithExtension(externalId),
+  successTitle: (_externalId, refreshed) =>
+    refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
+  failureToast: (_externalId, failure) => ({
+    title: "Failed to request item refresh",
+    ...(failure && { description: refreshFailureText(failure) }),
+  }),
+});
+
+/** Asks for the extension first, so a refused refresh writes nothing and shows the notice that says why. */
+export function useRefreshItem() {
+  const refresh = useResourceMutation(refreshItemCommand);
+  const run = async (externalId: number) => {
+    const ready = await requireExtension();
+    if (ready.isErr()) return Result.err(ready.error);
+    return refresh.run(externalId);
+  };
+  return { run, isPending: refresh.isPending } as const;
+}

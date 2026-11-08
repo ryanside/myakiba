@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import { itemDatabaseSearchResponseSchema } from "@myakiba/contracts/search/schema";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 
-const { collection, entry, entry_to_item, item, item_release, order } = figureSchema;
+const { collection, entry, entry_to_item, item, item_release, order, wishlistItem } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -102,6 +104,9 @@ describe("each search route answers as before", () => {
           image: null,
           category: null,
           latestRelease: { date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
+          collectionCount: 1,
+          onOrderCount: 0,
+          wishlisted: false,
         },
         {
           itemId: "item-2",
@@ -110,6 +115,9 @@ describe("each search route answers as before", () => {
           image: null,
           category: null,
           latestRelease: null,
+          collectionCount: 0,
+          onOrderCount: 0,
+          wishlisted: false,
         },
       ],
       totalCount: 2,
@@ -117,6 +125,40 @@ describe("each search route answers as before", () => {
     expect(await call("/items?query=artist")).toMatchObject({
       status: 200,
       body: { items: [{ itemId: "item-3" }] },
+    });
+  });
+
+  test("item database search badges count only the viewer's Collection Items and Wishlist", async () => {
+    await db.insert(collection).values([
+      { id: "c-plain", userId, itemId: "item-1" },
+      { id: "c-ordered", userId, itemId: "item-2", orderId: "order-2", status: "Ordered" },
+      { id: "c-paid", userId, itemId: "item-3", status: "Paid" },
+      { id: "c-shipped", userId, itemId: "item-3", status: "Shipped" },
+      { id: "c-other-2", userId: "user-2", itemId: "item-1", status: "Ordered" },
+      { id: "c-other-3", userId: "user-2", itemId: "item-3" },
+    ]);
+    await db.insert(wishlistItem).values([
+      { userId, itemId: "item-2" },
+      { userId: "user-2", itemId: "item-1" },
+    ]);
+
+    const { status, body } = await call("/items?query=miku");
+
+    expect(status).toBe(200);
+    const badges = Object.fromEntries(
+      itemDatabaseSearchResponseSchema.parse(body).items.map((found) => [
+        found.itemId,
+        {
+          collectionCount: found.collectionCount,
+          onOrderCount: found.onOrderCount,
+          wishlisted: found.wishlisted,
+        },
+      ]),
+    );
+    expect(badges).toEqual({
+      "item-1": { collectionCount: 2, onOrderCount: 0, wishlisted: false },
+      "item-2": { collectionCount: 0, onOrderCount: 1, wishlisted: true },
+      "item-3": { collectionCount: 0, onOrderCount: 2, wishlisted: false },
     });
   });
 
@@ -151,13 +193,23 @@ describe("each search route answers as before", () => {
     expect(all).toMatchObject({ status: 200, body: { orderIdsAndTitles: [{}, {}] } });
     expect(all.body).toEqual({
       orderIdsAndTitles: expect.arrayContaining([
-        { id: "order-1", title: "Miku preorder" },
-        { id: "order-2", title: "Rin preorder" },
+        { id: "order-1", title: "Miku preorder", images: [] },
+        { id: "order-2", title: "Rin preorder", images: [] },
       ]),
     });
     expect(await call("/orders?title=miku")).toEqual({
       status: 200,
-      body: { orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder" }] },
+      body: { orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder", images: [] }] },
+    });
+  });
+
+  test("order search gives each Order its Items' pictures", async () => {
+    await db.update(item).set({ image: "miku.jpg" }).where(eq(item.id, "item-1"));
+    expect(await call("/orders?title=miku")).toEqual({
+      status: 200,
+      body: {
+        orderIdsAndTitles: [{ id: "order-1", title: "Miku preorder", images: ["miku.jpg"] }],
+      },
     });
   });
 });

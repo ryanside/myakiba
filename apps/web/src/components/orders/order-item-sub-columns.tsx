@@ -6,12 +6,11 @@ import {
   Edit03Icon,
   Loading03Icon,
   MoreHorizontalIcon,
-  PackageIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
+import { ItemTitleCell } from "@/components/cells/item-title-cell";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,13 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { cn } from "@/lib/utils";
 import type { Currency, DateFormat, OrderStatus } from "@myakiba/contracts/shared/types";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { toast } from "@/components/ui/toast";
+import { writeClipboard } from "@/lib/clipboard";
 import { Link } from "@tanstack/react-router";
 import CollectionItemForm from "../collection/collection-item-form";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
@@ -42,12 +42,13 @@ import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
+import type { Saving } from "@/data/client";
 import { itemDestination } from "@/lib/item-destination";
 
 interface OrderItemSubColumnsParams {
   orderId: string;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onEditItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteItem: (orderId: string, itemId: string) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -118,9 +119,8 @@ function OrderItemActionsCell({
                     return;
                   }
 
-                  try {
-                    await navigator.clipboard.writeText(String(item.itemExternalId));
-                  } catch {
+                  const copied = await writeClipboard(String(item.itemExternalId));
+                  if (copied.isErr()) {
                     toast.add({
                       type: "error",
                       title: "Could not copy MFC item ID to clipboard",
@@ -149,7 +149,7 @@ function OrderItemActionsCell({
           ) : null}
         </DropdownMenu>
       </div>
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Remove item?"
@@ -177,31 +177,23 @@ export function createOrderItemSubColumns({
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <SelectionCheckbox
+          label="Select all"
           checked={table.getIsAllPageRowsSelected()}
           indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select all"
-          className="align-[inherit] mb-0.5 rounded-xs"
+          stopRowClick
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
         />
       ),
       cell: ({ row }) => (
-        <>
-          <div
-            className={cn(
-              "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block",
-            )}
-          />
-          <Checkbox
+        <SelectionCell selected={row.getIsSelected()}>
+          <SelectionCheckbox
+            label="Select row"
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-            className="align-[inherit] mb-0.5 rounded-xs"
+            stopRowClick
+            onCheckedChange={(value) => row.toggleSelected(value)}
           />
-        </>
+        </SelectionCell>
       ),
       size: 32,
       enableSorting: false,
@@ -220,29 +212,14 @@ export function createOrderItemSubColumns({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex items-center gap-3">
-            <Link
-              {...itemDestination(item.itemId, item.itemExternalId)}
-              aria-label={`View ${item.itemTitle}`}
-            >
-              <ImageThumbnail
-                images={item.itemImage ? [item.itemImage] : []}
-                title={item.itemTitle}
-                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 shrink-0 rounded-md"
-              />
-            </Link>
-            <div className="min-w-0 space-y-px">
-              <Link
-                className="block truncate font-medium text-foreground"
-                title={item.itemTitle}
-                {...itemDestination(item.itemId, item.itemExternalId)}
-              >
-                {item.itemTitle}
-              </Link>
-              <CategoryLabel category={item.itemCategory} />
-            </div>
-          </div>
+          <ItemTitleCell
+            itemId={item.itemId}
+            title={item.itemTitle}
+            externalId={item.itemExternalId}
+            image={item.itemImage}
+          >
+            {item.itemCategory ? <CategoryLabel category={item.itemCategory} /> : null}
+          </ItemTitleCell>
         );
       },
       enableSorting: true,

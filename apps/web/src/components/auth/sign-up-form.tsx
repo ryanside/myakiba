@@ -1,4 +1,4 @@
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
@@ -12,6 +12,7 @@ import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 function GoogleIcon() {
   return (
@@ -36,24 +37,19 @@ function GoogleIcon() {
   );
 }
 
-export default function SignUpForm() {
+export default function SignUpForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const navigate = useNavigate();
 
   const handleGoogleAuth = async () => {
-    await authClient.signIn.social(
-      {
+    const started = await decodeAuth(() =>
+      authClient.signIn.social({
         provider: "google",
-        callbackURL: getAuthRedirectUrl("/dashboard"),
-      },
-      {
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || error.error.statusText,
-          });
-        },
-      },
+        callbackURL: getAuthRedirectUrl(redirectTo),
+      }),
     );
+    if (started.isErr()) {
+      toast.add({ type: "error", title: started.error.message || started.error.statusText });
+    }
   };
 
   const { status, run } = useButtonStatus();
@@ -67,36 +63,30 @@ export default function SignUpForm() {
     onSubmit: async ({ value }) => {
       const captchaToken = await captcha.token();
       if (captchaToken === null) return;
-      await run(
+      const signedUp = await run(
         () =>
-          authClient.signUp.email(
-            {
-              email: value.email,
-              password: value.password,
-              name: value.username,
-              username: value.username,
-              callbackURL: getAuthRedirectUrl("/dashboard"),
-            },
-            {
-              headers: {
-                "x-captcha-response": captchaToken,
+          decodeAuth(() =>
+            authClient.signUp.email(
+              {
+                email: value.email,
+                password: value.password,
+                name: value.username,
+                username: value.username,
+                callbackURL: getAuthRedirectUrl(redirectTo),
               },
-              onSuccess: () => {
-                navigate({
-                  to: "/login",
-                  search: { view: "verify-email", email: value.email },
-                });
-              },
-              onError: (error) => {
-                toast.add({
-                  type: "error",
-                  title: error.error.message || error.error.statusText,
-                });
-              },
-            },
+              { headers: { "x-captcha-response": captchaToken } },
+            ),
           ),
-        (result) => !result.error,
+        (result) => result.isOk(),
       );
+      if (signedUp.isErr()) {
+        toast.add({ type: "error", title: signedUp.error.message || signedUp.error.statusText });
+        return;
+      }
+      navigate({
+        to: "/login",
+        search: { view: "verify-email", email: value.email, redirect: redirectTo },
+      });
     },
     validators: {
       onSubmit: z.object({
@@ -120,7 +110,11 @@ export default function SignUpForm() {
           </h1>
           <p className="text-[0.9375rem] text-muted-foreground">
             Already have one?{" "}
-            <Link to="/login" className="font-medium text-foreground underline underline-offset-4">
+            <Link
+              to="/login"
+              search={{ redirect: redirectTo }}
+              className="font-medium text-foreground underline underline-offset-4"
+            >
               Sign in
             </Link>
           </p>
@@ -142,14 +136,7 @@ export default function SignUpForm() {
         <span className="bg-background text-muted-foreground relative z-10 px-2">or</span>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="grid gap-4"
-      >
+      <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
         <form.Field
           name="username"
           asyncDebounceMs={1000}
@@ -160,14 +147,14 @@ export default function SignUpForm() {
               } else if (value.length > 30) {
                 return;
               }
-              const { data, error } = await authClient.isUsernameAvailable({
-                username: value,
-              });
-              if (data?.available === false) {
-                return "Username is already taken";
+              const checked = await decodeAuth(() =>
+                authClient.isUsernameAvailable({ username: value }),
+              );
+              if (checked.isErr()) {
+                return checked.error.message;
               }
-              if (error) {
-                return error.message;
+              if (checked.value.available === false) {
+                return "Username is already taken";
               }
             },
             onBlur: z

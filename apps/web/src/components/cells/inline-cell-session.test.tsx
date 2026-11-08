@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
+import type { Saving } from "@/data/client";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { Toaster } from "@/components/ui/toast";
@@ -14,13 +16,14 @@ function recordedWrites<Value>() {
   const writes: Value[] = [];
   const onSubmit = async (value: Value) => {
     writes.push(value);
+    return Result.ok();
   };
   return { writes, onSubmit };
 }
 
 type CellCase<Value> = {
   name: string;
-  render: (onSubmit: (value: Value) => Promise<void>) => ReactElement;
+  render: (onSubmit: (value: Value) => Saving) => ReactElement;
   trigger: string;
   open: (trigger: HTMLElement) => void;
   editor: () => HTMLElement;
@@ -70,7 +73,7 @@ describe.each([textCell, countCell, currencyCell] as CellCase<unknown>[])(
   "an inline $name cell",
   (cell) => {
     test("names its trigger after the value it shows", () => {
-      render(cell.render(async () => {}));
+      render(cell.render(async () => Result.ok()));
       expect(screen.getByRole("button", { name: cell.trigger })).toBeDefined();
     });
 
@@ -112,7 +115,7 @@ describe.each([textCell, countCell, currencyCell] as CellCase<unknown>[])(
 
 describe("an inline text cell", () => {
   test("shows a dash for an empty value and names its trigger Empty", () => {
-    render(<InlineTextCell label="Shop" value="" onSubmit={async () => {}} />);
+    render(<InlineTextCell label="Shop" value="" onSubmit={async () => Result.ok()} />);
     expect(screen.getByRole("button", { name: "Empty, edit Shop" }).textContent).toBe("—");
   });
 
@@ -154,7 +157,7 @@ describe("an inline text cell", () => {
       <InlineTextCell
         label="Title"
         value="Spring order"
-        onSubmit={async () => {}}
+        onSubmit={async () => Result.ok()}
         validate={(value) => {
           checked.push(value);
           return true;
@@ -181,7 +184,7 @@ describe("an inline currency cell", () => {
         currency="USD"
         locale="en-US"
         zeroAsEmpty
-        onSubmit={async () => {}}
+        onSubmit={async () => Result.ok()}
       />,
     );
     expect(screen.getByRole("button", { name: "Empty, edit Price" }).textContent).toBe("—");

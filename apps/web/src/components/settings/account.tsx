@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { useForm } from "@tanstack/react-form";
 import { Link, getRouteApi } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,10 +26,12 @@ import {
 } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
+import { useResendVerification } from "@/hooks/use-resend-verification";
 import { settings } from "@/data/resources/settings";
-import { authClient, callAuth } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { User } from "@/lib/auth-client";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 import { cn } from "@/lib/utils";
 import { DeleteAccount } from "./delete-account";
 import { Devices } from "./devices";
@@ -39,7 +41,6 @@ import { RETURN_TO_ACCOUNT, signInAgain } from "./sign-in-again";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MIN_PASSWORD_MESSAGE = `Use at least ${MIN_PASSWORD_LENGTH} characters`;
-const RESEND_COOLDOWN_SECONDS = 60;
 
 const settingsRoute = getRouteApi("/(app)/settings");
 
@@ -96,26 +97,8 @@ function StatusText({
   );
 }
 
-function useSecondsUntil(deadline: number | null): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (deadline === null) return;
-    const tick = () => {
-      const current = Date.now();
-      setNow(current);
-      if (current >= deadline) window.clearInterval(interval);
-    };
-    const interval = window.setInterval(tick, 1000);
-    tick();
-    return () => window.clearInterval(interval);
-  }, [deadline]);
-  return deadline === null ? 0 : Math.max(0, Math.ceil((deadline - now) / 1000));
-}
-
 function EmailRow({ email, isVerified }: { readonly email: string; readonly isVerified: boolean }) {
-  const [resendAt, setResendAt] = useState<number | null>(null);
-  const [isSending, setIsSending] = useState(false);
-  const secondsLeft = useSecondsUntil(resendAt);
+  const { resend, isSending, secondsLeft } = useResendVerification(email, RETURN_TO_ACCOUNT);
 
   return (
     <SettingsRow
@@ -134,28 +117,7 @@ function EmailRow({ email, isVerified }: { readonly email: string; readonly isVe
           variant="outline"
           size="sm"
           disabled={isSending || secondsLeft > 0}
-          onClick={async () => {
-            setIsSending(true);
-            const { error } = await callAuth(() =>
-              authClient.sendVerificationEmail({
-                email,
-                callbackURL: getAuthRedirectUrl(RETURN_TO_ACCOUNT),
-              }),
-            );
-            setIsSending(false);
-            if (error) {
-              toast.add({
-                type: "error",
-                title:
-                  error.status === 429
-                    ? "You just asked for one. Try again in a minute."
-                    : error.message || "Couldn't send the email. Try again.",
-              });
-              return;
-            }
-            setResendAt(Date.now() + RESEND_COOLDOWN_SECONDS * 1000);
-            toast.add({ type: "success", title: `Verification email sent to ${email}` });
-          }}
+          onClick={resend}
         >
           {secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend verification email"}
         </Button>
@@ -233,9 +195,9 @@ function ChangePasswordDialog() {
         }),
     },
     onSubmit: async ({ value, formApi }) => {
-      const result = await run(() => changePassword.run(value), closesOnSuccess);
-      if (result.kind === "failed" && result.error instanceof Error) {
-        const { message } = result.error;
+      const changed = await run(() => changePassword.run(value), closesOnSuccess);
+      if (changed.isErr()) {
+        const message = changed.error.message;
         formApi.setFieldMeta("currentPassword", (meta) => ({
           ...meta,
           errorMap: { onSubmit: message },
@@ -260,15 +222,7 @@ function ChangePasswordDialog() {
             Your other devices will be signed out. This one stays signed in.
           </DialogDescription>
         </DialogHeader>
-        <form
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            return form.handleSubmit();
-          }}
-          className="flex flex-col gap-4"
-        >
+        <form noValidate onSubmit={formSubmitHandler(form)} className="flex flex-col gap-4">
           {PASSWORD_FIELDS.map(({ name, label, autoComplete }) => (
             <form.Field key={name} name={name}>
               {(field) => (
@@ -338,16 +292,19 @@ function GoogleRow() {
   // On success Better Auth sends the browser to Google, so the button stays busy until the page goes.
   const connect = async () => {
     setIsConnecting(true);
-    const { error } = await callAuth(() =>
+    const linked = await decodeAuth(() =>
       authClient.linkSocial({
         provider: "google",
         callbackURL: getAuthRedirectUrl(RETURN_TO_ACCOUNT),
         errorCallbackURL: getAuthRedirectUrl(RETURN_TO_ACCOUNT),
       }),
     );
-    if (error) {
+    if (linked.isErr()) {
       setIsConnecting(false);
-      toast.add({ type: "error", title: error.message || "Couldn't connect Google" });
+      toast.add({
+        type: "error",
+        title: linked.error.message || "Couldn't connect Google",
+      });
     }
   };
 

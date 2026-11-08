@@ -15,6 +15,7 @@ import {
   updateList,
 } from "@/queries/lists";
 import { defineCommand, offsetAfterLoaded, rootedInfiniteRead, rootedRead } from "../client";
+import { positionOrderCommand } from "../position-order";
 
 const overviewKey = ["lists", "overview"] as const;
 const detailKey = (listId: string) => ["lists", "detail", listId] as const;
@@ -45,20 +46,22 @@ export const lists = {
   }),
 };
 
-export const listsMove = {
+export const listsMove = positionOrderCommand({
+  family: "lists",
   queryKey: overviewKey,
   persist: moveLists,
   additionalInvalidations: [anyTargetOptions],
   failureTitle: "Failed to save List order",
-} as const;
+});
 
 export const listMembersMove = (listId: string) =>
-  ({
+  positionOrderCommand({
+    family: "lists",
     queryKey: membersKey(listId),
-    persist: (intent: Parameters<typeof moveListMembers>[1]) => moveListMembers(listId, intent),
+    persist: (intent) => moveListMembers(listId, intent),
     additionalInvalidations: [overview],
     failureTitle: "Failed to save List order",
-  }) as const;
+  });
 
 const createListSpec = {
   invalidates: ["lists"],
@@ -68,7 +71,7 @@ const createListSpec = {
 
 export const createListCommand = defineCommand({
   ...createListSpec,
-  failureTitle: () => "Failed to create list",
+  failureToast: () => ({ title: "Failed to create list" }),
 });
 
 /** For a form that shows its own error. */
@@ -84,7 +87,7 @@ export const updateListCommand = defineCommand({
   persist: ({ listId, ...input }: { readonly listId: string } & ListInput) =>
     updateList(listId, input),
   successTitle: () => "List updated",
-  failureTitle: () => "Failed to update list",
+  failureToast: () => ({ title: "Failed to update list" }),
 });
 
 export const deleteListsCommand = defineCommand({
@@ -98,7 +101,9 @@ export const deleteListsCommand = defineCommand({
   },
   successTitle: (listIds) =>
     listIds.length === 1 ? "List deleted" : `${listIds.length.toLocaleString()} Lists deleted`,
-  failureTitle: (listIds) => `Failed to delete ${listIds.length === 1 ? "List" : "Lists"}`,
+  failureToast: (listIds) => ({
+    title: `Failed to delete ${listIds.length === 1 ? "List" : "Lists"}`,
+  }),
 });
 
 export const addTargetsToListsCommand = defineCommand({
@@ -148,5 +153,5 @@ export const removeListMembersCommand = defineCommand({
     readonly memberIds: readonly string[];
   }) => removeListMembers(listId, memberIds),
   successTitle: ({ memberIds }) => `${memberIds.length} removed from List`,
-  failureTitle: () => "Failed to remove from List",
+  failureToast: () => ({ title: "Failed to remove from List" }),
 });

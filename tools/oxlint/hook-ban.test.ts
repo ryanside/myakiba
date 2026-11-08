@@ -97,14 +97,14 @@ test("the hook ban keeps the db-client lock on every web file", async () => {
     webTest: await flagged("apps/web/src/components/screen.test.tsx"),
     orderTest: await flagged("apps/web/src/components/orders/order-submit.test.tsx"),
     data: await flagged("apps/web/src/data/resources/reads.ts"),
-    scraper: await flagged("apps/web/src/components/sync/sync-launcher.tsx"),
+    syncScreen: await flagged("apps/web/src/components/sync/sync-launcher.tsx"),
     replayedTest: await flagged("apps/web/src/hooks/use-wishlist.test.tsx"),
   }).toEqual({
     screen: ["hook", ...dbLock, "testFile", "testHelper"],
     webTest: ["hook", ...dbLock],
     orderTest: ["hook", ...dbLock, "testFile", "testHelper"],
     data: [...dbLock, "testFile", "testHelper"],
-    scraper: [...dbLock, "testFile", "testHelper"],
+    syncScreen: ["hook", ...dbLock, "testFile", "testHelper"],
     replayedTest: dbLock,
   });
 });

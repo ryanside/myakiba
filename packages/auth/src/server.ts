@@ -14,6 +14,11 @@ import { redis } from "@myakiba/redis/client";
 import { incrementWithTtl } from "@myakiba/redis/counter";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
+import { z } from "zod";
+import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+
+import { accessSessionStore } from "./session-store";
+import { sendAuthEmail } from "./send-auth-email";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -21,14 +26,15 @@ export const auth = betterAuth({
   appName: "myakiba",
   secondaryStorage: {
     get: async (key) => {
-      return await redis.get(key);
+      return await accessSessionStore("get", () => redis.get(key));
     },
     set: async (key, value, ttl) => {
-      if (ttl) await redis.set(key, value, "EX", ttl);
-      else await redis.set(key, value);
+      await accessSessionStore("set", () =>
+        ttl ? redis.set(key, value, "EX", ttl) : redis.set(key, value),
+      );
     },
     delete: async (key) => {
-      await redis.del(key);
+      await accessSessionStore("delete", () => redis.del(key));
     },
     getAndDelete: async (key) => {
       return await redis.getdel(key);
@@ -77,7 +83,7 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "reset", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Reset your password",
@@ -90,7 +96,7 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "verification", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Verify your email address",
@@ -150,11 +156,13 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         defaultValue: "USD",
+        validator: { input: z.enum(CURRENCIES) },
       },
       dateFormat: {
         type: "string",
         required: true,
         defaultValue: "MM/DD/YYYY",
+        validator: { input: z.enum(DATE_FORMATS) },
       },
     },
   },
@@ -171,7 +179,12 @@ type OpenAPIComponents = NonNullable<OpenAPISchema["components"]>;
 let schemaPromise: ReturnType<typeof auth.api.generateOpenAPISchema> | undefined;
 const getSchema = async (): Promise<OpenAPISchema> => {
   schemaPromise ??= auth.api.generateOpenAPISchema();
-  return await schemaPromise;
+  try {
+    return await schemaPromise;
+  } catch (error) {
+    schemaPromise = undefined;
+    throw error;
+  }
 };
 
 export const OpenAPI = {
@@ -193,8 +206,8 @@ export const OpenAPI = {
 
     return reference;
   },
-  components: (async (): Promise<OpenAPIComponents> => {
+  components: async (): Promise<OpenAPIComponents> => {
     const { components } = await getSchema();
     return components as OpenAPIComponents;
-  })(),
+  },
 } as const;

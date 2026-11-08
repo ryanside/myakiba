@@ -15,7 +15,7 @@ import { MediaViewSkeletons } from "@/components/media-tile";
 import { LIST_HEADING_CLASS_NAME, ListHeading } from "@/components/lists/list-heading";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,7 @@ import {
 import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useSelection } from "@/hooks/use-selection";
 import { useCallback, useMemo, useState } from "react";
+import type { Saving } from "@/data/client";
 
 export const Route = createFileRoute("/(app)/lists_/$listId")({
   component: RouteComponent,
@@ -79,15 +80,17 @@ function RouteComponent(): React.JSX.Element {
   const handleMove = moveMutation.move;
   const [viewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.lists);
   const { selectedIds, setSelection } = useSelection();
-  const removeMembers = removeMembersMutation.mutateAsync;
+  const removeMembers = removeMembersMutation.run;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
   const handleRemove = useCallback(
-    async (memberId: string): Promise<void> => {
-      await removeMembers([memberId]);
+    async (memberId: string): Saving => {
+      const removed = await removeMembers([memberId]);
+      if (removed.isErr()) return removed;
       setSelection((current) => {
         const { [memberId]: _removed, ...next } = current;
         return next;
       });
+      return removed;
     },
     [removeMembers, setSelection],
   );
@@ -164,9 +167,7 @@ function RouteComponent(): React.JSX.Element {
                     initialTitle={data.title}
                     initialDescription={data.description}
                     submitLabel="Save"
-                    onSubmit={async (input) => {
-                      await updateList({ listId, ...input });
-                    }}
+                    onSubmit={(input) => updateList({ listId, ...input })}
                   />
                   <DropdownMenu>
                     <DropdownMenuTrigger
@@ -183,14 +184,15 @@ function RouteComponent(): React.JSX.Element {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <ConfirmDialog
+                  <WriteConfirmDialog
                     open={deleteOpen}
                     onOpenChange={setDeleteOpen}
                     title="Delete List?"
                     description="This removes the List. Its Items, Collection Items, and Orders will not be deleted."
                     onConfirm={async () => {
-                      await deleteList(listId);
-                      await navigate({ to: "/lists" });
+                      const deleted = await deleteList(listId);
+                      if (deleted.isOk()) await navigate({ to: "/lists" });
+                      return deleted;
                     }}
                   />
                 </>
@@ -204,9 +206,7 @@ function RouteComponent(): React.JSX.Element {
         selectedMemberIds={selectedMemberIds}
         isRemoving={removeMembersMutation.isPending}
         onClearSelection={() => setSelection({})}
-        onRemoveMembers={async (memberIds) => {
-          await removeMembersMutation.mutateAsync(memberIds);
-        }}
+        onRemoveMembers={(memberIds) => removeMembersMutation.run(memberIds)}
       />
 
       {isPending ? (
@@ -254,9 +254,7 @@ function RouteComponent(): React.JSX.Element {
           isFetchingNextPage={membersQuery.isFetchingNextPage}
           onLoadMore={handleLoadMore}
           onRemove={handleRemove}
-          onMove={async (intent) => {
-            await handleMove(intent);
-          }}
+          onMove={(intent) => handleMove(intent)}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(memberId, selected) => {

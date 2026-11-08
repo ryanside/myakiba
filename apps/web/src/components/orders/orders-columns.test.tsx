@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -48,10 +49,11 @@ const edits: [EditedOrder, CascadeOptions][] = [];
 const columns = createOrdersColumns({
   onEditOrder: async (values, cascade) => {
     edits.push([values, cascade]);
+    return Result.ok();
   },
-  onDeleteOrders: async () => {},
-  onEditItem: async () => {},
-  onDeleteItem: async () => {},
+  onDeleteOrders: async () => Result.ok(),
+  onEditItem: async () => Result.ok(),
+  onDeleteItem: async () => Result.ok(),
   currency: "USD",
   locale: "en-US",
   dateFormat: "MM/DD/YYYY",

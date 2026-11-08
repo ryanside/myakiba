@@ -1,4 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { optionalMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { Cancel01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
@@ -14,7 +16,6 @@ import type { ReactElement } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { FieldTrigger } from "@/components/ui/field-trigger";
@@ -38,7 +39,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import {
   SHIPPING_METHODS,
   CONDITIONS,
@@ -47,9 +48,9 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { getCategoryColor } from "@/lib/category-colors";
-import { shownMessageOf } from "@/lib/api-response";
+import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
 import { DisclosureIcon } from "@/lib/icons";
 
 interface FiltersFormProps {
@@ -97,7 +98,6 @@ function FiltersDraft({
 }): React.JSX.Element {
   const entriesListId = useId();
   const [entriesPopoverOpen, setEntriesPopoverOpen] = useState(false);
-  const userLocale = getCurrencyLocale(currency);
 
   const form = useForm({
     defaultValues: {
@@ -136,8 +136,8 @@ function FiltersDraft({
     },
     onSubmit: async ({ value }) => {
       const filters: CollectionFilters = {
-        paidMin: value.paidMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.paidMin),
-        paidMax: value.paidMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.paidMax),
+        paidMin: optionalMinorUnits(value.paidMin),
+        paidMax: optionalMinorUnits(value.paidMax),
         shop: value.shop && value.shop.length > 0 ? value.shop : undefined,
         payDateStart: value.payDateStart || undefined,
         payDateEnd: value.payDateEnd || undefined,
@@ -148,10 +148,8 @@ function FiltersDraft({
         shipMethod: value.shipMethod && value.shipMethod.length > 0 ? value.shipMethod : undefined,
         relDateStart: value.relDateStart || undefined,
         relDateEnd: value.relDateEnd || undefined,
-        relPriceMin:
-          value.relPriceMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.relPriceMin),
-        relPriceMax:
-          value.relPriceMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.relPriceMax),
+        relPriceMin: optionalMinorUnits(value.relPriceMin),
+        relPriceMax: optionalMinorUnits(value.relPriceMax),
         relCurrency:
           value.relCurrency && value.relCurrency.length > 0 ? value.relCurrency : undefined,
         category: value.category && value.category.length > 0 ? value.category : undefined,
@@ -188,13 +186,7 @@ function FiltersDraft({
   const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        form.handleSubmit();
-      }}
-    >
+    <form onSubmit={formSubmitHandler(form)}>
       <DialogHeader className="pb-4 px-4">
         <DialogTitle>Filters</DialogTitle>
         <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
@@ -321,32 +313,8 @@ function FiltersDraft({
           <Field>
             <FieldTitle>Paid Price Range</FieldTitle>
             <div className="grid grid-cols-2 gap-2">
-              <form.Field
-                name="paidMin"
-                children={(field) => (
-                  <MaskInput
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    placeholder="Min"
-                    value={field.state.value || ""}
-                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  />
-                )}
-              />
-              <form.Field
-                name="paidMax"
-                children={(field) => (
-                  <MaskInput
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    placeholder="Max"
-                    value={field.state.value || ""}
-                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  />
-                )}
-              />
+              <MoneyField form={form} name="paidMin" currency={currency} placeholder="Min" />
+              <MoneyField form={form} name="paidMax" currency={currency} placeholder="Max" />
             </div>
           </Field>
 
@@ -789,32 +757,8 @@ function FiltersDraft({
           <Field>
             <FieldTitle>Release Price Range</FieldTitle>
             <div className="grid grid-cols-2 gap-2">
-              <form.Field
-                name="relPriceMin"
-                children={(field) => (
-                  <MaskInput
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    placeholder="Min"
-                    value={field.state.value || ""}
-                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  />
-                )}
-              />
-              <form.Field
-                name="relPriceMax"
-                children={(field) => (
-                  <MaskInput
-                    mask="currency"
-                    currency={currency}
-                    locale={userLocale}
-                    placeholder="Max"
-                    value={field.state.value || ""}
-                    onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  />
-                )}
-              />
+              <MoneyField form={form} name="relPriceMin" currency={currency} placeholder="Min" />
+              <MoneyField form={form} name="relPriceMax" currency={currency} placeholder="Max" />
             </div>
           </Field>
 

@@ -1,6 +1,7 @@
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import type { Saving } from "@/data/client";
 import { cn } from "@/lib/utils";
 import { CELL_EDITOR_CLASS_NAME, CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
@@ -8,7 +9,7 @@ interface InlineCountCellProps {
   /** What the cell holds, such as "Count", for its accessible name. */
   label: string;
   value: number;
-  onSubmit: (newValue: number) => Promise<void>;
+  onSubmit: (newValue: number) => Saving;
   disabled?: boolean;
 }
 

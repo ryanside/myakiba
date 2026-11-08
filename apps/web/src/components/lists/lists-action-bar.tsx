@@ -8,7 +8,8 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
+import type { Saving } from "@/data/client";
 
 export function ListsActionBar({
   selectedListIds,
@@ -19,7 +20,7 @@ export function ListsActionBar({
   readonly selectedListIds: ReadonlySet<string>;
   readonly isDeleting: boolean;
   readonly onClearSelection: () => void;
-  readonly onDeleteLists: (listIds: ReadonlySet<string>) => Promise<void>;
+  readonly onDeleteLists: (listIds: ReadonlySet<string>) => Saving;
 }): React.JSX.Element {
   const selectedCount = selectedListIds.size;
 
@@ -35,7 +36,7 @@ export function ListsActionBar({
       </ActionBarSelection>
       <ActionBarSeparator />
       <ActionBarGroup>
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedCount === 0 || isDeleting}
@@ -49,8 +50,9 @@ export function ListsActionBar({
           title={`Delete ${selectedCount} ${selectedCount === 1 ? "List" : "Lists"}?`}
           description="This removes the selected Lists. Their Items, Collection Items, and Orders will not be deleted."
           onConfirm={async () => {
-            await onDeleteLists(selectedListIds);
-            onClearSelection();
+            const saved = await onDeleteLists(selectedListIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
       </ActionBarGroup>

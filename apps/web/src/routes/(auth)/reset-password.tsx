@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/ui/field";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { AuthLayout } from "@/components/auth/auth-layout";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export const Route = createFileRoute("/(auth)/reset-password")({
   component: RouteComponent,
@@ -47,30 +48,18 @@ function RouteComponent() {
   const handleResetPassword = async (password: string) => {
     if (!token) return;
 
-    await run(
-      () =>
-        authClient.resetPassword(
-          {
-            newPassword: password,
-            token,
-          },
-          {
-            onSuccess: () => {
-              toast.add({ type: "success", title: "Password reset successfully" });
-              navigate({
-                to: "/login",
-              });
-            },
-            onError: (error) => {
-              toast.add({
-                type: "error",
-                title: error.error.message || "Failed to reset password",
-              });
-            },
-          },
-        ),
-      (result) => !result.error,
+    const reset = await run(
+      () => decodeAuth(() => authClient.resetPassword({ newPassword: password, token })),
+      (result) => result.isOk(),
     );
+    if (reset.isErr()) {
+      toast.add({ type: "error", title: reset.error.message || "Failed to reset password" });
+      return;
+    }
+    toast.add({ type: "success", title: "Password reset successfully" });
+    navigate({
+      to: "/login",
+    });
   };
 
   if (!token) {
@@ -116,14 +105,7 @@ function RouteComponent() {
             <p className="text-sm text-muted-foreground mt-2">Enter your new password below.</p>
           </div>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-          className="grid gap-4"
-        >
+        <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
           <form.Field
             name="password"
             validators={{

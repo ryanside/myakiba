@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SearchIcon, Tick02Icon } from "@hugeicons/core-free-icons";
@@ -72,6 +73,8 @@ function CommandInput({
       <InputGroup
         className={cn(
           "h-8! rounded-inner! border-border/40 bg-background/90 shadow-none! *:data-[slot=input-group-addon]:pl-2!",
+          "has-[[data-slot=command-input]:focus-visible]:border-ring has-[[data-slot=command-input]:focus-visible]:ring-2 has-[[data-slot=command-input]:focus-visible]:ring-ring",
+          "in-data-[slot=dialog-content]:has-[[data-slot=command-input]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=command-input]:focus-visible]:ring-0",
           "in-data-[slot=dialog-content]:h-12! in-data-[slot=dialog-content]:rounded-none! in-data-[slot=dialog-content]:border-0 in-data-[slot=dialog-content]:border-b in-data-[slot=dialog-content]:border-foreground/10 in-data-[slot=dialog-content]:bg-transparent! in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:border-foreground/10 in-data-[slot=dialog-content]:has-[[data-slot=input-group-control]:focus-visible]:ring-0 in-data-[slot=dialog-content]:*:data-[slot=input-group-addon]:pl-4!",
         )}
       >
@@ -93,6 +96,18 @@ function CommandInput({
         </InputGroupAddon>
       </InputGroup>
     </div>
+  );
+}
+
+/** The command's keys and filtering on the app's ordinary Input, for a command on a page. */
+function CommandPageInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+  return (
+    <CommandPrimitive.Input asChild data-slot="command-input" {...props}>
+      <Input className={className} />
+    </CommandPrimitive.Input>
   );
 }
 
@@ -243,6 +258,7 @@ export {
   Command,
   CommandDialog,
   CommandInput,
+  CommandPageInput,
   CommandList,
   CommandEmpty,
   CommandGroup,

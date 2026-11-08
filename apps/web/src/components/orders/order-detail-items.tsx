@@ -3,6 +3,7 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { OrderItemSubDataGrid } from "@/components/orders/order-item-sub-data-grid";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Saving } from "@/data/client";
 
 export function OrderDetailItems({
   orderId,
@@ -18,8 +19,8 @@ export function OrderDetailItems({
   readonly isLoading: boolean;
   readonly selectedOrderIdByCollectionId: ReadonlyMap<string, string>;
   readonly setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
-  readonly onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  readonly onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  readonly onEditItem: (values: CollectionItemFormValues) => Saving;
+  readonly onDeleteItem: (orderId: string, itemId: string) => Saving;
 }): ReactNode {
   if (isLoading) {
     return (

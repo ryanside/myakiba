@@ -1,7 +1,7 @@
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
-import { orThrow, useRead, useResourceMutation, useRootedInfiniteRead } from "@/data/client";
+import { useRead, useResourceMutation, useRootedInfiniteRead } from "@/data/client";
 import { usePositionOrderMutation } from "@/data/position-order";
 import {
   addTargetsToListsCommand,
@@ -59,11 +59,10 @@ export function useListMutations({
   const deleteMutation = useResourceMutation(deleteListsCommand);
 
   return {
-    createList: (input: ListInput) => orThrow(createMutation.run(input)),
-    updateList: (input: { readonly listId: string } & ListInput) =>
-      orThrow(updateMutation.run(input)),
-    deleteList: (listId: string) => orThrow(deleteMutation.run([listId])),
-    deleteLists: (listIds: ReadonlySet<string>) => orThrow(deleteMutation.run([...listIds])),
+    createList: (input: ListInput) => createMutation.run(input),
+    updateList: (input: { readonly listId: string } & ListInput) => updateMutation.run(input),
+    deleteList: (listId: string) => deleteMutation.run([listId]),
+    deleteLists: (listIds: ReadonlySet<string>) => deleteMutation.run([...listIds]),
     isDeleting: deleteMutation.isPending,
   } as const;
 }
@@ -121,10 +120,10 @@ export function useAddTargetsToListsMutation() {
     },
   });
   return {
-    mutateAsync: (input: { readonly targets: ListTarget[]; readonly listIds: string[] }) =>
-      orThrow(mutation.run(input)),
+    run: (input: { readonly targets: ListTarget[]; readonly listIds: string[] }) =>
+      mutation.run(input),
     isPending: mutation.isPending,
-    error: mutation.error,
+    last: mutation.last,
     reset: mutation.reset,
   } as const;
 }
@@ -132,17 +131,16 @@ export function useAddTargetsToListsMutation() {
 export function useRemoveTargetsFromListMutation(targets: readonly ListTarget[]) {
   const mutation = useResourceMutation(removeTargetsFromListCommand);
   return {
-    mutateAsync: (listId: string) => orThrow(mutation.run({ targets, listId })),
+    run: (listId: string) => mutation.run({ targets, listId }),
     isPending: mutation.isPending,
-    isSuccess: mutation.isSuccess,
-    error: mutation.error,
+    last: mutation.last,
   } as const;
 }
 
 export function useRemoveListMembersMutation(listId: string) {
   const mutation = useResourceMutation(removeListMembersCommand);
   return {
-    mutateAsync: (memberIds: readonly string[]) => orThrow(mutation.run({ listId, memberIds })),
+    run: (memberIds: readonly string[]) => mutation.run({ listId, memberIds }),
     isPending: mutation.isPending,
     variables: mutation.pendingInput?.memberIds,
   } as const;

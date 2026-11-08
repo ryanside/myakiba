@@ -1,14 +1,13 @@
 import { Fragment } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { useDataGrid } from "@/components/reui/data-grid/data-grid";
 import { flexRender } from "@tanstack/react-table";
 import type { Cell, Column, Header, HeaderGroup, Row } from "@tanstack/react-table";
 import { cva } from "class-variance-authority";
 
-import { ariaSort } from "@/components/data-table/aria-sort";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
+import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const headerCellSpacingVariants = cva("", {
   variants: {
@@ -60,6 +59,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
 
   return (
     <table
+      {...props.tableAria}
       data-slot="data-grid-table"
       className={cn(
         "text-foreground text-sm w-full min-w-full caption-bottom text-left align-middle font-normal rtl:text-right",
@@ -78,16 +78,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
 function DataGridTableHead({ children }: { children: ReactNode }) {
   const { props } = useDataGrid();
 
-  return (
-    <thead
-      className={cn(
-        props.tableClassNames?.header,
-        props.tableLayout?.headerSticky && props.tableClassNames?.headerSticky,
-      )}
-    >
-      {children}
-    </thead>
-  );
+  return <thead className={props.tableClassNames?.header}>{children}</thead>;
 }
 
 function DataGridTableHeadRow<TData>({
@@ -102,6 +93,7 @@ function DataGridTableHeadRow<TData>({
   return (
     <tr
       key={headerGroup.id}
+      data-row="head"
       className={cn(
         props.tableLayout?.headerBorder && "[&>th]:border-b [&>th]:border-border/70",
         props.tableLayout?.cellBorder && "*:last:border-e-0",
@@ -138,7 +130,6 @@ function DataGridTableHeadRowCell<TData>({
     <th
       key={header.id}
       ref={dndRef}
-      aria-sort={ariaSort(column.getIsSorted())}
       style={{
         ...((props.tableLayout?.width === "fixed" || props.tableLayout?.columnsResizable) && {
           width: header.getSize(),
@@ -146,7 +137,9 @@ function DataGridTableHeadRowCell<TData>({
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
         ...dndStyle,
       }}
-      data-pinned={isPinned || undefined}
+      aria-sort={getAriaSort(column)}
+      data-col={column.id}
+      data-pinned={(props.tableLayout?.columnsPinnable && isPinned) || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "text-secondary-foreground/80 h-9 relative text-left align-middle font-normal rtl:text-right [&:has([role=checkbox])]:pe-0",
@@ -269,15 +262,19 @@ function DataGridTableBodyRow<TData>({
   dndStyle?: CSSProperties;
 }) {
   const { props, table } = useDataGrid();
-  const onRowClick = props.onRowClick;
+  const { onRowClick, onRowPointerClick } = props;
   const isInteractive = Boolean(onRowClick);
 
   return (
     <tr
       ref={dndRef}
       style={dndStyle ?? undefined}
+      data-row={row.id}
       data-state={table.options.enableRowSelection && row.getIsSelected() ? "selected" : undefined}
-      onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+      onClick={(event) => {
+        onRowClick?.(row.original);
+        onRowPointerClick?.(row.original, event);
+      }}
       onKeyDown={
         onRowClick
           ? (event) => {
@@ -321,6 +318,40 @@ function DataGridTableBodyRowExpandded<TData>({ row }: { row: Row<TData> }) {
   );
 }
 
+/** The tinted panel under an expanded row. A click or a key in it stays out of the row. */
+function DataGridExpandedPanel({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      role="presentation"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+      {...props}
+      className={cn("space-y-2.5 bg-muted/30 p-4", className)}
+    />
+  );
+}
+
+function DataGridTableBodyRowFullWidth<TData>({
+  row,
+  children,
+}: {
+  row: Row<TData>;
+  children: ReactNode;
+}) {
+  const { props } = useDataGrid();
+  const bodyCellSpacing = bodyCellSpacingVariants({
+    size: props.tableLayout?.dense ? "dense" : "default",
+  });
+
+  return (
+    <DataGridTableBodyRow row={row}>
+      <td colSpan={row.getVisibleCells().length} className={cn("align-middle", bodyCellSpacing)}>
+        {children}
+      </td>
+    </DataGridTableBodyRow>
+  );
+}
+
 function DataGridTableBodyRowCell<TData>({
   children,
   cell,
@@ -354,7 +385,8 @@ function DataGridTableBodyRowCell<TData>({
         ...(props.tableLayout?.columnsPinnable && column.getCanPin() && getPinningStyles(column)),
         ...dndStyle,
       }}
-      data-pinned={isPinned || undefined}
+      data-col={column.id}
+      data-pinned={(props.tableLayout?.columnsPinnable && isPinned) || undefined}
       data-last-col={getLastColAttribute(isLastLeftPinned, isFirstRightPinned)}
       className={cn(
         "align-middle",
@@ -419,43 +451,6 @@ function DataGridTableLoader() {
         {props.loadingMessage || "Loading..."}
       </div>
     </div>
-  );
-}
-
-function DataGridTableRowSelect<TData>({ row }: { row: Row<TData> }) {
-  return (
-    <>
-      <div
-        className={cn(
-          "bg-primary absolute start-0 top-0 bottom-0 hidden w-[2px]",
-          row.getIsSelected() && "block",
-        )}
-      />
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="align-[inherit]"
-      />
-    </>
-  );
-}
-
-function DataGridTableRowSelectAll() {
-  const { table, recordCount, isLoading } = useDataGrid();
-
-  const isAllSelected = table.getIsAllPageRowsSelected();
-  const isSomeSelected = table.getIsSomePageRowsSelected();
-
-  return (
-    <Checkbox
-      checked={isAllSelected}
-      indeterminate={isSomeSelected && !isAllSelected}
-      disabled={isLoading || recordCount === 0}
-      onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      aria-label="Select all"
-      className="align-[inherit]"
-    />
   );
 }
 
@@ -540,20 +535,29 @@ function DataGridTable<TData>() {
           if (!table.getRowModel().rows.length) {
             return <DataGridTableEmpty />;
           }
-          return table.getRowModel().rows.map((row: Row<TData>) => (
-            <Fragment key={row.id}>
-              <DataGridTableBodyRow row={row}>
-                {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
-                  return (
-                    <DataGridTableBodyRowCell cell={cell} key={colIndex}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </DataGridTableBodyRowCell>
-                  );
-                })}
-              </DataGridTableBodyRow>
-              {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
-            </Fragment>
-          ));
+          return table.getRowModel().rows.map((row: Row<TData>) => {
+            const fullWidth = props.fullWidthRow?.(row.original);
+            return (
+              <Fragment key={row.id}>
+                {fullWidth ? (
+                  <DataGridTableBodyRowFullWidth row={row}>
+                    {fullWidth}
+                  </DataGridTableBodyRowFullWidth>
+                ) : (
+                  <DataGridTableBodyRow row={row}>
+                    {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
+                      return (
+                        <DataGridTableBodyRowCell cell={cell} key={colIndex}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </DataGridTableBodyRowCell>
+                      );
+                    })}
+                  </DataGridTableBodyRow>
+                )}
+                {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+              </Fragment>
+            );
+          });
         })()}
       </DataGridTableBody>
     </DataGridTableBase>
@@ -561,6 +565,7 @@ function DataGridTable<TData>() {
 }
 
 export {
+  DataGridExpandedPanel,
   DataGridTable,
   DataGridTableBase,
   DataGridTableBody,
@@ -575,7 +580,5 @@ export {
   DataGridTableHeadRowCell,
   DataGridTableHeadRowCellResize,
   DataGridTableLoader,
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
   DataGridTableRowSpacer,
 };

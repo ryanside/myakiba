@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import { functionalUpdate } from "@tanstack/react-table";
-import type * as z from "zod";
+import { parseJson } from "@myakiba/utils/parse-json";
+import { Result } from "better-result";
+import * as z from "zod";
 
 const storageChanges = new EventTarget();
 // Keep shared preferences usable when storage is full or unavailable.
@@ -10,25 +12,16 @@ function readStoredValue(key: string): string | null {
   const unpersistedValue = unpersistedValues.get(key);
   if (unpersistedValue !== undefined) return unpersistedValue;
 
-  try {
-    return globalThis.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+  return Result.try(() => globalThis.localStorage.getItem(key)).unwrapOr(null);
 }
+
+// A caller without a schema trusts what it stored, as it always has.
+const storedJson = z.unknown();
 
 function parseStoredValue<T>(item: string | null, initialValue: T, schema?: z.ZodType<T>): T {
   if (item === null) return initialValue;
 
-  try {
-    const parsedValue = JSON.parse(item);
-    if (schema === undefined) return parsedValue as T;
-
-    const validatedValue = schema.safeParse(parsedValue);
-    return validatedValue.success ? validatedValue.data : initialValue;
-  } catch {
-    return initialValue;
-  }
+  return parseJson(schema ?? (storedJson as z.ZodType<T>), item).unwrapOr(initialValue);
 }
 
 function notify(key: string) {
@@ -36,12 +29,9 @@ function notify(key: string) {
 }
 
 function writeStoredValue(key: string, serialized: string) {
-  try {
-    globalThis.localStorage.setItem(key, serialized);
-    unpersistedValues.delete(key);
-  } catch {
-    unpersistedValues.set(key, serialized);
-  }
+  const persisted = Result.try(() => globalThis.localStorage.setItem(key, serialized));
+  if (persisted.isOk()) unpersistedValues.delete(key);
+  else unpersistedValues.set(key, serialized);
   notify(key);
 }
 
@@ -94,11 +84,8 @@ function removeLocalStorage(keys: readonly string[]): () => void {
   });
   for (const key of keys) {
     unpersistedValues.delete(key);
-    try {
-      globalThis.localStorage.removeItem(key);
-    } catch {
-      // Unavailable storage holds nothing to remove.
-    }
+    // Unavailable storage holds nothing to remove.
+    Result.try(() => globalThis.localStorage.removeItem(key));
     notify(key);
   }
   return () => {

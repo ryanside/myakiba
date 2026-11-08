@@ -6,7 +6,6 @@ import {
   sortDirectionSchema,
 } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
-import { syncOrderSchema } from "../sync/schema";
 import { orderSearchSortSchema } from "../search/schema";
 
 export const orderFiltersSchema = z.object({
@@ -55,7 +54,23 @@ export const orderItemsQuerySchema = z.object({
   order: sortDirectionSchema.default("desc"),
 });
 
-export const newOrderSchema = syncOrderSchema.omit({ id: true, userId: true }).strict();
+export const newOrderSchema = z.strictObject({
+  status: z.enum(ORDER_STATUSES),
+  title: z.string(),
+  shop: z.string().trim(),
+  orderDate: z.iso.date().nullable(),
+  releaseDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
+  shippingMethod: z.enum(SHIPPING_METHODS),
+  shippingFee: z.number().int(),
+  taxes: z.number().int(),
+  duties: z.number().int(),
+  tariffs: z.number().int(),
+  miscFees: z.number().int(),
+  notes: z.string(),
+});
 
 export const editedOrderSchema = newOrderSchema.extend({
   orderId: z.string(),

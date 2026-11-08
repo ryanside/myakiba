@@ -241,7 +241,7 @@ function ActionBar(props: ActionBarProps) {
             "data-[side=bottom]:data-starting-style:[transform:translateY(var(--bar-rise))] data-[side=bottom]:data-ending-style:[transform:translateY(var(--bar-rise))]",
             "data-[side=top]:data-starting-style:[transform:translateY(calc(var(--bar-rise)*-1))] data-[side=top]:data-ending-style:[transform:translateY(calc(var(--bar-rise)*-1))]",
             orientation === "horizontal"
-              ? "flex flex-row items-center gap-2 px-2 py-1.5"
+              ? "flex w-max max-w-[calc(100vw-1.5rem)] flex-row flex-wrap items-center gap-2 px-2 py-1.5"
               : "flex flex-col items-start gap-2 px-1.5 py-2",
             className,
           )}
@@ -425,7 +425,9 @@ function ActionBarGroup(props: DivProps) {
         ref={composedRef}
         className={cn(
           "flex gap-2 outline-none",
-          orientation === "horizontal" ? "items-center" : "w-full flex-col items-start",
+          orientation === "horizontal"
+            ? "max-w-full min-w-0 flex-wrap items-center"
+            : "w-full flex-col items-start",
           className,
         )}
         onBlur={onBlur}

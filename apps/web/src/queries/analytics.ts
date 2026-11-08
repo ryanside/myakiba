@@ -1,4 +1,6 @@
-import { requireData } from "@/lib/api-response";
+import { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import type { AnalyticsSection } from "@myakiba/contracts/shared/types";
@@ -40,14 +42,17 @@ function getAnalyticsSectionApiPath(sectionName: AnalyticsSection) {
   return sectionName === "events" ? "section-entries" : sectionName;
 }
 
-export async function getAnalytics(): Promise<AnalyticsOverviewResponse> {
-  return requireData(app.api.analytics.get(), "Failed to get analytics");
+export function getAnalytics(): Promise<Result<AnalyticsOverviewResponse, ApiFailure>> {
+  return call(app.api.analytics.get(), {
+    fallback: "Failed to get analytics",
+    empty: "Failed to get analytics",
+  });
 }
 
-export async function getAnalyticsSection(
+export function getAnalyticsSection(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionFilters = {},
-): Promise<AnalyticsSectionData> {
+): Promise<Result<AnalyticsSectionData, ApiFailure>> {
   const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const search = filters.search?.trim();
   const query = {
@@ -58,17 +63,16 @@ export async function getAnalyticsSection(
     order: filters.order,
   };
 
-  const data = await requireData(
-    app.api.analytics({ sectionName: apiSectionName }).get({ query }),
-    "Failed to get analytics section",
-  );
-  return data.analytics;
+  return call(app.api.analytics({ sectionName: apiSectionName }).get({ query }), {
+    fallback: "Failed to get analytics section",
+    empty: "Failed to get analytics section",
+  }).then(Result.map((data) => data.analytics));
 }
 
-export async function getAnalyticsSectionItems(
+export function getAnalyticsSectionItems(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionItemsFilters,
-): Promise<AnalyticsSectionItemsData> {
+): Promise<Result<AnalyticsSectionItemsData, ApiFailure>> {
   const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const query = {
     match: filters.match,
@@ -76,16 +80,16 @@ export async function getAnalyticsSectionItems(
     offset: filters.offset ?? 0,
   };
 
-  return requireData(
-    app.api.analytics({ sectionName: apiSectionName }).items.get({ query }),
-    "Failed to get analytics section items",
-  );
+  return call(app.api.analytics({ sectionName: apiSectionName }).items.get({ query }), {
+    fallback: "Failed to get analytics section items",
+    empty: "Failed to get analytics section items",
+  });
 }
 
-export async function getAnalyticsSectionRelationships(
+export function getAnalyticsSectionRelationships(
   sectionName: AnalyticsSection,
   filters: AnalyticsSectionRelationshipsFilters,
-): Promise<AnalyticsSectionRelationshipsData> {
+): Promise<Result<AnalyticsSectionRelationshipsData, ApiFailure>> {
   const apiSectionName = getAnalyticsSectionApiPath(sectionName);
   const query = {
     match: filters.match,
@@ -93,8 +97,8 @@ export async function getAnalyticsSectionRelationships(
     limit: filters.limit ?? 5,
     offset: filters.offset ?? 0,
   };
-  return requireData(
-    app.api.analytics({ sectionName: apiSectionName }).relationships.get({ query }),
-    "Failed to get analytics section relationships",
-  );
+  return call(app.api.analytics({ sectionName: apiSectionName }).relationships.get({ query }), {
+    fallback: "Failed to get analytics section relationships",
+    empty: "Failed to get analytics section relationships",
+  });
 }

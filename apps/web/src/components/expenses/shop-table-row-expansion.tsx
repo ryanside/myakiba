@@ -17,7 +17,7 @@ import { EXPENSE_CHART_COLORS } from "@/components/expenses/chart-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 
 type OrdersExpansion = Extract<ShopExpansionResponse, { scope: "orders" }>;
 type ShippingExpansion = Extract<ShopExpansionResponse, { scope: "shipping" }>;

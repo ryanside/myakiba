@@ -33,11 +33,11 @@ type PanelProps = {
 
 const PANELS = [
   {
-    appImage: "item-detail",
-    appImageAlt: "myakiba item page",
+    appImage: "add",
+    appImageAlt: "myakiba Add page",
     appImageCrop: { scale: 100, x: 0, y: 0 },
     backgroundCrop: { scale: 176, x: -18, y: -38 },
-    caption: "add items using MyFigureCollection links",
+    caption: "pick items on MyFigureCollection, then choose where they go",
     rowSpan: 2,
     size: "wide",
     variant: "top-left",

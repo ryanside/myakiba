@@ -20,6 +20,8 @@ await mock.module("@tanstack/react-router", () => ({
   ...realRouter,
   useSearch: () => pageSearch,
   useRouter: () => ({}),
+  useLocation: <T,>(options?: { select?: (location: { href: string }) => T }) =>
+    options?.select ? options.select({ href: "/" }) : { href: "/" },
   Link: ({ children, to, className }: { children: ReactNode; to: string; className?: string }) => (
     <a href={to} className={className}>
       {children}

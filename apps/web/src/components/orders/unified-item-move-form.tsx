@@ -1,8 +1,15 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import {
   Dialog,
   DialogClose,
@@ -15,7 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,7 +37,6 @@ import type { NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema"
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { parseMoneyToMinorUnits } from "@myakiba/utils/currency";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
@@ -47,9 +52,10 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { shownMessageOf } from "@/lib/api-response";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
 import { DisclosureIcon } from "@/lib/icons";
 
 type UnifiedItemMoveFormProps = {
@@ -64,12 +70,12 @@ type UnifiedItemMoveFormProps = {
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   onMoveToNew: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly clearSelections?: () => void;
   readonly currency: Currency;
   readonly intent?: "move" | "add";
@@ -120,8 +126,6 @@ function UnifiedItemMoveFormContent({
   const existingSubmitLabel = intent === "add" ? "Assign Order" : "Move Items";
   const newSubmitLabel = intent === "add" ? "Assign to New Order" : "Move to New Order";
 
-  const userLocale = getCurrencyLocale(currency);
-
   const {
     cascadeOptions,
     handleSelectAll,
@@ -156,12 +160,16 @@ function UnifiedItemMoveFormContent({
     defaultValues: {
       targetOrderId: "",
     },
-    onSubmit: ({ value }) =>
-      run(async () => {
-        await onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds);
-        clearSelections?.();
-        close();
-      }),
+    onSubmit: async ({ value }) => {
+      const moved = await run(
+        () => onMoveToExisting(value.targetOrderId, selectedItems.collectionIds, sourceOrderIds),
+        closesOnSuccess,
+      );
+      // A failed move already rolled back and said why, so the dialog stays open to retry.
+      if (moved.isErr()) return;
+      clearSelections?.();
+      close();
+    },
   });
 
   const newOrderForm = useForm({
@@ -182,29 +190,32 @@ function UnifiedItemMoveFormContent({
       miscFees: "0.00",
       notes: "",
     },
-    onSubmit: ({ value }) =>
-      run(async () => {
-        const transformedValue: NewOrder = {
-          title: value.title,
-          shop: value.shop,
-          orderDate: value.orderDate || null,
-          releaseDate: value.releaseDate || null,
-          paymentDate: value.paymentDate || null,
-          shippingDate: value.shippingDate || null,
-          collectionDate: value.collectionDate || null,
-          status: value.status,
-          shippingMethod: value.shippingMethod,
-          shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-          taxes: parseMoneyToMinorUnits(value.taxes),
-          duties: parseMoneyToMinorUnits(value.duties),
-          tariffs: parseMoneyToMinorUnits(value.tariffs),
-          miscFees: parseMoneyToMinorUnits(value.miscFees),
-          notes: value.notes,
-        };
-        await onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds);
-        clearSelections?.();
-        close();
-      }),
+    onSubmit: async ({ value }) => {
+      const transformedValue: NewOrder = {
+        title: value.title,
+        shop: value.shop,
+        orderDate: value.orderDate || null,
+        releaseDate: value.releaseDate || null,
+        paymentDate: value.paymentDate || null,
+        shippingDate: value.shippingDate || null,
+        collectionDate: value.collectionDate || null,
+        status: value.status,
+        shippingMethod: value.shippingMethod,
+        shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+        taxes: acceptedMoneyToMinorUnits(value.taxes),
+        duties: acceptedMoneyToMinorUnits(value.duties),
+        tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+        miscFees: acceptedMoneyToMinorUnits(value.miscFees),
+        notes: value.notes,
+      };
+      const moved = await run(
+        () => onMoveToNew(transformedValue, cascadeOptions, selectedItems.collectionIds),
+        closesOnSuccess,
+      );
+      if (moved.isErr()) return;
+      clearSelections?.();
+      close();
+    },
   });
 
   return (
@@ -240,17 +251,7 @@ function UnifiedItemMoveFormContent({
         </div>
 
         {moveMode === "existing" ? (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                await existingOrderForm.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
-              }
-            }}
-          >
+          <form onSubmit={formSubmitHandler(existingOrderForm)}>
             <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
               <div className="px-4">
                 <existingOrderForm.Field
@@ -407,17 +408,7 @@ function UnifiedItemMoveFormContent({
             </DialogFooter>
           </form>
         ) : (
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                await newOrderForm.handleSubmit();
-              } catch {
-                // The mutation reports the error and the dialog stays open.
-              }
-            }}
-          >
+          <form onSubmit={formSubmitHandler(newOrderForm)}>
             <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
               <div className="flex flex-col gap-3 px-4">
                 <FormSection title="Basics">
@@ -611,117 +602,47 @@ function UnifiedItemMoveFormContent({
 
                 <FormSection title="Fees & Charges">
                   <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="shippingFee"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Shipping</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Shipping"
                     />
 
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="taxes"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Taxes</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Taxes"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="duties"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Duties</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Duties"
                     />
 
-                    <newOrderForm.Field
+                    <MoneyField
+                      form={newOrderForm}
                       name="tariffs"
-                      children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Tariffs</Label>
-                          <MaskInput
-                            id={field.name}
-                            name={field.name}
-                            mask="currency"
-                            currency={currency}
-                            locale={userLocale}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onValueChange={(_maskedValue, unmaskedValue) =>
-                              field.handleChange(unmaskedValue)
-                            }
-                            placeholder="0.00"
-                          />
-                        </div>
-                      )}
+                      currency={currency}
+                      placeholder="0.00"
+                      label="Tariffs"
                     />
                   </div>
 
-                  <newOrderForm.Field
+                  <MoneyField
+                    form={newOrderForm}
                     name="miscFees"
-                    children={(field) => (
-                      <div className="grid gap-1.5">
-                        <Label htmlFor={field.name}>Miscellaneous</Label>
-                        <MaskInput
-                          id={field.name}
-                          name={field.name}
-                          mask="currency"
-                          currency={currency}
-                          locale={userLocale}
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onValueChange={(_maskedValue, unmaskedValue) =>
-                            field.handleChange(unmaskedValue)
-                          }
-                          placeholder="0.00"
-                        />
-                      </div>
-                    )}
+                    currency={currency}
+                    placeholder="0.00"
+                    label="Miscellaneous"
                   />
                 </FormSection>
 

@@ -8,7 +8,8 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
+import type { Saving } from "@/data/client";
 
 export function ListMembersActionBar({
   selectedMemberIds,
@@ -19,7 +20,7 @@ export function ListMembersActionBar({
   readonly selectedMemberIds: readonly string[];
   readonly isRemoving: boolean;
   readonly onClearSelection: () => void;
-  readonly onRemoveMembers: (memberIds: readonly string[]) => Promise<void>;
+  readonly onRemoveMembers: (memberIds: readonly string[]) => Saving;
 }): React.JSX.Element {
   const selectedCount = selectedMemberIds.length;
 
@@ -33,7 +34,7 @@ export function ListMembersActionBar({
       <ActionBarSelection className="border-none">{selectedCount} selected</ActionBarSelection>
       <ActionBarSeparator />
       <ActionBarGroup>
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedCount === 0 || isRemoving}
@@ -48,8 +49,9 @@ export function ListMembersActionBar({
           description="This removes the selection from this List. The Items, Collection Items, and Orders will not be deleted."
           confirmLabel="Remove"
           onConfirm={async () => {
-            await onRemoveMembers(selectedMemberIds);
-            onClearSelection();
+            const saved = await onRemoveMembers(selectedMemberIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
       </ActionBarGroup>

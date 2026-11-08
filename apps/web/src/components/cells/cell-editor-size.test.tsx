@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { InlineCountCell } from "./inline-count-cell";
 import { InlineCurrencyCell } from "./inline-currency-cell";
@@ -8,7 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-const noop = async () => {};
+const noop = async () => Result.ok();
 
 // iOS Safari zooms the page into any focused field set below 16px, and --text-sm is 13px.
 function fontSizeClasses(field: HTMLElement): string[] {

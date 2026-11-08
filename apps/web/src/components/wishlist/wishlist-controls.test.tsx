@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -45,8 +46,8 @@ describe.each(["all", "upcoming", "available"] as const)(
               hasNextPage={false}
               isFetchingNextPage={false}
               onLoadMore={async () => ({ isFetchNextPageError: false })}
-              onRemove={async () => {}}
-              onMove={async () => {}}
+              onRemove={async () => Result.ok()}
+              onMove={async () => Result.ok()}
             />
           ),
         });

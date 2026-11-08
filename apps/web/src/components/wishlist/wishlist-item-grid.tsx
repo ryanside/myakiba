@@ -15,6 +15,7 @@ import { useSortableItems } from "@/hooks/use-sortable-items";
 import { itemDestination } from "@/lib/item-destination";
 import { cn } from "@/lib/utils";
 import type { WishlistPage } from "@/data/resources/wishlist";
+import type { Saving } from "@/data/client";
 
 type WishlistItem = WishlistPage["items"][number];
 
@@ -43,7 +44,7 @@ function SortableWishlistItem({
   readonly sortingDisabled: boolean;
   readonly removingItemId: string | undefined;
   readonly dropIndicator?: "before" | "after";
-  readonly onRemove: (itemId: string, itemExternalId: number | null) => Promise<void>;
+  readonly onRemove: (itemId: string, itemExternalId: number | null) => Saving;
   readonly onEntranceAnimationEnd?: (event: AnimationEvent<HTMLDivElement>) => void;
 }): React.JSX.Element {
   const removing = removingItemId === wishlistItem.itemId;
@@ -131,8 +132,8 @@ export function WishlistItemGrid({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onRemove: (itemId: string, itemExternalId: number | null) => Promise<void>;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onRemove: (itemId: string, itemExternalId: number | null) => Saving;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
 }): React.JSX.Element {
   const sortable = useSortableItems({
     items,

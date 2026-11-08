@@ -32,34 +32,22 @@ interface RateLimitResult {
 }
 
 const rateLimitConfigs = {
-  item: {
-    maxRequests: 30,
+  mfcIngest: {
+    maxRequests: 2000,
     windowSeconds: 3600,
-    keyPrefix: "rl:item",
+    keyPrefix: "rl:mfc-ingest",
     strategy: "userId",
   },
-  csv: {
-    maxRequests: 7,
+  itemResync: {
+    maxRequests: 60,
     windowSeconds: 3600,
-    keyPrefix: "rl:csv",
+    keyPrefix: "rl:item-resync",
     strategy: "userId",
   },
-  collection: {
-    maxRequests: 30,
+  addCommit: {
+    maxRequests: 120,
     windowSeconds: 3600,
-    keyPrefix: "rl:collection",
-    strategy: "userId",
-  },
-  order: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:order",
-    strategy: "userId",
-  },
-  retry: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:sync-retry",
+    keyPrefix: "rl:add-commit",
     strategy: "userId",
   },
 } as const satisfies Record<string, RateLimitConfig>;

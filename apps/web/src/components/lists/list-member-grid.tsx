@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -16,9 +17,10 @@ import { DragHandle, SortableMediaCollection } from "@/components/sortable-media
 import type { MediaViewMode } from "@/components/ui/view-toggle";
 import { cn } from "@/lib/utils";
 import { useSortableItems } from "@/hooks/use-sortable-items";
+import type { Saving } from "@/data/client";
 import { itemDestination } from "@/lib/item-destination";
 
-type ListMembersPage = NonNullable<Awaited<ReturnType<typeof getListMembers>>>;
+type ListMembersPage = NonNullable<InferOk<Awaited<ReturnType<typeof getListMembers>>>>;
 type ListMember = ListMembersPage["items"][number];
 
 const MEMBER_TYPE_LABELS = {
@@ -64,7 +66,7 @@ function SortableListMember({
   readonly selected: boolean;
   readonly dropIndicator?: "before" | "after";
   readonly onToggleSelection: () => void;
-  readonly onRemove: (memberId: string) => Promise<void>;
+  readonly onRemove: (memberId: string) => Saving;
   readonly onEntranceAnimationEnd?: (event: AnimationEvent<HTMLDivElement>) => void;
 }): React.JSX.Element {
   const removeDisabled = removingMemberIds !== undefined;
@@ -164,8 +166,8 @@ export function ListMemberGrid({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onRemove: (memberId: string) => Promise<void>;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onRemove: (memberId: string) => Saving;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (memberId: string, selected: boolean) => void;

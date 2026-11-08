@@ -11,6 +11,7 @@ import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/sche
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
+import type { Saving } from "@/data/client";
 
 interface OrdersGalleryGridProps {
   readonly orders: readonly Order[];
@@ -20,8 +21,8 @@ interface OrdersGalleryGridProps {
   readonly onRowSelectionChange: (
     updater: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState),
   ) => void;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly currency: Currency;
   readonly isLoading: boolean;
 }

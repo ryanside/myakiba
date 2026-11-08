@@ -16,7 +16,6 @@ import type { Currency } from "@myakiba/contracts/shared/types";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +25,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
+import type { Saving } from "@/data/client";
 import { cn } from "@/lib/utils";
 import { OrderForm } from "./order-form";
 
@@ -54,8 +55,8 @@ export function OrderActionsCell({
 }: {
   readonly order: Order;
   readonly isPending: boolean;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
   readonly currency: Currency;
 }): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -136,7 +137,7 @@ export function OrderActionsCell({
         targets={[{ type: "order", id: order.orderId }]}
         targetTitle={order.title}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete order?"

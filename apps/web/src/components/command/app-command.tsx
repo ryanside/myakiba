@@ -1,4 +1,10 @@
-import { LibraryIcon, Loading03Icon, PackageIcon, SearchIcon } from "@hugeicons/core-free-icons";
+import {
+  Add01Icon,
+  LibraryIcon,
+  Loading03Icon,
+  PackageIcon,
+  SearchIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useRead } from "@/data/client";
@@ -23,19 +29,23 @@ import {
 import { APP_COMMAND_NAVIGATION_ITEMS } from "@/lib/app-navigation";
 import type { AppNavigationItem, AppNavigationTarget } from "@/lib/app-navigation";
 import type { CommandSearchResults } from "@/queries/search";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import { LAUNCHABLE_SYNC_OPTIONS } from "@/components/sync/sync-launcher-options";
-import type {
-  LaunchableSyncType,
-  SyncLauncherOption,
-} from "@/components/sync/sync-launcher-options";
-import { SYNC_OPTION_META } from "@/lib/sync";
 import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 import { NavigateIcon } from "@/lib/icons";
 
 const TOKEN_SEPARATOR = /[^a-z0-9]+/i;
 const SEARCH_DEBOUNCE_MS = 200;
+const ADD_ITEMS_KEYWORDS = [
+  "add",
+  "pick",
+  "picks",
+  "collection",
+  "order",
+  "wishlist",
+  "item",
+  "mfc",
+  "myfigurecollection",
+] as const;
 const EMPTY_RESULTS: CommandSearchResults = {
   orderMatches: [],
   itemMatches: [],
@@ -141,7 +151,6 @@ function StatusCommandItem({
 export function AppCommand(): React.JSX.Element {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
   const [inputValue, setInputValue] = useState("");
   const query = inputValue.trim();
   const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
@@ -153,15 +162,7 @@ export function AppCommand(): React.JSX.Element {
     );
   }, [query]);
 
-  const visibleSyncItems = useMemo<readonly SyncLauncherOption[]>(() => {
-    return LAUNCHABLE_SYNC_OPTIONS.filter((item) =>
-      matchesQuery(
-        `${SYNC_OPTION_META[item.type].title} ${item.description}`,
-        [...item.keywords, item.type],
-        query,
-      ),
-    );
-  }, [query]);
+  const showAddItems = matchesQuery("Add items", ADD_ITEMS_KEYWORDS, query);
 
   const {
     data: { orderMatches, itemMatches } = EMPTY_RESULTS,
@@ -182,14 +183,9 @@ export function AppCommand(): React.JSX.Element {
     }
   };
 
-  const handleNavigate = (to: AppNavigationTarget): void => {
+  const handleNavigate = (to: AppNavigationTarget | "/add"): void => {
     closeCommand();
     void navigate({ to });
-  };
-
-  const handleSyncAction = (nextSyncType: LaunchableSyncType): void => {
-    closeCommand();
-    setSyncType(nextSyncType);
   };
 
   const handleOrderOpen = (orderId: string): void => {
@@ -251,9 +247,8 @@ export function AppCommand(): React.JSX.Element {
   }, [open]);
 
   const showNavigationGroup = visibleNavigationItems.length > 0;
-  const showSyncGroup = visibleSyncItems.length > 0;
   const showSearchGroups = query.length > 0;
-  const hasVisibleResults = showNavigationGroup || showSyncGroup || showSearchGroups;
+  const hasVisibleResults = showNavigationGroup || showAddItems || showSearchGroups;
 
   return (
     <>
@@ -299,22 +294,19 @@ export function AppCommand(): React.JSX.Element {
               </CommandGroup>
             ) : null}
 
-            {showSyncGroup ? (
+            {showAddItems ? (
               <CommandGroup heading="Actions">
-                {visibleSyncItems.map((item) => (
-                  <ActionCommandItem
-                    key={item.type}
-                    value={`sync-${item.type}`}
-                    title={SYNC_OPTION_META[item.type].title}
-                    subtitle={item.description}
-                    leading={<CommandLeadIcon icon={item.icon} />}
-                    onSelect={() => handleSyncAction(item.type)}
-                  />
-                ))}
+                <ActionCommandItem
+                  value="add-items"
+                  title="Add items"
+                  subtitle="Open the Add page to review your picks or search myakiba"
+                  leading={<CommandLeadIcon icon={Add01Icon} />}
+                  onSelect={() => handleNavigate("/add")}
+                />
               </CommandGroup>
             ) : null}
 
-            {showSyncGroup && showSearchGroups ? <CommandSeparator /> : null}
+            {showAddItems && showSearchGroups ? <CommandSeparator /> : null}
 
             {showSearchGroups ? (
               <CommandGroup heading="Orders">
@@ -418,8 +410,6 @@ export function AppCommand(): React.JSX.Element {
           </CommandFooter>
         </Command>
       </CommandDialog>
-
-      <SyncActionSheet syncType={syncType} onSyncTypeChange={setSyncType} side="right" />
     </>
   );
 }

@@ -2,7 +2,7 @@ import { $ } from "bun";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dir, "../..");
-const consumers = ["apps/server", "apps/web"];
+const consumers = ["apps/extension", "apps/server", "apps/web"];
 const requiredFlags = [
   "strict",
   "noUncheckedIndexedAccess",

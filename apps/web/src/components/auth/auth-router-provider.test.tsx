@@ -1,4 +1,5 @@
 import { afterAll, afterEach, expect, mock, spyOn, test } from "bun:test";
+import { Result } from "better-result";
 import {
   act,
   cleanup,
@@ -41,6 +42,7 @@ let requestLimit = Infinity;
 let held: Promise<null> | null = null;
 let endingSession = false;
 let deletingAccount = false;
+let draftItem: string | null = null;
 let dashboardRenders = 0;
 let shellRenders = 0;
 const session = signedInSession();
@@ -128,6 +130,7 @@ const { authClient } = await import("@/lib/auth-client");
 const { Toaster } = await import("@/components/ui/toast");
 const { Preferences } = await import("@/components/settings/preferences");
 const { useUserPreferences } = await import("@/hooks/use-user-preferences");
+const { useAddDraft } = await import("@/components/add/add-draft");
 const sessionAtom = authClient.$store.atoms.session;
 if (!sessionAtom) throw new Error("Missing session atom");
 const listen = sessionAtom.listen.bind(sessionAtom);
@@ -157,6 +160,8 @@ afterEach(() => {
   ownerLoads = 0;
   endingSession = false;
   deletingAccount = false;
+  draftItem = null;
+  sessionStorage.clear();
   dashboardRenders = 0;
   shellRenders = 0;
 });
@@ -171,7 +176,7 @@ const owner = rootedRead("dashboard", {
   load: async () => {
     ownerLoads++;
     if (!signedIn) throw new Error("Unauthorized");
-    return account.user.name;
+    return Result.ok(account.user.name);
   },
   staleTime: 5 * 60 * 1000,
 });
@@ -193,8 +198,21 @@ function Dashboard() {
       <h1>Dashboard</h1>
       {deletingAccount ? <DeleteAccount /> : <UserMenu session={session} />}
       {data && <p>{`${data}'s collection`}</p>}
+      {draftItem !== null && <AddDraft itemId={draftItem} />}
     </>
   );
+}
+
+function AddDraft({ itemId }: { readonly itemId: string }) {
+  const { rows } = useAddDraft(itemId);
+  return <p>{`${rows.length} to add`}</p>;
+}
+
+/** Every value this tab keeps in sessionStorage, as one string. */
+function tabStorage() {
+  return Array.from({ length: sessionStorage.length }, (_, index) =>
+    sessionStorage.getItem(sessionStorage.key(index) ?? ""),
+  ).join("\n");
 }
 
 const appRouteApi = getRouteApi("/(app)");
@@ -389,6 +407,22 @@ test("a session that ends drops the signed-out account's cached data", async () 
   await screen.findByRole("heading", { name: "Login" });
   expect(queryClient.getQueryData<string>(ownerKey)).toBeUndefined();
 });
+
+test.each(["signing out", "deleting an account"])(
+  "%s leaves none of the account's Add rows in the tab",
+  async (action) => {
+    deletingAccount = action === "deleting an account";
+    draftItem = "draft-item";
+    await openApp(true);
+    await screen.findByText("1 to add");
+    expect(tabStorage()).toContain("draft-item");
+
+    await endCurrentSession();
+    await screen.findByRole("heading", { name: "Login" });
+
+    expect(tabStorage()).not.toContain("draft-item");
+  },
+);
 
 test("saved preferences reach the route context without a page reload", async () => {
   await openApp(false, "/settings");
@@ -600,9 +634,7 @@ test.each([
       password: "Invalid password",
       expired: "Sign in again to delete your account",
       server: "Please try again",
-      network: deleteAccount
-        ? "Couldn't delete account. Try again."
-        : "Couldn't sign out. Try again.",
+      network: "Couldn't connect. Check your connection and try again.",
       "no-message": deleteAccount
         ? "Couldn't delete account. Try again."
         : "Couldn't sign out. Try again.",
@@ -616,3 +648,20 @@ test.each([
     expect(signedIn).toBe(true);
   },
 );
+
+test("a session change whose route reload fails asks for a refresh", async () => {
+  const { router, refetch } = await openApp();
+  await screen.findByText("Collector's collection");
+  const invalidate = spyOn(router, "invalidate").mockRejectedValue(new Error("Loader failed"));
+
+  try {
+    account = otherSession;
+    await act(refetch);
+
+    expect(
+      await screen.findByText("Couldn't update your session. Refresh to try again."),
+    ).toBeTruthy();
+  } finally {
+    invalidate.mockRestore();
+  }
+});

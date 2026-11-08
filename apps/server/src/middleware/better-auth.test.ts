@@ -30,6 +30,13 @@ const me = async (user: string) => {
   return response.text();
 };
 
+test("a request without a session answers the exact 401 response", async () => {
+  const response = await app.handle(new Request("http://localhost/probe/me"));
+
+  expect(response.status).toBe(401);
+  expect(await response.text()).toBe("Unauthorized");
+});
+
 test("a route inside privateApi that also sets auth: true looks the session up once", async () => {
   lookups.length = 0;
 

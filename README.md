@@ -29,7 +29,7 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 
 ### Core features
 
-- **Import from MyFigureCollection without starting over.** Import a MyFigureCollection CSV or paste item links to add MFC items to your collection and orders. myakiba pulls in the item information for you.
+- **Add items from MyFigureCollection.** Click Pick for myakiba on an MFC item page, then choose on the Add page where it goes. myakiba pulls in the item information for you.
 - **Manage your collection.** Get the flexibility of a spreadsheet with the item information from MFC already attached. Track what you own, what you paid, where you bought it, its condition, dates, tags, notes, and more.
 - **Multi-item orders.** Group multiple items into an order, follow each order from Ordered to Owned, and keep track of shipping, taxes, duties, tariffs, and other fees.
 - **See what is coming up.** Use the dashboard and personal calendar to check upcoming releases,
@@ -48,7 +48,7 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 - **Elysia and Bun**
 - **Better Auth**
 - **PostgreSQL and Drizzle ORM**
-- **Redis and BullMQ**
+- **Redis**
 - **AWS S3**
 - **Turborepo**
 
@@ -108,7 +108,6 @@ skipped by using the workarounds below.
 - [Bun](https://bun.sh/)
 - Docker with Docker Compose
 - An AWS S3 bucket and credentials
-- An HTTP proxy is optional but recommended
 
 ### Services
 
@@ -147,18 +146,15 @@ bun install
 ```bash
 cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
-cp apps/worker/.env.example apps/worker/.env
 ```
 
 Use these values for the services that run locally:
 
 ```dotenv
-# apps/server/.env and apps/worker/.env
+# apps/server/.env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/myakiba
 REDIS_HOST=localhost
 REDIS_PORT=6379
-
-# apps/server/.env
 CORS_ORIGIN=http://localhost:3001
 BETTER_AUTH_URL=http://localhost:3000
 
@@ -167,11 +163,13 @@ VITE_SERVER_URL=http://localhost:3000
 ```
 
 Fill in the remaining auth, email, Turnstile, and S3 values in the example files.
-`WORKER_PROXY_URL`, `AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
+`AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
 Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such as
-`https://cdn.example.com`. If it is empty, the worker builds each file's URL from
+`https://cdn.example.com`. If it is empty, the server builds each file's URL from
 `AWS_BUCKET_NAME` and `AWS_BUCKET_REGION`:
 `https://<AWS_BUCKET_NAME>.s3.<AWS_BUCKET_REGION>.amazonaws.com/<filename>`.
+Set `S3_ENDPOINT_URL` only to store item pictures in an S3-compatible store other
+than AWS, such as MinIO. The server then requires `AWS_BUCKET_URL`.
 
 1. Start the app:
 
@@ -191,7 +189,7 @@ Run `bun stop` when you want to stop the Postgres and Redis containers.
 ### Run the full stack with Docker Compose
 
 The root `docker-compose.yml` runs Postgres, Redis, the schema push, the server and bundled web
-app, and the worker.
+app.
 
 1. Create the Compose environment file:
 
@@ -247,15 +245,14 @@ Use the Postgres username, password, and database name from your `.env` file. Th
 myakiba/
 ├── apps/
 │   ├── web/            # Frontend (Vite + React + TanStack Router)
-│   ├── server/         # API and production web server (Elysia + Bun)
-│   └── worker/         # Scraping and background jobs (BullMQ)
+│   └── server/         # API and production web server (Elysia + Bun)
 ├── packages/
 │   ├── auth/           # Better Auth configuration
 │   ├── config/         # Shared TypeScript configuration
 │   ├── contracts/      # Shared Zod schemas, constants, and types
 │   ├── db/             # Drizzle schema and database scripts
 │   ├── env/            # Typed environment schemas
-│   ├── redis/          # Redis clients, job status, and local Compose setup
+│   ├── redis/          # Redis client, Item Refresh cooldown, and local Compose setup
 │   └── utils/          # Shared utilities
 ├── GLOSSARY.md         # Domain glossary
 ├── docker-compose.yml  # Local full-stack build

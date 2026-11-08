@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import type { ReactNode } from "react";
 import type { DashboardKanbanOrder } from "@/queries/dashboard";
 import { cardsIn, drag, frame, stopDrags, stubKanbanLayout } from "../../../test/kanban-drag";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
@@ -34,8 +36,16 @@ const holdFetches = () => {
 };
 
 const sendWrite = (orderId: string, change: Write["change"]) =>
-  new Promise<void>((resolve, reject) => {
-    writes.push({ orderId, change, settle: resolve, fail: () => reject(new Error("offline")) });
+  new Promise((resolve) => {
+    writes.push({
+      orderId,
+      change,
+      settle: () => resolve(Result.ok(null)),
+      fail: () =>
+        resolve(
+          Result.err(new ApiServerError({ status: 500, body: "offline", message: "offline" })),
+        ),
+    });
   });
 
 const realOrders = await import("@/queries/orders");

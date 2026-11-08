@@ -12,6 +12,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { AnimationEvent } from "react";
 import { useMotionPreference } from "@/hooks/use-appearance";
 import { toast } from "@/components/ui/toast";
+import type { Saving } from "@/data/client";
 
 const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]);
 
@@ -75,7 +76,7 @@ export function useSortableItems<T extends SortableRecord>({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly onClearSelection: () => void;
 }) {
   const reducedMotion = useMotionPreference().reduce;
@@ -205,15 +206,12 @@ export function useSortableItems<T extends SortableRecord>({
       if (movedIds.includes(targetId)) return;
 
       onClearSelection();
-      try {
-        await onMove({
-          movedIds,
-          anchorId: targetId,
-          placement: draggedIndex < targetIndex ? "after" : "before",
-        });
-      } catch {
-        // The mutation restores the saved order and reports the error.
-      }
+      // A failed move restores the saved order and says why itself.
+      await onMove({
+        movedIds,
+        anchorId: targetId,
+        placement: draggedIndex < targetIndex ? "after" : "before",
+      });
     },
     [items, onClearSelection, onMove, selectedIds],
   );

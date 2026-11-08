@@ -81,21 +81,21 @@ export function getDateOnlyMonthBounds(year: number, month: number): DateOnlyRan
 }
 
 /**
- * Normalizes supported scraped release-date inputs to YYYY-MM-DD.
+ * Normalizes release dates as MFC prints them to YYYY-MM-DD.
  *
  * @example
- * normalizeScrapedDate("2006")
+ * normalizeMfcDate("2006")
  * // "2006-01-01"
  *
  * @example
- * normalizeScrapedDate("09/2010")
+ * normalizeMfcDate("09/2010")
  * // "2010-09-01"
  *
  * @example
- * normalizeScrapedDate("09/18/2025")
+ * normalizeMfcDate("09/18/2025")
  * // "2025-09-18"
  */
-export function normalizeScrapedDate(dateStr: string): string | null {
+export function normalizeMfcDate(dateStr: string): string | null {
   const trimmed = dateStr.trim();
   if (!trimmed) return null;
 

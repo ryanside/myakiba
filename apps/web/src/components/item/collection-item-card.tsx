@@ -13,7 +13,7 @@ import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import { Badge, ThemedBadge } from "@/components/reui/badge";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Timeline,
@@ -32,6 +32,7 @@ import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/compon
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
+import type { Saving } from "@/data/client";
 
 function DetailRow({
   label,
@@ -78,18 +79,18 @@ export function CollectionItemCard({
   readonly currency: Currency;
   readonly locale: string;
   readonly dateFormat: DateFormat;
-  readonly onEdit: (values: CollectionItemFormValues) => Promise<void>;
-  readonly onDelete: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEdit: (values: CollectionItemFormValues) => Saving;
+  readonly onDelete: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onMoveToExisting: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onMoveToNew: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly isOrderActionPending: boolean;
   readonly className?: string;
 }): ReactNode {
@@ -243,7 +244,7 @@ export function CollectionItemCard({
           )}
 
           {collectionItem && item ? (
-            <ConfirmDialog
+            <WriteConfirmDialog
               renderTrigger={deleteTrigger}
               title="Delete item?"
               description="This will permanently remove this item from your collection."

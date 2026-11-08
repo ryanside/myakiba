@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { Add01Icon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -38,8 +39,9 @@ import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
+import type { Saving } from "@/data/client";
 
-type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
+type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
 export const Route = createFileRoute("/(app)/lists")({
   component: RouteComponent,
@@ -76,8 +78,8 @@ function SortableList({
   readonly selected: boolean;
   readonly dropIndicator?: "before" | "after";
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
   readonly onEntranceAnimationEnd?: (event: AnimationEvent<HTMLDivElement>) => void;
 }): React.JSX.Element {
   const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef } = useSortable({
@@ -222,9 +224,9 @@ function SortableLists({
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
   readonly onLoadMore: () => Promise<{ readonly isFetchNextPageError: boolean }>;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
-  readonly onMove: (intent: PositionOrderInput) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
+  readonly onMove: (intent: PositionOrderInput) => Saving;
   readonly selectedIds: ReadonlySet<string>;
   readonly onClearSelection: () => void;
   readonly onToggleSelection: (listId: string, selected: boolean) => void;
@@ -292,12 +294,14 @@ function RouteComponent(): React.JSX.Element {
   const viewMode: GridListViewMode = storedViewMode === "list" ? "list" : "grid";
   const { selectedIds, setSelection } = useSelection();
   const handleDeleteList = useCallback(
-    async (listId: string): Promise<void> => {
-      await deleteList(listId);
+    async (listId: string): Saving => {
+      const deleted = await deleteList(listId);
+      if (deleted.isErr()) return deleted;
       setSelection((current) => {
         const { [listId]: _removed, ...next } = current;
         return next;
       });
+      return deleted;
     },
     [deleteList, setSelection],
   );
@@ -320,9 +324,7 @@ function RouteComponent(): React.JSX.Element {
               title="Create List"
               description="Give your new List a title and an optional description."
               submitLabel="Create"
-              onSubmit={async (input) => {
-                await createList(input);
-              }}
+              onSubmit={(input) => createList(input)}
             />
           </>
         }
@@ -363,13 +365,9 @@ function RouteComponent(): React.JSX.Element {
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
           onLoadMore={handleLoadMore}
-          onUpdate={async (listId, input) => {
-            await updateList({ listId, ...input });
-          }}
+          onUpdate={(listId, input) => updateList({ listId, ...input })}
           onDelete={handleDeleteList}
-          onMove={async (intent) => {
-            await handleMove(intent);
-          }}
+          onMove={(intent) => handleMove(intent)}
           selectedIds={selectedIds}
           onClearSelection={() => setSelection({})}
           onToggleSelection={(listId, selected) => {

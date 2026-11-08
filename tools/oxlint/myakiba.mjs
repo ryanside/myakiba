@@ -117,7 +117,7 @@ const noEnvOutsideEnvPackage = {
     const report = (node, read) =>
       context.report({
         node,
-        message: `\`${read}\` read outside packages/env. Add the variable to the schema in packages/env and import \`env\` from "@myakiba/env/server" (or "/web", "/worker").`,
+        message: `\`${read}\` read outside packages/env. Add the variable to the schema in packages/env and import \`env\` from "@myakiba/env/server" (or "/web").`,
       });
     return {
       MemberExpression(node) {

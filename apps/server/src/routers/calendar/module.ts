@@ -2,7 +2,8 @@ import { and, asc, eq, exists, gte, lte, sql } from "drizzle-orm";
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import { getDateOnlyMonthBounds } from "@myakiba/utils/date-only";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { ok, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { query } from "@/domain/kernel";
 import type { CalendarQuery } from "./model";
 
 export const Calendar = {
@@ -48,7 +49,7 @@ export const Calendar = {
 
       scope.log.set({ calendar: { resultCount: items.length } });
       const result = { view: "items" as const, month: input.month, year: input.year, items };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -95,7 +96,7 @@ export const Calendar = {
       const orders = rows.map((row) => ({ ...row, images: row.images.slice(0, 4) }));
       scope.log.set({ calendar: { resultCount: orders.length } });
       const result = { view: "orders" as const, month: input.month, year: input.year, orders };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 };

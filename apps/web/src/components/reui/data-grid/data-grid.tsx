@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import type { ColumnFiltersState, RowData, SortingState, Table } from "@tanstack/react-table";
 
 import { cn } from "@/lib/utils";
@@ -53,11 +53,17 @@ export interface DataGridProps<TData extends object> {
   recordCount: number;
   children?: ReactNode;
   onRowClick?: (row: TData) => void;
+  /** A pointer shortcut only: unlike `onRowClick`, the row stays out of the tab order. */
+  onRowPointerClick?: (row: TData, event: MouseEvent<HTMLTableRowElement>) => void;
   isLoading?: boolean;
   loadingMode?: "skeleton" | "spinner";
   skeletonRowCount?: number;
   loadingMessage?: ReactNode | string;
   emptyMessage?: ReactNode | string;
+  /** A row that has no cells to show, such as one with no record behind it, spans the table. */
+  fullWidthRow?: (row: TData) => ReactNode;
+  /** The table's accessible name, and what describes it. */
+  tableAria?: Pick<ComponentProps<"table">, "aria-label" | "aria-describedby">;
   tableLayout?: {
     dense?: boolean;
     cellBorder?: boolean;
@@ -70,7 +76,6 @@ export interface DataGridProps<TData extends object> {
     stripped?: boolean;
     headerBackground?: boolean;
     headerBorder?: boolean;
-    headerSticky?: boolean;
     width?: "auto" | "fixed";
     columnsVisibility?: boolean;
     columnsResizable?: boolean;
@@ -83,7 +88,6 @@ export interface DataGridProps<TData extends object> {
     base?: string;
     header?: string;
     headerRow?: string;
-    headerSticky?: string;
     body?: string;
     bodyRow?: string;
     footer?: string;
@@ -131,7 +135,6 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       rowBorder: true,
       rowRounded: false,
       stripped: false,
-      headerSticky: false,
       headerBorder: true,
       width: "fixed",
       columnsVisibility: false,
@@ -145,7 +148,6 @@ function DataGrid<TData extends object>({ children, table, ...props }: DataGridP
       base: "",
       header: "",
       headerRow: "",
-      headerSticky: "sticky top-0 z-10 bg-background/90 backdrop-blur-xs",
       body: "",
       bodyRow: "",
       footer: "",

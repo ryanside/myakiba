@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -80,7 +81,7 @@ const orders = [
     }) satisfies Order,
 );
 
-const noop = async () => {};
+const noop = async () => Result.ok();
 const collectionProps = {
   items: collectionItems,
   tileSize: 180,

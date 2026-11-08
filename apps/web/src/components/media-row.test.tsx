@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -54,8 +55,8 @@ async function renderRows({ selected = false } = {}) {
         isFetchingNextPage={false}
         selectedIds={new Set(selected ? members.map((member) => member.id) : [])}
         onLoadMore={async () => ({ isFetchNextPageError: false })}
-        onRemove={async () => {}}
-        onMove={async () => {}}
+        onRemove={async () => Result.ok()}
+        onMove={async () => Result.ok()}
         onClearSelection={() => {}}
         onToggleSelection={() => {}}
       />

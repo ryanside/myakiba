@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { CellContext } from "@tanstack/react-table";
+import type { Saving } from "@/data/client";
 
 type PendingCellRender<TRow> = (
   context: CellContext<TRow, unknown>,
@@ -25,12 +26,12 @@ export function withRowPending<TRow>(
 
 export interface CellEdit<TValue> {
   readonly disabled: boolean;
-  readonly onSubmit: (value: TValue) => Promise<void>;
+  readonly onSubmit: (value: TValue) => Saving;
 }
 
 export function editableCell<TRow>(
   withPending: WithPending<TRow>,
-  save: (row: TRow, field: keyof TRow, value: TRow[keyof TRow]) => Promise<void>,
+  save: (row: TRow, field: keyof TRow, value: TRow[keyof TRow]) => Saving,
 ) {
   return <TField extends keyof TRow>(
     field: TField,
@@ -39,9 +40,7 @@ export function editableCell<TRow>(
     withPending(({ row }, isPending) =>
       render(row.original, {
         disabled: isPending,
-        onSubmit: async (value) => {
-          await save(row.original, field, value);
-        },
+        onSubmit: (value) => save(row.original, field, value),
       }),
     );
 }

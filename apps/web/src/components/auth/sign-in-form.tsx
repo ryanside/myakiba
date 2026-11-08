@@ -1,4 +1,4 @@
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { Link } from "@tanstack/react-router";
 import { toast } from "@/components/ui/toast";
@@ -11,6 +11,7 @@ import { Captcha, useCaptcha } from "@/components/auth/captcha";
 import { MyAkibaLogo } from "../myakiba-logo";
 import { PasswordInput } from "@/components/auth/password-input";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 function GoogleIcon() {
   return (
@@ -37,20 +38,15 @@ function GoogleIcon() {
 
 export default function SignInForm({ redirectTo }: { redirectTo: string }) {
   const handleGoogleAuth = async () => {
-    await authClient.signIn.social(
-      {
+    const started = await decodeAuth(() =>
+      authClient.signIn.social({
         provider: "google",
         callbackURL: getAuthRedirectUrl(redirectTo),
-      },
-      {
-        onError: (error) => {
-          toast.add({
-            type: "error",
-            title: error.error.message || error.error.statusText,
-          });
-        },
-      },
+      }),
     );
+    if (started.isErr()) {
+      toast.add({ type: "error", title: started.error.message || started.error.statusText });
+    }
   };
 
   const { status, run } = useButtonStatus();
@@ -63,38 +59,31 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
     onSubmit: async ({ value }) => {
       const captchaToken = await captcha.token();
       if (captchaToken === null) return;
-      await run(
+      const signedIn = await run(
         () =>
-          authClient.signIn.email(
-            {
-              email: value.email,
-              password: value.password,
-            },
-            {
-              headers: {
-                "x-captcha-response": captchaToken,
+          decodeAuth(() =>
+            authClient.signIn.email(
+              {
+                email: value.email,
+                password: value.password,
+                callbackURL: getAuthRedirectUrl(redirectTo),
               },
-              onSuccess: () => {
-                window.location.assign(getAuthRedirectUrl(redirectTo));
-              },
-              onError: (error) => {
-                if (error.error.status === 403) {
-                  toast.add({
-                    type: "error",
-                    title:
-                      "Please verify your email address. Check your inbox for a verification email.",
-                  });
-                  return;
-                }
-                toast.add({
-                  type: "error",
-                  title: error.error.message || error.error.statusText,
-                });
-              },
-            },
+              { headers: { "x-captcha-response": captchaToken } },
+            ),
           ),
-        (result) => !result.error,
+        (result) => result.isOk(),
       );
+      if (signedIn.isErr()) {
+        toast.add({
+          type: "error",
+          title:
+            signedIn.error.status === 403
+              ? "Please verify your email address. Check your inbox for a verification email."
+              : signedIn.error.message || signedIn.error.statusText,
+        });
+        return;
+      }
+      window.location.assign(getAuthRedirectUrl(redirectTo));
     },
     validators: {
       onSubmit: z.object({
@@ -112,7 +101,11 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
           <h1 className="text-[1.375rem] leading-8 font-medium tracking-tight">Sign in</h1>
           <p className="text-[0.9375rem] text-muted-foreground">
             New to myakiba?{" "}
-            <Link to="/signup" className="font-medium text-foreground underline underline-offset-4">
+            <Link
+              to="/signup"
+              search={{ redirect: redirectTo }}
+              className="font-medium text-foreground underline underline-offset-4"
+            >
               Create an account
             </Link>
           </p>
@@ -134,14 +127,7 @@ export default function SignInForm({ redirectTo }: { redirectTo: string }) {
         <span className="bg-background text-muted-foreground relative z-10 px-2">or</span>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="grid gap-4"
-      >
+      <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
         <form.Field name="email">
           {(field) => (
             <div className="space-y-2">

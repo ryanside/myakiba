@@ -2,9 +2,9 @@ import { Fragment } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { flexRender } from "@tanstack/react-table";
 import type { Row, RowData, Table as TanStackTable } from "@tanstack/react-table";
-import { ariaSort } from "@/components/data-table/aria-sort";
 import { ROW_HOVER_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getAriaSort } from "@/lib/aria-sort";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_SKELETON_ROW_COUNT = 10;
@@ -101,7 +101,7 @@ function TableHeader<TData extends RowData>({
           {headerGroup.headers.map((header) => (
             <th
               key={header.id}
-              aria-sort={ariaSort(header.column.getIsSorted())}
+              aria-sort={getAriaSort(header.column)}
               className={cn(
                 "border-b border-border/70 p-1.5 text-left font-medium text-muted-foreground",
                 variant === "sized" && "w-(--column-share)",

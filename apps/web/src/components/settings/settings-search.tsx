@@ -10,7 +10,7 @@ import {
   SETTINGS_SECTIONS,
   searchSettings,
   searchTerms,
-  settingHash,
+  settingAnchor,
 } from "./settings-registry";
 import { NavigateIcon } from "@/lib/icons";
 
@@ -105,7 +105,7 @@ export function SettingsSearchField({ query }: { readonly query: string }) {
                 setDraft({ text: "", typed: false });
                 void navigate({
                   search: { section: first.section },
-                  hash: settingHash(setting),
+                  hash: settingAnchor(setting),
                   hashScrollIntoView: RESULT_SCROLL,
                 });
               }
@@ -132,7 +132,7 @@ export function SettingsSearchResults({ query }: { readonly query: string }) {
       </header>
       {groups.length === 0 ? (
         <p className="text-pretty text-sm text-muted-foreground">
-          Try a broader word, like “currency”, “password” or “export”.
+          Try a broader word, like “currency”, “password” or “theme”.
         </p>
       ) : (
         groups.map(({ section, settings }) => (
@@ -142,7 +142,7 @@ export function SettingsSearchResults({ query }: { readonly query: string }) {
                 key={id}
                 to="/settings"
                 search={{ section }}
-                hash={settingHash(id)}
+                hash={settingAnchor(id)}
                 hashScrollIntoView={RESULT_SCROLL}
                 data-settings-result=""
                 onKeyDown={(event) => {

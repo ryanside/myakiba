@@ -13,6 +13,9 @@ import type { ReactNode } from "react";
 import { useEffect, useSyncExternalStore } from "react";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { Saving } from "@/data/client";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -49,25 +52,29 @@ const listPage = (items: readonly ServerItem[]) => {
     totalValue: items.reduce((sum, { price }) => sum + price, 0),
     totalItemsThisMonth: 0,
   };
-  // The 52f1b8fa replay runs this file from before S9, when the list was an array of rows that
-  // each carried the totals, so the page is also that array.
-  return Object.assign(
-    items.map((item) => ({ ...item, ...totals })),
-    { items, ...totals },
-  );
+  return { items, ...totals };
 };
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
-  (...args: never[]): Promise<void> =>
-    new Promise((resolve, reject) => {
+  (...args: never[]) =>
+    new Promise((resolve) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
-          resolve();
+          resolve(Result.ok(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () =>
+          resolve(
+            Result.err(
+              new ApiServerError({
+                status: 500,
+                body: `${name} rejected by server`,
+                message: `${name} rejected by server`,
+              }),
+            ),
+          ),
       });
     });
 
@@ -75,7 +82,9 @@ await mock.module("@/queries/collection", () => ({
   getCollection: async (filters: CollectionFilters) => {
     server.listReads++;
     await server.heldReads;
-    return listPage(server.items.filter((item) => item.itemTitle.includes(filters.search ?? "")));
+    return Result.ok(
+      listPage(server.items.filter((item) => item.itemTitle.includes(filters.search ?? ""))),
+    );
   },
 
   deleteCollectionItems: held("delete", (ids: string[]) => {
@@ -171,12 +180,9 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
         for (const listener of url.listeners) listener();
       });
     },
-    act: (run: (current: Actions) => Promise<void>) => {
+    act: (run: (current: Actions) => Saving) => {
       if (!actions) throw new Error("the collection page has not rendered");
-      return run(actions).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      return run(actions).then((saved) => saved.status);
     },
   };
 }
@@ -224,7 +230,7 @@ describe("a Collection Item write on the collection page", () => {
     );
 
     await answer(0, "finish");
-    expect(await deleting).toBe("resolved");
+    expect(await deleting).toBe("ok");
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" },
@@ -256,7 +262,7 @@ describe("a Collection Item write on the collection page", () => {
     );
     await releaseReads();
     expect({ settled: await editing, toasts: toastTitles() }).toEqual({
-      settled: "rejected",
+      settled: "error",
       toasts: ["error: Failed to update collection item. Please try again."],
     });
   });
@@ -270,7 +276,7 @@ describe("a Collection Item write on the collection page", () => {
     expect(shown().items).toEqual(["Miku 1000", "Rin 500", "Len 200"]);
 
     await answer(0, "finish");
-    expect(await editing).toBe("resolved");
+    expect(await editing).toBe("ok");
     await waitFor(() => expect(shown().items).toEqual(["Miku 1500", "Rin 500", "Len 200"]));
     expect(toastTitles()).toEqual(["success: Collection updated"]);
   });
@@ -278,7 +284,7 @@ describe("a Collection Item write on the collection page", () => {
 
 type CollectionHandlers = ReturnType<typeof useCollectionMutations> &
   ReturnType<typeof useCollectionOrderMutations>;
-const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Promise<void>])[] = [
+const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Saving])[] = [
   ["handleEditCollectionItem", (h) => h.handleEditCollectionItem(mikuAt(1500))],
   ["handleDeleteCollectionItems", (h) => h.handleDeleteCollectionItems(new Set([MIKU.id]))],
   [
@@ -317,12 +323,9 @@ describe("a Collection Item action's promise settles with the server write", () 
 
   test.each(HANDLERS)("%s: rejects when the write fails", async (_name, run) => {
     const handlers = renderHandlers();
-    const call = run(handlers.current).then(
-      () => "resolved",
-      () => "rejected",
-    );
+    const call = run(handlers.current).then((saved) => saved.status);
     await answer(0, "fail");
-    expect(await call).toBe("rejected");
+    expect(await call).toBe("error");
   });
 });
 
@@ -354,6 +357,6 @@ describe("a failed Collection Item write after the filter changes", () => {
     expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "1000" });
 
     await releaseReads();
-    expect(await deleting).toBe("rejected");
+    expect(await deleting).toBe("error");
   });
 });

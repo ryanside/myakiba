@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import type { AnalyticsSectionItemsData, AnalyticsSectionRow } from "@/queries/analytics";
 import { cn } from "@/lib/utils";
 import { itemDestination } from "@/lib/item-destination";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 
 const SECTION_ITEM_PAGE_SIZE = 6;
 

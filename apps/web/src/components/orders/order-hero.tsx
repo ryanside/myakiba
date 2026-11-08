@@ -11,7 +11,7 @@ import {
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/sche
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import type { Saving } from "@/data/client";
 
 export function OrderHero({
   order,
@@ -39,8 +40,8 @@ export function OrderHero({
   readonly isLoading: boolean;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrder: (orderId: string) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrder: (orderId: string) => Saving;
 }): ReactNode {
   if (isLoading) {
     return (
@@ -96,8 +97,8 @@ function LoadedOrderHero({
   readonly order: Order;
   readonly currency: Currency;
   readonly dateFormat: DateFormat;
-  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  readonly onDeleteOrder: (orderId: string) => Promise<void>;
+  readonly onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  readonly onDeleteOrder: (orderId: string) => Saving;
 }): ReactNode {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -180,7 +181,7 @@ function LoadedOrderHero({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <ConfirmDialog
+          <WriteConfirmDialog
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
             title="Delete order?"

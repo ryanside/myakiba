@@ -62,7 +62,9 @@ async function continueToAddItems() {
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  await screen.findByRole("dialog", { name: "Bring in your items." });
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Pick your first items." });
 }
 
 test("the onboarding dialog stays open on its step when the window narrows to a phone and widens back", async () => {
@@ -72,13 +74,13 @@ test("the onboarding dialog stays open on its step when the window narrows to a 
 
   resizeWindow(PHONE_WIDTH);
   expect(
-    screen.queryByRole("dialog", { name: "Bring in your items." }),
+    screen.queryByRole("dialog", { name: "Pick your first items." }),
     "the dialog closed or lost its step at phone width",
   ).not.toBeNull();
 
   resizeWindow(DESKTOP_WIDTH);
   expect(
-    screen.queryByRole("dialog", { name: "Bring in your items." }),
+    screen.queryByRole("dialog", { name: "Pick your first items." }),
     "the dialog closed or lost its step back at desktop width",
   ).not.toBeNull();
 });

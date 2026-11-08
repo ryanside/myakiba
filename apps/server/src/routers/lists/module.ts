@@ -1,28 +1,21 @@
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { collection, item, list, listMember, order } from "@myakiba/db/schema/figure";
-import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { Tx } from "@myakiba/db/tx";
 import type { ListInput, ListTarget } from "@myakiba/contracts/lists/schema";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
+import { addListMembers, lockOwnedLists, splitTargets, canTarget } from "@/lib/list-members";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { planPositionOrderMove, POSITION_UPDATE_CHUNK_SIZE } from "@/lib/position-order";
-import { command, fail, ok, query } from "@/domain/kernel";
-
-const LIST_MEMBER_INSERT_CHUNK_SIZE = 5000;
+import { Result, panic } from "better-result";
+import { command, query } from "@/domain/kernel";
+import { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
+import { ListNotFound } from "./errors/list-not-found";
+import { SelectionNotFound } from "./errors/selection-not-found";
 
 const listOrder = [asc(list.position), asc(list.createdAt), asc(list.id)];
 
 function lockLists(tx: Tx, userId: string) {
   return tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`lists:${userId}`}, 0))`);
-}
-
-function splitTargets(targets: readonly ListTarget[]) {
-  return {
-    itemIds: targets.flatMap((target) => (target.type === "item" ? [target.id] : [])),
-    collectionIds: targets.flatMap((target) =>
-      target.type === "collectionItem" ? [target.id] : [],
-    ),
-    orderIds: targets.flatMap((target) => (target.type === "order" ? [target.id] : [])),
-  };
 }
 
 function memberTargetFilter({ itemIds, collectionIds, orderIds }: ReturnType<typeof splitTargets>) {
@@ -33,36 +26,6 @@ function memberTargetFilter({ itemIds, collectionIds, orderIds }: ReturnType<typ
   ].filter((filter) => filter !== null);
   if (!first) return null;
   return or(first, ...rest) ?? first;
-}
-
-/** Whether every target exists and the caller owns each Collection Item and Order. */
-async function targetsExist(
-  tx: ReadTx,
-  userId: string,
-  { itemIds, collectionIds, orderIds }: ReturnType<typeof splitTargets>,
-) {
-  const [itemRows, collectionRows, orderRows] = await Promise.all([
-    itemIds.length > 0
-      ? tx.select({ id: item.id }).from(item).where(inArray(item.id, itemIds))
-      : Promise.resolve([]),
-    collectionIds.length > 0
-      ? tx
-          .select({ id: collection.id })
-          .from(collection)
-          .where(and(eq(collection.userId, userId), inArray(collection.id, collectionIds)))
-      : Promise.resolve([]),
-    orderIds.length > 0
-      ? tx
-          .select({ id: order.id })
-          .from(order)
-          .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
-      : Promise.resolve([]),
-  ]);
-  return (
-    itemRows.length === itemIds.length &&
-    collectionRows.length === collectionIds.length &&
-    orderRows.length === orderIds.length
-  );
 }
 
 async function ownedListForUpdate(tx: Tx, userId: string, listId: string) {
@@ -150,7 +113,7 @@ export const Lists = {
       ]);
 
       scope.log.set({ lists: { resultCount: items.length } });
-      return ok({
+      return Result.ok({
         items: items.map((currentList) => ({
           ...currentList,
           createdAt: currentList.createdAt.toISOString(),
@@ -184,10 +147,11 @@ export const Lists = {
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
         });
-      if (!created) throw new Error("FAILED_TO_CREATE_LIST");
+      if (!created)
+        panic("Inserting the list returned no row, so lists.create has no list to answer");
 
       scope.log.set({ list: { id: created.id } });
-      return ok({
+      return Result.ok({
         ...created,
         createdAt: created.createdAt.toISOString(),
         updatedAt: created.updatedAt.toISOString(),
@@ -201,15 +165,21 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ listCount: movedIds.length });
       await lockLists(scope.tx, userId);
+      // Rows lock in id order, as every route that locks several Lists does.
+      await scope.tx
+        .select({ id: list.id })
+        .from(list)
+        .where(eq(list.userId, userId))
+        .orderBy(asc(list.id))
+        .for("update");
       const currentLists = await scope.tx
         .select({ id: list.id, position: list.position })
         .from(list)
         .where(eq(list.userId, userId))
-        .orderBy(...listOrder)
-        .for("update");
+        .orderBy(...listOrder);
 
       const plan = planPositionOrderMove(currentLists, movedIds, anchorId, placement);
-      if (plan.kind === "not_found") return fail("not_found", "List not found");
+      if (plan.kind === "not_found") return Result.err(new ListNotFound());
 
       if (plan.updates.length > 0) {
         const positionCases = plan.updates.map(
@@ -231,7 +201,7 @@ export const Lists = {
           );
       }
 
-      return ok("List order saved");
+      return Result.ok("List order saved" as const);
     },
   ),
 
@@ -241,11 +211,11 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ targetCount: input.targets.length });
       const targets = splitTargets(input.targets);
-      if (!(await targetsExist(scope.tx, userId, targets))) {
-        return fail("not_found", "Selection not found");
+      if (!(await canTarget(scope.tx, userId, targets))) {
+        return Result.err(new SelectionNotFound());
       }
       const targetFilter = memberTargetFilter(targets);
-      if (!targetFilter) return fail("not_found", "Selection not found");
+      if (!targetFilter) return Result.err(new SelectionNotFound());
 
       const lists = await scope.tx
         .select({
@@ -260,7 +230,7 @@ export const Lists = {
         .orderBy(...listOrder);
 
       scope.log.set({ lists: { resultCount: lists.length } });
-      return ok({ lists });
+      return Result.ok({ lists });
     },
   ),
 
@@ -274,53 +244,12 @@ export const Lists = {
       const { targets, listIds } = input;
       scope.log.set({ targetCount: targets.length, listCount: listIds.length });
 
-      const [found, ownedLists] = await Promise.all([
-        targetsExist(scope.tx, userId, splitTargets(targets)),
-        scope.tx
-          .select({ id: list.id })
-          .from(list)
-          .where(and(eq(list.userId, userId), inArray(list.id, listIds)))
-          .orderBy(asc(list.id))
-          .for("update"),
-      ]);
-      if (!found || ownedLists.length !== listIds.length) {
-        return fail("not_found", "List or selection not found");
-      }
+      const added = await addListMembers(scope.tx, userId, targets, listIds);
+      if (added.isErr()) return added;
 
-      const maxPositions = await scope.tx
-        .select({
-          listId: listMember.listId,
-          position: sql<number>`COALESCE(MAX(${listMember.position}), -1)::integer`,
-        })
-        .from(listMember)
-        .where(inArray(listMember.listId, listIds))
-        .groupBy(listMember.listId);
-      const maxPositionByListId = new Map(
-        maxPositions.map((position) => [position.listId, position.position]),
-      );
-      const membersToInsert = listIds.flatMap((listId) => {
-        const maxPosition = maxPositionByListId.get(listId) ?? -1;
-        return targets.map((target, index) => ({
-          listId,
-          itemId: target.type === "item" ? target.id : null,
-          collectionId: target.type === "collectionItem" ? target.id : null,
-          orderId: target.type === "order" ? target.id : null,
-          position: maxPosition + index + 1,
-        }));
-      });
-      let addedCount = 0;
-      for (let index = 0; index < membersToInsert.length; index += LIST_MEMBER_INSERT_CHUNK_SIZE) {
-        const members = membersToInsert.slice(index, index + LIST_MEMBER_INSERT_CHUNK_SIZE);
-        const addedMembers = await scope.tx
-          .insert(listMember)
-          .values(members)
-          .onConflictDoNothing()
-          .returning({ id: listMember.id });
-        addedCount += addedMembers.length;
-      }
-
+      const { addedCount } = added.value;
       scope.log.set({ addedCount });
-      return ok({ listIds: [...listIds], addedCount });
+      return Result.ok({ listIds: [...listIds], addedCount });
     },
   ),
 
@@ -330,13 +259,13 @@ export const Lists = {
       const { listId } = input;
       scope.log.set({ list: { id: listId }, targetCount: input.targets.length });
       if (!(await ownedListForUpdate(scope.tx, scope.viewer.userId, listId))) {
-        return fail("not_found", "List not found");
+        return Result.err(new ListNotFound());
       }
 
       const targetFilter = memberTargetFilter(splitTargets(input.targets));
       if (!targetFilter) {
         scope.log.set({ removedCount: 0 });
-        return ok({ listId, removedCount: 0 });
+        return Result.ok({ listId, removedCount: 0 });
       }
       const removedMembers = await scope.tx
         .delete(listMember)
@@ -344,7 +273,7 @@ export const Lists = {
         .returning({ id: listMember.id });
 
       scope.log.set({ removedCount: removedMembers.length });
-      return ok({ listId, removedCount: removedMembers.length });
+      return Result.ok({ listId, removedCount: removedMembers.length });
     },
   ),
 
@@ -363,9 +292,9 @@ export const Lists = {
         .from(list)
         .where(and(eq(list.id, input.listId), eq(list.userId, scope.viewer.userId)))
         .limit(1);
-      if (!row) return fail("not_found", "List not found");
+      if (!row) return Result.err(new ListNotFound());
 
-      return ok({
+      return Result.ok({
         ...row,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
@@ -388,9 +317,9 @@ export const Lists = {
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
         });
-      if (!updated) return fail("not_found", "List not found");
+      if (!updated) return Result.err(new ListNotFound());
 
-      return ok({
+      return Result.ok({
         ...updated,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
@@ -404,13 +333,14 @@ export const Lists = {
       const userId = scope.viewer.userId;
       scope.log.set({ listCount: input.listIds.length });
       await lockLists(scope.tx, userId);
+      await lockOwnedLists(scope.tx, userId, input.listIds);
       const deleted = await scope.tx
         .delete(list)
         .where(and(eq(list.userId, userId), inArray(list.id, input.listIds)))
         .returning({ id: list.id });
-      if (deleted.length !== input.listIds.length) return fail("not_found", "List not found");
+      if (deleted.length !== input.listIds.length) return Result.err(new ListNotFound());
 
-      return ok({ deletedCount: input.listIds.length });
+      return Result.ok({ deletedCount: input.listIds.length });
     },
   ),
 
@@ -420,7 +350,7 @@ export const Lists = {
       const { listId, memberIds } = input;
       scope.log.set({ list: { id: listId }, memberCount: memberIds.length });
       if (!(await ownedListForUpdate(scope.tx, scope.viewer.userId, listId))) {
-        return fail("not_found", "Selection not found");
+        return Result.err(new SelectionNotFound());
       }
 
       const deletedMembers = await scope.tx
@@ -428,11 +358,11 @@ export const Lists = {
         .where(and(eq(listMember.listId, listId), inArray(listMember.id, memberIds)))
         .returning({ id: listMember.id });
       if (deletedMembers.length !== memberIds.length) {
-        return fail("not_found", "Selection not found");
+        return Result.err(new SelectionNotFound());
       }
 
       scope.log.set({ removedCount: deletedMembers.length });
-      return ok({ removedCount: deletedMembers.length });
+      return Result.ok({ removedCount: deletedMembers.length });
     },
   ),
 
@@ -471,7 +401,7 @@ export const Lists = {
           .innerJoin(list, eq(listMember.listId, list.id))
           .where(and(eq(listMember.listId, listId), eq(list.userId, userId))),
       ]);
-      if (ownedLists.length === 0) return fail("not_found", "List not found");
+      if (ownedLists.length === 0) return Result.err(new ListNotFound());
       const totalCount = countRows[0]?.totalCount ?? 0;
 
       const itemIds = memberRows.flatMap((member) => (member.itemId ? [member.itemId] : []));
@@ -526,7 +456,10 @@ export const Lists = {
       const members = memberRows.map((member) => {
         if (member.itemId) {
           const target = itemById.get(member.itemId);
-          if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+          if (!target)
+            panic(
+              `List member ${member.id} names item ${member.itemId}, which lists.members did not read`,
+            );
           return {
             id: member.id,
             position: member.position,
@@ -540,7 +473,11 @@ export const Lists = {
 
         if (member.collectionId) {
           const target = collectionItemById.get(member.collectionId);
-          if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+          if (!target) {
+            panic(
+              `List member ${member.id} names collection item ${member.collectionId}, which the owner cannot see`,
+            );
+          }
           return {
             id: member.id,
             position: member.position,
@@ -553,9 +490,13 @@ export const Lists = {
           };
         }
 
-        if (!member.orderId) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+        if (!member.orderId)
+          panic(`List member ${member.id} names no item, collection item or order`);
         const target = orderById.get(member.orderId);
-        if (!target) throw new Error("LIST_MEMBER_TARGET_NOT_FOUND");
+        if (!target)
+          panic(
+            `List member ${member.id} names order ${member.orderId}, which the owner cannot see`,
+          );
         return {
           id: member.id,
           position: member.position,
@@ -567,7 +508,7 @@ export const Lists = {
       });
 
       scope.log.set({ lists: { resultCount: members.length } });
-      return ok({ items: members, totalCount, limit, offset });
+      return Result.ok({ items: members, totalCount, limit, offset });
     },
   ),
 
@@ -577,7 +518,7 @@ export const Lists = {
       const { listId, movedIds, anchorId, placement } = input;
       scope.log.set({ list: { id: listId }, memberCount: movedIds.length });
       if (!(await ownedListForUpdate(scope.tx, scope.viewer.userId, listId))) {
-        return fail("not_found", "List or selection not found");
+        return Result.err(new ListOrSelectionNotFound());
       }
 
       const currentMembers = await scope.tx
@@ -588,7 +529,7 @@ export const Lists = {
         .for("update");
 
       const plan = planPositionOrderMove(currentMembers, movedIds, anchorId, placement);
-      if (plan.kind === "not_found") return fail("not_found", "List or selection not found");
+      if (plan.kind === "not_found") return Result.err(new ListOrSelectionNotFound());
 
       for (let index = 0; index < plan.updates.length; index += POSITION_UPDATE_CHUNK_SIZE) {
         const updates = plan.updates.slice(index, index + POSITION_UPDATE_CHUNK_SIZE);
@@ -611,7 +552,7 @@ export const Lists = {
           );
       }
 
-      return ok("List order saved");
+      return Result.ok("List order saved" as const);
     },
   ),
 };

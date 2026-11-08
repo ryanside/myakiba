@@ -1,0 +1,202 @@
+import { afterEach, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
+import { cleanup, configure, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { delegatingBridge, fakeExtension } from "../../../test/fake-extension";
+import {
+  LISTING_URLS,
+  SUPPORTED_BROWSERS,
+  listIn,
+  browseWith,
+} from "../../../test/extension-browser";
+
+const [CHROME] = SUPPORTED_BROWSERS;
+browseWith(CHROME.userAgent);
+listIn(CHROME.store);
+
+configure({ asyncUtilTimeout: 3000 });
+setDefaultTimeout(30_000);
+
+let extension = fakeExtension();
+const { createExtensionBridge } = await import("@/lib/extension-bridge");
+let bridge = createExtensionBridge(extension.window);
+await mock.module("@/lib/extension-bridge", () => ({
+  createExtensionBridge,
+  extensionBridge: delegatingBridge(() => bridge),
+}));
+
+const session = { user: { currency: "USD", dateFormat: "MM/DD/YYYY", username: "fixture" } };
+const realRouter = await import("@tanstack/react-router");
+await mock.module("@tanstack/react-router", () => ({
+  ...realRouter,
+  useNavigate: () => async () => {},
+  useRouter: () => ({ invalidate: async () => {} }),
+  getRouteApi: () => ({ useRouteContext: () => ({ session }) }),
+}));
+
+const { ExtensionStep } = await import("./extension-step");
+const { OnboardingProvider, useOpenOnboarding } = await import("./onboarding-dialog");
+
+function GettingStartedButton() {
+  const openOnboarding = useOpenOnboarding();
+  return (
+    <button type="button" onClick={openOnboarding}>
+      Getting Started
+    </button>
+  );
+}
+
+const ONBOARDING_KEY = "myakiba:onboarding-v2";
+const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
+
+function loadExtension(options: Parameters<typeof fakeExtension>[0]) {
+  extension = fakeExtension(options);
+  bridge = createExtensionBridge(extension.window);
+}
+
+function renderOnboarding() {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <OnboardingProvider>
+        <GettingStartedButton />
+      </OnboardingProvider>
+    </QueryClientProvider>,
+  );
+}
+
+/** Getting Started always opens at the welcome step, so the test walks to the extension step. */
+async function openExtensionStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Set your username, currency, and date format." });
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+}
+
+function reloadWith(options: Parameters<typeof fakeExtension>[0]) {
+  cleanup();
+  loadExtension(options);
+  renderOnboarding();
+}
+
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
+
+test("an installed extension reads as connected", async () => {
+  loadExtension({ installed: true });
+  render(<ExtensionStep />);
+
+  expect(await screen.findByText("Extension connected")).toBeDefined();
+  expect(screen.queryByRole("link")).toBeNull();
+});
+
+test("with no extension it links to the store listing", async () => {
+  loadExtension({ installed: false });
+  render(<ExtensionStep />);
+
+  expect(screen.getByRole("status").textContent).toBe("Looking for the extension…");
+  expect(await screen.findByText("Not installed")).toBeDefined();
+  expect(
+    screen
+      .getByRole("link", { name: "Install from the Chrome Web Store (opens in a new tab)" })
+      .getAttribute("href"),
+  ).toBe(LISTING_URLS.chromeWebStore);
+  expect(screen.getByText("Reload this page after you install it.")).toBeDefined();
+});
+
+test("an extension that is too old asks for an update", async () => {
+  loadExtension({ protocols: { min: 0, max: 0 } });
+  render(<ExtensionStep />);
+
+  expect(await screen.findByText("Update needed")).toBeDefined();
+  expect(screen.getByRole("link", { name: "How to update it (opens in a new tab)" })).toBeDefined();
+  expect(screen.getByText("Reload this page after you update it.")).toBeDefined();
+});
+
+test("an update keeps reading as update needed until the page reloads", async () => {
+  loadExtension({ protocols: { min: 0, max: 0 } });
+  render(<ExtensionStep />);
+  await screen.findByText("Update needed");
+
+  extension.setInstalled(false);
+  cleanup();
+  render(<ExtensionStep />);
+
+  await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Update needed"));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
+  expect(screen.getByRole("status").textContent).toBe("Update needed");
+});
+
+test("a new install shows after the reload, and onboarding reopens at the extension step", async () => {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
+  const reload = spyOn(window.location, "reload").mockImplementation(() => {});
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderOnboarding();
+  await openExtensionStep(user);
+  expect(await screen.findByText("Not installed")).toBeDefined();
+
+  await user.click(screen.getByRole("button", { name: "Reload page" }));
+  expect(reload).toHaveBeenCalledTimes(1);
+  reloadWith({ installed: true });
+
+  await screen.findByRole("dialog", { name: EXTENSION_STEP_TITLE });
+  expect(await screen.findByText("Extension connected")).toBeDefined();
+  reload.mockRestore();
+});
+
+test("onboarding closed at the extension step stays closed after a reload", async () => {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderOnboarding();
+  await openExtensionStep(user);
+
+  await user.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  reloadWith({ installed: false });
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("onboarding moved past the extension step does not reopen there after a reload", async () => {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ hasSeen: true }));
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderOnboarding();
+  await openExtensionStep(user);
+
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Pick your first items." });
+  reloadWith({ installed: false });
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+test("onboarding opened in a second tab leaves the first tab's extension step to reopen", async () => {
+  localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step: 0, hasSeen: true }));
+  loadExtension({ installed: false });
+  const user = userEvent.setup();
+  renderOnboarding();
+  localStorage.setItem(
+    ONBOARDING_KEY,
+    JSON.stringify({ step: 0, hasSeen: true, extensionStepOpen: true }),
+  );
+  window.dispatchEvent(new StorageEvent("storage", { key: ONBOARDING_KEY }));
+
+  await user.click(screen.getByRole("button", { name: "Getting Started" }));
+  await screen.findByRole("dialog", { name: "Welcome to myakiba." });
+
+  expect(localStorage.getItem(ONBOARDING_KEY)).toContain('"extensionStepOpen":true');
+});

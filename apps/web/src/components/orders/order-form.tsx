@@ -1,6 +1,14 @@
+import { Result } from "better-result";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import {
   Dialog,
   DialogClose,
@@ -22,7 +30,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -40,12 +47,13 @@ import type { Order } from "@myakiba/contracts/orders/types";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
-import { getCurrencyLocale } from "@/lib/locale";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 type MergeOrderFormProps = {
   renderTrigger: React.ReactElement;
@@ -56,7 +64,7 @@ type MergeOrderFormProps = {
     value: NewOrder,
     cascadeOptions: CascadeOptions,
     orderIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   clearSelections: () => void;
   currency: Currency;
 };
@@ -71,7 +79,7 @@ type SplitOrderFormProps = {
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
     orderIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   clearSelections: () => void;
   currency: Currency;
 };
@@ -81,7 +89,7 @@ type EditOrderFormProps = {
   orderIds?: ReadonlySet<string>;
   collectionIds?: ReadonlySet<string>;
   type: "edit-order";
-  callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
+  callbackFn: (value: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
   orderData: Order;
   clearSelections?: () => void;
   currency: Currency;
@@ -123,7 +131,6 @@ function OrderFormContent(
   },
 ) {
   const { type, currency, close } = props;
-  const userLocale = getCurrencyLocale(currency);
 
   const {
     cascadeOptions,
@@ -175,7 +182,7 @@ function OrderFormContent(
           notes: "",
         },
     onSubmit: ({ value }) =>
-      run(async () => {
+      run(async (): Saving => {
         const base = {
           title: value.title,
           shop: value.shop,
@@ -186,30 +193,35 @@ function OrderFormContent(
           collectionDate: value.collectionDate || null,
           status: value.status,
           shippingMethod: value.shippingMethod || "n/a",
-          shippingFee: parseMoneyToMinorUnits(value.shippingFee),
-          taxes: parseMoneyToMinorUnits(value.taxes),
-          duties: parseMoneyToMinorUnits(value.duties),
-          tariffs: parseMoneyToMinorUnits(value.tariffs),
-          miscFees: parseMoneyToMinorUnits(value.miscFees),
+          shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
+          taxes: acceptedMoneyToMinorUnits(value.taxes),
+          duties: acceptedMoneyToMinorUnits(value.duties),
+          tariffs: acceptedMoneyToMinorUnits(value.tariffs),
+          miscFees: acceptedMoneyToMinorUnits(value.miscFees),
           notes: value.notes,
         };
 
         if (type === "edit-order") {
           const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
           const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
-          await callbackFn(transformedValue, cascadeOptions);
+          const saved = await callbackFn(transformedValue, cascadeOptions);
+          // A failed write already rolled back and said why, so the form stays open to retry.
+          if (saved.isErr()) return saved;
         } else if (type === "split") {
           const { callbackFn, collectionIds, orderIds, clearSelections } =
             props as DeferredSplitOrderFormProps;
-          await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
+          const saved = await callbackFn(base as NewOrder, cascadeOptions, collectionIds, orderIds);
+          if (saved.isErr()) return saved;
           clearSelections?.();
         } else {
           const { callbackFn, orderIds, clearSelections } = props as DeferredMergeOrderFormProps;
-          await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+          const saved = await callbackFn(base as NewOrder, cascadeOptions, orderIds);
+          if (saved.isErr()) return saved;
           clearSelections?.();
         }
         close();
-      }),
+        return Result.ok();
+      }, closesOnSuccess),
   });
 
   const formFields = (
@@ -332,7 +344,10 @@ function OrderFormContent(
                   <PopoverReleaseDateCell
                     value={field.state.value ?? null}
                     orderId={orderData?.orderId}
-                    onSubmit={async (value) => field.handleChange(value)}
+                    onSubmit={async (value) => {
+                      field.handleChange(value);
+                      return Result.ok();
+                    }}
                     triggerVariant="outline"
                     triggerClassName="w-full justify-start"
                     placeholder="Select release"
@@ -435,107 +450,47 @@ function OrderFormContent(
 
       <FormSection title="Fees & Charges">
         <div className="grid grid-cols-2 gap-3">
-          <form.Field
+          <MoneyField
+            form={form}
             name="shippingFee"
-            children={(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Shipping</Label>
-                <MaskInput
-                  id={field.name}
-                  name={field.name}
-                  mask="currency"
-                  currency={currency}
-                  locale={userLocale}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
+            currency={currency}
+            placeholder="0.00"
+            label="Shipping"
           />
 
-          <form.Field
+          <MoneyField
+            form={form}
             name="taxes"
-            children={(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Taxes</Label>
-                <MaskInput
-                  id={field.name}
-                  name={field.name}
-                  mask="currency"
-                  currency={currency}
-                  locale={userLocale}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
+            currency={currency}
+            placeholder="0.00"
+            label="Taxes"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <form.Field
+          <MoneyField
+            form={form}
             name="duties"
-            children={(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Duties</Label>
-                <MaskInput
-                  id={field.name}
-                  name={field.name}
-                  mask="currency"
-                  currency={currency}
-                  locale={userLocale}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
+            currency={currency}
+            placeholder="0.00"
+            label="Duties"
           />
 
-          <form.Field
+          <MoneyField
+            form={form}
             name="tariffs"
-            children={(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Tariffs</Label>
-                <MaskInput
-                  id={field.name}
-                  name={field.name}
-                  mask="currency"
-                  currency={currency}
-                  locale={userLocale}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
-                  placeholder="0.00"
-                />
-              </div>
-            )}
+            currency={currency}
+            placeholder="0.00"
+            label="Tariffs"
           />
         </div>
 
-        <form.Field
+        <MoneyField
+          form={form}
           name="miscFees"
-          children={(field) => (
-            <div className="grid gap-1.5">
-              <Label htmlFor={field.name}>Miscellaneous</Label>
-              <MaskInput
-                id={field.name}
-                name={field.name}
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onValueChange={(_maskedValue, unmaskedValue) => field.handleChange(unmaskedValue)}
-                placeholder="0.00"
-              />
-            </div>
-          )}
+          currency={currency}
+          placeholder="0.00"
+          label="Miscellaneous"
         />
       </FormSection>
 
@@ -578,17 +533,7 @@ function OrderFormContent(
   if (type === "edit-order") {
     return (
       <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            try {
-              await form.handleSubmit();
-            } catch {
-              // The mutation reports the error and the sheet stays open.
-            }
-          }}
-        >
+        <form onSubmit={formSubmitHandler(form)}>
           <SheetHeader>
             <SheetTitle>Edit Order</SheetTitle>
             <SheetDescription>
@@ -630,17 +575,7 @@ function OrderFormContent(
 
   return (
     <DialogContent className="sm:max-w-lg!">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch {
-            // The mutation reports the error and the dialog stays open.
-          }
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <DialogHeader>
           <DialogTitle>{type === "merge" ? "Merge Orders" : "Split Items"}</DialogTitle>
           {selectedCount !== undefined && selectedCount > 0 && (

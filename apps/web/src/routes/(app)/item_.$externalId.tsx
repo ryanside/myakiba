@@ -1,21 +1,14 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { createFileRoute, useParams, notFound } from "@tanstack/react-router";
-// oxlint-disable-next-line no-restricted-imports -- scraper flow, replaced by the browser extension: the Item resync status and request stay here (until 2027-04-16, approved by root)
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/components/ui/toast";
 import { BackLink } from "@/components/ui/back-link";
-import { SyncActionSheet } from "@/components/sync/sync-launcher";
-import type { LaunchableSyncType } from "@/components/sync/sync-launcher-options";
 import { ItemCollection } from "@/components/item/item-collection";
 import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
 import { useRead } from "@/data/client";
-import { items } from "@/data/resources/item";
-import { getResyncStatus, requestResync } from "@/queries/item";
-import { shownMessageOf } from "@/lib/api-response";
+import { items, useRefreshItem } from "@/data/resources/item";
+import { shownMessageOf } from "@/data/api";
 
 export const Route = createFileRoute("/(app)/item_/$externalId")({
   parseParams: ({ externalId }) => {
@@ -40,36 +33,17 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
 });
 
 function RouteComponent(): ReactNode {
-  const queryClient = useQueryClient();
   const { externalId } = useParams({ from: "/(app)/item_/$externalId" });
-  const [syncType, setSyncType] = useState<LaunchableSyncType | null>(null);
 
   const { data, isPending, isError, error: itemError } = useRead(items.detail, externalId);
 
   const isNotFound = data === null;
 
-  const { data: resyncStatusData } = useQuery({
-    queryKey: ["item", externalId, "resyncStatus"],
-    queryFn: () => getResyncStatus(externalId),
-    staleTime: 1000 * 30,
-    retry: false,
+  const { data: refreshStatusData } = useRead(items.refreshStatus, externalId, {
     enabled: data != null,
   });
 
-  const requestResyncMutation = useMutation({
-    mutationFn: () => requestResync(externalId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["item", externalId, "resyncStatus"] });
-      toast.add({ type: "success", title: "Item refresh requested" });
-    },
-    onError: (mutationError) => {
-      toast.add({
-        type: "error",
-        title: "Failed to request item refresh",
-        description: mutationError.message,
-      });
-    },
-  });
+  const refresh = useRefreshItem();
 
   const { data: itemRelatedOrders } = useRead(items.relatedOrders, externalId, {
     enabled: data != null,
@@ -101,9 +75,7 @@ function RouteComponent(): ReactNode {
   }
 
   if (isNotFound) {
-    return (
-      <ItemNotFound externalId={externalId} syncType={syncType} onSyncTypeChange={setSyncType} />
-    );
+    return <ItemNotFound externalId={externalId} />;
   }
 
   const item = data?.item;
@@ -119,10 +91,10 @@ function RouteComponent(): ReactNode {
         item={item}
         isLoading={isPending}
         externalId={externalId}
-        resyncStatus={resyncStatusData?.status ?? "idle"}
-        cooldownExpiresAt={resyncStatusData?.cooldownExpiresAt ?? null}
-        isResyncPending={requestResyncMutation.isPending}
-        onRequestResync={() => requestResyncMutation.mutate()}
+        refreshStatus={refreshStatusData?.status ?? "idle"}
+        cooldownExpiresAt={refreshStatusData?.cooldownExpiresAt ?? null}
+        isRefreshPending={refresh.isPending}
+        onRequestRefresh={() => refresh.run(externalId)}
         isWishlisted={data?.isWishlisted ?? false}
       />
 
@@ -136,8 +108,6 @@ function RouteComponent(): ReactNode {
           isPending={isPending || isPendingItemRelatedCollection}
           isError={isErrorItemRelatedCollection}
           error={errorItemRelatedCollection}
-          onSyncCollection={() => setSyncType("collection")}
-          onSyncOrder={() => setSyncType("order")}
           onEditCollectionItem={handleEditCollectionItem}
           onDeleteCollectionItems={handleDeleteCollectionItems}
           onMoveToExistingOrder={handleAddCollectionItemsToOrder}
@@ -145,12 +115,6 @@ function RouteComponent(): ReactNode {
           isCollectionOrderPending={isCollectionOrderPending}
         />
       </div>
-
-      <SyncActionSheet
-        syncType={syncType}
-        onSyncTypeChange={setSyncType}
-        initialItemExternalId={String(externalId)}
-      />
     </div>
   );
 }

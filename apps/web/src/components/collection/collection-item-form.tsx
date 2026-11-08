@@ -12,9 +12,13 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "../ui/button";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "../ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "../ui/status-button";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
@@ -33,7 +37,9 @@ import { Rating } from "../ui/rating";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
+import { MoneyField } from "@/components/money-field";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import {
   COLLECTION_STATUSES,
@@ -44,14 +50,16 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { formatReleasePrice, getCurrencyLocale } from "@/lib/locale";
+import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { shownMessageOf } from "@/lib/api-response";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
 
 type CollectionItemFormProps = {
   renderTrigger: ReactElement;
   itemData: CollectionItemFormValues;
-  callbackFn: (itemData: CollectionItemFormValues) => Promise<void>;
+  callbackFn: (itemData: CollectionItemFormValues) => Saving;
   currency: Currency;
   dateFormat?: DateFormat;
 };
@@ -77,7 +85,6 @@ function CollectionItemFormContent({
 }: Omit<CollectionItemFormProps, "renderTrigger"> & {
   readonly close: () => void;
 }) {
-  const userLocale = getCurrencyLocale(currency);
   const requiresOrderBeforeStatusChange = itemData.orderId === null;
   const { status: buttonStatus, run } = useButtonStatus();
 
@@ -86,15 +93,16 @@ function CollectionItemFormContent({
       ...itemData,
       price: minorUnitsToMajorString(itemData.price ?? 0),
     },
-    onSubmit: ({ value }) =>
-      run(async () => {
-        const transformedValue: CollectionItemFormValues = {
-          ...value,
-          price: parseMoneyToMinorUnits(value.price),
-        };
-        await callbackFn(transformedValue);
-        close();
-      }),
+    onSubmit: async ({ value }) => {
+      const transformedValue: CollectionItemFormValues = {
+        ...value,
+        price: acceptedMoneyToMinorUnits(value.price),
+      };
+      const saved = await run(() => callbackFn(transformedValue), closesOnSuccess);
+      // A failed edit already rolled back and said why, so the form stays open to retry.
+      if (saved.isErr()) return;
+      close();
+    },
   });
 
   const {
@@ -106,17 +114,7 @@ function CollectionItemFormContent({
 
   return (
     <SheetContent side="right" className="w-full sm:max-w-lg! h-full">
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch {
-            // The mutation reports the error and the sheet keeps the draft.
-          }
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <SheetHeader>
           <SheetTitle>Edit Item</SheetTitle>
           <SheetDescription>{itemData.itemTitle}</SheetDescription>
@@ -125,32 +123,13 @@ function CollectionItemFormContent({
           <div className="flex flex-col gap-3 p-2">
             <FormSection title="Basics">
               <div className="grid grid-cols-2 gap-3">
-                <form.Field
+                <MoneyField
+                  form={form}
                   name="price"
-                  validators={{ onChange: z.string().nonempty("Price is required") }}
-                  children={(field) => (
-                    <div className="grid gap-1.5">
-                      <Label htmlFor={field.name}>Price</Label>
-                      <MaskInput
-                        id={field.name}
-                        name={field.name}
-                        mask="currency"
-                        currency={currency}
-                        locale={userLocale}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onValueChange={(_maskedValue, unmaskedValue) =>
-                          field.handleChange(unmaskedValue)
-                        }
-                        placeholder="0.00"
-                      />
-                      {!field.state.meta.isValid && (
-                        <p role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  currency={currency}
+                  placeholder="0.00"
+                  label="Price"
+                  required="Price is required"
                 />
 
                 <form.Field

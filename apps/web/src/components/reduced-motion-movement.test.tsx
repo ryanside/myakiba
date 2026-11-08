@@ -4,7 +4,6 @@ import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
-import { SparkleTrail } from "@/components/ui/sparkle-trail";
 import { Switch } from "@/components/ui/switch";
 
 afterEach(cleanup);
@@ -26,7 +25,6 @@ function tokensIn(opening: string): Map<string, string> {
   );
 }
 
-const motionOn = tokensIn(":root");
 const reduced = tokensIn(":root[data-reduce-motion]");
 
 function movesUnderReducedMotion(element: Element): boolean {
@@ -39,16 +37,6 @@ function movesUnderReducedMotion(element: Element): boolean {
     const tokens = [...duration.matchAll(/var\((--[\w-]+)\)/g)].map((match) => match[1]);
     return tokens.length > 0 && tokens.every((token) => reduced.get(token ?? "") === "0ms");
   });
-}
-
-function scaleOf(element: Element, mode: "motion on" | "reduced"): number | undefined {
-  for (const name of element.classList) {
-    const token = /^scale-\((--[\w-]+)\)$/.exec(name)?.[1];
-    if (token) return Number((mode === "reduced" && reduced.get(token)) || motionOn.get(token));
-    const percent = /^scale-(\d+)$/.exec(name)?.[1];
-    if (percent) return Number(percent) / 100;
-  }
-  return undefined;
 }
 
 function ExpandableRow() {
@@ -76,26 +64,6 @@ describe("under Reduce motion, controls snap to their new state", () => {
     const chevron = screen.getByRole("button", { name: "Expand row" }).querySelector("svg");
     if (!chevron) throw new Error("Missing the row chevron");
     expect(movesUnderReducedMotion(chevron)).toBe(false);
-  });
-});
-
-describe("a hidden sparkle glyph", () => {
-  function hiddenGlyphs(): Element[] {
-    const trail = render(<SparkleTrail />).container.firstElementChild;
-    if (!trail) throw new Error("Missing the sparkle trail");
-    expect(trail.children.length).toBeGreaterThan(0);
-    return [...trail.children];
-  }
-
-  test("starts a little smaller with motion on, never from nothing", () => {
-    for (const glyph of hiddenGlyphs()) {
-      expect(scaleOf(glyph, "motion on")).toBeGreaterThanOrEqual(0.9);
-      expect(scaleOf(glyph, "motion on")).toBeLessThan(1);
-    }
-  });
-
-  test("keeps its full size under Reduce motion, so it only fades", () => {
-    for (const glyph of hiddenGlyphs()) expect(scaleOf(glyph, "reduced")).toBe(1);
   });
 });
 

@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-// A namespace import, because scripts/replay.ts runs this file at revisions without pageRange.
-import * as pagination from "./data-table-pagination";
-
-const { DataTablePagination } = pagination;
+import { DataTablePagination, pageRange } from "./data-table-pagination";
 
 afterEach(cleanup);
 
@@ -67,9 +64,9 @@ describe("DataTablePagination past the end", () => {
 
 describe("pageRange", () => {
   test("names the rows on a page, and no rows on a page past the end", () => {
-    expect(pagination.pageRange({ totalCount: 50, limit: 10, offset: 40 })).toBe("41–50 of 50");
-    expect(pagination.pageRange({ totalCount: 5, limit: 10, offset: 100 })).toBe("0 of 5");
-    expect(pagination.pageRange({ totalCount: 0, limit: 10, offset: 0 })).toBe("0 of 0");
+    expect(pageRange({ totalCount: 50, limit: 10, offset: 40 })).toBe("41–50 of 50");
+    expect(pageRange({ totalCount: 5, limit: 10, offset: 100 })).toBe("0 of 5");
+    expect(pageRange({ totalCount: 0, limit: 10, offset: 0 })).toBe("0 of 0");
   });
 });
 

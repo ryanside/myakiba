@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
@@ -18,23 +19,13 @@ import { createId } from "@paralleldrive/cuid2";
 import {
   CATEGORIES,
   COLLECTION_STATUSES,
+  CONTENT_LABELS,
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
-  SYNC_TYPES,
-  SYNC_SESSION_STATUSES,
-  SYNC_SESSION_ITEM_STATUSES,
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
-import {
-  DATA_TRANSFER_IMPORT_PHASES,
-  DATA_TRANSFER_IMPORT_STATUSES,
-} from "@myakiba/contracts/data-transfer/constants";
-import type {
-  DataTransferArchiveV1,
-  DataTransferImportReport,
-} from "@myakiba/contracts/data-transfer/schema";
-import type { JobData } from "@myakiba/contracts/sync/schema";
+import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 
 export const item = pgTable(
   "item",
@@ -56,6 +47,8 @@ export const item = pgTable(
     width: integer("width"),
     depth: integer("depth"),
     mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
+    contentLabel: text("content_label", { enum: CONTENT_LABELS }),
+    mfcRatingId: integer("mfc_rating_id"),
     image: text("image"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -334,81 +327,17 @@ export const wishlistItem = pgTable(
   ],
 );
 
-export const dataTransferImport = pgTable("data_transfer_import", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  importId: text("import_id").notNull(),
-  jobId: text("job_id").notNull(),
-  fileName: text("file_name").notNull(),
-  archive: jsonb("archive").$type<DataTransferArchiveV1>(),
-  status: text("status", { enum: DATA_TRANSFER_IMPORT_STATUSES }).notNull().default("queued"),
-  phase: text("phase", { enum: DATA_TRANSFER_IMPORT_PHASES }).notNull().default("queued"),
-  report: jsonb("report").$type<DataTransferImportReport>(),
-  importedOrders: integer("imported_orders").notNull().default(0),
-  importedCollectionItems: integer("imported_collection_items").notNull().default(0),
-  failedCollectionItems: integer("failed_collection_items").notNull().default(0),
-  error: text("error"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const syncSession = pgTable(
-  "sync_session",
+/** One Add commit's answer, written in the commit's own transaction, so it exists only if the commit does. */
+export const addCommit = pgTable(
+  "add_commit",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    syncType: text("sync_type", { enum: SYNC_TYPES }).notNull(),
-    jobId: text("job_id"),
-    status: text("status", { enum: SYNC_SESSION_STATUSES }).notNull().default("pending"),
-    statusMessage: text("status_message").notNull().default(""),
-    orderId: text("order_id").references(() => order.id, {
-      onDelete: "set null",
-    }),
-    totalItems: integer("total_items").notNull().default(0),
-    successCount: integer("success_count").notNull().default(0),
-    failCount: integer("fail_count").notNull().default(0),
-    requestPayload: jsonb("request_payload").$type<JobData>(),
+    commitId: uuid("commit_id").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    answer: jsonb("answer").$type<AddCommitResponse>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-    completedAt: timestamp("completed_at"),
   },
-  (t) => [
-    index("sync_session_job_id_user_id_idx").on(t.jobId, t.userId),
-    index("sync_session_user_id_status_idx").on(t.userId, t.status),
-    index("sync_session_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
-  ],
+  (t) => [primaryKey({ columns: [t.userId, t.commitId] })],
 );
-
-export const syncSessionItem = pgTable(
-  "sync_session_item",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    syncSessionId: text("sync_session_id")
-      .notNull()
-      .references(() => syncSession.id, { onDelete: "cascade" }),
-    itemExternalId: integer("item_external_id").notNull(),
-    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
-    errorReason: text("error_reason"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("sync_session_item_session_id_external_id_idx").on(t.syncSessionId, t.itemExternalId),
-    index("sync_session_item_session_id_status_idx").on(t.syncSessionId, t.status),
-  ],
-);
-
-export type DbSyncSessionRow = typeof syncSession.$inferSelect;
-export type DbSyncSessionItemRow = typeof syncSessionItem.$inferSelect;
-export type DbEnrichedSyncSessionItemRow = DbSyncSessionItemRow & {
-  readonly itemId: string | null;
-  readonly itemTitle: string | null;
-  readonly itemImage: string | null;
-};

@@ -16,8 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import { Textarea } from "@/components/ui/textarea";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export function ListFormDialog({
   renderTrigger,
@@ -62,8 +69,10 @@ export function ListFormDialog({
             onSubmit={async (input) => {
               setIsSubmitting(true);
               try {
-                await formProps.onSubmit(input);
-                setOpen(false);
+                const saved = await formProps.onSubmit(input);
+                // A failed write already said why, so the dialog stays open to retry.
+                if (saved.isOk()) setOpen(false);
+                return saved;
               } finally {
                 setIsSubmitting(false);
               }
@@ -79,7 +88,7 @@ type ListFormProps = {
   readonly initialTitle?: string;
   readonly initialDescription?: string;
   readonly submitLabel: string;
-  readonly onSubmit: (input: ListInput) => Promise<void>;
+  readonly onSubmit: (input: ListInput) => Saving;
 };
 
 // Mounted per open, so each open starts from the List's current title and description.
@@ -98,21 +107,14 @@ function ListForm({
     validators: { onSubmit: listInputSchema },
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: ({ value }) =>
-      run(() => onSubmit({ title: value.title.trim(), description: value.description.trim() })),
+      run(
+        () => onSubmit({ title: value.title.trim(), description: value.description.trim() }),
+        closesOnSuccess,
+      ),
   });
 
   return (
-    <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        try {
-          await form.handleSubmit();
-        } catch {
-          // The mutation reports the error and the dialog stays open.
-        }
-      }}
-    >
+    <form onSubmit={formSubmitHandler(form)}>
       <FieldGroup>
         <form.Field name="title">
           {(field) => {
