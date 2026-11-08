@@ -71,3 +71,10 @@ test("the command palette's Add items opens the Add page, and the old paste form
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/add"));
 });
+
+test("a toolbar Add link takes its name from its own word, not an aria-label", async () => {
+  renderInApp(<AddLink />);
+  const link = await screen.findByRole("link", { name: "Add" });
+  expect(link.getAttribute("aria-label")).toBeNull();
+  expect(link.textContent).toBe("Add");
+});
