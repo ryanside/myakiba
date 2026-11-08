@@ -3553,6 +3553,14 @@
       "fixed": [
         "another account signing in from another tab while Add is open shows and keeps none of the rows"
       ]
+    },
+    {
+      "fix": "8933341d76448a9923d547ef5a5bb9a4daa6df5b",
+      "bug": "the shared Item title cell made its title link a block box only in the Add table, so Collection and Order Items rendered it inline, where text-overflow has no effect, and the cell cut a long title mid-word with no ellipsis or tooltip",
+      "test": "apps/web/src/components/cells/item-title-cell.test.tsx",
+      "fixed": [
+        "in Collection and Order Items, a long title ends with an ellipsis and keeps its full text"
+      ]
     }
   ],
   "lint": [
