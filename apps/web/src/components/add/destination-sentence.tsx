@@ -82,7 +82,7 @@ function DestinationSelect({
             chosen && "pl-2 @max-[21rem]/sentence:pl-2.5",
             choice === null &&
               !disabled &&
-              "border-transparent bg-primary text-primary-foreground data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary [&_svg]:text-primary-foreground",
+              "border-transparent bg-primary text-primary-foreground hover:bg-primary/85 data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary/85 [&_svg]:text-primary-foreground",
           )}
         >
           <Swap
@@ -104,7 +104,8 @@ function DestinationSelect({
         <SelectContent
           alignItemWithTrigger={false}
           align="start"
-          className={cn("w-52 max-w-[90vw] p-1", !openedByKey && "menu-settle")}
+          data-instant={openedByKey ? "" : undefined}
+          className="w-52 max-w-[90vw] p-(--inset)"
         >
           {CHOICES.map(({ value, label, icon }) => (
             <Fragment key={value}>
