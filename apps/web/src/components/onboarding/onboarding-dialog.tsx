@@ -41,7 +41,7 @@ type StepMeta = {
   readonly step: number;
   readonly eyebrow: string;
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
 };
 
 const STEPS: readonly [StepMeta, ...StepMeta[]] = [
@@ -73,7 +73,6 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     step: 4,
     eyebrow: "Add items",
     title: "Pick your first items.",
-    description: "You can add more any time with the + button at the top right.",
   },
 ];
 
@@ -392,7 +391,7 @@ function StepHeader({ meta }: StepHeaderProps) {
       <DialogTitle className="tracking-tight text-xl leading-tight font-medium">
         {meta.title}
       </DialogTitle>
-      <DialogDescription>{meta.description}</DialogDescription>
+      {meta.description ? <DialogDescription>{meta.description}</DialogDescription> : null}
     </div>
   );
 }
@@ -409,9 +408,6 @@ function AddStep() {
         </li>
         <li>Open the Add page, choose where your picks go and add them.</li>
       </ol>
-      <p className="text-pretty text-muted-foreground">
-        Items already in myakiba can be added from the Add page&apos;s search.
-      </p>
     </div>
   );
 }

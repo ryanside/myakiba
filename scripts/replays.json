@@ -3396,11 +3396,8 @@
         "the add items option cards take a card corner, not a pill"
       ],
       "testAt": "3cc4dbf2",
-      "reason": "Pinned to the test file before the dialog moved into OnboardingProvider. The merged dialog's Add step lists how to pick items and has no option cards, so only the copy and footer guards run at HEAD.",
-      "atHead": [
-        "the add items step points to the + button in the top bar, not the sidebar",
-        "every onboarding footer button is the standard button height"
-      ]
+      "reason": "Pinned to the test file before the dialog moved into OnboardingProvider. The merged dialog's Add step lists how to pick items, has no option cards, and the owner removed its pointer to the + button, so only the footer guard runs at HEAD.",
+      "atHead": ["every onboarding footer button is the standard button height"]
     },
     {
       "fix": "1fa632de",

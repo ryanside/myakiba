@@ -76,10 +76,10 @@ function DestinationSelect({
         <SelectTrigger
           aria-label="Where these go"
           className={cn(
-            "gap-2",
             // The glide's width is the trigger's, so its edge and chevron stay whole as it grows.
             "w-full",
-            chosen && "pl-2 @max-[21rem]/sentence:pl-2.5",
+            // The icon sits as far in as the chevron does, as a pill's icon sits 2px closer than its text.
+            chosen && "pl-2.5",
             choice === null &&
               !disabled &&
               "border-transparent bg-primary text-primary-foreground hover:bg-primary/85 data-placeholder:text-primary-foreground dark:bg-primary dark:hover:bg-primary/85 [&_svg]:text-primary-foreground",
@@ -88,7 +88,7 @@ function DestinationSelect({
           <Swap
             move={WORDS}
             id={choice ?? "unset"}
-            className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden"
+            className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
           >
             {chosen ? (
               <HugeiconsIcon

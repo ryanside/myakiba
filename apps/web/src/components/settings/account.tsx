@@ -1,10 +1,11 @@
-import { GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { DateFormat } from "@myakiba/contracts/shared/types";
 import { useForm } from "@tanstack/react-form";
 import { Link, getRouteApi } from "@tanstack/react-router";
 import { useState } from "react";
 import * as z from "zod";
+import { GoogleIcon } from "@/components/auth/google-icon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -315,7 +316,7 @@ function GoogleRow() {
       disabled={isPending || isError || isConnecting}
       onClick={connect}
     >
-      <HugeiconsIcon icon={GoogleIcon} data-icon="inline-start" aria-hidden="true" />
+      <GoogleIcon />
       Connect
     </Button>
   );
