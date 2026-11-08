@@ -21,6 +21,9 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
+  draftItemIds,
+  DRAFT_KEY,
 } from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -28,7 +31,6 @@ setDefaultTimeout(30_000);
 
 const ITEM_ID = "miku00000001";
 const OTHER_ID = "rem000000002";
-const DRAFT_KEY = "myakiba:add-draft";
 const FIRST_RELEASE = "00000000-0000-4000-8000-000000000001";
 const SECOND_RELEASE = "00000000-0000-4000-8000-000000000002";
 
@@ -47,12 +49,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const draft = (...itemIds: readonly string[]) =>
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true }))),
-  );
+  seedDraft(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true })));
 const draftWith = (itemId: string, overrides: RowOverrides) =>
-  sessionStorage.setItem(DRAFT_KEY, JSON.stringify([{ itemId, overrides, selected: true }]));
+  seedDraft([{ itemId, overrides, selected: true }]);
 const click = (user: User, name: string | RegExp) =>
   user.click(screen.getByRole("button", { name }));
 const rowsLoaded = () => screen.findAllByRole("checkbox", { name: /^Select (?!all)/u });
@@ -768,15 +767,12 @@ test("Select all counts only rows with an Item, and shows some as indeterminate"
   server.items.delete(OTHER_ID);
   draft(ITEM_ID, OTHER_ID);
   seedItems(item("third0000001", { title: "Third" }));
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(
-      [ITEM_ID, OTHER_ID, "third0000001"].map((itemId) => ({
-        itemId,
-        overrides: {},
-        selected: true,
-      })),
-    ),
+  seedDraft(
+    [ITEM_ID, OTHER_ID, "third0000001"].map((itemId) => ({
+      itemId,
+      overrides: {},
+      selected: true,
+    })),
   );
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
@@ -888,13 +884,10 @@ test("Fill all sets Condition, Count, Collection Date and Shipping Method for th
 });
 
 test("Fill all adds tags to what each row has, and says when it replaces values", async () => {
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([
-      { itemId: ITEM_ID, overrides: { tags: ["old"], notes: "keep" }, selected: true },
-      { itemId: OTHER_ID, overrides: {}, selected: true },
-    ]),
-  );
+  seedDraft([
+    { itemId: ITEM_ID, overrides: { tags: ["old"], notes: "keep" }, selected: true },
+    { itemId: OTHER_ID, overrides: {}, selected: true },
+  ]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
@@ -948,13 +941,10 @@ test("Fill selected leaves an unselected row's values alone", async () => {
 
 test("Fill all refuses tags that would take a row past 20, and says so", async () => {
   const tags = Array.from({ length: 20 }, (_, index) => `tag-${index}`);
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([
-      { itemId: ITEM_ID, overrides: { tags }, selected: true },
-      { itemId: OTHER_ID, overrides: {}, selected: true },
-    ]),
-  );
+  seedDraft([
+    { itemId: ITEM_ID, overrides: { tags }, selected: true },
+    { itemId: OTHER_ID, overrides: {}, selected: true },
+  ]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
@@ -1006,10 +996,7 @@ test("every popup is named, and so is the Order search", async () => {
 });
 
 test("removing a tag keeps focus in the Tags field", async () => {
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([{ itemId: ITEM_ID, overrides: { tags: ["old"] }, selected: true }]),
-  );
+  seedDraft([{ itemId: ITEM_ID, overrides: { tags: ["old"] }, selected: true }]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();
@@ -1211,11 +1198,11 @@ test("a pick saved after a commit answers cannot bring its rows back on a reload
   await waitFor(() => expect(server.uploads).toHaveLength(1));
 
   await act(async () => answer());
-  await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
 
   await act(async () => release());
-  await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toContain("item-12345"));
-  expect(sessionStorage.getItem(DRAFT_KEY)).not.toContain(ITEM_ID);
+  await waitFor(() => expect(draftItemIds()).toContain("item-12345"));
+  expect(draftItemIds()).not.toContain(ITEM_ID);
   cleanup();
 
   openAddPage("/add");
@@ -1229,13 +1216,13 @@ test("an Item added again after its commit is kept in the draft", async () => {
   openAddPage("/add?to=collection");
   await rowsLoaded();
   await click(user, "Add 1 to collection");
-  await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]"));
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
 
   await click(user, "Search myakiba");
   await user.type(await screen.findByRole("combobox", { name: "Search myakiba" }), "Hatsune");
   await user.click(await screen.findByRole("option", { name: /Hatsune Miku/u }));
 
-  await waitFor(() => expect(sessionStorage.getItem(DRAFT_KEY)).toContain(ITEM_ID));
+  await waitFor(() => expect(draftItemIds()).toContain(ITEM_ID));
 });
 
 test("a commit resets the form to its preset, with issues gone", async () => {
@@ -1261,7 +1248,7 @@ test("rows live in sessionStorage, so another tab, like a closed one reopened, h
   draft(ITEM_ID);
   openAddPage();
   await rowsLoaded();
-  expect(sessionStorage.getItem(DRAFT_KEY)).toContain(ITEM_ID);
+  expect(draftItemIds()).toContain(ITEM_ID);
   expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
   cleanup();
 
@@ -1305,15 +1292,12 @@ test("?q= opens the search with its words, and focus in it", async () => {
 });
 
 test("a full page says so, in a status region too, and removing a row clears it", async () => {
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(
-      Array.from({ length: 100 }, (_, index) => ({
-        itemId: `row${String(index).padStart(9, "0")}`,
-        overrides: {},
-        selected: true,
-      })),
-    ),
+  seedDraft(
+    Array.from({ length: 100 }, (_, index) => ({
+      itemId: `row${String(index).padStart(9, "0")}`,
+      overrides: {},
+      selected: true,
+    })),
   );
   const user = userEvent.setup();
   openAddPage();
@@ -1671,13 +1655,10 @@ test("the Lists picker names what it holds, and says when there are none or it c
 });
 
 test("Fill all writes Price, Score and a row's date to the selected rows only", async () => {
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([
-      { itemId: ITEM_ID, overrides: {}, selected: true },
-      { itemId: OTHER_ID, overrides: {}, selected: false },
-    ]),
-  );
+  seedDraft([
+    { itemId: ITEM_ID, overrides: {}, selected: true },
+    { itemId: OTHER_ID, overrides: {}, selected: false },
+  ]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await rowsLoaded();

@@ -13,6 +13,8 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
+  draftItemIds,
 } from "../../../test/add-app";
 
 const { AddLink } = await import("./add-link");
@@ -22,7 +24,6 @@ setDefaultTimeout(30_000);
 
 const ITEM_ID = "miku00000001";
 const OTHER_ID = "rem000000002";
-const DRAFT_KEY = "myakiba:add-draft";
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -37,10 +38,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const draft = (...itemIds: readonly string[]) =>
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true }))),
-  );
+  seedDraft(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true })));
 const rowsLoaded = () => screen.findAllByRole("checkbox", { name: /^Select (?!all)/u });
 const addTo = (path: string, to: string) => `/add?to=${to}&returnTo=${encodeURIComponent(path)}`;
 
@@ -70,7 +68,7 @@ test("a commit that empties the page goes back to where the link was, with its t
   await screen.findByRole("heading", { name: "/collection" });
   const notifications = screen.getByRole("region", { name: /Notifications/u });
   expect(within(notifications).getByText("Added 1 to your collection")).toBeDefined();
-  expect(sessionStorage.getItem(DRAFT_KEY)).toBe("[]");
+  expect(draftItemIds()).toEqual([]);
 });
 
 test("the way back leaves no Add page behind it", async () => {

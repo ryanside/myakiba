@@ -1,3 +1,4 @@
+import { getRouteApi } from "@tanstack/react-router";
 import { PageHeader, formatCount } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
@@ -9,7 +10,16 @@ import { OrderSwap, useSlide } from "./destination-motion";
 import { DestinationSentence } from "./destination-sentence";
 import { OrderDetails } from "./order-details";
 
+const appRouteApi = getRouteApi("/(app)");
+
 export function AddPage({ search }: { readonly search: AddSearchParams }) {
+  const userId = appRouteApi.useRouteContext().session.user.id;
+  // A sign-in from another tab changes the account without a reload, so the page starts over
+  // instead of showing, or saving under the new account, what the last one left in memory.
+  return <AccountAddPage key={userId} search={search} />;
+}
+
+function AccountAddPage({ search }: { readonly search: AddSearchParams }) {
   const c = useAddController(search);
   const { kind, order } = c.resolvedForm;
   const orderId = c.hasItems && kind === "order" ? order.kind : null;

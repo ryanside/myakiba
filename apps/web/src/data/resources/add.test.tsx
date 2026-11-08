@@ -87,6 +87,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   if (realVisibility) Object.defineProperty(document, "visibilityState", realVisibility);
   else Reflect.deleteProperty(document, "visibilityState");
   server.itemQueries = [];
@@ -148,9 +149,9 @@ const SHARED = {
   count: 1,
 } as const;
 
-function renderCommit(queryClient?: QueryClient) {
+function renderCommit(queryClient?: QueryClient, userId = "collector") {
   const { wrapper } = withClient(queryClient);
-  return renderHook(() => useCommitAdd(), { wrapper }).result;
+  return renderHook(() => useCommitAdd(userId), { wrapper }).result;
 }
 
 describe("an Add commit", () => {
@@ -215,6 +216,36 @@ describe("an Add commit", () => {
     expect(failed).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/u);
     expect(retried).toBe(failed);
     expect(next).not.toBe(failed);
+  });
+
+  test("a retry nine minutes after the first send starts a new commit", async () => {
+    const commit = renderCommit();
+    const now = spyOn(Date, "now");
+    try {
+      server.commitAnswer = () => unreachable;
+      for (const minute of [0, 8.99, 9]) {
+        now.mockReturnValue(Date.UTC(2026, 10, 8, 12) + minute * 60_000);
+        await act(() => commit.current.run(CHOICES));
+      }
+    } finally {
+      now.mockRestore();
+    }
+
+    const [first, retried, late] = server.commits.map((sent) => sent.commitId);
+    expect(retried).toBe(first);
+    expect(late).not.toBe(first);
+  });
+
+  test("another account in the tab never sends the last account's commitId", async () => {
+    const accounts = ["collector", "other-collector", "collector"].map((userId) =>
+      renderCommit(undefined, userId),
+    );
+    server.commitAnswer = () => unreachable;
+    for (const commit of accounts) await act(() => commit.current.run(CHOICES));
+
+    const [first, other, back] = server.commits.map((sent) => sent.commitId);
+    expect(other).not.toBe(first);
+    expect(back).not.toBe(first);
   });
 
   test("keeps the commitId when a retry rebuilds the same choices in another property order", async () => {

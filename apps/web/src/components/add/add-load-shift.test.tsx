@@ -7,21 +7,18 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
 } from "../../../test/add-app";
 import { fakePick } from "../../../test/fake-extension";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
-const DRAFT_KEY = "myakiba:add-draft";
 const MIKU = "miku00000001";
 const REM = "rem000000002";
 
 const draft = (rows: readonly (readonly [string, boolean])[]) =>
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(rows.map(([itemId, selected]) => ({ itemId, overrides: {}, selected }))),
-  );
+  seedDraft(rows.map(([itemId, selected]) => ({ itemId, overrides: {}, selected })));
 
 let release = () => {};
 
