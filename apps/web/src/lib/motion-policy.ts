@@ -1,8 +1,22 @@
 import { MotionGlobalConfig } from "motion/react";
 
-/** The strong ease-out every entrance uses, for Motion and for CSS and the Web Animations API. */
-export const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-export const EASE_OUT_CSS = `cubic-bezier(${EASE_OUT.join(", ")})`;
+type EaseToken = "--ease-out" | "--ease-in-out";
+
+/**
+ * A motion curve from index.css, as the Web Animations API takes it, which can't resolve `var()`.
+ * Without the stylesheet there is no curve, and the animation keeps its default.
+ */
+export function easing(token: EaseToken): string | undefined {
+  return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || undefined;
+}
+
+/** The same curve as the four points Motion takes. */
+export function motionEase(token: EaseToken) {
+  const points = /^cubic-bezier\(([^,]+),([^,]+),([^,]+),([^)]+)\)$/.exec(easing(token) ?? "");
+  return points
+    ? ([Number(points[1]), Number(points[2]), Number(points[3]), Number(points[4])] as const)
+    : undefined;
+}
 
 /** A change this soon after a key press is that key's doing. A held Space fires its click on release. */
 const KEY_WINDOW_MS = 500;

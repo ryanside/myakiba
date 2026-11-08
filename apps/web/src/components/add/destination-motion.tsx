@@ -1,10 +1,9 @@
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 import type { ReactNode, RefObject } from "react";
-import { EASE_OUT, EASE_OUT_CSS, keyJustPressed, motionOff } from "@/lib/motion-policy";
+import { easing, keyJustPressed, motionEase, motionOff } from "@/lib/motion-policy";
 import { cn } from "@/lib/utils";
 
-const MOVE_CSS = "cubic-bezier(0.77, 0, 0.175, 1)";
 const SLIDE_MS = 220;
 const COLUMNS_FADE_MS = 150;
 const AT_REST = "translateY(0px)";
@@ -26,7 +25,7 @@ function variantsOf({ fromY, toY, inMs, outMs, delayMs }: Move) {
       transition: {
         duration: instant ? 0 : inMs / 1000,
         delay: instant ? 0 : delayMs / 1000,
-        ease: EASE_OUT,
+        ease: motionEase("--ease-out"),
       },
       // A transform left behind would break the sticky and fixed things inside.
       transitionEnd: { transform: "none" },
@@ -34,7 +33,7 @@ function variantsOf({ fromY, toY, inMs, outMs, delayMs }: Move) {
     gone: (instant: boolean) => ({
       opacity: 0,
       transform: `translateY(${toY}px)`,
-      transition: { duration: instant ? 0 : outMs / 1000, ease: EASE_OUT },
+      transition: { duration: instant ? 0 : outMs / 1000, ease: motionEase("--ease-out") },
     }),
   };
 }
@@ -143,7 +142,7 @@ export function useSlide<T extends HTMLElement>(change: string | null) {
       {
         duration: SLIDE_MS,
         // Going down it must clear the Order fast. Going up it waits for the Order to fade.
-        easing: from < 0 ? EASE_OUT_CSS : MOVE_CSS,
+        easing: easing(from < 0 ? "--ease-out" : "--ease-in-out"),
       },
     );
     flight.current = animation;
@@ -166,7 +165,7 @@ export function useColumnsFade(frame: RefObject<HTMLElement | null>, columnsHidd
       for (const running of group.getAnimations()) running.cancel();
       group.animate([{ opacity: 0 }, { opacity: 1 }], {
         duration: COLUMNS_FADE_MS,
-        easing: EASE_OUT_CSS,
+        easing: easing("--ease-out"),
       });
     }
   }, [columnsHidden, frame]);

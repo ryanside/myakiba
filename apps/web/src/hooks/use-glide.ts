@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { EASE_OUT_CSS, motionOff } from "@/lib/motion-policy";
+import { easing, motionOff } from "@/lib/motion-policy";
 
 const DURATION_MS = 200;
 
@@ -36,7 +36,7 @@ export function useGlide<T extends HTMLElement>(
     if (clip) element.style.overflow = "clip";
     const animation = element.animate([{ [axis]: `${from}px` }, { [axis]: `${to}px` }], {
       duration: DURATION_MS,
-      easing: EASE_OUT_CSS,
+      easing: easing("--ease-out"),
     });
     flight.current = animation;
     animation.onfinish = () => {

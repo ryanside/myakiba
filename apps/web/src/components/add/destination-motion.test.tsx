@@ -104,6 +104,34 @@ test("reduced motion lands at once", () => {
   expect(flights).toHaveLength(0);
 });
 
+test("the slide and the words take their curves from the motion tokens", () => {
+  const root = document.documentElement.style;
+  const { element, flights, moveTo } = placedElement();
+  const view = slide(element);
+  try {
+    root.setProperty("--ease-out", "cubic-bezier(0.1, 0.2, 0.3, 0.4)");
+    root.setProperty("--ease-in-out", "cubic-bezier(0.5, 0.6, 0.7, 0.8)");
+    moveTo(400);
+    view.rerender({ change: "b" });
+    moveTo(100);
+    view.rerender({ change: "c" });
+    expect(flights.map((flight) => flight.options.easing)).toEqual([
+      "cubic-bezier(0.1, 0.2, 0.3, 0.4)",
+      "cubic-bezier(0.5, 0.6, 0.7, 0.8)",
+    ]);
+    expect(WORDS.at(false).transition.ease).toEqual([0.1, 0.2, 0.3, 0.4]);
+
+    root.setProperty("--ease-out", "cubic-bezier(0.9, 0, 0.1, 1)");
+    moveTo(400);
+    view.rerender({ change: "d" });
+    expect(flights[2]?.options.easing).toBe("cubic-bezier(0.9, 0, 0.1, 1)");
+    expect(WORDS.gone(false).transition.ease).toEqual([0.9, 0, 0.1, 1]);
+  } finally {
+    root.removeProperty("--ease-out");
+    root.removeProperty("--ease-in-out");
+  }
+});
+
 test("nothing moves on first paint", () => {
   render(
     <Swap move={WORDS} id="Collection">
