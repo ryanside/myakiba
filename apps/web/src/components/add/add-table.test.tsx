@@ -18,6 +18,7 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
 } from "../../../test/add-app";
 
 const { PickStatus } = await import("./pick-status");
@@ -25,7 +26,6 @@ const { PickStatus } = await import("./pick-status");
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
 
-const DRAFT_KEY = "myakiba:add-draft";
 const YEN_RELEASE = {
   id: "00000000-0000-4000-8000-000000000001",
   date: "2027-02-01",
@@ -45,10 +45,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const draft = (...itemIds: readonly string[]) =>
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true }))),
-  );
+  seedDraft(itemIds.map((itemId) => ({ itemId, overrides: {}, selected: true })));
 
 function renderPick(pick: PickRow) {
   const calls = { retried: [] as number[], discarded: [] as number[] };
@@ -219,14 +216,11 @@ test("a header sorts its column both ways, then returns to the draft's order", a
 
 test("Price sorts by what each row will save, and a row with no fields stays on top", async () => {
   seedItems(item("rem000000001", { title: "Rem" }));
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([
-      { itemId: "miku00000001", overrides: { price: "9000" }, selected: true },
-      { itemId: "gone00000001", overrides: {}, selected: true },
-      { itemId: "rem000000001", overrides: {}, selected: true },
-    ]),
-  );
+  seedDraft([
+    { itemId: "miku00000001", overrides: { price: "9000" }, selected: true },
+    { itemId: "gone00000001", overrides: {}, selected: true },
+    { itemId: "rem000000001", overrides: {}, selected: true },
+  ]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await screen.findByText("No longer in myakiba");
@@ -266,13 +260,10 @@ test("the headers only sort, with no menu to hide, move or pin a column", async 
 });
 
 test("a selected row is the grid's selected row, and an unselected one is not dimmed", async () => {
-  sessionStorage.setItem(
-    DRAFT_KEY,
-    JSON.stringify([
-      { itemId: "miku00000001", overrides: {}, selected: true },
-      { itemId: "rem000000001", overrides: {}, selected: false },
-    ]),
-  );
+  seedDraft([
+    { itemId: "miku00000001", overrides: {}, selected: true },
+    { itemId: "rem000000001", overrides: {}, selected: false },
+  ]);
   seedItems(item("rem000000001", { title: "Rem" }));
   openAddPage("/add?to=collection");
   await screen.findByRole("checkbox", { name: "Select Miku" });

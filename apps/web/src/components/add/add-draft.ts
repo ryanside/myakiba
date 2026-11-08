@@ -1,10 +1,9 @@
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
 import { CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
-import { parseJson } from "@myakiba/utils/parse-json";
+import { getRouteApi } from "@tanstack/react-router";
 import { useEffect, useReducer } from "react";
 import * as z from "zod";
-
-const STORAGE_KEY = "myakiba:add-draft";
+import { accountSlot } from "@/lib/account-storage";
 
 const dateOverride = z.iso.date().nullable().optional();
 
@@ -36,6 +35,9 @@ const draftRowSchema = z.object({
 });
 
 export type DraftRow = z.infer<typeof draftRowSchema>;
+
+const storedDraft = accountSlot("add-draft", z.array(draftRowSchema).max(MAX_ADD_ROWS).readonly());
+const appRouteApi = getRouteApi("/(app)");
 
 type DraftState = {
   readonly rows: readonly DraftRow[];
@@ -91,25 +93,29 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
   }
 }
 
-function readDraft(presetItem: string | undefined): DraftState {
-  const stored = sessionStorage.getItem(STORAGE_KEY);
-  const parsed =
-    stored === null ? null : parseJson(z.array(draftRowSchema).max(MAX_ADD_ROWS), stored);
-  const rows = parsed?.isOk() ? parsed.value : [];
+function readDraft({
+  userId,
+  presetItem,
+}: {
+  readonly userId: string;
+  readonly presetItem: string | undefined;
+}): DraftState {
   return draftReducer(
-    { rows, full: false },
+    { rows: storedDraft.read(userId) ?? [], full: false },
     { type: "add", itemIds: presetItem === undefined ? [] : [presetItem] },
   );
 }
 
 /**
- * The Add page's rows. They live in `sessionStorage`, so a reload keeps them and closing the tab
- * drops them. A link's preset Item is a row from the first render.
+ * The signed-in account's Add rows. They live in `sessionStorage`, so a reload keeps them and
+ * closing the tab drops them, and another account in the tab starts empty. A link's preset Item
+ * is a row from the first render.
  */
 export function useAddDraft(presetItem: string | undefined) {
-  const [state, dispatch] = useReducer(draftReducer, presetItem, readDraft);
+  const userId = appRouteApi.useRouteContext().session.user.id;
+  const [state, dispatch] = useReducer(draftReducer, { userId, presetItem }, readDraft);
   useEffect(() => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state.rows));
-  }, [state.rows]);
+    storedDraft.write(userId, state.rows);
+  }, [userId, state.rows]);
   return { rows: state.rows, full: state.full, dispatch } as const;
 }

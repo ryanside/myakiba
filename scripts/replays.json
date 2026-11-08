@@ -3522,6 +3522,37 @@
       "bug": "a release tile kept saying Releases after midnight until something else re-rendered it",
       "test": "apps/web/src/components/release-item-tile.test.tsx",
       "fixed": ["a tile releasing today reads Released after midnight passes with no other update"]
+    },
+    {
+      "fix": "784fafee5d72bc4da0a68e4c0fe2af9976fd59a4",
+      "bug": "the Add draft sat under one sessionStorage key, so another account that signed in on the tab opened Add with the last account's rows, prices and notes",
+      "test": "apps/web/src/components/add/add-account.test.tsx",
+      "fixed": [
+        "another account in the same tab opens an empty Add page, and the rows it left are gone"
+      ]
+    },
+    {
+      "fix": "784fafee5d72bc4da0a68e4c0fe2af9976fd59a4",
+      "bug": "signing out or deleting the account left its Add rows, prices and notes in the tab's sessionStorage",
+      "test": "apps/web/src/components/auth/auth-router-provider.test.tsx",
+      "fixed": [
+        "signing out leaves none of the account's Add rows in the tab",
+        "deleting an account leaves none of the account's Add rows in the tab"
+      ]
+    },
+    {
+      "fix": "e75d55dd86a4dbc9a6bba255992d995710400eb1",
+      "bug": "an unanswered Add commit's commitId lived in a ref, so a reload mid-commit and the same click sent a new commitId and the server wrote the Collection rows or the Order twice",
+      "test": "apps/web/src/components/add/add-retry.test.tsx",
+      "fixed": ["a reload mid-commit, then the same click, sends the same commitId"]
+    },
+    {
+      "fix": "3f2b571a4573b13a08dcc8284cf68d07bbf3729e",
+      "bug": "a sign-in from another tab changed the session without a reload, and the mounted Add page kept showing the last account's rows and saved them under the new account's id",
+      "test": "apps/web/src/components/add/add-account.test.tsx",
+      "fixed": [
+        "another account signing in from another tab while Add is open shows and keeps none of the rows"
+      ]
     }
   ],
   "lint": [
