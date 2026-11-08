@@ -10,8 +10,12 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import type { AnyRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { ItemRelease } from "@myakiba/contracts/item/schema";
+import { parseJson } from "@myakiba/utils/parse-json";
+import * as z from "zod";
+import type { DraftRow } from "@/components/add/add-draft";
 import type { AddItem } from "@/components/add/commit-input";
 import { Toaster } from "@/components/ui/toast";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
@@ -249,6 +253,7 @@ export function seedItems(...items: readonly AddItem[]) {
 }
 
 export const USER = {
+  id: "collector",
   email: "collector@example.com",
   emailVerified: true,
   username: "collector",
@@ -257,12 +262,40 @@ export const USER = {
   hasSeenOnboarding: true,
 };
 
+/** Where the Add draft lives in sessionStorage. */
+export const DRAFT_KEY = "myakiba:account:add-draft";
+
+/** Leaves `rows` in the tab as the Add draft of `USER`, as a reload finds them. */
+export function seedDraft(rows: readonly DraftRow[]) {
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ userId: USER.id, value: rows }));
+}
+
+/** The Items of the Add draft the tab holds, or null when it holds none. */
+export function draftItemIds(): readonly string[] | null {
+  const stored = sessionStorage.getItem(DRAFT_KEY);
+  if (stored === null) return null;
+  const draft = z.object({ value: z.array(z.object({ itemId: z.string() })) });
+  return parseJson(draft, stored)
+    .unwrap()
+    .value.map(({ itemId }) => itemId);
+}
+
+/** The account the open page's route reads, which `signInElsewhere` changes without a reload. */
+let signedIn = USER;
+
+/** Signs `user` in under the open page without a reload, as a sign-in from another tab does. */
+export async function signInElsewhere(router: AnyRouter, user: Partial<typeof USER>) {
+  signedIn = { ...USER, ...user };
+  await router.invalidate();
+}
+
 function appRouter(entry: string, user: typeof USER, content: () => ReactNode) {
+  signedIn = user;
   const root = createRootRoute({ component: Outlet });
   const app = createRoute({
     getParentRoute: () => root,
     id: "(app)",
-    beforeLoad: () => ({ session: { user } }),
+    beforeLoad: () => ({ session: { user: signedIn } }),
     component: Outlet,
   });
   const stub = (path: string) =>

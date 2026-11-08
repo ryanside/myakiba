@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { refused, resetServer, server } from "../../../test/add-app";
+import { USER, refused, resetServer, server } from "../../../test/add-app";
 import { DEFAULT_ORDER_FIELDS, DEFAULT_SHARED } from "./commit-input";
 import type { CommitIssue, CommitRow, Destination } from "./commit-input";
 
@@ -23,7 +23,10 @@ const NEW_ORDER: Destination = {
   lists: [],
 };
 
-beforeEach(resetServer);
+beforeEach(() => {
+  sessionStorage.clear();
+  resetServer();
+});
 afterEach(cleanup);
 
 function renderButton({
@@ -47,6 +50,7 @@ function renderButton({
   render(
     <QueryClientProvider client={new QueryClient()}>
       <CommitButton
+        userId={USER.id}
         rows={rows}
         count={rows.length}
         destination={destination}

@@ -11,6 +11,7 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
 } from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -63,10 +64,7 @@ async function searchAndAdd(user: ReturnType<typeof userEvent.setup>, text: stri
 
 test("a known Item commits with no extension probe and no extension at all", async () => {
   const extension = loadExtension({ installed: false });
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: OTHER_ID, overrides: {}, selected: false }]),
-  );
+  seedDraft([{ itemId: OTHER_ID, overrides: {}, selected: false }]);
   const user = userEvent.setup();
   openAddPage(`/add?item=${ITEM_ID}&to=collection`);
 
@@ -183,10 +181,7 @@ test.each([
   ["/add?to=wishlist", "Item Database", true],
 ])("%s presets %s", async (entry, kind, wishlist) => {
   seedItems(item("preset000001", { title: "Preset" }));
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: "preset000001", overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: "preset000001", overrides: {}, selected: true }]);
   openAddPage(entry);
   expect(await chosenDestination()).toBe(kind);
   expect(screen.getByRole("checkbox", { name: "Wishlist" }).getAttribute("aria-checked")).toBe(
@@ -448,10 +443,7 @@ test("a reload keeps the rows, and a commit clears only the rows it added", asyn
 
 test("a row myakiba no longer has says so and cannot be committed", async () => {
   server.items.delete(OTHER_ID);
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: OTHER_ID, overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: OTHER_ID, overrides: {}, selected: true }]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
 
@@ -465,10 +457,7 @@ test("a row myakiba no longer has says so and cannot be committed", async () => 
 
 test("a failed read of the rows' Items says so, never that they are gone, and Retry recovers them", async () => {
   server.itemsFailure = refused(503, "down");
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: ITEM_ID, overrides: {}, selected: true }]);
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
 
@@ -493,13 +482,10 @@ test("a failed read of the rows' Items says so, never that they are gone, and Re
 });
 
 test("removing a row moves focus to the next row's remove button", async () => {
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([
-      { itemId: ITEM_ID, overrides: {}, selected: true },
-      { itemId: OTHER_ID, overrides: {}, selected: true },
-    ]),
-  );
+  seedDraft([
+    { itemId: ITEM_ID, overrides: {}, selected: true },
+    { itemId: OTHER_ID, overrides: {}, selected: true },
+  ]);
   const user = userEvent.setup();
   openAddPage("/add");
 
@@ -592,10 +578,7 @@ test("every Order field is on screen, with nothing to open first", async () => {
 test("the page says the extension stopped, with rows or without, and stops saying so once it answers", async () => {
   const extension = loadExtension({});
   extension.stopTakes(true);
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: ITEM_ID, overrides: {}, selected: true }]);
   openAddPage();
 
   const alert = await screen.findByRole("alert");
@@ -642,10 +625,7 @@ test("a failed pick is announced, and the announcement region is there before it
 
 test("the commit button stays at the end of the sentence, disabled whenever it has nothing to commit", async () => {
   const user = userEvent.setup();
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: ITEM_ID, overrides: {}, selected: true }]);
   openAddPage("/add?to=collection");
   const commit = await screen.findByRole("button", { name: "Add 1 to collection" });
   await screen.findByRole("checkbox", { name: /^Select (?!all)/u });

@@ -12,6 +12,7 @@ export type CommitAnswer = InferOk<Awaited<ReturnType<ReturnType<typeof useCommi
 
 /** The one Add button, at the end of the sentence. Its label says what the click will do. */
 export function CommitButton({
+  userId,
   rows,
   count,
   destination,
@@ -23,6 +24,8 @@ export function CommitButton({
   onCommitted,
   onDone,
 }: {
+  /** The signed-in account, whose unanswered commit a retry reuses. */
+  readonly userId: string;
   readonly rows: readonly CommitRow[];
   /** How many rows it will add, known before `rows` have their Items. */
   readonly count: number;
@@ -36,7 +39,7 @@ export function CommitButton({
   readonly onCommitted: (answer: CommitAnswer) => void;
   readonly onDone: () => void;
 }) {
-  const commit = useCommitAdd();
+  const commit = useCommitAdd(userId);
   const { status, run } = useButtonStatus({ successDuration: 900 });
   const plan = commitPlan(destination, count, { emailVerified });
   const glide = useGlide<HTMLDivElement>(plan.label);
