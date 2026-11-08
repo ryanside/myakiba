@@ -17,6 +17,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { ItemBadges } from "./item-badges";
+import { THUMBNAIL } from "./row-fields";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -88,7 +89,12 @@ export function AddSearch({
           <p role="status" className="sr-only">
             {showResults && !stale ? resultsAnnouncement(results.length, isError) : ""}
           </p>
-          <Command shouldFilter={false} loop label="Search myakiba" className="bg-transparent p-0">
+          <Command
+            shouldFilter={false}
+            loop
+            label="Search myakiba"
+            className="bg-transparent p-0 [--inset:--spacing(1)]"
+          >
             <div className="p-2">
               <CommandPageInput
                 ref={(element) => {
@@ -134,7 +140,7 @@ export function AddSearch({
                           setText("");
                         }}
                         className={cn(
-                          "gap-3 rounded-lg py-2 data-[disabled=true]:opacity-60",
+                          "gap-3 py-2 data-[disabled=true]:opacity-60",
                           stale && "opacity-60",
                         )}
                       >
@@ -142,7 +148,7 @@ export function AddSearch({
                           images={item.image ? [item.image] : []}
                           title={item.title}
                           decorative
-                          className="size-8 shrink-0 rounded-md"
+                          className={THUMBNAIL}
                           fallbackIcon={null}
                         />
                         <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -175,7 +181,7 @@ export function AddSearch({
                 href={mfcSearchUrl(query)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 border-t border-foreground/10 px-3.5 py-2.5 text-sm outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                className="flex items-center gap-2 border-t border-foreground/10 px-3.5 py-2.5 text-sm outline-none hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               >
                 <HugeiconsIcon
                   icon={Search01Icon}
