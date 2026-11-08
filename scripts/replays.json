@@ -1710,6 +1710,17 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
+      "fix": "667c8154",
+      "bug": "tapping a link in the phone sidebar opened the page behind the sheet, which stayed open",
+      "test": "apps/web/src/components/sidebar/app-sidebar-mobile.test.tsx",
+      "fixed": [
+        "the phone sidebar closes after a link opens another page",
+        "the phone sidebar closes after a link to the current page"
+      ],
+      "testAt": "667c815449446646ed1d24a8ca9e6ffe4a931c9e",
+      "reason": "The merge with main dropped this entry because every revision of the test imports test/sidebar-app.tsx, which now needs OnboardingProvider. The pin takes that harness from the fix's revision instead, and HEAD keeps the same test names."
+    },
+    {
       "fix": "2d8c17ce",
       "bug": "a new account that opened Getting Started within 400 ms never saved that it had seen onboarding",
       "test": "apps/web/src/components/onboarding/onboarding-dialog.test.tsx",

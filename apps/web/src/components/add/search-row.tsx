@@ -1,7 +1,8 @@
-import { ArrowUpRight01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { mfcSearchUrl } from "@myakiba/contracts/add/constants";
 import { buttonVariants } from "@/components/ui/button";
+import { ExternalIcon } from "@/lib/icons";
 import type { AddController } from "./add-controller";
 import { AddSearch, NARROW_HIDDEN } from "./add-search";
 
@@ -31,7 +32,7 @@ export function SearchRow({ controller: c }: { readonly controller: AddControlle
           <span className={NARROW_HIDDEN}>Search </span>MyFigureCollection
         </span>
         <HugeiconsIcon
-          icon={ArrowUpRight01Icon}
+          icon={ExternalIcon}
           data-icon="inline-end"
           strokeWidth={2}
           className="text-muted-foreground group-hover/button:text-foreground"

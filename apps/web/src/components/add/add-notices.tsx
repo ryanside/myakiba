@@ -1,10 +1,11 @@
-import { Alert02Icon, ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
+import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MAX_ADD_ROWS, mfcItemUrl } from "@myakiba/contracts/add/constants";
 import type { ReactNode } from "react";
 import { formatCount } from "@/components/page-header";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ExternalIcon } from "@/lib/icons";
 import { EXTENSION_STOPPED_TEXT } from "@/lib/pick-failure";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
@@ -83,11 +84,7 @@ function ErrorNotice({
 function MfcHint({ mfcItemId }: { readonly mfcItemId: number }) {
   return (
     <Alert role="note" className="color-motion hover:bg-muted">
-      <HugeiconsIcon
-        icon={ArrowUpRight01Icon}
-        className="text-muted-foreground"
-        aria-hidden="true"
-      />
+      <HugeiconsIcon icon={ExternalIcon} className="text-muted-foreground" aria-hidden="true" />
       <AlertDescription className="text-foreground [&_a]:no-underline">
         {/* The link's box covers the notice, so all of it opens MFC. */}
         <a

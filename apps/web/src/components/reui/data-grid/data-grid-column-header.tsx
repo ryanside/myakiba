@@ -23,16 +23,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon, DragDropVerticalIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import {
-  Tick02Icon,
-  ArrowLeft03Icon,
-  ArrowRight03Icon,
   MoveLeftIcon,
   MoveRightIcon,
-  DragDropVerticalIcon,
-  PinOffIcon,
-} from "@hugeicons/core-free-icons";
-import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
+  PinLeftIcon,
+  PinRightIcon,
+  SortAscendingIcon,
+  SortDescendingIcon,
+  UnsortedIcon,
+} from "@/lib/icons";
 
 const SORT_ICONS = { asc: SortAscendingIcon, desc: SortDescendingIcon } as const;
 
@@ -187,7 +187,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           onClick={() => column.pin(isPinned === "left" ? false : "left")}
         >
           <HugeiconsIcon
-            icon={ArrowLeft03Icon}
+            icon={PinLeftIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
@@ -206,7 +206,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           onClick={() => column.pin(isPinned === "right" ? false : "right")}
         >
           <HugeiconsIcon
-            icon={ArrowRight03Icon}
+            icon={PinRightIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"

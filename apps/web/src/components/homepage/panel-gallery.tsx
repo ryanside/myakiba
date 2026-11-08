@@ -35,7 +35,8 @@ const PANELS = [
   {
     appImage: "add",
     appImageAlt: "myakiba Add page",
-    appImageCrop: { scale: 100, x: 0, y: 0 },
+    // The sentence ends in its commit button at the frame's right edge, so the crop skips the sidebar.
+    appImageCrop: { scale: 100, x: -29, y: 0 },
     backgroundCrop: { scale: 176, x: -18, y: -38 },
     caption: "pick items on MyFigureCollection, then choose where they go",
     rowSpan: 2,
