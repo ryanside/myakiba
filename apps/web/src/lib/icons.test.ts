@@ -9,7 +9,7 @@ const mapped = new Set<unknown>(Object.values(icons));
 const glyphs = new Map<string, unknown>(Object.entries(hugeicons));
 const hugeiconsImport = /import\s*\{([^}]*)\}\s*from\s*"@hugeicons\/core-free-icons"/g;
 const directionGlyph =
-  /^(Circle|Square)?(Arrows?|Chevrons?|Direction|Move)(Big|Move|Out)?(Up|Down|Left|Right)/;
+  /^(Circle|Square)?(Arrows?|Chevrons?|Direction|Move)(Big|Move|Out)?(Up|Down|Left|Right|Diagonal|Horizontal|Vertical|First|Last)/;
 
 function bypassesOf(source: string): string[] {
   return [...source.matchAll(hugeiconsImport)]
@@ -33,7 +33,18 @@ test("finds a direction icon imported straight from hugeicons", () => {
     bypassesOf(
       'import { PackageIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons";\n' +
         'import { ArrowRightIcon as Next } from "@hugeicons/core-free-icons";\n' +
-        'import { ArrowUpRight01Icon, MoveLeftIcon, ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";',
+        'import { ArrowUpRight01Icon, MoveLeftIcon, ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";\n' +
+        'import { ArrowDiagonalIcon, ChevronFirstIcon, ChevronLastIcon, SquareArrowVerticalIcon } from "@hugeicons/core-free-icons";\n' +
+        'import { BowArrowIcon, PinOffIcon, DragDropVerticalIcon, ArrowExpandIcon } from "@hugeicons/core-free-icons";',
     ),
-  ).toEqual(["ArrowRight01Icon", "ArrowRightIcon", "ArrowUpRight01Icon", "MoveLeftIcon"]);
+  ).toEqual([
+    "ArrowRight01Icon",
+    "ArrowRightIcon",
+    "ArrowUpRight01Icon",
+    "MoveLeftIcon",
+    "ArrowDiagonalIcon",
+    "ChevronFirstIcon",
+    "ChevronLastIcon",
+    "SquareArrowVerticalIcon",
+  ]);
 });
