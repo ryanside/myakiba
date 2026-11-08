@@ -56,10 +56,10 @@ export function ItemTitleCell({
       <div className={cn("min-w-0 space-y-px", walkedByKeys && "flex-1")}>
         <Link
           {...destination}
-          title={walkedByKeys ? title : undefined}
+          title={title}
           className={cn(
-            "truncate font-medium text-foreground",
-            walkedByKeys && cn("block w-fit max-w-full rounded-sm", FOCUS_RING),
+            "block truncate font-medium text-foreground",
+            walkedByKeys && cn("w-fit max-w-full rounded-sm", FOCUS_RING),
           )}
         >
           {title}
