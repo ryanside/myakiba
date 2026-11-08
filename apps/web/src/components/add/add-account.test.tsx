@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test";
-import { cleanup, configure, screen } from "@testing-library/react";
-import { item, loadExtension, openAddPage, resetServer, seedItems } from "../../../test/add-app";
+import { act, cleanup, configure, screen, waitFor } from "@testing-library/react";
+import {
+  draftItemIds,
+  item,
+  loadExtension,
+  openAddPage,
+  resetServer,
+  seedItems,
+  signInElsewhere,
+} from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
 setDefaultTimeout(30_000);
@@ -45,4 +53,16 @@ test("another account in the same tab opens an empty Add page, and the rows it l
 
   await openAs();
   expect(showsRow()).toBe(false);
+});
+
+test("another account signing in from another tab while Add is open shows and keeps none of the rows", async () => {
+  const router = openAddPage(`/add?item=${ITEM_ID}`);
+  await screen.findByRole("checkbox", { name: "Select Hatsune Miku" });
+  await waitFor(() => expect(draftItemIds()).toEqual([ITEM_ID]));
+
+  await act(() => signInElsewhere(router, OTHER_ACCOUNT));
+
+  await screen.findByRole("button", { name: "Search myakiba" });
+  expect(showsRow()).toBe(false);
+  expect(draftItemIds() ?? []).toEqual([]);
 });

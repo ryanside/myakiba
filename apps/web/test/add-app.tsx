@@ -10,6 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import type { AnyRouter } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { ItemRelease } from "@myakiba/contracts/item/schema";
 import { parseJson } from "@myakiba/utils/parse-json";
@@ -279,12 +280,22 @@ export function draftItemIds(): readonly string[] | null {
     .value.map(({ itemId }) => itemId);
 }
 
+/** The account the open page's route reads, which `signInElsewhere` changes without a reload. */
+let signedIn = USER;
+
+/** Signs `user` in under the open page without a reload, as a sign-in from another tab does. */
+export async function signInElsewhere(router: AnyRouter, user: Partial<typeof USER>) {
+  signedIn = { ...USER, ...user };
+  await router.invalidate();
+}
+
 function appRouter(entry: string, user: typeof USER, content: () => ReactNode) {
+  signedIn = user;
   const root = createRootRoute({ component: Outlet });
   const app = createRoute({
     getParentRoute: () => root,
     id: "(app)",
-    beforeLoad: () => ({ session: { user } }),
+    beforeLoad: () => ({ session: { user: signedIn } }),
     component: Outlet,
   });
   const stub = (path: string) =>
