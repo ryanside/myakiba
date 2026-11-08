@@ -124,8 +124,9 @@ export function showCommitToast(outcome: CommitOutcome, navigate: Navigate) {
         title: commitToastTitle(outcome),
         decorative: true,
         showRemainingCount: true,
+        // Concentric with the toast, whose corner and padding around media these are.
         className:
-          "size-12 shrink-0 rounded-lg outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10",
+          "size-12 shrink-0 rounded-inner outline-1 -outline-offset-1 outline-black/10 [--inset:--spacing(3)] [--radius-outer:var(--radius-2xl)] dark:outline-white/10",
         fallbackIcon: createElement(HugeiconsIcon, {
           icon: outcome.ownership.kind === "order" ? PackageIcon : Image01Icon,
           className: "size-5 text-muted-foreground",
