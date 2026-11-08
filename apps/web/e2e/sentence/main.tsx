@@ -92,6 +92,7 @@ function Sentence() {
             disabled={sentenceCase.rows === 0}
           >
             <CommitButton
+              userId="sentence"
               rows={rows}
               count={sentenceCase.selected}
               destination={destination}

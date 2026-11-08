@@ -1,6 +1,8 @@
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
-import { useEffect, useEffectEvent, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
+import * as z from "zod";
+import { accountSlot } from "@/lib/account-storage";
 import { ApiRejected } from "@/lib/errors/api-rejected";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { TakenPick } from "@/lib/extension-bridge";
@@ -69,20 +71,36 @@ function choicesKey(choices: AddChoices): string {
 }
 
 /**
- * The Add click. Sending the same choices again after a failed click is a retry of that click, so
- * it keeps its `commitId` and the server answers it at most once. A saved click or new choices
- * start a new commit.
+ * How long a retry keeps an unanswered commit's `commitId`, from its first send. The server answers
+ * an id at most once for 10 minutes from when it first sees it, then writes again for it as for a
+ * new id, so an older id is worth no more than a new one. The spare minute is for the retry's trip.
  */
-export function useCommitAdd() {
+const RETRY_WINDOW_MS = 9 * 60 * 1000;
+
+/** The last click that got no answer, so a retry after a reload is still that click. */
+const unansweredCommit = accountSlot(
+  "add-commit",
+  z.object({ choices: z.string(), commitId: z.uuid(), expiresAt: z.number() }),
+);
+
+/**
+ * The Add click. Sending the same choices again after a click that got no answer is a retry of
+ * that click, after a reload too, so it keeps its `commitId` and the server answers it at most
+ * once. A saved click, new choices or the end of the retry window start a new commit.
+ */
+export function useCommitAdd(userId: string) {
   const commit = useResourceMutation(commitAddCommand);
-  const unanswered = useRef<{ readonly choices: string; readonly commitId: string } | null>(null);
   const run = async (choices: AddChoices) => {
     const key = choicesKey(choices);
-    const commitId =
-      unanswered.current?.choices === key ? unanswered.current.commitId : crypto.randomUUID();
-    unanswered.current = { choices: key, commitId };
-    const committed = await commit.run({ ...choices, commitId });
-    if (committed.isOk()) unanswered.current = null;
+    const now = Date.now();
+    const unanswered = unansweredCommit.read(userId);
+    const sent =
+      unanswered?.choices === key && unanswered.expiresAt > now
+        ? unanswered
+        : { choices: key, commitId: crypto.randomUUID(), expiresAt: now + RETRY_WINDOW_MS };
+    unansweredCommit.write(userId, sent);
+    const committed = await commit.run({ ...choices, commitId: sent.commitId });
+    if (committed.isOk()) unansweredCommit.clear();
     return committed;
   };
   return { run, isPending: commit.isPending } as const;

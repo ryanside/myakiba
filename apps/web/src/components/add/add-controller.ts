@@ -308,6 +308,7 @@ export function useAddController(search: AddSearchParams) {
     },
     /** Spread onto `<CommitButton />`. */
     commitProps: {
+      userId: session.user.id,
       rows: commitRows,
       count: selectedCount,
       destination,
