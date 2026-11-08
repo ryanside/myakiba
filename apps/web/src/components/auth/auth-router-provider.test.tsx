@@ -42,6 +42,7 @@ let requestLimit = Infinity;
 let held: Promise<null> | null = null;
 let endingSession = false;
 let deletingAccount = false;
+let draftItem: string | null = null;
 let dashboardRenders = 0;
 let shellRenders = 0;
 const session = signedInSession();
@@ -129,6 +130,7 @@ const { authClient } = await import("@/lib/auth-client");
 const { Toaster } = await import("@/components/ui/toast");
 const { Preferences } = await import("@/components/settings/preferences");
 const { useUserPreferences } = await import("@/hooks/use-user-preferences");
+const { useAddDraft } = await import("@/components/add/add-draft");
 const sessionAtom = authClient.$store.atoms.session;
 if (!sessionAtom) throw new Error("Missing session atom");
 const listen = sessionAtom.listen.bind(sessionAtom);
@@ -158,6 +160,8 @@ afterEach(() => {
   ownerLoads = 0;
   endingSession = false;
   deletingAccount = false;
+  draftItem = null;
+  sessionStorage.clear();
   dashboardRenders = 0;
   shellRenders = 0;
 });
@@ -194,8 +198,21 @@ function Dashboard() {
       <h1>Dashboard</h1>
       {deletingAccount ? <DeleteAccount /> : <UserMenu session={session} />}
       {data && <p>{`${data}'s collection`}</p>}
+      {draftItem !== null && <AddDraft itemId={draftItem} />}
     </>
   );
+}
+
+function AddDraft({ itemId }: { readonly itemId: string }) {
+  const { rows } = useAddDraft(itemId);
+  return <p>{`${rows.length} to add`}</p>;
+}
+
+/** Every value this tab keeps in sessionStorage, as one string. */
+function tabStorage() {
+  return Array.from({ length: sessionStorage.length }, (_, index) =>
+    sessionStorage.getItem(sessionStorage.key(index) ?? ""),
+  ).join("\n");
 }
 
 const appRouteApi = getRouteApi("/(app)");
@@ -390,6 +407,22 @@ test("a session that ends drops the signed-out account's cached data", async () 
   await screen.findByRole("heading", { name: "Login" });
   expect(queryClient.getQueryData<string>(ownerKey)).toBeUndefined();
 });
+
+test.each(["signing out", "deleting an account"])(
+  "%s leaves none of the account's Add rows in the tab",
+  async (action) => {
+    deletingAccount = action === "deleting an account";
+    draftItem = "draft-item";
+    await openApp(true);
+    await screen.findByText("1 to add");
+    expect(tabStorage()).toContain("draft-item");
+
+    await endCurrentSession();
+    await screen.findByRole("heading", { name: "Login" });
+
+    expect(tabStorage()).not.toContain("draft-item");
+  },
+);
 
 test("saved preferences reach the route context without a page reload", async () => {
   await openApp(false, "/settings");

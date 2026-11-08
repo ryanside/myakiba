@@ -249,6 +249,7 @@ export function seedItems(...items: readonly AddItem[]) {
 }
 
 export const USER = {
+  id: "collector",
   email: "collector@example.com",
   emailVerified: true,
   username: "collector",
