@@ -9,7 +9,7 @@ const mapped = new Set<unknown>(Object.values(icons));
 const glyphs = new Map<string, unknown>(Object.entries(hugeicons));
 const hugeiconsImport = /import\s*\{([^}]*)\}\s*from\s*"@hugeicons\/core-free-icons"/g;
 const directionName =
-  /^(Circle|Square)?(Fading)?(Arrows?|Chevrons?|Direction|Move)(Big|Move|Out)?(Up|Down|Left|Right|Top|Bottom)|^(Circle|Square)?(Arrows?|Chevrons?)(Diagonal|Horizontal|Vertical|First|Last)/;
+  /^(Circle|Square)?(Fading)?(Arrows?|Chevrons?|Move)(Big|Move|Out)?(Up|Down|Left|Right|Top|Bottom)|^(Circle|Square)?(Arrows?|Chevrons?)(Diagonal|Horizontal|Vertical|First|Last|AllDirection)|^Curvy(Left|Right|Up|Down)/;
 // Hugeicons exports one glyph under several names, so an alias such as NewTab is caught by its glyph.
 const directionGlyphs = new Set(
   [...glyphs].filter(([name]) => directionName.test(name)).map(([, glyph]) => glyph),
@@ -40,8 +40,10 @@ test("finds a direction icon imported straight from hugeicons", () => {
         'import { ArrowUpRight01Icon, MoveLeftIcon, ArrowTurnBackwardIcon } from "@hugeicons/core-free-icons";\n' +
         'import { ArrowDiagonalIcon, ChevronFirstIcon, ChevronLastIcon, SquareArrowVerticalIcon } from "@hugeicons/core-free-icons";\n' +
         'import { MoveTopIcon, NewTab, CircleFadingArrowUpIcon } from "@hugeicons/core-free-icons";\n' +
+        'import { ArrowAllDirectionIcon, CurvyLeftRightDirectionIcon } from "@hugeicons/core-free-icons";\n' +
         'import { BowArrowIcon, PinOffIcon, DragDropVerticalIcon, ArrowExpandIcon } from "@hugeicons/core-free-icons";\n' +
-        'import { MoveDiagonal, MoveDiagonal2, ArrowTurnBackwardIcon as Reset } from "@hugeicons/core-free-icons";',
+        'import { MoveDiagonal, MoveDiagonal2, ArrowTurnBackwardIcon as Reset } from "@hugeicons/core-free-icons";\n' +
+        'import { DirectionLeft01Icon, DirectionRightIcon } from "@hugeicons/core-free-icons";',
     ),
   ).toEqual([
     "ArrowRight01Icon",
@@ -55,5 +57,7 @@ test("finds a direction icon imported straight from hugeicons", () => {
     "MoveTopIcon",
     "NewTab",
     "CircleFadingArrowUpIcon",
+    "ArrowAllDirectionIcon",
+    "CurvyLeftRightDirectionIcon",
   ]);
 });
