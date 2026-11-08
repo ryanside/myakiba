@@ -324,7 +324,7 @@ function DetailsPanel({ row: { id, row, item, release } }: { readonly row: ItemR
 }
 
 // Its content starts under the Item column's, so a row keeps its place when it becomes an Item.
-const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem-2px)] ps-8.5";
+const FRAME_WIDTH_IN_CELL = "sticky start-2 w-[calc(100cqw-1rem)] ps-8.5";
 
 function MissingRow({
   id,
@@ -475,7 +475,6 @@ const COLUMNS: ColumnDef<AddRow>[] = [
 const HIDDEN_WITHOUT_FIELDS = { price: false, count: false, condition: false };
 const SHOW_ALL = {};
 const PINNED = { right: ["actions"] };
-const FRAME_BORDERS = 2;
 
 function useFrameWidth(frame: RefObject<HTMLElement | null>): number {
   const [width, setWidth] = useState(Number.POSITIVE_INFINITY);
@@ -587,7 +586,7 @@ export function AddItems({ controller: c }: { readonly controller: AddController
             dense: true,
             columnsResizable: true,
             // Only when columns can pass under it does the pin show, so at rest it is any other cell.
-            columnsPinnable: table.getTotalSize() > frameWidth - FRAME_BORDERS,
+            columnsPinnable: table.getTotalSize() > frameWidth,
           }}
           tableClassNames={{
             // Rows are there from the first paint, so an entrance would only move them on load.
