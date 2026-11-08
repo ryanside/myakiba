@@ -8,6 +8,7 @@ import {
   resetServer,
   seedItems,
   server,
+  seedDraft,
 } from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -21,10 +22,7 @@ beforeEach(() => {
   resetServer();
   loadExtension({});
   seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777 }));
-  sessionStorage.setItem(
-    "myakiba:add-draft",
-    JSON.stringify([{ itemId: ITEM_ID, overrides: {}, selected: true }]),
-  );
+  seedDraft([{ itemId: ITEM_ID, overrides: {}, selected: true }]);
   server.lists.push(
     { id: "shelf0000001", title: "Display shelf" },
     { id: "gifts0000001", title: "Gifts" },

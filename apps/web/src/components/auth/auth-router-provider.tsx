@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { RouterProvider } from "@tanstack/react-router";
 import type { AnyRouter } from "@tanstack/react-router";
 import { Result } from "better-result";
+import { forgetAccountStorage } from "@/lib/account-storage";
 import { authClient, classifySession } from "@/lib/auth-client";
 import { useClearServerData, useResetServerData } from "@/data/resources/session";
 import type { SessionSource } from "@/lib/session";
@@ -28,6 +29,7 @@ export function AuthRouterProvider({
     if (state === "pending") return;
     let resetting: Promise<void> | undefined;
     if (confirmedUserId.current !== null && confirmedUserId.current !== userId) {
+      forgetAccountStorage();
       // Reads on screen keep their data through a clear, so another account resets them instead.
       if (userId === null) clearServerData();
       else resetting = resetServerData();

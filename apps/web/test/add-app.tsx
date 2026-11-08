@@ -12,6 +12,9 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { ItemRelease } from "@myakiba/contracts/item/schema";
+import { parseJson } from "@myakiba/utils/parse-json";
+import * as z from "zod";
+import type { DraftRow } from "@/components/add/add-draft";
 import type { AddItem } from "@/components/add/commit-input";
 import { Toaster } from "@/components/ui/toast";
 import { delegatingBridge, fakeExtension } from "./fake-extension";
@@ -257,6 +260,24 @@ export const USER = {
   dateFormat: "MM/DD/YYYY",
   hasSeenOnboarding: true,
 };
+
+/** Where the Add draft lives in sessionStorage. */
+export const DRAFT_KEY = "myakiba:account:add-draft";
+
+/** Leaves `rows` in the tab as the Add draft of `USER`, as a reload finds them. */
+export function seedDraft(rows: readonly DraftRow[]) {
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ userId: USER.id, value: rows }));
+}
+
+/** The Items of the Add draft the tab holds, or null when it holds none. */
+export function draftItemIds(): readonly string[] | null {
+  const stored = sessionStorage.getItem(DRAFT_KEY);
+  if (stored === null) return null;
+  const draft = z.object({ value: z.array(z.object({ itemId: z.string() })) });
+  return parseJson(draft, stored)
+    .unwrap()
+    .value.map(({ itemId }) => itemId);
+}
 
 function appRouter(entry: string, user: typeof USER, content: () => ReactNode) {
   const root = createRootRoute({ component: Outlet });
