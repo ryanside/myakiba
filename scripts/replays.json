@@ -3553,6 +3553,18 @@
       "fixed": [
         "another account signing in from another tab while Add is open shows and keeps none of the rows"
       ]
+    },
+    {
+      "fix": "d36b1e41732553d4b2ca1aac8128794983d88def",
+      "bug": "an unlabelled DatePicker took its name from its placeholder and date and was also described by the date, or by its title, so a screen reader read the date twice",
+      "test": "apps/web/src/components/ui/date-picker.test.tsx",
+      "fixed": ["an unlabelled date picker says its placeholder and date once, with no description"]
+    },
+    {
+      "fix": "d36b1e41732553d4b2ca1aac8128794983d88def",
+      "bug": "the toolbar AddLink had an aria-label of Add over its own visible word Add, so its name came from two places",
+      "test": "apps/web/src/components/add/add-entry-points.test.tsx",
+      "fixed": ["a toolbar Add link takes its name from its own word, not an aria-label"]
     }
   ],
   "lint": [
