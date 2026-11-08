@@ -3527,6 +3527,14 @@
       "bug": "an unanswered Add commit's commitId lived in a ref, so a reload mid-commit and the same click sent a new commitId and the server wrote the Collection rows or the Order twice",
       "test": "apps/web/src/components/add/add-retry.test.tsx",
       "fixed": ["a reload mid-commit, then the same click, sends the same commitId"]
+    },
+    {
+      "fix": "3f2b571a4573b13a08dcc8284cf68d07bbf3729e",
+      "bug": "a sign-in from another tab changed the session without a reload, and the mounted Add page kept showing the last account's rows and saved them under the new account's id",
+      "test": "apps/web/src/components/add/add-account.test.tsx",
+      "fixed": [
+        "another account signing in from another tab while Add is open shows and keeps none of the rows"
+      ]
     }
   ],
   "lint": [
