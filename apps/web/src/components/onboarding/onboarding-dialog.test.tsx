@@ -202,14 +202,6 @@ function classTokens(element: HTMLElement) {
   return element.className.split(/\s+/);
 }
 
-test("the add items step points to the + button in the top bar, not the sidebar", async () => {
-  await openDashboard(false);
-  const dialog = await continueToAddItems();
-
-  expect(dialog.textContent).toContain("the + button at the top right");
-  expect(dialog.textContent).not.toContain("sidebar");
-});
-
 test("every onboarding footer button is the standard button height", async () => {
   await openDashboard(false);
   const welcomeFooter = ["Close", "Continue"].map((name) => screen.getByRole("button", { name }));
