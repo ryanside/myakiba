@@ -3555,6 +3555,18 @@
       ]
     },
     {
+      "fix": "d36b1e41732553d4b2ca1aac8128794983d88def",
+      "bug": "an unlabelled DatePicker took its name from its placeholder and date and was also described by the date, or by its title, so a screen reader read the date twice",
+      "test": "apps/web/src/components/ui/date-picker.test.tsx",
+      "fixed": ["an unlabelled date picker says its placeholder and date once, with no description"]
+    },
+    {
+      "fix": "d36b1e41732553d4b2ca1aac8128794983d88def",
+      "bug": "the toolbar AddLink had an aria-label of Add over its own visible word Add, so its name came from two places",
+      "test": "apps/web/src/components/add/add-entry-points.test.tsx",
+      "fixed": ["a toolbar Add link takes its name from its own word, not an aria-label"]
+    },
+    {
       "fix": "8933341d76448a9923d547ef5a5bb9a4daa6df5b",
       "bug": "the shared Item title cell made its title link a block box only in the Add table, so Collection and Order Items rendered it inline, where text-overflow has no effect, and the cell cut a long title mid-word with no ellipsis or tooltip",
       "test": "apps/web/src/components/cells/item-title-cell.test.tsx",

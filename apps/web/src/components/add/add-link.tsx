@@ -31,7 +31,6 @@ export function AddLink({
       to="/add"
       search={{ ...search, returnTo }}
       className={buttonVariants({ variant, size, className })}
-      aria-label={children === undefined ? "Add" : undefined}
     >
       {icon ? (
         <HugeiconsIcon
@@ -41,7 +40,7 @@ export function AddLink({
           aria-hidden="true"
         />
       ) : null}
-      {children ?? <span className="hidden sm:inline">Add</span>}
+      {children ?? <span className="sr-only sm:not-sr-only">Add</span>}
     </Link>
   );
 }

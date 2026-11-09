@@ -55,12 +55,17 @@ export function DatePicker({
               "data-[empty=true]:text-muted-foreground press-none w-full min-w-0 justify-start overflow-hidden text-left font-normal",
               className,
             )}
-            title={dateValue ? format(dateValue, "PPP") : undefined}
-            aria-describedby={valueId}
+            // Only an id lets a <label htmlFor> name the trigger. Without one, its content names it
+            // with the date already, so a description, or a title on the trigger, would repeat it.
+            aria-describedby={id ? valueId : undefined}
           >
             <HugeiconsIcon icon={Calendar01Icon} data-icon="inline-start" className="shrink-0" />
             {dateValue && <span className="sr-only">{placeholder}, </span>}
-            <span id={valueId} className="min-w-0 flex-1 truncate">
+            <span
+              id={valueId}
+              className="min-w-0 flex-1 truncate"
+              title={dateValue ? format(dateValue, "PPP") : undefined}
+            >
               {dateValue ? format(dateValue, "PP") : placeholder}
             </span>
           </Button>
