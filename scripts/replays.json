@@ -3553,6 +3553,22 @@
       "fixed": [
         "another account signing in from another tab while Add is open shows and keeps none of the rows"
       ]
+    },
+    {
+      "fix": "3f11bb0a1eb997dd5bba098a6b393d8681f49b66",
+      "bug": "an /add link with a preset outside its shape, such as ?item=verify-item-1, failed the route's search schema, and the page showed Something went wrong instead of Add",
+      "test": "apps/web/src/lib/add-search.test.ts",
+      "fixed": [
+        "ignores the malformed to \"elsewhere\" and keeps the rest of the link",
+        "ignores the malformed to \"order:NOPE\" and keeps the rest of the link",
+        "ignores the malformed item \"verify-item-1\" and keeps the rest of the link",
+        "ignores the malformed item \"x\" and keeps the rest of the link",
+        "ignores the malformed item [\"abc12345\",\"def67890\"] and keeps the rest of the link",
+        "ignores the malformed mfc \"-1\" and keeps the rest of the link",
+        "ignores the malformed mfc \"abc\" and keeps the rest of the link",
+        "ignores the malformed q \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" and keeps the rest of the link",
+        "ignores the malformed from \"x\" and keeps the rest of the link"
+      ]
     }
   ],
   "lint": [
