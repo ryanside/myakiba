@@ -3589,6 +3589,15 @@
         "ignores the malformed q \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" and keeps the rest of the link",
         "ignores the malformed from \"x\" and keeps the rest of the link"
       ]
+    },
+    {
+      "fix": "5227fbbfc0329acd2c64b6ba0218953c6e328a3d",
+      "bug": "The demos' stageshow kit read only the device's reduced-motion setting, so with the app's own Reduce motion switch on they kept playing.",
+      "test": "apps/web/src/components/stageshow/kit/reduced-motion.test.tsx",
+      "fixed": [
+        "stageshow reduced motion > follows the app's Reduce motion switch when the device setting is off",
+        "stageshow reduced motion > a demo holds its poster and never runs its script under the app's switch"
+      ]
     }
   ],
   "lint": [

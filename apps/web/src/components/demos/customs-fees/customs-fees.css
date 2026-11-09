@@ -1,0 +1,554 @@
+/* Customs fees: the orders table with a shipped order's Fees & Charges
+   popover open over its Total, and the Expenses page's Spend by cost type as
+   a satellite over the app's sidebar. Anatomy from orders-columns.tsx,
+   popover-multi-input-cell.tsx, expenses/orders/breakdown.tsx and
+   breakdown-chart.tsx. Every rule is scoped. */
+
+.mk-customs-fees .ss-stage {
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Inset a gutter from the top and right, off the foot. Its left edge sits
+   half a card in, so the card straddles it over the sidebar */
+.mk-customs-fees .mk-customs-fees-window {
+  position: absolute;
+  top: 24px;
+  left: 184px;
+  width: 752px;
+  height: 520px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+/* The phone column: one 24px gutter above, left and below, off the right */
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-window {
+  left: 24px;
+  width: 420px;
+  /* What shows stays at least square: 334 wide, 334 tall */
+  height: 334px;
+}
+
+.mk-customs-fees .mk-customs-fees-window .ss-window__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-customs-fees .mk-customs-fees-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 176px minmax(0, 1fr);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The app's sidebar: chrome under the card, quiet bars only */
+.mk-customs-fees .mk-customs-fees-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 20px 22px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in oklab, var(--muted) 45%, var(--card));
+}
+
+.mk-customs-fees .mk-customs-fees-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.mk-customs-fees .mk-customs-fees-page {
+  min-width: 0;
+  padding: 16px 20px 0;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-page {
+  /* Past the stage's right edge, so the rules bleed */
+  width: 346px;
+  padding: 15px 0 0 12px;
+}
+
+/* The page's title, as PageHeader sets it */
+.mk-customs-fees .mk-customs-fees-title {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  margin-bottom: 12px;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 32px;
+  letter-spacing: -0.01em;
+}
+
+/* The toolbar over the table: search and filters, quiet */
+.mk-customs-fees .mk-customs-fees-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  margin-bottom: 12px;
+}
+
+/* In the phone column the order's row sits low enough that its popover,
+   opening upward, keeps a gutter from the stage's top */
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-toolbar {
+  margin-bottom: 12px;
+}
+
+.mk-customs-fees .mk-customs-fees-search,
+.mk-customs-fees .mk-customs-fees-filter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+}
+
+.mk-customs-fees .mk-customs-fees-search {
+  width: 220px;
+}
+
+.mk-customs-fees .mk-customs-fees-filter {
+  border-style: dashed;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-search {
+  width: 176px;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-filter-2 {
+  display: none;
+}
+
+/* Order rows: expand, Order, Items, Total, Status */
+.mk-customs-fees .mk-customs-fees-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 64px 112px 128px;
+  align-items: center;
+  height: 52px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  white-space: nowrap;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-row {
+  grid-template-columns: minmax(0, 1fr) 100px 32px;
+  height: 48px;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-head {
+  height: 36px;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-row > :first-child,
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-items,
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-status {
+  display: none;
+}
+
+.mk-customs-fees .mk-customs-fees-head {
+  height: 36px;
+  color: var(--muted-foreground);
+}
+
+.mk-customs-fees .mk-customs-fees-cell {
+  min-width: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-customs-fees .mk-customs-fees-num {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 16px;
+  text-align: right;
+}
+
+/* The numeric cell keeps its trigger's ring and fill inside the cell */
+.mk-customs-fees .mk-customs-fees-subject .mk-customs-fees-num {
+  overflow: visible;
+}
+
+.mk-customs-fees .mk-customs-fees-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+/* The order: a stack of its item images, then its title */
+.mk-customs-fees .mk-customs-fees-order {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mk-customs-fees .mk-customs-fees-thumbs {
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--muted);
+}
+
+.mk-customs-fees .mk-customs-fees-thumbs img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: top;
+}
+
+.mk-customs-fees .mk-customs-fees-thumbs[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.mk-customs-fees .mk-customs-fees-thumbs[data-count="3"] {
+  grid-template-rows: 1fr 1fr;
+}
+
+.mk-customs-fees .mk-customs-fees-thumbs[data-count="3"] img:first-child {
+  grid-row: span 2;
+}
+
+.mk-customs-fees .mk-customs-fees-order-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.mk-customs-fees .mk-customs-fees-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-customs-fees .mk-customs-fees-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-paid);
+}
+
+.mk-customs-fees .mk-customs-fees-dot[data-status="Ordered"] {
+  background: var(--mk-ordered);
+}
+
+.mk-customs-fees .mk-customs-fees-dot[data-status="Shipped"] {
+  background: var(--mk-shipped);
+}
+
+.mk-customs-fees .mk-customs-fees-dot[data-status="Owned"] {
+  background: var(--mk-owned);
+}
+
+/* The Total: a ghost button over the cell, its value right-aligned. Open,
+   it keeps the pressed fill, as aria-expanded does */
+.mk-customs-fees .mk-customs-fees-trigger {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: flex-end;
+  height: 32px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border-radius: 12px;
+  transition: background-color 0.15s ease;
+}
+
+.mk-customs-fees .mk-customs-fees-trigger[data-hover],
+.mk-customs-fees .mk-customs-fees-trigger[data-open] {
+  background: var(--muted);
+}
+
+/* One wash once the fees are saved, then gone */
+.mk-customs-fees .mk-customs-fees-trigger::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.mk-customs-fees .mk-customs-fees-trigger[data-wash]::before {
+  opacity: 1;
+  transition-duration: 0.1s;
+}
+
+.mk-customs-fees .mk-customs-fees-trigger .ss-count {
+  position: relative;
+}
+
+/* Fees & Charges: the app's popover, w-72 p-0 */
+.mk-customs-fees .mk-customs-fees-popover {
+  --ss-popover-bg: var(--popover);
+  --ss-popover-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 12px;
+  color: var(--popover-foreground);
+}
+
+.mk-customs-fees .mk-customs-fees-pop-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 12px 8px;
+}
+
+.mk-customs-fees .mk-customs-fees-pop-title {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.mk-customs-fees .mk-customs-fees-pop-desc {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.mk-customs-fees .mk-customs-fees-fees {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.mk-customs-fees .mk-customs-fees-fee {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-customs-fees .mk-customs-fees-fee-label {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* MaskInput at h-7: a pill with a hairline, the value at text-sm */
+.mk-customs-fees .mk-customs-fees-input {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid var(--input);
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 20px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.mk-customs-fees .ss-stage[data-theme="dark"] .mk-customs-fees-input {
+  background: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+.mk-customs-fees .mk-customs-fees-input[data-focus] {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.mk-customs-fees .mk-customs-fees-input-text {
+  white-space: pre;
+}
+
+.mk-customs-fees .mk-customs-fees-sel[data-on] {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--ring) 35%, transparent);
+}
+
+.mk-customs-fees .mk-customs-fees-caret {
+  width: 1.5px;
+  height: 16px;
+  margin-left: 1px;
+  background: var(--foreground);
+  animation: mk-customs-fees-blink 1.06s steps(1) 0.5s infinite;
+}
+
+.mk-customs-fees .mk-customs-fees-caret[data-hide] {
+  visibility: hidden;
+}
+
+.mk-customs-fees .mk-customs-fees-pop-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.mk-customs-fees .mk-customs-fees-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.mk-customs-fees .mk-customs-fees-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  transition: background-color 0.15s ease;
+}
+
+.mk-customs-fees .mk-customs-fees-btn-primary[data-hover] {
+  background: color-mix(in oklab, var(--primary) 85%, transparent);
+}
+
+/* Spend by cost type, the Expenses page's card, straddling the window's left
+   edge over its sidebar */
+.mk-customs-fees .mk-customs-fees-card {
+  position: absolute;
+  top: 176px;
+  left: 24px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 320px;
+  padding: 16px 20px 14px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 16px;
+  background: var(--popover);
+  color: var(--foreground);
+  box-shadow: var(--ss-shadow-satellite);
+  /* On a layer for good, so its text doesn't hop as the rise ends */
+  will-change: transform;
+  transition:
+    opacity 0.28s ease,
+    transform 0.9s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* The phone column brings it in at its beat, over the rows above the order */
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-card {
+  /* Clear of the title bar, over the toolbar and the quiet rows only */
+  top: 77px;
+  left: 24px;
+  gap: 10px;
+  width: 310px;
+  padding: 12px 16px 10px;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-line {
+  height: 26px;
+}
+
+.mk-customs-fees .mk-customs-fees-card:not([data-show]) {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.mk-customs-fees .mk-customs-fees-card-title {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.mk-customs-fees .mk-customs-fees-stack {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+}
+
+.mk-customs-fees .mk-customs-fees-segment {
+  flex: none;
+  height: 100%;
+  transition: width 0.9s cubic-bezier(0.45, 0, 0.1, 1);
+}
+
+.mk-customs-fees .mk-customs-fees-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mk-customs-fees .mk-customs-fees-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+}
+
+.mk-customs-fees .mk-customs-fees-marker {
+  flex: none;
+  width: 6px;
+  height: 16px;
+  border-radius: 999px;
+}
+
+.mk-customs-fees .mk-customs-fees-line-label {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mk-customs-fees .mk-customs-fees-line-pct {
+  --ss-count-unit-gap: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.mk-customs-fees .mk-customs-fees-line-value {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+/* Where the pointer rests between beats: empty surface beside a title */
+.mk-customs-fees .mk-customs-fees-rest {
+  position: absolute;
+  top: 336px;
+  left: 616px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-rest {
+  top: 352px;
+  left: 140px;
+}
+
+@keyframes mk-customs-fees-blink {
+  50% {
+    opacity: 0;
+  }
+}

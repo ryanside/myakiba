@@ -1,0 +1,529 @@
+/* The homepage's feature grid. One set of rounded tiles on a 12px gap, the
+   copy bottom-left in every tile, each picture its own Stage the size of
+   the slot above the copy. The grid is the page's: container queries on
+   the root pick three columns, two, or one. */
+.mk-feature-bento {
+  --pad: 20px;
+  --fb-tile: var(--muted);
+  --fb-panel: var(--card);
+  --fb-panel-edge: var(--tile-shadow);
+  --fb-tile-edge: oklch(0 0 0 / 0.07);
+  --fb-stat: oklch(0.21 0 0);
+  --fb-stat-ink: oklch(0.98 0 0);
+  --fb-stat-ink-2: oklch(0.98 0 0 / 0.6);
+
+  container-type: inline-size;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+
+  &[data-theme="dark"] {
+    --fb-tile: oklch(0.2 0 0);
+    --fb-tile-edge: oklch(1 0 0 / 0.06);
+    --fb-panel: oklch(0.245 0 0);
+    --fb-panel-edge: 0 0 0 1px oklch(1 0 0 / 0.07);
+    --fb-stat: oklch(0.31 0 0);
+    --fb-stat-ink: oklch(0.98 0 0);
+    --fb-stat-ink-2: oklch(0.98 0 0 / 0.6);
+  }
+
+  & .mk-feature-bento-grid {
+    display: grid;
+    gap: 12px;
+    max-width: 960px;
+    margin: 0 auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 368px 320px 330px 270px 270px;
+    grid-template-areas: "hero" "releases" "categories" "spend" "shipping";
+  }
+
+  /* A tablet column: the hero across, then pairs */
+  @container (min-width: 560px) {
+    & .mk-feature-bento-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: 310px 330px 300px;
+      grid-template-areas: "hero hero" "releases categories" "spend shipping";
+    }
+  }
+
+  /* The page column: the hero and the release list, then three */
+  @container (min-width: 820px) {
+    & .mk-feature-bento-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: 310px 320px;
+      grid-template-areas: "hero hero releases" "categories spend shipping";
+    }
+  }
+
+  /* ---- The tile: one frame for all five ---- */
+
+  & .mk-feature-bento-tile {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--fb-tile);
+    /* Clip the stages' own layers to the rounded corners too */
+    clip-path: inset(0 round 14px);
+  }
+
+  /* The tile's hairline, drawn over its picture so a card hung off its
+     corner never melts into the page */
+  & .mk-feature-bento-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--fb-tile-edge);
+    pointer-events: none;
+  }
+
+  & .mk-feature-bento-tile--hero {
+    grid-area: hero;
+  }
+  & .mk-feature-bento-tile--releases {
+    grid-area: releases;
+  }
+  & .mk-feature-bento-tile--categories {
+    grid-area: categories;
+  }
+  & .mk-feature-bento-tile--spend {
+    grid-area: spend;
+    background: var(--fb-stat);
+  }
+  & .mk-feature-bento-tile--shipping {
+    grid-area: shipping;
+  }
+
+  /* Copy: a title and one plain line, bottom-left at the tile's inset */
+  & .mk-feature-bento-copy {
+    position: absolute;
+    left: var(--pad);
+    right: var(--pad);
+    bottom: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+  }
+
+  & .mk-feature-bento-copy__title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+  }
+
+  & .mk-feature-bento-copy__line {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-feature-bento-tile--spend .mk-feature-bento-copy__title {
+    color: var(--fb-stat-ink);
+  }
+
+  & .mk-feature-bento-tile--spend .mk-feature-bento-copy__line {
+    color: var(--fb-stat-ink-2);
+  }
+
+  /* ---- Pictures: the slot above the copy, its top and sides the tile's ---- */
+
+  & .mk-feature-bento-picture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    /* the copy, its inset and one gap */
+    bottom: calc(var(--pad) * 2 + 40px);
+  }
+
+  & .mk-feature-bento-stage .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* ---- Collection (hero): the gallery, off the top and both sides ---- */
+
+  & .mk-feature-bento-gallery {
+    position: absolute;
+    inset: 0;
+  }
+
+  & .mk-feature-bento-photo {
+    position: absolute;
+    width: var(--tile);
+    height: var(--tile);
+    border-radius: 10px;
+    background: var(--muted);
+  }
+
+  & .mk-feature-bento-photo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  /* The image edge the app draws on every photo */
+  & .mk-feature-bento-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--image-edge);
+    pointer-events: none;
+  }
+
+  /* Selected: the app's 2px primary ring, 1px off the photo */
+  & .mk-feature-bento-photo[data-selected] {
+    z-index: 1;
+    box-shadow:
+      0 0 0 1px var(--fb-tile),
+      0 0 0 3px var(--primary),
+      0 16px 32px -6px oklch(0 0 0 / 0.5),
+      0 4px 10px oklch(0 0 0 / 0.18);
+  }
+
+  /* The media controls a selected photo keeps showing: select, edit, more */
+  & .mk-feature-bento-controls {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px;
+    border-radius: 7px;
+    background: oklch(0 0 0 / 0.6);
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.16),
+      0 1px 2px oklch(0 0 0 / 0.2),
+      0 8px 24px oklch(0 0 0 / 0.16);
+    color: #fff;
+  }
+
+  & .mk-feature-bento-control,
+  & .mk-feature-bento-check {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+  }
+
+  & .mk-feature-bento-check svg {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: #000;
+  }
+
+  &[data-theme="dark"] .mk-feature-bento-check svg {
+    background: #fff;
+    color: #000;
+  }
+
+  /* ---- Releases: the dashboard's list, hung from the top-right corner ---- */
+
+  & .mk-feature-bento-panel {
+    position: absolute;
+    top: -28px;
+    right: -28px;
+    bottom: 0;
+    left: var(--pad);
+    display: flex;
+    flex-direction: column;
+    padding: 44px 40px 0 12px;
+    border-radius: 12px;
+    background: var(--fb-panel);
+    box-shadow: var(--fb-panel-edge);
+    color: var(--foreground);
+  }
+
+  & .mk-feature-bento-releases__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 0 8px;
+  }
+
+  & .mk-feature-bento-releases__month {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  /* The outline count badge */
+  & .mk-feature-bento-releases__count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    padding: 0 5px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The list scrolls in the app, so its foot fades as it does there */
+  & .mk-feature-bento-releases__list {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  }
+
+  & .mk-feature-bento-releases__day {
+    padding: 4px 0 4px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-feature-bento-release {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+  }
+
+  & .mk-feature-bento-release__thumb {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    object-fit: cover;
+    object-position: top;
+    box-shadow: 0 0 0 1px var(--image-edge);
+  }
+
+  & .mk-feature-bento-release__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  & .mk-feature-bento-release__title {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  & .mk-feature-bento-release__meta {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  /* ---- Categories: the breakdown on the tile's ground ---- */
+
+  & .mk-feature-bento-breakdown {
+    position: absolute;
+    top: var(--pad);
+    left: var(--pad);
+    right: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--foreground);
+  }
+
+  & .mk-feature-bento-breakdown__title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  & .mk-feature-bento-breakdown__bar {
+    display: flex;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  & .mk-feature-bento-breakdown__legend {
+    display: flex;
+    flex-direction: column;
+  }
+
+  & .mk-feature-bento-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 28px;
+  }
+
+  & .mk-feature-bento-legend__marker {
+    flex: none;
+    width: 6px;
+    height: 16px;
+    border-radius: 3px;
+  }
+
+  & .mk-feature-bento-legend__name {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  & .mk-feature-bento-legend__count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-feature-bento-legend__value {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Spend: two KPIs in type, on the one dark tile ---- */
+
+  /* The two KPIs as one group, centered in the space over the copy */
+  & .mk-feature-bento-spend {
+    position: absolute;
+    top: var(--pad);
+    left: var(--pad);
+    right: var(--pad);
+    bottom: calc(var(--pad) * 2 + 40px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  & .mk-feature-bento-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  & .mk-feature-bento-kpi__label {
+    font-family: var(--font-orbitron);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    text-transform: lowercase;
+    color: var(--fb-stat-ink-2);
+  }
+
+  & .mk-feature-bento-kpi__value {
+    font-size: 34px;
+    font-weight: 500;
+    line-height: 42px;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--fb-stat-ink);
+  }
+
+  & .mk-feature-bento-kpi__value[data-big] {
+    font-size: 50px;
+    line-height: 58px;
+    letter-spacing: -0.03em;
+  }
+
+  /* ---- Shipping: one bar per method on the tile's ground ---- */
+
+  & .mk-feature-bento-chart {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--pad);
+    right: var(--pad);
+    display: flex;
+  }
+
+  & .mk-feature-bento-chart__axis {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 22px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  & .mk-feature-bento-chart__col {
+    position: relative;
+    flex: 1;
+  }
+
+  & .mk-feature-bento-chart__bar {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    width: 36px;
+    margin-left: -18px;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(
+        to bottom,
+        var(--color) 20%,
+        color-mix(in oklab, var(--color) 28%, transparent) 100%
+      )
+      bottom / 100% var(--plot) no-repeat;
+    clip-path: inset(100% 0 0 0);
+    /* Leaving: all together and quick, so the replay reads as one gesture */
+    transition: clip-path 0.26s cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  & .mk-feature-bento-chart__value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+    opacity: 0;
+    transform: translateY(4px);
+    will-change: transform;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  & .mk-feature-bento-chart__label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--muted-foreground);
+  }
+
+  /* Arriving: each bar draws up from the axis, its value following it */
+  & .mk-feature-bento-chart[data-grown] .mk-feature-bento-chart__bar {
+    clip-path: inset(0);
+    transition: clip-path 0.9s cubic-bezier(0.25, 0.8, 0.25, 1) calc(var(--i) * 90ms);
+  }
+
+  & .mk-feature-bento-chart[data-grown] .mk-feature-bento-chart__value {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 0.4s ease calc(0.45s + var(--i) * 90ms),
+      transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) calc(0.45s + var(--i) * 90ms);
+  }
+}

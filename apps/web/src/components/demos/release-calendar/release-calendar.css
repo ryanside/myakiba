@@ -1,0 +1,509 @@
+/* The Calendar page: the month grid with the release list beside it. The
+   window is pinned a gutter from the top and sides and runs off the bottom,
+   so the last weeks and the list's tail leave through the crop. */
+.mk-release-calendar {
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  & .mk-release-calendar-mask {
+    position: absolute;
+    inset: 0;
+  }
+
+  & .mk-release-calendar-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 480px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .mk-release-calendar-window .ss-window__body {
+    background: var(--ss-surface);
+  }
+
+  & .mk-release-calendar-content {
+    padding: 18px 24px 0;
+    color: var(--ss-text-strong);
+  }
+
+  /* The page header: title, the month toolbar, the view tabs at the end */
+  & .mk-release-calendar-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 32px;
+    margin-bottom: 16px;
+  }
+
+  & .mk-release-calendar-page-title {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  & .mk-release-calendar-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  & .mk-release-calendar-iconbtn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--ss-text-strong);
+
+    & svg {
+      display: block;
+    }
+  }
+
+  /* NativeSelect at size sm: a hairline field with its disclosure chevron */
+  & .mk-release-calendar-select {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 8px 0 10px;
+    border: 1px solid var(--input);
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--ss-text-strong);
+
+    & svg {
+      display: block;
+      color: var(--ss-text);
+    }
+  }
+
+  /* Items and Orders, the app's pill TabsList: quiet chrome at the end */
+  & .mk-release-calendar-tabs {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 32px;
+    margin-left: auto;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--muted);
+
+    & > span {
+      display: inline-flex;
+      align-items: center;
+      height: 100%;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ss-text);
+    }
+
+    & > span[data-active] {
+      background: var(--background);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+      color: var(--ss-text-strong);
+    }
+  }
+
+  & .mk-release-calendar-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+    gap: 24px;
+  }
+
+  /* The month grid: weekday labels over whole weeks, hairline cells */
+  & .mk-release-calendar-grid {
+    overflow: hidden;
+    border: 1px solid var(--ss-line);
+    border-radius: 12px;
+  }
+
+  & .mk-release-calendar-weekdays,
+  & .mk-release-calendar-cells {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  & .mk-release-calendar-weekdays {
+    border-bottom: 1px solid var(--ss-line);
+
+    & > span {
+      padding: 7px 10px;
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 500;
+      color: var(--ss-text);
+    }
+  }
+
+  & .mk-release-calendar-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 76px;
+    padding: 8px;
+    border-right: 1px solid var(--ss-line-faint);
+    border-bottom: 1px solid var(--ss-line-faint);
+    transition: background-color 150ms ease;
+
+    &:nth-child(7n) {
+      border-right: 0;
+    }
+
+    /* The selected cell's 2px inset ring, as the app draws it */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      box-shadow: inset 0 0 0 2px var(--primary);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+  }
+
+  & .mk-release-calendar-cell[data-hover] {
+    background: color-mix(in oklab, var(--muted) 30%, transparent);
+  }
+
+  & .mk-release-calendar-cell[data-selected] {
+    background: color-mix(in oklab, var(--primary) 8%, transparent);
+
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  & .mk-release-calendar-cell[data-out] {
+    background: color-mix(in oklab, var(--muted) 50%, transparent);
+
+    & .mk-release-calendar-day {
+      color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+    }
+  }
+
+  & .mk-release-calendar-cell-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    height: 20px;
+  }
+
+  & .mk-release-calendar-day {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ss-text-strong);
+  }
+
+  /* The day's release count, a muted pill at the end of its line */
+  & .mk-release-calendar-count {
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--muted);
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ss-text-strong);
+  }
+
+  /* The day's thumbnails, overlapped as a stack */
+  & .mk-release-calendar-stack {
+    display: flex;
+    align-items: center;
+  }
+
+  & .mk-release-calendar-stack-thumb {
+    position: relative;
+    flex: none;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    overflow: hidden;
+    border: 1px solid var(--ss-line);
+    border-radius: 7px;
+    background: var(--muted);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+
+    & + & {
+      margin-left: -17px;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+  }
+
+  /* The release list: one group a date, in date order */
+  & .mk-release-calendar-list {
+    min-width: 0;
+  }
+
+  /* A group glides as the groups above it close and open; on a lasting
+     layer its words move as one picture and land without a hop */
+  & .mk-release-calendar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 20px;
+    will-change: transform;
+  }
+
+  /* A date label: muted text, or, while days are picked, a tinted chip
+     with a dot. Its padding and dot open with it, so the words glide over. */
+  & .mk-release-calendar-label {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--ss-text);
+    white-space: nowrap;
+    transition:
+      padding 260ms cubic-bezier(0.23, 1, 0.32, 1),
+      background-color 200ms ease,
+      box-shadow 200ms ease,
+      color 200ms ease;
+  }
+
+  & .mk-release-calendar-label-dot {
+    flex: none;
+    width: 0;
+    height: 6px;
+    margin-right: 0;
+    border-radius: 3px;
+    background: var(--primary);
+    opacity: 0;
+    transition:
+      width 260ms cubic-bezier(0.23, 1, 0.32, 1),
+      margin-right 260ms cubic-bezier(0.23, 1, 0.32, 1),
+      opacity 200ms ease;
+  }
+
+  & .mk-release-calendar-label[data-selected] {
+    padding: 0 8px;
+    background: color-mix(in oklab, var(--primary) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 30%, transparent);
+    color: var(--primary);
+
+    & .mk-release-calendar-label-dot {
+      width: 6px;
+      margin-right: 6px;
+      opacity: 1;
+    }
+  }
+
+  & .mk-release-calendar-rows {
+    display: flex;
+    flex-direction: column;
+    margin: 0 -6px;
+  }
+
+  & .mk-release-calendar-row {
+    --ss-row-title: 14px;
+    --ss-row-subtitle: 12px;
+    --ss-row-meta: 12px;
+    --ss-row-line: 18px;
+    --ss-row-line-2: 16px;
+    --ss-row-gap: 2px;
+    border-radius: 10px;
+  }
+
+  & .mk-release-calendar-thumb {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--muted);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--image-edge);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+  }
+
+  & .mk-release-calendar-title {
+    display: block;
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ss-text-strong);
+  }
+
+  & .mk-release-calendar-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 16px;
+    color: var(--ss-text);
+  }
+
+  & .mk-release-calendar-category[data-category="Prepainted"] {
+    color: var(--category-prepainted);
+  }
+
+  & .mk-release-calendar-category[data-category="Plushes"] {
+    color: var(--category-plushes);
+  }
+
+  & .mk-release-calendar-price {
+    font-variant-numeric: tabular-nums;
+    color: var(--ss-text);
+  }
+
+  /* Compact: a phone column. The window runs off the right with an even
+     gutter on the other three sides; the month toolbar moves into the
+     window's bar, the cells keep their number and count, and the list's
+     rows are one line each. */
+  & .ss-stage[data-layout="compact"] {
+    /* A phone column is taller than wide, so the window ends square and
+       fades out at its foot, over the list's tail; the content keeps its
+       right inset inside the stage */
+    & .mk-release-calendar-mask {
+      mask-image: linear-gradient(to bottom, #000 318px, transparent 356px);
+    }
+
+    & .mk-release-calendar-window {
+      top: 16px;
+      left: 16px;
+      width: 400px;
+      height: 342px;
+    }
+
+    & .mk-release-calendar-content {
+      padding: 10px 74px 0 14px;
+    }
+
+    & .mk-release-calendar-nav {
+      gap: 4px;
+      margin-left: 8px;
+    }
+
+    & .mk-release-calendar-iconbtn {
+      width: 24px;
+      height: 24px;
+    }
+
+    & .mk-release-calendar-select {
+      gap: 6px;
+      height: 24px;
+      padding: 0 6px 0 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 16px;
+
+      & svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+
+    & .mk-release-calendar-main {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    & .mk-release-calendar-grid {
+      border-radius: 10px;
+    }
+
+    & .mk-release-calendar-weekdays > span {
+      padding: 2px 6px;
+      font-size: 11px;
+      line-height: 14px;
+    }
+
+    & .mk-release-calendar-cell {
+      height: 22px;
+      padding: 0 5px;
+      justify-content: center;
+    }
+
+    & .mk-release-calendar-cell-head {
+      height: 14px;
+    }
+
+    & .mk-release-calendar-day {
+      font-size: 11px;
+      line-height: 14px;
+    }
+
+    & .mk-release-calendar-count {
+      padding: 0 4px;
+      font-size: 10px;
+      line-height: 14px;
+    }
+
+    & .mk-release-calendar-group {
+      gap: 3px;
+      padding-bottom: 8px;
+    }
+
+    & .mk-release-calendar-label {
+      height: 16px;
+      font-size: 11px;
+      line-height: 14px;
+    }
+
+    & .mk-release-calendar-row {
+      --ss-row-title: 13px;
+      --ss-row-meta: 12px;
+      --ss-row-line: 16px;
+      border-radius: 8px;
+    }
+
+    & .mk-release-calendar-rows {
+      margin: 0 -4px;
+    }
+
+    & .mk-release-calendar-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+    }
+  }
+}

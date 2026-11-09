@@ -1,0 +1,337 @@
+/* The order page, cropped to its items table and cost breakdown. One window,
+   inset top and left, off the right and bottom edges. */
+.mk-order-price .ss-stage {
+  overflow: hidden;
+  background: transparent;
+}
+
+.mk-order-price .mk-order-price-win {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  width: 1040px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-win {
+  top: 16px;
+  left: 16px;
+  width: 400px;
+}
+
+.mk-order-price .mk-order-price-body {
+  min-height: 440px;
+  padding: 24px 32px 0;
+  background: var(--ss-surface);
+  color: var(--ss-text-strong);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-body {
+  height: 304px;
+  min-height: 0;
+  padding: 12px 82px 0 16px;
+}
+
+/* The order's own header, quiet: thumbnail, title, status */
+.mk-order-price .mk-order-price-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mk-order-price .mk-order-price-hero-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.mk-order-price .mk-order-price-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mk-order-price .mk-order-price-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: -0.02em;
+}
+
+.mk-order-price .mk-order-price-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.mk-order-price .mk-order-price-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-shipped);
+}
+
+.mk-order-price .mk-order-price-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 12px;
+}
+
+/* Items on the left, the cost breakdown beside them */
+.mk-order-price .mk-order-price-grid {
+  display: grid;
+  grid-template-columns: 540px 248px;
+  gap: 48px;
+  margin-top: 28px;
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 0;
+}
+
+.mk-order-price .mk-order-price-heading {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 22px;
+}
+
+.mk-order-price .mk-order-price-table {
+  margin-top: 10px;
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-table {
+  margin-top: 0;
+}
+
+.mk-order-price .mk-order-price-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 84px 96px 16px;
+  align-items: center;
+  gap: 16px;
+  height: 54px;
+  border-bottom: 1px solid var(--ss-line-faint);
+  white-space: nowrap;
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-row {
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 12px;
+  height: 42px;
+}
+
+.mk-order-price .mk-order-price-row:last-child {
+  border-bottom: 0;
+}
+
+.mk-order-price .mk-order-price-row--head {
+  height: 34px;
+  border-bottom-color: var(--ss-line);
+  color: var(--ss-text);
+  font-size: 13px;
+}
+
+.mk-order-price .mk-order-price-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+}
+
+.mk-order-price .mk-order-price-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mk-order-price .mk-order-price-thumb {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.mk-order-price .mk-order-price-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mk-order-price .mk-order-price-title {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.mk-order-price .mk-order-price-item-text > .ss-bar {
+  margin: 6px 0 5px;
+}
+
+.mk-order-price .mk-order-price-meta > .ss-bar {
+  flex: none;
+}
+
+/* The title's second line, as ItemTitleCell draws it: the MFC number, then the category */
+.mk-order-price .mk-order-price-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mk-order-price .mk-order-price-mfc {
+  flex: none;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+
+.mk-order-price .mk-order-price-category {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+}
+
+.mk-order-price .mk-order-price-category[data-tone="prepainted"] {
+  color: var(--category-prepainted);
+}
+
+.mk-order-price .mk-order-price-category[data-tone="plushes"] {
+  color: var(--category-plushes);
+}
+
+.mk-order-price .mk-order-price-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-order-price .mk-order-price-actions {
+  display: flex;
+  color: var(--ss-icon);
+}
+
+/* The price cell. Closed it is a ghost button; open it is the field
+   InlineCurrencyCell draws: muted fill, an inset ring, the same 8px inset,
+   so the digits never move. */
+.mk-order-price .mk-order-price-cell {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 32px;
+}
+
+.mk-order-price .mk-order-price-field {
+  position: absolute;
+  inset: 0 -8px;
+  border-radius: 10px;
+  background: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--ring);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mk-order-price .mk-order-price-cell[data-edit] .mk-order-price-field {
+  box-shadow: inset 0 0 0 1px var(--ring);
+  opacity: 1;
+}
+
+/* One wash on commit, then gone */
+.mk-order-price .mk-order-price-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0 -8px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.mk-order-price .mk-order-price-cell[data-wash]::before {
+  opacity: 1;
+  transition-duration: 0.1s;
+}
+
+.mk-order-price .mk-order-price-cell-text {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  will-change: transform;
+}
+
+.mk-order-price .mk-order-price-sel[data-on] {
+  border-radius: 2px;
+  background: color-mix(in srgb, #3b82f6 32%, transparent);
+}
+
+.mk-order-price .mk-order-price-caret {
+  width: 1.5px;
+  height: 16px;
+  margin-left: 1px;
+  margin-right: -2.5px;
+  background: var(--ss-text-strong);
+  animation: mk-order-price-blink 1.06s steps(1) 0.5s infinite;
+}
+
+.mk-order-price .mk-order-price-caret[data-hide] {
+  visibility: hidden;
+}
+
+/* The cost breakdown, as OrderSummary lays it out */
+.mk-order-price .mk-order-price-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mk-order-price .ss-stage[data-layout="compact"] .mk-order-price-lines {
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.mk-order-price .mk-order-price-line,
+.mk-order-price .mk-order-price-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.mk-order-price .mk-order-price-label {
+  color: var(--ss-text);
+}
+
+.mk-order-price .mk-order-price-total {
+  min-height: 28px;
+  padding-top: 8px;
+  font-weight: 500;
+}
+
+.mk-order-price .mk-order-price-total-value {
+  font-size: 18px;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+}
+
+@keyframes mk-order-price-blink {
+  50% {
+    opacity: 0;
+  }
+}

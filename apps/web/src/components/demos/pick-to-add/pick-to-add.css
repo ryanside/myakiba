@@ -1,0 +1,1265 @@
+/* A figure picked on another site, then placed from myakiba's Add page, in one
+   browser. The toggle and note copy apps/extension/lib/mfc-page/ui.ts; the
+   Add page copies components/add (add-page, destination-sentence,
+   commit-button, add-table, pick-status, empty-state) and ui/toast.tsx.
+   Every rule is scoped to the demo. */
+
+@keyframes mk-pick-to-add-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.mk-pick-to-add-root {
+  --mk-pick-to-add-settle: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* The window is whole, so its shadow falls on the page on every side
+     instead of ending in a straight line a gutter out, which reads as a plate */
+  & .ss-stage {
+    overflow: clip;
+    overflow-clip-margin: 64px;
+    clip-path: inset(-64px);
+    background: transparent;
+  }
+
+  /* The browser fills the stage, a gutter in on every side: the extension's
+     note lives on the page's foot corner, so the foot stays in frame */
+  & .mk-pick-to-add-window,
+  & .mk-pick-to-add-panel {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 392px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .mk-pick-to-add-panel {
+    width: 310px;
+  }
+
+  & .mk-pick-to-add-viewport {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* ---- Pages: one crossfades to the next, the next rising 8px ---- */
+
+  /* A page that has faded out also leaves the layout's hit area and checks */
+  & .mk-pick-to-add-page {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(8px);
+    will-change: transform;
+    transition:
+      opacity 0.14s ease-out,
+      transform 0.2s ease,
+      visibility 0s linear 0.2s;
+  }
+
+  & .mk-pick-to-add-page[data-show] {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition:
+      visibility 0s,
+      opacity 0.24s ease 0.1s,
+      transform 0.4s var(--mk-pick-to-add-settle) 0.1s;
+  }
+
+  /* The page that leaves goes in place */
+  & .mk-pick-to-add-page:not([data-show]) {
+    transform: none;
+  }
+
+  /* ==== The other site: quiet grays in its own face ==== */
+
+  & .mk-pick-to-add-page:first-child {
+    font:
+      13px/1.4 arial,
+      helvetica,
+      sans-serif;
+  }
+
+  & .mk-pick-to-add-site-head {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    height: 44px;
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklab, var(--muted) 55%, var(--background));
+  }
+
+  & .mk-pick-to-add-site-nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  & .mk-pick-to-add-site-search {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    margin-left: auto;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--background);
+  }
+
+  & .mk-pick-to-add-item {
+    display: flex;
+    gap: 32px;
+    padding: 24px 32px 0;
+  }
+
+  & .mk-pick-to-add-item-image {
+    flex: none;
+    width: 200px;
+    height: 260px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--muted);
+  }
+
+  & .mk-pick-to-add-item-image img,
+  & .mk-pick-to-add-thumb img,
+  & .mk-pick-to-add-toast-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-pick-to-add-item-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  & .mk-pick-to-add-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 16px;
+  }
+
+  & .mk-pick-to-add-item-title {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 28px;
+  }
+
+  & .mk-pick-to-add-maker {
+    display: flex;
+    align-items: center;
+    height: 18px;
+    margin-top: 4px;
+  }
+
+  /* The site's action bar. The toggle copies its neighbors' metrics, as the
+     extension does: 48px tall, 16px in, 4px apart, tinted from the text */
+  & .mk-pick-to-add-actions {
+    display: flex;
+    align-items: center;
+    margin: 16px 0 0 -4px;
+  }
+
+  & .mk-pick-to-add-action,
+  & .mk-pick-to-add-toggle {
+    box-sizing: border-box;
+    flex: none;
+    height: 48px;
+    margin: 0 4px;
+    padding: 0 16px;
+    border-radius: 4px;
+    background: color-mix(in srgb, currentColor 4%, transparent);
+  }
+
+  & .mk-pick-to-add-action {
+    display: grid;
+    place-items: center;
+  }
+
+  & .mk-pick-to-add-toggle {
+    display: inline-grid;
+    align-items: center;
+    color: color-mix(in srgb, currentColor 85%, transparent);
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease-out,
+      opacity 0.15s ease-out;
+  }
+
+  & .mk-pick-to-add-toggle[data-hover] {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  & .mk-pick-to-add-toggle[data-state="busy"] {
+    opacity: 0.7;
+  }
+
+  & .mk-pick-to-add-toggle[data-state="picked"] {
+    background: color-mix(in srgb, currentColor 18%, transparent);
+  }
+
+  /* Every label shares one cell, so the toggle keeps its width */
+  /* The old label is gone before the new one shows, so the two never cross */
+  & .mk-pick-to-add-toggle-label {
+    grid-area: 1 / 1;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.08s ease-out;
+  }
+
+  & .mk-pick-to-add-toggle-label[data-on] {
+    opacity: 1;
+    transition: opacity 0.14s ease-out 0.08s;
+  }
+
+  & .mk-pick-to-add-toggle[data-pressed] {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+  }
+
+  & .mk-pick-to-add-related {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 14px;
+    width: 176px;
+    padding-top: 4px;
+  }
+
+  & .mk-pick-to-add-related-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  & .mk-pick-to-add-related-thumb {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--muted);
+  }
+
+  & .mk-pick-to-add-related-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-pick-to-add-related-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  & .mk-pick-to-add-specs {
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+  }
+
+  & .mk-pick-to-add-spec {
+    display: grid;
+    grid-template-columns: 96px auto;
+    align-items: center;
+    height: 26px;
+  }
+
+  /* The extension's note: its own dark surface, fixed to the page's corner */
+  & .mk-pick-to-add-note {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid #666;
+    border-radius: 4px;
+    background: #2b2b2b;
+    color: #fff;
+    font:
+      13px/1.4 arial,
+      helvetica,
+      sans-serif;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(6px);
+    will-change: transform;
+    transition:
+      opacity 0.25s ease-out,
+      transform 0.4s var(--mk-pick-to-add-settle);
+  }
+
+  & .mk-pick-to-add-note[data-show] {
+    opacity: 1;
+    transform: none;
+  }
+
+  & .mk-pick-to-add-note-link {
+    color: #9dc1ff;
+    text-decoration: underline;
+  }
+
+  /* ==== myakiba ==== */
+
+  /* The header is the app's, over both of its pages; the pages start under it */
+  & .mk-pick-to-add-app-layer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.14s ease-out;
+  }
+
+  & .mk-pick-to-add-app-layer[data-show] {
+    opacity: 1;
+    transition: opacity 0.24s ease 0.1s;
+  }
+
+  & .mk-pick-to-add-page:not(:first-child) {
+    top: 56px;
+  }
+
+  /* The collection's rows come in as the table's data does: a short rise */
+  & .mk-pick-to-add-row[data-arrive] {
+    opacity: 0;
+    transform: translateY(6px);
+    will-change: transform;
+    transition:
+      opacity 0.25s ease-out,
+      transform 0.25s ease-out,
+      background-color 0.15s ease-out;
+  }
+
+  & .mk-pick-to-add-page[data-show] .mk-pick-to-add-row[data-arrive] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.25s ease-out 0.3s,
+      transform 0.25s ease-out 0.3s,
+      background-color 0.15s ease-out;
+  }
+
+  & .mk-pick-to-add-row[data-arrive][data-hover] {
+    background: color-mix(in oklab, var(--muted) 50%, transparent);
+  }
+
+  & .mk-pick-to-add-page:not(:first-child) {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  & .mk-pick-to-add-app-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 28px 0 28px;
+  }
+
+  & .mk-pick-to-add-head-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  & .mk-pick-to-add-iconbtn,
+  & .mk-pick-to-add-plus {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-plus {
+    width: 32px;
+    height: 32px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  & .mk-pick-to-add-add {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 32px 0;
+  }
+
+  & .mk-pick-to-add-page-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-height: 36px;
+  }
+
+  & .mk-pick-to-add-page-title {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.01em;
+  }
+
+  & .mk-pick-to-add-page-meta {
+    font-size: 17px;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  /* ---- The destination, as one sentence ending in its commit ---- */
+
+  & .mk-pick-to-add-sentence {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    margin-top: 24px;
+    white-space: nowrap;
+  }
+
+  & .mk-pick-to-add-lead {
+    flex: none;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  & .mk-pick-to-add-quiet {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-quiet:first-of-type {
+    margin-left: 8px;
+  }
+
+  /* The select's trigger: the primary cue while nothing is chosen */
+  & .mk-pick-to-add-choose {
+    display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--input);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--foreground);
+    transition:
+      background-color 0.2s ease-out,
+      border-color 0.2s ease-out,
+      color 0.2s ease-out,
+      padding 0.3s var(--mk-pick-to-add-settle),
+      opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-choose[data-cue] {
+    border-color: transparent;
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  & .mk-pick-to-add-choose[data-cue][data-hover] {
+    background: color-mix(in oklab, var(--primary) 85%, transparent);
+  }
+
+  & .mk-pick-to-add-choose:not([data-cue])[data-hover] {
+    background: var(--muted);
+  }
+
+  & .mk-pick-to-add-choose-icon {
+    display: grid;
+    flex: none;
+    width: 0;
+    margin-right: 0;
+    overflow: hidden;
+    color: var(--muted-foreground);
+    opacity: 0;
+    transition:
+      opacity 0.1s ease-out,
+      width 0.4s var(--mk-pick-to-add-settle) 0.04s,
+      margin 0.4s var(--mk-pick-to-add-settle) 0.04s;
+  }
+
+  & .mk-pick-to-add-choose-icon[data-on] {
+    width: 16px;
+    margin-right: 6px;
+    opacity: 1;
+    transition:
+      width 0.3s var(--mk-pick-to-add-settle),
+      margin 0.3s var(--mk-pick-to-add-settle),
+      opacity 0.2s ease-out 0.26s;
+  }
+
+  & .mk-pick-to-add-choose:has(.mk-pick-to-add-choose-icon[data-on]) {
+    padding-left: 10px;
+  }
+
+  & .mk-pick-to-add-chevron {
+    display: grid;
+    flex: none;
+    margin-left: 6px;
+    color: var(--muted-foreground);
+    transition: color 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-choose[data-cue] .mk-pick-to-add-chevron {
+    color: var(--primary-foreground);
+  }
+
+  /* Disabled: nothing on the page to choose for */
+  & .mk-pick-to-add-sentence[data-disabled] .mk-pick-to-add-choose {
+    opacity: 0.5;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-sentence[data-disabled] .mk-pick-to-add-wishlist {
+    opacity: 0.5;
+  }
+
+  & .mk-pick-to-add-sentence[data-disabled] .mk-pick-to-add-lists,
+  & .mk-pick-to-add-sentence[data-disabled] .mk-pick-to-add-folded {
+    opacity: 0.4;
+  }
+
+  & .mk-pick-to-add-wishlist {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-star {
+    display: grid;
+    margin-right: -2px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-lists,
+  & .mk-pick-to-add-folded {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: none;
+    align-items: center;
+    height: 32px;
+    padding: 0 8px 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-weight: 500;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-folded {
+    gap: 4px;
+    padding: 0 10px;
+    color: var(--muted-foreground);
+  }
+
+  /* The commit: one slot for its label, its spinner and its check */
+  & .mk-pick-to-add-commit {
+    display: inline-grid;
+    box-sizing: border-box;
+    flex: none;
+    align-items: center;
+    justify-items: center;
+    height: 32px;
+    margin-left: auto;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 500;
+    transition:
+      background-color 0.12s ease-out,
+      color 0.12s ease-out;
+  }
+
+  & .mk-pick-to-add-commit[data-hover]:not([data-blocked]) {
+    background: color-mix(in oklab, var(--primary) 85%, transparent);
+  }
+
+  & .mk-pick-to-add-commit[data-blocked] {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-commit-label,
+  & .mk-pick-to-add-commit-icon {
+    grid-area: 1 / 1;
+    display: flex;
+    align-items: center;
+    will-change: transform;
+    transition:
+      opacity 0.2s ease-out,
+      transform 0.3s var(--mk-pick-to-add-settle),
+      filter 0.3s ease-out;
+  }
+
+  /* The label comes back once the fill has changed under it */
+  & .mk-pick-to-add-commit:not([data-busy]) .mk-pick-to-add-commit-label {
+    transition-delay: 0.12s;
+  }
+
+  & .mk-pick-to-add-commit[data-busy] .mk-pick-to-add-commit-label {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(4px);
+  }
+
+  & .mk-pick-to-add-commit-icon {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+
+  & .mk-pick-to-add-commit-icon[data-on] {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  & .mk-pick-to-add-spin {
+    display: grid;
+    animation: mk-pick-to-add-spin 0.8s linear infinite;
+  }
+
+  /* The select's popup, under its trigger, start-aligned */
+  & .mk-pick-to-add-menu {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    width: 208px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--popover);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      var(--ss-shadow-float);
+    color: var(--popover-foreground);
+  }
+
+  & .mk-pick-to-add-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 32px 0 6px;
+    border-radius: 8px;
+    transition: background-color 0.1s ease-out;
+  }
+
+  & .mk-pick-to-add-menu-item svg {
+    flex: none;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-menu-item[data-hover] {
+    background: color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+
+  & .mk-pick-to-add-menu-sep {
+    height: 1px;
+    margin: 4px -4px;
+    background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  }
+
+  /* ---- The table: one grid template for the head and the row ---- */
+
+  & .mk-pick-to-add-table {
+    --cols: 32px minmax(0, 1fr) 120px 72px 112px 136px;
+
+    margin-top: 10px;
+  }
+
+  & .mk-pick-to-add-thead,
+  & .mk-pick-to-add-row {
+    display: grid;
+    grid-template-columns: var(--cols);
+    align-items: center;
+  }
+
+  & .mk-pick-to-add-thead {
+    height: 36px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  & .mk-pick-to-add-th {
+    padding-left: 8px;
+  }
+
+  & .mk-pick-to-add-cell-check {
+    display: grid;
+    place-items: center;
+  }
+
+  & .mk-pick-to-add-cell-check > * {
+    grid-area: 1 / 1;
+  }
+
+  & .mk-pick-to-add-check {
+    display: grid;
+    box-sizing: border-box;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--input);
+    border-radius: 4px;
+    color: var(--primary-foreground);
+    transition:
+      background-color 0.2s ease-out,
+      border-color 0.2s ease-out,
+      color 0.2s ease-out,
+      opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-check svg {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-check[data-on] svg {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-check[data-on] {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+
+  & .mk-pick-to-add-check[data-dim] {
+    opacity: 0.5;
+  }
+
+  & .mk-pick-to-add-skeleton-check {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--muted);
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-skeleton-check[data-on] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-skeleton-check[data-on] + .mk-pick-to-add-check {
+    opacity: 0;
+  }
+
+  & .mk-pick-to-add-body {
+    position: relative;
+    height: 53px;
+    transition: height 0.45s var(--mk-pick-to-add-settle);
+  }
+
+  & .mk-pick-to-add-body[data-empty] {
+    height: 96px;
+  }
+
+  & .mk-pick-to-add-body-row,
+  & .mk-pick-to-add-body-empty {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+  }
+
+  & .mk-pick-to-add-body-row {
+    transition:
+      opacity 0.22s ease-out,
+      transform 0.3s ease-out;
+  }
+
+  & .mk-pick-to-add-body[data-empty] .mk-pick-to-add-body-row {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  & .mk-pick-to-add-body-empty {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+  }
+
+  & .mk-pick-to-add-body[data-empty] .mk-pick-to-add-body-empty {
+    opacity: 1;
+    transition: opacity 0.35s ease-out 0.22s;
+  }
+
+  & .mk-pick-to-add-row {
+    height: 53px;
+  }
+
+  & .mk-pick-to-add-cell-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 0 16px 0 8px;
+  }
+
+  & .mk-pick-to-add-thumb {
+    position: relative;
+    display: grid;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 6px;
+  }
+
+  & .mk-pick-to-add-thumb > * {
+    grid-area: 1 / 1;
+  }
+
+  & .mk-pick-to-add-thumb img {
+    width: 32px;
+    height: 32px;
+    outline: 1px solid var(--image-edge);
+    outline-offset: -1px;
+    opacity: 0;
+    transition: opacity 0.3s ease-out 0.1s;
+  }
+
+  & .mk-pick-to-add-thumb img[data-on] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-thumb-spin {
+    display: grid;
+    place-items: center;
+    color: var(--muted-foreground);
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-thumb-spin[data-on] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  & .mk-pick-to-add-row-title {
+    overflow: hidden;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  & .mk-pick-to-add-row-sub {
+    min-width: 0;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-cell {
+    padding-left: 8px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    transition: opacity 0.3s ease-out 0.12s;
+  }
+
+  & .mk-pick-to-add-cell[data-on] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-row-actions {
+    display: flex;
+    grid-column: -2;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    padding-right: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease-out 0.12s;
+  }
+
+  & .mk-pick-to-add-row-actions[data-on] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-details {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px 0 10px;
+    border-radius: 999px;
+    font-weight: 500;
+    opacity: 0.4;
+    transition: opacity 0.2s ease-out;
+  }
+
+  & .mk-pick-to-add-details svg {
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-details[data-enabled] {
+    opacity: 1;
+  }
+
+  & .mk-pick-to-add-remove {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 16px;
+    color: var(--muted-foreground);
+    text-align: center;
+    text-wrap: pretty;
+  }
+
+  & .mk-pick-to-add-empty-title {
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  & .mk-pick-to-add-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 36px;
+    padding: 0 8px;
+    border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  & .mk-pick-to-add-foot-mfc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 10px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-foot-search {
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+  }
+
+  /* ---- Words that change in place ---- */
+
+  & .mk-pick-to-add-swap {
+    display: inline-grid;
+    max-width: 100%;
+  }
+
+  & .mk-pick-to-add-swap-item {
+    grid-area: 1 / 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transform: translateY(4px);
+    will-change: transform;
+    transition:
+      opacity 0.16s ease-out,
+      transform 0.3s var(--mk-pick-to-add-settle);
+  }
+
+  & .mk-pick-to-add-swap-item[data-on] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.24s ease-out 0.1s,
+      transform 0.4s var(--mk-pick-to-add-settle) 0.1s;
+  }
+
+  /* ---- The Collection, filtered to what was just added ---- */
+
+  & .mk-pick-to-add-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  & .mk-pick-to-add-tool {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-tool[data-field] {
+    width: 224px;
+  }
+
+  /* The view toggle, compact (the default) pressed */
+  & .mk-pick-to-add-views {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    height: 32px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+
+  & .mk-pick-to-add-view {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-pick-to-add-view[data-on] {
+    background: var(--muted);
+    color: var(--foreground);
+  }
+
+  & .mk-pick-to-add-toolbar-add {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    margin-left: auto;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 500;
+  }
+
+  & .mk-pick-to-add-chip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 8px;
+    width: fit-content;
+    min-height: 28px;
+    margin: 12px 0 0;
+    padding: 4px 12px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .mk-pick-to-add-chip-link {
+    font-weight: 500;
+    color: var(--primary);
+  }
+
+  & .mk-pick-to-add-table[data-collection] {
+    --cols: 32px minmax(0, 1fr) 96px 80px 120px;
+
+    margin-top: 14px;
+  }
+
+  & .mk-pick-to-add-table[data-collection] .mk-pick-to-add-row {
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  /* ---- The toast: top center, the figure, what happened, View ---- */
+
+  & .mk-pick-to-add-toast {
+    position: absolute;
+    top: 16px;
+    right: 0;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 12px;
+    width: 384px;
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 21.6px;
+    background: var(--popover);
+    box-shadow: var(--ss-shadow-float);
+    color: var(--popover-foreground);
+    font-size: 14px;
+    line-height: 20px;
+    opacity: 0;
+    transform: translateY(-12px);
+    will-change: transform;
+    transition:
+      transform 0.5s var(--mk-pick-to-add-settle),
+      opacity 0.3s ease;
+  }
+
+  & .mk-pick-to-add-toast[data-show] {
+    opacity: 1;
+    transform: none;
+  }
+
+  & .mk-pick-to-add-toast-media {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 9.6px;
+    outline: 1px solid var(--image-edge);
+    outline-offset: -1px;
+  }
+
+  & .mk-pick-to-add-toast-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+  }
+
+  & .mk-pick-to-add-toast-view {
+    display: inline-flex;
+    flex: none;
+    box-sizing: border-box;
+    align-items: center;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  & .mk-pick-to-add-toast-close {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted-foreground);
+  }
+
+  /* ==== Compact: a phone column, the browser's page without its lights ==== */
+
+  & .ss-stage[data-layout="compact"] {
+    & .mk-pick-to-add-site-head {
+      gap: 0;
+      justify-content: space-between;
+      height: 40px;
+      padding: 0 16px;
+    }
+
+    & .mk-pick-to-add-item {
+      gap: 14px;
+      padding: 16px 16px 0;
+    }
+
+    & .mk-pick-to-add-item-image {
+      width: 108px;
+      height: 156px;
+    }
+
+    & .mk-pick-to-add-item-title {
+      font-size: 15px;
+      line-height: 20px;
+    }
+
+    & .mk-pick-to-add-actions {
+      margin: 14px 12px 0;
+    }
+
+    & .mk-pick-to-add-app-head {
+      height: 44px;
+      padding: 0 12px;
+    }
+
+    & .mk-pick-to-add-page:not(:first-child) {
+      top: 44px;
+    }
+
+    & .mk-pick-to-add-iconbtn[data-wide] {
+      display: none;
+    }
+
+    & .mk-pick-to-add-add {
+      padding: 12px 16px 0;
+    }
+
+    /* The narrow table keeps the row's title and its remove; Details waits
+       for a wider screen */
+    & .mk-pick-to-add-table {
+      --cols: 32px minmax(0, 1fr) 36px;
+    }
+
+    & .mk-pick-to-add-details {
+      display: none;
+    }
+
+    & .mk-pick-to-add-body[data-empty] {
+      height: 116px;
+    }
+
+    & .mk-pick-to-add-tool[data-field] {
+      width: auto;
+    }
+
+    & .mk-pick-to-add-toolbar-add {
+      width: 32px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    & .mk-pick-to-add-table[data-collection] {
+      --cols: 32px minmax(0, 1fr);
+    }
+
+    & .mk-pick-to-add-toast {
+      right: 16px;
+      left: 16px;
+      width: auto;
+    }
+  }
+}

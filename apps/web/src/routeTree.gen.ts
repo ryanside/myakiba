@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
+import { Route as DemosRouteImport } from './routes/demos'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as appAddRouteImport } from './routes/(app)/add'
@@ -45,6 +46,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemosRoute = DemosRouteImport.update({
+  id: '/demos',
+  path: '/demos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -180,6 +186,7 @@ const appItemCustomIdRoute = appItemCustomIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
   '/showcase': typeof ShowcaseRoute
   '/add': typeof appAddRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
   '/showcase': typeof ShowcaseRoute
   '/add': typeof appAddRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
+  '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
   '/showcase': typeof ShowcaseRoute
   '/(app)/add': typeof appAddRoute
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demos'
     | '/privacy'
     | '/showcase'
     | '/add'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demos'
     | '/privacy'
     | '/showcase'
     | '/add'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/(app)'
+    | '/demos'
     | '/privacy'
     | '/showcase'
     | '/(app)/add'
@@ -359,6 +371,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
+  DemosRoute: typeof DemosRoute
   PrivacyRoute: typeof PrivacyRoute
   ShowcaseRoute: typeof ShowcaseRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demos': {
+      id: '/demos'
+      path: '/demos'
+      fullPath: '/demos'
+      preLoaderRoute: typeof DemosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -628,6 +648,7 @@ const changelogChangelogRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
+  DemosRoute: DemosRoute,
   PrivacyRoute: PrivacyRoute,
   ShowcaseRoute: ShowcaseRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,

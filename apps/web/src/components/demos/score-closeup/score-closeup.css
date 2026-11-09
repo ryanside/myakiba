@@ -1,0 +1,381 @@
+/* Score close-up: the collection table's compact rows, one figure's Score
+   cell opened and rated out of ten. Anatomy from collection-columns.tsx, the
+   reui data grid (dense cells), popover-rating-cell.tsx, ui/rating.tsx,
+   ui/popover.tsx and cells/empty-value.tsx. The whole window is drawn at
+   1.4x (1.07x in the phone column), chrome and all: a crop of the real
+   window, not a control blown up. The popover rides a second layer at the
+   same zoom, so the phone column's fade never touches it. In the phone
+   column the zoom is 1.07, so the popover keeps the app's full 288px a gutter inside each side. */
+.mk-score-closeup {
+  --mk-zoom: 1.4;
+
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  & .ss-stage[data-layout="compact"] {
+    --mk-zoom: 1.07;
+  }
+
+  & .mk-score-closeup-mask {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Inset 24px top and sides, in stage pixels, then scaled from that corner */
+  & .mk-score-closeup-zoom {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    transform: scale(var(--mk-zoom));
+    transform-origin: 0 0;
+  }
+
+  & .mk-score-closeup-over {
+    pointer-events: none;
+  }
+
+  /* Whole across, off the bottom: 912px of stage at 1.4x */
+  & .mk-score-closeup-window {
+    width: calc(912px / 1.4);
+    height: 320px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .mk-score-closeup-window .ss-window__body {
+    background: var(--background);
+  }
+
+  & .mk-score-closeup-body {
+    padding: 8px 16px 0;
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The dense grid: select, Item, Scale, Count, Score, Shop */
+  & .mk-score-closeup-row {
+    display: grid;
+    grid-template-columns: 36px 235px 72px 72px 88px minmax(0, 1fr);
+    align-items: center;
+    height: 52px;
+    box-sizing: border-box;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+  }
+
+  & .mk-score-closeup-row[data-hover] {
+    background: var(--row-hover);
+  }
+
+  & .mk-score-closeup-head {
+    height: 32px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-score-closeup-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  /* Numeric columns: right-aligned, 24px clear of the next column */
+  & .mk-score-closeup-num {
+    justify-content: flex-end;
+    padding-right: 24px;
+  }
+
+  & .mk-score-closeup-cell-check {
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+  }
+
+  & .mk-score-closeup-check {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--input);
+    border-radius: 4px;
+  }
+
+  /* The Item cell: the thumbnail, the title over its category */
+  & .mk-score-closeup-item {
+    gap: 12px;
+    padding-right: 16px;
+  }
+
+  & .mk-score-closeup-thumb {
+    position: relative;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--muted);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--image-edge);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+  }
+
+  & .mk-score-closeup-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  & .mk-score-closeup-title {
+    display: flex;
+    align-items: center;
+    height: 20px;
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+  }
+
+  /* A placeholder title keeps the real lines' air, not their pitch */
+  & .mk-score-closeup-lines[data-filler] .mk-score-closeup-title {
+    align-items: flex-end;
+    padding-bottom: 3px;
+    box-sizing: border-box;
+  }
+
+  /* Under the title: the MFC number, then the category, 8px apart */
+  & .mk-score-closeup-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 16px;
+  }
+
+  & .mk-score-closeup-category {
+    color: var(--category-prepainted);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  /* The Score cell: the app's ghost button, the cell's width and 8px past
+     each side, its value against the right edge */
+  & .mk-score-closeup-trigger {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    width: calc(100% + 16px);
+    height: 32px;
+    margin: 0 -8px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: background-color 0.15s ease;
+  }
+
+  & .mk-score-closeup-trigger[data-hover],
+  & .mk-score-closeup-trigger[data-open] {
+    background: var(--muted);
+  }
+
+  /* The dash and the score share one slot: the dash rolls up and out, the
+     score rises in after it */
+  & .mk-score-closeup-value {
+    display: inline-grid;
+    clip-path: inset(0 -12px);
+
+    & > span {
+      grid-area: 1 / 1;
+      justify-self: end;
+    }
+  }
+
+  & .mk-score-closeup-dash {
+    color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+    font-weight: 400;
+    transition:
+      transform 0.28s cubic-bezier(0.55, 0, 1, 0.45),
+      opacity 0.28s cubic-bezier(0.55, 0, 1, 0.45);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-score-closeup-dash {
+    color: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
+  }
+
+  & .mk-score-closeup-number {
+    color: var(--foreground);
+    opacity: 0;
+    transform: translateY(100%);
+    will-change: transform;
+    transition:
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.11s,
+      opacity 0.4s ease-out 0.11s;
+  }
+
+  & .mk-score-closeup-value[data-scored] {
+    & .mk-score-closeup-dash {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+
+    & .mk-score-closeup-number {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* The popover: w-72, p-2.5, rounded-lg, the app's ring and shadow-md.
+     Centered under the cell, 4px below it */
+  & .mk-score-closeup-popover {
+    --ss-popover-bg: var(--popover);
+    --ss-popover-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    top: 176px;
+    left: 323px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 288px;
+    padding: 10px;
+    border-radius: 12px;
+    color: var(--popover-foreground);
+    font-size: 14px;
+  }
+
+  & .mk-score-closeup-label {
+    font-weight: 500;
+    line-height: 14px;
+  }
+
+  & .mk-score-closeup-rating {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Ten whole stars, 4px apart, as the app sets them when editable */
+  & .mk-score-closeup-stars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  & .mk-score-closeup-star {
+    position: relative;
+    display: block;
+    width: 20px;
+    height: 20px;
+
+    & svg {
+      display: block;
+    }
+  }
+
+  & .mk-score-closeup-star-empty {
+    color: color-mix(in oklab, var(--muted-foreground) 30%, transparent);
+  }
+
+  & .mk-score-closeup-star-fill {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    color: var(--color-yellow-400, oklch(85.2% 0.199 91.936));
+    opacity: 0;
+    transition: opacity 0.12s ease-out;
+
+    & svg {
+      fill: currentColor;
+    }
+  }
+
+  & .mk-score-closeup-star-fill[data-on] {
+    opacity: 1;
+  }
+
+  /* The readout follows the pointer star by star: its digits roll at hover
+     speed, so one has landed before the next star fills */
+  & .mk-score-closeup-preview .ss-roll__char {
+    animation-duration: 0.3s;
+  }
+
+  & .mk-score-closeup-preview .ss-roll__mid {
+    transition-duration: 0.25s;
+  }
+
+  & .mk-score-closeup-preview .ss-roll__item[data-out] {
+    animation-duration: 0.16s;
+  }
+
+  & .mk-score-closeup-preview {
+    width: 20px;
+    color: var(--muted-foreground);
+    line-height: 20px;
+    white-space: nowrap;
+  }
+
+  /* Where the pointer rests: over the quiet rows below the popover */
+  & .mk-score-closeup-rest {
+    position: absolute;
+    top: 258px;
+    left: 560px;
+    width: 1px;
+    height: 1px;
+  }
+
+  /* The phone column: the same close-up at 1.07x, off the right and fading at
+     its foot, the row cut to Item and Score */
+  & .ss-stage[data-layout="compact"] {
+    & .mk-score-closeup-mask {
+      mask-image: linear-gradient(to bottom, #000 284px, transparent 340px);
+    }
+
+    & .mk-score-closeup-window {
+      width: 360px;
+      height: 300px;
+    }
+
+    & .mk-score-closeup-body {
+      padding: 8px 0 0 8px;
+    }
+
+    & .mk-score-closeup-row {
+      grid-template-columns: 172px 88px minmax(0, 1fr);
+    }
+
+    & .mk-score-closeup-cell-check,
+    & .mk-score-closeup-col-scale,
+    & .mk-score-closeup-col-count,
+    & .mk-score-closeup-col-shop {
+      display: none;
+    }
+
+    /* The app's full width, flush with the window's left edge */
+    & .mk-score-closeup-popover {
+      left: 0;
+    }
+
+    & .mk-score-closeup-rest {
+      top: 250px;
+      left: 196px;
+    }
+  }
+}

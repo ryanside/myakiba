@@ -1,0 +1,438 @@
+/* The dashboard's "In progress" board, as order-kanban.tsx and overview-tab.tsx
+   draw it. Every rule is scoped to the demo. */
+.mk-order-board {
+  /* The crop is the stage's foot only: the window runs off the bottom, and
+     its shadow falls on the page at the sides and top instead of ending in a
+     straight line a gutter out, which reads as a plate */
+  & .ss-stage {
+    overflow: clip;
+    overflow-clip-margin: 64px;
+    clip-path: inset(-64px -64px 0 -64px);
+  }
+
+  /* Pinned, off the bottom: the window sits a gutter in from the top and both
+     sides, so every column is whole, and runs past the stage's foot */
+  .mk-order-board-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 600px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  .mk-order-board-app {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    color: var(--foreground);
+  }
+
+  /* The app's header: sidebar trigger and search, then add and the user */
+  .mk-order-board-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    padding: 0 20px;
+  }
+
+  .mk-order-board-header__group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mk-order-board-iconbtn,
+  .mk-order-board-add {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-board-add {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .mk-order-board-page {
+    padding: 14px 24px 0;
+  }
+
+  .mk-order-board-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 40px;
+  }
+
+  .mk-order-board-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+  }
+
+  /* The app's eyebrow: Orbitron, small, lowercase */
+  .mk-order-board-kpi__label {
+    font-family: var(--font-orbitron);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 14px;
+    text-transform: lowercase;
+    color: var(--muted-foreground);
+  }
+
+  /* The value's 32px line, kept by padding: a rolling figure is one em tall */
+  .mk-order-board-kpi__row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 1px 0 9px;
+  }
+
+  .mk-order-board-kpi__value {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+
+  .mk-order-board-kpi__sub {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-board-section {
+    margin-top: 32px;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 22px;
+    letter-spacing: -0.01em;
+  }
+
+  .mk-order-board-board {
+    position: relative;
+    height: 600px;
+    margin-top: 16px;
+  }
+
+  .mk-order-board-col {
+    position: absolute;
+    top: 0;
+  }
+
+  .mk-order-board-col__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 22px;
+    padding: 0 2px;
+  }
+
+  .mk-order-board-col__dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .mk-order-board-col__title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+  }
+
+  .mk-order-board-col__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Each card sits at its place by a transform and glides between places */
+  .mk-order-board-place {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    will-change: transform;
+    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Where the carried order will land. Drawn at its full size, only fades */
+  .mk-order-board-slot {
+    position: absolute;
+    right: 0;
+    left: 0;
+    border: 1.5px dashed color-mix(in oklab, var(--foreground) 22%, transparent);
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--muted) 45%, transparent);
+    opacity: 0;
+    transition: opacity 0.14s ease-out;
+  }
+
+  .mk-order-board-slot[data-show] {
+    opacity: 1;
+    transition: opacity 0.16s ease-out 0.22s;
+  }
+
+  .mk-order-board-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    height: 74px;
+    padding: 12px;
+    border: 1px solid var(--tile-edge);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: var(--tile-lift);
+    transition: box-shadow 0.22s ease-out;
+  }
+
+  /* The order's item thumbnails, stacked as ImageThumbnail stacks them */
+  .mk-order-board-thumb {
+    display: grid;
+    flex: none;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 1px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: var(--muted);
+  }
+
+  .mk-order-board-thumb[data-count="1"] {
+    grid-template-columns: 1fr;
+  }
+
+  .mk-order-board-thumb[data-count="3"] img:first-child {
+    grid-row: span 2;
+  }
+
+  .mk-order-board-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
+    object-position: top;
+    outline: 1px solid var(--image-edge);
+    outline-offset: -1px;
+  }
+
+  .mk-order-board-card__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .mk-order-board-card__line,
+  .mk-order-board-card__meta {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .mk-order-board-card__line {
+    height: 18px;
+  }
+
+  .mk-order-board-card__meta {
+    gap: 8px;
+    height: 16px;
+  }
+
+  .mk-order-board-card__end,
+  .mk-order-board-card__total {
+    margin-left: auto;
+  }
+
+  .mk-order-board-card__title {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+  }
+
+  .mk-order-board-card__shop {
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+  }
+
+  .mk-order-board-card__total {
+    flex: none;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+
+  /* The order that moves: one element the whole time. At rest it sits in its
+     column's first place; carried it rides the hand exactly, lifted and
+     tilted a touch around the grip; released it glides into its slot */
+  .mk-order-board-carried {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    will-change: translate, transform;
+    transition:
+      translate 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      scale 0.22s ease-out,
+      rotate 0.22s ease-out;
+  }
+
+  .mk-order-board-carried[data-lifted] {
+    scale: 1.03;
+    rotate: -1.5deg;
+    transition:
+      scale 0.22s ease-out,
+      rotate 0.22s ease-out;
+  }
+
+  .mk-order-board-carried[data-lifted] .mk-order-board-card {
+    box-shadow: var(--ss-shadow-lift);
+  }
+
+  /* The app's toast: a popover-colored card that drops in from the top */
+  .mk-order-board-toast {
+    position: absolute;
+    top: 10px;
+    right: 0;
+    left: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 11px 19px 11px 16px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--popover);
+    box-shadow: var(--ss-shadow-float);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--popover-foreground);
+    opacity: 0;
+    transform: translateY(-10px);
+    will-change: transform;
+    transition:
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.3s ease;
+  }
+
+  .mk-order-board-toast[data-show] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .mk-order-board-toast__icon {
+    display: grid;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--success);
+  }
+
+  /* The phone header keeps the sidebar trigger and the user: the toast
+     drops over the middle, where search and add sit on a desktop */
+  .mk-order-board-iconbtn[data-wide],
+  .mk-order-board-add {
+    .ss-stage[data-layout="compact"] & {
+      display: none;
+    }
+  }
+
+  .mk-order-board-rest {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  /* Compact: a phone column. The page itself, pinned a gutter in from the
+     top and sides and off the foot; Shipped and Owned, Total Items above */
+  & .ss-stage[data-layout="compact"] {
+    .mk-order-board-panel {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 334px;
+      height: 480px;
+      box-shadow: var(--ss-shadow-hero);
+    }
+
+    .mk-order-board-header {
+      height: 44px;
+      padding: 0 8px;
+    }
+
+    .mk-order-board-page {
+      padding: 6px 12px 0;
+    }
+
+    .mk-order-board-kpis {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mk-order-board-section {
+      margin-top: 16px;
+      font-size: 16px;
+    }
+
+    .mk-order-board-board {
+      margin-top: 10px;
+    }
+
+    .mk-order-board-card {
+      gap: 8px;
+      height: 66px;
+      padding: 10px;
+      border-radius: 12px;
+    }
+
+    .mk-order-board-slot {
+      border-radius: 12px;
+    }
+
+    .mk-order-board-card__title {
+      font-size: 13px;
+    }
+
+    .mk-order-board-toast {
+      top: 5px;
+      gap: 8px;
+      padding: 7px 14px 7px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+    }
+  }
+}
