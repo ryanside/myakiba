@@ -3565,6 +3565,30 @@
       "bug": "the toolbar AddLink had an aria-label of Add over its own visible word Add, so its name came from two places",
       "test": "apps/web/src/components/add/add-entry-points.test.tsx",
       "fixed": ["a toolbar Add link takes its name from its own word, not an aria-label"]
+    },
+    {
+      "fix": "8933341d76448a9923d547ef5a5bb9a4daa6df5b",
+      "bug": "the shared Item title cell made its title link a block box only in the Add table, so Collection and Order Items rendered it inline, where text-overflow has no effect, and the cell cut a long title mid-word with no ellipsis or tooltip",
+      "test": "apps/web/src/components/cells/item-title-cell.test.tsx",
+      "fixed": [
+        "in Collection and Order Items, a long title ends with an ellipsis and keeps its full text"
+      ]
+    },
+    {
+      "fix": "3f11bb0a1eb997dd5bba098a6b393d8681f49b66",
+      "bug": "an /add link with a preset outside its shape, such as ?item=verify-item-1, failed the route's search schema, and the page showed Something went wrong instead of Add",
+      "test": "apps/web/src/lib/add-search.test.ts",
+      "fixed": [
+        "ignores the malformed to \"elsewhere\" and keeps the rest of the link",
+        "ignores the malformed to \"order:NOPE\" and keeps the rest of the link",
+        "ignores the malformed item \"verify-item-1\" and keeps the rest of the link",
+        "ignores the malformed item \"x\" and keeps the rest of the link",
+        "ignores the malformed item [\"abc12345\",\"def67890\"] and keeps the rest of the link",
+        "ignores the malformed mfc \"-1\" and keeps the rest of the link",
+        "ignores the malformed mfc \"abc\" and keeps the rest of the link",
+        "ignores the malformed q \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" and keeps the rest of the link",
+        "ignores the malformed from \"x\" and keeps the rest of the link"
+      ]
     }
   ],
   "lint": [
