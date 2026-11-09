@@ -1,0 +1,411 @@
+/* Analytics, Artists: a section table whose first row opens in place.
+   The window is pinned a gutter from the top and sides and runs off the
+   bottom, so the rows the opening carries down leave through the crop. */
+.mk-analytics-expand {
+  & .ss-stage {
+    --gutter: 24px;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  & .mk-analytics-expand-mask {
+    position: absolute;
+    inset: 0;
+  }
+
+  & .mk-analytics-expand-window {
+    position: absolute;
+    top: var(--gutter);
+    left: var(--gutter);
+    width: calc(960px - var(--gutter) * 2);
+    height: 480px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .ss-stage[data-layout="compact"] {
+    --gutter: 16px;
+
+    /* A phone column is taller than wide, so a window bled off the right
+       and bottom would show as a tall slab. It bleeds off the right, ends
+       square and fades out at its foot, over the rows past the opened one;
+       the content keeps its right inset inside the stage. */
+    & .mk-analytics-expand-mask {
+      mask-image: linear-gradient(to bottom, #000 300px, transparent 356px);
+    }
+
+    & .mk-analytics-expand-window {
+      width: 380px;
+      height: calc(358px - var(--gutter));
+    }
+  }
+
+  & .mk-analytics-expand-window .ss-window__body {
+    background: var(--ss-surface);
+  }
+
+  & .mk-analytics-expand-content {
+    padding: 14px 20px 0;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-content {
+    padding: 8px 54px 0 16px;
+  }
+
+  /* The section's own heading, set in the app's display face */
+  & .mk-analytics-expand-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 26px;
+    margin-bottom: 8px;
+    font-family: var(--font-orbitron);
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: lowercase;
+    color: var(--ss-text-strong);
+  }
+
+  & .mk-analytics-expand-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    width: 220px;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid var(--ss-line);
+    border-radius: 8px;
+    color: var(--ss-icon);
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-search {
+    width: 120px;
+  }
+
+  /* One grid template for every row, so the columns line up through the
+     header, the ranked rows and the filler */
+  & .mk-analytics-expand-row {
+    display: grid;
+    grid-template-columns: 44px 40px minmax(0, 1.7fr) minmax(0, 0.8fr) minmax(0, 0.8fr);
+    align-items: center;
+    justify-items: start;
+    height: 40px;
+    padding: 0 6px;
+    margin: 0 -6px;
+    font-size: 12px;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ss-text-strong);
+    transition: background-color 150ms ease;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-row {
+    grid-template-columns: 36px 28px minmax(0, 1fr) 80px;
+  }
+
+  & .mk-analytics-expand-row[data-hover] {
+    background: var(--row-hover);
+  }
+
+  & .mk-analytics-expand-head {
+    height: 32px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    font-weight: 500;
+    color: var(--ss-text);
+  }
+
+  & .mk-analytics-expand-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  & .mk-analytics-expand-sort[data-on] {
+    color: var(--ss-text-strong);
+  }
+
+  & .mk-analytics-expand-rank {
+    color: var(--ss-text);
+  }
+
+  & .mk-analytics-expand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  & .mk-analytics-expand-num {
+    color: var(--ss-text-strong);
+  }
+
+  /* The ghost icon button: its chevron turns a quarter while the row is open */
+  & .mk-analytics-expand-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--ss-icon);
+    transition:
+      background-color 150ms ease,
+      transform 120ms ease;
+  }
+
+  & .mk-analytics-expand-toggle[data-hover] {
+    background: var(--muted);
+    color: var(--ss-text-strong);
+  }
+
+  & .mk-analytics-expand-toggle[data-pressed] {
+    transform: scale(0.94);
+  }
+
+  & .mk-analytics-expand-chevron {
+    display: block;
+    width: 16px;
+    height: 16px;
+    transition: rotate 220ms cubic-bezier(0.23, 1, 0.32, 1);
+
+    & svg {
+      display: block;
+    }
+  }
+
+  & .mk-analytics-expand-chevron[data-open] {
+    rotate: 90deg;
+  }
+
+  /* The opened row: the app's tinted well under a faint rule */
+  & .mk-analytics-expand-panel {
+    margin: 0 -20px;
+    padding: 16px 20px;
+    border-top: 1px solid color-mix(in oklab, var(--border) 30%, transparent);
+    background: color-mix(in oklab, var(--muted) 30%, transparent);
+  }
+
+  & .mk-analytics-expand-for {
+    margin-bottom: 10px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--ss-text);
+
+    & b {
+      font-weight: 500;
+      color: var(--ss-text-strong);
+    }
+  }
+
+  & .mk-analytics-expand-panel-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 28px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-panel {
+    margin: 0 -54px 0 -16px;
+    padding: 16px 54px 16px 16px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-panel-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  & .mk-analytics-expand-thumbs {
+    display: grid;
+    grid-template-columns: repeat(3, 76px);
+    gap: 8px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-analytics-expand-thumbs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  /* A gallery tile: the skeleton's muted square, the figure fading in over it */
+  & .mk-analytics-expand-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--muted);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--image-edge);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+      opacity: 0;
+      transition: opacity 280ms ease-out;
+    }
+
+    & img[data-shown] {
+      opacity: 1;
+      transition-delay: calc(var(--i) * 70ms);
+    }
+  }
+
+  & .mk-analytics-expand-tabs {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 22px;
+    margin-bottom: 8px;
+  }
+
+  & .mk-analytics-expand-tab {
+    position: relative;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: var(--ss-text-strong);
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -4px;
+      height: 2px;
+      border-radius: 1px;
+      background: var(--ss-text-strong);
+    }
+  }
+
+  & .mk-analytics-expand-rels {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--ss-line);
+    border-radius: 12px;
+    background: var(--ss-surface);
+    list-style: none;
+  }
+
+  /* Each relationship row holds its skeleton and its content in one cell,
+     so the content resolves in place, top to bottom */
+  & .mk-analytics-expand-rel {
+    display: grid;
+    height: 44px;
+    padding: 0 12px;
+
+    & + & {
+      border-top: 1px solid var(--ss-line);
+    }
+
+    & > * {
+      grid-area: 1 / 1;
+      align-self: center;
+      transition: opacity 260ms ease-out;
+    }
+
+    & > .mk-analytics-expand-rel-row {
+      opacity: 0;
+    }
+  }
+
+  & .mk-analytics-expand-rel[data-shown] {
+    & > * {
+      transition-delay: calc(var(--i) * 90ms);
+    }
+
+    & > .mk-analytics-expand-rel-skeleton {
+      opacity: 0;
+    }
+
+    & > .mk-analytics-expand-rel-row {
+      opacity: 1;
+    }
+  }
+
+  & .mk-analytics-expand-rel-skeleton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  & .mk-analytics-expand-rel-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  & .mk-analytics-expand-rel-row {
+    --ss-row-title: 13px;
+    --ss-row-subtitle: 11px;
+    --ss-row-line: 16px;
+    --ss-row-line-2: 14px;
+    border-radius: 0;
+  }
+
+  & .mk-analytics-expand-rel-name {
+    font-weight: 500;
+  }
+
+  & .mk-analytics-expand-previews {
+    display: flex;
+    flex: none;
+    gap: 4px;
+  }
+
+  & .mk-analytics-expand-preview {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--muted);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--image-edge);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+  }
+
+  & .mk-analytics-expand-preview-empty::after {
+    border-color: transparent;
+  }
+}
+
+/* One relationship line in the phone column: flat, on the panel's own
+   left edge, so it reads as a line of the opened row and not a card */
+.mk-analytics-expand .ss-stage[data-layout="compact"] {
+  & .mk-analytics-expand-rels {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  & .mk-analytics-expand-rel {
+    padding: 0;
+  }
+}

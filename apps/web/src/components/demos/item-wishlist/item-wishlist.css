@@ -1,0 +1,642 @@
+/* Item Database to an item's page, then Add to Wishlist. Anatomy from
+   item-database/item-database.tsx, page-header.tsx, search-pill.tsx,
+   media-tile.tsx (MediaRow), release-item-tile.tsx, item/item-hero.tsx,
+   item/item-details.tsx, item/item-collection.tsx and
+   wishlist/wishlist-toggle-button.tsx. */
+
+@keyframes mk-item-wishlist-caret {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-item-wishlist-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.mk-item-wishlist {
+  --mk-item-wishlist-settle: cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* The window: inset a gutter top and sides, off the bottom */
+  & .mk-item-wishlist-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 480px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  /* The phone column: off the right, stopping short of the foot so what
+     shows keeps a desktop window's shape */
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-window {
+    width: 380px;
+    height: 334px;
+  }
+
+  & .mk-item-wishlist-window .ss-window__body {
+    background: var(--background);
+  }
+
+  & .mk-item-wishlist-app {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* ---- Pages: one body crossfades to the next, the next rising 8px ---- */
+
+  & .mk-item-wishlist-page {
+    position: absolute;
+    inset: 0;
+    padding: 12px var(--pad-end) 0 var(--pad);
+    opacity: 0;
+    transform: translateY(8px);
+    will-change: transform;
+    transition:
+      opacity 0.14s ease-out,
+      transform 0.2s ease;
+  }
+
+  /* The next page starts as the last has nearly gone: their words barely cross, and the window is never blank */
+  & .mk-item-wishlist-page[data-show] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.24s ease 0.1s,
+      transform 0.4s var(--mk-item-wishlist-settle) 0.1s;
+  }
+
+  /* The database leaves in place, so the rows don't drop as the figure lifts */
+  & .mk-item-wishlist-page:first-child:not([data-show]) {
+    transform: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-page {
+    padding-top: 16px;
+  }
+
+  /* ---- PageHeader: the title and its count ---- */
+
+  & .mk-item-wishlist-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    height: 36px;
+    padding-top: 2px;
+    box-sizing: border-box;
+  }
+
+  & .mk-item-wishlist-title {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+  }
+
+  & .mk-item-wishlist-count {
+    font-size: 17px;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  /* ---- The toolbar: the search pill, then the view toggle and Add ---- */
+
+  & .mk-item-wishlist-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    margin-top: 14px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-toolbar {
+    margin-top: 20px;
+  }
+
+  & .mk-item-wishlist-search {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    box-sizing: border-box;
+    width: 384px;
+    height: 32px;
+    padding: 0 14px 0 36px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--muted);
+    transition:
+      border-color 0.15s ease-out,
+      box-shadow 0.15s ease-out;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-search {
+    width: 296px;
+  }
+
+  /* Focused as the app's Input draws it: the ring's color on the border and a 2px ring */
+  & .mk-item-wishlist-search[data-focused] {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  & .mk-item-wishlist-search-icon {
+    position: absolute;
+    top: 7px;
+    left: 11px;
+    display: flex;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-item-wishlist-field {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    height: 20px;
+    white-space: nowrap;
+  }
+
+  & .mk-item-wishlist-caret {
+    flex: none;
+    width: 1.5px;
+    height: 16px;
+    margin-left: 1px;
+    border-radius: 1px;
+    background: var(--foreground);
+    animation: mk-item-wishlist-caret 1.06s steps(1) 0.5s infinite;
+  }
+
+  & .mk-item-wishlist-placeholder {
+    position: absolute;
+    left: 0;
+    overflow: hidden;
+    max-width: 100%;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+  }
+
+  /* The caret sits before the placeholder, as an empty input's does */
+  & .mk-item-wishlist-caret + .mk-item-wishlist-placeholder {
+    left: 3px;
+  }
+
+  & .mk-item-wishlist-placeholder[data-hidden] {
+    opacity: 0;
+  }
+
+  & .mk-item-wishlist-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  /* The segmented ViewToggle: a muted track, the pressed item on the page's surface */
+  & .mk-item-wishlist-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .mk-item-wishlist-segment {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-item-wishlist-segment[data-on] {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-item-wishlist-segment[data-on] {
+    background: var(--input);
+  }
+
+  & .mk-item-wishlist-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 500;
+  }
+
+  /* ---- The results: MediaRow, a 64px image, the title over its category ---- */
+
+  & .mk-item-wishlist-list {
+    position: absolute;
+    right: var(--pad-end);
+    left: var(--pad);
+  }
+
+  & .mk-item-wishlist-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    height: 80px;
+    padding: 8px;
+    border-radius: 17.6px;
+    transition: background-color 0.15s ease-out;
+  }
+
+  & .mk-item-wishlist-row[data-hover] {
+    background: var(--row-hover);
+  }
+
+  & .mk-item-wishlist-thumb {
+    position: relative;
+    flex: none;
+    width: 64px;
+    height: 64px;
+    overflow: hidden;
+    border-radius: 9.6px;
+    background: var(--muted);
+  }
+
+  & .mk-item-wishlist-thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--image-edge);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* The opened figure's slot is empty: its image is the figure above it */
+  & .mk-item-wishlist-row[data-picked] .mk-item-wishlist-thumb {
+    background: none;
+  }
+
+  & .mk-item-wishlist-row[data-picked] .mk-item-wishlist-thumb::after {
+    content: none;
+  }
+
+  & .mk-item-wishlist-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 20%;
+  }
+
+  & .mk-item-wishlist-thumb img[data-crop="low"] {
+    object-position: 50% 70%;
+  }
+
+  & .mk-item-wishlist-row-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  & .mk-item-wishlist-row-title {
+    overflow: hidden;
+    font-weight: 500;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & .mk-item-wishlist-category {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--category-prepainted, green);
+  }
+
+  & .mk-item-wishlist-bar-line {
+    display: flex;
+    align-items: center;
+    height: 18px;
+  }
+
+  & .mk-item-wishlist-bar-line[data-small] {
+    height: 16px;
+  }
+
+  /* A placeholder row keeps the air between a real row's marks, not its line pitch */
+  & .mk-item-wishlist-row-text > .mk-item-wishlist-bar-line + .mk-item-wishlist-bar-line {
+    margin-top: -3px;
+  }
+
+  & .mk-item-wishlist-facts {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-right: 4px;
+  }
+
+  /* ---- The opened figure: one image from its row to the hero ---- */
+
+  & .mk-item-wishlist-figure {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    overflow: hidden;
+    border-radius: 9.6px;
+    background: var(--muted);
+    transform-origin: 0 0;
+    will-change: transform;
+    transition:
+      transform 0.72s var(--mk-item-wishlist-settle),
+      width 0.72s var(--mk-item-wishlist-settle),
+      height 0.72s var(--mk-item-wishlist-settle),
+      border-radius 0.72s var(--mk-item-wishlist-settle);
+  }
+
+  & .mk-item-wishlist-figure::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--image-edge);
+    border-radius: inherit;
+    pointer-events: none;
+    transition: border-color 0.72s var(--mk-item-wishlist-settle);
+  }
+
+  /* The hero's own edge is the app's ring-foreground/6 */
+  & .mk-item-wishlist-figure[data-open] {
+    border-radius: 16.8px;
+  }
+
+  & .mk-item-wishlist-figure[data-open]::after {
+    border-color: color-mix(in oklab, var(--foreground) 6%, transparent);
+  }
+
+  & .mk-item-wishlist-figure img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 20%;
+  }
+
+  /* ---- The item page: Back, the hero, then the details ---- */
+
+  & .mk-item-wishlist-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-item-wishlist-hero {
+    position: absolute;
+    right: var(--pad-end);
+    left: var(--pad);
+    display: flex;
+    gap: 24px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-hero {
+    gap: 16px;
+  }
+
+  & .mk-item-wishlist-hero-slot {
+    flex: none;
+  }
+
+  & .mk-item-wishlist-hero-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  & .mk-item-wishlist-hero-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  & .mk-item-wishlist-hero-title {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 30px;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-hero-title {
+    font-size: 20px;
+    line-height: 25px;
+  }
+
+  /* The MFC link and Updated, text-xs, 16px apart */
+  & .mk-item-wishlist-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 16px;
+  }
+
+  /* Refresh, the wishlist toggle and Add Item to List: a wrapping row */
+  & .mk-item-wishlist-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* The phone column's text is narrower than any two buttons: the row wraps
+     to one a line, so it is drawn as the column it becomes */
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-hero-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* WishlistToggleButton: an outline button, the star leading its label */
+  & .mk-item-wishlist-button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 14px 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color 0.15s ease-out,
+      opacity 0.15s ease-out;
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-item-wishlist-button {
+    border-color: var(--input);
+    background: transparent;
+  }
+
+  & .mk-item-wishlist-button[data-hover] {
+    background: var(--muted);
+  }
+
+  /* Disabled while it saves */
+  & .mk-item-wishlist-button[data-saving] {
+    opacity: 0.4;
+  }
+
+  & .mk-item-wishlist-button-icon {
+    display: grid;
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  & .mk-item-wishlist-button-icon > span {
+    display: flex;
+    grid-area: 1 / 1;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+
+  & .mk-item-wishlist-button[data-icon="star"] .mk-item-wishlist-star,
+  & .mk-item-wishlist-button[data-icon="spinner"] .mk-item-wishlist-spinner,
+  & .mk-item-wishlist-button[data-icon="filled"] .mk-item-wishlist-star-filled {
+    opacity: 1;
+  }
+
+  & .mk-item-wishlist-star-filled {
+    color: var(--color-yellow-400, oklch(85.2% 0.199 91.936));
+  }
+
+  & .mk-item-wishlist-spinner svg {
+    animation: mk-item-wishlist-spin 0.8s linear infinite;
+  }
+
+  /* The details: Releases and Your Collection, quiet, after the page */
+  & .mk-item-wishlist-details {
+    position: absolute;
+    right: var(--pad-end);
+    left: var(--pad);
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-details {
+    grid-template-columns: 1fr;
+  }
+
+  & .mk-item-wishlist-page[data-show] .mk-item-wishlist-details {
+    opacity: 1;
+    transition: opacity 0.4s ease 0.32s;
+  }
+
+  & .mk-item-wishlist-releases {
+    padding-right: 32px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-item-wishlist-releases {
+    padding-right: 0;
+  }
+
+  & .mk-item-wishlist-collection {
+    padding-left: 32px;
+  }
+
+  & .mk-item-wishlist-section-title {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-item-wishlist-release-rows {
+    display: flex;
+    flex-direction: column;
+    margin-top: 12px;
+  }
+
+  & .mk-item-wishlist-release {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 20px;
+    padding: 10px 0;
+    border-top: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+  }
+
+  & .mk-item-wishlist-release:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  & .mk-item-wishlist-release-icon {
+    display: flex;
+    color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  }
+
+  & .mk-item-wishlist-badge {
+    display: flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: var(--secondary);
+  }
+
+  & .mk-item-wishlist-release-price {
+    margin-left: auto;
+  }
+
+  & .mk-item-wishlist-collection-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 16px;
+  }
+
+  & .mk-item-wishlist-collection-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}

@@ -1,0 +1,1118 @@
+/* Lists that hold anything: the orders table with one order selected, the
+   Add to List dialog, the toast, and the List page with its members. Anatomy
+   from orders-columns.tsx, orders-action-bar.tsx, add-to-lists-dialog.tsx,
+   ui/toast.tsx, lists_.$listId.tsx, list-heading.tsx, ui/folder.tsx,
+   list-member-grid.tsx and media-tile.tsx. Every rule is scoped to the demo. */
+.mk-list-anything {
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* The window: inset top and sides, off the bottom */
+  & .mk-list-anything-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 520px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  /* The phone column: a square of the page, off the right only, so the
+     window keeps a desktop's shape */
+  & .ss-stage[data-layout="compact"] .mk-list-anything-window {
+    width: 380px;
+    height: 334px;
+  }
+
+  & .mk-list-anything-window .ss-window__body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  & .mk-list-anything-body {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Two pages in one window: the one showing leads, the other fades */
+  & .mk-list-anything-page {
+    position: absolute;
+    inset: 0;
+    padding: 12px 24px 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  /* The incoming page leads and the outgoing one clears quickly, so the
+     window is never empty and the two never read as one for long */
+  & .mk-list-anything-page[data-on] {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-page {
+    padding: 12px 12px 0;
+  }
+
+  /* ── The orders table ─────────────────────────────────────────────── */
+
+  /* Wide, the rows fade out over the stage's foot, so the crop never leaves
+     a sliver of a row's thumbnail; the action bar sits outside the mask */
+  & .mk-list-anything-table {
+    mask-image: linear-gradient(to bottom, #000 330px, transparent 350px);
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-table {
+    width: 310px;
+    mask-image: none;
+  }
+
+  /* Rows: select, expand, Order, Items, Total, Status, actions */
+  & .mk-list-anything-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 28px minmax(0, 1fr) 120px 150px 172px 56px;
+    align-items: center;
+    height: 52px;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row {
+    grid-template-columns: 24px minmax(0, 1fr) 80px;
+    height: 50px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-head {
+    height: 34px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-cell {
+    padding: 0 6px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-expand,
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-col-items,
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-col-status,
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-cell-more,
+  & .ss-stage[data-layout="compact"] .mk-list-anything-head > span:empty {
+    display: none;
+  }
+
+  /* A selected row: the grid's muted wash and a primary rule at its start */
+  & .mk-list-anything-row[data-picked] {
+    background: color-mix(in oklab, var(--muted) 50%, transparent);
+  }
+
+  & .mk-list-anything-row::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background: var(--primary);
+    content: "";
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  & .mk-list-anything-row[data-picked]::before {
+    opacity: 1;
+  }
+
+  & .mk-list-anything-head-last {
+    grid-column: span 2;
+  }
+
+  & .mk-list-anything-head {
+    height: 36px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    color: var(--muted-foreground);
+  }
+
+  & .mk-list-anything-cell {
+    min-width: 0;
+    padding: 0 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & .mk-list-anything-num {
+    text-align: right;
+  }
+
+  & .mk-list-anything-cell-check {
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+  }
+
+  & .mk-list-anything-cell-more {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 12px;
+    color: var(--muted-foreground);
+    opacity: 0.8;
+  }
+
+  & .mk-list-anything-expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-foreground);
+  }
+
+  /* The checkbox: an outlined square that fills and ticks */
+  & .mk-list-anything-check {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--input);
+    border-radius: 4px;
+    color: var(--primary-foreground);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-list-anything-check:not([data-on]) {
+    background: color-mix(in oklab, var(--input) 30%, transparent);
+  }
+
+  & .mk-list-anything-check svg {
+    opacity: 0;
+    scale: 0.9;
+    transition:
+      opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+      scale 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  & .mk-list-anything-check[data-on] {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+
+  & .mk-list-anything-check[data-on] svg {
+    opacity: 1;
+    scale: 1;
+  }
+
+  & .mk-list-anything-order {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* An order's photos: the app's ImageThumbnail, one to four in a grid */
+  & .mk-list-anything-thumbs,
+  & .mk-list-anything-mosaic {
+    display: grid;
+    flex: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    overflow: hidden;
+    background: var(--muted);
+  }
+
+  & .mk-list-anything-thumbs {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  & .mk-list-anything-thumbs img,
+  & .mk-list-anything-mosaic img {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-list-anything-thumbs[data-count="1"],
+  & .mk-list-anything-mosaic[data-count="1"] {
+    grid-template-columns: 1fr;
+  }
+
+  & .mk-list-anything-thumbs[data-count="3"],
+  & .mk-list-anything-thumbs[data-count="4"],
+  & .mk-list-anything-mosaic[data-count="3"],
+  & .mk-list-anything-mosaic[data-count="4"] {
+    grid-template-rows: 1fr 1fr;
+  }
+
+  & .mk-list-anything-thumbs[data-count="3"] img:first-child,
+  & .mk-list-anything-mosaic[data-count="3"] img:first-child {
+    grid-row: span 2;
+  }
+
+  & .mk-list-anything-order-title {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+  }
+
+  & .mk-list-anything-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  & .mk-list-anything-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mk-paid);
+  }
+
+  & .mk-list-anything-dot[data-status="Ordered"] {
+    background: var(--mk-ordered);
+  }
+
+  & .mk-list-anything-dot[data-status="Shipped"] {
+    background: var(--mk-shipped);
+  }
+
+  & .mk-list-anything-dot[data-status="Owned"] {
+    background: var(--mk-owned);
+  }
+
+  /* ── The action bar: fixed to the foot of the view, centered ──────── */
+  & .mk-list-anything-bar {
+    position: absolute;
+    top: 312px;
+    right: 0;
+    left: 0;
+    display: flex;
+    width: fit-content;
+    margin: 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+    font-size: 13px;
+    line-height: 20px;
+    opacity: 0;
+    translate: 0 8px;
+    will-change: transform;
+    transition:
+      opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+      translate 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  & .mk-list-anything-bar[data-open] {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 0.22s;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-bar {
+    top: 238px;
+    right: 24px;
+  }
+
+  & .mk-list-anything-bar-selection {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  & .mk-list-anything-bar-sep {
+    flex: none;
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+  }
+
+  & .mk-list-anything-bar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  & .mk-list-anything-bar-item {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 500;
+    white-space: nowrap;
+    will-change: transform;
+    transition:
+      background-color 0.2s ease,
+      scale 0.15s ease;
+  }
+
+  & .mk-list-anything-bar-item[data-off] {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  & .mk-list-anything-bar-item[data-tone="destructive"] {
+    background: color-mix(in oklab, var(--destructive) 10%, transparent);
+    color: var(--destructive);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-list-anything-bar-item[data-tone="destructive"] {
+    background: color-mix(in oklab, var(--destructive) 20%, transparent);
+  }
+
+  & .mk-list-anything-bar-item[data-target][data-hover] {
+    background: color-mix(in oklab, var(--primary) 85%, transparent);
+  }
+
+  & .mk-list-anything-bar-item[data-pressed],
+  & .mk-list-anything-button[data-pressed] {
+    scale: 0.97;
+  }
+
+  & .mk-list-anything-bar-close {
+    display: flex;
+    padding: 0 8px 0 6px;
+    opacity: 0.7;
+  }
+
+  /* ── The Add to List dialog ───────────────────────────────────────── */
+  & .mk-list-anything-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.1);
+    opacity: 0;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    transition: opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  & .mk-list-anything-backdrop[data-open] {
+    opacity: 1;
+    transition-duration: 0.2s;
+  }
+
+  & .mk-list-anything-dialog {
+    position: absolute;
+    top: 22px;
+    left: 264px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 384px;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 16px 16px 0;
+    border-radius: 22px;
+    background: var(--background);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      var(--ss-shadow-satellite);
+    color: var(--foreground);
+    font-size: 13px;
+    line-height: 20px;
+    opacity: 0;
+    scale: 0.96;
+    will-change: transform;
+    pointer-events: none;
+    transition:
+      opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+      scale 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  & .mk-list-anything-dialog[data-open] {
+    opacity: 1;
+    scale: 1;
+    pointer-events: auto;
+    transition-duration: 0.2s;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-dialog {
+    top: 20px;
+    left: 12px;
+    width: 298px;
+  }
+
+  & .mk-list-anything-dialog-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--foreground);
+  }
+
+  & .mk-list-anything-dialog-head {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 24px;
+  }
+
+  & .mk-list-anything-dialog-title {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+
+  & .mk-list-anything-dialog-desc {
+    display: flex;
+    align-items: center;
+    height: 20px;
+  }
+
+  /* The form under the header: the new List, the Lists, the footer */
+  & .mk-list-anything-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  & .mk-list-anything-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  & .mk-list-anything-label {
+    font-weight: 500;
+    line-height: 18px;
+  }
+
+  /* The InputGroup: a rounded field with the Create button inside its end */
+  & .mk-list-anything-input {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 5px 0 10px;
+    border: 1px solid var(--input);
+    border-radius: 17px;
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-list-anything-input {
+    background: color-mix(in oklab, var(--input) 30%, transparent);
+  }
+
+  & .mk-list-anything-placeholder {
+    color: var(--muted-foreground);
+  }
+
+  & .mk-list-anything-create {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 11px;
+    font-weight: 500;
+  }
+
+  /* The Lists, one checkable line each */
+  & .mk-list-anything-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  & .mk-list-anything-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 20px;
+  }
+
+  & .mk-list-anything-option-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  & .mk-list-anything-option-open {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    color: var(--muted-foreground);
+  }
+
+  /* The footer: a muted strip across the dialog's foot */
+  & .mk-list-anything-dialog-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0 -16px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklab, var(--muted) 50%, transparent);
+  }
+
+  & .mk-list-anything-button {
+    display: inline-grid;
+    flex: none;
+    grid-auto-flow: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    will-change: transform;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      scale 0.15s ease;
+  }
+
+  & .mk-list-anything-button[data-tone="outline"] {
+    border-color: var(--border);
+    background: var(--card);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-list-anything-button[data-tone="outline"] {
+    border-color: var(--input);
+    background: transparent;
+  }
+
+  & .mk-list-anything-button[data-tone="outline"][data-hover] {
+    background: var(--muted);
+  }
+
+  & .mk-list-anything-button[data-size="sm"] {
+    height: 28px;
+    padding: 0 12px;
+  }
+
+  & .mk-list-anything-button[data-icon] {
+    width: 32px;
+    padding: 0;
+  }
+
+  & .mk-list-anything-button[data-tone="primary"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Save waits for a List: the app's disabled default button */
+  & .mk-list-anything-button[data-tone="primary"][data-off] {
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  /* The label and the spinner share one cell, so the button keeps its size */
+  & .mk-list-anything-button-label,
+  & .mk-list-anything-button-spin {
+    display: flex;
+    grid-area: 1 / 1;
+    justify-content: center;
+    transition:
+      opacity 0.2s ease,
+      filter 0.2s ease,
+      translate 0.2s ease;
+  }
+
+  & .mk-list-anything-button-spin {
+    opacity: 0;
+    filter: blur(4px);
+    translate: 0 8px;
+  }
+
+  & .mk-list-anything-button-spin svg {
+    animation: mk-list-anything-spin 0.8s linear infinite;
+  }
+
+  & .mk-list-anything-button[data-pending] .mk-list-anything-button-label {
+    opacity: 0;
+    filter: blur(4px);
+    translate: 0 -8px;
+  }
+
+  & .mk-list-anything-button[data-pending] .mk-list-anything-button-spin {
+    opacity: 1;
+    filter: none;
+    translate: 0 0;
+  }
+
+  /* ── The toast: top center of the view, sliding down from above ───── */
+  & .mk-list-anything-toast {
+    position: absolute;
+    top: 16px;
+    left: 264px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 384px;
+    box-sizing: border-box;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--popover);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+    color: var(--popover-foreground);
+    font-size: 13px;
+    line-height: 20px;
+    opacity: 0;
+    translate: 0 -12px;
+    will-change: transform;
+    transition:
+      opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+      translate 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  & .mk-list-anything-toast[data-open] {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 0.4s ease,
+      translate 0.4s ease;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-toast {
+    left: 12px;
+    width: 298px;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  & .mk-list-anything-toast-icon {
+    display: flex;
+    flex: none;
+    color: var(--success);
+  }
+
+  & .mk-list-anything-toast-title {
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  & .mk-list-anything-toast-close {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted-foreground);
+  }
+
+  /* ── The List page ────────────────────────────────────────────────── */
+
+  /* The heading row: folder, title and count; the view toggle and actions */
+  & .mk-list-anything-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    height: 72px;
+    margin-bottom: 16px;
+  }
+
+  & .mk-list-anything-list-lead {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  & .mk-list-anything-heading {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  & .mk-list-anything-list-title {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  & .mk-list-anything-list-count {
+    color: var(--muted-foreground);
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  & .mk-list-anything-list-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  & .mk-list-anything-tool-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* The segmented ToggleGroup: a muted track, the pressed item raised */
+  & .mk-list-anything-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .mk-list-anything-segment {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-list-anything-segment[data-on] {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-list-anything-segment[data-on] {
+    background: var(--input);
+  }
+
+  /* The Folder at 90px, its papers fanning in as the page opens */
+  & .mk-list-anything-folder {
+    position: relative;
+    flex: none;
+    width: 90px;
+    height: 72px;
+  }
+
+  & .mk-list-anything-folder-back {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  & .mk-list-anything-folder-back path {
+    fill: var(--muted);
+    stroke: var(--border);
+    vector-effect: non-scaling-stroke;
+  }
+
+  & .mk-list-anything-paper {
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 27px;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 1.2px;
+    border-radius: 1.9px;
+    background: var(--card);
+    box-shadow: var(--tile-shadow);
+  }
+
+  & .mk-list-anything-paper img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0.7px;
+    outline: 1px solid var(--image-edge);
+    outline-offset: -1px;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-list-anything-paper[data-slot="0"] {
+    z-index: 1;
+    translate: -130% 17.5%;
+    rotate: -12deg;
+  }
+
+  & .mk-list-anything-paper[data-slot="1"] {
+    z-index: 2;
+    translate: 30% 15%;
+    rotate: 11deg;
+  }
+
+  & .mk-list-anything-paper[data-slot="2"] {
+    z-index: 3;
+    translate: -76.7% 5%;
+    rotate: -4deg;
+  }
+
+  & .mk-list-anything-paper[data-slot="3"] {
+    z-index: 4;
+    translate: -20% 0;
+    rotate: 4deg;
+  }
+
+  & .mk-list-anything-folder-front {
+    position: absolute;
+    z-index: 5;
+    top: 44%;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 5.4px;
+    background: var(--card);
+    box-shadow: var(--tile-shadow);
+  }
+
+  /* The grid: four columns at the app's 200px minimum, 20px apart */
+  & .mk-list-anything-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 20px;
+  }
+
+  & .mk-list-anything-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  & .mk-list-anything-card-image {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 22px;
+    background: var(--muted);
+  }
+
+  & .mk-list-anything-card-image::after {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--image-edge);
+    border-radius: inherit;
+    content: "";
+    pointer-events: none;
+    transition: border-color 0.15s ease-out;
+  }
+
+  & .mk-list-anything-card[data-hover] .mk-list-anything-card-image::after {
+    border-color: var(--image-edge-hover);
+  }
+
+  & .mk-list-anything-mosaic {
+    width: 100%;
+    height: 100%;
+  }
+
+  & .mk-list-anything-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 12px;
+  }
+
+  & .mk-list-anything-kind {
+    overflow: hidden;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & .mk-list-anything-card-title {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* A card's controls float over its photo's corner, under the pointer only */
+  & .mk-list-anything-controls {
+    position: absolute;
+    z-index: 2;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 1px;
+    padding: 2px;
+    border-radius: 10px;
+    background: rgb(0 0 0 / 0.6);
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.16),
+      0 1px 2px oklch(0 0 0 / 0.2),
+      0 8px 24px oklch(0 0 0 / 0.16);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+
+  & .mk-list-anything-card[data-hover] .mk-list-anything-controls {
+    opacity: 1;
+  }
+
+  & .mk-list-anything-control {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+  }
+
+  & .mk-list-anything-control-box {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px #fff;
+  }
+
+  /* The list view, for the phone column: one member per row */
+  & .ss-stage[data-layout="compact"] .mk-list-anything-page[data-page="list"] {
+    padding-top: 8px;
+  }
+
+  & .mk-list-anything-rows {
+    display: flex;
+    flex-direction: column;
+    width: 310px;
+    margin-top: 4px;
+  }
+
+  & .mk-list-anything-member-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 16px;
+    transition: background-color 0.15s ease;
+  }
+
+  & .mk-list-anything-member-row[data-hover] {
+    background: color-mix(in oklab, var(--muted) 50%, transparent);
+  }
+
+  & .mk-list-anything-row-image {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+  }
+
+  & .mk-list-anything-row-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  & .mk-list-anything-row-title {
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & .mk-list-anything-row-controls {
+    display: flex;
+    flex: none;
+    gap: 1px;
+    margin-right: -2px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-list-anything-row-controls .mk-list-anything-control-box {
+    box-shadow: inset 0 0 0 1px var(--muted-foreground);
+  }
+
+  /* The page arrives as the app draws it: the heading and members rise in,
+     the folder's papers fan out */
+  & .mk-list-anything-page[data-page="list"][data-on] .mk-list-anything-heading,
+  & .mk-list-anything-page[data-page="list"][data-on] > .mk-list-anything-list-title,
+  & .mk-list-anything-page[data-page="list"][data-on] .mk-list-anything-card,
+  & .mk-list-anything-page[data-page="list"][data-on] .mk-list-anything-member-row {
+    animation: mk-list-anything-data-in 0.25s cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  & .mk-list-anything-page[data-page="list"][data-on] .mk-list-anything-paper {
+    animation: mk-list-anything-fan 0.24s cubic-bezier(0.23, 1, 0.32, 1) backwards;
+  }
+
+  & .mk-list-anything-page[data-on] .mk-list-anything-paper[data-slot="1"] {
+    animation-delay: 34ms;
+  }
+
+  & .mk-list-anything-page[data-on] .mk-list-anything-paper[data-slot="2"] {
+    animation-delay: 68ms;
+  }
+
+  & .mk-list-anything-page[data-on] .mk-list-anything-paper[data-slot="3"] {
+    animation-delay: 102ms;
+  }
+
+  /* Where the pointer rests: empty table surface in the Items column */
+  & .mk-list-anything-rest {
+    position: absolute;
+    top: 300px;
+    left: 470px;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-list-anything-rest {
+    top: 252px;
+    left: 250px;
+  }
+}
+
+@keyframes mk-list-anything-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes mk-list-anything-data-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+@keyframes mk-list-anything-fan {
+  from {
+    translate: -50% 20%;
+    rotate: 0deg;
+  }
+}
