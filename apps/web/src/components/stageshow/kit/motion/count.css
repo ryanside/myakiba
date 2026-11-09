@@ -60,9 +60,8 @@
     transition: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .ss-count__strip {
-      transition: none;
-    }
+  /* __root.tsx sets this from the device setting or the app's Reduce motion switch */
+  :root[data-reduce-motion] .ss-count__strip {
+    transition: none;
   }
 }
