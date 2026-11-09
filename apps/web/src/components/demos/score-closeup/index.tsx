@@ -88,25 +88,28 @@ async function script(a: Act<S>): Promise<void> {
 
   await a.wait(1000);
   a.mark("open");
-  await a.move({ at: "score", x: 0.3, y: 0.6 });
+  await a.moveCursor({ at: "score", x: 0.3, y: 0.6 });
   await a.wait(140);
   await a.click({ at: "score", x: 0.3, y: 0.6 });
   a.put({ open: true });
   await a.wait(650);
   // Down into the popover, onto the first star
-  await a.move({ at: "star-1", x: 0.5, y: 0.6 }, { duration: 560, onMove: track });
+  await a.moveCursor({ at: "star-1", x: 0.5, y: 0.6 }, { duration: 560, onMove: track });
   await a.wait(220);
   a.mark("sweep");
-  await a.move({ at: "star-10", x: 0.5, y: 0.6 }, { duration: 1500, path: level, onMove: track });
+  await a.moveCursor(
+    { at: "star-10", x: 0.5, y: 0.6 },
+    { duration: 1500, path: level, onMove: track },
+  );
   await a.wait(320);
-  await a.move({ at: `star-${PICK}`, x: 0.5, y: 0.6 }, { duration: 360, onMove: track });
+  await a.moveCursor({ at: `star-${PICK}`, x: 0.5, y: 0.6 }, { duration: 360, onMove: track });
   await a.wait(260);
   a.mark("score");
   await a.click({ at: `star-${PICK}`, x: 0.5, y: 0.6 });
   a.put({ score: PICK });
   await a.wait(500);
   // Off the stars and the cell, so both read
-  await a.move("rest", { duration: 800, onMove: track });
+  await a.moveCursor("rest", { duration: 800, onMove: track });
   await a.wait(2600);
 }
 

@@ -67,12 +67,12 @@ const cls = (name: string) => `mk-order-cascade-${name}`;
 
 /** Picks a status from the order's select, as a mouse does it. */
 async function pick(a: Act<S>, to: Status) {
-  await a.move({ at: "order-status", x: 0.78, y: 0.55 });
+  await a.moveCursor({ at: "order-status", x: 0.78, y: 0.55 });
   await a.wait(180);
   await a.click({ at: "order-status", x: 0.78, y: 0.55 });
   a.put({ open: true });
   await a.wait(520);
-  await a.move({ at: `opt-${to}`, x: 0.72, y: 0.55 }, { duration: 420 });
+  await a.moveCursor({ at: `opt-${to}`, x: 0.72, y: 0.55 }, { duration: 420 });
   await a.wait(260);
   await a.click({ at: `opt-${to}`, x: 0.72, y: 0.55 });
   a.put({ open: false });
@@ -96,7 +96,7 @@ async function script(a: Act<S>) {
   a.mark("open");
   await pick(a, "Shipped");
   // Off the value so the roll reads, to empty space left of the item statuses
-  const away = a.move("rest", { duration: 700 });
+  const away = a.moveCursor("rest", { duration: 700 });
   await a.wait(650);
   a.mark("cascade");
   await cascade(a, "Shipped");
@@ -104,7 +104,7 @@ async function script(a: Act<S>) {
   await a.wait(2600);
   a.mark("reset");
   await pick(a, "Paid");
-  const back = a.move("rest", { duration: 700 });
+  const back = a.moveCursor("rest", { duration: 700 });
   await a.wait(650);
   await cascade(a, "Paid");
   await back;

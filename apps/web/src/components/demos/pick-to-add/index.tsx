@@ -133,7 +133,7 @@ async function script(a: Act<S>): Promise<void> {
   // The Add page saves the pick, then shows its Item; the pointer comes up
   // toward the sentence meanwhile, onto the clear space beside the title
   await a.wait(250);
-  await a.move({ at: "choose", x: 1.6, y: -0.4 }, { duration: 650 });
+  await a.moveCursor({ at: "choose", x: 1.6, y: -0.4 }, { duration: 650 });
   a.mark("saved");
   await a.set({ row: "item" });
   await a.wait(700);
@@ -141,7 +141,7 @@ async function script(a: Act<S>): Promise<void> {
   await a.click({ at: "choose", x: 0.9, y: 0.7 });
   await a.set({ menu: true });
   await a.wait(350);
-  await a.move({ at: "collection", x: 0.82, y: 0.55 });
+  await a.moveCursor({ at: "collection", x: 0.82, y: 0.55 });
   await a.wait(180);
   await a.click();
   await a.set({ menu: false, collection: true });
@@ -164,7 +164,7 @@ async function script(a: Act<S>): Promise<void> {
   await a.wait(160);
   await a.set({ page: "collection" });
   await a.wait(500);
-  await a.move(SETTLE[a.layout], { duration: 700 });
+  await a.moveCursor(SETTLE[a.layout], { duration: 700 });
   a.mark("hold");
   await a.wait(2400);
 }

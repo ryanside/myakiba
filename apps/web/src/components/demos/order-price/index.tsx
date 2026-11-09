@@ -80,13 +80,13 @@ const poster: S = { ...initial, price: NEW_PRICE, wash: true };
 async function script(a: Act<S>) {
   await a.wait(900);
   a.mark("open");
-  await a.move({ at: "price", x: 0.15, y: 0.55 });
+  await a.moveCursor({ at: "price", x: 0.15, y: 0.55 });
   await a.wait(200);
   // One click opens the cell, as the real InlineCurrencyCell does
   await a.click({ at: "price", x: 0.15, y: 0.55 });
   a.put({ edit: true, val: "129.99" });
   // Off the digits while typing, as a hand does once it goes to the keys
-  await a.move({ at: "price", x: -0.6, y: 1.6 }, { duration: 450 });
+  await a.moveCursor({ at: "price", x: -0.6, y: 1.6 }, { duration: 450 });
   await a.wait(150);
   a.mark("select");
   await a.key("cmd+a");

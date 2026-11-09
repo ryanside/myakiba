@@ -126,7 +126,7 @@ async function glide(a: Act<S>, to: Point, first: boolean, duration?: number) {
   const g = GEOMETRY[a.layout];
   const order = orderOf(g, first);
   const rects = places(a);
-  await a.move(to, {
+  await a.moveCursor(to, {
     duration,
     onMove: (at) => {
       const i = rects.findIndex((r) => inside(r, at));
@@ -145,7 +145,7 @@ async function carry(a: Act<S>, from: number, to: number, first: boolean) {
   await glide(a, { x: source.x + source.width * 0.55, y: source.y + source.height * 0.42 }, first);
   await a.wait(260);
   const handle = a.rect("handle");
-  await a.move(centerOf(handle), { duration: 380 });
+  await a.moveCursor(centerOf(handle), { duration: 380 });
   await a.wait(180);
   const end = dropAt(target);
   await a.drag(

@@ -101,7 +101,7 @@ const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies
 const DATE_FIELD = ["", "f-paid", "f-shipped", "f-owned"];
 
 async function press(a: Act<S>, target: string, at: Point, ms: number) {
-  await a.move({ at: target, ...at }, { duration: ms });
+  await a.moveCursor({ at: target, ...at }, { duration: ms });
   await a.wait(90);
   await a.click();
 }
@@ -117,7 +117,7 @@ async function markPaid(a: Act<S>) {
   await a.click({ at: "f-status", x: 0.84, y: 0.6 });
   await a.set({ menu: true });
   await a.wait(340);
-  await a.move({ at: "opt-Paid", x: 0.8, y: 0.6 }, { duration: 340 });
+  await a.moveCursor({ at: "opt-Paid", x: 0.8, y: 0.6 }, { duration: 340 });
   await a.wait(100);
   await a.click();
   await a.set({ menu: false, formStep: 2 });
@@ -128,7 +128,7 @@ async function markPaid(a: Act<S>) {
   if (a.layout === "wide") {
     await a.set({ calendar: true });
     await a.wait(400);
-    await a.move({ at: "day-14", x: 0.86, y: 0.88 }, { duration: 420 });
+    await a.moveCursor({ at: "day-14", x: 0.86, y: 0.88 }, { duration: 420 });
     await a.wait(100);
     await a.click();
     await a.set({ picked: true, formDates: 2 });
@@ -164,7 +164,7 @@ async function script(a: Act<S>) {
   await a.wait(400);
   await markPaid(a);
   // The stepper fills while the hand leaves the page; the totals a beat later
-  const leave = a.move("rest", { duration: 700 });
+  const leave = a.moveCursor("rest", { duration: 700 });
   await a.wait(900);
   await leave;
   a.mark("paid");
@@ -177,7 +177,7 @@ async function script(a: Act<S>) {
 
   a.mark("owned");
   await lapse(a, 4);
-  const back = a.move("rest", { duration: 600 });
+  const back = a.moveCursor("rest", { duration: 600 });
   await a.wait(800);
   await back;
   a.mark("counted");

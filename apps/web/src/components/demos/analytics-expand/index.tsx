@@ -77,7 +77,7 @@ const READ = { wide: { x: 440, y: 199 }, compact: { x: 250, y: 150 } } as const;
 // after them, the way the two reads come back in the app.
 async function script(a: Act<State>): Promise<void> {
   await a.wait(500);
-  await a.move({ at: "expand", x: 0.72, y: 0.7 });
+  await a.moveCursor({ at: "expand", x: 0.72, y: 0.7 });
   await a.wait(180);
   a.mark("press");
   await a.click({ at: "expand", x: 0.72, y: 0.7 });
@@ -92,7 +92,7 @@ async function script(a: Act<State>): Promise<void> {
   await a.wait(1100);
   // Off the chevron while the result is read, onto the opened row's blank
   // header line, near where it goes back to close it.
-  await a.move(READ[a.layout], { duration: 800 });
+  await a.moveCursor(READ[a.layout], { duration: 800 });
   await a.wait(2300);
   a.mark("close");
   await a.click({ at: "expand", x: 0.72, y: 0.7 });
@@ -100,7 +100,7 @@ async function script(a: Act<State>): Promise<void> {
   await a.wait(700);
   // Under the closed row: the next opening loads again from its skeleton.
   await a.snap({ panel: false, items: false, related: false });
-  await a.move(REST[a.layout], { duration: 600 });
+  await a.moveCursor(REST[a.layout], { duration: 600 });
   await a.wait(300);
 }
 

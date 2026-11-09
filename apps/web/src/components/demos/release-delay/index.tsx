@@ -92,12 +92,12 @@ const cls = (name: string) => `mk-release-delay-${name}`;
 async function script(a: Act<S>) {
   await a.wait(1100);
   a.mark("open");
-  await a.move({ at: "item-release", x: 0.9, y: 0.8 });
+  await a.moveCursor({ at: "item-release", x: 0.9, y: 0.8 });
   await a.wait(180);
   await a.click({ at: "item-release", x: 0.9, y: 0.8 });
   a.put({ open: true });
   await a.wait(700);
-  await a.move({ at: "opt-aug", x: 0.84, y: 0.5 }, { duration: 420 });
+  await a.moveCursor({ at: "opt-aug", x: 0.84, y: 0.5 }, { duration: 420 });
   await a.wait(320);
   await a.click({ at: "opt-aug", x: 0.84, y: 0.5 });
   a.put({ open: false });
@@ -105,7 +105,7 @@ async function script(a: Act<S>) {
   a.mark("pick");
   a.put({ item: "aug" });
   // Off the values, so both rolls read
-  const away = a.move("rest", { duration: 700 });
+  const away = a.moveCursor("rest", { duration: 700 });
   await a.wait(1000);
   a.mark("order");
   a.put({ order: "aug", wash: true });

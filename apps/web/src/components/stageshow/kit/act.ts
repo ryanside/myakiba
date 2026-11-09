@@ -43,7 +43,7 @@ export interface Act<S> {
    * along a chart line. `onMove(at, from, t)` gets each point on the way, as drag's does, for anything
    * that follows the pointer (a scrubbed day, a hover readout).
    */
-  move: (
+  moveCursor: (
     to: Target,
     opts?: {
       duration?: number;
@@ -82,7 +82,7 @@ export interface Act<S> {
   mark: (name: string) => void;
   /** Type text into a string key of state, one character at a time, `interval` ms apart on average (35 by default). */
   type: (key: keyof S, text: string, opts?: { interval?: number }) => Promise<void>;
-  /** Press, hold and move in the same shallow, hand-like arc as move(), reporting each frame. The cursor
+  /** Press, hold and move in the same shallow, hand-like arc as moveCursor(), reporting each frame. The cursor
    * dips as it presses and closes into the grab hand at the bottom of the dip, and opens on release by itself:
    * don't switch to 'grab' before a drag, a hovering cursor is never a fist.
    * I-beam and crosshair selections keep their kind. Use cursor: 'preserve'
@@ -362,7 +362,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
     return opts?.layout ? layoutRectOf(root, el) : rectOf(root, el, scaleRef.current);
   };
 
-  const move: Act<S>["move"] = async (to, opts) => {
+  const moveCursor: Act<S>["moveCursor"] = async (to, opts) => {
     check();
     const from = { ...pos.current };
     const end = aim(to);
@@ -401,7 +401,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
   const click: Act<S>["click"] = async (to, opts) => {
     check();
     if (to !== undefined) {
-      await move(to);
+      await moveCursor(to);
       await wait(120);
     }
     check();
@@ -638,7 +638,7 @@ export function createAct<S>(signal: AbortSignal, env: ActEnv<S>): Act<S> {
     put,
     wait: (ms) => watched(pauseFor(ms)),
     rect,
-    move: (to, opts) => watched(move(to, opts)),
+    moveCursor: (to, opts) => watched(moveCursor(to, opts)),
     click: (to, opts) => watched(click(to, opts)),
     snap: (patch, scope) => watched(snap(patch, scope)),
     key: (combo) => watched(key(combo)),

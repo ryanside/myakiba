@@ -189,7 +189,7 @@ async function script(a: Act<S>): Promise<void> {
   a.mark("saved");
   await a.set({ saving: false, wishlisted: true });
   await a.wait(400);
-  await a.move(AFTER[a.layout], { duration: 700 });
+  await a.moveCursor(AFTER[a.layout], { duration: 700 });
   a.mark("hold");
   await a.wait(2000);
 }

@@ -167,7 +167,7 @@ function placement(trigger: Rect, layout: Layout) {
 async function enter(a: Act<S>, field: Field, typed: string) {
   // Past the end of the amount, so the hand never covers it: a double-click
   // there selects the last word, the whole figure
-  await a.move({ at: `fee-${field}`, x: 0.66, y: 0.58 }, { duration: 560 });
+  await a.moveCursor({ at: `fee-${field}`, x: 0.66, y: 0.58 }, { duration: 560 });
   await a.wait(160);
   await a.click(undefined, { double: true });
   a.put({ focus: field, sel: field });
@@ -180,7 +180,7 @@ async function enter(a: Act<S>, field: Field, typed: string) {
 async function script(a: Act<S>) {
   await a.wait(900);
   a.mark("open");
-  await a.move({ at: "total", x: 0.32, y: 0.55 });
+  await a.moveCursor({ at: "total", x: 0.32, y: 0.55 });
   await a.wait(180);
   await a.click();
   a.put({ open: true });
@@ -192,12 +192,12 @@ async function script(a: Act<S>) {
   await enter(a, "tariffs", "32.00");
 
   a.mark("save");
-  await a.move({ at: "save", x: 0.9, y: 0.72 }, { duration: 460 });
+  await a.moveCursor({ at: "save", x: 0.9, y: 0.72 }, { duration: 460 });
   await a.wait(160);
   await a.click();
   // The popover closes first; the Total takes the saved fees at once
   a.put({ open: false, focus: null, saved: true, wash: true });
-  const away = a.move("rest", { duration: 760 });
+  const away = a.moveCursor("rest", { duration: 760 });
   await a.wait(1000);
   a.put({ wash: false });
 

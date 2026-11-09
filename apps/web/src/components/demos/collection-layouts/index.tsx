@@ -98,7 +98,7 @@ const AIM = { x: 0.7, y: 0.74 } as const;
 async function script(a: Act<State>): Promise<void> {
   await a.wait(1100);
   a.mark("aim");
-  await a.move({ at: "view-gallery", ...AIM });
+  await a.moveCursor({ at: "view-gallery", ...AIM });
   await a.wait(160);
   a.mark("press");
   await a.click({ at: "view-gallery", ...AIM });
@@ -106,14 +106,14 @@ async function script(a: Act<State>): Promise<void> {
   await a.set({ gallery: true });
   await a.wait(500);
   // Off the toggle while the figures settle into their tiles
-  await a.move(REST[a.layout], { duration: 750 });
+  await a.moveCursor(REST[a.layout], { duration: 750 });
   await a.wait(2300);
   a.mark("back");
   await a.click({ at: "view-compact", ...AIM });
   a.mark("compact");
   await a.set({ gallery: false });
   await a.wait(500);
-  await a.move(REST[a.layout], { duration: 750 });
+  await a.moveCursor(REST[a.layout], { duration: 750 });
   await a.wait(2000);
 }
 

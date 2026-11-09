@@ -104,7 +104,7 @@ const READ = { wide: { x: 560, y: 364 }, compact: { x: 322, y: 142 } } as const;
 const cellAim = (day: number) => ({ at: `day-${day}`, x: 0.8, y: 0.78 });
 
 async function toggle(a: Act<State>, day: number): Promise<void> {
-  await a.move(cellAim(day));
+  await a.moveCursor(cellAim(day));
   await a.wait(160);
   await a.click(cellAim(day));
   a.put((s) => ({
@@ -121,7 +121,7 @@ async function script(a: Act<State>): Promise<void> {
   await a.wait(1700);
   a.mark("second");
   await toggle(a, 20);
-  await a.move(READ[a.layout], { duration: 700 });
+  await a.moveCursor(READ[a.layout], { duration: 700 });
   a.mark("hold");
   await a.wait(2300);
   a.mark("reset");
@@ -129,7 +129,7 @@ async function script(a: Act<State>): Promise<void> {
   await a.wait(600);
   await toggle(a, 11);
   await a.wait(500);
-  await a.move(REST[a.layout], { duration: 800 });
+  await a.moveCursor(REST[a.layout], { duration: 800 });
   await a.wait(400);
 }
 

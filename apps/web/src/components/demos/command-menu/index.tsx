@@ -180,12 +180,12 @@ async function script(a: Act<S>) {
   await a.snap({ query: "", searched: false, up: false }, "dialog");
   await a.wait(2000);
   a.mark("back");
-  await a.move({ at: "back", x: 0.14, y: 0.55 });
+  await a.moveCursor({ at: "back", x: 0.14, y: 0.55 });
   await a.wait(150);
   await a.click({ at: "back", x: 0.14, y: 0.55 });
   await a.set({ view: "dashboard" });
   await a.wait(300);
-  await a.move("rest", { duration: 600 });
+  await a.moveCursor("rest", { duration: 600 });
   await a.wait(200);
 }
 

@@ -195,14 +195,14 @@ async function script(a: Act<S>) {
   await a.set({ toast: false, page: "list" });
   await a.wait(450);
   a.mark("list");
-  await a.move(
+  await a.moveCursor(
     { at: "order-card", x: 0.58, y: a.layout === "wide" ? 0.62 : 0.55 },
     { duration: 750 },
   );
   await a.wait(2600);
   // Back to the orders page, which is where the loop begins
   a.mark("back");
-  const away = a.move("rest", { duration: 800 });
+  const away = a.moveCursor("rest", { duration: 800 });
   await a.wait(200);
   await a.set({ page: "orders" });
   await away;

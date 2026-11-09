@@ -166,7 +166,7 @@ async function carry(a: Act<S>, to: Home) {
   const card = a.rect("order");
   const hold = GRAB[a.layout];
   const grab = { x: card.width * hold.x, y: card.height * hold.y };
-  await a.move({ x: card.x + grab.x, y: card.y + grab.y });
+  await a.moveCursor({ x: card.x + grab.x, y: card.y + grab.y });
   await a.wait(220);
   const board = a.rect("board", { layout: true });
   const slot = a.rect(`slot-${to}`, { layout: true });
@@ -194,7 +194,7 @@ async function script(a: Act<S>) {
   a.mark("toast");
   await a.set({ toast: true });
   await a.wait(700);
-  await a.move("rest", { duration: 700 });
+  await a.moveCursor("rest", { duration: 700 });
   a.mark("totals");
   await a.set({ counted: true });
   await a.wait(2600);
@@ -205,7 +205,7 @@ async function script(a: Act<S>) {
   await a.wait(500);
   await a.set({ counted: false });
   await a.wait(600);
-  await a.move("rest", { duration: 700 });
+  await a.moveCursor("rest", { duration: 700 });
 }
 
 function Thumb({ images, size }: { images: readonly number[]; size: number }) {

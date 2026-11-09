@@ -188,7 +188,7 @@ async function script(a: Act<S>) {
   // The move returns: the selection clears, the dialog closes, the bar leaves
   a.mark("moved");
   await a.set({ dialog: false, focus: false, picked: false });
-  const away = a.move("rest", { duration: 900 });
+  const away = a.moveCursor("rest", { duration: 900 });
   await a.wait(250);
   // The figure lifts off its row, then rides up into the new order's row as
   // that row opens at the top; the subtable closes up behind it

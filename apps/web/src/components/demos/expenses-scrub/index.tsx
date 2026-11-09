@@ -118,7 +118,7 @@ async function script(a: Act<S>): Promise<void> {
   await a.wait(1000);
   // Up into the plot at January
   a.mark("enter");
-  await a.move(at(ENTRY), { duration: 900, path: straight, onMove: track });
+  await a.moveCursor(at(ENTRY), { duration: 900, path: straight, onMove: track });
   await a.wait(700);
   // One stroke along the line, across March, to August: a hand running the
   // curve, the same distance under it all the way
@@ -127,13 +127,13 @@ async function script(a: Act<S>): Promise<void> {
     const x = from.x + (to.x - from.x) * e;
     return { x, y: box.y + under(x - box.x) };
   };
-  await a.move(at(NOTE), { duration: 3000, path: along, onMove: track });
+  await a.moveCursor(at(NOTE), { duration: 3000, path: along, onMove: track });
   a.mark("settle");
   await a.wait(2600);
   // Down out of the plot: the headline rolls back to the latest total
   a.mark("leave");
   const out = at(NOTE);
-  await a.move({ x: out.x, y: rest.y }, { duration: 700, path: straight, onMove: track });
+  await a.moveCursor({ x: out.x, y: rest.y }, { duration: 700, path: straight, onMove: track });
   await a.wait(1100);
   // The hairline has faded where it was; forget its place, unseen
   await a.snap({ x: null });

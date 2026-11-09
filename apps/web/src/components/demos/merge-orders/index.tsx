@@ -181,7 +181,7 @@ async function script(a: Act<S>) {
   // leaves; the table refreshes a beat later
   a.mark("merged");
   await a.set({ dialog: false, focus: false, picked: [false, false] });
-  const away = a.move("rest", { duration: 800 });
+  const away = a.moveCursor("rest", { duration: 800 });
   await a.wait(300);
   // The new order arrives at the top, then the two it replaced leave
   a.put({ merged: true, wash: true });
