@@ -54,6 +54,15 @@ myakiba is being created in hopes to be a useful alternative, as well as a fun/l
 
 ## Page showcase
 
+### Add
+
+Click Pick for myakiba on any MyFigureCollection item page, and the item lands on the Add page with
+its information already filled in. Choose where your picks go: your collection, a new or existing
+order, your wishlist, or your lists. Set the price, count, and condition for each item, then add
+them all at once.
+
+![Add](apps/web/public/add-light.webp)
+
 ### Dashboard
 
 The overview puts your total items, total spend, active orders, and unpaid costs up front. It also
