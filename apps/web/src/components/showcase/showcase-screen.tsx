@@ -1,6 +1,6 @@
 import { AppShell } from "./app-shell";
 import { SHOWCASE_SCREENS } from "./screens";
-import type { ShowcaseScreenName } from "./screens";
+import type { ShowcaseScreenName } from "./names";
 import { ShowcaseFrame } from "./showcase-frame";
 
 /** One app screen as a picture of the app, scaled to fit its box. */

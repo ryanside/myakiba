@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { ShowcaseScreenName } from "./names";
 import * as add from "./screens/add";
 import * as analytics from "./screens/analytics";
 import * as analyticsSection from "./screens/analytics-section";
@@ -22,7 +23,6 @@ export type ShowcaseScreen = {
   readonly images: readonly string[];
 };
 
-// In the order the app's sidebar lists them.
 export const SHOWCASE_SCREENS = {
   dashboard: {
     label: "Dashboard",
@@ -74,11 +74,4 @@ export const SHOWCASE_SCREENS = {
     images: itemDetail.images,
   },
   add: { label: "Add", path: "/add", Screen: add.Screen, images: add.images },
-} as const satisfies Record<string, ShowcaseScreen>;
-
-export type ShowcaseScreenName = keyof typeof SHOWCASE_SCREENS;
-
-export const SHOWCASE_SCREEN_NAMES = Object.keys(SHOWCASE_SCREENS) as [
-  ShowcaseScreenName,
-  ...ShowcaseScreenName[],
-];
+} as const satisfies Record<ShowcaseScreenName, ShowcaseScreen>;

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import * as z from "zod";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { prepareShowcaseScreens } from "@/components/showcase/prepare";
-import { SHOWCASE_SCREEN_NAMES, SHOWCASE_SCREENS } from "@/components/showcase/screens";
+import { SHOWCASE_SCREEN_NAMES } from "@/components/showcase/names";
+import { SHOWCASE_SCREENS } from "@/components/showcase/screens";
 import { ShowcaseScreen } from "@/components/showcase/showcase-screen";
 import { SCREEN_WIDTH } from "@/components/showcase/showcase-frame";
 
@@ -12,7 +12,9 @@ export const Route = createFileRoute("/showcase")({
     focus: z.enum(SHOWCASE_SCREEN_NAMES).optional(),
   }),
   loaderDeps: ({ search }) => ({ focus: search.focus }),
+  // TanStack Router keeps a loader in the app's entry chunk, so this one loads the screens on demand.
   loader: async ({ deps }) => {
+    const { prepareShowcaseScreens } = await import("@/components/showcase/prepare");
     await prepareShowcaseScreens(deps.focus ? [deps.focus] : SHOWCASE_SCREEN_NAMES);
     return { now: new Date() };
   },
