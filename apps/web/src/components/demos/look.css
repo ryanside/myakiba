@@ -1,0 +1,35 @@
+/* The myakiba look for every demo stage: the app's own tokens from index.css,
+   so a stage follows the page between light and dark. Shared by all demos. */
+.look-myakiba .ss-stage {
+  --ss-canvas: var(--background);
+  --ss-surface: var(--card);
+  --ss-chrome: var(--background);
+  --ss-well: var(--muted);
+  --ss-raised: var(--popover);
+  --ss-line: var(--border);
+  --ss-line-faint: color-mix(in oklab, var(--border) 60%, transparent);
+  --ss-text-strong: var(--foreground);
+  --ss-text: var(--muted-foreground);
+  --ss-text-faint: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+  --ss-icon: var(--muted-foreground);
+  --ss-accent: var(--primary);
+  --ss-accent-text: var(--primary-foreground);
+  --ss-success: var(--success);
+  --ss-warning: var(--warning);
+  --ss-danger: var(--destructive);
+  --ss-font: var(--font-sans);
+  --ss-radius-sm: 6px;
+  --ss-radius-md: 8px;
+  --ss-radius-lg: 12px;
+  --ss-radius-window: 14px;
+  --ss-control: 32px;
+  --ss-row: 28px;
+
+  /* Acquisition Status colors, as lib/orders.ts paints them */
+  --mk-ordered: var(--info);
+  --mk-paid: var(--warning);
+  --mk-shipped: var(--color-violet-500);
+  --mk-owned: var(--success);
+
+  font-family: var(--font-sans);
+}
