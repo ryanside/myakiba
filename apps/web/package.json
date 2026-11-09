@@ -11,7 +11,8 @@
     "check-types": "tsc --noEmit",
     "test": "bun test --isolate --env-file=test.env",
     "e2e": "cd e2e && bun test",
-    "e2e:build": "vite build --config e2e/sentence/vite.config.ts"
+    "e2e:build": "vite build --config e2e/sentence/vite.config.ts",
+    "store-tiles": "bun scripts/store-tiles.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
