@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as DemosRouteImport } from './routes/demos'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as appAddRouteImport } from './routes/(app)/add'
 import { Route as appAnalyticsRouteImport } from './routes/(app)/analytics'
 import { Route as appCalendarRouteImport } from './routes/(app)/calendar'
@@ -55,6 +56,11 @@ const DemosRoute = DemosRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShowcaseRoute = ShowcaseRouteImport.update({
+  id: '/showcase',
+  path: '/showcase',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appAddRoute = appAddRouteImport.update({
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
+  '/showcase': typeof ShowcaseRoute
   '/add': typeof appAddRoute
   '/analytics': typeof appAnalyticsRoute
   '/calendar': typeof appCalendarRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
+  '/showcase': typeof ShowcaseRoute
   '/add': typeof appAddRoute
   '/analytics': typeof appAnalyticsRoute
   '/calendar': typeof appCalendarRoute
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/(app)': typeof appRouteRouteWithChildren
   '/demos': typeof DemosRoute
   '/privacy': typeof PrivacyRoute
+  '/showcase': typeof ShowcaseRoute
   '/(app)/add': typeof appAddRoute
   '/(app)/analytics': typeof appAnalyticsRoute
   '/(app)/calendar': typeof appCalendarRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demos'
     | '/privacy'
+    | '/showcase'
     | '/add'
     | '/analytics'
     | '/calendar'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/'
     | '/demos'
     | '/privacy'
+    | '/showcase'
     | '/add'
     | '/analytics'
     | '/calendar'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/(app)'
     | '/demos'
     | '/privacy'
+    | '/showcase'
     | '/(app)/add'
     | '/(app)/analytics'
     | '/(app)/calendar'
@@ -361,6 +373,7 @@ export interface RootRouteChildren {
   appRouteRoute: typeof appRouteRouteWithChildren
   DemosRoute: typeof DemosRoute
   PrivacyRoute: typeof PrivacyRoute
+  ShowcaseRoute: typeof ShowcaseRoute
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
   authResetPasswordRoute: typeof authResetPasswordRoute
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/showcase': {
+      id: '/showcase'
+      path: '/showcase'
+      fullPath: '/showcase'
+      preLoaderRoute: typeof ShowcaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(app)/add': {
@@ -630,6 +650,7 @@ const rootRouteChildren: RootRouteChildren = {
   appRouteRoute: appRouteRouteWithChildren,
   DemosRoute: DemosRoute,
   PrivacyRoute: PrivacyRoute,
+  ShowcaseRoute: ShowcaseRoute,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
   authResetPasswordRoute: authResetPasswordRoute,
