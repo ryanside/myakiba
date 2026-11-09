@@ -145,25 +145,25 @@ What each store takes:
 
 Upload the same five PNGs, in this order, to both stores. The captions go in AMO's caption field.
 
-| #   | Shows                                                                                               | Theme     | AMO caption                                                               |
-| --- | --------------------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------- |
-| 1   | MFC item 1618468, signed out of MFC, with "✓ Picked" next to MFC's buttons and the "1 picked" note. | MFC's own | Pick the item you're viewing on MyFigureCollection.                       |
-| 2   | The Add page with three picked rows.                                                                | Light     | Your picks arrive on myakiba's Add page.                                  |
-| 3   | The same page with the destination menu open, next to the Wishlist and Lists controls.              | Dark      | Choose where they go: your collection, an order, your wishlist or a list. |
-| 4   | The "Added 3 to your collection" toast over the emptied Add page.                                   | Light     | Add them all with one click.                                              |
-| 5   | A myakiba item page after "Refresh item details", reading "Updated just now".                       | Dark      | Refresh an item's details from MFC whenever you ask.                      |
+| #   | Shows                                                                                               | AMO caption                                                               |
+| --- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | MFC item 1618468, signed out of MFC, with "✓ Picked" next to MFC's buttons and the "1 picked" note. | Pick the item you're viewing on MyFigureCollection.                       |
+| 2   | The Add page with the picked item's row.                                                            | Your picks arrive on myakiba's Add page.                                  |
+| 3   | The same page with the destination menu open, next to the Wishlist and Lists controls.              | Choose where they go: your collection, an order, your wishlist or a list. |
+| 4   | The "Added 1 to your collection" toast over the emptied Add page.                                   | Add them with one click.                                                  |
+| 5   | The item's myakiba page after "Refresh item details", reading "Updated just now".                   | Refresh an item's details from MFC whenever you ask.                      |
 
-The screenshots and the video show MFC's item pictures, so they are not in the repo. To capture them again, use a fresh browser profile that is signed out of MFC and signed in to myakiba, collapse the sidebar, and capture a 1024x640 viewport at 125% so each image is 1280x800 and still reads at 640x400. The three items are MFC 1618468, 2474731 and 2163938.
+All five use myakiba's dark theme, and MFC's item page is in its own dark style. The screenshots and the video show MFC's item pictures, so they are not in the repo. To capture them again, use a fresh browser profile that is signed out of MFC and signed in to myakiba, switch to the dark theme, collapse the sidebar, and capture a 1024x640 viewport at 125% so each image is 1280x800 and still reads at 640x400. Every shot uses the one item, MFC 1618468.
 
 The repo's end-to-end tests run against a mock myakiba page and a mock MFC site with made-up pictures, so they cannot produce honest screenshots.
 
 ### Promo tiles
 
-`store-assets/chrome-small-promo-440x280.png` and `store-assets/chrome-marquee-promo-1400x560.png` draw the myakiba wordmark beside a picked button and three rows. They hold no screenshot and no MFC picture. `bun run store-tiles` in `apps/web` redraws both from the wordmark in `apps/web/src/components/myakiba-logo.tsx`. They live outside `apps/extension/` because the sources zip holds all of `apps/extension/`.
+`store-assets/chrome-small-promo-440x280.png` and `store-assets/chrome-marquee-promo-1400x560.png` set the myakiba wordmark and a picked item card over the Akihabara street the app's sign-in page uses, drawn pixel-sharp like the app draws it. They hold no screenshot and no MFC picture. `bun run store-tiles` in `apps/web` redraws both from `apps/web/src/components/myakiba-logo.tsx` and `apps/web/src/assets/backgrounds/11-akihabara-bright-bitgrain.webp`. They live outside `apps/extension/` because the sources zip holds all of `apps/extension/`.
 
 ### Demo video
 
-The Chrome listing's video is a 26-second, 1920x1080 recording of the real flow. It picks three MFC items, opens "Review in myakiba", chooses Collection, clicks "Add 3 to collection" and ends on the toast. Upload it to YouTube and paste the link in the Chrome listing. AMO has no video field.
+The Chrome listing's video is a 22-second, 1920x1080 recording of the real flow with item 1618468, framed over the same Akihabara street. It picks the item on MFC, opens "Review in myakiba", chooses Collection, clicks "Add 1 to collection", then clicks the toast's View and ends on the collection showing the item just added. Upload it to YouTube and paste the link in the Chrome listing. AMO has no video field.
 
 ## Release checklist
 

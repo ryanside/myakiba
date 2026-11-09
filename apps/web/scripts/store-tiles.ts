@@ -2,70 +2,101 @@ import path from "node:path";
 import { chromium } from "playwright";
 
 const LOGO = path.join(import.meta.dir, "../src/components/myakiba-logo.tsx");
+const BACKGROUND = path.join(
+  import.meta.dir,
+  "../src/assets/backgrounds/11-akihabara-bright-bitgrain.webp",
+);
 const OUT = path.join(import.meta.dir, "../../../store-assets");
 
 const source = await Bun.file(LOGO).text();
 const wordmark = /viewBox="0 0 154 30"[^>]*>\s*<path d="([^"]+)"/u.exec(source)?.[1];
-if (!wordmark) throw new Error(`no 154x30 wordmark in ${LOGO}, so the tiles cannot be drawn`);
+const mark = /viewBox="0 0 53 18"[^>]*>\s*<path d="([^"]+)"/u.exec(source)?.[1];
+if (!wordmark || !mark)
+  throw new Error(`no wordmark or icon mark in ${LOGO}, so the tiles cannot be drawn`);
+const background = `data:image/webp;base64,${Buffer.from(await Bun.file(BACKGROUND).arrayBuffer()).toString("base64")}`;
 
-type Box = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+type Layout = {
+  readonly width: number;
+  readonly height: number;
+  /** Wordmark width and its left edge; it is centred vertically. */
+  readonly logo: { readonly x: number; readonly w: number };
+  /** The picked card: its box and the size unit everything inside it scales with. */
+  readonly card: { readonly x: number; readonly y: number; readonly w: number; readonly u: number };
+  readonly shade: string;
+};
 
-/** A Pick button in its picked state, three rows arriving under it, and the wordmark. */
-function tile(width: number, height: number, logo: Box, picks: Box): string {
-  const u = picks.h / 10;
-  const chip = { x: picks.x, y: picks.y, w: picks.w * 0.42, h: u * 2.2 };
-  const check = `M ${chip.x + chip.w / 2 - u * 0.64} ${chip.y + chip.h / 2 + u * 0.03} l ${u * 0.42} ${u * 0.42} l ${u * 0.86} ${-u * 0.9}`;
-  const rows = [0, 1, 2].map((i) => {
-    const y = picks.y + u * 3.4 + i * u * 2.2;
-    const opacity = [1, 0.72, 0.48][i];
-    return `<g opacity="${opacity}">
-      <rect x="${picks.x}" y="${y}" width="${picks.w}" height="${u * 1.8}" rx="${u * 0.45}" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
-      <rect x="${picks.x + u * 0.35}" y="${y + u * 0.3}" width="${u * 1.2}" height="${u * 1.2}" rx="${u * 0.3}" fill="#ffffff" fill-opacity="0.85"/>
-      <rect x="${picks.x + u * 2}" y="${y + u * 0.55}" width="${picks.w * 0.48}" height="${u * 0.3}" rx="${u * 0.15}" fill="#ffffff" fill-opacity="0.8"/>
-      <rect x="${picks.x + u * 2}" y="${y + u * 1.05}" width="${picks.w * 0.26}" height="${u * 0.24}" rx="${u * 0.12}" fill="#ffffff" fill-opacity="0.38"/>
-    </g>`;
-  });
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#26262b"/>
-      <stop offset="1" stop-color="#050506"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="${(picks.x + picks.w / 2) / width}" cy="${(picks.y + picks.h / 2) / height}" r="0.55">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="${width}" height="${height}" fill="url(#bg)"/>
-  <rect width="${width}" height="${height}" fill="url(#glow)"/>
-  <path transform="translate(${logo.x} ${logo.y}) scale(${logo.w / 154})" fill="#ffffff" d="${wordmark}"/>
-  <rect x="${chip.x}" y="${chip.y}" width="${chip.w}" height="${chip.h}" rx="${chip.h / 2}" fill="#ffffff"/>
-  <path d="${check}" fill="none" stroke="#0a0a0a" stroke-width="${u * 0.32}" stroke-linecap="round" stroke-linejoin="round"/>
-  ${rows.join("\n  ")}
-</svg>`;
+/** The Akihabara street the app signs in over, the wordmark, and a picked item arriving. */
+function tile({ width, height, logo, card, shade }: Layout): string {
+  const { u } = card;
+  return `<!doctype html><html><head><style>
+  * { box-sizing: border-box; margin: 0; }
+  body { width: ${width}px; height: ${height}px; overflow: hidden; background: #08080a; }
+  .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%;
+        image-rendering: pixelated; filter: saturate(1.15) contrast(1.05); }
+  .shade { position: absolute; inset: 0; background: ${shade}; }
+  .logo { position: absolute; left: ${logo.x}px; top: ${(height - (logo.w * 30) / 154) / 2}px; width: ${logo.w}px;
+          filter: drop-shadow(0 ${u * 0.3}px ${u * 1.2}px rgba(0,0,0,.55)); }
+  .card { position: absolute; left: ${card.x}px; top: ${card.y}px; width: ${card.w}px; padding: ${u * 1.1}px;
+          border-radius: ${u * 1.4}px; background: rgba(14,14,16,.72); backdrop-filter: blur(${u * 0.9}px);
+          border: 1px solid rgba(255,255,255,.16);
+          box-shadow: 0 ${u * 1.6}px ${u * 4}px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08); }
+  .row { display: flex; align-items: center; gap: ${u * 1.1}px; }
+  .thumb { width: ${u * 4.4}px; height: ${u * 4.4}px; border-radius: ${u * 0.9}px; flex: none;
+           background: linear-gradient(145deg, #2c2c33, #121215); border: 1px solid rgba(255,255,255,.14);
+           display: grid; place-items: center; }
+  .thumb svg { width: 62%; }
+  .lines { flex: 1; display: grid; gap: ${u * 0.7}px; }
+  .line { height: ${u * 0.75}px; border-radius: ${u}px; background: rgba(255,255,255,.88); }
+  .line.short { width: 55%; height: ${u * 0.6}px; background: rgba(255,255,255,.4); }
+  .pill { position: absolute; left: ${card.x + card.w - u * 7.5}px; top: ${card.y - u * 2.6}px;
+          width: ${u * 8.6}px; height: ${u * 4}px; border-radius: ${u * 2}px; background: #fff;
+          display: grid; place-items: center; transform: rotate(-4deg);
+          box-shadow: 0 ${u * 0.9}px ${u * 2.4}px rgba(0,0,0,.45); }
+  .pill svg { width: ${u * 2.2}px; }
+</style></head><body>
+  <img class="bg" src="${background}" alt="">
+  <div class="shade"></div>
+  <svg class="logo" viewBox="0 0 154 30" fill="#fff"><path d="${wordmark}"/></svg>
+  <div class="card"><div class="row">
+    <div class="thumb"><svg viewBox="0 0 53 18" fill="#fff"><path d="${mark}"/></svg></div>
+    <div class="lines"><div class="line"></div><div class="line short"></div></div>
+  </div></div>
+  <div class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg></div>
+</body></html>`;
 }
 
-const TILES = [
+const TILES: readonly ({ readonly file: string } & Layout)[] = [
   {
     file: "chrome-small-promo-440x280.png",
     width: 440,
     height: 280,
-    svg: tile(440, 280, { x: 36, y: 112, w: 176, h: 0 }, { x: 246, y: 62, w: 160, h: 156 }),
+    logo: { x: 30, w: 190 },
+    card: { x: 236, y: 124, w: 184, u: 9 },
+    shade:
+      "linear-gradient(90deg, rgba(8,8,10,.9) 0%, rgba(8,8,10,.72) 48%, rgba(8,8,10,.25) 100%)",
   },
   {
     file: "chrome-marquee-promo-1400x560.png",
     width: 1400,
     height: 560,
-    svg: tile(1400, 560, { x: 120, y: 226, w: 520, h: 0 }, { x: 780, y: 108, w: 500, h: 344 }),
+    logo: { x: 110, w: 520 },
+    card: { x: 820, y: 250, w: 470, u: 20 },
+    shade:
+      "linear-gradient(90deg, rgba(8,8,10,.9) 0%, rgba(8,8,10,.74) 40%, rgba(8,8,10,.2) 75%, rgba(8,8,10,.38) 100%)",
   },
-] as const;
+];
 
 const browser = await chromium.launch({ channel: "chromium" });
 try {
-  for (const { file, width, height, svg } of TILES) {
-    const page = await browser.newPage({ viewport: { width, height } });
-    await page.setContent(`<body style="margin:0">${svg}</body>`);
-    await page.screenshot({ path: path.join(OUT, file), clip: { x: 0, y: 0, width, height } });
+  for (const { file, ...layout } of TILES) {
+    const page = await browser.newPage({
+      viewport: { width: layout.width, height: layout.height },
+    });
+    await page.setContent(tile(layout));
+    await page.screenshot({
+      path: path.join(OUT, file),
+      clip: { x: 0, y: 0, width: layout.width, height: layout.height },
+    });
     await page.close();
   }
 } finally {
