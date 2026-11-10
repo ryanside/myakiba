@@ -99,6 +99,13 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ["title field: whitespace", () => fill(" \t", (run) => ({ fields: field("Title", `a${run}b`) }))],
   ["version: many links", () => fill("<a>v</a>", (run) => ({ fields: field("Version", run) }))],
   [
+    "sibling Releases fields",
+    () =>
+      fill('<div class="data-field"><div class="data-label">Releases</div></div>', (run) => ({
+        fields: run,
+      })),
+  ],
+  [
     "sibling fields with unknown labels",
     () => fill(field("Sculpting", "x"), (run) => ({ fields: run })),
   ],

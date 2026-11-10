@@ -122,38 +122,28 @@ const readVarious: FieldReader = (field, _$, fields) => {
   fields.mfcRatingId = match?.[1] ? Number(match[1]) : null;
 };
 
-const readReleases: FieldReader = (field, $, fields) => {
-  const releaseFields = field.add(
-    field.nextAll(".data-field").filter((_, next) => {
-      const $next = $(next);
-      return $next.find(".data-label").length === 0 || $next.hasClass("item-extra-release");
-    }),
-  );
-  fields.releases = [];
-  for (const element of releaseFields) {
-    const $release = $(element);
-    const dateLink = $release.find("a.time");
-    if (dateLink.length === 0) continue;
-    const text = $release.find(".data-value").text();
-    const types: string[] = [];
-    for (const em of $release.find("small.light").find("em")) {
-      const part = $(em).text().trim();
-      if (part) types.push(part);
-    }
-    const price = PATTERNS.price.exec(text);
-    fields.releases.push({
-      rawDate: dateLink.text().trim(),
-      type: types.join(" "),
-      price: price?.[1]
-        ? parseMoneyInputToMinorUnits(price[1]).unwrap(
-            `MFC release price matched the price pattern but is not valid safe money while parsing release fields: ${JSON.stringify(price[1])}`,
-          )
-        : 0,
-      priceCurrency: price?.[2] ?? "JPY",
-      barcode: PATTERNS.barcode.exec(text)?.[1] ?? "",
-    });
+function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
+  const dateLink = $release.find("a.time");
+  if (dateLink.length === 0) return;
+  const text = $release.find(".data-value").text();
+  const types: string[] = [];
+  for (const em of $release.find("small.light").find("em")) {
+    const part = $(em).text().trim();
+    if (part) types.push(part);
   }
-};
+  const price = PATTERNS.price.exec(text);
+  fields.releases.push({
+    rawDate: dateLink.text().trim(),
+    type: types.join(" "),
+    price: price?.[1]
+      ? parseMoneyInputToMinorUnits(price[1]).unwrap(
+          `MFC release price matched the price pattern but is not valid safe money while parsing release fields: ${JSON.stringify(price[1])}`,
+        )
+      : 0,
+    priceCurrency: price?.[2] ?? "JPY",
+    barcode: PATTERNS.barcode.exec(text)?.[1] ?? "",
+  });
+}
 
 const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map([
   ["Category", readCategory],
@@ -178,6 +168,9 @@ const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map([
   ["Various", readVarious],
 ]);
 
+/** A Releases field and the sibling fields MFC lists its later releases in. */
+type ReleaseGroup = { parent: AnyNode | null; fields: Cheerio<Element>[] };
+
 export function readItemFields($: CheerioAPI): ItemFields {
   const fields: ItemFields = {
     rawCategory: "",
@@ -193,15 +186,28 @@ export function readItemFields($: CheerioAPI): ItemFields {
     releases: [],
     warnings: [],
   };
+  // MFC lists a second release as a sibling field with no label, or with the item-extra-release class.
+  const releases: ReleaseGroup = { parent: null, fields: [] };
   for (const element of $(".item-object").first().find(".data-field")) {
     const field = $(element);
-    const label = field.find(".data-label").text().trim();
+    const labels = field.find(".data-label");
+    if (
+      releases.fields.length > 0 &&
+      releases.parent === element.parent &&
+      (labels.length === 0 || field.hasClass("item-extra-release"))
+    ) {
+      releases.fields.push(field);
+    }
+    const label = labels.text().trim();
     if (!label) continue;
-    const reader =
-      FIELD_READERS.get(label) ?? (label.startsWith("Releases") ? readReleases : undefined);
+    const reader = FIELD_READERS.get(label);
     if (reader) reader(field, $, fields);
-    else fields.warnings.push(`unread field "${label}"`);
+    else if (label.startsWith("Releases")) {
+      releases.parent = element.parent;
+      releases.fields = [field];
+    } else fields.warnings.push(`unread field "${label}"`);
   }
+  for (const release of releases.fields) readRelease(release, $, fields);
   return fields;
 }
 
