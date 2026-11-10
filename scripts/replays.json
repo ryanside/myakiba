@@ -1533,16 +1533,6 @@
       "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
-      "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
-      "testAt": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
-      "bug": "server silently discarded an invariant failure and reported success",
-      "test": "apps/server/src/routers/item/routes.test.ts",
-      "fixed": [
-        "a named Entry missing after insert rolls back the custom Item instead of dropping its link"
-      ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
-    },
-    {
       "fix": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
       "testAt": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
       "bug": "auth session store failures had no tagged adapter diagnostic",

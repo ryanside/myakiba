@@ -176,7 +176,6 @@ void (true satisfies Equal<
 >);
 
 // Items
-const itemsCreateCustom = () => serve(caller, Items.createCustom, inputOf(Items.createCustom));
 const itemsReleases = () => serve(caller, Items.releases, inputOf(Items.releases));
 const itemsGet = () => serve(caller, Items.get, inputOf(Items.get));
 const itemsRelatedOrders = () => serve(caller, Items.relatedOrders, inputOf(Items.relatedOrders));
@@ -186,7 +185,6 @@ const itemsResyncStatus = () => serve(caller, Items.resyncStatus, inputOf(Items.
 const itemsResync = () => serve(caller, Items.resync, inputOf(Items.resync));
 void (true satisfies Equal<
   {
-    createCustom: Failures<typeof itemsCreateCustom>;
     releases: Failures<typeof itemsReleases>;
     get: Failures<typeof itemsGet>;
     relatedOrders: Failures<typeof itemsRelatedOrders>;
@@ -195,10 +193,6 @@ void (true satisfies Equal<
     resync: Failures<typeof itemsResync>;
   },
   {
-    createCustom:
-      | S<400, "Entry category mismatch">
-      | S<404, "Entry not found">
-      | S<500, "Failed to create custom item">;
     releases: S<500, "Failed to get item releases">;
     get: S<404, "Item not found"> | S<500, "Failed to get item">;
     relatedOrders: S<500, "Failed to get item related orders">;
