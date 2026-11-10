@@ -101,7 +101,8 @@ export function createApp({ drain, authDocs }: AppOptions) {
       .use(
         evlog({
           drain,
-          exclude: ["/health"],
+          // A reset link carries its token in the path, and evlog logs the path.
+          exclude: ["/health", "/api/auth/reset-password/*"],
         }),
       )
       .use(
