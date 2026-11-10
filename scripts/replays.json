@@ -1,6 +1,22 @@
 {
   "test": [
     {
+      "fix": "1bcd28a6175594d4177cd5b7d86a7e56e0c48db4",
+      "bug": "The MFC page scrub dropped any element inside an item field that it did not list, with its text, so struck-out title text, a label element in a field label and fields that were a section, definition list or table row read differently after the scrub.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage keeps every reading of a page > a title with struck-out text",
+        "scrubMfcPage keeps every reading of a page > a field label in a label element",
+        "scrubMfcPage keeps every reading of a page > fields that are a section, a definition list and a table row"
+      ]
+    },
+    {
+      "fix": "c8bb716b1d0b79e7c0a640470226074b50111544",
+      "bug": "The MFC page scrub kept the tag names of bare ancestors and the user menu, so a custom element name could carry the user's text out of the MFC tab.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": ["scrubMfcPage sends nothing of the user > no element name carries the marker out"]
+    },
+    {
       "fix": "ca3f20e08c53e49b82213852e43739853fb6c9e0",
       "bug": "The MFC page scrub was a denylist, so the user's note and collection status on the Item, ?username= links, avatar images and profile links on language subdomains left the MFC tab and reached myakiba's server.",
       "test": "packages/mfc/src/capture.test.ts",
