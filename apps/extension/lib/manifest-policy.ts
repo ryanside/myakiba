@@ -42,7 +42,18 @@ export const manifestSchema = z.object({
   optional_permissions: strings,
   host_permissions: strings,
   optional_host_permissions: strings,
-  content_scripts: z.array(z.object({ matches: strings })).default([]),
+  content_scripts: z
+    .array(
+      z.object({
+        matches: strings,
+        all_frames: z.boolean().optional(),
+        world: z.string().optional(),
+      }),
+    )
+    .default([]),
+  externally_connectable: z.unknown().optional(),
+  web_accessible_resources: z.array(z.unknown()).default([]),
+  content_security_policy: z.unknown().optional(),
 });
 export type Manifest = z.input<typeof manifestSchema>;
 
@@ -58,6 +69,33 @@ function differences(
     ...expected
       .filter((entry) => !actual.includes(entry))
       .map((entry) => `${what} lack ${entry}, which STORE.md lists`),
+  ];
+}
+
+/** Each key that would let another site, extension or the page itself reach into the extension. */
+function openings(built: z.output<typeof manifestSchema>, browser: ManifestBrowser): string[] {
+  const manifest = `the ${browser} manifest sets`;
+  return [
+    ...(built.externally_connectable === undefined
+      ? []
+      : [
+          `${manifest} externally_connectable, which lets other extensions and sites message this one`,
+        ]),
+    ...(built.web_accessible_resources.length === 0
+      ? []
+      : [`${manifest} web_accessible_resources, which lets pages load the extension's files`]),
+    ...(built.content_security_policy === undefined
+      ? []
+      : [
+          `${manifest} content_security_policy, which replaces the browser's default CSP for the extension`,
+        ]),
+    ...built.content_scripts.flatMap((script) => {
+      const on = `the ${browser} content script on ${script.matches.join(", ")}`;
+      return [
+        ...(script.all_frames === true ? [`${on} runs in all frames, not only the top one`] : []),
+        ...(script.world === "MAIN" ? [`${on} runs in the page's MAIN world`] : []),
+      ];
+    }),
   ];
 }
 
@@ -79,5 +117,6 @@ export function checkManifest(manifest: Manifest, browser: ManifestBrowser): str
       built.content_scripts.flatMap((script) => script.matches),
       expected.contentScriptMatches,
     ),
+    ...openings(built, browser),
   ];
 }
