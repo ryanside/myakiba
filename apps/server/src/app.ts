@@ -6,6 +6,7 @@ import { MAX_ITEM_PAGE_BYTES, MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
 import { staticPlugin } from "@elysiajs/static";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -52,11 +53,43 @@ const resolveServerDistPath = (): string => {
   return path.resolve(process.cwd(), "dist");
 };
 
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gu;
+
+/**
+ * The web app runs its bundle and the inline scripts in its own index.html, hashed here so an edit
+ * to one cannot slip past, plus Turnstile's widget. Images are `https:` because a custom Item's
+ * picture may be any URL; MFC pictures come from the bucket, also `https:`. Its charts and
+ * components set inline styles.
+ */
+function contentSecurityPolicy(html: string): string {
+  const hashes = [...html.matchAll(INLINE_SCRIPT)].map(
+    ([, script = ""]) => `'sha256-${createHash("sha256").update(script).digest("base64")}'`,
+  );
+  return [
+    "default-src 'self'",
+    `script-src 'self' ${TURNSTILE_ORIGIN} ${hashes.join(" ")}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self'",
+    `connect-src 'self' ${new URL(env.BETTER_AUTH_URL).origin}`,
+    `frame-src ${TURNSTILE_ORIGIN}`,
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
 const serveIndexHtml = async (distDir: string): Promise<Response> => {
   const indexHtmlPath: string = path.resolve(distDir, "index.html");
   const indexHtml: string = await readFile(indexHtmlPath, "utf-8");
   return new Response(indexHtml, {
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": contentSecurityPolicy(indexHtml),
+      "x-frame-options": "DENY",
+    },
   });
 };
 
