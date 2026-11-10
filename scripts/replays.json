@@ -1,6 +1,16 @@
 {
   "test": [
     {
+      "fix": "ca3f20e08c53e49b82213852e43739853fb6c9e0",
+      "bug": "The MFC page scrub was a denylist, so the user's note and collection status on the Item, ?username= links, avatar images and profile links on language subdomains left the MFC tab and reached myakiba's server.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage sends nothing of the user > no trace of the marker or of the capturing user leaves the page",
+        "scrubMfcPage output > keeps only the title, og:image and canonical link in the head",
+        "scrubMfcPage keeps what readMfcEnvelope reads on other pages > keeps only the sign-in handle of a guest menu"
+      ]
+    },
+    {
       "fix": "fb844501e118ac4db502c841913449bbead8b497",
       "bug": "A picked date replaced the native field label with its placeholder, hiding the field name from screen readers.",
       "test": "apps/web/src/components/ui/date-picker.test.tsx",
