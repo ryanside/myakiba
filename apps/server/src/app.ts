@@ -87,13 +87,16 @@ export function createApp({ drain, authDocs }: AppOptions) {
         if (!needsSession(new URL(request.url).pathname)) return;
         if (!hasSessionCookie(request.headers)) return status(401);
       })
+      // The docs page loads an unpinned script from a CDN, so it stays off the production origin.
       .use(
-        openapi({
-          mapJsonSchema: {
-            zod: z.toJSONSchema,
-          },
-          documentation: authDocs,
-        }),
+        env.NODE_ENV === "production"
+          ? new Elysia()
+          : openapi({
+              mapJsonSchema: {
+                zod: z.toJSONSchema,
+              },
+              documentation: authDocs,
+            }),
       )
       .use(routes)
       .get("/", () => serveIndexHtml(serverDistPath))

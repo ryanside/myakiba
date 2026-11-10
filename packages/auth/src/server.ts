@@ -158,7 +158,8 @@ export const auth = betterAuth({
     }),
     username(),
     emailHarmony({}),
-    openAPI(),
+    // The reference page loads an unpinned script from a CDN, so it stays off the production origin.
+    ...(env.NODE_ENV === "production" ? [] : [openAPI()]),
     admin(),
     ...(env.BETTER_AUTH_API_KEY
       ? [

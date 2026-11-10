@@ -54,14 +54,15 @@ log.info({
   },
 });
 
-const authDocs: OpenAPIDocumentation | undefined = env.OPENAPI_AUTH_DOCS
+const includeAuthDocs = env.OPENAPI_AUTH_DOCS && env.NODE_ENV !== "production";
+const authDocs: OpenAPIDocumentation | undefined = includeAuthDocs
   ? ({
       components: await OpenAPI.components(),
       paths: await OpenAPI.getPaths(),
     } as OpenAPIDocumentation)
   : undefined;
 
-log.info({ msg: "auth docs resolved", includeAuthDocs: env.OPENAPI_AUTH_DOCS });
+log.info({ msg: "auth docs resolved", includeAuthDocs });
 
 const app = createApp({ drain, authDocs }).listen(3000, () => {
   log.info({
