@@ -3,7 +3,9 @@
 /// <reference types="jose" />
 import "dotenv/config";
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { getSessionCookie } from "better-auth/cookies";
 import { db } from "@myakiba/db/client";
 import * as schema from "@myakiba/db/schema/auth";
 import { admin, captcha, username, openAPI } from "better-auth/plugins";
@@ -16,11 +18,34 @@ import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
 import { z } from "zod";
 import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 
 import { accessSessionStore } from "./session-store";
 import { sendAuthEmail } from "./send-auth-email";
 
 const resend = new Resend(env.RESEND_API_KEY);
+
+/** Better Auth leaves a user's name and image unbounded, and every session read loads them. */
+const profileTextSchema = z.looseObject({
+  name: z
+    .string()
+    .max(WRITE_LIMITS.name, `Name is longer than ${WRITE_LIMITS.name} characters`)
+    .optional(),
+  image: z
+    .string()
+    .max(WRITE_LIMITS.imageUrl, `Image URL is longer than ${WRITE_LIMITS.imageUrl} characters`)
+    .nullish(),
+});
+
+const capProfileText = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/sign-up/email" && ctx.path !== "/update-user") return;
+  const parsed = profileTextSchema.safeParse(ctx.body ?? {});
+  if (parsed.success) return;
+  throw new APIError("BAD_REQUEST", {
+    code: "VALIDATION_ERROR",
+    message: parsed.error.issues[0]?.message ?? "Invalid profile",
+  });
+});
 
 export const auth = betterAuth({
   appName: "myakiba",
@@ -74,6 +99,9 @@ export const auth = betterAuth({
         },
       },
     },
+  },
+  hooks: {
+    before: capProfileText,
   },
   trustedOrigins: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
   rateLimit: {
@@ -180,6 +208,9 @@ export const auth = betterAuth({
     },
   },
 });
+
+/** Whether a request carries a session cookie at all, valid or not. */
+export const hasSessionCookie = (headers: Headers): boolean => getSessionCookie(headers) !== null;
 
 type OpenAPISchema = Awaited<ReturnType<typeof auth.api.generateOpenAPISchema>>;
 type OpenAPIOperation = { tags?: string[] };

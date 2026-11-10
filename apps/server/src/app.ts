@@ -1,6 +1,8 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { evlog } from "evlog/elysia";
+import { hasSessionCookie } from "@myakiba/auth/server";
+import { MAX_ITEM_PAGE_BYTES, MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 import { openapi } from "@elysiajs/openapi";
 import { staticPlugin } from "@elysiajs/static";
@@ -8,6 +10,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as z from "zod";
+import { publicRoutes } from "./boundary/public-routes";
 import { routes } from "./routes";
 
 export type OpenAPIDocumentation = NonNullable<
@@ -18,6 +21,22 @@ type AppOptions = {
   readonly drain: NonNullable<Parameters<typeof evlog>[0]>["drain"];
   readonly authDocs: OpenAPIDocumentation | undefined;
 };
+
+/**
+ * The largest legitimate request is an Item upload: a 2 MB page and a 10 MB picture. Their
+ * multipart framing measured 505 bytes, so 64 KiB leaves room for long file names.
+ */
+const MAX_REQUEST_BODY_BYTES = MAX_ITEM_PAGE_BYTES + MAX_ITEM_PICTURE_BYTES + 64 * 1024;
+
+const PUBLIC_PATHS = publicRoutes.routes.map((route) => route.path);
+const isPublicPath = (pathname: string): boolean =>
+  PUBLIC_PATHS.some((publicPath) =>
+    publicPath.endsWith("*")
+      ? pathname.startsWith(publicPath.slice(0, -1))
+      : pathname === publicPath,
+  );
+const needsSession = (pathname: string): boolean =>
+  (pathname === "/api" || pathname.startsWith("/api/")) && !isPublicPath(pathname);
 
 const resolveServerDistPath = (): string => {
   const candidates: readonly string[] = [
@@ -45,7 +64,7 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
 export function createApp({ drain, authDocs }: AppOptions) {
   const serverDistPath = resolveServerDistPath();
   return (
-    new Elysia()
+    new Elysia({ serve: { maxRequestBodySize: MAX_REQUEST_BODY_BYTES } })
       .use(
         evlog({
           drain,
@@ -61,6 +80,13 @@ export function createApp({ drain, authDocs }: AppOptions) {
           credentials: true,
         }),
       )
+      // privateApi checks the session after Elysia parses the body; this refuses a signed-out
+      // request before anything reads it. A preflight carries no cookie, so it passes.
+      .onRequest(({ request, status }) => {
+        if (request.method === "OPTIONS") return;
+        if (!needsSession(new URL(request.url).pathname)) return;
+        if (!hasSessionCookie(request.headers)) return status(401);
+      })
       .use(
         openapi({
           mapJsonSchema: {

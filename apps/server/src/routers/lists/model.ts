@@ -4,8 +4,11 @@ import {
   paginationLimitSchema,
   paginationOffsetSchema,
 } from "@myakiba/contracts/shared/pagination";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 
-export const listIdParamSchema = z.object({ listId: z.string().trim().min(1) });
+export const listIdParamSchema = z.object({
+  listId: z.string().trim().min(1).max(WRITE_LIMITS.id),
+});
 
 export const listPageQuerySchema = z.object({
   limit: paginationLimitSchema.optional().default(LIST_PAGE_SIZE),
@@ -25,8 +28,9 @@ export const removeTargetsFromListSchema = listIdParamSchema.extend({
 
 export const removeListMembersSchema = z.object({
   memberIds: z
-    .array(z.string().trim().min(1))
+    .array(z.string().trim().min(1).max(WRITE_LIMITS.id))
     .min(1)
+    .max(WRITE_LIMITS.ids)
     .refine((memberIds) => new Set(memberIds).size === memberIds.length, {
       error: "Selected IDs must be unique",
     }),
