@@ -29,14 +29,15 @@ export type ItemFields = {
 
 type FieldReader = (field: Cheerio<Element>, $: CheerioAPI, fields: ItemFields) => void;
 
+// A lookbehind lets a repeated run match only from where the run starts, so a long run is scanned once.
 const PATTERNS = {
   height: /H=([\d,]+)mm/,
   width: /W=([\d,]+)mm/,
   depth: /[DL]=([\d,]+)mm/,
-  price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
-  barcode: /([A-Z0-9-]+)$/,
+  price: /(?<![\d,])(\d+(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
+  barcode: /(?<![A-Z0-9-])([A-Z0-9-]+)$/,
   entryId: /\/entry\/(\d+)/,
-  materialPercentage: /(\d+(?:\.\d+)?)\s*%/,
+  materialPercentage: /(?<!\d)(\d+(?:\.\d+)?)\s*%/,
   ratingId: /[?&]ratingId=(\d+)/,
 } as const;
 
