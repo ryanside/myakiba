@@ -214,6 +214,10 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
       })),
   ],
   [
+    "price: comma groups before a currency",
+    () => fill(",111", (run) => ({ fields: release(`1${run} JPY`) })),
+  ],
+  [
     "title: an unclosed content label",
     () => fill("a", (run) => ({ title: `[${run}`, fields: "" })),
   ],

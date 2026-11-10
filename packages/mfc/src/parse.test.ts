@@ -390,6 +390,16 @@ const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])
     500,
     (size) => edit(item98777, ">Orchid Seed</span>", `>${"a".repeat(size)}</span>`),
   ],
+  [
+    "warnings",
+    100,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        characters(size, (index) => 3_000_000_000 + index) + MATERIALS_FIELD,
+      ),
+  ],
 ];
 
 describe("parseMfcItemPage size limits", () => {
@@ -406,6 +416,53 @@ describe("parseMfcItemPage size limits", () => {
       edit(item98777, 'class="time">11/15/2018</a>', `class="time">${"9".repeat(5000)}</a>`),
     );
     expect(page.warnings).toEqual([`release skipped: unsupported date "${"9".repeat(100)}…"`]);
+  });
+});
+
+describe("parseMfcItemPage values too large to store", () => {
+  test("a release price past safe money reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "999,999,999,999,999,999 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual(['unreadable release price "999,999,999,999,999,999"']);
+  });
+
+  test("a dimension past the integer column reads as none and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "<strong>140</strong>", "<strong>99,999,999,999</strong>"),
+    );
+    expect(page.height).toBeNull();
+    expect(page.warnings).toEqual(['unreadable height "99,999,999,999"']);
+  });
+
+  test("a rating id past the integer column reads as none and warns", () => {
+    const page = parsedPage(edit(item98777, "ratingId=3", "ratingId=99999999999"));
+    expect(page.mfcRatingId).toBeNull();
+    expect(page.warnings).toEqual(['unreadable rating id "99999999999"']);
+  });
+
+  test("an entry id past the integer column drops the entry and warns", () => {
+    const page = parsedPage(edit(item98777, 'href="/entry/7628"', 'href="/entry/99999999999"'));
+    expect(page.entries.map((entry) => entry.externalId)).not.toContain(7628);
+    expect(page.entries).toHaveLength(ENTRIES_98777.length - 1);
+    expect(page.warnings).toEqual(['unreadable entry id "99999999999"']);
+  });
+
+  test("a material percentage over 100 reads as none and warns", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        '<span switch="塩ビ">PVC</span></a></div>',
+        '<span switch="塩ビ">PVC</span></a> <small class="light">170%</small></div>',
+      ),
+    );
+    expect(
+      page.entries
+        .filter((entry) => entry.category === "Materials")
+        .map((entry) => entry.materialPercentage),
+    ).toEqual([null, null]);
+    expect(page.warnings).toEqual(['unreadable material percentage "170"']);
   });
 });
 

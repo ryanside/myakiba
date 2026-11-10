@@ -3,8 +3,8 @@ import { DomHandler, Parser } from "htmlparser2";
 /**
  * Sizes no real MFC Item page reaches, so a page past one was built to slow the parser down and is
  * rejected as too_large. The captured 98777 page nests 18 elements deep, 5 inside a data field, and
- * has 9 data fields, 7 entries, 1 release, a 64-character title, and an 18-character entry
- * name. Each limit sits far above what a real page shows. Every release past the first is a
+ * has 9 data fields, 7 entries, 1 release, a 64-character title, an 18-character entry name and no
+ * warnings. Each limit sits far above what a real page shows. Every release past the first is a
  * data field of its own, so dataFields leaves room for every release and every labelled field.
  * entryNameLength also keeps a name inside Postgres's 2704-byte btree row limit, which
  * `entry_name_category_idx` enforces.
@@ -17,6 +17,7 @@ export const PAGE_LIMITS = {
   releases: 200,
   titleLength: 2000,
   entryNameLength: 500,
+  warnings: 100,
 } as const;
 
 export type PageLimit = keyof typeof PAGE_LIMITS;

@@ -33,6 +33,9 @@ export type ItemFields = {
 
 type FieldReader = (field: Cheerio<Element>, $: CheerioAPI, fields: ItemFields) => void;
 
+/** The largest value a Postgres `integer` column holds. */
+const INT4_MAX = 2_147_483_647;
+
 // A lookbehind lets a repeated run match only from where the run starts, so a long run is scanned once.
 const PATTERNS = {
   height: /H=([\d,]+)mm/,
@@ -49,7 +52,7 @@ const plainEntries =
   (category: EntryCategory): FieldReader =>
   (field, $, fields) => {
     for (const link of field.find(".item-entry")) {
-      const entry = readEntryLink($(link));
+      const entry = readEntryLink($(link), fields);
       if (entry) fields.mentions.push({ ...entry, category, role: "", materialPercentage: null });
     }
   };
@@ -63,7 +66,7 @@ const entriesWithRoles =
       for (const node of $(group).contents()) {
         const $node = $(node);
         if ($node.hasClass("item-entry")) {
-          const entry = readEntryLink($node);
+          const entry = readEntryLink($node, fields);
           if (entry) pending.push(entry);
         } else if ($node.is("small.light") && $node.find("em").length > 0) {
           role = $node.find("em").text().trim();
@@ -83,9 +86,9 @@ const readMaterials: FieldReader = (field, $, fields) => {
   for (const group of field.find(".item-entries")) {
     const $group = $(group);
     const match = PATTERNS.materialPercentage.exec($group.find("small.light").text());
-    const materialPercentage = match?.[1] ? Number.parseFloat(match[1]) : null;
+    const materialPercentage = match?.[1] ? percentage(match[1], fields) : null;
     for (const link of $group.find(".item-entry")) {
-      const entry = readEntryLink($(link));
+      const entry = readEntryLink($(link), fields);
       if (entry) {
         fields.mentions.push({ ...entry, category: "Materials", role: "", materialPercentage });
       }
@@ -115,15 +118,15 @@ const readVersion: FieldReader = (field, $, fields) => {
 const readDimensions: FieldReader = (field, _$, fields) => {
   const text = valueText(field);
   fields.scale = field.find("a.item-scale").text().trim();
-  fields.height = millimetres(PATTERNS.height.exec(text));
-  fields.width = millimetres(PATTERNS.width.exec(text));
-  fields.depth = millimetres(PATTERNS.depth.exec(text));
+  fields.height = millimetres("height", PATTERNS.height.exec(text), fields);
+  fields.width = millimetres("width", PATTERNS.width.exec(text), fields);
+  fields.depth = millimetres("depth", PATTERNS.depth.exec(text), fields);
 };
 
 const readVarious: FieldReader = (field, _$, fields) => {
   const href = field.find('a[href*="ratingId="]').first().attr("href") ?? "";
   const match = PATTERNS.ratingId.exec(href);
-  fields.mfcRatingId = match?.[1] ? Number(match[1]) : null;
+  fields.mfcRatingId = match?.[1] ? integer("rating id", match[1], fields) : null;
 };
 
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
@@ -139,11 +142,7 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   fields.releases.push({
     rawDate: dateLink.text().trim(),
     type: types.join(" "),
-    price: price?.[1]
-      ? parseMoneyInputToMinorUnits(price[1]).unwrap(
-          `MFC release price matched the price pattern but is not valid safe money while parsing release fields: ${JSON.stringify(price[1])}`,
-        )
-      : 0,
+    price: price?.[1] ? money(price[1], fields) : 0,
     priceCurrency: price?.[2] ?? "JPY",
     barcode: PATTERNS.barcode.exec(text)?.[1] ?? "",
   });
@@ -248,6 +247,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     return Result.err("entryNameLength");
   }
   if (fields.releases.length > PAGE_LIMITS.releases) return Result.err("releases");
+  if (fields.warnings.length > PAGE_LIMITS.warnings) return Result.err("warnings");
   return Result.ok(fields);
 }
 
@@ -257,16 +257,46 @@ function hasClass(element: Element, name: string): boolean {
 
 function readEntryLink(
   $entry: Cheerio<AnyNode>,
+  fields: ItemFields,
 ): { externalId: number; sourceLabel: string } | null {
   const sourceLabel = $entry.find("span[switch]").text().trim();
   const id = PATTERNS.entryId.exec($entry.attr("href") ?? "")?.[1];
-  return sourceLabel && id ? { externalId: Number.parseInt(id, 10), sourceLabel } : null;
+  if (!sourceLabel || !id) return null;
+  const externalId = integer("entry id", id, fields);
+  return externalId === null ? null : { externalId, sourceLabel };
 }
 
 function valueText(field: Cheerio<Element>): string {
   return field.find(".data-value").first().text().replaceAll(/\s+/g, " ").trim();
 }
 
-function millimetres(match: RegExpExecArray | null): number | null {
-  return match?.[1] ? Number.parseInt(match[1].replaceAll(",", ""), 10) : null;
+/** Reads digits, with any thousands commas, that fit the `integer` column they are stored in, or warns and reads nothing. */
+function integer(name: string, text: string, fields: ItemFields): number | null {
+  const value = Number.parseInt(text.replaceAll(",", ""), 10);
+  if (Number.isInteger(value) && value <= INT4_MAX) return value;
+  fields.warnings.push(`unreadable ${name} ${quoted(text)}`);
+  return null;
+}
+
+function millimetres(
+  name: string,
+  match: RegExpExecArray | null,
+  fields: ItemFields,
+): number | null {
+  return match?.[1] ? integer(name, match[1], fields) : null;
+}
+
+/** Reads a percentage the `decimal(5,2)` column and its 0 to 100 check accept, or warns and reads nothing. */
+function percentage(text: string, fields: ItemFields): number | null {
+  const value = Number.parseFloat(text);
+  if (value <= 100) return value;
+  fields.warnings.push(`unreadable material percentage ${quoted(text)}`);
+  return null;
+}
+
+function money(text: string, fields: ItemFields): number {
+  const minorUnits = parseMoneyInputToMinorUnits(text);
+  if (minorUnits.isOk()) return minorUnits.value;
+  fields.warnings.push(`unreadable release price ${quoted(text)}`);
+  return 0;
 }
