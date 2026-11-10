@@ -114,6 +114,14 @@ export const auth = betterAuth({
     captcha({
       provider: "cloudflare-turnstile",
       secretKey: env.TURNSTILE_SECRET_KEY,
+      // Every endpoint that checks a password or sends mail without a session or a mailed token.
+      endpoints: [
+        "/sign-up/email",
+        "/sign-in/email",
+        "/sign-in/username",
+        "/request-password-reset",
+        "/send-verification-email",
+      ],
     }),
     username(),
     emailHarmony({}),

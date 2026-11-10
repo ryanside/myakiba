@@ -10,6 +10,9 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import type { User } from "@/lib/auth-client";
+import { PassingTurnstile } from "../../../test/turnstile";
+
+await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: PassingTurnstile }));
 
 await mock.module("@/lib/auth-redirect-url", () => ({
   getAuthRedirectUrl: (path: string) => `http://localhost:3001${path}`,
