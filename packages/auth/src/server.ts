@@ -47,6 +47,11 @@ export const auth = betterAuth({
     database: {
       joins: true,
     },
+    // Cloudflare sets cf-connecting-ip and overwrites a client's copy; a client sets
+    // X-Forwarded-For to anything. Without the header, dev and tests share 127.0.0.1.
+    ipAddress: {
+      ipAddressHeaders: ["cf-connecting-ip"],
+    },
   },
   database: drizzleAdapter(db, {
     provider: "pg",

@@ -1,5 +1,4 @@
 import { Elysia, status } from "elysia";
-import { createHash } from "node:crypto";
 import { redis } from "@myakiba/redis/client";
 import { auth } from "@myakiba/auth/server";
 
@@ -21,7 +20,6 @@ interface RateLimitConfig {
   readonly maxRequests: number;
   readonly windowSeconds: number;
   readonly keyPrefix: string;
-  readonly strategy: "userId" | "ipFingerprint";
 }
 
 interface RateLimitResult {
@@ -36,37 +34,20 @@ const rateLimitConfigs = {
     maxRequests: 2000,
     windowSeconds: 3600,
     keyPrefix: "rl:mfc-ingest",
-    strategy: "userId",
   },
   itemResync: {
     maxRequests: 60,
     windowSeconds: 3600,
     keyPrefix: "rl:item-resync",
-    strategy: "userId",
   },
   addCommit: {
     maxRequests: 120,
     windowSeconds: 3600,
     keyPrefix: "rl:add-commit",
-    strategy: "userId",
   },
 } as const satisfies Record<string, RateLimitConfig>;
 
 type RateLimitName = keyof typeof rateLimitConfigs;
-
-function getIpFingerprint(headers: Headers): string {
-  const ip =
-    headers.get("cf-connecting-ip") ??
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  const userAgent = headers.get("user-agent") ?? "";
-  const acceptLanguage = headers.get("accept-language") ?? "";
-
-  return createHash("sha256")
-    .update(`${ip}:${userAgent}:${acceptLanguage}`)
-    .digest("hex")
-    .slice(0, 16);
-}
 
 async function getUserId(headers: Headers): Promise<string | null> {
   const session = await auth.api.getSession({ headers });
@@ -94,15 +75,9 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
   rateLimit: (name: RateLimitName) => ({
     async beforeHandle({ request, set }) {
       const config = rateLimitConfigs[name];
-
-      let identifier: string | null;
-
-      if (config.strategy === "userId") {
-        identifier = await getUserId(request.headers);
-        if (!identifier) return;
-      } else {
-        identifier = getIpFingerprint(request.headers);
-      }
+      // Keyed on the signed-in user, never on a header the client can change.
+      const identifier = await getUserId(request.headers);
+      if (!identifier) return;
 
       const key = `${config.keyPrefix}:${identifier}`;
       const result = await checkRateLimit(key, config);
