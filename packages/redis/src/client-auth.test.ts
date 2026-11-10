@@ -20,8 +20,11 @@ const server = Bun.listen<{ authenticated: boolean }>({
           const password = command.at(-1);
           passwordsSent.push(password);
           socket.data.authenticated = password === PASSWORD;
-          if (socket.data.authenticated) {socket.write(name === "AUTH" ? "+OK\r\n" : "%1\r\n+server\r\n+redis\r\n");}
-          else {socket.write("-WRONGPASS invalid password\r\n");}
+          if (socket.data.authenticated) {
+            socket.write(name === "AUTH" ? "+OK\r\n" : "%1\r\n+server\r\n+redis\r\n");
+          } else {
+            socket.write("-WRONGPASS invalid password\r\n");
+          }
         } else if (!socket.data.authenticated) {
           socket.write("-NOAUTH Authentication required.\r\n");
         } else if (name === "INFO") {
