@@ -41,6 +41,8 @@ function readings(html: string) {
 
 const COMPANY_FIELD =
   '<div class="data-field"><div class="data-label">Company</div><div class="data-value"><div class="item-entries"><a href="/entry/7628" class="tbx-tooltip item-entry important"><img src="https://static.myfigurecollection.net/upload/entries/0/7628-40502.jpg" alt="Orchid Seed"/><meta name="vars" content="7:7628"/><span switch="オーキッドシード">Orchid Seed</span></a>&nbsp;<small class="light">as <em>Manufacturer</em></small></div></div></div>';
+const DIMENSIONS_FIELD =
+  '<div class="data-field"><div class="data-label">Dimensions</div><div class="data-value"><a href="/?_tb=item&amp;scale=7" class="item-scale" title="Scale"><small>1/</small>7</a>&nbsp;&nbsp;<small>H=</small><strong>140</strong><small>mm (5.46in, 1:1=0.98m)</small></div></div>';
 const VARIOUS_FIELD = '<div class="data-field"><div class="data-label">Various</div>';
 const OG_IMAGE =
   'content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"';
@@ -140,6 +142,30 @@ const VARIANTS: readonly (readonly [string, string])[] = [
   ],
   ["no og:image", edit(item98777, `<meta property="og:image" ${OG_IMAGE}/>`, "")],
   ["another item", edit(item98777, "/item/98777", "/item/98778")],
+  [
+    "a title with struck-out text",
+    edit(
+      item98777,
+      VARIOUS_FIELD,
+      `<div class="data-field"><div class="data-label">Title</div><div class="data-value">Hello <s>Good-bye</s></div></div>${VARIOUS_FIELD}`,
+    ),
+  ],
+  [
+    "a field label in a label element",
+    edit(
+      item98777,
+      '<div class="data-label">Various</div>',
+      '<div class="data-label"><label>Various</label></div>',
+    ),
+  ],
+  [
+    "fields that are a section, a definition list and a table row",
+    edit(
+      item98777,
+      DIMENSIONS_FIELD,
+      `${DIMENSIONS_FIELD.replace("<div", "<section").replace(/<\/div>$/, "</section>")}<dl class="data-field"><dt class="data-label">Numbering</dt><dd class="data-value">#12</dd></dl><table><tr class="data-field"><td class="data-label">Title</td><td class="data-value">Hello</td></tr></table>`,
+    ),
+  ],
 ];
 
 describe("scrubMfcPage keeps every reading of a page", () => {

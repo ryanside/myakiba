@@ -23,6 +23,16 @@ const HTML_ELEMENTS = new Set(
   ].flatMap((names) => names.split(" ")),
 );
 
+// Inside a field every element keeps its text, except these, whose content is not text.
+const NON_TEXT_ELEMENTS = new Set(
+  [
+    "script style template noscript noembed noframes plaintext title meta link base",
+    "img picture source track video audio canvas iframe frame frameset object embed param",
+    "applet bgsound map area svg math input textarea select option optgroup datalist",
+    "button output meter progress keygen",
+  ].flatMap((names) => names.split(" ")),
+);
+
 function tagOf(source: Element): string {
   return HTML_ELEMENTS.has(source.localName) ? source.localName : "span";
 }
@@ -120,8 +130,8 @@ function isGuestMenu(menu: Element): boolean {
 
 function copyField(source: Element, out: Document): Element | null {
   const name = source.localName;
-  if (!READS.fieldElements.has(name)) return null;
-  const copy = withAttributes(out.createElement(name), {
+  if (NON_TEXT_ELEMENTS.has(name)) return null;
+  const copy = withAttributes(out.createElement(tagOf(source)), {
     class: source.getAttribute("class"),
     href: name === "a" ? readFieldHrefIds(source.getAttribute("href")) : null,
     switch: source.hasAttribute("switch") ? "" : null,
