@@ -5,7 +5,7 @@ import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
-import { PAGE_LIMITS, quoted } from "./limits";
+import { PAGE_LIMITS, clippedQuote } from "./limits";
 import type { PageLimit } from "./limits";
 
 export type EntryMention = {
@@ -33,7 +33,6 @@ export type ItemFields = {
 
 type FieldReader = (field: Cheerio<Element>, $: CheerioAPI, fields: ItemFields) => void;
 
-/** The largest value a Postgres `integer` column holds. */
 const INT4_MAX = 2_147_483_647;
 
 // A lookbehind lets a repeated run match only from where the run starts, so a long run is scanned once.
@@ -86,7 +85,7 @@ const readMaterials: FieldReader = (field, $, fields) => {
   for (const group of field.find(".item-entries")) {
     const $group = $(group);
     const match = PATTERNS.materialPercentage.exec($group.find("small.light").text());
-    const materialPercentage = match?.[1] ? percentage(match[1], fields) : null;
+    const materialPercentage = match?.[1] ? storedPercentage(match[1], fields) : null;
     for (const link of $group.find(".item-entry")) {
       const entry = readEntryLink($(link), fields);
       if (entry) {
@@ -126,7 +125,7 @@ const readDimensions: FieldReader = (field, _$, fields) => {
 const readVarious: FieldReader = (field, _$, fields) => {
   const href = field.find('a[href*="ratingId="]').first().attr("href") ?? "";
   const match = PATTERNS.ratingId.exec(href);
-  fields.mfcRatingId = match?.[1] ? integer("rating id", match[1], fields) : null;
+  fields.mfcRatingId = match?.[1] ? storedInteger("rating id", match[1], fields) : null;
 };
 
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
@@ -171,15 +170,13 @@ const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map([
   ["Various", readVarious],
 ]);
 
-/** The data fields of the Item, in page order, with how deep elements nest inside any one of them. */
-type DataFields = { readonly fields: Element[]; readonly depth: number };
+type DataFields = { readonly fields: Element[]; readonly fieldDepth: number };
 
-/** A Releases field and the sibling fields MFC lists its later releases in. */
 type ReleaseGroup = { parent: AnyNode | null; fields: Cheerio<Element>[] };
 
 function dataFields(root: AnyNode | undefined): DataFields {
   const fields: Element[] = [];
-  let depth = 0;
+  let fieldDepth = 0;
   const stack: { node: AnyNode; depth: number | null }[] = root
     ? [{ node: root, depth: null }]
     : [];
@@ -191,13 +188,13 @@ function dataFields(root: AnyNode | undefined): DataFields {
       fields.push(node);
       inside = 0;
     }
-    if (inside !== null && inside > depth) depth = inside;
+    if (inside !== null && inside > fieldDepth) fieldDepth = inside;
     for (let index = node.children.length - 1; index >= 0; index -= 1) {
       const child = node.children[index];
       if (child) stack.push({ node: child, depth: inside });
     }
   }
-  return { fields, depth };
+  return { fields, fieldDepth };
 }
 
 export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
@@ -217,7 +214,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
   };
   const found = dataFields($(".item-object").first()[0]);
   if (found.fields.length > PAGE_LIMITS.dataFields) return Result.err("dataFields");
-  if (found.depth > PAGE_LIMITS.fieldDepth) return Result.err("fieldDepth");
+  if (found.fieldDepth > PAGE_LIMITS.fieldDepth) return Result.err("fieldDepth");
 
   // MFC lists a second release as a sibling field with no label, or with the item-extra-release class.
   const releases: ReleaseGroup = { parent: null, fields: [] };
@@ -238,7 +235,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     else if (label.startsWith("Releases")) {
       releases.parent = element.parent;
       releases.fields = [field];
-    } else fields.warnings.push(`unread field ${quoted(label)}`);
+    } else fields.warnings.push(`unread field ${clippedQuote(label)}`);
   }
   for (const release of releases.fields) readRelease(release, $, fields);
 
@@ -262,7 +259,7 @@ function readEntryLink(
   const sourceLabel = $entry.find("span[switch]").text().trim();
   const id = PATTERNS.entryId.exec($entry.attr("href") ?? "")?.[1];
   if (!sourceLabel || !id) return null;
-  const externalId = integer("entry id", id, fields);
+  const externalId = storedInteger("entry id", id, fields);
   return externalId === null ? null : { externalId, sourceLabel };
 }
 
@@ -270,11 +267,10 @@ function valueText(field: Cheerio<Element>): string {
   return field.find(".data-value").first().text().replaceAll(/\s+/g, " ").trim();
 }
 
-/** Reads digits, with any thousands commas, that fit the `integer` column they are stored in, or warns and reads nothing. */
-function integer(name: string, text: string, fields: ItemFields): number | null {
+function storedInteger(name: string, text: string, fields: ItemFields): number | null {
   const value = Number.parseInt(text.replaceAll(",", ""), 10);
   if (Number.isInteger(value) && value <= INT4_MAX) return value;
-  fields.warnings.push(`unreadable ${name} ${quoted(text)}`);
+  fields.warnings.push(`unreadable ${name} ${clippedQuote(text)}`);
   return null;
 }
 
@@ -283,20 +279,19 @@ function millimetres(
   match: RegExpExecArray | null,
   fields: ItemFields,
 ): number | null {
-  return match?.[1] ? integer(name, match[1], fields) : null;
+  return match?.[1] ? storedInteger(name, match[1], fields) : null;
 }
 
-/** Reads a percentage the `decimal(5,2)` column and its 0 to 100 check accept, or warns and reads nothing. */
-function percentage(text: string, fields: ItemFields): number | null {
+function storedPercentage(text: string, fields: ItemFields): number | null {
   const value = Number.parseFloat(text);
   if (value <= 100) return value;
-  fields.warnings.push(`unreadable material percentage ${quoted(text)}`);
+  fields.warnings.push(`unreadable material percentage ${clippedQuote(text)}`);
   return null;
 }
 
 function money(text: string, fields: ItemFields): number {
   const minorUnits = parseMoneyInputToMinorUnits(text);
   if (minorUnits.isOk()) return minorUnits.value;
-  fields.warnings.push(`unreadable release price ${quoted(text)}`);
+  fields.warnings.push(`unreadable release price ${clippedQuote(text)}`);
   return 0;
 }

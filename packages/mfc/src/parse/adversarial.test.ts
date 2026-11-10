@@ -4,7 +4,6 @@ import { parseJson } from "@myakiba/utils/parse-json";
 
 const PAGE_BYTES = 2 * 1024 * 1024;
 const BOUND_MS = 1000;
-/** Long enough for a child process to start on a slow runner, short enough to cut off a quadratic parse. */
 const DEADLINE_MS = 5000;
 const TIME_PARSE = new URL("../../test/time-parse.ts", import.meta.url).pathname;
 
@@ -18,7 +17,6 @@ function field(label: string, value: string): string {
   return `<div class="data-field"><div class="data-label">${label}</div><div class="data-value">${value}</div></div>`;
 }
 
-/** Appends `unit(0)`, `unit(1)`, … while the page built around them stays within the upload limit. */
 function fillWith(unit: (index: number) => string, build: (filler: string) => Page): string {
   let room = PAGE_BYTES - shell(build("")).length;
   const parts: string[] = [];
@@ -39,7 +37,6 @@ function nested(open: string, close: string, build: (filler: string) => Page): s
   return shell(build(open.repeat(depth) + close.repeat(depth)));
 }
 
-/** Wraps the page's filler in `depth` nested copies of an element, the deepest the limits allow. */
 function around(
   open: string,
   close: string,
@@ -61,7 +58,6 @@ const release = (value: string) => field("Releases", `<a class="time">01/01/2020
 const entry = (id: string, label: string) =>
   `<a href="/entry/${id}" class="item-entry"><span switch="">${label}</span></a>`;
 
-/** One row per field reader and pattern: the worst 2 MB page for it. A new reader adds its row. */
 const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   [
     "price: comma groups with no currency",
@@ -231,7 +227,6 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
 ];
 
-/** Pages as deep as the limits allow, holding the whole upload in their deepest element. They must parse. */
 const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
   [
     "data values nested to the field depth limit",
@@ -274,7 +269,6 @@ const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
 
 const timedParse = z.object({ ms: z.number(), outcome: z.string() });
 
-/** Parses in a child process, so a parse that would run for an hour is killed at the deadline. */
 async function timeParse(html: string): Promise<z.infer<typeof timedParse> | "too slow"> {
   const child = Bun.spawn([process.execPath, TIME_PARSE], {
     stdin: new Blob([html]),

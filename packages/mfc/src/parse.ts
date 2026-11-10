@@ -9,7 +9,7 @@ import { readMfcEnvelope } from "./page";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
-import { PAGE_LIMITS, parseShallowDocument, quoted } from "./parse/limits";
+import { PAGE_LIMITS, parseShallowDocument, clippedQuote } from "./parse/limits";
 import type { PageLimit } from "./parse/limits";
 import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
@@ -105,16 +105,17 @@ export function parseMfcItemPage(
   const { title, contentLabel } = splitContentLabel(rawTitle);
   const warnings = [...fields.warnings];
   const bracket = CONTENT_LABEL_PREFIX.exec(title);
-  if (!contentLabel && bracket) warnings.push(`unknown title bracket ${quoted(`[${bracket[1]}]`)}`);
+  if (!contentLabel && bracket)
+    warnings.push(`unknown title bracket ${clippedQuote(`[${bracket[1]}]`)}`);
   if (envelope.ogImage.kind === "rejected") {
-    warnings.push(`picture rejected: ${quoted(envelope.ogImage.raw)}`);
+    warnings.push(`picture rejected: ${clippedQuote(envelope.ogImage.raw)}`);
   }
 
   const releases: MfcRelease[] = [];
   for (const { rawDate, ...release } of fields.releases) {
     const date = normalizeMfcDate(rawDate);
     if (date) releases.push({ date, ...release });
-    else warnings.push(`release skipped: unsupported date ${quoted(rawDate)}`);
+    else warnings.push(`release skipped: unsupported date ${clippedQuote(rawDate)}`);
   }
 
   return Result.ok({

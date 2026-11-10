@@ -332,7 +332,6 @@ function characters(count: number, id: (index: number) => number): string {
   return `<div class="data-field"><div class="data-label">Characters</div><div class="data-value">${links.join("")}</div></div>`;
 }
 
-/** Each limit with a builder for the 98777 page holding `size` of what it limits. */
 type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
 
 const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])[] = [

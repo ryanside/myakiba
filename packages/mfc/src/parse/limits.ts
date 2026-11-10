@@ -53,7 +53,6 @@ export function parseShallowDocument(html: string): DomHandler["root"] | null {
 
 const CLIPPED_LENGTH = 100;
 
-/** A page value quoted for a warning, cut short so a crafted value cannot flood the logs. */
-export function quoted(value: string): string {
+export function clippedQuote(value: string): string {
   return `"${value.length > CLIPPED_LENGTH ? `${value.slice(0, CLIPPED_LENGTH)}…` : value}"`;
 }
