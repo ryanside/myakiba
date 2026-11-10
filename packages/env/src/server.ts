@@ -18,6 +18,9 @@ export const env = createEnv({
     BETTER_AUTH_URL: z.url(),
     BETTER_AUTH_API_KEY: z.string().min(1).optional(),
     BUILD_ID: z.string().optional().default("dev"),
+    NODE_ENV: z.enum(["development", "test", "production"]).optional().default("development"),
+    OPENAPI_AUTH_DOCS: z.stringbool().optional().default(false),
+    STATIC_ASSETS_DIR: z.string().min(1).optional(),
     POSTHOG_API_KEY: z.string().min(1).optional(),
     // Named so the AWS SDK does not read it on its own, as it does AWS_ENDPOINT_URL.
     S3_ENDPOINT_URL: z.url().optional(),
