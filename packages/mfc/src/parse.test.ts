@@ -318,6 +318,97 @@ describe("parseMfcItemPage warnings", () => {
   });
 });
 
+const ITEM_OBJECT = '<div class="object-wrapper item-object">';
+const CATEGORY_FIELD = '<div class="data-field"><div class="data-label">Category';
+const MATERIALS_FIELD = '<div class="data-field"><div class="data-label">Materials';
+const RAW_TITLE = "[Explicit] - Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)</h1>";
+
+function characters(count: number, id: (index: number) => number): string {
+  const links = Array.from(
+    { length: count },
+    (_, index) =>
+      `<a href="/entry/${id(index)}" class="item-entry"><span switch="">C${index}</span></a>`,
+  );
+  return `<div class="data-field"><div class="data-label">Characters</div><div class="data-value">${links.join("")}</div></div>`;
+}
+
+/** Each limit with a builder for the 98777 page holding `size` of what it limits. */
+type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
+
+const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])[] = [
+  [
+    "depth",
+    256,
+    (size) =>
+      edit(
+        item98777,
+        ITEM_OBJECT,
+        ITEM_OBJECT + "<div>".repeat(size - 9) + "</div>".repeat(size - 9),
+      ),
+  ],
+  [
+    "fieldDepth",
+    32,
+    (size) =>
+      edit(item98777, ">Orchid Seed</span>", `>${"<b>".repeat(size - 4)}Orchid Seed</span>`),
+  ],
+  [
+    "dataFields",
+    300,
+    (size) =>
+      edit(
+        item98777,
+        CATEGORY_FIELD,
+        '<div class="data-field"></div>'.repeat(size - 9) + CATEGORY_FIELD,
+      ),
+  ],
+  [
+    "entries",
+    1000,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        characters(size - 7, (index) => 1_000_000 + index) + MATERIALS_FIELD,
+      ),
+  ],
+  [
+    "releases",
+    200,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        '<div class="data-field"><div class="data-value"><a class="time">11/15/2018</a></div></div>'.repeat(
+          size - 1,
+        ) + MATERIALS_FIELD,
+      ),
+  ],
+  ["titleLength", 2000, (size) => edit(item98777, RAW_TITLE, `${"a".repeat(size)}</h1>`)],
+  [
+    "entryNameLength",
+    500,
+    (size) => edit(item98777, ">Orchid Seed</span>", `>${"a".repeat(size)}</span>`),
+  ],
+];
+
+describe("parseMfcItemPage size limits", () => {
+  test.each(LIMIT_CASES)("a page at its %s limit of %d parses", (_limit, size, build) => {
+    expect(problemOf(build(size))).toBeNull();
+  });
+
+  test.each(LIMIT_CASES)("a page past its %s limit of %d is too_large", (limit, size, build) => {
+    expect(problemOf(build(size + 1))).toEqual({ kind: "too_large", limit });
+  });
+
+  test("a warning quotes at most 100 characters of a crafted value", () => {
+    const page = parsedPage(
+      edit(item98777, 'class="time">11/15/2018</a>', `class="time">${"9".repeat(5000)}</a>`),
+    );
+    expect(page.warnings).toEqual([`release skipped: unsupported date "${"9".repeat(100)}…"`]);
+  });
+});
+
 describe("splitContentLabel", () => {
   test.each([
     ["[Intermediate] - A", { title: "A", contentLabel: "intermediate" }],

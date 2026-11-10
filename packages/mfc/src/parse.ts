@@ -9,6 +9,8 @@ import { readMfcEnvelope } from "./page";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
+import { PAGE_LIMITS, parseShallowDocument, quoted } from "./parse/limits";
+import type { PageLimit } from "./parse/limits";
 import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
 export { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
@@ -57,7 +59,8 @@ export type MfcPageProblem =
   | { readonly kind: "sfw_hidden" }
   | { readonly kind: "missing_title" }
   | { readonly kind: "missing_category" }
-  | { readonly kind: "unsupported_category"; readonly raw: string };
+  | { readonly kind: "unsupported_category"; readonly raw: string }
+  | { readonly kind: "too_large"; readonly limit: PageLimit };
 
 const ENVELOPE_PROBLEMS = {
   challenge: { kind: "challenge" },
@@ -71,6 +74,8 @@ export function parseMfcItemPage(
 ): Result<MfcItemPage, MfcPageUnreadable> {
   const unreadable = (problem: MfcPageProblem) =>
     Result.err(new MfcPageUnreadable({ mfcItemId: expected, problem }));
+  const document = parseShallowDocument(html);
+  if (!document) return unreadable({ kind: "too_large", limit: "depth" });
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
   if (envelope.kind !== "item") return unreadable(ENVELOPE_PROBLEMS[envelope.kind]);
   if (envelope.mfcItemId !== expected) {
@@ -78,11 +83,16 @@ export function parseMfcItemPage(
   }
   if (envelope.ogImage.kind === "sfw_hidden") return unreadable({ kind: "sfw_hidden" });
 
-  const $ = cheerio.load(html);
+  const $ = cheerio.load(document);
   const rawTitle = $("h1.title").first().text().trim();
   if (!rawTitle) return unreadable({ kind: "missing_title" });
+  if (rawTitle.length > PAGE_LIMITS.titleLength) {
+    return unreadable({ kind: "too_large", limit: "titleLength" });
+  }
 
-  const fields = readItemFields($);
+  const read = readItemFields($);
+  if (read.isErr()) return unreadable({ kind: "too_large", limit: read.error });
+  const fields = read.value;
   const category = CATEGORIES.find((known) => known === fields.rawCategory);
   if (!category) {
     return unreadable(
@@ -95,16 +105,16 @@ export function parseMfcItemPage(
   const { title, contentLabel } = splitContentLabel(rawTitle);
   const warnings = [...fields.warnings];
   const bracket = CONTENT_LABEL_PREFIX.exec(title);
-  if (!contentLabel && bracket) warnings.push(`unknown title bracket "[${bracket[1]}]"`);
+  if (!contentLabel && bracket) warnings.push(`unknown title bracket ${quoted(`[${bracket[1]}]`)}`);
   if (envelope.ogImage.kind === "rejected") {
-    warnings.push(`picture rejected: "${envelope.ogImage.raw}"`);
+    warnings.push(`picture rejected: ${quoted(envelope.ogImage.raw)}`);
   }
 
   const releases: MfcRelease[] = [];
   for (const { rawDate, ...release } of fields.releases) {
     const date = normalizeMfcDate(rawDate);
     if (date) releases.push({ date, ...release });
-    else warnings.push(`release skipped: unsupported date "${rawDate}"`);
+    else warnings.push(`release skipped: unsupported date ${quoted(rawDate)}`);
   }
 
   return Result.ok({

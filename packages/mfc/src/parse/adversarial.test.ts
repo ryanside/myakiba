@@ -33,6 +33,30 @@ function fill(unit: string, build: (filler: string) => Page): string {
   return fillWith(() => unit, build);
 }
 
+function nested(open: string, close: string, build: (filler: string) => Page): string {
+  const room = PAGE_BYTES - shell(build("")).length;
+  const depth = Math.floor(room / (open.length + close.length));
+  return shell(build(open.repeat(depth) + close.repeat(depth)));
+}
+
+/** Wraps the page's filler in `depth` nested copies of an element, the deepest the limits allow. */
+function around(
+  open: string,
+  close: string,
+  depth: number,
+  build: (filler: string) => Page,
+): string {
+  return fill("x ", (run) => build(open.repeat(depth) + run + close.repeat(depth)));
+}
+
+/**
+ * PAGE_LIMITS.fieldDepth and .depth, written out so this file also loads at revisions before the
+ * limits existed. A field's own .data-value is one level of its depth; html, body, .item-object and
+ * the field are four more of the page's.
+ */
+const FIELD_DEPTH = 32 - 1;
+const PAGE_DEPTH = 256 - 5;
+
 const release = (value: string) => field("Releases", `<a class="time">01/01/2020</a> ${value}`);
 const entry = (id: string, label: string) =>
   `<a href="/entry/${id}" class="item-entry"><span switch="">${label}</span></a>`;
@@ -106,9 +130,42 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
       })),
   ],
   [
+    "Releases followed by sibling unlabelled releases",
+    () =>
+      fill('<div class="data-field"><a class="time">01/01/2020</a></div>', (run) => ({
+        fields: release("1 JPY") + run,
+      })),
+  ],
+  [
     "sibling fields with unknown labels",
     () => fill(field("Sculpting", "x"), (run) => ({ fields: run })),
   ],
+  [
+    "nested data fields",
+    () =>
+      nested('<div class="data-field"><div class="data-label">Origin</div>', "</div>", (run) => ({
+        fields: run,
+      })),
+  ],
+  [
+    "nested data values",
+    () =>
+      nested('<div class="data-value">x', "</div>", (run) => ({
+        fields: field("Releases", `<a class="time">01/01/2020</a>${run}`),
+      })),
+  ],
+  [
+    "nested entry groups",
+    () =>
+      nested(
+        `<div class="item-entries">${entry("1", "x")}<small class="light">1%`,
+        "</small></div>",
+        (run) => ({
+          fields: field("Materials", run),
+        }),
+      ),
+  ],
+  ["nested elements", () => nested("<b>", "</b>", (run) => ({ fields: field("Title", run) }))],
   [
     "entry groups with roles",
     () =>
@@ -137,6 +194,26 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
       ),
   ],
   [
+    "Nendoroid label: whitespace with a failing tail",
+    () =>
+      fill(" ", (run) => ({
+        fields: field(
+          "Classification",
+          `<div class="item-entries">${entry("23355", `x${run}y`)}</div>`,
+        ),
+      })),
+  ],
+  [
+    "Nendoroid label: repeated number openers",
+    () =>
+      fill(" (#", (run) => ({
+        fields: field(
+          "Classification",
+          `<div class="item-entries">${entry("23355", `x${run}`)}</div>`,
+        ),
+      })),
+  ],
+  [
     "title: an unclosed content label",
     () => fill("a", (run) => ({ title: `[${run}`, fields: "" })),
   ],
@@ -147,6 +224,47 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   [
     "page title: whitespace",
     () => fill(" ", (run) => ({ head: `<title>${run}x</title>`, fields: "" })),
+  ],
+];
+
+/** Pages as deep as the limits allow, holding the whole upload in their deepest element. They must parse. */
+const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
+  [
+    "data values nested to the field depth limit",
+    () =>
+      around('<div class="data-value">', "</div>", FIELD_DEPTH, (run) => ({
+        fields: field("Title", run),
+      })),
+  ],
+  [
+    "version links nested to the field depth limit",
+    () => around("<a>", "</a>", FIELD_DEPTH, (run) => ({ fields: field("Version", run) })),
+  ],
+  [
+    "entry groups nested to the field depth limit",
+    () =>
+      around(
+        '<div class="item-entries"><small class="light">',
+        "</small></div>",
+        Math.floor(FIELD_DEPTH / 2),
+        (run) => ({
+          fields: field("Materials", run),
+        }),
+      ),
+  ],
+  [
+    "release dates nested to the field depth limit",
+    () =>
+      around('<a class="time">', "</a>", FIELD_DEPTH, (run) => ({
+        fields: field("Releases", run),
+      })),
+  ],
+  [
+    "fields nested to the page depth limit",
+    () =>
+      fill("x ", (run) => ({
+        fields: "<b>".repeat(PAGE_DEPTH) + field("Title", run) + "</b>".repeat(PAGE_DEPTH),
+      })),
   ],
 ];
 
@@ -180,6 +298,20 @@ describe("parseMfcItemPage on adversarial pages at the upload limit", () => {
       expect(timed).not.toBe("too slow");
       if (timed === "too slow") return;
       expect(timed.outcome).not.toStartWith("threw");
+      expect(timed.ms).toBeLessThan(BOUND_MS);
+    },
+    DEADLINE_MS * 2,
+  );
+});
+
+describe("parseMfcItemPage on pages at the nesting limits", () => {
+  test.each(AT_LIMIT_PAGES)(
+    `%s parses within ${BOUND_MS} ms`,
+    async (_name, build) => {
+      const timed = await timeParse(build());
+      expect(timed).not.toBe("too slow");
+      if (timed === "too slow") return;
+      expect(timed.outcome).toBe("parsed");
       expect(timed.ms).toBeLessThan(BOUND_MS);
     },
     DEADLINE_MS * 2,

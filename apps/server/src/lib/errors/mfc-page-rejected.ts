@@ -11,6 +11,7 @@ const PROBLEM_MESSAGE = {
   missing_title: "The item page has no title",
   missing_category: "The item page has no category",
   unsupported_category: "This item category is not supported",
+  too_large: "The page is larger than any MyFigureCollection item page",
 } as const satisfies Record<MfcPageProblem["kind"], string>;
 
 /** An uploaded MFC item page the server cannot ingest, answered as a 400 that names why. */

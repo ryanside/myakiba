@@ -1,8 +1,12 @@
+import { Result } from "better-result";
 import type { Cheerio, CheerioAPI } from "cheerio";
+import { isTag } from "domhandler";
 import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
+import { PAGE_LIMITS, quoted } from "./limits";
+import type { PageLimit } from "./limits";
 
 export type EntryMention = {
   readonly externalId: number;
@@ -90,7 +94,7 @@ const readMaterials: FieldReader = (field, $, fields) => {
 };
 
 const readCategory: FieldReader = (field, _$, fields) => {
-  fields.rawCategory = field.find(".data-value").find("span").first().text().trim();
+  fields.rawCategory = field.find(".data-value").first().find("span").first().text().trim();
 };
 
 const readMfcTitle: FieldReader = (field, _$, fields) => {
@@ -125,7 +129,7 @@ const readVarious: FieldReader = (field, _$, fields) => {
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
   const dateLink = $release.find("a.time");
   if (dateLink.length === 0) return;
-  const text = $release.find(".data-value").text();
+  const text = $release.find(".data-value").first().text();
   const types: string[] = [];
   for (const em of $release.find("small.light").find("em")) {
     const part = $(em).text().trim();
@@ -168,10 +172,36 @@ const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map([
   ["Various", readVarious],
 ]);
 
+/** The data fields of the Item, in page order, with how deep elements nest inside any one of them. */
+type DataFields = { readonly fields: Element[]; readonly depth: number };
+
 /** A Releases field and the sibling fields MFC lists its later releases in. */
 type ReleaseGroup = { parent: AnyNode | null; fields: Cheerio<Element>[] };
 
-export function readItemFields($: CheerioAPI): ItemFields {
+function dataFields(root: AnyNode | undefined): DataFields {
+  const fields: Element[] = [];
+  let depth = 0;
+  const stack: { node: AnyNode; depth: number | null }[] = root
+    ? [{ node: root, depth: null }]
+    : [];
+  for (let next = stack.pop(); next; next = stack.pop()) {
+    const { node } = next;
+    if (!isTag(node)) continue;
+    let inside = next.depth === null ? null : next.depth + 1;
+    if (inside === null && node !== root && hasClass(node, "data-field")) {
+      fields.push(node);
+      inside = 0;
+    }
+    if (inside !== null && inside > depth) depth = inside;
+    for (let index = node.children.length - 1; index >= 0; index -= 1) {
+      const child = node.children[index];
+      if (child) stack.push({ node: child, depth: inside });
+    }
+  }
+  return { fields, depth };
+}
+
+export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
   const fields: ItemFields = {
     rawCategory: "",
     mfcTitle: null,
@@ -186,9 +216,13 @@ export function readItemFields($: CheerioAPI): ItemFields {
     releases: [],
     warnings: [],
   };
+  const found = dataFields($(".item-object").first()[0]);
+  if (found.fields.length > PAGE_LIMITS.dataFields) return Result.err("dataFields");
+  if (found.depth > PAGE_LIMITS.fieldDepth) return Result.err("fieldDepth");
+
   // MFC lists a second release as a sibling field with no label, or with the item-extra-release class.
   const releases: ReleaseGroup = { parent: null, fields: [] };
-  for (const element of $(".item-object").first().find(".data-field")) {
+  for (const element of found.fields) {
     const field = $(element);
     const labels = field.find(".data-label");
     if (
@@ -205,10 +239,20 @@ export function readItemFields($: CheerioAPI): ItemFields {
     else if (label.startsWith("Releases")) {
       releases.parent = element.parent;
       releases.fields = [field];
-    } else fields.warnings.push(`unread field "${label}"`);
+    } else fields.warnings.push(`unread field ${quoted(label)}`);
   }
   for (const release of releases.fields) readRelease(release, $, fields);
-  return fields;
+
+  if (fields.mentions.length > PAGE_LIMITS.entries) return Result.err("entries");
+  if (fields.mentions.some(({ sourceLabel }) => sourceLabel.length > PAGE_LIMITS.entryNameLength)) {
+    return Result.err("entryNameLength");
+  }
+  if (fields.releases.length > PAGE_LIMITS.releases) return Result.err("releases");
+  return Result.ok(fields);
+}
+
+function hasClass(element: Element, name: string): boolean {
+  return element.attribs.class?.split(/[\t\n\f\r ]+/).includes(name) ?? false;
 }
 
 function readEntryLink(
@@ -220,7 +264,7 @@ function readEntryLink(
 }
 
 function valueText(field: Cheerio<Element>): string {
-  return field.find(".data-value").text().replaceAll(/\s+/g, " ").trim();
+  return field.find(".data-value").first().text().replaceAll(/\s+/g, " ").trim();
 }
 
 function millimetres(match: RegExpExecArray | null): number | null {
