@@ -154,5 +154,3 @@ export function createApp({ drain, authDocs }: AppOptions) {
       })
   );
 }
-
-export type App = ReturnType<typeof createApp>;
