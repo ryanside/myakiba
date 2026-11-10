@@ -181,7 +181,6 @@ const itemsGet = () => serve(caller, Items.get, inputOf(Items.get));
 const itemsRelatedOrders = () => serve(caller, Items.relatedOrders, inputOf(Items.relatedOrders));
 const itemsRelatedCollection = () =>
   serve(caller, Items.relatedCollection, inputOf(Items.relatedCollection));
-const itemsResyncStatus = () => serve(caller, Items.resyncStatus, inputOf(Items.resyncStatus));
 const itemsResync = () => serve(caller, Items.resync, inputOf(Items.resync));
 void (true satisfies Equal<
   {
@@ -189,7 +188,6 @@ void (true satisfies Equal<
     get: Failures<typeof itemsGet>;
     relatedOrders: Failures<typeof itemsRelatedOrders>;
     relatedCollection: Failures<typeof itemsRelatedCollection>;
-    resyncStatus: Failures<typeof itemsResyncStatus>;
     resync: Failures<typeof itemsResync>;
   },
   {
@@ -197,7 +195,6 @@ void (true satisfies Equal<
     get: S<404, "Item not found"> | S<500, "Failed to get item">;
     relatedOrders: S<500, "Failed to get item related orders">;
     relatedCollection: S<500, "Failed to get item related collections">;
-    resyncStatus: S<404, "Item not found"> | S<500, "Failed to check item refresh status">;
     resync:
       | S<
           400,
@@ -212,7 +209,6 @@ void (true satisfies Equal<
           400
         >
       | S<404, "Item not found">
-      | S<429, "Item details were recently refreshed">
       | S<500, "Failed to request item refresh">;
   }
 >);

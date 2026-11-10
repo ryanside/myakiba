@@ -1,8 +1,7 @@
-import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { SQL } from "bun";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
-import type { DrainContext } from "evlog";
+import Redis from "ioredis";
 import path from "node:path";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
@@ -22,21 +21,20 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
-let cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
-initLogger({
-  silent: true,
-  drain: ({ event }) => {
-    if ("cooldown" in event) cooldownLogged.resolve(event);
-  },
+initLogger({ enabled: false });
+
+const redisUrl = process.env.TEST_REDIS_URL;
+if (!redisUrl) throw new Error("TEST_REDIS_URL is required for the Item Refresh tests");
+const redis = new Redis(redisUrl);
+await mock.module("@myakiba/redis/client", () => ({ redis }));
+
+const userId = `user-${crypto.randomUUID()}`;
+const rateLimitKeys = [`rl:item-resync:${userId}`, `rl:mfc-ingest:${userId}`];
+
+afterAll(async () => {
+  await redis.del(...rateLimitKeys);
+  redis.disconnect();
 });
-
-const userId = "user-1";
-
-const redisKeys = new Map<string, { readonly value: string; readonly expiresAt: number }>();
-const liveKey = (key: string) => {
-  const stored = redisKeys.get(key);
-  return stored !== undefined && stored.expiresAt > Date.now() ? stored : undefined;
-};
 
 await mock.module("@myakiba/auth/server", () => ({
   auth: {
@@ -50,70 +48,6 @@ await mock.module("@myakiba/auth/server", () => ({
   },
 }));
 
-const rateLimited: string[] = [];
-let resyncsThisHour = 1;
-let redisLost = false;
-let redisStatus = "ready";
-let cooldownReadsBeforeDisconnect: number | null = null;
-const cooldownCalls: string[] = [];
-let hangRedis: "read" | "write" | null = null;
-let hungRedis = Promise.withResolvers<never>();
-let loseRedis: "at the cooldown write" | "after the cooldown write" | null = null;
-let dropTransactionAtCooldown = false;
-const reachRedis = () => {
-  if (redisLost) throw new Error("Connection is closed.");
-};
-const isCooldown = (key: string) => key.startsWith("item-resync:cooldown:");
-
-await mock.module("@myakiba/redis/client", () => ({
-  redis: {
-    get status() {
-      return redisStatus;
-    },
-    eval: async (_script: string, _keys: number, key: string) => {
-      reachRedis();
-      rateLimited.push(key);
-      return [key.startsWith("rl:item-resync:") ? resyncsThisHour : 1, 3600];
-    },
-    set: async (key: string, value: string, _mode: "EX", seconds: number) => {
-      if (isCooldown(key)) cooldownCalls.push("set");
-      if (isCooldown(key) && loseRedis === "at the cooldown write") redisLost = true;
-      if (isCooldown(key) && hangRedis === "write") return hungRedis.promise;
-      reachRedis();
-      redisKeys.set(key, { value, expiresAt: Date.now() + seconds * 1000 });
-      if (isCooldown(key) && loseRedis === "after the cooldown write") redisLost = true;
-      if (isCooldown(key) && dropTransactionAtCooldown) await dropOpenTransaction();
-      return "OK";
-    },
-    get: async (key: string) => {
-      if (isCooldown(key)) cooldownCalls.push("get");
-      if (isCooldown(key) && hangRedis === "read") return hungRedis.promise;
-      reachRedis();
-      return liveKey(key)?.value ?? null;
-    },
-    ttl: async (key: string) => {
-      if (isCooldown(key)) {
-        cooldownCalls.push("ttl");
-        if (cooldownReadsBeforeDisconnect !== null) {
-          cooldownReadsBeforeDisconnect -= 1;
-          if (cooldownReadsBeforeDisconnect === 0) redisStatus = "reconnecting";
-        }
-      }
-      reachRedis();
-      const stored = liveKey(key);
-      return stored === undefined ? -2 : Math.ceil((stored.expiresAt - Date.now()) / 1000);
-    },
-    exists: async (key: string) => {
-      reachRedis();
-      return liveKey(key) === undefined ? 0 : 1;
-    },
-    del: async (key: string) => {
-      reachRedis();
-      return redisKeys.delete(key) ? 1 : 0;
-    },
-  },
-}));
-
 await mock.module("@/lib/item-images", () => ({
   createItemImages,
   itemImages: { store: (id: MfcItemId, picture: Blob) => store.images.store(id, picture) },
@@ -121,34 +55,6 @@ await mock.module("@/lib/item-images", () => ({
 
 const db = await createTestDatabase();
 
-async function dropOpenTransaction() {
-  const monitor = new SQL({ url: process.env.DATABASE_URL });
-  try {
-    const transactions = await monitor<{ pid: number }[]>`
-      SELECT pid FROM pg_stat_activity
-      WHERE datname = current_database() AND state = 'idle in transaction'
-    `;
-    const [transaction] = transactions;
-    if (transactions.length !== 1 || !transaction)
-      throw new Error(`found ${transactions.length} transactions`);
-    await monitor`SELECT pg_terminate_backend(${transaction.pid})`;
-  } finally {
-    await monitor.close();
-  }
-}
-
-// Bun's pool can hand out the dropped connection once more before it notices the close.
-async function poolRecovered() {
-  const deadline = Date.now() + 2000;
-  for (;;) {
-    try {
-      await db.execute("SELECT 1");
-      return;
-    } catch (error) {
-      if (Date.now() > deadline) throw error;
-    }
-  }
-}
 const { default: itemRouter } = await import("./index");
 const { default: mfcItemsRouter } = await import("../mfc-items/index");
 const app = new Elysia({ prefix: "/api" }).use(itemRouter).use(mfcItemsRouter);
@@ -206,7 +112,6 @@ if (ID_98777 === null) throw new Error("98777 is an MFC item id");
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
-const RECENTLY_REFRESHED = { status: 429, body: "Item details were recently refreshed" };
 
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
@@ -245,16 +150,7 @@ beforeEach(async () => {
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
   store = memoryStore();
-  redisKeys.clear();
-  rateLimited.length = 0;
-  cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
-  resyncsThisHour = 1;
-  redisLost = false;
-  redisStatus = "ready";
-  cooldownReadsBeforeDisconnect = null;
-  cooldownCalls.length = 0;
-  loseRedis = null;
-  dropTransactionAtCooldown = false;
+  await redis.del(...rateLimitKeys);
 });
 
 async function answer(response: Response) {
@@ -294,21 +190,7 @@ async function resync(page: string, picture?: Uint8Array, externalId = 98_777) {
   return answer(response);
 }
 
-async function resyncStatus(externalId = 98_777) {
-  const response = await app.handle(
-    new Request(`http://localhost/api/item/${externalId}/resync-status`, {
-      headers: { "x-test-user": userId },
-    }),
-  );
-  return answer(response);
-}
-
-const IDLE = { status: 200, body: { status: "idle", cooldownExpiresAt: null } };
-
-const refreshed = (saved: "refreshed" | "unchanged") => ({
-  status: 200,
-  body: { status: "cooldown", cooldownExpiresAt: expect.any(String), saved },
-});
+const refreshed = (saved: "refreshed" | "unchanged") => ({ status: 200, body: { saved } });
 
 async function itemRows() {
   const [row] = await db
@@ -384,7 +266,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     const orderId = await collectEveryRelease(itemId, "2018-11-15");
     const { item: imported } = await itemRows();
 
-    expect(await resync(derivedRescheduledPage)).toEqual(refreshed("refreshed"));
+    expect(await resync(derivedRescheduledPage)).toMatchObject(refreshed("refreshed"));
 
     const rows = await itemRows();
     expect(rows.item).toMatchObject({ title: RETITLED, image: imported?.image });
@@ -400,7 +282,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     await collectEveryRelease(itemId, "2019-03-20");
     expect(await selectedReleases()).toHaveLength(2);
 
-    expect(await resync(derivedTwoRepricedPage)).toEqual(refreshed("refreshed"));
+    expect(await resync(derivedTwoRepricedPage)).toMatchObject(refreshed("refreshed"));
 
     expect(await selectedReleases()).toEqual([null, null]);
     const { releases } = await itemRows();
@@ -419,7 +301,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     await upload(thirds);
     const before = await itemRows();
 
-    expect(await resync(thirds)).toEqual(refreshed("unchanged"));
+    expect(await resync(thirds)).toMatchObject(refreshed("unchanged"));
 
     expect(await itemRows()).toEqual(before);
   });
@@ -433,7 +315,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
         `<span switch="塩ビ">PVC</span></a> <small class="light">${percentage}%</small></div>`,
       );
       await upload(page);
-      expect(await resync(page)).toEqual(refreshed("unchanged"));
+      expect(await resync(page)).toMatchObject(refreshed("unchanged"));
     },
   );
 
@@ -450,20 +332,19 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
       .where(eq(entry_to_item.materialPercentage, 1.01))
       .returning({ materialPercentage: entry_to_item.materialPercentage });
     expect(reset).toEqual([{ materialPercentage: 1 }, { materialPercentage: 1 }]);
-    expect(await resync(page)).toEqual(refreshed("refreshed"));
+    expect(await resync(page)).toMatchObject(refreshed("refreshed"));
   });
 
-  test("the page as it is stored answers unchanged, writes nothing and still starts the cooldown", async () => {
+  test("the page as it is stored answers unchanged and writes nothing", async () => {
     await upload(page98777, JPEG);
     const before = await itemRows();
 
-    expect(await resync(page98777, JPEG)).toEqual(refreshed("unchanged"));
+    expect(await resync(page98777, JPEG)).toMatchObject(refreshed("unchanged"));
 
     expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toMatchObject({ body: { status: "cooldown" } });
   });
 
-  test("a challenge page answers 400, leaves the item as it was and starts no cooldown", async () => {
+  test("a challenge page answers 400 and leaves the item as it was", async () => {
     await upload(page98777);
     const before = await itemRows();
 
@@ -473,10 +354,9 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     });
 
     expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
   });
 
-  test("a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown", async () => {
+  test("a page whose picture SFW mode hides answers 400 and leaves the item as it was", async () => {
     await upload(page98777, JPEG);
     const before = await itemRows();
 
@@ -494,49 +374,38 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     });
 
     expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
   });
 
-  test("an item that was never imported answers 404 on both routes and stores nothing", async () => {
-    const notFound = { status: 404, body: "Item not found" };
-    expect(await resync(page98777, JPEG)).toEqual(notFound);
-    expect(await resyncStatus()).toEqual(notFound);
+  test("an item that was never imported answers 404 and stores nothing", async () => {
+    expect(await resync(page98777, JPEG)).toEqual({ status: 404, body: "Item not found" });
     expect(store.objects.size).toBe(0);
   });
 });
 
-describe("the 3-day cooldown and resync-status", () => {
-  test("a resync inside the cooldown is refused with the old message and status reports it", async () => {
+describe("Item Refresh has no cooldown", () => {
+  test("a refresh answers only whether it saved", async () => {
     await upload(page98777);
-    expect(await resyncStatus()).toEqual(IDLE);
 
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-    expect(await resync(derivedRescheduledPage)).toEqual(RECENTLY_REFRESHED);
+    expect(await resync(derivedRetitledPage)).toEqual({
+      status: 200,
+      body: { saved: "refreshed" },
+    });
+  });
 
-    const { body } = await resyncStatus();
-    const { cooldownExpiresAt } = z
-      .object({ status: z.literal("cooldown"), cooldownExpiresAt: z.iso.datetime() })
-      .parse(body);
-    const threeDays = 3 * 24 * 60 * 60 * 1000;
-    expect(Math.abs(Date.parse(cooldownExpiresAt) - Date.now() - threeDays)).toBeLessThan(5000);
-    const { item: row } = await itemRows();
+  test("two refreshes in a row both write", async () => {
+    await upload(page98777);
+
+    expect(await resync(derivedRetitledPage)).toMatchObject(refreshed("refreshed"));
+    expect(await resync(derivedRescheduledPage)).toMatchObject(refreshed("refreshed"));
+
+    const { item: row, releases } = await itemRows();
     expect(row?.title).toBe(RETITLED);
+    expect(releases).toEqual([
+      { id: mfcReleaseId(ID_98777, RESCHEDULED_98777), ...RESCHEDULED_98777 },
+    ]);
   });
 
-  test("status reads idle while a posted page is being written, then cooldown", async () => {
-    await upload(page98777);
-    const put = store.holdPut();
-
-    const pending = resync(derivedRetitledPage, JPEG);
-    await put.arrived;
-    expect(await resyncStatus()).toEqual(IDLE);
-    put.release();
-
-    expect(await pending).toEqual(refreshed("refreshed"));
-    expect(await resyncStatus()).toMatchObject({ body: { status: "cooldown" } });
-  });
-
-  test("two concurrent resyncs of one item run one after the other and only one refreshes", async () => {
+  test("two concurrent refreshes of one item run one after the other and both write", async () => {
     const itemId = await upload(page98777);
     await collectEveryRelease(itemId, "2018-11-15");
 
@@ -548,17 +417,15 @@ describe("the 3-day cooldown and resync-status", () => {
     });
 
     const replies = await answers.both;
-    expect(replies.map((reply) => reply.status).toSorted((a, b) => a - b)).toEqual([200, 429]);
+    expect(replies.map((reply) => reply.status)).toEqual([200, 200]);
     const { item: row, links, releases } = await itemRows();
     expect(row?.title).toBe(RETITLED);
     expect(links).toHaveLength(7);
     expect(releases).toHaveLength(1);
     expect(await selectedReleases()).toEqual(releases.map((release) => release.id));
   });
-});
 
-describe("a resync that fails part way leaves no cooldown and no refresh", () => {
-  test("a picture store that throws answers 500 and status reads idle", async () => {
+  test("a picture store that throws answers 500 and leaves the item as it was", async () => {
     await upload(page98777);
     const before = await itemRows();
     store.failPut();
@@ -569,100 +436,6 @@ describe("a resync that fails part way leaves no cooldown and no refresh", () =>
     });
 
     expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
-  });
-
-  test("Redis lost right after the cooldown write still commits the refresh the cooldown names", async () => {
-    await upload(page98777);
-    loseRedis = "after the cooldown write";
-
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-
-    redisLost = false;
-    loseRedis = null;
-    const { item: row } = await itemRows();
-    expect(row?.title).toBe(RETITLED);
-    expect(await resyncStatus()).toMatchObject({ body: { status: "cooldown" } });
-  });
-
-  test("a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes", async () => {
-    await upload(page98777);
-    const before = await itemRows();
-    dropTransactionAtCooldown = true;
-
-    expect(await resync(derivedRetitledPage)).toEqual({
-      status: 500,
-      body: "Failed to request item refresh",
-    });
-
-    dropTransactionAtCooldown = false;
-    await poolRecovered();
-    expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-  });
-});
-
-describe("best-effort cooldown failures", () => {
-  test("status skips a disconnected Redis cache and warns while reporting idle", async () => {
-    await upload(page98777);
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-    cooldownCalls.length = 0;
-    redisStatus = "reconnecting";
-    expect(await resyncStatus()).toEqual(IDLE);
-    expect(cooldownCalls).toEqual([]);
-    expect(await cooldownLogged.promise).toMatchObject({
-      level: "warn",
-      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
-    });
-  });
-
-  test("Redis disconnected after the cooldown guard commits the refresh without queueing a write", async () => {
-    await upload(page98777);
-    cooldownReadsBeforeDisconnect = 2;
-    expect(await resync(derivedRetitledPage)).toEqual({
-      status: 200,
-      body: { status: "idle", cooldownExpiresAt: null, saved: "refreshed" },
-    });
-    expect(cooldownCalls).toEqual(["get", "ttl", "get", "ttl"]);
-    const rows = await itemRows();
-    expect(rows.item?.title).toBe(RETITLED);
-    expect(await cooldownLogged.promise).toMatchObject({
-      level: "warn",
-      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
-    });
-  });
-
-  test("Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure", async () => {
-    await upload(page98777);
-    loseRedis = "at the cooldown write";
-
-    expect(await resync(derivedRetitledPage)).toEqual({
-      status: 200,
-      body: { status: "idle", cooldownExpiresAt: null, saved: "refreshed" },
-    });
-    const { item: row } = await itemRows();
-    expect(row?.title).toBe(RETITLED);
-    expect(await cooldownLogged.promise).toMatchObject({
-      level: "warn",
-      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
-    });
-    redisLost = false;
-    loseRedis = null;
-    expect(await resyncStatus()).toEqual(IDLE);
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("unchanged"));
-  });
-
-  test("Redis lost during a status read reports idle and logs the failure", async () => {
-    await upload(page98777);
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
-    redisLost = true;
-    cooldownLogged = Promise.withResolvers<DrainContext["event"]>();
-    expect(await resyncStatus()).toEqual(IDLE);
-    expect(await cooldownLogged.promise).toMatchObject({
-      level: "warn",
-      failure: expect.objectContaining({ _tag: "ResyncCooldownUnavailable" }),
-    });
   });
 });
 
@@ -670,15 +443,14 @@ describe("the per-user resync rate limit", () => {
   test("the 61st resync in an hour answers 429 and refreshes nothing", async () => {
     await upload(page98777);
     const before = await itemRows();
-    resyncsThisHour = 61;
+    await redis.set(`rl:item-resync:${userId}`, "60", "EX", 3600);
 
     const refused = await resync(derivedRetitledPage);
 
     expect(refused.status).toBe(429);
     expect(refused.body).toStartWith("Rate limit exceeded");
-    expect(rateLimited).toContain(`rl:item-resync:${userId}`);
+    expect(await redis.get(`rl:item-resync:${userId}`)).toBe("61");
     expect(await itemRows()).toEqual(before);
-    expect(await resyncStatus()).toEqual(IDLE);
   });
 });
 
@@ -687,7 +459,7 @@ describe("the posted picture", () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
 
-    expect(await resync(page98777, PNG)).toEqual(refreshed("refreshed"));
+    expect(await resync(page98777, PNG)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
     expect(row?.image).toEndWith(".png");
@@ -699,7 +471,7 @@ describe("the posted picture", () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
 
-    expect(await resync(derivedRetitledPage, NOT_AN_IMAGE)).toEqual(refreshed("refreshed"));
+    expect(await resync(derivedRetitledPage, NOT_AN_IMAGE)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
     expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
@@ -709,7 +481,7 @@ describe("the posted picture", () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
 
-    expect(await resync(derivedRetitledPage)).toEqual(refreshed("refreshed"));
+    expect(await resync(derivedRetitledPage)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
     expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
@@ -722,7 +494,7 @@ async function storedVersion(itemId: string) {
 }
 
 describe("pages the refresh refuses or rewrites", () => {
-  test("a page for a different item answers 400 and starts no cooldown", async () => {
+  test("a page for a different item answers 400 and leaves that item as it was", async () => {
     await db.insert(item).values({ source: "mfc", externalId: 12_345, title: "Another item" });
 
     expect(await resync(page98777, JPEG, 12_345)).toEqual({
@@ -735,7 +507,6 @@ describe("pages the refresh refuses or rewrites", () => {
       .from(item)
       .where(eq(item.externalId, 12_345));
     expect(other).toEqual({ title: "Another item", image: null });
-    expect(await resyncStatus(12_345)).toEqual(IDLE);
     expect(store.objects.size).toBe(0);
   });
 
@@ -750,58 +521,12 @@ describe("pages the refresh refuses or rewrites", () => {
       "UPDATE entry_to_item SET roles = '{}', role = COALESCE(roles[1], '') WHERE roles <> '{}'",
     );
 
-    expect(await resync(page98777)).toEqual(refreshed("refreshed"));
+    expect(await resync(page98777)).toMatchObject(refreshed("refreshed"));
 
     const rewritten = await itemRows();
     expect(rewritten.links).toEqual(imported.links);
     expect(await storedVersion(itemId)).toEqual(version);
 
-    redisKeys.clear();
-    expect(await resync(page98777)).toEqual(refreshed("unchanged"));
+    expect(await resync(page98777)).toMatchObject(refreshed("unchanged"));
   });
 });
-
-test.each(["write", "status", "guard"] as const)(
-  "hanging cooldown %s settles within its deadline",
-  async (operation) => {
-    await upload(page98777);
-    hungRedis = Promise.withResolvers<never>();
-    hangRedis = operation === "write" ? "write" : "read";
-    const realTimer = globalThis.setTimeout;
-    const timer = spyOn(globalThis, "setTimeout").mockImplementation(
-      Object.assign(
-        (...[fn, ms, ...args]: Parameters<typeof setTimeout>) =>
-          realTimer(fn, ms === 1000 ? 5 : ms, ...args),
-        { __promisify__: realTimer.__promisify__ },
-      ),
-    );
-    const pending = operation === "status" ? resyncStatus() : resync(derivedRetitledPage);
-    let guard: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const response = await Promise.race([
-        pending,
-        new Promise<null>((resolve) => {
-          guard = realTimer(() => resolve(null), 250);
-        }),
-      ]);
-      if (operation === "guard") {
-        expect(response).toMatchObject({ status: 500, body: "Failed to request item refresh" });
-      } else if (operation === "status") {
-        expect(response).toEqual(IDLE);
-      } else {
-        expect(response).toMatchObject({
-          status: 200,
-          body: { status: "idle", saved: "refreshed" },
-        });
-        const rows = await itemRows();
-        expect(rows.item?.title).toBe(RETITLED);
-      }
-    } finally {
-      clearTimeout(guard);
-      timer.mockRestore();
-      hangRedis = null;
-      hungRedis.reject(new Error("test releases hung Redis"));
-      await pending;
-    }
-  },
-);

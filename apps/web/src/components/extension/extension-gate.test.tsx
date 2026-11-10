@@ -43,9 +43,7 @@ function renderRefreshButton() {
   render(
     <>
       <ItemRefreshButton
-        status="idle"
         isPending={false}
-        cooldownExpiresAt={null}
         onRequest={() => {
           calls += 1;
         }}
@@ -212,9 +210,7 @@ test("the dialog closes, and the next try probes again", async () => {
   render(
     <>
       <ItemRefreshButton
-        status="idle"
         isPending={false}
-        cooldownExpiresAt={null}
         onRequest={() => {
           calls += 1;
         }}
@@ -239,12 +235,7 @@ test("closing the dialog keeps its copy while it closes and returns focus to the
   const user = userEvent.setup();
   render(
     <>
-      <ItemRefreshButton
-        status="idle"
-        isPending={false}
-        cooldownExpiresAt={null}
-        onRequest={noop}
-      />
+      <ItemRefreshButton isPending={false} onRequest={noop} />
       <ExtensionRequiredDialog />
     </>,
   );
@@ -266,9 +257,7 @@ test("a gated button shows it is checking and ignores a second click until the c
   render(
     <>
       <ItemRefreshButton
-        status="idle"
         isPending={false}
-        cooldownExpiresAt={null}
         onRequest={() => {
           calls += 1;
         }}
