@@ -22,15 +22,14 @@ await mock.module("@myakiba/redis/client", () => ({
 initLogger({ silent: true });
 const { auth } = await import("./server");
 
-// The real rate limits and IP settings, without the captcha, so each guess reaches the limiter.
-const limited = betterAuth({
+const authWithoutPlugins = betterAuth({
   ...auth.options,
   database: memoryAdapter({ user: [], account: [], session: [], verification: [] }),
   plugins: [],
 });
 
 async function signIn(headers: Record<string, string>): Promise<number> {
-  const response = await limited.handler(
+  const response = await authWithoutPlugins.handler(
     new Request("http://localhost:3000/api/auth/sign-in/email", {
       method: "POST",
       headers: { "content-type": "application/json", origin: "http://localhost:3001", ...headers },

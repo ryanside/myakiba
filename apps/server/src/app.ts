@@ -23,11 +23,10 @@ type AppOptions = {
   readonly authDocs: OpenAPIDocumentation | undefined;
 };
 
-/**
- * The largest legitimate request is an Item upload: a 2 MB page and a 10 MB picture. Their
- * multipart framing measured 505 bytes, so 64 KiB leaves room for long file names.
- */
-const MAX_REQUEST_BODY_BYTES = MAX_ITEM_PAGE_BYTES + MAX_ITEM_PICTURE_BYTES + 64 * 1024;
+/** Room for an upload's multipart framing, which measured 505 bytes, and long file names. */
+const MULTIPART_SLACK_BYTES = 64 * 1024;
+/** The largest legitimate request is an Item upload: its page and its picture. */
+const MAX_REQUEST_BODY_BYTES = MAX_ITEM_PAGE_BYTES + MAX_ITEM_PICTURE_BYTES + MULTIPART_SLACK_BYTES;
 
 const PUBLIC_PATHS = publicRoutes.routes.map((route) => route.path);
 const isPublicPath = (pathname: string): boolean =>
@@ -57,10 +56,8 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gu;
 
 /**
- * The web app runs its bundle and the inline scripts in its own index.html, hashed here so an edit
- * to one cannot slip past, plus Turnstile's widget. Images are `https:` because a custom Item's
- * picture may be any URL; MFC pictures come from the bucket, also `https:`. Its charts and
- * components set inline styles.
+ * Images allow any `https:` source because a custom Item's picture may be any URL. The charts,
+ * Base UI and index.html add `<style>` elements, so styles need `'unsafe-inline'`.
  */
 function contentSecurityPolicy(html: string): string {
   const hashes = [...html.matchAll(INLINE_SCRIPT)].map(
@@ -114,8 +111,8 @@ export function createApp({ drain, authDocs }: AppOptions) {
           credentials: true,
         }),
       )
-      // privateApi checks the session after Elysia parses the body; this refuses a signed-out
-      // request before anything reads it. A preflight carries no cookie, so it passes.
+      // privateApi checks the session only after Elysia parses the body, so a request with no
+      // session cookie is refused here, before its body is read. Preflights carry no cookie.
       .onRequest(({ request, status }) => {
         if (request.method === "OPTIONS") return;
         if (!needsSession(new URL(request.url).pathname)) return;

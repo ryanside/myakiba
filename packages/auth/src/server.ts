@@ -72,8 +72,9 @@ export const auth = betterAuth({
     database: {
       joins: true,
     },
-    // Cloudflare sets cf-connecting-ip and overwrites a client's copy; a client sets
-    // X-Forwarded-For to anything. Without the header, dev and tests share 127.0.0.1.
+    // Cloudflare overwrites cf-connecting-ip, so long as the origin is reachable only through
+    // Cloudflare; a client sets X-Forwarded-For to anything. Without the header, Better Auth keys
+    // dev and tests on 127.0.0.1 and production on one shared bucket.
     ipAddress: {
       ipAddressHeaders: ["cf-connecting-ip"],
     },

@@ -8,15 +8,14 @@ const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1"]);
 const isLoopback = (url: URL): boolean => LOOPBACK_HOSTS.has(url.hostname);
 
 /**
- * Why a CORS_ORIGIN entry cannot be trusted, or null. An entry is a bare origin, as browsers send
- * it. It is https, except a loopback origin during development, or in a production build that
- * itself runs on loopback, such as the image smoke.
+ * Why a CORS_ORIGIN entry cannot be trusted, or null. A production build that itself runs on
+ * loopback, such as the image smoke, may list a loopback http origin too.
  */
-function corsOriginProblem(entry: string, localServer: boolean): string | null {
+function corsOriginProblem(entry: string, allowLoopbackHttp: boolean): string | null {
   const url = URL.parse(entry);
   if (!url || url.origin !== entry) return `${entry} is not an origin such as https://myakiba.app`;
   if (url.protocol === "https:") return null;
-  if (url.protocol === "http:" && isLoopback(url) && localServer) return null;
+  if (url.protocol === "http:" && isLoopback(url) && allowLoopbackHttp) return null;
   return `${entry} must use https`;
 }
 
@@ -49,10 +48,10 @@ export const env = createEnv({
         path: ["AWS_BUCKET_URL"],
       })
       .superRefine((parsed, ctx) => {
-        const localServer =
+        const allowLoopbackHttp =
           parsed.NODE_ENV !== "production" || isLoopback(new URL(parsed.BETTER_AUTH_URL));
         for (const entry of parsed.CORS_ORIGIN.split(",").map((origin) => origin.trim())) {
-          const problem = corsOriginProblem(entry, localServer);
+          const problem = corsOriginProblem(entry, allowLoopbackHttp);
           if (problem) ctx.addIssue({ code: "custom", message: problem, path: ["CORS_ORIGIN"] });
         }
       }),

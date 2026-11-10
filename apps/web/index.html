@@ -50,7 +50,7 @@
         document.documentElement.classList.add(t);
       })();
     </script>
-    <!-- Zod would probe eval, which the CSP refuses; it reads this before any schema is built -->
+    <!-- Zod probes eval unless jitless, and the CSP refuses eval. Zod reads this when it loads. -->
     <script>
       globalThis.__zod_globalConfig = { jitless: true };
     </script>

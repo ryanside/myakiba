@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { Panic } from "better-result";
 
-const valid = {
+const validProductionEnv = {
   REDIS_HOST: "127.0.0.1",
   REDIS_PORT: "6379",
   AWS_BUCKET_REGION: "us-east-1",
@@ -29,10 +29,9 @@ afterEach(() => {
   Object.assign(process.env, savedEnv);
 });
 
-/** Loads a fresh server env from `changes` over a valid production config. */
 async function load(changes: Record<string, string>) {
   for (const key of Object.keys(process.env)) Reflect.deleteProperty(process.env, key);
-  Object.assign(process.env, valid, changes);
+  Object.assign(process.env, validProductionEnv, changes);
   loads += 1;
   return await import(`./server?load=${loads}`);
 }

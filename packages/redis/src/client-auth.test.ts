@@ -4,8 +4,7 @@ import { initLogger } from "evlog";
 const PASSWORD = "redis-test-password";
 const passwordsSent: (string | undefined)[] = [];
 
-/** A Redis stand-in that, like the production Redis, answers nothing before AUTH with its password. */
-const server = Bun.listen<{ authenticated: boolean }>({
+const passwordProtectedRedis = Bun.listen<{ authenticated: boolean }>({
   hostname: "127.0.0.1",
   port: 0,
   socket: {
@@ -50,13 +49,13 @@ function commands(text: string): string[][] {
 }
 
 process.env.REDIS_HOST = "127.0.0.1";
-process.env.REDIS_PORT = String(server.port);
+process.env.REDIS_PORT = String(passwordProtectedRedis.port);
 process.env.REDIS_PASSWORD = PASSWORD;
 initLogger({ silent: true });
 const { redis: client } = await import("./client");
 afterAll(() => {
   client.disconnect();
-  server.stop(true);
+  passwordProtectedRedis.stop(true);
   delete process.env.REDIS_PASSWORD;
 });
 

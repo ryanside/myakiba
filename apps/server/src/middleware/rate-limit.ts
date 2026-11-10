@@ -75,7 +75,6 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
   rateLimit: (name: RateLimitName) => ({
     async beforeHandle({ request, set }) {
       const config = rateLimitConfigs[name];
-      // Keyed on the signed-in user, never on a header the client can change.
       const identifier = await getUserId(request.headers);
       if (!identifier) return;
 

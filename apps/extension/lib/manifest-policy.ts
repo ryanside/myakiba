@@ -72,8 +72,10 @@ function differences(
   ];
 }
 
-/** Each key that would let another site, extension or the page itself reach into the extension. */
-function openings(built: z.output<typeof manifestSchema>, browser: ManifestBrowser): string[] {
+function waysIntoExtension(
+  built: z.output<typeof manifestSchema>,
+  browser: ManifestBrowser,
+): string[] {
   const manifest = `the ${browser} manifest sets`;
   return [
     ...(built.externally_connectable === undefined
@@ -117,6 +119,6 @@ export function checkManifest(manifest: Manifest, browser: ManifestBrowser): str
       built.content_scripts.flatMap((script) => script.matches),
       expected.contentScriptMatches,
     ),
-    ...openings(built, browser),
+    ...waysIntoExtension(built, browser),
   ];
 }
