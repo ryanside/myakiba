@@ -3598,6 +3598,75 @@
         "stageshow reduced motion > follows the app's Reduce motion switch when the device setting is off",
         "stageshow reduced motion > a demo holds its poster and never runs its script under the app's switch"
       ]
+    },
+    {
+      "fix": "d846980d3fa445fa1075c0430b6ff1c64b8aac71",
+      "bug": "The MFC price, barcode and material-percentage patterns retried a long run of digits or barcode characters from every character, so one 2 MB page held the server for about an hour.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > price: comma groups with no currency answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > barcode: barcode characters with a failing tail answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > barcode: dashes with a failing tail answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > material percentage: digits with no percent sign answers a Result within 1000 ms"
+      ]
+    },
+    {
+      "fix": "16a2bf9424d4fe139570ba1143627a3c673c7b5a",
+      "bug": "Each MFC Releases field searched every later sibling field, so a page of 4,000 sibling Releases fields took 13 s.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers a Result within 1000 ms"
+      ]
+    },
+    {
+      "fix": "dfe83449cfabdf6ec97617a7c887f83b2f74188b",
+      "bug": "A deeply nested MFC page, nested fields, tens of thousands of releases or a huge entry name held the server for seconds or overflowed the stack, because no size limit rejected a page larger than any real MFC page.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > Releases followed by sibling unlabelled releases answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested data fields answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested data values answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested entry groups answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested elements answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: whitespace with a failing tail answers a Result within 1000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: repeated number openers answers a Result within 1000 ms"
+      ]
+    },
+    {
+      "fix": "dfe83449cfabdf6ec97617a7c887f83b2f74188b",
+      "bug": "A page larger than any real MFC page parsed instead of answering too_large, and a warning quoted a crafted page value whole.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage size limits > a page past its depth limit of 256 is too_large",
+        "parseMfcItemPage size limits > a page past its fieldDepth limit of 32 is too_large",
+        "parseMfcItemPage size limits > a page past its dataFields limit of 300 is too_large",
+        "parseMfcItemPage size limits > a page past its entries limit of 1000 is too_large",
+        "parseMfcItemPage size limits > a page past its releases limit of 200 is too_large",
+        "parseMfcItemPage size limits > a page past its titleLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its entryNameLength limit of 500 is too_large",
+        "parseMfcItemPage size limits > a warning quotes at most 100 characters of a crafted value"
+      ]
+    },
+    {
+      "fix": "76113bdf600ea636a89a2ae282ddd3ca29b6f4e3",
+      "bug": "A release price past safe money panicked in .unwrap, so the page answered a logged 500.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > price: comma groups before a currency answers a Result within 1000 ms"
+      ]
+    },
+    {
+      "fix": "76113bdf600ea636a89a2ae282ddd3ca29b6f4e3",
+      "bug": "An MFC price past safe money, a dimension, rating id or entry id past int4, or a material percentage over 100 panicked or failed the insert with a logged 500, and the warnings had no bound.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage values too large to store > a release price past safe money reads as no price and warns",
+        "parseMfcItemPage values too large to store > a dimension past the integer column reads as none and warns",
+        "parseMfcItemPage values too large to store > a rating id past the integer column reads as none and warns",
+        "parseMfcItemPage values too large to store > an entry id past the integer column drops the entry and warns",
+        "parseMfcItemPage values too large to store > a material percentage over 100 reads as none and warns",
+        "parseMfcItemPage size limits > a page past its warnings limit of 100 is too_large"
+      ]
     }
   ],
   "lint": [
