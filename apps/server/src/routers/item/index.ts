@@ -2,11 +2,13 @@ import { itemRefreshSchema } from "@myakiba/contracts/mfc-items/schema";
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
 import { rateLimit } from "@/middleware/rate-limit";
+import { verifiedEmail } from "@/middleware/verified-email";
 import { itemIdParamSchema, itemParamSchema } from "./model";
 import { Items } from "./module";
 
 const itemRouter = privateApi("/item")
   .use(rateLimit)
+  .use(verifiedEmail)
   .get("/:id/releases", (ctx) => serve(ctx, Items.releases, ctx.params), {
     params: itemIdParamSchema,
   })
@@ -20,6 +22,7 @@ const itemRouter = privateApi("/item")
   .post("/:id/resync", (ctx) => serve(ctx, Items.resync, { ...ctx.params, ...ctx.body }), {
     params: itemParamSchema,
     body: itemRefreshSchema,
+    verifiedEmail: true,
     rateLimit: "itemResync",
   });
 

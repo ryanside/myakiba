@@ -19,6 +19,7 @@ import { mfcItemId } from "@myakiba/mfc/page";
 import { mfcReleaseId } from "@myakiba/mfc/parse";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
+import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import { createItemImages } from "@/lib/item-images";
 
 initLogger({ enabled: false });
@@ -29,6 +30,7 @@ const redis = new Redis(redisUrl);
 await mock.module("@myakiba/redis/client", () => ({ redis }));
 
 const userId = `user-${crypto.randomUUID()}`;
+const unverifiedUserId = `unverified-${crypto.randomUUID()}`;
 const rateLimitKeys = [`rl:item-resync:${userId}`, `rl:mfc-ingest:${userId}`];
 
 afterAll(async () => {
@@ -42,7 +44,9 @@ await mock.module("@myakiba/auth/server", () => ({
     api: {
       getSession: async ({ headers }: { headers: Headers }) => {
         const id = headers.get("x-test-user");
-        return id ? { user: { id, emailVerified: true }, session: { id: `session-${id}` } } : null;
+        if (!id) return null;
+        const emailVerified = id !== unverifiedUserId;
+        return { user: { id, emailVerified }, session: { id: `session-${id}` } };
       },
     },
   },
@@ -179,11 +183,11 @@ async function upload(page: string, picture?: Uint8Array) {
   return z.object({ itemId: z.string() }).parse(body).itemId;
 }
 
-async function resync(page: string, picture?: Uint8Array, externalId = 98_777) {
+async function resync(page: string, picture?: Uint8Array, externalId = 98_777, as = userId) {
   const response = await app.handle(
     new Request(`http://localhost/api/item/${externalId}/resync`, {
       method: "POST",
-      headers: { "x-test-user": userId },
+      headers: { "x-test-user": as },
       body: pageForm(page, picture),
     }),
   );
@@ -436,6 +440,21 @@ describe("Item Refresh has no cooldown", () => {
     });
 
     expect(await itemRows()).toEqual(before);
+  });
+});
+
+describe("who may refresh an Item", () => {
+  test("an account without a verified email gets 403 and refreshes nothing", async () => {
+    await upload(page98777, JPEG);
+    const before = await itemRows();
+
+    expect(await resync(derivedRetitledPage, PNG, 98_777, unverifiedUserId)).toEqual({
+      status: 403,
+      body: EMAIL_VERIFICATION_REQUIRED,
+    });
+
+    expect(await itemRows()).toEqual(before);
+    expect(store.objects.size).toBe(1);
   });
 });
 
