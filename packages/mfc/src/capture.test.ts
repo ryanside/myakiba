@@ -184,6 +184,20 @@ const PLANTED = [
     "<footer>",
     `<section class="comments"><div class="comment"><a href="/profile/${MARKER}">${MARKER}</a><div class="bbcode">Nice one, says ${MARKER}</div></div></section><!-- ${MARKER} --><footer><span>Signed in as ${MARKER}</span>`,
   ],
+  ['<body id="ref-top">', `<body id="ref-top" class="user-${MARKER}" data-user="${MARKER}">`],
+  [
+    '<section class="object">',
+    `<section class="object" id="${MARKER}" data-owner="${MARKER}" title="${MARKER}">`,
+  ],
+  [
+    '<div class="data-label">Origin</div><div class="data-value">',
+    `<div class="data-label">Origin</div><div class="data-value"><!-- ${MARKER} --><textarea>${MARKER}</textarea><input value="${MARKER}"/><button>${MARKER}</button><script>var u = "${MARKER}";</script>`,
+  ],
+  ['<meta property="og:image" ', `<meta data-user="${MARKER}" property="og:image" `],
+  [
+    '<div id="wide">',
+    `<script>var viewer = "${MARKER}";</script><style>.${MARKER}{}</style><template><b>${MARKER}</b></template><noscript><img src="/${MARKER}.gif"/>${MARKER}</noscript><input type="hidden" name="token" value="${MARKER}"/><p>${MARKER}: The page you requested was not found.</p><div id="wide">`,
+  ],
 ] as const;
 
 const plantedPage = PLANTED.reduce((html, [from, to]) => edit(html, from, to), item98777);
