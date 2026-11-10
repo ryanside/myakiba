@@ -14,6 +14,7 @@ network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
+redis_password=image-smoke-redis-password
 unreachable_host=10.255.255.1
 unreachable=
 vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke)
@@ -112,6 +113,7 @@ smoke_server() {
   start=$(now)
   docker run -d --label "$label" --name "$container" --network "$network" -p 127.0.0.1::3000 \
     -e DATABASE_URL="$server_database_url" -e REDIS_HOST="$redis_host" -e REDIS_PORT=6379 \
+    -e REDIS_PASSWORD="$redis_password" \
     -e CORS_ORIGIN=http://localhost:3000 -e BETTER_AUTH_URL=http://localhost:3000 \
     -e BETTER_AUTH_SECRET=image-smoke-secret-0123456789abcdef \
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
@@ -175,7 +177,8 @@ main() {
   docker network create --label "$label" "$network" >/dev/null
   docker run -d --label "$label" --name "$postgres" --network "$network" \
     -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:18.6 >/dev/null
-  docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 >/dev/null
+  docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 \
+    redis-server --requirepass "$redis_password" >/dev/null
 
   for target in "$@"; do
     name=${target%%=*}
@@ -185,7 +188,7 @@ main() {
       image=$prefix-$name
     fi
     wait_until 60 docker exec "$postgres" pg_isready -h 127.0.0.1 -U smoke || fail "Postgres did not start" "$postgres"
-    wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
+    wait_until 60 docker exec -e REDISCLI_AUTH="$redis_password" "$redis" redis-cli ping || fail "Redis did not start" "$redis"
     "smoke_${name//-/_}" "$image"
   done
   [ -z "$unreachable" ] || set -- "$@" "with $unreachable unreachable"
