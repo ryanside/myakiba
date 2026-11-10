@@ -218,6 +218,25 @@ describe("scrubMfcPage sends nothing of the user", () => {
   test("the planted page still reads as the same signed-in item", () => {
     expect(readings(scrubbed)).toEqual(readings(item98777));
   });
+
+  test("no element name carries the marker out", () => {
+    const tag = `x-${MARKER}`;
+    const html = (
+      [
+        [
+          '<h1 itemprop="headline" class="title">',
+          `<${tag}><h1 itemprop="headline" class="title">`,
+        ],
+        ["(Orchid Seed)</h1>", `(Orchid Seed)</h1></${tag}>`],
+        [
+          '<div class="tbx-menu user-menu">',
+          `<${tag} class="tbx-menu user-menu"></${tag}><div class="tbx-menu user-menu">`,
+        ],
+        ["<strong>140</strong>", `<strong>140</strong><${tag}></${tag}>`],
+      ] as const
+    ).reduce((page, [from, to]) => edit(page, from, to), item98777);
+    expect(scrub(html)).not.toContain(MARKER);
+  });
 });
 
 describe("scrubMfcPage output", () => {
