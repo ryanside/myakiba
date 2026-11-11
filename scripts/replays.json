@@ -3733,6 +3733,42 @@
       ]
     },
     {
+      "bug": "The Item ownership migration made the owner keys' targets unique indexes, which no Drizzle schema drizzle-kit 0.31 can push onto a migrated database.",
+      "fix": "dbf1eaf6c1810ed416832a28cfb081321de8935e",
+      "fixed": [
+        "pushes the owned schema onto a migrated database with no prompt and no lost row",
+        "an empty database pushed twice ends with the schema a migrated database gets"
+      ],
+      "test": "packages/db/src/item-ownership/push.test.ts",
+      "testAt": "dbf1eaf6c1810ed416832a28cfb081321de8935e",
+      "reason": "The composite owner keys this fix made pushable are gone, replaced by owner guards, so HEAD's push test expects no composite keys. Its own test passes only on Postgres 17, because drizzle-kit 0.31.10 reads the keys' targets in reverse on 18."
+    },
+    {
+      "bug": "On Postgres 18.6, drizzle-kit 0.31.10 read the composite owner keys' unique targets in reverse column order, so a push of the owned schema asked to truncate item on a migrated database and failed 2BP01 on an empty database's second push.",
+      "fix": "5f00011df6bfe1d4d8637b31f20d3dc8880fb8ed",
+      "fixed": [
+        "pushes the owned schema onto a migrated database with no prompt and no lost row",
+        "an empty database pushed twice ends with the schema a migrated database gets"
+      ],
+      "test": "packages/db/src/item-ownership/push.test.ts"
+    },
+    {
+      "bug": "The Item ownership migration gave owner x's copy of Item y:z and owner x:y's copy of Item z the same id, so it failed with a duplicate key.",
+      "fix": "599f9250765294d091460c0a414e97be255d3939",
+      "fixed": [
+        "gives separate copies to two pairs whose owner and Item ids join to the same text"
+      ],
+      "test": "packages/db/src/item-ownership/migrate.test.ts"
+    },
+    {
+      "bug": "Under a repeatable read default, the Item ownership migration missed a Collection Item committed while it waited for its locks, and failed.",
+      "fix": "2b954e3f928e57f4244692ddc413bdafac6d926f",
+      "fixed": [
+        "table locks > migrates a Collection Item committed while it waits for its lock, even under a repeatable read default"
+      ],
+      "test": "packages/db/src/item-ownership/migrate.test.ts"
+    },
+    {
       "fix": "b4c7f77f2fdc82480f4812645158486a51a62387",
       "bug": "Item Refresh matched stored and page releases by an id derived from the MFC id, so an Item whose release ids were made any other way refreshed its own page as changed and cleared every selection, and a page that listed one release twice never read as unchanged.",
       "test": "apps/server/src/routers/item/resync.test.ts",

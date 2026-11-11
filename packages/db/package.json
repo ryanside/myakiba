@@ -19,6 +19,8 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "test": "bun test --isolate",
+    "items:cleanup": "bun src/scripts/items-cleanup.ts",
     "db:push": "bun src/scripts/push-schema.ts",
     "db:push:interactive": "drizzle-kit push --verbose",
     "db:studio": "drizzle-kit studio",

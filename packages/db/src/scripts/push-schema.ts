@@ -1,6 +1,7 @@
 import process from "node:process";
 import { SQL } from "bun";
 import dotenv from "dotenv";
+import { installOwnerGuards } from "../item-ownership/guards";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -55,4 +56,18 @@ if (exitCode !== 0 || !completed) {
     "Schema push did not complete. Destructive and ambiguous changes require an interactive review.",
   );
   process.exit(1);
+}
+
+// Push does not read triggers, so the owner guards are installed after every push. A database
+// without the owner columns yet has none to install.
+const guarded = new SQL({ url: databaseUrl });
+try {
+  const guards = await installOwnerGuards(guarded);
+  console.log(
+    guards === "installed"
+      ? "Item owner guards installed."
+      : "Item owner guards skipped: no owner columns.",
+  );
+} finally {
+  await guarded.close();
 }
