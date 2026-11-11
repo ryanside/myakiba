@@ -52,6 +52,7 @@ test("reports one copy per user and referenced Item, with its releases, Item Ent
     pairs: 5,
     copied: { items: 5, entries: 10, links: 11, releases: 12 },
     foreignReleasesCleared: 1,
+    otherUsersListTargets: 0,
     repointed: { collection: 5, wishlistItem: 2, listMemberItem: 2, listMemberOwner: 5 },
     milliseconds: expect.any(Number),
   });
@@ -142,6 +143,19 @@ test("moves each Selected Item Release to its copy, and clears and counts a rele
     { id: "col-5", cleared: false, original: "e0000000-0000-4000-8000-000000000001" },
   ]);
   expect(report).toMatchObject({ foreignReleasesCleared: 1 });
+});
+
+test("counts List Members whose Collection Item or Order belongs to another user than the List", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    INSERT INTO list_member (id, list_id, item_id, collection_id, order_id, position, created_at) VALUES
+      ('member-x', 'list-2', NULL, 'col-1', NULL, 1, '2026-02-09 10:00'),
+      ('member-y', 'list-2', NULL, NULL, 'order-1', 2, '2026-02-09 10:00');
+  `);
+  expect(await migrateItemOwnership(sql)).toMatchObject({
+    status: "migrated",
+    otherUsersListTargets: 2,
+  });
 });
 
 test("gives every copied release a version 8 UUID, which the contracts' z.uuid() accepts", async () => {

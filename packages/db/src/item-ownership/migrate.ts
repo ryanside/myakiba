@@ -21,6 +21,8 @@ export type MigrationReport =
       readonly pairs: number;
       readonly copied: Counts<"items" | "entries" | "links" | "releases">;
       readonly foreignReleasesCleared: number;
+      /** Expected 0. The owner keys do not cover these, so the run counts them and leaves them. */
+      readonly otherUsersListTargets: number;
       readonly repointed: Counts<
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"
       >;
@@ -185,6 +187,7 @@ type Run = {
   pairs: number;
   readonly copied: Counts<"items" | "entries" | "links" | "releases">;
   foreignReleasesCleared: number;
+  otherUsersListTargets: number;
   readonly repointed: Counts<"collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner">;
 };
 
@@ -219,6 +222,14 @@ const STEPS = {
       ANALYZE ownership_pair;
     `);
     run.pairs = await count(tx, "SELECT count(*) FROM ownership_pair");
+    run.otherUsersListTargets = await count(
+      tx,
+      `SELECT count(*) FROM list_member m JOIN list l ON l.id = m.list_id
+      LEFT JOIN collection c ON c.id = m.collection_id
+      LEFT JOIN "order" o ON o.id = m.order_id
+      WHERE (m.collection_id IS NOT NULL AND c.user_id IS DISTINCT FROM l.user_id)
+        OR (m.order_id IS NOT NULL AND o.user_id IS DISTINCT FROM l.user_id)`,
+    );
   },
 
   async copyItems(tx, run) {
@@ -401,6 +412,7 @@ export async function migrateItemOwnership(
         pairs: run.pairs,
         copied: run.copied,
         foreignReleasesCleared: run.foreignReleasesCleared,
+        otherUsersListTargets: run.otherUsersListTargets,
         repointed: run.repointed,
         milliseconds: Math.round(performance.now() - started),
       };
@@ -438,6 +450,7 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
     pairs: 0,
     copied: { items: 0, entries: 0, links: 0, releases: 0 },
     foreignReleasesCleared: 0,
+    otherUsersListTargets: 0,
     repointed: { collection: 0, wishlistItem: 0, listMemberItem: 0, listMemberOwner: 0 },
   };
   for (const step of MIGRATION_STEPS) {
