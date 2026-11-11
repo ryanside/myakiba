@@ -3818,6 +3818,22 @@
         "db-push skips the migration on a fresh database and installs the guards; a second run changes nothing"
       ],
       "test": "packages/db/src/scripts/push-schema.test.ts"
+    },
+    {
+      "bug": "An Item Refresh that deleted a release while a Collection edit or an Add commit selected it made the owner guard reject the write, which answered a logged 500 instead of the operation's ReleaseNotOfItem.",
+      "fix": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "fixed": [
+        "an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing"
+      ],
+      "test": "apps/server/src/routers/collection/routes.test.ts"
+    },
+    {
+      "bug": "An Item Refresh that deleted a release while a Collection edit or an Add commit selected it made the owner guard reject the write, which answered a logged 500 instead of the operation's ReleaseNotOfItem.",
+      "fix": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "fixed": [
+        "a chosen release an Item Refresh deletes meanwhile answers 404 and writes nothing"
+      ],
+      "test": "apps/server/src/routers/add/commit.test.ts"
     }
   ],
   "lint": [
