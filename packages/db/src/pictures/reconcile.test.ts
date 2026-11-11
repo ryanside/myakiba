@@ -20,7 +20,14 @@ const UNUSED = `items/${"c".repeat(64)}.webp`;
 const ROOT_SHOWN = "1618468-shown.jpg";
 const ROOT_UNUSED = "98777-unused.jpg";
 const STAGING_UNUSED = "items/mfc/98777/0123456789abcdef.jpg";
-const OUTSIDE = ["notes/readme.txt", "items/not-a-hash.jpg"];
+const OUTSIDE = [
+  "notes/readme.txt",
+  "items/not-a-hash.jpg",
+  "robots.txt",
+  "index.html",
+  "items/mfc/98777/notes.txt",
+  "items/mfc/98777/0123456789abcdef.svg",
+];
 const STORED_KEYS = [SHARED, MINE, UNUSED, ROOT_SHOWN, ROOT_UNUSED, STAGING_UNUSED, ...OUTSIDE];
 const STORED = STORED_KEYS.length;
 
@@ -114,6 +121,13 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
 
     expect(report.counts).toMatchObject({ objects: 6, shown: 3, garbage: 3, deleted: 3 });
     expect(await keys()).toEqual([ROOT_SHOWN, ...OUTSIDE, SHARED, MINE].toSorted());
+  });
+
+  test("--legacy never considers a root robots.txt or any other key that is not a picture", async () => {
+    const report = await reconcilePictures(sql, bucket, options({ apply: true, legacy: true }));
+
+    expect(garbageKeys(report)).toEqual([ROOT_UNUSED, STAGING_UNUSED, UNUSED].toSorted());
+    for (const key of OUTSIDE) expect(await keys()).toContain(key);
   });
 
   test("an image written with a path-style bucket URL still shows its key", async () => {

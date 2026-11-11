@@ -4,10 +4,15 @@ import type { S3Client, SQL } from "bun";
 const CONTENT_KEY = /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u;
 
 /**
- * Pictures stored before keys were content addresses: main's worker put MFC's own file name at the
- * bucket root, and staging put `items/mfc/<id>/<hash16>.<ext>`.
+ * Pictures stored before keys were content addresses. main's worker put MFC's own file name at the
+ * bucket root, for a JPEG, PNG, WebP, GIF or AVIF response only. Staging put
+ * `items/mfc/<id>/<hash16>.<ext>`. Any other key, such as a root `robots.txt`, is never considered.
  */
-const isLegacyKey = (key: string) => !key.includes("/") || key.startsWith("items/mfc/");
+const LEGACY_KEYS = [
+  /^[^/]+\.(?:jpe?g|png|webp|gif|avif)$/iu,
+  /^items\/mfc\/\d+\/[0-9a-f]{16}\.(?:jpg|png|gif|webp|avif)$/u,
+];
+const isLegacyKey = (key: string) => LEGACY_KEYS.some((pattern) => pattern.test(key));
 
 /**
  * A save stores its picture before its transaction commits, so a young object may be one a save
