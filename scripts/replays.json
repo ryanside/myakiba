@@ -3750,7 +3750,9 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped"
-      ]
+      ],
+      "testAt": "10ce759b17576263816a49e0e9aada15e81de451",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with the harness from #211's merge, before the ownership switch."
     },
     {
       "fix": "95764a1244c723084e44794e0059f61ac1bf61d9",
@@ -4167,7 +4169,18 @@
       "fixed": [
         "push moves add_commit to a key it reads back the same, so a second push leaves it alone",
         "with the unique index built first, push only drops the old key, so commits always have one"
-      ]
+      ],
+      "testAt": "f83de712d01a6484afc52787ec02c6b527677377",
+      "reason": "At HEAD the app schema is the owned one, so the test migrates its template before pushing it. At this revision the app schema predates ownership, so the replay takes the test and harness from #218's merge."
+    },
+    {
+      "bug": "Production deploys from main, whose database still had the retired data_transfer_import and sync_session tables. db-push committed the ownership migration, then drizzle-kit push stopped at a prompt asking whether add_commit was one of them renamed, leaving the database migrated but not pushed, and the failure did not say so.",
+      "fix": "cee9295fa9fd0ffd95dee0537b4387ea5ac51b18",
+      "fixed": [
+        "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
+        "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
+      ],
+      "test": "packages/db/src/scripts/push-schema.test.ts"
     }
   ],
   "lint": [
