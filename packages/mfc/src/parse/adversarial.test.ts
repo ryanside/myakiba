@@ -87,6 +87,25 @@ const release = (value: string) => field("Releases", `<a class="time">01/01/2020
 const entry = (id: string, label: string) =>
   `<a href="/entry/${id}" class="item-entry"><span switch="">${label}</span></a>`;
 
+/**
+ * Material groups nested `groups` deep around `count` entries in rows of 500, the first `named` of
+ * them named, so a reader that reads an entry once per group around it passes the entries limit.
+ */
+function nestedMaterialGroups(groups: number, count: number, named: number): string {
+  const rows: string[] = [];
+  for (let start = 0; start < count; start += 500) {
+    let row = "";
+    for (let index = start; index < Math.min(count, start + 500); index += 1) {
+      row +=
+        index < named
+          ? entry(String(index + 1), "x")
+          : `<a class="item-entry" href="/entry/${index + 1}"></a>`;
+    }
+    rows.push(`<b>${row}</b>`);
+  }
+  return '<div class="item-entries">'.repeat(groups) + rows.join("") + "</div>".repeat(groups);
+}
+
 type Row = readonly [name: string, outcome: string, build: () => string];
 
 const ADVERSARIAL_PAGES: readonly Row[] = [
@@ -537,6 +556,17 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
               2 * CHILDREN + 1,
             ),
           ),
+        ),
+      }),
+  ],
+  [
+    "material groups nested to the field depth limit around the most entries that fit",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - FIELD_DEPTH - 3,
+          field("Materials", nestedMaterialGroups(FIELD_DEPTH - 3, NODES - 250, 40)),
         ),
       }),
   ],

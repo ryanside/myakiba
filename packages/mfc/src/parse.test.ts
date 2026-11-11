@@ -530,6 +530,21 @@ describe("parseMfcItemPage stored values", () => {
     expect(page.scale).toBe("1/7");
   });
 
+  test("entries in nested material groups count once toward the entries limit", () => {
+    const links = Array.from(
+      { length: 600 },
+      (_, index) =>
+        `<a href="/entry/${2_000_000 + index}" class="item-entry"><span switch="">M${index}</span></a>`,
+    );
+    const page = parsedPage(
+      withField(
+        "Materials",
+        `<div class="item-entries"><div class="item-entries"><b>${links.slice(0, 300).join("")}</b><b>${links.slice(300).join("")}</b></div></div>`,
+      ),
+    );
+    expect(page.entries.filter((entry) => entry.category === "Materials")).toHaveLength(602);
+  });
+
   test("a version inside nested links reads once", () => {
     expect(parsedPage(withField("Version", "<a><a>Reissue</a></a>")).version).toEqual(["Reissue"]);
   });

@@ -83,7 +83,7 @@ const entriesWithRoles =
   };
 
 const readMaterials: FieldReader = (field, $, fields) => {
-  for (const group of field.find(".item-entries")) {
+  for (const group of outermost(field.find(".item-entries"))) {
     const $group = $(group);
     const match = PATTERNS.materialPercentage.exec(outermost($group.find("small.light")).text());
     const materialPercentage = match?.[1] ? storedPercentage(match[1], fields) : null;
