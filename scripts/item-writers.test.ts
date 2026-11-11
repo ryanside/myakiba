@@ -26,6 +26,7 @@ const RAW_WRITES = [
     "giu",
   ),
   new RegExp(`\\b(merge)\\s+into\\s+(?:only\\s+)?${TABLE}(?=[\\s(;]|$)`, "giu"),
+  new RegExp(`\\b(copy)\\s+${TABLE}(?:\\s*\\([^)]*\\))?\\s+from\\b`, "giu"),
 ];
 const NAME = `(?:only\\s+)?(?:"[^"]+"|[a-z_][\\w$]*)(?:\\.(?:"[^"]+"|[a-z_][\\w$]*))?\\*?`;
 // A cascade empties every table that references the ones named, so it can reach the Item tables.
@@ -82,8 +83,22 @@ const importsSchema = (node: Node) =>
 const nameOf = (node: Node): string | undefined => {
   if (node.type === "Identifier") return node.name;
   if (node.type === "Literal") return String(node.value);
+  if (node.type === "TemplateLiteral" && node.expressions.length === 0)
+    return node.quasis[0]?.value.cooked ?? undefined;
   return undefined;
 };
+
+/** The property a member expression reads: `a.b`, `a["b"]` or ``a[`b`]``. */
+const keyOf = (node: Node): string | undefined => {
+  if (node.type !== "MemberExpression") return undefined;
+  if (!node.computed) return node.property.type === "Identifier" ? node.property.name : undefined;
+  return nameOf(node.property);
+};
+
+const importsSchemaThen = (callee: Node) =>
+  callee.type === "MemberExpression" &&
+  keyOf(callee) === "then" &&
+  importsSchema(unwrapped(callee.object));
 
 function itemWrites(file: string, text: string): ItemWrite[] {
   const writes: ItemWrite[] = [];
@@ -103,24 +118,35 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       if (cascade) write(start, "truncate", "cascade");
     }
   };
-  const tableOf = (node: Node): string | undefined => {
+  const tableOf = (value: Node): string | undefined => {
+    const node = unwrapped(value);
     if (node.type === "Identifier") return tables.get(node.name);
-    if (
-      node.type === "MemberExpression" &&
-      node.object.type === "Identifier" &&
-      namespaces.has(node.object.name) &&
-      node.property.type === "Identifier" &&
-      isTable(node.property.name)
-    )
-      return node.property.name;
+    if (node.type !== "MemberExpression") return undefined;
+    const namespace = unwrapped(node.object);
+    const key = keyOf(node);
+    if (namespace.type === "Identifier" && namespaces.has(namespace.name) && key && isTable(key))
+      return key;
     return undefined;
+  };
+  // The schema module, a binding of it, or an object spread from either.
+  const isNamespace = (value: Node): boolean => {
+    const node = unwrapped(value);
+    if (importsSchema(node)) return true;
+    if (node.type === "Identifier") return namespaces.has(node.name);
+    return (
+      node.type === "ObjectExpression" &&
+      node.properties.some(
+        (property) => property.type === "SpreadElement" && isNamespace(property.argument),
+      )
+    );
   };
   const held = (value: Node): string[] => {
     const node = unwrapped(value);
     if (node.type === "ObjectExpression")
-      return node.properties.flatMap((property) =>
-        property.type === "Property" ? held(property.value) : [],
-      );
+      return node.properties.flatMap((property) => {
+        if (property.type === "Property") return held(property.value);
+        return isNamespace(property.argument) ? ["*"] : [];
+      });
     if (node.type === "ArrayExpression")
       return node.elements.flatMap((element) =>
         element && element.type !== "SpreadElement" ? held(element) : [],
@@ -156,6 +182,9 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       }
     },
     ExportNamedDeclaration(node) {
+      if (node.declaration?.type === "VariableDeclaration")
+        for (const declarator of node.declaration.declarations)
+          if (declarator.init && isNamespace(declarator.init)) write(node.start, "re-export", "*");
       for (const specifier of node.specifiers) {
         const local = nameOf(specifier.local);
         if (node.source === null) reExported(specifier.start, local);
@@ -173,25 +202,45 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       else if (exported.type === "Identifier") reExported(node.start, exported.name);
     },
     VariableDeclarator(node) {
-      const value = node.init ? unwrapped(node.init) : undefined;
-      if (value && importsSchema(value)) {
+      if (node.init && isNamespace(node.init)) {
         if (node.id.type === "Identifier") namespaces.add(node.id.name);
         destructured(node.id);
-      } else if (value?.type === "Identifier" && namespaces.has(value.name)) {
-        if (node.id.type === "Identifier") namespaces.add(node.id.name);
-        destructured(node.id);
-      } else copied(node.start, value);
+      } else copied(node.start, node.init);
     },
     AssignmentExpression(node) {
       copied(node.start, node.right);
     },
+    AssignmentPattern(node) {
+      copied(node.start, node.right);
+    },
+    ForOfStatement(node) {
+      copied(node.start, node.right);
+    },
+    PropertyDefinition(node) {
+      copied(node.start, node.value);
+    },
+    ReturnStatement(node) {
+      copied(node.start, node.argument);
+    },
+    ArrowFunctionExpression(node) {
+      if (node.expression) copied(node.start, node.body);
+    },
     CallExpression(node) {
-      const { callee } = node;
-      if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return;
-      const verb = callee.property.name;
-      const [target] = node.arguments;
-      if (!DRIZZLE_WRITES.has(verb) || !target) return;
-      const table = tableOf(target);
+      const callee = unwrapped(node.callee);
+      const [first] = node.arguments;
+      if (importsSchemaThen(callee) && first) {
+        const callback = unwrapped(first);
+        const [module] =
+          callback.type === "ArrowFunctionExpression" || callback.type === "FunctionExpression"
+            ? callback.params
+            : [];
+        if (module?.type === "Identifier") namespaces.add(module.name);
+        else if (module) destructured(module);
+        return;
+      }
+      const verb = keyOf(callee);
+      if (!verb || !DRIZZLE_WRITES.has(verb) || !first) return;
+      const table = tableOf(first);
       if (table) write(node.start, verb, table);
     },
     Literal(node) {
@@ -257,6 +306,38 @@ describe("an Item table write", () => {
     [
       `import { item } from "@myakiba/db/schema/figure"; await tx.execute(sql\`insert /* x */ into \${item} (id) values (1)\`);`,
     ],
+    [
+      `import { item } from "@myakiba/db/schema/figure"; tx.insert(item as typeof item).values({});`,
+    ],
+    [`import { item } from "@myakiba/db/schema/figure"; tx.insert(item!).values({});`],
+    [`import { item } from "@myakiba/db/schema/figure"; tx.insert((item)).values({});`],
+    [
+      `import { entry } from "@myakiba/db/schema/figure"; tx.update(entry satisfies object).set({});`,
+    ],
+    [`import * as schema from "@myakiba/db/schema/figure"; tx.insert(schema["item"]).values({});`],
+    [`import * as schema from "@myakiba/db/schema/figure"; tx.delete((schema).entry);`],
+    [`import { item } from "@myakiba/db/schema/figure"; tx["insert"](item).values({});`],
+    [`import { item } from "@myakiba/db/schema/figure"; tx[\`delete\`](item);`],
+    ["await sql`COPY item FROM STDIN`;"],
+    [
+      'await sql.unsafe("copy public.entry_to_item (entry_id, item_id) from stdin with (format csv)");',
+    ],
+    [
+      `import { item } from "@myakiba/db/schema/figure"; function write(t = item) { tx.insert(t); }`,
+    ],
+    [`import { item } from "@myakiba/db/schema/figure"; for (const t of [item]) tx.insert(t);`],
+    [`import { entry } from "@myakiba/db/schema/figure"; class Writer { table = entry; }`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; const tables = { ...figure }; tx.insert(tables.item);`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; export const tables = { ...figure };`],
+    [`import * as figure from "@myakiba/db/schema/figure"; export const tables = figure;`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function tables() { return { ...figure }; }`,
+    ],
+    [`import("@myakiba/db/schema/figure").then((m) => m.item_release);`],
+    [`import("@myakiba/db/schema/figure").then(({ entry }) => tx.select().from(entry));`],
+    [`import { item } from "@myakiba/db/schema/figure"; const table = () => item;`],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
   });
@@ -277,6 +358,13 @@ describe("an Item table write", () => {
     [`export { collection } from "@myakiba/db/schema/figure";`],
     [`<span className="truncate text-xs">{item.title}</span>`],
     ["await sql`TRUNCATE collection`;"],
+    ["await sql`COPY item TO STDOUT`;"],
+    ["await sql`COPY collection FROM STDIN`;"],
+    [`import { item } from "@myakiba/db/schema/figure"; const id = () => item.id;`],
+    [`import("@myakiba/db/schema/figure").then((m) => m.collection);`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; const schema = { ...figure }; drizzle({ client, schema });`,
+    ],
   ])("is not found in %s", (body) => {
     expect(writes(body)).toEqual([]);
   });
