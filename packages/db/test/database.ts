@@ -56,12 +56,15 @@ export function testDatabases() {
       return database;
     },
     /** Postgres copies a template only while nothing is connected to it, so this closes it. */
-    async legacyTemplate(fill: (sql: SQL) => Promise<void>): Promise<string> {
+    async legacyTemplate(
+      fill: (sql: SQL) => Promise<void>,
+      schema: readonly string[] = LEGACY_SCHEMA,
+    ): Promise<string> {
       const { name, sql } = await createDatabase();
       templates.push(name);
       try {
         await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
-        for (const statement of LEGACY_SCHEMA) await sql.unsafe(statement);
+        for (const statement of schema) await sql.unsafe(statement);
         await fill(sql);
       } finally {
         await sql.close();
