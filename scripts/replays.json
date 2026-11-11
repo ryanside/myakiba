@@ -3728,6 +3728,31 @@
       "fixed": [
         "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
       ]
+    },
+    {
+      "bug": "The Item ownership migration made the owner keys' targets unique indexes, which no Drizzle schema drizzle-kit 0.31 can push onto a migrated database.",
+      "fix": "dbf1eaf6c1810ed416832a28cfb081321de8935e",
+      "fixed": [
+        "pushes the owned schema onto a migrated database with no prompt and no lost row",
+        "an empty database pushed twice ends with the schema a migrated database gets"
+      ],
+      "test": "packages/db/src/item-ownership/push.test.ts"
+    },
+    {
+      "bug": "The Item ownership migration gave owner x's copy of Item y:z and owner x:y's copy of Item z the same id, so it failed with a duplicate key.",
+      "fix": "599f9250765294d091460c0a414e97be255d3939",
+      "fixed": [
+        "gives separate copies to two pairs whose owner and Item ids join to the same text"
+      ],
+      "test": "packages/db/src/item-ownership/migrate.test.ts"
+    },
+    {
+      "bug": "Under a repeatable read default, the Item ownership migration missed a Collection Item committed while it waited for its locks, and failed.",
+      "fix": "2b954e3f928e57f4244692ddc413bdafac6d926f",
+      "fixed": [
+        "table locks > migrates a Collection Item committed while it waits for its lock, even under a repeatable read default"
+      ],
+      "test": "packages/db/src/item-ownership/migrate.test.ts"
     }
   ],
   "lint": [
