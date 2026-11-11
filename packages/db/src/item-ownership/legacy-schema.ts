@@ -65,8 +65,7 @@ export const LEGACY_SCHEMA: readonly string[] = [
 	"commit_id" uuid NOT NULL,
 	"body_hash" text NOT NULL,
 	"answer" jsonb,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "add_commit_user_id_commit_id_pk" PRIMARY KEY("user_id","commit_id")
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 `,
   `CREATE TABLE "collection" (
@@ -222,6 +221,7 @@ export const LEGACY_SCHEMA: readonly string[] = [
   `CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");`,
   `CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");`,
   `CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");`,
+  `CREATE UNIQUE INDEX "add_commit_user_id_commit_id_idx" ON "add_commit" USING btree ("user_id","commit_id");`,
   `CREATE INDEX "collection_user_id_status_created_at_idx" ON "collection" USING btree ("user_id","status","created_at" DESC NULLS LAST);`,
   `CREATE INDEX "collection_user_id_item_id_idx" ON "collection" USING btree ("user_id","item_id");`,
   `CREATE INDEX "collection_owned_user_id_item_id_idx" ON "collection" USING btree ("user_id","item_id") WHERE "collection"."status" = 'Owned';`,

@@ -11,7 +11,6 @@ import {
   index,
   uniqueIndex,
   check,
-  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
@@ -339,5 +338,7 @@ export const addCommit = pgTable(
     answer: jsonb("answer").$type<AddCommitResponse>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.commitId] })],
+  // Not a composite primary key: drizzle-kit 0.31.10 reads one's columns in no fixed order, so
+  // push would drop and re-add it, and every Add commit fails while it is gone.
+  (t) => [uniqueIndex("add_commit_user_id_commit_id_idx").on(t.userId, t.commitId)],
 );

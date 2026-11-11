@@ -2,17 +2,15 @@ import path from "node:path";
 
 export const PUSH_TIMEOUT = 60_000;
 const OWNED_SCHEMA = Bun.fileURLToPath(import.meta.resolve("./owned-schema.ts"));
+export const APP_SCHEMA = path.join(import.meta.dir, "../src/schema");
 
-// drizzle-kit 0.31.10 reads a composite primary key's columns through an unordered join. On
-// Postgres 18 a migrated database's catalog statistics often make it read add_commit's in
-// reverse, so push rebuilds that key. Nothing else depends on it, so a push may or may not run it.
-const ADD_COMMIT_KEY_REBUILD = [
-  'ALTER TABLE "add_commit" ADD CONSTRAINT "add_commit_user_id_commit_id_pk" PRIMARY KEY("user_id","commit_id")',
-  'ALTER TABLE "add_commit" DROP CONSTRAINT "add_commit_user_id_commit_id_pk"',
+// drizzle-kit 0.31.10 rewrites this default on every push of today's schema.
+export const REPEATED_ON_EVERY_PUSH = [
+  `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
-/** Pushes test/owned-schema.ts as push-schema.ts pushes the app's schema: no TTY, so any prompt fails. */
-export async function pushOwnedSchema(url: string) {
+/** Pushes a schema as push-schema.ts pushes the app's: no TTY, so any prompt fails. */
+export async function pushSchema(url: string, schema = OWNED_SCHEMA) {
   const child = Bun.spawn(
     [
       "bunx",
@@ -20,7 +18,7 @@ export async function pushOwnedSchema(url: string) {
       "push",
       "--verbose",
       "--dialect=postgresql",
-      `--schema=${OWNED_SCHEMA}`,
+      `--schema=${schema}`,
       `--url=${url}`,
       "--schemaFilters=public",
     ],
@@ -40,15 +38,9 @@ export async function pushOwnedSchema(url: string) {
     .map((statement) => statement.trim().replace(/;$/, ""))
     .filter(Boolean)
     .toSorted();
-  const rebuiltAddCommitKey = ADD_COMMIT_KEY_REBUILD.every((rebuild) =>
-    statements.includes(rebuild),
-  );
   return {
     applied: ["Changes applied", "No changes detected"].some((done) => output.includes(done)),
-    statements: rebuiltAddCommitKey
-      ? statements.filter((statement) => !ADD_COMMIT_KEY_REBUILD.includes(statement))
-      : statements,
-    rebuiltAddCommitKey,
+    statements,
     output,
   };
 }
