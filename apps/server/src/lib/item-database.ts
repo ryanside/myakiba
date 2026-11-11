@@ -3,13 +3,16 @@ import { and, asc, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
+import { pictureLock } from "@myakiba/db/picture-lock";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
 import type { Viewer } from "@/domain/viewer";
 import { ItemDatabaseFull } from "@/lib/errors/item-database-full";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
+import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { itemFields, linksInLockOrder, releaseKey, storedPercentage } from "@/lib/item-details";
+import { itemImages } from "@/lib/item-images";
 import type { PictureOutcome, StoredPicture } from "@/lib/item-images";
 import { buildReleasePlan } from "@/lib/release-plan";
 import type { ReleasePlan } from "@/lib/release-plan";
@@ -75,22 +78,37 @@ function lockItemDatabase(tx: Tx, viewer: Viewer) {
 
 type ShownPicture = { readonly image: string; readonly imageBytes: number } | null;
 
-/** The picture a write shows, after the quota check that counts: the one under the lock. */
+type ToShow = { readonly shown: ShownPicture; readonly outcome: PictureOutcome };
+
+/**
+ * The picture a write shows, after the quota check that counts: the one under the owner's lock.
+ * It then takes the picture's lock, which pictures:reconcile deletes under, and holds it until the
+ * commit. If reconcile deleted the object meanwhile, the picture is stored again first.
+ */
 async function pictureToShow(
   tx: Tx,
   viewer: Viewer,
+  mfcItemId: MfcItemId,
   picture: StoredPicture | null,
   replacing?: string,
-): Promise<{ readonly shown: ShownPicture; readonly outcome: PictureOutcome }> {
-  if (picture === null) return { shown: null, outcome: "absent" };
+): Promise<Result<ToShow, StoreItemPictureFailed>> {
+  if (picture === null) return Result.ok({ shown: null, outcome: "absent" });
   if (picture.kind === "rejected") {
-    return { shown: null, outcome: picture.reason === "over_quota" ? "over_quota" : "rejected" };
+    const outcome = picture.reason === "over_quota" ? "over_quota" : "rejected";
+    return Result.ok({ shown: null, outcome });
   }
   const { url: image, bytes } = picture;
   if (!(await pictureFits(tx, viewer, { image, bytes, replacing }))) {
-    return { shown: null, outcome: "over_quota" };
+    return Result.ok({ shown: null, outcome: "over_quota" });
   }
-  return { shown: { image, imageBytes: bytes }, outcome: "stored" };
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${pictureLock(picture.key)}, 0))`,
+  );
+  const ensured = await Result.tryPromise({
+    try: () => itemImages.ensure(picture),
+    catch: (cause) => new StoreItemPictureFailed({ mfcItemId, cause }),
+  });
+  return ensured.map(() => ({ shown: { image, imageBytes: bytes }, outcome: "stored" }));
 }
 
 function releaseRows(itemId: string, page: MfcItemPage) {
@@ -184,7 +202,7 @@ export async function addMfcItemIfMissing(
   viewer: Viewer,
   page: MfcItemPage,
   picture: StoredPicture | null,
-): Promise<Result<Added, MfcItemNotPersisted | ItemDatabaseFull>> {
+): Promise<Result<Added, MfcItemNotPersisted | ItemDatabaseFull | StoreItemPictureFailed>> {
   await lockItemDatabase(tx, viewer);
   const existingId = await findMfcItem(tx, viewer, page.mfcItemId);
   if (existingId) return Result.ok({ itemId: existingId, created: false });
@@ -193,7 +211,9 @@ export async function addMfcItemIfMissing(
     .from(item)
     .where(eq(item.ownerId, viewer.userId));
   if ((held?.items ?? 0) >= MAX_ITEMS_PER_ACCOUNT) return Result.err(new ItemDatabaseFull());
-  const { shown, outcome } = await pictureToShow(tx, viewer, picture);
+  const toShow = await pictureToShow(tx, viewer, page.mfcItemId, picture);
+  if (toShow.isErr()) return toShow;
+  const { shown, outcome } = toShow.value;
   const createdId = await createMfcItemIfAbsent(tx, viewer.userId, page, shown);
   if (!createdId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
   return Result.ok({ itemId: createdId, created: true, picture: outcome });
@@ -342,12 +362,14 @@ export async function refreshItem(
   itemId: string,
   page: MfcItemPage,
   picture: StoredPicture | null,
-): Promise<Result<Refreshed, ItemNotFound>> {
+): Promise<Result<Refreshed, ItemNotFound | StoreItemPictureFailed>> {
   await lockItemDatabase(tx, viewer);
   const locked = await lockItem(tx, viewer.userId, itemId);
   if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
-  const { shown, outcome } = await pictureToShow(tx, viewer, picture, id);
+  const toShow = await pictureToShow(tx, viewer, page.mfcItemId, picture, id);
+  if (toShow.isErr()) return toShow;
+  const { shown, outcome } = toShow.value;
   const { image, imageBytes } = shown ?? fields;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);

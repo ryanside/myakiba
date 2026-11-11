@@ -1,23 +1,34 @@
 import { describe, expect, test } from "bun:test";
+import { HeadObjectCommand, NotFound } from "@aws-sdk/client-s3";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createItemImages } from "./item-images";
 
 const fits = async () => true;
 const sha256 = (data: Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 
-function fakeBucket() {
+function fakeBucket({ headFails = false } = {}) {
   const puts: PutObjectCommand["input"][] = [];
+  const heads: string[] = [];
+  const stored = new Set<string>();
   const images = createItemImages({
     client: {
       send: async (command) => {
+        const key = command.input.Key ?? "";
+        if (command instanceof HeadObjectCommand) {
+          heads.push(key);
+          if (headFails) throw new Error("S3 is down");
+          if (stored.has(key)) return { $metadata: { httpStatusCode: 200 } };
+          throw new NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
+        }
         puts.push(command.input);
+        stored.add(key);
         return { $metadata: { httpStatusCode: 200 } };
       },
     },
     name: "pictures",
     publicUrl: "https://cdn.example.test/",
   });
-  return { images, puts };
+  return { images, puts, heads, stored };
 }
 
 const ascii = (text: string) => [...new TextEncoder().encode(text)];
@@ -45,6 +56,9 @@ describe("item pictures are stored by their bytes", () => {
         kind: "stored",
         url: `https://cdn.example.test/${key}`,
         bytes: sample.byteLength,
+        key,
+        body: sample,
+        contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
       });
       expect(puts).toHaveLength(1);
       expect(puts[0]).toMatchObject({
@@ -115,5 +129,46 @@ describe("item pictures are stored by their bytes", () => {
     limit.set(SAMPLES.jpg);
 
     expect(await images.store(new Blob([limit]), fits)).toMatchObject({ kind: "stored" });
+  });
+});
+
+describe("a stored picture is stored again only if it is gone", () => {
+  async function storedJpeg(bucket: ReturnType<typeof fakeBucket>) {
+    const picture = await bucket.images.store(new Blob([SAMPLES.jpg]), fits);
+    if (picture.kind !== "stored") throw new Error("expected a stored picture");
+    return picture;
+  }
+
+  test("a picture still in the bucket is not stored again", async () => {
+    const bucket = fakeBucket();
+    const picture = await storedJpeg(bucket);
+
+    await bucket.images.ensure(picture);
+
+    expect(bucket.heads).toEqual([picture.key]);
+    expect(bucket.puts).toHaveLength(1);
+  });
+
+  test("a picture reconcile deleted is stored again with its bytes and type", async () => {
+    const bucket = fakeBucket();
+    const picture = await storedJpeg(bucket);
+    bucket.stored.delete(picture.key);
+
+    await bucket.images.ensure(picture);
+
+    expect(bucket.puts).toHaveLength(2);
+    expect(bucket.puts[1]).toMatchObject({
+      Key: picture.key,
+      Body: SAMPLES.jpg,
+      ContentType: "image/jpeg",
+      CacheControl: "public, max-age=31536000, immutable",
+    });
+  });
+
+  test("a HEAD that fails for another reason throws", async () => {
+    const bucket = fakeBucket({ headFails: true });
+    const picture = await storedJpeg(bucket);
+
+    await expect(bucket.images.ensure(picture)).rejects.toThrow("S3 is down");
   });
 });

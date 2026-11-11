@@ -10,6 +10,9 @@
     "./owner-guards": {
       "default": "./src/item-ownership/guards.ts"
     },
+    "./picture-lock": {
+      "default": "./src/pictures/lock.ts"
+    },
     "./order-release-date": {
       "default": "./src/order-release-date.ts"
     },

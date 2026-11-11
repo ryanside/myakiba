@@ -1,4 +1,5 @@
 import type { S3Client, SQL } from "bun";
+import { pictureLock } from "./lock";
 
 /** A picture stored by its content: `items/<sha256>.<ext>`. */
 const CONTENT_KEY = /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u;
@@ -98,8 +99,9 @@ async function isShown(sql: SQL, key: string): Promise<boolean> {
 /**
  * Finds stored pictures no Item shows that are older than the grace period, and deletes them when
  * asked. It lists the bucket before it reads the Items, so an object a save stores after the
- * listing is not seen, and one stored before it is young. Just before each delete it reads the
- * object's LastModified again and asks the database again, and keeps the object if either moved.
+ * listing is not seen, and one stored before it is young. Each delete holds the picture's lock,
+ * and under it reconcile asks the database again and reads the object's LastModified again, and
+ * keeps the object if either moved.
  * It never considers a key outside the content keys, or the legacy keys with `legacy`.
  */
 export async function reconcilePictures(
@@ -122,16 +124,19 @@ export async function reconcilePictures(
   const kept: string[] = [];
   if (apply && refused === null) {
     for (const object of garbage) {
-      const current = await bucket.stat(object.key);
-      // A HEAD's Last-Modified has whole seconds, and a listing's may have milliseconds.
-      const listedAt = Math.floor(Date.parse(object.lastModified) / 1000);
-      const storedAt = Math.floor(current.lastModified.getTime() / 1000);
-      if (storedAt !== listedAt || (await isShown(sql, object.key))) {
-        kept.push(object.key);
-        continue;
-      }
-      await bucket.delete(object.key);
-      deleted.push(object.key);
+      // A save that shows this key waits for the commit, then stores the picture again if it is gone.
+      const removed = await sql.begin(async (tx) => {
+        await tx`SELECT pg_advisory_xact_lock(hashtextextended(${pictureLock(object.key)}, 0))`;
+        if (await isShown(tx, object.key)) return false;
+        const current = await bucket.stat(object.key);
+        // A HEAD's Last-Modified has whole seconds, and a listing's may have milliseconds.
+        const listedAt = Math.floor(Date.parse(object.lastModified) / 1000);
+        const storedAt = Math.floor(current.lastModified.getTime() / 1000);
+        if (storedAt !== listedAt) return false;
+        await bucket.delete(object.key);
+        return true;
+      });
+      (removed ? deleted : kept).push(object.key);
     }
   }
 

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
+import { SQL } from "bun";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 import path from "node:path";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import * as z from "zod";
-import type { PutObjectCommand } from "@aws-sdk/client-s3";
+import type { HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
@@ -45,7 +46,7 @@ const realS3 = await import("@aws-sdk/client-s3");
 await mock.module("@aws-sdk/client-s3", () => ({
   ...realS3,
   S3Client: class {
-    send(command: PutObjectCommand) {
+    send(command: PutObjectCommand | HeadObjectCommand) {
       return store.send(command);
     }
   },
@@ -94,9 +95,14 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x4
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const send = async (command: PutObjectCommand) => {
+  const send = async (command: PutObjectCommand | HeadObjectCommand) => {
+    const key = command.input.Key ?? "";
+    if (command instanceof realS3.HeadObjectCommand) {
+      if (objects.has(key)) return { $metadata: { httpStatusCode: 200 } };
+      throw new realS3.NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
+    }
     await gate?.();
-    objects.set(command.input.Key ?? "", command.input);
+    objects.set(key, command.input);
     return { $metadata: { httpStatusCode: 200 } };
   };
   const releasePutsTogether = (parties: number) => {
@@ -817,5 +823,47 @@ describe("POST /api/mfc-items holds at most 20,000 Items per account", () => {
       status: 200,
       body: { saved: "existing", itemId: saved(first).itemId, mfcItemId: 98_777 },
     });
+  });
+});
+
+describe("POST /api/mfc-items and pictures:reconcile", () => {
+  /** Whether a statement waits on an advisory lock before `settled` says the race is over. */
+  async function waitsOnAdvisoryLock(watcher: SQL, settled: () => boolean) {
+    const deadline = Date.now() + 5000;
+    while (!settled() && Date.now() < deadline) {
+      const [row] = await watcher<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_stat_activity
+        WHERE datname = current_database() AND wait_event = 'advisory'
+      `;
+      if ((row?.waiting ?? 0) > 0) return true;
+      await Bun.sleep(10);
+    }
+    return false;
+  }
+
+  test("a save waits on reconcile's lock on its picture, and stores the picture again if reconcile deleted it", async () => {
+    const key = `items/${fileOf(JPEG, "jpg")}`;
+    const lock = `picture:${key}`;
+    const reconcile = new SQL({ url: process.env.DATABASE_URL, max: 1 });
+    const watcher = new SQL({ url: process.env.DATABASE_URL, max: 1 });
+    try {
+      await reconcile`SELECT pg_advisory_lock(hashtextextended(${lock}, 0))`;
+      let finished = false;
+      const saving = upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }).finally(() => {
+        finished = true;
+      });
+
+      expect(await waitsOnAdvisoryLock(watcher, () => finished)).toBe(true);
+      expect(finished).toBe(false);
+      store.objects.delete(key);
+      await reconcile`SELECT pg_advisory_unlock(hashtextextended(${lock}, 0))`;
+
+      expect(await saving).toMatchObject({ status: 200, body: { picture: "stored" } });
+      expect(store.objects.has(key)).toBe(true);
+      const { item: shown } = await itemRows(98_777);
+      expect(shown).toMatchObject({ image: `${PUBLIC}/${key}` });
+    } finally {
+      await Promise.all([reconcile.close(), watcher.close()]);
+    }
   });
 });

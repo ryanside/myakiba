@@ -1,7 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import path from "node:path";
-import { S3Client } from "bun";
-import type { SQL } from "bun";
+import { S3Client, SQL } from "bun";
 import { testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
 import { GRACE_MS, reconcilePictures } from "./reconcile";
@@ -157,12 +156,12 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
     const racing = {
       list: bucket.list.bind(bucket),
       delete: bucket.delete.bind(bucket),
+      // Garbage is handled in key order, so both changes land after the listing and before
+      // STAGING_UNUSED's turn.
       stat: async (key: string) => {
         if (key === ROOT_UNUSED) {
           await Bun.sleep(1100);
           await bucket.write(key, "picture");
-        }
-        if (key === STAGING_UNUSED) {
           await sql`
             INSERT INTO item (id, owner_id, external_id, title, image)
             VALUES ('item-5', 'u1', 5, 'Saved meanwhile', ${`${CDN}/${STAGING_UNUSED}`})
@@ -178,6 +177,55 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
     expect(report.counts.deleted).toBe(1);
     expect(await keys()).toContain(ROOT_UNUSED);
     expect(await keys()).toContain(STAGING_UNUSED);
+  });
+
+  test("a save that commits while reconcile deletes its object still leaves the object", async () => {
+    const watcher = new SQL({ url: databaseUrl, max: 1 });
+    // A save of the same bytes as the server makes it: under the picture's lock, it stores the
+    // picture again if it is gone, then commits the Item that shows it.
+    const save = (saver: SQL) =>
+      saver.begin(async (tx) => {
+        await tx`SELECT pg_advisory_xact_lock(hashtextextended(${`picture:${UNUSED}`}, 0))`;
+        if (!(await bucket.exists(UNUSED))) await bucket.write(UNUSED, "picture");
+        await tx`
+          INSERT INTO item (id, owner_id, external_id, title, image, image_bytes)
+          VALUES ('item-9', 'u2', 9, 'Saved meanwhile', ${`${CDN}/${UNUSED}`}, 7)
+        `;
+      });
+    const saver = new SQL({ url: databaseUrl, max: 1 });
+    let saving: Promise<unknown> = Promise.resolve();
+    const racing = {
+      list: bucket.list.bind(bucket),
+      stat: bucket.stat.bind(bucket),
+      delete: async (key: string) => {
+        if (key === UNUSED) {
+          const race = { settled: false };
+          saving = save(saver).finally(() => {
+            race.settled = true;
+          });
+          // Wait until the save commits, or until it waits on the picture's lock.
+          for (let tries = 0; tries < 500 && !race.settled; tries += 1) {
+            const [row] = await watcher<{ waiting: number }[]>`
+              SELECT count(*)::int AS waiting FROM pg_stat_activity
+              WHERE datname = current_database() AND wait_event = 'advisory'
+            `;
+            if ((row?.waiting ?? 0) > 0) break;
+            await Bun.sleep(10);
+          }
+        }
+        return bucket.delete(key);
+      },
+    };
+    try {
+      await reconcilePictures(sql, racing, options({ apply: true }));
+      await saving;
+
+      const [shown] = await sql`SELECT image FROM item WHERE id = 'item-9'`;
+      expect(shown).toEqual({ image: `${CDN}/${UNUSED}` });
+      expect(await bucket.exists(UNUSED)).toBe(true);
+    } finally {
+      await Promise.all([watcher.close(), saver.close()]);
+    }
   });
 
   test("a deleted account's Items go with it, and only pictures no one else shows become garbage", async () => {

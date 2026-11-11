@@ -5,7 +5,7 @@ import Redis from "ioredis";
 import path from "node:path";
 import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
-import type { PutObjectCommand } from "@aws-sdk/client-s3";
+import type { HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import * as authSchema from "@myakiba/db/schema/auth";
 import {
   collection,
@@ -52,7 +52,7 @@ const realS3 = await import("@aws-sdk/client-s3");
 await mock.module("@aws-sdk/client-s3", () => ({
   ...realS3,
   S3Client: class {
-    send(command: PutObjectCommand) {
+    send(command: PutObjectCommand | HeadObjectCommand) {
       return store.send(command);
     }
   },
@@ -141,9 +141,14 @@ const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const send = async (command: PutObjectCommand) => {
+  const send = async (command: PutObjectCommand | HeadObjectCommand) => {
+    const key = command.input.Key ?? "";
+    if (command instanceof realS3.HeadObjectCommand) {
+      if (objects.has(key)) return { $metadata: { httpStatusCode: 200 } };
+      throw new realS3.NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
+    }
     await gate?.();
-    objects.set(command.input.Key ?? "", command.input);
+    objects.set(key, command.input);
     return { $metadata: { httpStatusCode: 200 } };
   };
   const holdPut = () => {

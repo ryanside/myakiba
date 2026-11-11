@@ -1,13 +1,20 @@
 import { createHash } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import type { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+import { HeadObjectCommand, NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 
 /** A picture read from an upload, before an Item shows it. */
 export type StoredPicture =
   /** In the bucket at its content's key. No Item shows it until the writer saves it. */
-  | { readonly kind: "stored"; readonly url: string; readonly bytes: number }
+  | {
+      readonly kind: "stored";
+      readonly url: string;
+      readonly bytes: number;
+      readonly key: string;
+      /** Kept so the writer can store it again if reconcile deleted it meanwhile. */
+      readonly body: Uint8Array;
+      readonly contentType: string;
+    }
   | {
       readonly kind: "rejected";
       readonly reason: "not_an_image" | "too_large" | "over_quota";
@@ -22,14 +29,16 @@ type Fits = (url: string, bytes: number) => Promise<boolean>;
 export type ItemImages = {
   /** Sniffs and hashes the picture, then stores it if it fits. Throws when S3 does not take it within 5 s. */
   readonly store: (picture: Blob, fits: Fits) => Promise<StoredPicture>;
+  /** Stores a stored picture again if it is gone. Throws when S3 does not answer within 5 s. */
+  readonly ensure: (picture: Extract<StoredPicture, { readonly kind: "stored" }>) => Promise<void>;
 };
 
 type Bucket = {
   readonly client: {
     readonly send: (
-      command: PutObjectCommand,
+      command: PutObjectCommand | HeadObjectCommand,
       options: { readonly abortSignal: AbortSignal },
-    ) => Promise<PutObjectCommandOutput>;
+    ) => Promise<{ readonly $metadata: object }>;
   };
   readonly name: string;
   readonly publicUrl: string;
@@ -86,6 +95,17 @@ const FORMATS = [
 
 export function createItemImages(bucket: Bucket): ItemImages {
   const baseUrl = bucket.publicUrl.replace(/\/+$/u, "");
+  const put = async (key: string, body: Uint8Array, contentType: string) => {
+    const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
+    const command = new PutObjectCommand({
+      Bucket: bucket.name,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: IMMUTABLE,
+    });
+    await racingAbort(bucket.client.send(command, { abortSignal: timeout }), timeout);
+  };
   return {
     async store(picture, fits) {
       if (picture.size > MAX_ITEM_PICTURE_BYTES) return { kind: "rejected", reason: "too_large" };
@@ -97,17 +117,32 @@ export function createItemImages(bucket: Bucket): ItemImages {
       const contentKey = `items/${contentHash}.${format.extension}`;
       const url = `${baseUrl}/${contentKey}`;
       if (!(await fits(url, bytes.byteLength))) return { kind: "rejected", reason: "over_quota" };
-      const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
-      const put = new PutObjectCommand({
-        Bucket: bucket.name,
-        Key: contentKey,
-        Body: bytes,
-        ContentType: format.contentType,
-        CacheControl: IMMUTABLE,
-      });
       // Stored again even when it exists, so its LastModified starts the reconcile grace anew.
-      await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
-      return { kind: "stored", url, bytes: bytes.byteLength };
+      await put(contentKey, bytes, format.contentType);
+      return {
+        kind: "stored",
+        url,
+        bytes: bytes.byteLength,
+        key: contentKey,
+        body: bytes,
+        contentType: format.contentType,
+      };
+    },
+    async ensure({ key, body, contentType }) {
+      const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
+      const head = new HeadObjectCommand({ Bucket: bucket.name, Key: key });
+      const found = await racingAbort(
+        bucket.client.send(head, { abortSignal: timeout }).then(
+          () => true,
+          // The SDK answers a HEAD for a missing object with NotFound.
+          (error: Error) => {
+            if (error instanceof NotFound) return false;
+            throw error;
+          },
+        ),
+        timeout,
+      );
+      if (!found) await put(key, body, contentType);
     },
   };
 }
