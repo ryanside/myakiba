@@ -76,11 +76,21 @@ jobs:
       - name: Check types
         run: bunx turbo run check-types
 
+      # A service container cannot take MinIO's `server` command, so this step starts it.
+      - name: Start MinIO for pictures:reconcile
+        run: |
+          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=test -e MINIO_ROOT_PASSWORD=test-password \
+            cgr.dev/chainguard/minio@sha256:ad134b2dd572ae0d989d6807c3e45516cc75a34883a8021db2ff04be5d1d496a server /data
+          timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done'
+          docker run --rm --network host -e MC_HOST_s3=http://test:test-password@localhost:9000 \
+            cgr.dev/chainguard/minio-client@sha256:2fc4412391f1ce7372db8dd8bee17b38d76f7bb898bac195915bfe6979aa5784 mb s3/myakiba-test
+
       - name: Test
         run: bun run test
         env:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
           TEST_REDIS_URL: redis://localhost:6379
+          TEST_S3_URL: http://test:test-password@localhost:9000/myakiba-test
 
   extension-sources:
     name: Rebuild the extension from its sources zip
