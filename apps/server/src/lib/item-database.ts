@@ -1,19 +1,105 @@
-import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
+import { Result, panic } from "better-result";
+import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import type { Tx } from "@myakiba/db/tx";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { MfcItemId } from "@myakiba/mfc/page";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
-import {
-  itemFields,
-  linkEntries,
-  linksInLockOrder,
-  releaseKey,
-  releaseRows,
-} from "@/lib/mfc-item-ingest";
-import { buildReleasePlan } from "./release-plan";
-import type { ReleasePlan } from "./release-plan";
+import { ItemNotFound } from "@/lib/errors/item-not-found";
+import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
+import { itemFields, linksInLockOrder, releaseKey, storedPercentage } from "@/lib/item-details";
+import type { StoredPicture } from "@/lib/item-images";
+import { buildReleasePlan } from "@/lib/release-plan";
+import type { ReleasePlan } from "@/lib/release-plan";
 
-export async function lockItem(tx: Tx, itemId: string) {
+export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | undefined> {
+  const [found] = await tx
+    .select({ id: item.id })
+    .from(item)
+    .where(and(eq(item.source, "mfc"), eq(item.externalId, id)));
+  return found?.id;
+}
+
+function releaseRows(itemId: string, page: MfcItemPage) {
+  const unique = new Map(page.releases.map((release) => [releaseKey(release), release]));
+  return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
+}
+
+async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<void> {
+  const links = linksInLockOrder(page);
+  if (links.length === 0) return;
+  const entries = await tx
+    .insert(entry)
+    .values(
+      links.map((link) => ({
+        externalId: link.externalId,
+        source: "mfc" as const,
+        category: link.category,
+        name: link.name,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [entry.source, entry.externalId],
+      set: { name: sql`excluded.name`, category: sql`excluded.category`, updatedAt: new Date() },
+    })
+    .returning({ id: entry.id, externalId: entry.externalId });
+  const entryIds = new Map(entries.map((row) => [row.externalId, row.id]));
+  await tx.insert(entry_to_item).values(
+    links.map((link) => {
+      const entryId = entryIds.get(link.externalId);
+      if (!entryId) {
+        panic(
+          `Entry ${link.externalId} was not returned by its upsert while linking item ${itemId}`,
+        );
+      }
+      return {
+        entryId,
+        itemId,
+        role: link.roles[0] ?? "",
+        roles: [...link.roles],
+        sourceLabel: link.sourceLabel,
+        materialPercentage: link.materialPercentage,
+      };
+    }),
+  );
+}
+
+async function createMfcItemIfAbsent(
+  tx: Tx,
+  page: MfcItemPage,
+  image: string | null,
+): Promise<string | undefined> {
+  const [created] = await tx
+    .insert(item)
+    .values({ externalId: page.mfcItemId, source: "mfc", ...itemFields(page), image })
+    .onConflictDoNothing({ target: [item.source, item.externalId] })
+    .returning({ id: item.id });
+  if (!created) return undefined;
+
+  await linkEntries(tx, created.id, page);
+  if (page.releases.length > 0) {
+    await tx.insert(item_release).values(releaseRows(created.id, page));
+  }
+  return created.id;
+}
+
+export async function ensureMfcItem(
+  tx: Tx,
+  page: MfcItemPage,
+  stored: StoredPicture | null,
+): Promise<Result<{ readonly itemId: string; readonly created: boolean }, MfcItemNotPersisted>> {
+  const createdId = await createMfcItemIfAbsent(
+    tx,
+    page,
+    stored?.kind === "stored" ? stored.url : null,
+  );
+  if (createdId) return Result.ok({ itemId: createdId, created: true });
+  const existingId = await findMfcItem(tx, page.mfcItemId);
+  if (!existingId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
+  return Result.ok({ itemId: existingId, created: false });
+}
+
+async function lockItem(tx: Tx, itemId: string) {
   const [locked] = await tx
     .select({
       id: item.id,
@@ -66,19 +152,6 @@ function pageLink(link: MfcEntryLink): Link {
     roles: [...link.roles],
     materialPercentage: storedPercentage(link.materialPercentage),
   };
-}
-
-// entry_to_item.material_percentage is decimal(5,2), so a finer share reads back rounded.
-export function storedPercentage(percentage: number | null): number | null {
-  if (percentage === null) return null;
-  const [coefficient = "0", exponent = "0"] = Math.abs(percentage).toString().split("e");
-  const [whole = "0", fraction = ""] = coefficient.split(".");
-  const digits = whole + fraction;
-  const centEnd = whole.length + Number(exponent) + 2;
-  if (centEnd < 0) return 0;
-  const cents = BigInt(digits.slice(0, centEnd).padEnd(centEnd, "0") || "0");
-  const rounded = cents + (Number(digits[centEnd] ?? "0") >= 5 ? 1n : 0n);
-  return rounded === 0n ? 0 : Math.sign(percentage) * Number(`${rounded}e-2`);
 }
 
 type Snapshot = {
@@ -158,11 +231,14 @@ async function applyReleases(
 
 export async function refreshItem(
   tx: Tx,
-  locked: LockedItem,
+  itemId: string,
   page: MfcItemPage,
-  image: string | null,
-): Promise<ReleasePlan["kind"] | "unchanged"> {
+  stored: StoredPicture | null,
+): Promise<Result<ReleasePlan["kind"] | "unchanged", ItemNotFound>> {
+  const locked = await lockItem(tx, itemId);
+  if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
+  const image = stored?.kind === "stored" ? stored.url : fields.image;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);
   const keyed = rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
@@ -176,7 +252,7 @@ export async function refreshItem(
     links: linksInLockOrder(page).map(pageLink),
     releaseKeys: sortedKeys(keyed),
   };
-  if (Bun.deepEquals(current, next)) return "unchanged";
+  if (Bun.deepEquals(current, next)) return Result.ok("unchanged");
 
   await tx
     .update(item)
@@ -184,5 +260,5 @@ export async function refreshItem(
     .where(eq(item.id, id));
   await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
   await linkEntries(tx, id, page);
-  return applyReleases(tx, id, buildReleasePlan({ existing, page: keyed }), rows);
+  return Result.ok(await applyReleases(tx, id, buildReleasePlan({ existing, page: keyed }), rows));
 }
