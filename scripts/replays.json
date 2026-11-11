@@ -3739,6 +3739,17 @@
         "pushes the owned schema onto a migrated database with no prompt and no lost row",
         "an empty database pushed twice ends with the schema a migrated database gets"
       ],
+      "test": "packages/db/src/item-ownership/push.test.ts",
+      "testAt": "dbf1eaf6c1810ed416832a28cfb081321de8935e",
+      "reason": "The composite owner keys this fix made pushable are gone, replaced by owner guards, so HEAD's push test expects no composite keys. Its own test passes only on Postgres 17, because drizzle-kit 0.31.10 reads the keys' targets in reverse on 18."
+    },
+    {
+      "bug": "On Postgres 18.6, drizzle-kit 0.31.10 read the composite owner keys' unique targets in reverse column order, so a push of the owned schema asked to truncate item on a migrated database and failed 2BP01 on an empty database's second push.",
+      "fix": "5f00011df6bfe1d4d8637b31f20d3dc8880fb8ed",
+      "fixed": [
+        "pushes the owned schema onto a migrated database with no prompt and no lost row",
+        "an empty database pushed twice ends with the schema a migrated database gets"
+      ],
       "test": "packages/db/src/item-ownership/push.test.ts"
     },
     {
