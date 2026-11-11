@@ -342,7 +342,9 @@
       "fixed": [
         "each search route answers as before > item database search ranks an exact id before a prefix, then a title, then an entry",
         "each search route answers as before > item database search badges count only the viewer's Collection Items and Wishlist"
-      ]
+      ],
+      "testAt": "caae145d0487a662056ad5b2ccbd4d884520f36e",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
@@ -422,7 +424,9 @@
         "every API route requires a session unless it is listed as public > GET /api/item/:externalId",
         "every API route requires a session unless it is listed as public > GET /api/search/releases",
         "every API route requires a session unless it is listed as public > GET /api/search/entries"
-      ]
+      ],
+      "testAt": "5a51f519047107b199bff9c9b156e8f33f57c1d9",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "8bf962cd8b33bffd3f3e3a929bf062fde73dae61",
@@ -430,13 +434,17 @@
       "test": "apps/server/src/route-auth.test.ts",
       "fixed": [
         "every API route requires a session unless it is listed as public > GET /api/items/:itemId/resync-status"
-      ]
+      ],
+      "testAt": "8bf962cd8b33bffd3f3e3a929bf062fde73dae61",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "527a76d484ecf8d8e09616512bbecd837777d26b",
       "bug": "a failed order-item delete left owned items detached",
       "test": "apps/server/src/routers/orders/remove-items.test.ts",
-      "fixed": ["removing items from an order > a failed delete leaves every item in the order"]
+      "fixed": ["removing items from an order > a failed delete leaves every item in the order"],
+      "testAt": "527a76d484ecf8d8e09616512bbecd837777d26b",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "ed65f1d850e96ab20d8c32d4b46f24e4d0102897",
@@ -732,13 +740,17 @@
       "fix": "0e06a016c9b7cbc4a39f78b2b8e145e2f3104c4b",
       "bug": "each /health call left another Redis ping pending while packets dropped",
       "test": "apps/server/src/lib/readiness.test.ts",
-      "fixed": ["readinessCheck > keeps one Redis ping pending while the connection drops packets"]
+      "fixed": ["readinessCheck > keeps one Redis ping pending while the connection drops packets"],
+      "testAt": "0e06a016c9b7cbc4a39f78b2b8e145e2f3104c4b",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "13284a20165145cb83c0b2ad02dbf4e7166e1e4c",
       "bug": "each timed-out /health call stayed attached to the pending probe until it settled",
       "test": "apps/server/src/lib/readiness.test.ts",
-      "fixed": ["readinessCheck > keeps nothing per timed-out call while the probe stays pending"]
+      "fixed": ["readinessCheck > keeps nothing per timed-out call while the probe stays pending"],
+      "testAt": "13284a20165145cb83c0b2ad02dbf4e7166e1e4c",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "17ff984664927da1fb892da539eae49d90c6f71b",
@@ -749,13 +761,17 @@
         "each orders route answers as before > move an item deleted in another tab",
         "a write that names any id the caller does not own answers 404 and changes nothing > move only another user's item",
         "a write with an empty id list answers 404 and changes nothing > move"
-      ]
+      ],
+      "testAt": "17ff984664927da1fb892da539eae49d90c6f71b",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "6951e768644864d684020559b34af7a0aaf9450a",
       "bug": "collection edit and delete returned Date timestamps that the wire sends as strings",
       "test": "apps/server/src/routers/collection/routes.test.ts",
-      "fixed": ["the edit and delete operations return strings, so Eden types them as strings"]
+      "fixed": ["the edit and delete operations return strings, so Eden types them as strings"],
+      "testAt": "6951e768644864d684020559b34af7a0aaf9450a",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "25bdd70543c196384d607faa296b1f27d4e18307",
@@ -767,7 +783,9 @@
       "fix": "6bdc882362a1c12429c8e2914c04f3cbc67fd39b",
       "bug": "a list page and its totals read two snapshots, so a committed delete left rows the totals did not count",
       "test": "apps/server/src/routers/list-snapshot.test.ts",
-      "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"]
+      "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"],
+      "testAt": "6bdc882362a1c12429c8e2914c04f3cbc67fd39b",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
@@ -951,13 +969,17 @@
         "a write that names any id the caller does not own answers 404 and changes nothing > move an own and another user's item",
         "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's order",
         "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's item"
-      ]
+      ],
+      "testAt": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
       "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
       "test": "apps/server/src/routers/collection/routes.test.ts",
-      "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
+      "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"],
+      "testAt": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "2a572a426b4d6b3107fb3159ffbf4ec976c2e80a",
@@ -1020,7 +1042,9 @@
         "GET /api/auth/does-not-exist logs 404 and keeps Better Auth's response",
         "POST /api/auth/delete-user logs 401 and keeps Better Auth's response",
         "GET /api/auth/callback/google logs 302 and keeps Better Auth's response"
-      ]
+      ],
+      "testAt": "670907bdb63f81b011b8d670e691a0726e75d28e",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "ebab2322988880da373c829954cc6446a1abf0ea",
@@ -1489,7 +1513,9 @@
         "server logs and exits for unhandledRejection during boot with success flush",
         "server logs and exits for unhandledRejection during boot with reject flush",
         "server logs and exits for unhandledRejection during boot with stuck flush"
-      ]
+      ],
+      "testAt": "6dbb035be7d5d521243352fdf57d445b344cf08f",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "89dd81426801639af37b213341673c04420ed17e",
@@ -3234,7 +3260,9 @@
         "a free-text query value reaches the route as the text the client sent > search=a%2Cb",
         "a free-text query value reaches the route as the text the client sent > search=%5B1%5D",
         "a free-text query value reaches the route as the text the client sent > search=%7B%7D"
-      ]
+      ],
+      "testAt": "2155e8a2",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "2155e8a2",
@@ -3243,7 +3271,9 @@
       "fixed": [
         "a section search for %2C answers with no rows",
         "a section search for a,b answers with no rows"
-      ]
+      ],
+      "testAt": "2155e8a2",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "c6ea6429",
@@ -3604,7 +3634,9 @@
         "a signed-out upload answers 401 before its body is read",
         "a body over the largest legitimate upload is refused before it is read",
         "an Order with notes over 10000 characters answers 422"
-      ]
+      ],
+      "testAt": "2549eca2bbd76288a8f8fdcf4199f24c11113244",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "2549eca2bbd76288a8f8fdcf4199f24c11113244",
@@ -3626,7 +3658,9 @@
         "production answers 404 for the API docs at /openapi/json",
         "production answers 404 for the API docs at /api/auth/reference",
         "production answers 404 for the API docs at /api/auth/open-api/generate-schema"
-      ]
+      ],
+      "testAt": "e2d04b2095511a6066c518800f7cdf2451bd40b1",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "4efae6d5a43b7acf1a18427d4b6b99e0029004ad",
@@ -3641,7 +3675,9 @@
         "in production mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile",
         "in test mode > / serves no HTML without the frame and script headers",
         "in production mode > / serves no HTML without the frame and script headers"
-      ]
+      ],
+      "testAt": "4efae6d5a43b7acf1a18427d4b6b99e0029004ad",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "7a10dcef67e810190060641bed9622d4a84c0d57",
@@ -3664,7 +3700,9 @@
         "in production mode > /nested/index.html serves no HTML without the frame and script headers",
         "in production mode > /nested/ serves no HTML without the frame and script headers",
         "in production mode > /nested serves no HTML without the frame and script headers"
-      ]
+      ],
+      "testAt": "7a10dcef67e810190060641bed9622d4a84c0d57",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "cfbcc5d00fc23d4a4337e49d280e559049296d7e",
@@ -3676,7 +3714,9 @@
       "fix": "f9fef3fa72fd0d8bcdb0d6a76483e72433a6394f",
       "bug": "evlog logged the path of a password reset link, which holds its token, to the console and the PostHog drain.",
       "test": "apps/server/src/request-log.test.ts",
-      "fixed": ["a password reset link's token reaches neither the log nor the drain"]
+      "fixed": ["a password reset link's token reaches neither the log nor the drain"],
+      "testAt": "f9fef3fa72fd0d8bcdb0d6a76483e72433a6394f",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "2b56934239e0b1e869a1e338422093564567a597",
@@ -3703,7 +3743,9 @@
       "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
       "bug": "POST /api/item/custom let any signed-in account write an owner-less Item, Entries and releases with no limit, though the web never called it.",
       "test": "apps/server/src/routers/item/routes.test.ts",
-      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"]
+      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"],
+      "testAt": "d2efa322b5a4646a76b4552891429435acf255ff",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "10cd59403523c9bb425f9d4c6f8b1a3edc6be7ed",
@@ -3714,7 +3756,9 @@
         "Item Refresh has no cooldown > two refreshes in a row both write",
         "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
-      ]
+      ],
+      "testAt": "10cd59403523c9bb425f9d4c6f8b1a3edc6be7ed",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
@@ -3722,7 +3766,9 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing"
-      ]
+      ],
+      "testAt": "8a46ad31f47968abe935b3fde2f50725b5014d22",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "fix": "562eada1705d62a04754cd69390ac5725056999d",
@@ -3730,7 +3776,9 @@
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": [
         "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
-      ]
+      ],
+      "testAt": "562eada1705d62a04754cd69390ac5725056999d",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "bug": "The Item ownership migration made the owner keys' targets unique indexes, which no Drizzle schema drizzle-kit 0.31 can push onto a migrated database.",
@@ -3777,7 +3825,9 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
-      ]
+      ],
+      "testAt": "b4c7f77f2fdc82480f4812645158486a51a62387",
+      "reason": "The server test harness installs the owner guards from @myakiba/db/owner-guards, which this revision does not export, and the Item fixtures at HEAD need an owner."
     },
     {
       "bug": "An owner guard read the parent it checked without a lock, so an Item deleted and reissued to another user while a write waited passed the guard and the foreign key check. Two overlapping guard installs failed with tuple concurrently updated, and a guard that fired only on a replica counted as installed.",
