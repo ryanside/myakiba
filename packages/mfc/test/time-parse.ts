@@ -6,7 +6,11 @@ const started = performance.now();
 let outcome: string;
 try {
   const parsed = parseMfcItemPage(html, itemId(1));
-  outcome = parsed.isOk() ? "parsed" : parsed.error.problem.kind;
+  if (parsed.isOk()) outcome = "parsed";
+  else {
+    const { problem } = parsed.error;
+    outcome = problem.kind === "too_large" ? `too_large:${problem.limit}` : problem.kind;
+  }
 } catch (error) {
   outcome = `threw ${error instanceof Error ? error.name : String(error)}`;
 }

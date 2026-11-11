@@ -3570,6 +3570,14 @@
         "parseMfcItemPage on adversarial pages at the upload limit > barcode: barcode characters with a failing tail answers a Result within 1000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > barcode: dashes with a failing tail answers a Result within 1000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > material percentage: digits with no percent sign answers a Result within 1000 ms"
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
+      "atHead": [
+        "parseMfcItemPage on adversarial pages at the upload limit > price: comma groups with no currency answers parsed within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > barcode: barcode characters with a failing tail answers parsed within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > barcode: dashes with a failing tail answers parsed within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > material percentage: digits with no percent sign answers parsed within 5000 ms"
       ]
     },
     {
@@ -3584,6 +3592,11 @@
       "test": "packages/mfc/src/parse/adversarial.test.ts",
       "fixed": [
         "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers a Result within 1000 ms"
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
+      "atHead": [
+        "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers too_large:dataFields within 5000 ms"
       ]
     },
     {
@@ -3598,6 +3611,17 @@
         "parseMfcItemPage on adversarial pages at the upload limit > nested elements answers a Result within 1000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: whitespace with a failing tail answers a Result within 1000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: repeated number openers answers a Result within 1000 ms"
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
+      "atHead": [
+        "parseMfcItemPage on adversarial pages at the upload limit > Releases followed by sibling unlabelled releases answers too_large:dataFields within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested data fields answers too_large:depth within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested data values answers too_large:depth within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested entry groups answers too_large:depth within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > nested elements answers too_large:depth within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: whitespace with a failing tail answers too_large:entryNameLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Nendoroid label: repeated number openers answers too_large:entryNameLength within 5000 ms"
       ]
     },
     {
@@ -3621,6 +3645,11 @@
       "test": "packages/mfc/src/parse/adversarial.test.ts",
       "fixed": [
         "parseMfcItemPage on adversarial pages at the upload limit > price: comma groups before a currency answers a Result within 1000 ms"
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
+      "atHead": [
+        "parseMfcItemPage on adversarial pages at the upload limit > price: comma groups before a currency answers parsed within 5000 ms"
       ]
     },
     {

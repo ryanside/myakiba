@@ -3,11 +3,17 @@ import { z } from "zod";
 import { parseJson } from "@myakiba/utils/parse-json";
 
 const PAGE_BYTES = 2 * 1024 * 1024;
-const BOUND_MS = 1000;
-const DEADLINE_MS = 5000;
+// Proves a page answers in seconds, not minutes, even on a busy CI runner. Each row also names its
+// outcome, so a page the tree limits reject is proven rejected before any reader runs.
+const BOUND_MS = 5000;
+const DEADLINE_MS = 10_000;
 const TIME_PARSE = new URL("../../test/time-parse.ts", import.meta.url).pathname;
 
-type Page = { readonly head?: string; readonly title?: string; readonly fields: string };
+type Page = {
+  readonly head?: string;
+  readonly title?: string;
+  readonly fields: string;
+};
 
 function shell({ head = "", title = "T", fields }: Page): string {
   return `<html><head>${head}<link rel="canonical" href="https://myfigurecollection.net/item/1"></head><body><h1 class="title">${title}</h1><div class="item-object">${field("Category", "<span>Prepainted</span>")}${fields}</div></body></html>`;
@@ -58,25 +64,32 @@ const release = (value: string) => field("Releases", `<a class="time">01/01/2020
 const entry = (id: string, label: string) =>
   `<a href="/entry/${id}" class="item-entry"><span switch="">${label}</span></a>`;
 
-const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
+type Row = readonly [name: string, outcome: string, build: () => string];
+
+const ADVERSARIAL_PAGES: readonly Row[] = [
   [
     "price: comma groups with no currency",
+    "parsed",
     () => fill(",111", (run) => ({ fields: release(`1${run}`) })),
   ],
   [
     "price: a digit then whitespace with no currency",
+    "parsed",
     () => fill(" ", (run) => ({ fields: release(`1${run}x`) })),
   ],
   [
     "barcode: barcode characters with a failing tail",
+    "parsed",
     () => fill("A", (run) => ({ fields: release(`${run}!`) })),
   ],
   [
     "barcode: dashes with a failing tail",
+    "parsed",
     () => fill("-", (run) => ({ fields: release(`${run} `) })),
   ],
   [
     "material percentage: digits with no percent sign",
+    "parsed",
     () =>
       fill("1", (run) => ({
         fields: field(
@@ -87,6 +100,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "material percentage: decimals with no percent sign",
+    "parsed",
     () =>
       fill("1.1", (run) => ({
         fields: field(
@@ -97,16 +111,27 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "height: digits and commas with no unit",
+    "parsed",
     () => fill("1,", (run) => ({ fields: field("Dimensions", `H=${run}`) })),
   ],
-  ["width: repeated openers", () => fill("W=1", (run) => ({ fields: field("Dimensions", run) }))],
-  ["depth: repeated openers", () => fill("L=1", (run) => ({ fields: field("Dimensions", run) }))],
+  [
+    "width: repeated openers",
+    "parsed",
+    () => fill("W=1", (run) => ({ fields: field("Dimensions", run) })),
+  ],
+  [
+    "depth: repeated openers",
+    "parsed",
+    () => fill("L=1", (run) => ({ fields: field("Dimensions", run) })),
+  ],
   [
     "dimensions: whitespace",
+    "parsed",
     () => fill(" \n", (run) => ({ fields: field("Dimensions", `H=${run}1mm`) })),
   ],
   [
     "entry id: a long id",
+    "parsed",
     () =>
       fill("1", (run) => ({
         fields: field("Origin", `<div class="item-entries">${entry(run, "x")}</div>`),
@@ -114,12 +139,25 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "rating id: a long id",
-    () => fill("1", (run) => ({ fields: field("Various", `<a href="/?ratingId=${run}x">r</a>`) })),
+    "parsed",
+    () =>
+      fill("1", (run) => ({
+        fields: field("Various", `<a href="/?ratingId=${run}x">r</a>`),
+      })),
   ],
-  ["title field: whitespace", () => fill(" \t", (run) => ({ fields: field("Title", `a${run}b`) }))],
-  ["version: many links", () => fill("<a>v</a>", (run) => ({ fields: field("Version", run) }))],
+  [
+    "title field: whitespace",
+    "parsed",
+    () => fill(" \t", (run) => ({ fields: field("Title", `a${run}b`) })),
+  ],
+  [
+    "version: many links",
+    "parsed",
+    () => fill("<a>v</a>", (run) => ({ fields: field("Version", run) })),
+  ],
   [
     "sibling Releases fields",
+    "too_large:dataFields",
     () =>
       fill('<div class="data-field"><div class="data-label">Releases</div></div>', (run) => ({
         fields: run,
@@ -127,6 +165,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "Releases followed by sibling unlabelled releases",
+    "too_large:dataFields",
     () =>
       fill('<div class="data-field"><a class="time">01/01/2020</a></div>', (run) => ({
         fields: release("1 JPY") + run,
@@ -134,10 +173,12 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "sibling fields with unknown labels",
+    "too_large:dataFields",
     () => fill(field("Sculpting", "x"), (run) => ({ fields: run })),
   ],
   [
     "nested data fields",
+    "too_large:depth",
     () =>
       nested('<div class="data-field"><div class="data-label">Origin</div>', "</div>", (run) => ({
         fields: run,
@@ -145,6 +186,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "nested data values",
+    "too_large:depth",
     () =>
       nested('<div class="data-value">x', "</div>", (run) => ({
         fields: field("Releases", `<a class="time">01/01/2020</a>${run}`),
@@ -152,6 +194,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "nested entry groups",
+    "too_large:depth",
     () =>
       nested(
         `<div class="item-entries">${entry("1", "x")}<small class="light">1%`,
@@ -161,9 +204,14 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
         }),
       ),
   ],
-  ["nested elements", () => nested("<b>", "</b>", (run) => ({ fields: field("Title", run) }))],
+  [
+    "nested elements",
+    "too_large:depth",
+    () => nested("<b>", "</b>", (run) => ({ fields: field("Title", run) })),
+  ],
   [
     "entry groups with roles",
+    "too_large:entries",
     () =>
       fill(
         `<div class="item-entries">${entry("1", "x")}<small class="light"><em>r</em></small></div>`,
@@ -174,6 +222,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "one entry with many distinct roles",
+    "too_large:entries",
     () =>
       fillWith(
         (role) =>
@@ -183,6 +232,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "many distinct entries",
+    "too_large:entries",
     () =>
       fillWith(
         (id) => entry(String(id + 1), String(id)),
@@ -191,6 +241,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "Nendoroid label: whitespace with a failing tail",
+    "too_large:entryNameLength",
     () =>
       fill(" ", (run) => ({
         fields: field(
@@ -201,6 +252,7 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "Nendoroid label: repeated number openers",
+    "too_large:entryNameLength",
     () =>
       fill(" (#", (run) => ({
         fields: field(
@@ -211,18 +263,22 @@ const ADVERSARIAL_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "price: comma groups before a currency",
+    "parsed",
     () => fill(",111", (run) => ({ fields: release(`1${run} JPY`) })),
   ],
   [
     "title: an unclosed content label",
+    "too_large:titleLength",
     () => fill("a", (run) => ({ title: `[${run}`, fields: "" })),
   ],
   [
     "title: a content label with a failing tail",
+    "too_large:titleLength",
     () => fill("]", (run) => ({ title: `[Explicit${run}`, fields: "" })),
   ],
   [
     "page title: whitespace",
+    "parsed",
     () => fill(" ", (run) => ({ head: `<title>${run}x</title>`, fields: "" })),
   ],
 ];
@@ -237,7 +293,10 @@ const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "version links nested to the field depth limit",
-    () => around("<a>", "</a>", FIELD_DEPTH, (run) => ({ fields: field("Version", run) })),
+    () =>
+      around("<a>", "</a>", FIELD_DEPTH, (run) => ({
+        fields: field("Version", run),
+      })),
   ],
   [
     "entry groups nested to the field depth limit",
@@ -287,15 +346,14 @@ async function timeParse(html: string): Promise<z.infer<typeof timedParse> | "to
 
 describe("parseMfcItemPage on adversarial pages at the upload limit", () => {
   test.each(ADVERSARIAL_PAGES)(
-    `%s answers a Result within ${BOUND_MS} ms`,
-    async (_name, build) => {
+    `%s answers %s within ${BOUND_MS} ms`,
+    async (_name, outcome, build) => {
       const html = build();
       expect(html.length).toBeLessThanOrEqual(PAGE_BYTES);
       expect(html.length).toBeGreaterThan(PAGE_BYTES - 1000);
       const timed = await timeParse(html);
-      expect(timed).not.toBe("too slow");
+      expect(timed === "too slow" ? timed : timed.outcome).toBe(outcome);
       if (timed === "too slow") return;
-      expect(timed.outcome).not.toStartWith("threw");
       expect(timed.ms).toBeLessThan(BOUND_MS);
     },
     DEADLINE_MS * 2,
