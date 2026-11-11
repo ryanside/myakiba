@@ -477,6 +477,34 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
   });
 });
 
+describe("POST /api/mfc-items saves a page's text without NUL characters", () => {
+  test("a NUL in the title, the Title field, a release type and an entry name is dropped", async () => {
+    const withNuls = [
+      ["Yukishiro May - 1/7 (Orchid Seed)</h1>", "Yukishiro\u0000 May - 1/7 (Orchid Seed)</h1>"],
+      [">Orchid Seed</span>", ">Orchid\u0000 Seed</span>"],
+      ["<em>Standard (Japan)</em>", "<em>Standard\u0000 (Japan)</em>"],
+      [
+        field("Category"),
+        `<div class="data-field"><div class="data-label">Title</div><div class="data-value">ハロー\u0000グッバイ</div></div>${field("Category")}`,
+      ],
+    ] as const;
+    const page = withNuls.reduce((html, [from, to]) => edit(html, from, to), page98777);
+
+    const { status } = await upload({ mfcItemId: 98_777, page });
+
+    expect(status).toBe(200);
+    const rows = await itemRows(98_777);
+    expect(rows.item).toMatchObject({
+      title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
+      mfcTitle: "ハローグッバイ",
+    });
+    expect(rows.links).toContainEqual(link(7628, "Companies", "Orchid Seed", ["Manufacturer"]));
+    expect(rows.releases).toEqual([
+      { id: mfcReleaseId(ID_98777, RELEASE_98777), ...RELEASE_98777 },
+    ]);
+  });
+});
+
 describe("POST /api/mfc-items needs a verified email and has its own rate limit", () => {
   test("an unverified user gets 403 with the verification message", async () => {
     const unverified = { "x-test-unverified": "1" };

@@ -70,11 +70,13 @@ const ENVELOPE_PROBLEMS = {
 } as const satisfies Record<Exclude<MfcEnvelope["kind"], "item">, MfcPageProblem>;
 
 export function parseMfcItemPage(
-  html: string,
+  page: string,
   expected: MfcItemId,
 ): Result<MfcItemPage, MfcPageUnreadable> {
   const unreadable = (problem: MfcPageProblem) =>
     Result.err(new MfcPageUnreadable({ mfcItemId: expected, problem }));
+  // htmlparser2 keeps U+0000, which a browser drops from page text and Postgres refuses in text.
+  const html = page.replaceAll("\u0000", "");
   const tree = parseBoundedDocument(html);
   if ("exceeded" in tree) return unreadable({ kind: "too_large", limit: tree.exceeded });
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
