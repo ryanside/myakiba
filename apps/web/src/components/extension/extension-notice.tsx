@@ -30,7 +30,7 @@ export const UPDATE_LINK = {
 
 export const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
 
-export function underReviewBody(stores: readonly ExtensionStore[]): string {
+function underReviewBody(stores: readonly ExtensionStore[]): string {
   const where = stores.map((store) => STORE_NAMES[store]).join(" and ");
   return `It is in review at ${where} now, and it will be released shortly. Picking items and refreshing item details need it, so both are unavailable until it passes review.`;
 }

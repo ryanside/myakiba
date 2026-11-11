@@ -411,7 +411,7 @@ export function WishlistRankDemo({ theme }: DemoProps) {
           ) : (
             // A phone column has no room for a desktop window's shape: the
             // window's surface without its chrome, the page with its header
-            // on top, off the right and the foot, as order-board does
+            // on top, off the right and the foot
             <div className="ss-window mk-wishlist-rank-panel" data-crop>
               <Page s={s} layout={layout} />
             </div>

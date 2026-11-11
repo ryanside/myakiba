@@ -235,11 +235,7 @@ export function Stage<S extends object>({
     if (!fit) return;
     const measure = () => {
       const w = fit.clientWidth;
-      // A host that sizes the stage by something other than the screen (a
-      // bento tile set by its row's height) marks a wrapper data-ss-wide to
-      // keep the wide design, scaled, rather than the phone-width one
-      const wide = !!fit.parentElement?.closest("[data-ss-wide]");
-      const narrow = compactBelow !== undefined && !wide && w < compactBelow;
+      const narrow = compactBelow !== undefined && w < compactBelow;
       const next: Layout = narrow ? "compact" : "wide";
       setLayout(next);
       // fill (or a host wrapper marked data-ss-fill) lets the stage grow past its design size, within reason

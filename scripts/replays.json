@@ -1880,7 +1880,10 @@
       "fixed": [
         "reduced motion switches loop text without waiting for a fade",
         "enabling reduced motion during a fade keeps loop text visible"
-      ]
+      ],
+      "testAt": "b0a3f124a3a46fea02a0bdc0505a608f387a2f2c",
+      "reason": "The rotating homepage text went with the old hero, so HEAD has no TextLoop to test. The fix's own test still proves the bug.",
+      "head": []
     },
     {
       "fix": "ed092193",
@@ -3753,6 +3756,15 @@
         "table locks > migrates a Collection Item committed while it waits for its lock, even under a repeatable read default"
       ],
       "test": "packages/db/src/item-ownership/migrate.test.ts"
+    },
+    {
+      "fix": "b4c7f77f2fdc82480f4812645158486a51a62387",
+      "bug": "Item Refresh matched stored and page releases by an id derived from the MFC id, so an Item whose release ids were made any other way refreshed its own page as changed and cleared every selection, and a page that listed one release twice never read as unchanged.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
+      ]
     }
   ],
   "lint": [
