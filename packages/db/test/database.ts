@@ -96,5 +96,24 @@ export async function snapshot(sql: SQL) {
     FROM pg_constraint WHERE connamespace = 'public'::regnamespace
     ORDER BY table_name, conname
   `;
-  return { rows, columns: [...columns], indexes: [...indexes], constraints: [...constraints] };
+  const triggers = await sql`
+    SELECT c.relname AS table_name, t.tgname, pg_get_triggerdef(t.oid) AS definition
+    FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
+    ORDER BY table_name, t.tgname
+  `;
+  const functions = await sql`
+    SELECT p.proname, pg_get_functiondef(p.oid) AS definition FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace AND NOT EXISTS
+      (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e')
+    ORDER BY p.proname
+  `;
+  return {
+    rows,
+    columns: [...columns],
+    indexes: [...indexes],
+    constraints: [...constraints],
+    triggers: [...triggers],
+    functions: [...functions],
+  };
 }

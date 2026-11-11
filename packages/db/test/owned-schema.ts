@@ -12,8 +12,6 @@ import {
   uniqueIndex,
   check,
   primaryKey,
-  foreignKey,
-  unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "../src/schema/auth";
@@ -33,8 +31,9 @@ export { account, session, user, verification } from "../src/schema/auth";
 
 /**
  * figure.ts as the ownership switch must declare it, outside src/schema so drizzle-kit never
- * pushes it. The owner keys, their unique() targets and the names match what
- * migrateItemOwnership creates, so push applies it to a migrated database.
+ * pushes it. It declares the owner columns, their foreign keys into "user" and the owner unique
+ * indexes as migrateItemOwnership creates them. The owner guards are triggers, which push does
+ * not read, so nothing here declares them.
  */
 export const item = pgTable(
   "item",
@@ -64,7 +63,6 @@ export const item = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    unique("item_id_owner_id_unique").on(t.id, t.ownerId),
     uniqueIndex("item_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
     index("item_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
   ],
@@ -92,7 +90,6 @@ export const item_release = pgTable(
       t.createdAt.desc(),
     ),
     index("item_release_date_item_id_idx").on(t.date, t.itemId),
-    unique("item_release_id_item_id_unique").on(t.id, t.itemId),
   ],
 );
 
@@ -113,7 +110,6 @@ export const entry = pgTable(
   (t) => [
     index("entry_name_category_idx").on(t.name, t.category),
     index("entry_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
-    unique("entry_id_owner_id_unique").on(t.id, t.ownerId),
     uniqueIndex("entry_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
   ],
 );
@@ -152,16 +148,6 @@ export const entry_to_item = pgTable(
     uniqueIndex("entry_to_item_entry_id_item_id_idx").on(t.entryId, t.itemId),
     index("entry_to_item_item_id_idx").on(t.itemId),
     index("entry_to_item_item_id_entry_id_idx").on(t.itemId, t.entryId),
-    foreignKey({
-      name: "entry_to_item_entry_owner_fk",
-      columns: [t.ownerId, t.entryId],
-      foreignColumns: [entry.ownerId, entry.id],
-    }).onDelete("cascade"),
-    foreignKey({
-      name: "entry_to_item_item_owner_fk",
-      columns: [t.ownerId, t.itemId],
-      foreignColumns: [item.ownerId, item.id],
-    }).onDelete("cascade"),
   ],
 );
 
@@ -174,7 +160,9 @@ export const collection = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    itemId: text("item_id").notNull(),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => item.id, { onDelete: "cascade" }),
     orderId: text("order_id").references(() => order.id, {
       onDelete: "set null",
     }),
@@ -184,7 +172,7 @@ export const collection = pgTable(
       .notNull()
       .default("Owned"),
     count: integer("count").default(1).notNull(),
-    releaseId: uuid("release_id"),
+    releaseId: uuid("release_id").references(() => item_release.id, { onDelete: "set null" }),
     score: decimal("score", { precision: 3, scale: 1 }).default("0.0").notNull(),
     price: bigint("price", { mode: "number" }).default(0).notNull(),
     shop: text("shop").default("").notNull(),
@@ -223,16 +211,6 @@ export const collection = pgTable(
       .on(t.userId, t.shop)
       .where(sql`${t.status} = 'Owned' AND ${t.shop} <> ''`),
     index("collection_order_id_user_id_idx").on(t.orderId, t.userId),
-    foreignKey({
-      name: "collection_item_owner_fk",
-      columns: [t.userId, t.itemId],
-      foreignColumns: [item.ownerId, item.id],
-    }).onDelete("cascade"),
-    foreignKey({
-      name: "collection_release_of_item_fk",
-      columns: [t.itemId, t.releaseId],
-      foreignColumns: [item_release.itemId, item_release.id],
-    }),
   ],
 );
 
@@ -295,7 +273,6 @@ export const list = pgTable(
   },
   (t) => [
     index("list_user_id_position_created_at_id_idx").on(t.userId, t.position, t.createdAt, t.id),
-    unique("list_id_user_id_unique").on(t.id, t.userId),
   ],
 );
 
@@ -305,9 +282,11 @@ export const listMember = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
-    listId: text("list_id").notNull(),
+    listId: text("list_id")
+      .notNull()
+      .references(() => list.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull(),
-    itemId: text("item_id"),
+    itemId: text("item_id").references(() => item.id, { onDelete: "cascade" }),
     collectionId: text("collection_id").references(() => collection.id, {
       onDelete: "cascade",
     }),
@@ -327,16 +306,6 @@ export const listMember = pgTable(
     index("list_member_item_id_idx").on(t.itemId),
     index("list_member_collection_id_idx").on(t.collectionId),
     index("list_member_order_id_idx").on(t.orderId),
-    foreignKey({
-      name: "list_member_list_owner_fk",
-      columns: [t.userId, t.listId],
-      foreignColumns: [list.userId, list.id],
-    }).onDelete("cascade"),
-    foreignKey({
-      name: "list_member_item_owner_fk",
-      columns: [t.userId, t.itemId],
-      foreignColumns: [item.ownerId, item.id],
-    }).onDelete("cascade"),
   ],
 );
 
@@ -349,7 +318,9 @@ export const wishlistItem = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    itemId: text("item_id").notNull(),
+    itemId: text("item_id")
+      .notNull()
+      .references(() => item.id, { onDelete: "cascade" }),
     position: integer("position").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -363,11 +334,6 @@ export const wishlistItem = pgTable(
       t.id,
     ),
     index("wishlist_item_item_id_idx").on(t.itemId),
-    foreignKey({
-      name: "wishlist_item_item_owner_fk",
-      columns: [t.userId, t.itemId],
-      foreignColumns: [item.ownerId, item.id],
-    }).onDelete("cascade"),
   ],
 );
 

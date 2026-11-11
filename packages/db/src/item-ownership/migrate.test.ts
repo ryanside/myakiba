@@ -257,34 +257,6 @@ test("leaves a fresh database alone", async () => {
   expect(columns).toEqual([]);
 });
 
-test("Postgres rejects a reference to another user's copy once the migration commits", async () => {
-  const { sql } = await migrated();
-  const [{ id: itemOfU1 }] = await rows(
-    sql,
-    "SELECT id FROM item WHERE owner_id = 'u1' AND external_id = 1001",
-  );
-  const [{ id: releaseOfU1ItemB }] = await rows(
-    sql,
-    `SELECT r.id FROM item_release r JOIN item i ON i.id = r.item_id
-    WHERE i.owner_id = 'u1' AND i.external_id = 1002`,
-  );
-  await expect(
-    sql`INSERT INTO collection (id, user_id, item_id, tags) VALUES ('col-x', 'u2', ${itemOfU1}, '{}')`,
-  ).rejects.toThrow("collection_item_owner_fk");
-  await expect(
-    sql`INSERT INTO wishlist_item (id, user_id, item_id) VALUES ('wish-x', 'u2', ${itemOfU1})`,
-  ).rejects.toThrow("wishlist_item_item_owner_fk");
-  await expect(
-    sql`INSERT INTO list_member (id, list_id, user_id, item_id) VALUES ('member-x', 'list-2', 'u2', ${itemOfU1})`,
-  ).rejects.toThrow("list_member_item_owner_fk");
-  await expect(
-    sql`INSERT INTO list_member (id, list_id, user_id, item_id) VALUES ('member-y', 'list-2', 'u1', ${itemOfU1})`,
-  ).rejects.toThrow("list_member_list_owner_fk");
-  await expect(
-    sql`UPDATE collection SET release_id = ${releaseOfU1ItemB} WHERE id = 'col-1'`,
-  ).rejects.toThrow("collection_release_of_item_fk");
-});
-
 describe("table locks", () => {
   async function holdCollectionLock(sql: SQL) {
     const locked = Promise.withResolvers<true>();

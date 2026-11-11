@@ -1,4 +1,5 @@
 import { SQL } from "bun";
+import { installOwnerGuards, ownerGuardsInstalled } from "./guards";
 
 export const MIGRATION_STEPS = [
   "expand",
@@ -21,7 +22,7 @@ export type MigrationReport =
       readonly pairs: number;
       readonly copied: Counts<"items" | "entries" | "links" | "releases">;
       readonly foreignReleasesCleared: number;
-      /** Expected 0. The owner keys do not cover these, so the run counts them and leaves them. */
+      /** Expected 0. The owner guards do not cover these, so the run counts them and leaves them. */
       readonly otherUsersListTargets: number;
       readonly repointed: Counts<
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"
@@ -38,15 +39,6 @@ export type OwnershipMiss = { readonly check: string; readonly rows: number };
 
 type Counts<K extends string> = { [key in K]: number };
 
-type ForeignKey = {
-  readonly name: string;
-  readonly table: string;
-  readonly columns: readonly string[];
-  readonly references: string;
-  readonly referencedColumns: readonly string[];
-  readonly onDelete: "cascade" | "no action";
-};
-
 const LOCK_ATTEMPTS = 3;
 const LOCK_NOT_AVAILABLE = "55P03";
 const DEADLOCK_DETECTED = "40P01";
@@ -56,38 +48,10 @@ const LOCK_FAILURES: ReadonlySet<string | undefined> = new Set([
 ]);
 const REFERENCE_TABLES = ["collection", "wishlist_item", "list_member"] as const;
 
-// isItemOwnershipMigrated finds a finished run by these names, so each is the name the Drizzle schema declares.
-const OWNER_KEYS: readonly ForeignKey[] = [
-  cascade("item_owner_id_user_id_fk", "item", ["owner_id"], "user", ["id"]),
-  cascade("entry_owner_id_user_id_fk", "entry", ["owner_id"], "user", ["id"]),
-  cascade("collection_item_owner_fk", "collection", ["user_id", "item_id"], "item"),
-  {
-    // Drizzle cannot declare SET NULL for one column of a composite key, so deleting a selected release fails.
-    name: "collection_release_of_item_fk",
-    table: "collection",
-    columns: ["item_id", "release_id"],
-    references: "item_release",
-    referencedColumns: ["item_id", "id"],
-    onDelete: "no action",
-  },
-  cascade("wishlist_item_item_owner_fk", "wishlist_item", ["user_id", "item_id"], "item"),
-  cascade("list_member_list_owner_fk", "list_member", ["user_id", "list_id"], "list", [
-    "user_id",
-    "id",
-  ]),
-  cascade("list_member_item_owner_fk", "list_member", ["user_id", "item_id"], "item"),
-  cascade("entry_to_item_entry_owner_fk", "entry_to_item", ["owner_id", "entry_id"], "entry"),
-  cascade("entry_to_item_item_owner_fk", "entry_to_item", ["owner_id", "item_id"], "item"),
-];
-
-// The composite owner keys reference these. drizzle-kit 0.31 push cannot match a key whose target
-// is a unique index, so each is a unique constraint, declared in the Drizzle schema with `unique()`.
-// Push reads a unique constraint's columns in column-number order, so each lists them that way.
-const OWNER_KEY_TARGETS = [
-  { name: "item_id_owner_id_unique", table: "item", columns: ["id", "owner_id"] },
-  { name: "item_release_id_item_id_unique", table: "item_release", columns: ["id", "item_id"] },
-  { name: "entry_id_owner_id_unique", table: "entry", columns: ["id", "owner_id"] },
-  { name: "list_id_user_id_unique", table: "list", columns: ["id", "user_id"] },
+// drizzle-kit names a column's foreign key this way, so push finds these as the schema declares them.
+const OWNER_KEYS = [
+  { name: "item_owner_id_user_id_fk", table: "item" },
+  { name: "entry_owner_id_user_id_fk", table: "entry" },
 ] as const;
 
 const OWNER_INDEXES = [
@@ -101,14 +65,6 @@ const OWNER_INDEXES = [
     table: "entry",
     columns: ["owner_id", "source", "external_id"],
   },
-] as const;
-
-const REPLACED_KEYS = [
-  { table: "collection", column: "item_id" },
-  { table: "collection", column: "release_id" },
-  { table: "wishlist_item", column: "item_id" },
-  { table: "list_member", column: "item_id" },
-  { table: "list_member", column: "list_id" },
 ] as const;
 
 const OWNERSHIP_CHECKS = [
@@ -329,11 +285,11 @@ const STEPS = {
 
   async contract(tx) {
     await tx.unsafe("ALTER TABLE list_member ALTER COLUMN user_id SET NOT NULL");
-    const targets = await constraintNames(tx, "u");
-    for (const target of OWNER_KEY_TARGETS.filter((candidate) => !targets.has(candidate.name))) {
+    const present = await foreignKeyNames(tx);
+    for (const key of OWNER_KEYS.filter((candidate) => !present.has(candidate.name))) {
       await tx.unsafe(
-        `ALTER TABLE ${ident(target.table)} ADD CONSTRAINT ${ident(target.name)}
-        UNIQUE (${target.columns.map(ident).join(",")})`,
+        `ALTER TABLE ${ident(key.table)} ADD CONSTRAINT ${ident(key.name)}
+        FOREIGN KEY ("owner_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action`,
       );
     }
     for (const index of OWNER_INDEXES) {
@@ -342,28 +298,7 @@ const STEPS = {
         USING btree (${index.columns.map(ident).join(",")})`,
       );
     }
-    for (const replaced of REPLACED_KEYS) {
-      const keys = await tx<{ conname: string }[]>`
-        SELECT c.conname FROM pg_constraint c
-        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-        WHERE c.contype = 'f' AND c.conrelid = ${`public.${replaced.table}`}::regclass
-          AND cardinality(c.conkey) = 1 AND a.attname = ${replaced.column}
-      `;
-      for (const key of keys) {
-        await tx.unsafe(
-          `ALTER TABLE ${ident(replaced.table)} DROP CONSTRAINT ${ident(key.conname)}`,
-        );
-      }
-    }
-    const present = await constraintNames(tx, "f");
-    for (const key of OWNER_KEYS.filter((candidate) => !present.has(candidate.name))) {
-      await tx.unsafe(
-        `ALTER TABLE ${ident(key.table)} ADD CONSTRAINT ${ident(key.name)}
-        FOREIGN KEY (${key.columns.map(ident).join(",")})
-        REFERENCES "public".${ident(key.references)}(${key.referencedColumns.map(ident).join(",")})
-        ON DELETE ${key.onDelete} ON UPDATE no action`,
-      );
-    }
+    await installOwnerGuards(tx);
   },
 
   async verify(tx, run) {
@@ -384,7 +319,7 @@ const STEPS = {
 
 /**
  * Gives every user their own copy of each pre-ownership Item they reference, with its Item
- * Releases, Item Entries and links, re-points their references to it, and adds the owner keys.
+ * Releases, Item Entries and links, re-points their references to it, and installs the owner guards.
  * One transaction: a crash or a failed check leaves the database as it was. A fresh database
  * and a migrated one are left alone.
  */
@@ -423,9 +358,9 @@ export async function migrateItemOwnership(
   }
 }
 
+/** The run installs the owner guards last, in its transaction, so they mark a finished run. */
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
-  const present = await constraintNames(sql, "f");
-  return OWNER_KEYS.every((key) => present.has(key.name));
+  return ownerGuardsInstalled(sql);
 }
 
 export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {
@@ -485,10 +420,10 @@ async function columnsOf(tx: SQL, table: string, except: readonly string[]) {
   };
 }
 
-async function constraintNames(sql: SQL, type: "f" | "u"): Promise<Set<string>> {
+async function foreignKeyNames(sql: SQL): Promise<Set<string>> {
   const rows = await sql<{ conname: string }[]>`
     SELECT conname FROM pg_constraint
-    WHERE contype = ${type} AND connamespace = 'public'::regnamespace
+    WHERE contype = 'f' AND connamespace = 'public'::regnamespace
   `;
   return new Set(rows.map((row) => row.conname));
 }
@@ -508,16 +443,6 @@ async function missesOf(
 async function count(sql: SQL, query: string): Promise<number> {
   const [row] = await sql.unsafe<[{ rows: number }]>(`SELECT (${query})::int AS rows`);
   return row.rows;
-}
-
-function cascade(
-  name: string,
-  table: string,
-  columns: readonly string[],
-  references: string,
-  referencedColumns: readonly string[] = ["owner_id", "id"],
-): ForeignKey {
-  return { name, table, columns, references, referencedColumns, onDelete: "cascade" };
 }
 
 function ident(name: string): string {
