@@ -99,33 +99,29 @@ export function normalizeMfcDate(dateStr: string): string | null {
   const trimmed = dateStr.trim();
   if (!trimmed) return null;
 
-  if (YEAR_ONLY_PATTERN.test(trimmed)) {
-    const isoDate = `${String(Number(trimmed)).padStart(4, "0")}-01-01`;
-    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
-  }
+  if (YEAR_ONLY_PATTERN.test(trimmed)) return mfcDate(Number(trimmed), 1, 1);
 
   const monthYearMatch = trimmed.match(MONTH_YEAR_PATTERN);
-  if (monthYearMatch) {
-    const month = Number(monthYearMatch[1]);
-    const year = Number(monthYearMatch[2]);
-    const isoDate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-01`;
-    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
-  }
+  if (monthYearMatch) return mfcDate(Number(monthYearMatch[2]), Number(monthYearMatch[1]), 1);
 
   const monthDayYearMatch = trimmed.match(MONTH_DAY_YEAR_PATTERN);
   if (monthDayYearMatch) {
-    const month = Number(monthDayYearMatch[1]);
-    const day = Number(monthDayYearMatch[2]);
-    const year = Number(monthDayYearMatch[3]);
-    const isoDate = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
+    const [, month, day, year] = monthDayYearMatch.map(Number);
+    return mfcDate(year ?? 0, month ?? 0, day ?? 0);
   }
 
   const datePart = trimmed.split("T")[0] ?? trimmed;
   const result = DATE_ONLY_SCHEMA.safeParse(datePart);
-  return result.success
-    ? `${String(result.data.year).padStart(4, "0")}-${String(result.data.month).padStart(2, "0")}-${String(result.data.day).padStart(2, "0")}`
-    : null;
+  return result.success ? mfcDate(result.data.year, result.data.month, result.data.day) : null;
+}
+
+/** Postgres has no year 0, and MFC prints no release year before 1000. */
+const EARLIEST_MFC_YEAR = 1000;
+
+function mfcDate(year: number, month: number, day: number): string | null {
+  if (year < EARLIEST_MFC_YEAR) return null;
+  const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return DATE_ONLY_SCHEMA.safeParse(isoDate).success ? isoDate : null;
 }
 
 /**

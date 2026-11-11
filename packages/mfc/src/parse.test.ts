@@ -532,6 +532,16 @@ describe("parseMfcItemPage stored values", () => {
   });
 });
 
+describe("parseMfcItemPage release dates", () => {
+  test("a release in the year 0000 is skipped and warns", () => {
+    const page = parsedPage(
+      edit(item98777, 'class="time">11/15/2018</a>', 'class="time">11/15/0000</a>'),
+    );
+    expect(page.releases).toEqual([]);
+    expect(page.warnings).toEqual(['release skipped: unsupported date "11/15/0000"']);
+  });
+});
+
 describe("parseMfcItemPage release prices", () => {
   test("an ungrouped price reads whole", () => {
     const page = parsedPage(
