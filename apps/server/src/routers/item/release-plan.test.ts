@@ -54,6 +54,14 @@ describe("buildReleasePlan", () => {
     });
   });
 
+  test("two releases replaced by one other clears both", () => {
+    expect(plan(["a", "b", "c"], ["a", "d"])).toEqual({
+      kind: "clear",
+      staleReleaseIds: ["stored-b", "stored-c"],
+      addedReleaseIds: ["new-d"],
+    });
+  });
+
   test("a removed release with nothing in its place clears it", () => {
     expect(plan(["a", "b"], ["a"])).toEqual({
       kind: "clear",
