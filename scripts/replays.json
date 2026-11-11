@@ -3534,6 +3534,39 @@
         "stageshow reduced motion > follows the app's Reduce motion switch when the device setting is off",
         "stageshow reduced motion > a demo holds its poster and never runs its script under the app's switch"
       ]
+    },
+    {
+      "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
+      "bug": "POST /api/item/custom let any signed-in account write an owner-less Item, Entries and releases with no limit, though the web never called it.",
+      "test": "apps/server/src/routers/item/routes.test.ts",
+      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"]
+    },
+    {
+      "fix": "10cd59403523c9bb425f9d4c6f8b1a3edc6be7ed",
+      "bug": "Item Refresh refused a second refresh of an Item for three days, and its answer carried the cooldown.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "Item Refresh has no cooldown > a refresh answers only whether it saved",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ]
+    },
+    {
+      "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
+      "bug": "Item Refresh rewrote an Item for an account without a verified email, though saving a Pick needed one.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing"
+      ]
+    },
+    {
+      "fix": "562eada1705d62a04754cd69390ac5725056999d",
+      "bug": "A Collection Item edit saved any releaseId the client sent, so it could select a release of another Item.",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": [
+        "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
+      ]
     }
   ],
   "lint": [
