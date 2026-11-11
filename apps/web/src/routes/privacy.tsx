@@ -88,8 +88,9 @@ function PrivacyPolicy() {
           <p>
             Before it keeps or passes on a page, the extension removes everything but the
             item&apos;s details: the page&apos;s title and address, the item&apos;s heading, picture
-            and detail fields, and whether you are signed in to MFC. The page it keeps or passes on
-            does not contain your MFC username, your notes on the item or your collection status.
+            and detail fields, whether MFC found the page, and whether you are signed in to MFC. The
+            page it keeps or passes on does not contain your MFC username, your notes on the item or
+            your collection status.
           </p>
         </Section>
 
