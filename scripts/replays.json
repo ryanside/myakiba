@@ -1880,7 +1880,10 @@
       "fixed": [
         "reduced motion switches loop text without waiting for a fade",
         "enabling reduced motion during a fade keeps loop text visible"
-      ]
+      ],
+      "testAt": "b0a3f124a3a46fea02a0bdc0505a608f387a2f2c",
+      "reason": "The rotating homepage text went with the old hero, so HEAD has no TextLoop to test. The fix's own test still proves the bug.",
+      "head": []
     },
     {
       "fix": "ed092193",

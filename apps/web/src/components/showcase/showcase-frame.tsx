@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /** The app window a showcase screen shows, in CSS pixels. */
-export const SCREEN_WIDTH = 1440;
+const SCREEN_WIDTH = 1440;
 const SCREEN_HEIGHT = 900;
 
 /**

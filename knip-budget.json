@@ -1,5 +1,5 @@
 {
-  "dependencies": ["apps/server/package.json web", "apps/web/package.json react-use-measure"],
+  "dependencies": ["apps/server/package.json web"],
   "duplicates": ["packages/contracts/src/orders/schema.ts orderFiltersSchema|searchSchema"],
   "exports": [
     "apps/server/src/routers/calendar/model.ts CALENDAR_VIEWS",
@@ -86,7 +86,6 @@
     "apps/web/src/components/ui/toast.tsx ToastTitle",
     "apps/web/src/components/ui/toast.tsx ToastViewport",
     "apps/web/src/components/ui/toggle.tsx Toggle",
-    "apps/web/src/lib/typer/typer.ts ALL_VARIATIONS",
     "packages/contracts/src/calendar/schema.ts CALENDAR_VIEWS",
     "packages/contracts/src/expenses/schema.ts expenseFilterOptionsSchema",
     "packages/contracts/src/expenses/schema.ts expenseShopRowSchema",
@@ -122,7 +121,6 @@
     "apps/web/src/components/reui/data-grid/data-grid-table-dnd-rows.tsx",
     "apps/web/src/components/reui/data-grid/data-grid-table-dnd.tsx",
     "apps/web/src/components/ui/chart.tsx",
-    "apps/web/src/components/ui/infinite-slider.tsx",
     "apps/web/src/components/ui/progressive-blur.tsx",
     "apps/web/src/components/ui/visually-hidden-input.tsx"
   ],
