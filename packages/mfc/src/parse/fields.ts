@@ -69,7 +69,7 @@ const entriesWithRoles =
           const entry = readEntryLink($node, fields);
           if (entry) pending.push(entry);
         } else if ($node.is("small.light") && $node.find("em").length > 0) {
-          role = $node.find("em").text().trim();
+          role = outermost($node.find("em")).text().trim();
           for (const entry of pending) {
             fields.mentions.push({ ...entry, category, role, materialPercentage: null });
           }
@@ -85,7 +85,7 @@ const entriesWithRoles =
 const readMaterials: FieldReader = (field, $, fields) => {
   for (const group of field.find(".item-entries")) {
     const $group = $(group);
-    const match = PATTERNS.materialPercentage.exec($group.find("small.light").text());
+    const match = PATTERNS.materialPercentage.exec(outermost($group.find("small.light")).text());
     const materialPercentage = match?.[1] ? storedPercentage(match[1], fields) : null;
     for (const link of $group.find(".item-entry")) {
       const entry = readEntryLink($(link), fields);
@@ -109,7 +109,7 @@ const readNumbering: FieldReader = (field, _$, fields) => {
 };
 
 const readVersion: FieldReader = (field, $, fields) => {
-  for (const link of field.find("a")) {
+  for (const link of outermost(field.find("a"))) {
     const text = $(link).text().trim();
     if (text) fields.version.push(text);
   }
@@ -117,7 +117,7 @@ const readVersion: FieldReader = (field, $, fields) => {
 
 const readDimensions: FieldReader = (field, _$, fields) => {
   const text = valueText(field);
-  fields.scale = field.find("a.item-scale").text().trim();
+  fields.scale = outermost(field.find("a.item-scale")).text().trim();
   fields.height = millimetres("height", PATTERNS.height.exec(text), fields);
   fields.width = millimetres("width", PATTERNS.width.exec(text), fields);
   fields.depth = millimetres("depth", PATTERNS.depth.exec(text), fields);
@@ -130,11 +130,11 @@ const readVarious: FieldReader = (field, _$, fields) => {
 };
 
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
-  const dateLink = $release.find("a.time");
+  const dateLink = outermost($release.find("a.time"));
   if (dateLink.length === 0) return;
   const text = $release.find(".data-value").first().text();
   const types: string[] = [];
-  for (const em of $release.find("small.light em")) {
+  for (const em of outermost($release.find("small.light em"))) {
     const part = $(em).text().trim();
     if (part) types.push(part);
   }
@@ -221,7 +221,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
   const releases: ReleaseGroup = { parent: null, fields: [] };
   for (const element of found.fields) {
     const field = $(element);
-    const labels = field.find(".data-label");
+    const labels = outermost(field.find(".data-label"));
     if (
       releases.fields.length > 0 &&
       releases.parent === element.parent &&
@@ -245,8 +245,30 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     return Result.err("entryNameLength");
   }
   if (fields.releases.length > PAGE_LIMITS.releases) return Result.err("releases");
+  const stored = [
+    fields.mfcTitle ?? "",
+    fields.numbering ?? "",
+    fields.scale,
+    ...fields.version,
+    ...fields.mentions.map(({ role }) => role),
+    ...fields.releases.flatMap(({ type, barcode }) => [type, barcode]),
+  ];
+  if (stored.some((value) => value.length > PAGE_LIMITS.valueLength)) {
+    return Result.err("valueLength");
+  }
   if (fields.warnings.length > PAGE_LIMITS.warnings) return Result.err("warnings");
   return Result.ok(fields);
+}
+
+/** The elements of `selection` that no other element of it contains, so nested matches never repeat text. */
+function outermost<T extends AnyNode>(selection: Cheerio<T>): Cheerio<T> {
+  const matched = new Set<AnyNode>(selection.toArray());
+  return selection.filter((_index, element) => {
+    for (let parent = element.parent; parent; parent = parent.parent) {
+      if (matched.has(parent)) return false;
+    }
+    return true;
+  });
 }
 
 function hasClass(element: Element, name: string): boolean {
@@ -257,7 +279,7 @@ function readEntryLink(
   $entry: Cheerio<AnyNode>,
   fields: ItemFields,
 ): { externalId: number; sourceLabel: string } | null {
-  const sourceLabel = $entry.find("span[switch]").text().trim();
+  const sourceLabel = outermost($entry.find("span[switch]")).text().trim();
   const id = PATTERNS.entryId.exec($entry.attr("href") ?? "")?.[1];
   if (!sourceLabel || !id) return null;
   const externalId = storedInteger("entry id", id, fields);

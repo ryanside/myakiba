@@ -358,6 +358,14 @@ function elements(count: number): string {
   return groups.join("");
 }
 
+function withField(label: string, value: string): string {
+  return edit(
+    item98777,
+    CATEGORY_FIELD,
+    `<div class="data-field"><div class="data-label">${label}</div><div class="data-value">${value}</div></div>${CATEGORY_FIELD}`,
+  );
+}
+
 type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
 
 const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])[] = [
@@ -422,6 +430,11 @@ const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])
   ],
   ["titleLength", 2000, (size) => edit(item98777, RAW_TITLE, `${"a".repeat(size)}</h1>`)],
   [
+    "valueLength",
+    2000,
+    (size) => edit(item98777, "<em>Standard (Japan)</em>", `<em>${"a".repeat(size)}</em>`),
+  ],
+  [
     "entryNameLength",
     500,
     (size) => edit(item98777, ">Orchid Seed</span>", `>${"a".repeat(size)}</span>`),
@@ -452,6 +465,70 @@ describe("parseMfcItemPage size limits", () => {
       edit(item98777, 'class="time">11/15/2018</a>', `class="time">${"9".repeat(5000)}</a>`),
     );
     expect(page.warnings).toEqual([`release skipped: unsupported date "${"9".repeat(100)}…"`]);
+  });
+});
+
+const PAST_VALUE_LENGTH = "a".repeat(2001);
+
+describe("parseMfcItemPage stored values", () => {
+  test.each([
+    ["role", () => edit(item98777, "<em>Manufacturer</em>", `<em>${PAST_VALUE_LENGTH}</em>`)],
+    [
+      "release type",
+      () => edit(item98777, "<em>Standard (Japan)</em>", `<em>${PAST_VALUE_LENGTH}</em>`),
+    ],
+    ["barcode", () => edit(item98777, ">4582292601715<meta", `>${"4".repeat(2001)}<meta`)],
+    [
+      "scale",
+      () => edit(item98777, "<small>1/</small>7</a>", `<small>1/</small>${"7".repeat(2001)}</a>`),
+    ],
+    ["version", () => withField("Version", `<a>${PAST_VALUE_LENGTH}</a>`)],
+    ["Title field", () => withField("Title", PAST_VALUE_LENGTH)],
+    ["numbering", () => withField("Numbering", PAST_VALUE_LENGTH)],
+  ])("a %s longer than 2000 characters is too_large", (_value, build) => {
+    expect(problemOf(build())).toEqual({ kind: "too_large", limit: "valueLength" });
+  });
+
+  test("a role inside nested em elements reads once", () => {
+    const page = parsedPage(
+      edit(item98777, "<em>Manufacturer</em>", "<em><em>Manufacturer</em></em>"),
+    );
+    expect(page.entries).toEqual(ENTRIES_98777);
+  });
+
+  test("an entry name inside nested names reads once", () => {
+    const page = parsedPage(
+      edit(item98777, ">Orchid Seed</span>", '><span switch="">Orchid Seed</span></span>'),
+    );
+    expect(page.entries).toEqual(ENTRIES_98777);
+  });
+
+  test("a release type and date inside nested elements read once", () => {
+    const nestedType = edit(
+      item98777,
+      "<em>Standard (Japan)</em>",
+      "<em><em>Standard (Japan)</em></em>",
+    );
+    const page = parsedPage(
+      edit(
+        nestedType,
+        'class="time">11/15/2018</a>',
+        'class="time"><a class="time">11/15/2018</a></a>',
+      ),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a scale inside nested scale links reads once", () => {
+    const page = parsedPage(
+      edit(item98777, "<small>1/</small>7</a>", '<a class="item-scale"><small>1/</small>7</a></a>'),
+    );
+    expect(page.scale).toBe("1/7");
+  });
+
+  test("a version inside nested links reads once", () => {
+    expect(parsedPage(withField("Version", "<a><a>Reissue</a></a>")).version).toEqual(["Reissue"]);
   });
 });
 

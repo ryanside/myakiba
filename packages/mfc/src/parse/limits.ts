@@ -11,6 +11,8 @@ import { DomHandler, Parser } from "htmlparser2";
  * above what a real page shows. Every release past the first is a data field of its own, so
  * dataFields leaves room for every release and every labelled field. entryNameLength also keeps a
  * name inside Postgres's 2704-byte btree row limit, which `entry_name_category_idx` enforces.
+ * valueLength caps every other string the Item stores: a Title, Numbering, scale, version, role,
+ * release type or barcode, none of which runs past a few dozen characters on a real page.
  *
  * depth, children and nodes bound the tree before cheerio sees it. A cheerio find runs domutils'
  * removeSubsets over the element children of the element it searches from, which costs
@@ -26,6 +28,7 @@ export const PAGE_LIMITS = {
   releases: 200,
   titleLength: 2000,
   entryNameLength: 500,
+  valueLength: 2000,
   warnings: 100,
 } as const;
 

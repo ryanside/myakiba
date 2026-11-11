@@ -53,13 +53,14 @@ function nested(open: string, close: string, build: (filler: string) => Page): s
   return shell(build(open.repeat(depth) + close.repeat(depth)));
 }
 
+/** A value just inside PAGE_LIMITS.valueLength, nested `depth` deep, on a page padded to the limit. */
 function around(
   open: string,
   close: string,
   depth: number,
   build: (filler: string) => Page,
 ): string {
-  return fill("x ", (run) => build(open.repeat(depth) + run + close.repeat(depth)));
+  return padded(build(open.repeat(depth) + "x ".repeat(900) + close.repeat(depth)));
 }
 
 /**
@@ -304,6 +305,63 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill(" ", (run) => ({ head: `<title>${run}x</title>`, fields: "" })),
   ],
   [
+    "a role inside nested em elements",
+    "too_large:valueLength",
+    () =>
+      fill("x", (run) => ({
+        fields: field(
+          "Company",
+          `<div class="item-entries">${entry("1", "x")}<small class="light">${"<em>".repeat(28)}${run}${"</em>".repeat(28)}</small></div>`,
+        ),
+      })),
+  ],
+  [
+    "a release type inside nested em elements",
+    "too_large:valueLength",
+    () =>
+      fill("x", (run) => ({
+        fields: release(
+          `<small class="light">${"<em>".repeat(28)}${run}${"</em>".repeat(28)}</small>`,
+        ),
+      })),
+  ],
+  [
+    "a version inside nested links",
+    "too_large:valueLength",
+    () =>
+      fill("x", (run) => ({
+        fields: field("Version", "<a>".repeat(29) + run + "</a>".repeat(29)),
+      })),
+  ],
+  [
+    "a scale inside nested scale links",
+    "too_large:valueLength",
+    () =>
+      fill("1", (run) => ({
+        fields: field(
+          "Dimensions",
+          `${'<a class="item-scale">'.repeat(29)}1/${run}${"</a>".repeat(29)}`,
+        ),
+      })),
+  ],
+  [
+    "material percentages inside nested small.light elements",
+    "parsed",
+    () =>
+      fill("1", (run) => ({
+        fields: field(
+          "Materials",
+          `<div class="item-entries">${'<small class="light">'.repeat(28)}${run}${"</small>".repeat(28)}</div>`,
+        ),
+      })),
+  ],
+  ["a barcode", "too_large:valueLength", () => fill("A", (run) => ({ fields: release(run) }))],
+  [
+    "a Title field",
+    "too_large:valueLength",
+    () => fill("x", (run) => ({ fields: field("Title", run) })),
+  ],
+  [
     "elements before the page's html element",
     "too_large:children",
     () => fill("<br>", (run) => ({ before: run, fields: "" })),
@@ -531,10 +589,7 @@ const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
   ],
   [
     "fields nested to the page depth limit",
-    () =>
-      fill("x ", (run) => ({
-        fields: "<b>".repeat(PAGE_DEPTH) + field("Title", run) + "</b>".repeat(PAGE_DEPTH),
-      })),
+    () => padded({ fields: deep(PAGE_DEPTH, field("Title", "x ".repeat(900))) }),
   ],
 ];
 
