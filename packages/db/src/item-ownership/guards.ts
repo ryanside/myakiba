@@ -48,41 +48,43 @@ function written(columns: readonly string[]): string {
 /**
  * A child guard checks the row it writes against its parents. A parent it cannot see fails the
  * check, so a parent committed by another transaction after the check began never passes it.
+ * KEY SHARE holds the parent until the write commits, as a foreign key check does: a parent
+ * deleted while the guard waits for it fails the check, even if its id is reissued.
  * It checks only the columns the write changes: a cascade that clears release_id, or deletes the
  * row's Item first, then has nothing to look up.
  */
 const CHILD_GUARDS = {
   collection: `
     IF ${written(["user_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("collection_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
     END IF;
     IF NEW.release_id IS NOT NULL AND ${written(["item_id", "release_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item_release WHERE id = NEW.release_id AND item_id = NEW.item_id) THEN
+      (SELECT 1 FROM public.item_release WHERE id = NEW.release_id AND item_id = NEW.item_id FOR KEY SHARE) THEN
       ${raise("collection_release_of_item", "format('Item %s, release %s', NEW.item_id, NEW.release_id)")}
     END IF;`,
   wishlist_item: `
     IF ${written(["user_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("wishlist_item_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
     END IF;`,
   list_member: `
     IF ${written(["user_id", "list_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.list WHERE id = NEW.list_id AND user_id = NEW.user_id) THEN
+      (SELECT 1 FROM public.list WHERE id = NEW.list_id AND user_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("list_member_list_owner", "format('user %s, List %s', NEW.user_id, NEW.list_id)")}
     END IF;
     IF NEW.item_id IS NOT NULL AND ${written(["user_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("list_member_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
     END IF;`,
   // A link without an owner joins an Item and an Item Entry without one, as before the migration.
   entry_to_item: `
     IF ${written(["owner_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_item_owner", "format('owner %s, Item %s', NEW.owner_id, NEW.item_id)")}
     END IF;
     IF ${written(["owner_id", "entry_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id) THEN
+      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_entry_owner", "format('owner %s, Item Entry %s', NEW.owner_id, NEW.entry_id)")}
     END IF;`,
 } as const;
@@ -100,7 +102,9 @@ const OWNER_GUARD_TRIGGERS: readonly { readonly table: string; readonly name: st
   ...FIXED_OWNERS.map((fixed) => fixed.table),
 ].map((table) => ({ table, name: `${table}_owner_guard` }));
 
+// Two installs that replace the same function at once fail with "tuple concurrently updated".
 const GUARDS_SQL = [
+  "SELECT pg_advisory_xact_lock(hashtextextended('myakiba:owner-guards', 0));",
   ...Object.entries(CHILD_GUARDS).map(
     ([table, body]) => `
     CREATE OR REPLACE FUNCTION public.${table}_owner_guard() RETURNS trigger LANGUAGE plpgsql AS $guard$
@@ -147,7 +151,7 @@ export async function ownerGuardsInstalled(sql: SQL): Promise<boolean> {
   const rows = await sql<{ table: string; name: string }[]>`
     SELECT c.relname AS table, t.tgname AS name FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
-    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal AND t.tgenabled <> 'D'
+    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal AND t.tgenabled IN ('O', 'A')
   `;
   const present = new Set(rows.map((row) => `${row.table}.${row.name}`));
   return OWNER_GUARD_TRIGGERS.every((guard) => present.has(`${guard.table}.${guard.name}`));
