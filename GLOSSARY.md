@@ -1,17 +1,17 @@
 # myakiba
 
-myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means collectible information in the Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
+myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means collectible information in a user's own Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
 
 ## Language
 
 ### Item database
 
 **Item Database**:
-All the Items and their details in myakiba. An Item's details are the same for every user.
-_Avoid_: Catalog, library
+All of one user's Items and their details. Each user has their own, and nobody else sees or changes it.
+_Avoid_: Catalog, library, shared database
 
 **Item**:
-The description of one collectible, separate from any one user's purchase or ownership details. An Item can come from MyFigureCollection or be custom.
+The description of one collectible in one user's Item Database, separate from that user's purchase or ownership details. An Item can come from MyFigureCollection or be custom. Two users who save the same MyFigureCollection page each have their own Item.
 _Avoid_: Catalog Item, database item, global item
 
 **Item Release**:
@@ -23,7 +23,7 @@ An optional Item Release picked for a Collection Item. It must be a release of t
 _Avoid_: Selected Release, Latest release, Order Release Date
 
 **Item Entry**:
-A named detail linked to one or more Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job.
+A named detail linked to one or more of one user's Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job. Each user has their own Item Entries, so a page renames only its uploader's.
 _Avoid_: Catalog Entry, Item Attribute, Entry, tag
 
 **Item Entry Category**:
@@ -182,7 +182,7 @@ _Avoid_: Unique Owned
 Use Add for the header button and the Add Page; keep full action names for destinations.
 
 **Add Page**:
-The page where a user chooses where Items go. Its rows come from Picks and from Item Database search; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
+The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
 _Avoid_: Add menu, Add tray, sheet
 
 **Pick**:
@@ -190,7 +190,7 @@ Choosing the MyFigureCollection Item page you are viewing with the Browser Exten
 _Avoid_: Import, bookmark
 
 **Add to item database**:
-Saving a Pick: myakiba reads the picked page and adds its Item to the Item Database, or reuses the Item already there. It creates no Collection Item.
+Saving a Pick: myakiba reads the picked page and adds its Item to your Item Database, or reuses your Item already there. It never reuses or changes another user's Item for the same page, and it creates no Collection Item.
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
@@ -206,7 +206,7 @@ On the Add Page, adding Order Items to an existing Order; they copy its status, 
 _Avoid_: Sync Order Items
 
 **Item Refresh**:
-An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
+An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible only to you and may change or clear Selected Item Releases on your Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
 **Browser Extension**:

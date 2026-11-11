@@ -14,6 +14,7 @@ import { appendToWishlist } from "@/lib/wishlist-append";
 import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { ItemsMissing } from "./errors/items-missing";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
+import { guardedWrite } from "@/lib/owner-guard";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
 
 type CollectionInsert = typeof collection.$inferInsert;
@@ -127,7 +128,7 @@ export async function writeCommit(
     })
     .from(item)
     .leftJoinLateral(release, sql`TRUE`)
-    .where(inArray(item.id, itemIds))
+    .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
     .for("key share", { of: item });
   const itemById = new Map(found.map((row) => [row.id, row]));
   const chosenIds = choices.rows.flatMap(({ releaseId }) => (releaseId ? [releaseId] : []));
@@ -142,7 +143,8 @@ export async function writeCommit(
             priceCurrency: item_release.priceCurrency,
           })
           .from(item_release)
-          .where(inArray(item_release.id, chosenIds));
+          .innerJoin(item, eq(item.id, item_release.itemId))
+          .where(and(eq(item.ownerId, userId), inArray(item_release.id, chosenIds)));
   const chosenById = new Map(chosenReleases.map((chosen) => [chosen.id, chosen]));
   const picked = [];
   for (const row of choices.rows) {
@@ -194,7 +196,10 @@ export async function writeCommit(
   }));
 
   if (collectionItems.length > 0) {
-    await tx.insert(collection).values(collectionItems);
+    const inserted = await guardedWrite(tx.insert(collection).values(collectionItems), {
+      collection_release_of_item: () => new ReleaseNotOfItem(),
+    });
+    if (inserted.isErr()) return Result.err(inserted.error);
     if (place?.orderId) {
       await advanceOrderReleaseDatesForCollectionItems(
         tx,

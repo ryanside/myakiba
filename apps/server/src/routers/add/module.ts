@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Result } from "better-result";
 import { item } from "@myakiba/db/schema/figure";
 import { command, query } from "@/domain/kernel";
@@ -30,7 +30,7 @@ export const Add = {
         })
         .from(item)
         .leftJoinLateral(release, sql`TRUE`)
-        .where(inArray(item.id, ids));
+        .where(and(eq(item.ownerId, scope.viewer.userId), inArray(item.id, ids)));
       const rowById = new Map(rows.map((row) => [row.itemId, row]));
 
       const items = ids.flatMap((id) => {

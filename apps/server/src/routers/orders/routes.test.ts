@@ -43,7 +43,10 @@ beforeEach(async () => {
     { id: userId, name: "Ryan", email: "r@example.com", username: "ryan" },
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
-  await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
+  await db.insert(item).values([
+    { id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "item-1-other", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
+  ]);
   await db.insert(order).values([
     { id: "order-1", userId, title: "AmiAmi preorder" },
     { id: "order-2", userId, title: "HLJ preorder" },
@@ -53,7 +56,13 @@ beforeEach(async () => {
     { id: "c-owned", userId, itemId: "item-1", orderId: "order-1", status: "Owned" },
     { id: "c-ordered", userId, itemId: "item-1", orderId: "order-1", status: "Ordered" },
     { id: "c-2", userId, itemId: "item-1", orderId: "order-2", status: "Ordered" },
-    { id: "c-other", userId: "user-2", itemId: "item-1", orderId: "order-3", status: "Ordered" },
+    {
+      id: "c-other",
+      userId: "user-2",
+      itemId: "item-1-other",
+      orderId: "order-3",
+      status: "Ordered",
+    },
   ]);
 });
 

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import type { SQL } from "bun";
+import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
 import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards, ownerGuardsInstalled } from "./guards";
@@ -293,3 +293,65 @@ test(
   },
   PUSH_TIMEOUT,
 );
+
+const REISSUE_LOCK = 7;
+
+async function waitsForALock(sql: SQL, marker: string): Promise<boolean> {
+  const [{ waiting }] = await sql<[{ waiting: number }]>`
+    SELECT count(*)::int AS waiting FROM pg_stat_activity
+    WHERE wait_event_type = 'Lock' AND query LIKE ${`%${marker}%`} AND pid <> pg_backend_pid()
+  `;
+  return waiting > 0;
+}
+
+test("a guard locks the Item it checks, so an id deleted and reissued to another user mid-write cannot pass it", async () => {
+  const { sql } = await migrated();
+  await sql`INSERT INTO item (id, owner_id, title) VALUES ('item-u1-other', 'u1', 'Also mine')`;
+  const reissued = Promise.withResolvers<true>();
+  const release = Promise.withResolvers<true>();
+  const reissuing = sql.begin(async (tx) => {
+    await tx`SELECT pg_advisory_xact_lock(${REISSUE_LOCK})`;
+    await tx`DELETE FROM item WHERE id = 'item-u1'`;
+    await tx`INSERT INTO item (id, owner_id, title) VALUES ('item-u1', 'u2', 'Reissued')`;
+    reissued.resolve(true);
+    await release.promise;
+  });
+  await reissued.promise;
+  // Postgres runs a statement's foreign key checks after its last row, so they find the reissued Item.
+  const write = outcome(sql`
+    INSERT INTO collection (id, user_id, item_id, tags)
+    SELECT v.id, 'u1', v.item_id, '{}'
+    FROM (VALUES ('col-x', 'item-u1', 0), ('col-y', 'item-u1-other', ${REISSUE_LOCK}::int)) v(id, item_id, waits_for)
+    WHERE v.waits_for = 0 OR (SELECT true FROM pg_advisory_xact_lock(v.waits_for))
+  `);
+  while (!(await waitsForALock(sql, "col-x"))) await Bun.sleep(10);
+  release.resolve(true);
+  await reissuing;
+  expect(await write).toBe("collection_item_owner");
+  expect(await verifyItemOwnership(sql)).toEqual([]);
+});
+
+test("overlapping installs all succeed", async () => {
+  const database = await migrated();
+  const clients = Array.from({ length: 6 }, () => new SQL({ url: database.url, max: 1 }));
+  try {
+    for (let round = 0; round < 5; round++) {
+      const installs = await Promise.allSettled(
+        clients.map((client) => installOwnerGuards(client)),
+      );
+      expect(installs.filter((install) => install.status === "rejected")).toEqual([]);
+    }
+  } finally {
+    await Promise.all(clients.map((client) => client.close()));
+  }
+});
+
+test("a guard that fires only on a replica is not installed, and installing enables it again", async () => {
+  const { sql } = await migrated();
+  await sql`ALTER TABLE collection ENABLE REPLICA TRIGGER collection_owner_guard`;
+  expect(await ownerGuardsInstalled(sql)).toBe(false);
+  expect(await installOwnerGuards(sql)).toBe("installed");
+  expect(await ownerGuardsInstalled(sql)).toBe(true);
+  await sql`ALTER TABLE collection ENABLE ALWAYS TRIGGER collection_owner_guard`;
+  expect(await ownerGuardsInstalled(sql)).toBe(true);
+});

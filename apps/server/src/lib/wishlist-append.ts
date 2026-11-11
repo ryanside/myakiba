@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Result } from "better-result";
 import { item, wishlistItem } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
@@ -22,7 +22,7 @@ export async function appendToWishlist(
     tx
       .select({ id: item.id })
       .from(item)
-      .where(inArray(item.id, [...itemIds])),
+      .where(and(eq(item.ownerId, userId), inArray(item.id, [...itemIds]))),
     tx
       .select({ position: sql<number>`COALESCE(MAX(${wishlistItem.position}), -1)::integer` })
       .from(wishlistItem)

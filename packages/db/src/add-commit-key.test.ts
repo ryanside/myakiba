@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import type { SQL } from "bun";
 import { testDatabases } from "../test/database";
-import { APP_SCHEMA, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
+import { PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
+import { migrateItemOwnership } from "./item-ownership/migrate";
 
 const databases = testDatabases();
 
@@ -34,7 +35,7 @@ const REVERSED = ["commit_id", "user_id"];
 const OIDS_PER_ATTEMPT = 8192;
 const ATTEMPTS = 6;
 
-/** Production before this key change, on a catalog where drizzle reads its key as commit_id, user_id. */
+/** Production before this key change, migrated as db-push migrates it, on a catalog where drizzle reads its key as commit_id, user_id. */
 async function productionTemplateWithReversedKeyRead(): Promise<string | undefined> {
   for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
     const read = { columns: [] as string[] };
@@ -44,6 +45,7 @@ async function productionTemplateWithReversedKeyRead(): Promise<string | undefin
         ALTER TABLE add_commit DROP CONSTRAINT IF EXISTS add_commit_user_id_commit_id_pk,
           ADD CONSTRAINT add_commit_user_id_commit_id_pk PRIMARY KEY (user_id, commit_id)
       `;
+      await migrateItemOwnership(sql);
       await sql`CREATE SCHEMA unrelated`;
       await sql`CREATE TABLE unrelated.pair (a int, b int, PRIMARY KEY (a, b))`;
       await sql`
@@ -95,12 +97,12 @@ test.skipIf(template === undefined)(
     const { sql, url } = await productionWithReversedKeyRead();
     const before = await commitRecords(sql);
 
-    expect(await pushSchema(url, APP_SCHEMA)).toMatchObject({
+    expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: [DROP_OLD_KEY, ...REPEATED_ON_EVERY_PUSH, CREATE_INDEX],
     });
     expect(await commitRecords(sql)).toEqual(before);
-    expect(await pushSchema(url, APP_SCHEMA)).toMatchObject({
+    expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: REPEATED_ON_EVERY_PUSH,
     });
@@ -118,11 +120,11 @@ test.skipIf(template === undefined)(
       ON "add_commit" USING btree ("user_id", "commit_id")
     `;
 
-    expect(await pushSchema(url, APP_SCHEMA)).toMatchObject({
+    expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: [DROP_OLD_KEY, ...REPEATED_ON_EVERY_PUSH],
     });
-    expect(await pushSchema(url, APP_SCHEMA)).toMatchObject({
+    expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: REPEATED_ON_EVERY_PUSH,
     });

@@ -35,12 +35,21 @@ beforeEach(async () => {
   await db.insert(item).values([
     {
       id: "item-1",
+      ownerId: userId,
       externalId: 186,
       title: "Nendoroid Hatsune Miku",
       image: "miku.jpg",
       category: "Prepainted",
     },
-    { id: "item-custom", externalId: null, source: "custom", title: "Custom Rin" },
+    { id: "item-custom", ownerId: userId, externalId: null, source: "custom", title: "Custom Rin" },
+    { id: "aki-1", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
+    {
+      id: "aki-custom",
+      ownerId: "user-2",
+      externalId: null,
+      source: "custom",
+      title: "Custom Rin",
+    },
   ]);
   await db.insert(item_release).values([
     { itemId: "item-1", date: "2026-01-01", price: 4000, priceCurrency: "JPY" },
@@ -57,11 +66,11 @@ beforeEach(async () => {
   await db.insert(collection).values([
     { userId, itemId: "item-1" },
     { userId, itemId: "item-1", status: "Ordered" },
-    { userId: "user-2", itemId: "item-custom" },
+    { userId: "user-2", itemId: "aki-custom" },
   ]);
   await db.insert(wishlistItem).values([
     { userId, itemId: "item-custom" },
-    { userId: "user-2", itemId: "item-1" },
+    { userId: "user-2", itemId: "aki-1" },
   ]);
 });
 

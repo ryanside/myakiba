@@ -5,7 +5,7 @@ import { command } from "@/domain/kernel";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import { ensureMfcItem } from "@/lib/item-database";
+import { addMfcItemIfMissing } from "@/lib/item-database";
 import { pictureLog, pictureOutcome, prepareMfcItem, refusedPageLog } from "@/lib/mfc-item-ingest";
 import type { PictureOutcome } from "@/lib/mfc-item-ingest";
 
@@ -26,7 +26,7 @@ export const MfcItems = {
       // Neither failure has a fallback, so each answers the logged 500.
       operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {
-        const prepared = await prepareMfcItem(scope.tx, input);
+        const prepared = await prepareMfcItem(scope.tx, scope.viewer, input);
         if (prepared.isErr()) {
           const failure = prepared.error;
           if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
@@ -46,7 +46,7 @@ export const MfcItems = {
     async (scope, { page, stored }) => {
       const id = page.mfcItemId;
       const picture = pictureOutcome(stored);
-      const ensured = await ensureMfcItem(scope.tx, page, stored);
+      const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, stored);
       if (ensured.isErr()) return ensured;
       const { itemId, created } = ensured.value;
 

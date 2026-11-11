@@ -32,9 +32,14 @@ beforeAll(async () => {
   await db
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
-  await db
-    .insert(item)
-    .values({ id: "item-1", externalId: 101, title: "Miku", category: "Prepainted", scale: "1/7" });
+  await db.insert(item).values({
+    id: "item-1",
+    ownerId: userId,
+    externalId: 101,
+    title: "Miku",
+    category: "Prepainted",
+    scale: "1/7",
+  });
   await db.insert(collection).values(
     SHOPS.flatMap((shop, index) =>
       Array.from({ length: SHOPS.length - index }, (_, copy) => ({

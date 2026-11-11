@@ -364,8 +364,20 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
         await db.execute("TRUNCATE item, entry CASCADE");
         const { answers } = await db.transaction(async (tx) => {
           await tx.insert(entry).values([
-            { externalId: 9613, source: "mfc", category: "Artists", name: "Minheru" },
-            { externalId: 21_937, source: "mfc", category: "Artists", name: "Moekibara Fumitake" },
+            {
+              ownerId: userId,
+              externalId: 9613,
+              source: "mfc",
+              category: "Artists",
+              name: "Minheru",
+            },
+            {
+              ownerId: userId,
+              externalId: 21_937,
+              source: "mfc",
+              category: "Artists",
+              name: "Moekibara Fumitake",
+            },
           ]);
           const uploads = Promise.all([
             upload({ mfcItemId: 98_777, page: page98777 }),

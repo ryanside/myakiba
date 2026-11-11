@@ -203,7 +203,14 @@ export const Search = {
           .select(fields)
           .from(item)
           .leftJoinLateral(latestRelease, sql`TRUE`)
-          .where(and(eq(item.source, "mfc"), isNotNull(item.externalId), searchFilter))
+          .where(
+            and(
+              eq(item.ownerId, scope.viewer.userId),
+              eq(item.source, "mfc"),
+              isNotNull(item.externalId),
+              searchFilter,
+            ),
+          )
           .$dynamic();
       const page = await paginateBy(
         scope,
@@ -261,7 +268,13 @@ export const Search = {
           category: entry.category,
         })
         .from(entry)
-        .where(and(eq(entry.source, "mfc"), ilike(entry.name, `%${search}%`)))
+        .where(
+          and(
+            eq(entry.ownerId, scope.viewer.userId),
+            eq(entry.source, "mfc"),
+            ilike(entry.name, `%${search}%`),
+          ),
+        )
         .orderBy(asc(entry.name), asc(entry.id))
         .limit(limit)
         .offset(offset);

@@ -1,16 +1,15 @@
 import path from "node:path";
 
 export const PUSH_TIMEOUT = 60_000;
-const OWNED_SCHEMA = Bun.fileURLToPath(import.meta.resolve("./owned-schema.ts"));
-export const APP_SCHEMA = path.join(import.meta.dir, "../src/schema");
+const SCHEMA = path.join(import.meta.dir, "../src/schema");
 
 // drizzle-kit 0.31.10 rewrites this default on every push of today's schema.
 export const REPEATED_ON_EVERY_PUSH = [
   `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
-/** Pushes a schema as push-schema.ts pushes the app's: no TTY, so any prompt fails. */
-export async function pushSchema(url: string, schema = OWNED_SCHEMA) {
+/** Pushes the app schema as push-schema.ts does: no TTY, so any prompt fails. */
+export async function pushSchema(url: string) {
   const child = Bun.spawn(
     [
       "bunx",
@@ -18,7 +17,7 @@ export async function pushSchema(url: string, schema = OWNED_SCHEMA) {
       "push",
       "--verbose",
       "--dialect=postgresql",
-      `--schema=${schema}`,
+      `--schema=${SCHEMA}`,
       `--url=${url}`,
       "--schemaFilters=public",
     ],

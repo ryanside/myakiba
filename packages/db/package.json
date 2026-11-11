@@ -7,6 +7,9 @@
     "./client": {
       "default": "./src/client.ts"
     },
+    "./owner-guards": {
+      "default": "./src/item-ownership/guards.ts"
+    },
     "./order-release-date": {
       "default": "./src/order-release-date.ts"
     },

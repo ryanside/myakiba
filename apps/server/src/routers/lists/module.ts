@@ -421,7 +421,7 @@ export const Lists = {
                 image: item.image,
               })
               .from(item)
-              .where(inArray(item.id, itemIds)),
+              .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds))),
         collectionIds.length === 0
           ? Promise.resolve([])
           : scope.tx

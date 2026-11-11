@@ -342,7 +342,9 @@
       "fixed": [
         "each search route answers as before > item database search ranks an exact id before a prefix, then a title, then an entry",
         "each search route answers as before > item database search badges count only the viewer's Collection Items and Wishlist"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "caae145d0487a662056ad5b2ccbd4d884520f36e",
@@ -749,13 +751,17 @@
         "each orders route answers as before > move an item deleted in another tab",
         "a write that names any id the caller does not own answers 404 and changes nothing > move only another user's item",
         "a write with an empty id list answers 404 and changes nothing > move"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "6951e768644864d684020559b34af7a0aaf9450a",
       "bug": "collection edit and delete returned Date timestamps that the wire sends as strings",
       "test": "apps/server/src/routers/collection/routes.test.ts",
-      "fixed": ["the edit and delete operations return strings, so Eden types them as strings"]
+      "fixed": ["the edit and delete operations return strings, so Eden types them as strings"],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "25bdd70543c196384d607faa296b1f27d4e18307",
@@ -767,7 +773,9 @@
       "fix": "6bdc882362a1c12429c8e2914c04f3cbc67fd39b",
       "bug": "a list page and its totals read two snapshots, so a committed delete left rows the totals did not count",
       "test": "apps/server/src/routers/list-snapshot.test.ts",
-      "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"]
+      "fixed": ["a delete committed while a page is read leaves its rows and totals in agreement"],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "9d8845a0f8b06c20147d168dfd4bca764ccdae57",
@@ -951,13 +959,17 @@
         "a write that names any id the caller does not own answers 404 and changes nothing > move an own and another user's item",
         "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's order",
         "a write that names any id the caller does not own answers 404 and changes nothing > delete an own and another user's item"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "97a0d693c15cc0c3836d9dece14dc066938ec2ed",
       "bug": "a collection bulk delete answered 200 for a mix of the caller's items and another user's, deleting the caller's and skipping the rest",
       "test": "apps/server/src/routers/collection/routes.test.ts",
-      "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"]
+      "fixed": ["a bulk delete of an own and another user's item answers 404 and deletes nothing"],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "2a572a426b4d6b3107fb3159ffbf4ec976c2e80a",
@@ -3243,7 +3255,9 @@
       "fixed": [
         "a section search for %2C answers with no rows",
         "a section search for a,b answers with no rows"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "c6ea6429",
@@ -3736,7 +3750,9 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped"
-      ]
+      ],
+      "testAt": "10ce759b17576263816a49e0e9aada15e81de451",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with the harness from #211's merge, before the ownership switch."
     },
     {
       "fix": "95764a1244c723084e44794e0059f61ac1bf61d9",
@@ -4004,7 +4020,9 @@
       "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
       "bug": "POST /api/item/custom let any signed-in account write an owner-less Item, Entries and releases with no limit, though the web never called it.",
       "test": "apps/server/src/routers/item/routes.test.ts",
-      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"]
+      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "10cd59403523c9bb425f9d4c6f8b1a3edc6be7ed",
@@ -4015,7 +4033,9 @@
         "Item Refresh has no cooldown > two refreshes in a row both write",
         "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
@@ -4023,7 +4043,9 @@
       "test": "apps/server/src/routers/item/resync.test.ts",
       "fixed": [
         "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "fix": "562eada1705d62a04754cd69390ac5725056999d",
@@ -4031,7 +4053,9 @@
       "test": "apps/server/src/routers/collection/routes.test.ts",
       "fixed": [
         "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
     },
     {
       "bug": "The Item ownership migration made the owner keys' targets unique indexes, which no Drizzle schema drizzle-kit 0.31 can push onto a migrated database.",
@@ -4051,7 +4075,9 @@
         "pushes the owned schema onto a migrated database with no prompt and no lost row",
         "an empty database pushed twice ends with the schema a migrated database gets"
       ],
-      "test": "packages/db/src/item-ownership/push.test.ts"
+      "test": "packages/db/src/item-ownership/push.test.ts",
+      "testAt": "5f00011df6bfe1d4d8637b31f20d3dc8880fb8ed",
+      "reason": "The ownership switch deletes test/owned-schema.ts, which this test pushed, and its push tests push the app's own schema instead. Before the switch that schema has no owner columns."
     },
     {
       "bug": "The Item ownership migration gave owner x's copy of Item y:z and owner x:y's copy of Item z the same id, so it failed with a duplicate key.",
@@ -4076,7 +4102,65 @@
       "fixed": [
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
-      ]
+      ],
+      "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
+    },
+    {
+      "bug": "An owner guard read the parent it checked without a lock, so an Item deleted and reissued to another user while a write waited passed the guard and the foreign key check. Two overlapping guard installs failed with tuple concurrently updated, and a guard that fired only on a replica counted as installed.",
+      "fix": "c847974e4ec40c076fb7bec9d9c6d335a4407443",
+      "fixed": [
+        "a guard locks the Item it checks, so an id deleted and reissued to another user mid-write cannot pass it",
+        "overlapping installs all succeed",
+        "a guard that fires only on a replica is not installed, and installing enables it again"
+      ],
+      "test": "packages/db/src/item-ownership/guards.test.ts"
+    },
+    {
+      "bug": "Every user shared one Item Database, so a user read another user's Item, releases and Item Entries by id or MFC id, and a forged page or Item Refresh from one user rewrote Items and Item Entries other users held.",
+      "fix": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "fixed": [
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the Item page of her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > her Item's releases",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Item Refresh of her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the Add page's items for her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Add commit of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > a Wishlist add of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > a List add of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the item database search for her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the entry search for her Item Entry",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Add commit of his own Item with her release",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an edit of his own Collection Item that selects her release",
+        "Bob's forged page for an MFC id Alice holds makes his own Item and changes nothing Alice reads",
+        "Bob's Item Refresh renames only his own Item Entries",
+        "the item database search shows each user only their own Items"
+      ],
+      "test": "apps/server/src/routers/owner-isolation.test.ts"
+    },
+    {
+      "bug": "db-push pushed the schema without the Item ownership migration, so a pre-ownership database never got its owners and a fresh one never said it skipped the migration.",
+      "fix": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "fixed": [
+        "db-push migrates a legacy database, pushes with no prompt and no lost row, and installs the guards; a second run changes nothing",
+        "db-push skips the migration on a fresh database and installs the guards; a second run changes nothing"
+      ],
+      "test": "packages/db/src/scripts/push-schema.test.ts"
+    },
+    {
+      "bug": "An Item Refresh that deleted a release while a Collection edit or an Add commit selected it made the owner guard reject the write, which answered a logged 500 instead of the operation's ReleaseNotOfItem.",
+      "fix": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "fixed": [
+        "an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing"
+      ],
+      "test": "apps/server/src/routers/collection/routes.test.ts"
+    },
+    {
+      "bug": "An Item Refresh that deleted a release while a Collection edit or an Add commit selected it made the owner guard reject the write, which answered a logged 500 instead of the operation's ReleaseNotOfItem.",
+      "fix": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "fixed": [
+        "a chosen release an Item Refresh deletes meanwhile answers 404 and writes nothing"
+      ],
+      "test": "apps/server/src/routers/add/commit.test.ts"
     },
     {
       "fix": "0602b6003abfa90c3510e04c29add7cea0676519",
@@ -4085,7 +4169,18 @@
       "fixed": [
         "push moves add_commit to a key it reads back the same, so a second push leaves it alone",
         "with the unique index built first, push only drops the old key, so commits always have one"
-      ]
+      ],
+      "testAt": "f83de712d01a6484afc52787ec02c6b527677377",
+      "reason": "At HEAD the app schema is the owned one, so the test migrates its template before pushing it. At this revision the app schema predates ownership, so the replay takes the test and harness from #218's merge."
+    },
+    {
+      "bug": "Production deploys from main, whose database still had the retired data_transfer_import and sync_session tables. db-push committed the ownership migration, then drizzle-kit push stopped at a prompt asking whether add_commit was one of them renamed, leaving the database migrated but not pushed, and the failure did not say so.",
+      "fix": "cee9295fa9fd0ffd95dee0537b4387ea5ac51b18",
+      "fixed": [
+        "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
+        "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
+      ],
+      "test": "packages/db/src/scripts/push-schema.test.ts"
     }
   ],
   "lint": [

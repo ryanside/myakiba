@@ -563,7 +563,9 @@ async function storedVersion(itemId: string) {
 
 describe("pages the refresh refuses or rewrites", () => {
   test("a page for a different item answers 400 and leaves that item as it was", async () => {
-    await db.insert(item).values({ source: "mfc", externalId: 12_345, title: "Another item" });
+    await db
+      .insert(item)
+      .values({ ownerId: userId, source: "mfc", externalId: 12_345, title: "Another item" });
 
     expect(await resync(page98777, JPEG, 12_345)).toEqual({
       status: 400,

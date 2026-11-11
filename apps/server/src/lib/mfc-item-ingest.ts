@@ -1,6 +1,7 @@
 import { Result } from "better-result";
 import type { ItemRefresh, ItemUpload } from "@myakiba/contracts/mfc-items/schema";
 import type { ReadTx } from "@myakiba/db/tx";
+import type { Viewer } from "@/domain/viewer";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
@@ -42,10 +43,11 @@ export async function readMfcItemPage(
 /** The slow half of an ingest: an Item already in the pool answers at once, otherwise the page is read. */
 export async function prepareMfcItem(
   pool: ReadTx,
+  viewer: Viewer,
   upload: ItemUpload,
 ): Promise<Result<PreparedMfcItem, MfcPageUnreadable | StoreItemPictureFailed>> {
   const id = upload.mfcItemId as MfcItemId;
-  const existingId = await findMfcItem(pool, id);
+  const existingId = await findMfcItem(pool, viewer, id);
   if (existingId) return Result.ok({ kind: "existing", mfcItemId: id, itemId: existingId });
   return readMfcItemPage(id, upload);
 }

@@ -32,6 +32,8 @@ export const item = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
+    // Null only on a pre-ownership Item, Item Entry or link, which items:cleanup deletes.
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     title: text("title").notNull(),
@@ -53,7 +55,7 @@ export const item = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
+    uniqueIndex("item_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
     index("item_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
   ],
 );
@@ -89,6 +91,7 @@ export const entry = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     category: text("category").notNull(), // classifications, origin, character, company, artist, material, event
@@ -99,13 +102,14 @@ export const entry = pgTable(
   (t) => [
     index("entry_name_category_idx").on(t.name, t.category),
     index("entry_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
-    uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
+    uniqueIndex("entry_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
   ],
 );
 
 export const entry_to_item = pgTable(
   "entry_to_item",
   {
+    ownerId: text("owner_id"),
     entryId: text("entry_id")
       .notNull()
       .references(() => entry.id, { onDelete: "cascade" }),
@@ -275,6 +279,7 @@ export const listMember = pgTable(
     listId: text("list_id")
       .notNull()
       .references(() => list.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
     itemId: text("item_id").references(() => item.id, { onDelete: "cascade" }),
     collectionId: text("collection_id").references(() => collection.id, {
       onDelete: "cascade",

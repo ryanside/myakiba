@@ -3,6 +3,7 @@ import { SQL } from "bun";
 import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
+import { installOwnerGuards } from "@myakiba/db/owner-guards";
 
 /** Creates a fresh database with the app schema, points DATABASE_URL at it and drops it after the file. */
 export async function createTestDatabase() {
@@ -26,6 +27,7 @@ export async function createTestDatabase() {
     generateDrizzleJson({ ...authSchema, ...figureSchema }),
   );
   for (const statement of schemaStatements) await db.execute(statement);
+  await installOwnerGuards(db.$client);
 
   afterAll(async () => {
     await db.$client.close();
