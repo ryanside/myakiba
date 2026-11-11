@@ -70,13 +70,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. The extension sends only what myakiba reads from the page: its title and address, the item's heading, picture and details, whether MFC found the page, and whether you are signed in to MFC. Nothing else of yours leaves MFC. The items you save are yours. Nobody else sees or changes them, and myakiba keeps new item pictures private. Refreshing an item's details needs a verified email on myakiba and updates only your item. It loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
+      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. The extension sends only what myakiba reads from the page: its title and address, the item's heading, picture and details, whether MFC found the page, and whether you are signed in to MFC. Nothing else of yours leaves MFC. The items you save are yours. Nobody else sees or changes them, and myakiba keeps new item pictures private. Refreshing an item's details from MFC needs a verified email on myakiba and updates only your item. The extension loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
   },
   {
     id: "faq-add-items",
     question: "How do I add items?",
     answer:
-      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. To add an item you already saved in myakiba, search for it on the Add page. You do not need the extension for that.",
+      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. Items you saved before show up in the Add page's search. You can add them again from there, without the extension.",
   },
   {
     id: EXTENSION_FAQ_ID,
