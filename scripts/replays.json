@@ -4237,7 +4237,9 @@
         "item pictures are stored by their bytes > bytes that are no supported image are rejected without a put",
         "item pictures are stored by their bytes > a picture over 10 MB is rejected without a put",
         "item pictures are stored by their bytes > a picture of exactly 10 MB is stored"
-      ]
+      ],
+      "testAt": "64ef35a96f290e6e9619bc7be1559cac15d27e43",
+      "reason": "The fix round's c1408913 made these tests also expect a stored picture's key, bytes and type, which the writer uses to store it again and this revision does not return, so the replay takes this revision's test file."
     },
     {
       "fix": "cc76a3b85875ba3b93419ae2f96e1111f131f078",
@@ -4253,6 +4255,13 @@
       "test": "apps/web/src/data/resources/add.test.tsx",
       "fixed": [
         "an account's limits > a pick saved over the picture quota joins the draft without its picture and says so",
+        "an account's limits > a full Item Database keeps the pick and says why on its row and in a toast",
+        "pick failure copy > words full"
+      ],
+      "testAt": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "reason": "813a2e5e replaced the one-toast-per-pick test with one that expects a single shared toast, so the replay takes this revision's test file.",
+      "atHead": [
+        "an account's limits > picks saved over the picture quota join the draft without their pictures and leave one toast",
         "an account's limits > a full Item Database keeps the pick and says why on its row and in a toast",
         "pick failure copy > words full"
       ]
@@ -4271,6 +4280,64 @@
       "bug": "The web app's Content-Security-Policy allowed only https: images, so pictures from a bucket URL on http, such as a local MinIO, did not load.",
       "test": "apps/server/src/html-headers-bucket.test.ts",
       "fixed": ["the web app may show pictures from the bucket's public URL, even on http"]
+    },
+    {
+      "fix": "8f46572399fb7c9c49e8c3f5047cd0516b076eec",
+      "bug": "pictures:reconcile --legacy considered every root-level key and every items/mfc/ key, so it deleted a root robots.txt that was never a picture.",
+      "test": "packages/db/src/pictures/reconcile.test.ts",
+      "fixed": [
+        "pictures:reconcile against an S3-compatible store > --legacy also deletes unused root-level and items/mfc/ pictures, and nothing outside",
+        "pictures:reconcile against an S3-compatible store > --legacy never considers a root robots.txt or any other key that is not a picture",
+        "pictures:reconcile against an S3-compatible store > more garbage than --max-delete deletes nothing",
+        "pictures:reconcile against an S3-compatible store > an object stored again, or shown by an Item, before its delete is kept"
+      ]
+    },
+    {
+      "fix": "813a2e5e9c036c623c278b9e10e40d8a412e5829",
+      "bug": "Each pick saved over the picture quota added its own sticky warning toast, so a batch of picks left a stack of toasts.",
+      "test": "apps/web/src/data/resources/add.test.tsx",
+      "fixed": [
+        "an account's limits > picks saved over the picture quota join the draft without their pictures and leave one toast"
+      ]
+    },
+    {
+      "fix": "c14089138c89be498d3e3d96ff8a294dab085172",
+      "bug": "pictures:reconcile re-checked the database and then deleted, so a save of the same bytes that committed in between left its Item showing a deleted object.",
+      "test": "packages/db/src/pictures/reconcile.test.ts",
+      "fixed": [
+        "pictures:reconcile against an S3-compatible store > a save that commits while reconcile deletes its object still leaves the object"
+      ]
+    },
+    {
+      "fix": "c14089138c89be498d3e3d96ff8a294dab085172",
+      "bug": "A save neither waited for reconcile's delete of its picture nor stored the picture again after it, so it could commit an Item showing a deleted object.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items and pictures:reconcile > a save waits on reconcile's lock on its picture, and stores the picture again if reconcile deleted it"
+      ]
+    },
+    {
+      "fix": "c14089138c89be498d3e3d96ff8a294dab085172",
+      "bug": "The picture store could not check that a stored picture was still in the bucket or store it again, so a save could not recover a picture reconcile deleted.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "item pictures are stored by their bytes > jpg bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > png bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > gif bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > webp bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > avif bytes are stored with their own type at their content's key",
+        "a stored picture is stored again only if it is gone > a picture still in the bucket is not stored again",
+        "a stored picture is stored again only if it is gone > a picture reconcile deleted is stored again with its bytes and type",
+        "a stored picture is stored again only if it is gone > a HEAD that fails for another reason throws"
+      ]
+    },
+    {
+      "fix": "4f9964a900aed66070e95c1c3fe6f1acb65a3b6a",
+      "bug": "A save that checked its picture under the lock failed when S3 answered the HEAD with 403, as it does for a missing key to a user without s3:ListBucket, instead of storing the picture again.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "a stored picture is stored again only if it is gone > a HEAD S3 forbids, as it does for a missing key without s3:ListBucket, stores it again"
+      ]
     }
   ],
   "lint": [
