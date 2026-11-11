@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 import path from "node:path";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import * as z from "zod";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -778,5 +778,44 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
     expect([...store.objects.keys()].toSorted()).toEqual(
       [`items/${fileOf(JPEG, "jpg")}`, `items/${fileOf(PNG, "png")}`].toSorted(),
     );
+  });
+});
+
+describe("POST /api/mfc-items holds at most 20,000 Items per account", () => {
+  async function holdItems(count: number) {
+    await db.execute(sql`
+      INSERT INTO item (id, owner_id, external_id, source, title)
+      SELECT 'held-' || n, ${userId}, 2000000 + n, 'mfc', 'Held ' || n
+      FROM generate_series(1, ${count}) AS n
+    `);
+  }
+
+  test("a full Item Database answers 409 and adds nothing", async () => {
+    await holdItems(20_000);
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+      status: 409,
+      body: "Your Item Database is full. One account can hold 20,000 Items.",
+    });
+    expect(await itemRows(98_777)).toMatchObject({ item: undefined });
+  });
+
+  test("the 20,000th Item is added", async () => {
+    await holdItems(19_999);
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777 })).toMatchObject({
+      status: 200,
+      body: { saved: "created" },
+    });
+  });
+
+  test("an Item the full account already holds still answers existing", async () => {
+    await holdItems(19_999);
+    const first = await upload({ mfcItemId: 98_777, page: page98777 });
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777 })).toEqual({
+      status: 200,
+      body: { saved: "existing", itemId: saved(first).itemId, mfcItemId: 98_777 },
+    });
   });
 });

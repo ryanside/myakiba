@@ -46,7 +46,12 @@ export const MfcItems = {
     async (scope, { page, picture }) => {
       const id = page.mfcItemId;
       const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, picture);
-      if (ensured.isErr()) return ensured;
+      if (ensured.isErr()) {
+        if (ensured.error._tag === "ItemDatabaseFull") {
+          scope.log.set({ mfc: { itemId: id, outcome: "database_full" } });
+        }
+        return ensured;
+      }
       const added = ensured.value;
       scope.log.set({
         mfc: {

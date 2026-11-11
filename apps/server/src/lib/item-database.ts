@@ -1,11 +1,12 @@
 import { Result, panic } from "better-result";
-import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
 import type { Viewer } from "@/domain/viewer";
+import { ItemDatabaseFull } from "@/lib/errors/item-database-full";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { itemFields, linksInLockOrder, releaseKey, storedPercentage } from "@/lib/item-details";
@@ -15,6 +16,9 @@ import type { ReleasePlan } from "@/lib/release-plan";
 
 /** How many bytes of pictures stored by content one account's Items may show. */
 const PICTURE_QUOTA_BYTES = 2 * 1024 ** 3;
+
+/** How many Items one account's Item Database may hold. */
+const MAX_ITEMS_PER_ACCOUNT = 20_000;
 
 export async function findMfcItem(
   tx: ReadTx,
@@ -60,7 +64,7 @@ export async function pictureFits(
 }
 
 /**
- * Serializes one owner's Item writes, so the picture quota sees every write
+ * Serializes one owner's Item writes, so the Item cap and the picture quota see every write
  * before it. Taken before any Item row lock.
  */
 function lockItemDatabase(tx: Tx, viewer: Viewer) {
@@ -173,17 +177,22 @@ type Added =
 
 /**
  * Adds the page's Item to the viewer's Item Database, or answers the one they already have for
- * that MFC id. A picture over the quota is left out.
+ * that MFC id. A full Item Database adds nothing, and a picture over the quota is left out.
  */
 export async function addMfcItemIfMissing(
   tx: Tx,
   viewer: Viewer,
   page: MfcItemPage,
   picture: StoredPicture | null,
-): Promise<Result<Added, MfcItemNotPersisted>> {
+): Promise<Result<Added, MfcItemNotPersisted | ItemDatabaseFull>> {
   await lockItemDatabase(tx, viewer);
   const existingId = await findMfcItem(tx, viewer, page.mfcItemId);
   if (existingId) return Result.ok({ itemId: existingId, created: false });
+  const [held] = await tx
+    .select({ items: count() })
+    .from(item)
+    .where(eq(item.ownerId, viewer.userId));
+  if ((held?.items ?? 0) >= MAX_ITEMS_PER_ACCOUNT) return Result.err(new ItemDatabaseFull());
   const { shown, outcome } = await pictureToShow(tx, viewer, picture);
   const createdId = await createMfcItemIfAbsent(tx, viewer.userId, page, shown);
   if (!createdId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
