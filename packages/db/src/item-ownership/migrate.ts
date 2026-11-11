@@ -54,7 +54,7 @@ const LOCK_FAILURES: ReadonlySet<string | undefined> = new Set([
 ]);
 const REFERENCE_TABLES = ["collection", "wishlist_item", "list_member"] as const;
 
-// drizzle-kit push matches constraints by name, so each has the name the Drizzle schema will give it.
+// isItemOwnershipMigrated finds a finished run by these names, so each is the name the Drizzle schema declares.
 const OWNER_KEYS: readonly ForeignKey[] = [
   cascade("item_owner_id_user_id_fk", "item", ["owner_id"], "user", ["id"]),
   cascade("entry_owner_id_user_id_fk", "entry", ["owner_id"], "user", ["id"]),
@@ -78,21 +78,27 @@ const OWNER_KEYS: readonly ForeignKey[] = [
   cascade("entry_to_item_item_owner_fk", "entry_to_item", ["owner_id", "item_id"], "item"),
 ];
 
+// The composite owner keys reference these. drizzle-kit 0.31 push cannot match a key whose target
+// is a unique index, so each is a unique constraint, declared in the Drizzle schema with `unique()`.
+// Push reads a unique constraint's columns in column-number order, so each lists them that way.
+const OWNER_KEY_TARGETS = [
+  { name: "item_id_owner_id_unique", table: "item", columns: ["id", "owner_id"] },
+  { name: "item_release_id_item_id_unique", table: "item_release", columns: ["id", "item_id"] },
+  { name: "entry_id_owner_id_unique", table: "entry", columns: ["id", "owner_id"] },
+  { name: "list_id_user_id_unique", table: "list", columns: ["id", "user_id"] },
+] as const;
+
 const OWNER_INDEXES = [
-  { name: "item_owner_id_id_idx", table: "item", columns: ["owner_id", "id"] },
   {
     name: "item_owner_id_source_external_id_idx",
     table: "item",
     columns: ["owner_id", "source", "external_id"],
   },
-  { name: "item_release_item_id_id_idx", table: "item_release", columns: ["item_id", "id"] },
-  { name: "entry_owner_id_id_idx", table: "entry", columns: ["owner_id", "id"] },
   {
     name: "entry_owner_id_source_external_id_idx",
     table: "entry",
     columns: ["owner_id", "source", "external_id"],
   },
-  { name: "list_user_id_id_idx", table: "list", columns: ["user_id", "id"] },
 ] as const;
 
 const REPLACED_KEYS = [
@@ -312,6 +318,13 @@ const STEPS = {
 
   async contract(tx) {
     await tx.unsafe("ALTER TABLE list_member ALTER COLUMN user_id SET NOT NULL");
+    const targets = await constraintNames(tx, "u");
+    for (const target of OWNER_KEY_TARGETS.filter((candidate) => !targets.has(candidate.name))) {
+      await tx.unsafe(
+        `ALTER TABLE ${ident(target.table)} ADD CONSTRAINT ${ident(target.name)}
+        UNIQUE (${target.columns.map(ident).join(",")})`,
+      );
+    }
     for (const index of OWNER_INDEXES) {
       await tx.unsafe(
         `CREATE UNIQUE INDEX IF NOT EXISTS ${ident(index.name)} ON ${ident(index.table)}
@@ -331,7 +344,7 @@ const STEPS = {
         );
       }
     }
-    const present = await foreignKeyNames(tx);
+    const present = await constraintNames(tx, "f");
     for (const key of OWNER_KEYS.filter((candidate) => !present.has(candidate.name))) {
       await tx.unsafe(
         `ALTER TABLE ${ident(key.table)} ADD CONSTRAINT ${ident(key.name)}
@@ -395,7 +408,7 @@ export async function migrateItemOwnership(
 }
 
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
-  const present = await foreignKeyNames(sql);
+  const present = await constraintNames(sql, "f");
   return OWNER_KEYS.every((key) => present.has(key.name));
 }
 
@@ -453,10 +466,10 @@ async function columnsOf(tx: SQL, table: string, except: readonly string[]) {
   };
 }
 
-async function foreignKeyNames(sql: SQL): Promise<Set<string>> {
+async function constraintNames(sql: SQL, type: "f" | "u"): Promise<Set<string>> {
   const rows = await sql<{ conname: string }[]>`
     SELECT conname FROM pg_constraint
-    WHERE contype = 'f' AND connamespace = 'public'::regnamespace
+    WHERE contype = ${type} AND connamespace = 'public'::regnamespace
   `;
   return new Set(rows.map((row) => row.conname));
 }
