@@ -30,13 +30,6 @@ const UNDER_REVIEW = "The myakiba browser extension is under review";
 const PICK_UNSUPPORTED = "Picking needs desktop Chrome or Firefox";
 const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
 
-function expectReviewNotice(text: string | null | undefined, storeName: string) {
-  expect(text).toContain(UNDER_REVIEW);
-  expect(text).toContain(`It is in review at ${storeName} now`);
-  expect(text).toContain("it will be released shortly");
-  expect(text).toContain("so both are unavailable until it passes review");
-}
-
 function expectPickReviewNotice(text: string | null | undefined, storeName: string) {
   expect(text).toContain(UNDER_REVIEW);
   expect(text).toContain(`It is in review at ${storeName} now`);
@@ -146,7 +139,7 @@ async function faqAnswer() {
   await user.click(
     screen.getByRole("button", { name: "How do I install the myakiba browser extension?" }),
   );
-  const answer = await screen.findByText(/You need the extension|under review/u);
+  const answer = await screen.findByText(/install it|under review/u);
   return answer;
 }
 
@@ -155,7 +148,9 @@ test("the FAQ says the extension is under review while no store lists it", async
 
   const answer = await faqAnswer();
 
-  expectReviewNotice(answer.textContent, "the Chrome Web Store and Firefox Add-ons");
+  expect(answer.textContent).toBe(
+    `${UNDER_REVIEW}. It will be in the Chrome Web Store and Firefox Add-ons soon.`,
+  );
   expect(screen.queryByRole("link", { name: /Chrome Web Store|Firefox Add-ons/u })).toBeNull();
 });
 
@@ -167,10 +162,8 @@ test("the FAQ links each listed store and says which are still reviewing", async
   expect(screen.getByRole("link", { name: "the Chrome Web Store" }).getAttribute("href")).toBe(
     LISTING_URLS.chromeWebStore,
   );
-  expect(answer.textContent).toContain(
-    "For Firefox, it is in review at Firefox Add-ons now, and it will be released shortly.",
-  );
-  expect(answer.textContent).not.toContain("both are unavailable");
+  expect(answer.textContent).toContain("for Chrome, Edge and other Chromium browsers.");
+  expect(answer.textContent).toContain("It is still under review at Firefox Add-ons.");
 });
 
 test("the FAQ links both stores once both list the extension", async () => {
@@ -184,7 +177,7 @@ test("the FAQ links both stores once both list the extension", async () => {
   expect(screen.getByRole("link", { name: "Firefox Add-ons" }).getAttribute("href")).toBe(
     LISTING_URLS.firefoxAddons,
   );
-  expect(answer.textContent).not.toContain("in review");
+  expect(answer.textContent).not.toContain("under review");
 });
 
 test("the update link opens an FAQ answer that says how to update, even while every store reviews", async () => {

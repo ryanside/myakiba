@@ -10,7 +10,6 @@ import {
   EXTENSION_UPDATE_FAQ_ID,
   STORE_NAMES,
   UNDER_REVIEW_TITLE,
-  underReviewBody,
 } from "@/components/extension/extension-notice";
 import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
 import { HomeSection } from "@/components/homepage/kit";
@@ -22,41 +21,36 @@ const STORE_BROWSERS = {
   firefoxAddons: "Firefox",
 } as const satisfies Record<ExtensionStore, string>;
 
-const EXTENSION_USES =
-  "You need the extension on a computer to pick MFC items and refresh an item's details.";
-
 function ExtensionInstallAnswer() {
+  const listed = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] !== null);
   const reviewing = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] === null);
-  if (reviewing.length === EXTENSION_STORES.length) {
-    return `${UNDER_REVIEW_TITLE}. ${underReviewBody(reviewing)}`;
+  if (listed.length === 0) {
+    return `${UNDER_REVIEW_TITLE}. It will be in ${reviewing.map((store) => STORE_NAMES[store]).join(" and ")} soon.`;
   }
   return (
     <>
-      {EXTENSION_USES}
-      {EXTENSION_STORES.map((store) => (
-        <StoreInstructions key={store} store={store} />
+      On a computer, install it
+      {listed.map((store, i) => (
+        <StoreLink key={store} store={store} first={i === 0} />
       ))}
+      .{reviewing.map((store) => ` It is still under review at ${STORE_NAMES[store]}.`)}
     </>
   );
 }
 
-function StoreInstructions({ store }: { readonly store: ExtensionStore }) {
-  const url = EXTENSION_LISTINGS[store];
-  if (url === null) {
-    return ` For ${STORE_BROWSERS[store]}, it is in review at ${STORE_NAMES[store]} now, and it will be released shortly.`;
-  }
+function StoreLink({ store, first }: { readonly store: ExtensionStore; readonly first: boolean }) {
   return (
     <>
-      {` For ${STORE_BROWSERS[store]}, install it from `}
+      {first ? " from " : ", or from "}
       <a
-        href={url}
+        href={EXTENSION_LISTINGS[store] ?? undefined}
         target="_blank"
         rel="noreferrer"
         className="font-medium text-foreground hover:underline"
       >
         {STORE_NAMES[store]}
       </a>
-      , then reload myakiba.
+      {` for ${STORE_BROWSERS[store]}`}
     </>
   );
 }
@@ -70,13 +64,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. The extension sends only what myakiba reads from the page: its title and address, the item's heading, picture and details, whether MFC found the page, and whether you are signed in to MFC. Nothing else of yours leaves MFC. The items you save are yours. Nobody else sees or changes them, and myakiba keeps new item pictures private. Refreshing an item's details from MFC needs a verified email on myakiba and updates only your item. The extension loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
+      "Yes. The myakiba extension reads the MFC item pages you pick and sends myakiba only the details it needs.",
   },
   {
-    id: "faq-add-items",
-    question: "How do I add items?",
+    id: "faq-privacy",
+    question: "Who can see my items?",
     answer:
-      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. Items you saved before show up in the Add page's search. You can add them again from there, without the extension.",
+      "Only you. Your items and the pictures you save with them are private, and refreshing an item from MFC updates only yours.",
   },
   {
     id: EXTENSION_FAQ_ID,
@@ -87,7 +81,7 @@ const FAQ_ITEMS: readonly {
     id: EXTENSION_UPDATE_FAQ_ID,
     question: "How do I update the myakiba browser extension?",
     answer:
-      "Your browser updates the extension from its store on its own: Chrome every few hours, and Firefox about once a day. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. In Chrome, open chrome://extensions, turn on Developer mode and click Update. Then reload myakiba.",
+      "Your browser updates the extension on its own. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. In Chrome, open chrome://extensions, turn on Developer mode and click Update. Then reload myakiba.",
   },
   {
     id: "item-2",
