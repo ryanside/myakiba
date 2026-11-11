@@ -3673,7 +3673,32 @@
         "in test mode > the web app at /dashboard may not be framed and runs only its own scripts and Turnstile",
         "in production mode > the web app at /dashboard may not be framed and runs only its own scripts and Turnstile",
         "in test mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile",
-        "in production mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile"
+        "in production mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > / serves no HTML without the frame and script headers",
+        "in production mode > / serves no HTML without the frame and script headers"
+      ]
+    },
+    {
+      "fix": "7a10dcef67e810190060641bed9622d4a84c0d57",
+      "bug": "The static plugin served /index.html, /index.html/ and any other .html file raw, with no Content-Security-Policy and no X-Frame-Options, because it never matched the string ignore pattern \"index.html\".",
+      "test": "apps/server/src/html-headers.test.ts",
+      "fixed": [
+        "in test mode > the web app at /index.html may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > the web app at /index.html?x=1 may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > the web app at /index.html/ may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > /index.html serves no HTML without the frame and script headers",
+        "in test mode > /nested/page.html serves no HTML without the frame and script headers",
+        "in test mode > /nested/index.html serves no HTML without the frame and script headers",
+        "in test mode > /nested/ serves no HTML without the frame and script headers",
+        "in test mode > /nested serves no HTML without the frame and script headers",
+        "in production mode > the web app at /index.html may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > the web app at /index.html?x=1 may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > the web app at /index.html/ may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > /index.html serves no HTML without the frame and script headers",
+        "in production mode > /nested/page.html serves no HTML without the frame and script headers",
+        "in production mode > /nested/index.html serves no HTML without the frame and script headers",
+        "in production mode > /nested/ serves no HTML without the frame and script headers",
+        "in production mode > /nested serves no HTML without the frame and script headers"
       ]
     },
     {
