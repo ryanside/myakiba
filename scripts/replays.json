@@ -4035,7 +4035,13 @@
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
       ],
       "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
-      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch.",
+      "atHead": [
+        "Item Refresh has no cooldown > a refresh answers whether it saved and what became of its picture",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ]
     },
     {
       "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
@@ -4181,6 +4187,90 @@
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
       ],
       "test": "packages/db/src/scripts/push-schema.test.ts"
+    },
+    {
+      "fix": "fbe8e9c3f56160f11ca71b5b3fc4e6f9c241751c",
+      "bug": "The item table had no column for a picture's size, so an account's pictures could not be counted against a quota.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "push adds the picture size column to a database in the owned shape with no prompt and no lost row; a second push changes nothing"
+      ]
+    },
+    {
+      "fix": "64ef35a96f290e6e9619bc7be1559cac15d27e43",
+      "bug": "A Pick's picture was stored at a key made of its MFC id and a 16-hex hash, so the same bytes saved by two users or for two Items were separate objects and CDN entries, and nothing limited how much one account stored.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items saves an MFC item page as a new item > the 98777 page creates one item with its label, rating, entries, links and release",
+        "POST /api/mfc-items keeps each account's pictures within 2 GiB > a picture over the quota is not stored, and the item is saved without it",
+        "POST /api/mfc-items keeps each account's pictures within 2 GiB > a picture that exactly fills the quota is stored",
+        "POST /api/mfc-items keeps each account's pictures within 2 GiB > two uploads that each fit alone, stored at once, end with one picture over the quota",
+        "POST /api/mfc-items stores each picture once, by its bytes > two users who save the same bytes share one object, and each Item shows it",
+        "POST /api/mfc-items stores each picture once, by its bytes > different bytes are separate objects, each shown only by its uploader's Item"
+      ]
+    },
+    {
+      "fix": "64ef35a96f290e6e9619bc7be1559cac15d27e43",
+      "bug": "An Item Refresh stored its picture at an MFC-id key, any picture fit however much an account stored, and the refresh did not say what became of its picture.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "Item Refresh has no cooldown > a refresh answers whether it saved and what became of its picture",
+        "the posted picture > a different picture replaces the item's image with one at its content's key",
+        "the posted picture > the same bytes again change nothing",
+        "the posted picture > a legacy picture refreshed with new bytes moves to their content's key",
+        "a refreshed picture stays within the owner's 2 GiB of pictures > a new picture over the quota is not stored and the item keeps its picture",
+        "a refreshed picture stays within the owner's 2 GiB of pictures > the picture a refresh replaces does not count against its replacement"
+      ]
+    },
+    {
+      "fix": "64ef35a96f290e6e9619bc7be1559cac15d27e43",
+      "bug": "The picture store keyed a picture by its MFC id and a 16-hex hash and took no quota check, so it could not store one picture once for every Item and user, or skip an upload over the quota.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "item pictures are stored by their bytes > jpg bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > png bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > gif bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > webp bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > avif bytes are stored with their own type at their content's key",
+        "item pictures are stored by their bytes > the same bytes get the same key, stored again each time, and different bytes another",
+        "item pictures are stored by their bytes > a picture that does not fit the owner's quota is rejected without a put",
+        "item pictures are stored by their bytes > bytes that are no supported image are rejected without a put",
+        "item pictures are stored by their bytes > a picture over 10 MB is rejected without a put",
+        "item pictures are stored by their bytes > a picture of exactly 10 MB is stored"
+      ]
+    },
+    {
+      "fix": "cc76a3b85875ba3b93419ae2f96e1111f131f078",
+      "bug": "Nothing limited how many Items one account's Item Database held.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items holds at most 20,000 Items per account > a full Item Database answers 409 and adds nothing"
+      ]
+    },
+    {
+      "fix": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "bug": "A Pick saved without its picture over the quota, or refused because the Item Database was full, showed no message, and the full pick's row said only that myakiba could not save it.",
+      "test": "apps/web/src/data/resources/add.test.tsx",
+      "fixed": [
+        "an account's limits > a pick saved over the picture quota joins the draft without its picture and says so",
+        "an account's limits > a full Item Database keeps the pick and says why on its row and in a toast",
+        "pick failure copy > words full"
+      ]
+    },
+    {
+      "fix": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "bug": "An Item Refresh that left out its new picture over the quota still said only that the details were refreshed or up to date.",
+      "test": "apps/web/src/data/resources/item.test.tsx",
+      "fixed": [
+        "an Item Refresh refreshed over the picture quota says the picture was left out",
+        "an Item Refresh unchanged over the picture quota says the picture was left out"
+      ]
+    },
+    {
+      "fix": "6a4d5558aafef88d8fe55ee187c385d863f87840",
+      "bug": "The web app's Content-Security-Policy allowed only https: images, so pictures from a bucket URL on http, such as a local MinIO, did not load.",
+      "test": "apps/server/src/html-headers-bucket.test.ts",
+      "fixed": ["the web app may show pictures from the bucket's public URL, even on http"]
     }
   ],
   "lint": [
