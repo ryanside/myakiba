@@ -3,7 +3,12 @@ import path from "node:path";
 import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
-import { PUSH_TIMEOUT } from "../../test/push";
+import {
+  PICTURE_BYTES_COLUMN,
+  PUSH_TIMEOUT,
+  REPEATED_ON_EVERY_PUSH,
+  pushSchema,
+} from "../../test/push";
 import { ownerGuardsInstalled } from "../item-ownership/guards";
 import {
   isItemOwnershipMigrated,
@@ -185,7 +190,7 @@ async function whatUsersSee(sql: SQL) {
   const [view] = await sql<[{ rows: unknown }]>`
     WITH item_view AS (
       SELECT i.id, jsonb_build_object(
-        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id}'::text[],
+        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_bytes}'::text[],
         'releases', (
           SELECT coalesce(jsonb_agg(to_jsonb(r) - '{id,item_id}'::text[] ORDER BY r.date, r.price), '[]')
           FROM item_release r WHERE r.item_id = i.id
@@ -330,4 +335,37 @@ test(
     expect(await verifyItemOwnership(sql)).toEqual([]);
   },
   PUSH_TIMEOUT * 2,
+);
+
+test(
+  "push adds the picture size column to a database in the owned shape with no prompt and no lost row; a second push changes nothing",
+  async () => {
+    const { sql, url } = await databases.create();
+    const fresh = await dbPush(url);
+    expect(fresh.exitCode).toBe(0);
+    await sql`ALTER TABLE item DROP COLUMN image_bytes`;
+    await sql`
+      INSERT INTO "user" (id, name, email, email_verified, username)
+      VALUES ('u1', 'User One', 'u1@example.com', true, 'user_one')
+    `;
+    await sql`
+      INSERT INTO item (id, owner_id, external_id, source, title, image) VALUES
+        ('item-a', 'u1', 1001, 'mfc', 'Item A', 'https://static.myakiba.app/items/mfc/1001/aaaaaaaaaaaaaaaa.jpg'),
+        ('item-b', 'u1', 1002, 'mfc', 'Item B', NULL)
+    `;
+    const before = await snapshot(sql);
+
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: [...PICTURE_BYTES_COLUMN, ...REPEATED_ON_EVERY_PUSH].toSorted(),
+    });
+    const after = await snapshot(sql);
+    expect(after.rows).toEqual(before.rows);
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: REPEATED_ON_EVERY_PUSH,
+    });
+    expect(await snapshot(sql)).toEqual(after);
+  },
+  PUSH_TIMEOUT * 3,
 );

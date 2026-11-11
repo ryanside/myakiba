@@ -51,6 +51,8 @@ export const item = pgTable(
     contentLabel: text("content_label", { enum: CONTENT_LABELS }),
     mfcRatingId: integer("mfc_rating_id"),
     image: text("image"),
+    // Set only for a picture stored by its content: its size counts toward the owner's quota.
+    imageBytes: integer("image_bytes"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

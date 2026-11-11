@@ -8,6 +8,9 @@ export const REPEATED_ON_EVERY_PUSH = [
   `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
+/** What a push adds to a database in the owned shape from before pictures were stored by content. */
+export const PICTURE_BYTES_COLUMN = [`ALTER TABLE "item" ADD COLUMN "image_bytes" integer`];
+
 /** Pushes the app schema as push-schema.ts does: no TTY, so any prompt fails. */
 export async function pushSchema(url: string) {
   const child = Bun.spawn(

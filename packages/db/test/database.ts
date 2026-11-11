@@ -82,7 +82,8 @@ export async function snapshot(sql: SQL) {
   const rows: Record<string, string> = {};
   for (const { name } of tables) {
     const [table] = await sql.unsafe<[{ rows: string }]>(
-      `SELECT coalesce(string_agg(t::text, E'\\n' ORDER BY t::text), '') AS rows FROM "${name}" t`,
+      // Nulls are left out, so a push that adds a nullable column changes no row.
+      `SELECT coalesce(string_agg(r, E'\\n' ORDER BY r), '') AS rows FROM (SELECT jsonb_strip_nulls(to_jsonb(t))::text AS r FROM "${name}" t) s`,
     );
     rows[name] = table.rows;
   }
