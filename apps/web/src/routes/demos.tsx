@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useTheme } from "next-themes";
 import { AnalyticsExpandDemo } from "@/components/demos/analytics-expand";
 import { CollectionLayoutsDemo } from "@/components/demos/collection-layouts";
 import { CommandMenuDemo } from "@/components/demos/command-menu";
 import { CustomsFeesDemo } from "@/components/demos/customs-fees";
+import { useDemoTheme } from "@/components/demos/demo-props";
 import { ExpensesScrubDemo } from "@/components/demos/expenses-scrub";
 import { FeatureBentoDemo } from "@/components/demos/feature-bento";
 import { ItemWishlistDemo } from "@/components/demos/item-wishlist";
@@ -28,7 +28,6 @@ export const Route = createFileRoute("/demos")({
     meta: [
       { title: "Demos - myakiba" },
       { name: "description", content: "Small looping demos of myakiba" },
-      // Unlinked until the homepage picks its demos; drop this to let it be indexed.
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -36,8 +35,7 @@ export const Route = createFileRoute("/demos")({
 });
 
 function DemosPage() {
-  const { resolvedTheme } = useTheme();
-  const theme = resolvedTheme === "light" ? "light" : "dark";
+  const theme = useDemoTheme();
 
   return (
     <div className="min-h-screen min-w-0 overflow-x-clip bg-background text-foreground">
