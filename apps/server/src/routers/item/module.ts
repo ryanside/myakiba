@@ -19,7 +19,7 @@ import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { findMfcItem, refreshItem } from "@/lib/item-database";
-import { pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
+import { pictureLog, readMfcItemPage, refusedPageLog } from "@/lib/mfc-item-ingest";
 import type { EntriesWithRoles } from "./model";
 
 async function findResyncItem(tx: ReadTx, externalId: number) {
@@ -235,7 +235,7 @@ export const Items = {
         if (read.isErr()) {
           const failure = read.error;
           if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
-          scope.log.set({ mfc: { itemId: found.id, outcome: failure.problem.kind } });
+          scope.log.set({ mfc: refusedPageLog(failure) });
           return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
         }
         const { page, stored } = read.value;

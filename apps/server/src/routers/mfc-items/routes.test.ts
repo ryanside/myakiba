@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import type { DrainContext } from "evlog";
 import path from "node:path";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
@@ -12,7 +13,8 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
-initLogger({ enabled: false });
+let drained = Promise.withResolvers<DrainContext>();
+initLogger({ silent: true, drain: (context) => drained.resolve(context) });
 
 const userId = "user-1";
 
@@ -449,6 +451,25 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     expect(store.objects.size).toBe(0);
   });
 
+  test("a page past a size limit answers 400 and logs the limit and what it measured", async () => {
+    const tooWide = edit(
+      page98777,
+      field("Category"),
+      `<div>${"<i></i>".repeat(1025)}</div>${field("Category")}`,
+    );
+    drained = Promise.withResolvers<DrainContext>();
+
+    expect(await upload({ mfcItemId: 98_777, page: tooWide })).toEqual({
+      status: 400,
+      body: "The page is larger than any MyFigureCollection item page",
+    });
+    const { event } = await drained.promise;
+    expect(event).toMatchObject({
+      mfc: { itemId: 98_777, outcome: "too_large", limit: "children", measured: 1025 },
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+
   test("the page of 98778 posted as 98777 answers 400 and writes nothing", async () => {
     expect(await upload({ mfcItemId: 98_777, page: derivedWrongItemPage, picture: JPEG })).toEqual({
       status: 400,
@@ -482,6 +503,32 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
 
     expect(response.status).toBe(422);
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+});
+
+describe("POST /api/mfc-items saves a page's text without NUL characters", () => {
+  test("a NUL in the title, the Title field, a release type and an entry name is dropped", async () => {
+    const withNuls = [
+      ["Yukishiro May - 1/7 (Orchid Seed)</h1>", "Yukishiro\u0000 May - 1/7 (Orchid Seed)</h1>"],
+      [">Orchid Seed</span>", ">Orchid\u0000 Seed</span>"],
+      ["<em>Standard (Japan)</em>", "<em>Standard\u0000 (Japan)</em>"],
+      [
+        field("Category"),
+        `<div class="data-field"><div class="data-label">Title</div><div class="data-value">ハロー\u0000グッバイ</div></div>${field("Category")}`,
+      ],
+    ] as const;
+    const page = withNuls.reduce((html, [from, to]) => edit(html, from, to), page98777);
+
+    const { status } = await upload({ mfcItemId: 98_777, page });
+
+    expect(status).toBe(200);
+    const rows = await itemRows(98_777);
+    expect(rows.item).toMatchObject({
+      title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
+      mfcTitle: "ハローグッバイ",
+    });
+    expect(rows.links).toContainEqual(link(7628, "Companies", "Orchid Seed", ["Manufacturer"]));
+    expect(rows.releases).toEqual([{ id: expect.any(String), ...RELEASE_98777 }]);
   });
 });
 

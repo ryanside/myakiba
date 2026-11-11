@@ -9,6 +9,8 @@ import { MFC_PAGE_READS as READS } from "./reads";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
+import { PAGE_LIMITS, parseBoundedDocument, clippedQuote } from "./parse/limits";
+import type { TooLarge } from "./parse/limits";
 import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
 export { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
@@ -57,7 +59,8 @@ export type MfcPageProblem =
   | { readonly kind: "sfw_hidden" }
   | { readonly kind: "missing_title" }
   | { readonly kind: "missing_category" }
-  | { readonly kind: "unsupported_category"; readonly raw: string };
+  | { readonly kind: "unsupported_category"; readonly raw: string }
+  | ({ readonly kind: "too_large" } & TooLarge);
 
 const ENVELOPE_PROBLEMS = {
   challenge: { kind: "challenge" },
@@ -66,11 +69,15 @@ const ENVELOPE_PROBLEMS = {
 } as const satisfies Record<Exclude<MfcEnvelope["kind"], "item">, MfcPageProblem>;
 
 export function parseMfcItemPage(
-  html: string,
+  page: string,
   expected: MfcItemId,
 ): Result<MfcItemPage, MfcPageUnreadable> {
   const unreadable = (problem: MfcPageProblem) =>
     Result.err(new MfcPageUnreadable({ mfcItemId: expected, problem }));
+  // htmlparser2 keeps U+0000, which a browser drops from page text and Postgres refuses in text.
+  const html = page.replaceAll("\u0000", "");
+  const tree = parseBoundedDocument(html);
+  if ("exceeded" in tree) return unreadable({ kind: "too_large", ...tree.exceeded });
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
   if (envelope.kind !== "item") return unreadable(ENVELOPE_PROBLEMS[envelope.kind]);
   if (envelope.mfcItemId !== expected) {
@@ -78,11 +85,16 @@ export function parseMfcItemPage(
   }
   if (envelope.ogImage.kind === "sfw_hidden") return unreadable({ kind: "sfw_hidden" });
 
-  const $ = cheerio.load(html);
+  const $ = cheerio.load(tree.root);
   const rawTitle = $(READS.heading).first().text().trim();
   if (!rawTitle) return unreadable({ kind: "missing_title" });
+  if (rawTitle.length > PAGE_LIMITS.titleLength) {
+    return unreadable({ kind: "too_large", limit: "titleLength", measured: rawTitle.length });
+  }
 
-  const fields = readItemFields($);
+  const read = readItemFields($);
+  if (read.isErr()) return unreadable({ kind: "too_large", ...read.error });
+  const fields = read.value;
   const category = CATEGORIES.find((known) => known === fields.rawCategory);
   if (!category) {
     return unreadable(
@@ -95,16 +107,20 @@ export function parseMfcItemPage(
   const { title, contentLabel } = splitContentLabel(rawTitle);
   const warnings = [...fields.warnings];
   const bracket = CONTENT_LABEL_PREFIX.exec(title);
-  if (!contentLabel && bracket) warnings.push(`unknown title bracket "[${bracket[1]}]"`);
+  if (!contentLabel && bracket)
+    warnings.push(`unknown title bracket ${clippedQuote(`[${bracket[1]}]`)}`);
   if (envelope.ogImage.kind === "rejected") {
-    warnings.push(`picture rejected: "${envelope.ogImage.raw}"`);
+    warnings.push(`picture rejected: ${clippedQuote(envelope.ogImage.raw)}`);
   }
 
   const releases: MfcRelease[] = [];
   for (const { rawDate, ...release } of fields.releases) {
     const date = normalizeMfcDate(rawDate);
     if (date) releases.push({ date, ...release });
-    else warnings.push(`release skipped: unsupported date "${rawDate}"`);
+    else warnings.push(`release skipped: unsupported date ${clippedQuote(rawDate)}`);
+  }
+  if (warnings.length > PAGE_LIMITS.warnings) {
+    return unreadable({ kind: "too_large", limit: "warnings", measured: warnings.length });
   }
 
   return Result.ok({
