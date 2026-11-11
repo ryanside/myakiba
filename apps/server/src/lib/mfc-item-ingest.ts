@@ -1,16 +1,13 @@
-import { Result, panic } from "better-result";
-import { and, eq, sql } from "drizzle-orm";
+import { Result } from "better-result";
 import type { ItemRefresh, ItemUpload } from "@myakiba/contracts/mfc-items/schema";
-import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
-import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { ReadTx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
+import { findMfcItem } from "@/lib/item-database";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 
 export type PictureOutcome = "stored" | "absent" | "rejected";
 
@@ -23,14 +20,6 @@ type ParsedMfcItem = {
 type PreparedMfcItem =
   | { readonly kind: "existing"; readonly mfcItemId: MfcItemId; readonly itemId: string }
   | ParsedMfcItem;
-
-export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | undefined> {
-  const [found] = await tx
-    .select({ id: item.id })
-    .from(item)
-    .where(and(eq(item.source, "mfc"), eq(item.externalId, id)));
-  return found?.id;
-}
 
 /** Parses the page and stores its picture. Run it before any transaction opens: a stored picture is never rolled back. */
 export async function readMfcItemPage(
@@ -73,123 +62,3 @@ export const pictureOutcome = (stored: StoredPicture | null): PictureOutcome =>
 
 export const pictureLog = (stored: StoredPicture | null) =>
   stored?.kind === "rejected" ? `rejected: ${stored.reason}` : pictureOutcome(stored);
-
-export function itemFields(page: MfcItemPage) {
-  return {
-    title: page.title,
-    mfcTitle: page.mfcTitle,
-    numbering: page.numbering,
-    category: page.category,
-    version: [...page.version],
-    scale: page.scale,
-    height: page.height,
-    width: page.width,
-    depth: page.depth,
-    mfcMetadataVersion: MFC_ITEM_METADATA_VERSION,
-    contentLabel: page.contentLabel,
-    mfcRatingId: page.mfcRatingId,
-  };
-}
-
-export function linksInLockOrder(page: MfcItemPage) {
-  return page.entries.toSorted((a, b) => a.externalId - b.externalId);
-}
-
-export async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<void> {
-  const links = linksInLockOrder(page);
-  if (links.length === 0) return;
-  const entries = await tx
-    .insert(entry)
-    .values(
-      links.map((link) => ({
-        externalId: link.externalId,
-        source: "mfc" as const,
-        category: link.category,
-        name: link.name,
-      })),
-    )
-    .onConflictDoUpdate({
-      target: [entry.source, entry.externalId],
-      set: { name: sql`excluded.name`, category: sql`excluded.category`, updatedAt: new Date() },
-    })
-    .returning({ id: entry.id, externalId: entry.externalId });
-  const entryIds = new Map(entries.map((row) => [row.externalId, row.id]));
-  await tx.insert(entry_to_item).values(
-    links.map((link) => {
-      const entryId = entryIds.get(link.externalId);
-      if (!entryId) {
-        panic(
-          `Entry ${link.externalId} was not returned by its upsert while linking item ${itemId}`,
-        );
-      }
-      return {
-        entryId,
-        itemId,
-        role: link.roles[0] ?? "",
-        roles: [...link.roles],
-        sourceLabel: link.sourceLabel,
-        materialPercentage: link.materialPercentage,
-      };
-    }),
-  );
-}
-
-type ReleaseContent = {
-  readonly date: string;
-  readonly type: string | null;
-  readonly price: number | null;
-  readonly priceCurrency: string | null;
-  readonly barcode: string | null;
-};
-
-/** A release's identity within its Item: two releases with the same key are the same release. */
-export function releaseKey(release: ReleaseContent): string {
-  return JSON.stringify([
-    release.date,
-    release.type,
-    release.price,
-    release.priceCurrency,
-    release.barcode,
-  ]);
-}
-
-export function releaseRows(itemId: string, page: MfcItemPage) {
-  const unique = new Map(page.releases.map((release) => [releaseKey(release), release]));
-  return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
-}
-
-async function createMfcItemIfAbsent(
-  tx: Tx,
-  page: MfcItemPage,
-  image: string | null,
-): Promise<string | undefined> {
-  const [created] = await tx
-    .insert(item)
-    .values({ externalId: page.mfcItemId, source: "mfc", ...itemFields(page), image })
-    .onConflictDoNothing({ target: [item.source, item.externalId] })
-    .returning({ id: item.id });
-  if (!created) return undefined;
-
-  await linkEntries(tx, created.id, page);
-  if (page.releases.length > 0) {
-    await tx.insert(item_release).values(releaseRows(created.id, page));
-  }
-  return created.id;
-}
-
-/** Inserts the Item unless another upload already did. Only the insert's winner writes its details. */
-export async function ensureMfcItem(
-  tx: Tx,
-  page: MfcItemPage,
-  stored: StoredPicture | null,
-): Promise<Result<{ readonly itemId: string; readonly created: boolean }, MfcItemNotPersisted>> {
-  const createdId = await createMfcItemIfAbsent(
-    tx,
-    page,
-    stored?.kind === "stored" ? stored.url : null,
-  );
-  if (createdId) return Result.ok({ itemId: createdId, created: true });
-  const existingId = await findMfcItem(tx, page.mfcItemId);
-  if (!existingId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
-  return Result.ok({ itemId: existingId, created: false });
-}

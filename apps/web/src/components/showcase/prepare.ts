@@ -1,6 +1,7 @@
+import { loadFont } from "@/lib/load-font";
 import { getPageBackground } from "@/lib/page-background";
 import { SHOWCASE_SCREENS } from "./screens";
-import type { ShowcaseScreenName } from "./names";
+import type { ShowcaseScreenName } from "./screens";
 
 // The screens paint in these. The page loads them first, so no screen shows a fallback font.
 const SCREEN_FONTS = ['16px "Inter Variable"', '16px "Orbitron Variable"'] as const;
@@ -12,14 +13,6 @@ async function decodeImage(source: string) {
     await image.decode();
   } catch {
     // A missing picture shows as the app shows it, so the page does not wait on it.
-  }
-}
-
-async function loadFont(font: string) {
-  try {
-    await document.fonts.load(font);
-  } catch {
-    // A font that fails to load falls back as it does in the app.
   }
 }
 

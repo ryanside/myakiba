@@ -10,9 +10,10 @@ import {
   EXTENSION_UPDATE_FAQ_ID,
   STORE_NAMES,
   UNDER_REVIEW_TITLE,
-  underReviewBody,
 } from "@/components/extension/extension-notice";
 import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
+import { HomeSection } from "@/components/homepage/kit";
+import { DISCORD_URL } from "@/components/homepage/links";
 import type { ExtensionStore } from "@/lib/extension-listings";
 
 const STORE_BROWSERS = {
@@ -20,41 +21,36 @@ const STORE_BROWSERS = {
   firefoxAddons: "Firefox",
 } as const satisfies Record<ExtensionStore, string>;
 
-const EXTENSION_USES =
-  "You need the extension on a computer to pick MFC items and refresh an item's details.";
-
 function ExtensionInstallAnswer() {
+  const listed = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] !== null);
   const reviewing = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] === null);
-  if (reviewing.length === EXTENSION_STORES.length) {
-    return `${UNDER_REVIEW_TITLE}. ${underReviewBody(reviewing)}`;
+  if (listed.length === 0) {
+    return `${UNDER_REVIEW_TITLE}. It will be in ${reviewing.map((store) => STORE_NAMES[store]).join(" and ")} soon.`;
   }
   return (
     <>
-      {EXTENSION_USES}
-      {EXTENSION_STORES.map((store) => (
-        <StoreInstructions key={store} store={store} />
+      On a computer, install it
+      {listed.map((store, i) => (
+        <StoreLink key={store} store={store} first={i === 0} />
       ))}
+      .{reviewing.map((store) => ` It is still under review at ${STORE_NAMES[store]}.`)}
     </>
   );
 }
 
-function StoreInstructions({ store }: { readonly store: ExtensionStore }) {
-  const url = EXTENSION_LISTINGS[store];
-  if (url === null) {
-    return ` For ${STORE_BROWSERS[store]}, it is in review at ${STORE_NAMES[store]} now, and it will be released shortly.`;
-  }
+function StoreLink({ store, first }: { readonly store: ExtensionStore; readonly first: boolean }) {
   return (
     <>
-      {` For ${STORE_BROWSERS[store]}, install it from `}
+      {first ? " from " : ", or from "}
       <a
-        href={url}
+        href={EXTENSION_LISTINGS[store] ?? undefined}
         target="_blank"
         rel="noreferrer"
         className="font-medium text-foreground hover:underline"
       >
         {STORE_NAMES[store]}
       </a>
-      , then reload myakiba.
+      {` for ${STORE_BROWSERS[store]}`}
     </>
   );
 }
@@ -68,13 +64,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. Saved items are shared, so an item added once never needs adding again. An item refresh loads that item's MFC page with your MFC sign-in, at most one every few seconds, so it never hammers their site.",
+      "Yes. When you add an item from its MFC page, the myakiba extension sends myakiba only what it needs from that page.",
   },
   {
-    id: "faq-add-items",
-    question: "How do I add items?",
+    id: "faq-privacy",
+    question: "Who can see my items?",
     answer:
-      "Open an item on MFC and click Pick for myakiba, next to MFC's own buttons. Your picks wait in the extension until you open the Add page in myakiba, where you choose where they go: your collection, an order, your wishlist or a list. Items already in myakiba can be added from the Add page's search, without the extension.",
+      "Only you. Your items and the pictures you save with them are private, and nobody else can change them.",
   },
   {
     id: EXTENSION_FAQ_ID,
@@ -85,13 +81,13 @@ const FAQ_ITEMS: readonly {
     id: EXTENSION_UPDATE_FAQ_ID,
     question: "How do I update the myakiba browser extension?",
     answer:
-      "Your browser updates the extension from its store on its own: Chrome every few hours, and Firefox about once a day. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. In Chrome, open chrome://extensions, turn on Developer mode and click Update. Then reload myakiba.",
+      "Your browser updates the extension on its own. To update it now in Firefox, open the Add-ons Manager, open its gear menu and choose Check for Updates. In Chrome, open chrome://extensions, turn on Developer mode and click Update. Then reload myakiba.",
   },
   {
     id: "item-2",
-    question: "Is myakiba a MFC alternative?",
+    question: "Is myakiba an MFC alternative?",
     answer:
-      "myakiba is an alternative for MFC's manager. It does not aim to replace MFC's community, database, or marketplace features.",
+      "myakiba is an alternative to MFC's manager. It does not aim to replace MFC's community, database, or marketplace features.",
   },
   {
     id: "item-3",
@@ -114,34 +110,45 @@ function openedFromLink(): string[] {
 
 export default function FAQsSection() {
   return (
-    <section id="faqs" className="bg-background py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <h2 className="text-xl font-medium tracking-tight">FAQs</h2>
-        <Accordion className="mt-8" defaultValue={openedFromLink()}>
-          {FAQ_ITEMS.map((item) => (
-            <AccordionItem key={item.id} id={item.id} value={item.id} className="scroll-mt-16">
-              <AccordionTrigger className="cursor-pointer text-sm">
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-muted-foreground">{item.answer}</p>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        <p className="text-muted-foreground mt-8 text-sm">
-          Something else?{" "}
-          <a
-            href="https://discord.gg/VKHVvhcC2z"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground font-medium hover:underline"
-          >
-            Ask on Discord
-          </a>
-        </p>
+    <HomeSection id="faqs" labelledBy="faqs-title" className="py-16 md:py-24">
+      <div className="grid gap-12 md:grid-cols-2 md:gap-6">
+        <h2
+          id="faqs-title"
+          className="max-w-sm text-3xl font-medium tracking-tight text-balance md:text-4xl"
+        >
+          Questions
+        </h2>
+        <div>
+          <Accordion defaultValue={openedFromLink()}>
+            {FAQ_ITEMS.map((item) => (
+              <AccordionItem
+                key={item.id}
+                id={item.id}
+                value={item.id}
+                className="scroll-mt-16 border-dashed"
+              >
+                <AccordionTrigger className="cursor-pointer py-3 text-[15px]">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-[15px] leading-relaxed text-muted-foreground">{item.answer}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Something else?{" "}
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground hover:underline"
+            >
+              Ask on Discord
+            </a>
+          </p>
+        </div>
       </div>
-    </section>
+    </HomeSection>
   );
 }

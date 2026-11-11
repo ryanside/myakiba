@@ -235,11 +235,7 @@ export function Stage<S extends object>({
     if (!fit) return;
     const measure = () => {
       const w = fit.clientWidth;
-      // A host that sizes the stage by something other than the screen (a
-      // bento tile set by its row's height) marks a wrapper data-ss-wide to
-      // keep the wide design, scaled, rather than the phone-width one
-      const wide = !!fit.parentElement?.closest("[data-ss-wide]");
-      const narrow = compactBelow !== undefined && !wide && w < compactBelow;
+      const narrow = compactBelow !== undefined && w < compactBelow;
       const next: Layout = narrow ? "compact" : "wide";
       setLayout(next);
       // fill (or a host wrapper marked data-ss-fill) lets the stage grow past its design size, within reason
@@ -255,11 +251,11 @@ export function Stage<S extends object>({
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(fit);
-    // Hosts can switch layout/fill policy without changing this box's
-    // width. Observe only those attributes on its ancestors, not the scene.
+    // Hosts can switch fill policy without changing this box's width.
+    // Observe only that attribute on its ancestors, not the scene.
     const hosts = new MutationObserver(measure);
     for (let host = fit.parentElement; host; host = host.parentElement) {
-      hosts.observe(host, { attributes: true, attributeFilter: ["data-ss-wide", "data-ss-fill"] });
+      hosts.observe(host, { attributes: true, attributeFilter: ["data-ss-fill"] });
     }
     return () => {
       ro.disconnect();

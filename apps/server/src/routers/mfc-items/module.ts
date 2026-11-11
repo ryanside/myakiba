@@ -5,13 +5,8 @@ import { command } from "@/domain/kernel";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import {
-  ensureMfcItem,
-  pictureLog,
-  pictureOutcome,
-  prepareMfcItem,
-  refusedPageLog,
-} from "@/lib/mfc-item-ingest";
+import { ensureMfcItem } from "@/lib/item-database";
+import { pictureLog, pictureOutcome, prepareMfcItem, refusedPageLog } from "@/lib/mfc-item-ingest";
 import type { PictureOutcome } from "@/lib/mfc-item-ingest";
 
 type IngestResult =
