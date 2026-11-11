@@ -88,6 +88,24 @@ const derivedTwoReleasesPage = edit(
 const standardRelease =
   '<div class="data-field"><div class="data-value"><a href="/?_tb=item" class="time">11/15/2018</a> <small class="light">as <em>Standard (Japan)</em></small><br/>13,500 <small>JPY</small> &bull; 4582292601715</div></div>';
 const derivedRepeatedReleasePage = edit(page98777, materials, `${standardRelease}${materials}`);
+const sameBarcodeLimitedRelease = limitedRelease("03/20/2019", "16,000").replace(
+  "4582292609999",
+  "4582292601715",
+);
+const derivedStandardThenLimitedPage = edit(
+  page98777,
+  materials,
+  sameBarcodeLimitedRelease + materials,
+);
+const derivedLimitedThenStandardPage = edit(
+  edit(
+    edit(edit(page98777, ">11/15/2018<", ">03/20/2019<"), "Standard (Japan)", "Limited (Japan)"),
+    "13,500 <small>JPY",
+    "16,000 <small>JPY",
+  ),
+  materials,
+  standardRelease + materials,
+);
 const derivedTwoRepricedPage = edit(
   edit(derivedTwoReleasesPage, "13,500 <small>JPY", "13,800 <small>JPY"),
   ">16,000 <small>JPY",
@@ -369,6 +387,16 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
 
     expect(await itemRows()).toEqual(before);
     expect(await selectedReleases()).toEqual(before.releases.map((release) => release.id));
+  });
+
+  test("a page that lists the stored releases in another order refreshes as unchanged", async () => {
+    await upload(derivedStandardThenLimitedPage);
+    const before = await itemRows();
+    expect(before.releases).toHaveLength(2);
+
+    expect(await resync(derivedLimitedThenStandardPage)).toMatchObject(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
   });
 
   test("a challenge page answers 400 and leaves the item as it was", async () => {
