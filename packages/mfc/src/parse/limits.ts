@@ -16,11 +16,14 @@ import { DomHandler, Parser } from "htmlparser2";
  *
  * depth, children and nodes bound the tree before cheerio sees it. A cheerio find runs domutils'
  * removeSubsets over the element children of the element it searches from, which costs
- * children² × depth, and the nodes limit bounds how many such elements a page can hold.
+ * children² × depth, and the nodes limit bounds how many such elements a page can hold. The field
+ * readers search from one element without that pass, so children bounds only cheerio's searches
+ * from the page root. MFC writes a separator element between entries, so a group of 512 entries
+ * has 1,023 element children.
  */
 export const PAGE_LIMITS = {
   depth: 64,
-  children: 512,
+  children: 1024,
   nodes: 10_000,
   fieldDepth: 32,
   dataFields: 300,

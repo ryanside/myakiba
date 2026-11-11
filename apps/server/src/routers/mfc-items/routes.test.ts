@@ -455,7 +455,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     const tooWide = edit(
       page98777,
       field("Category"),
-      `<div>${"<i></i>".repeat(513)}</div>${field("Category")}`,
+      `<div>${"<i></i>".repeat(1025)}</div>${field("Category")}`,
     );
     drained = Promise.withResolvers<DrainContext>();
 
@@ -465,7 +465,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     });
     const { event } = await drained.promise;
     expect(event).toMatchObject({
-      mfc: { itemId: 98_777, outcome: "too_large", limit: "children", measured: 513 },
+      mfc: { itemId: 98_777, outcome: "too_large", limit: "children", measured: 1025 },
     });
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });

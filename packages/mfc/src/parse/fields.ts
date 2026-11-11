@@ -1,5 +1,6 @@
 import { Result } from "better-result";
 import type { Cheerio, CheerioAPI } from "cheerio";
+import { select } from "cheerio-select";
 import { isTag } from "domhandler";
 import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
@@ -51,8 +52,8 @@ const PATTERNS = {
 const plainEntries =
   (category: EntryCategory): FieldReader =>
   (field, $, fields) => {
-    for (const link of field.find(".item-entry")) {
-      const entry = readEntryLink($(link), fields);
+    for (const link of find($, field, ".item-entry")) {
+      const entry = readEntryLink($(link), $, fields);
       if (entry) fields.mentions.push({ ...entry, category, role: "", materialPercentage: null });
     }
   };
@@ -60,16 +61,18 @@ const plainEntries =
 const entriesWithRoles =
   (category: EntryCategory): FieldReader =>
   (field, $, fields) => {
-    for (const group of field.find(".item-entries")) {
+    for (const group of find($, field, ".item-entries")) {
       let pending: { externalId: number; sourceLabel: string }[] = [];
       let role = "";
       for (const node of $(group).contents()) {
         const $node = $(node);
         if ($node.hasClass("item-entry")) {
-          const entry = readEntryLink($node, fields);
+          const entry = readEntryLink($node, $, fields);
           if (entry) pending.push(entry);
-        } else if ($node.is("small.light") && $node.find("em").length > 0) {
-          role = outermost($node.find("em")).text().trim();
+        } else if ($node.is("small.light") && find($, $node, "em").length > 0) {
+          role = outermost(find($, $node, "em"))
+            .text()
+            .trim();
           for (const entry of pending) {
             fields.mentions.push({ ...entry, category, role, materialPercentage: null });
           }
@@ -83,12 +86,14 @@ const entriesWithRoles =
   };
 
 const readMaterials: FieldReader = (field, $, fields) => {
-  for (const group of outermost(field.find(".item-entries"))) {
+  for (const group of outermost(find($, field, ".item-entries"))) {
     const $group = $(group);
-    const match = PATTERNS.materialPercentage.exec(outermost($group.find("small.light")).text());
+    const match = PATTERNS.materialPercentage.exec(
+      outermost(find($, $group, "small.light")).text(),
+    );
     const materialPercentage = match?.[1] ? storedPercentage(match[1], fields) : null;
-    for (const link of $group.find(".item-entry")) {
-      const entry = readEntryLink($(link), fields);
+    for (const link of find($, $group, ".item-entry")) {
+      const entry = readEntryLink($(link), $, fields);
       if (entry) {
         fields.mentions.push({ ...entry, category: "Materials", role: "", materialPercentage });
       }
@@ -96,45 +101,50 @@ const readMaterials: FieldReader = (field, $, fields) => {
   }
 };
 
-const readCategory: FieldReader = (field, _$, fields) => {
-  fields.rawCategory = field.find(".data-value").first().find("span").first().text().trim();
+const readCategory: FieldReader = (field, $, fields) => {
+  fields.rawCategory = find($, find($, field, ".data-value").first(), "span")
+    .first()
+    .text()
+    .trim();
 };
 
-const readMfcTitle: FieldReader = (field, _$, fields) => {
-  fields.mfcTitle = valueText(field) || null;
+const readMfcTitle: FieldReader = (field, $, fields) => {
+  fields.mfcTitle = valueText(field, $) || null;
 };
 
-const readNumbering: FieldReader = (field, _$, fields) => {
-  fields.numbering = valueText(field) || null;
+const readNumbering: FieldReader = (field, $, fields) => {
+  fields.numbering = valueText(field, $) || null;
 };
 
 const readVersion: FieldReader = (field, $, fields) => {
-  for (const link of outermost(field.find("a"))) {
+  for (const link of outermost(find($, field, "a"))) {
     const text = $(link).text().trim();
     if (text) fields.version.push(text);
   }
 };
 
-const readDimensions: FieldReader = (field, _$, fields) => {
-  const text = valueText(field);
-  fields.scale = outermost(field.find("a.item-scale")).text().trim();
+const readDimensions: FieldReader = (field, $, fields) => {
+  const text = valueText(field, $);
+  fields.scale = outermost(find($, field, "a.item-scale"))
+    .text()
+    .trim();
   fields.height = millimetres("height", PATTERNS.height.exec(text), fields);
   fields.width = millimetres("width", PATTERNS.width.exec(text), fields);
   fields.depth = millimetres("depth", PATTERNS.depth.exec(text), fields);
 };
 
-const readVarious: FieldReader = (field, _$, fields) => {
-  const href = field.find('a[href*="ratingId="]').first().attr("href") ?? "";
+const readVarious: FieldReader = (field, $, fields) => {
+  const href = find($, field, 'a[href*="ratingId="]').first().attr("href") ?? "";
   const match = PATTERNS.ratingId.exec(href);
   fields.mfcRatingId = match?.[1] ? storedInteger("rating id", match[1], fields) : null;
 };
 
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
-  const dateLink = outermost($release.find("a.time"));
+  const dateLink = outermost(find($, $release, "a.time"));
   if (dateLink.length === 0) return;
-  const text = $release.find(".data-value").first().text();
+  const text = find($, $release, ".data-value").first().text();
   const types: string[] = [];
-  for (const em of outermost($release.find("small.light em"))) {
+  for (const em of outermost(find($, $release, "small.light em"))) {
     const part = $(em).text().trim();
     if (part) types.push(part);
   }
@@ -224,7 +234,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, TooLarge> {
   const releases: ReleaseGroup = { parent: null, fields: [] };
   for (const element of found.fields) {
     const field = $(element);
-    const labels = outermost(field.find(".data-label"));
+    const labels = outermost(find($, field, ".data-label"));
     if (
       releases.fields.length > 0 &&
       releases.parent === element.parent &&
@@ -283,17 +293,32 @@ function hasClass(element: Element, name: string): boolean {
 
 function readEntryLink(
   $entry: Cheerio<AnyNode>,
+  $: CheerioAPI,
   fields: ItemFields,
 ): { externalId: number; sourceLabel: string } | null {
-  const sourceLabel = outermost($entry.find("span[switch]")).text().trim();
+  const sourceLabel = outermost(find($, $entry, "span[switch]"))
+    .text()
+    .trim();
   const id = PATTERNS.entryId.exec($entry.attr("href") ?? "")?.[1];
   if (!sourceLabel || !id) return null;
   const externalId = storedInteger("entry id", id, fields);
   return externalId === null ? null : { externalId, sourceLabel };
 }
 
-function valueText(field: Cheerio<Element>): string {
-  return field.find(".data-value").first().text().replaceAll(/\s+/g, " ").trim();
+function valueText(field: Cheerio<Element>, $: CheerioAPI): string {
+  return find($, field, ".data-value").first().text().replaceAll(/\s+/g, " ").trim();
+}
+
+/**
+ * `selection.find(selector)` for a selection of one element. cheerio's find hands css-select the
+ * element's children as an array, and css-select runs domutils' removeSubsets over that array,
+ * which costs children² × depth. One element's children hold no duplicates and none contains
+ * another, so searching from the element itself finds the same nodes without that pass.
+ */
+function find($: CheerioAPI, selection: Cheerio<AnyNode>, selector: string): Cheerio<Element> {
+  const [element, ...rest] = selection.toArray();
+  if (!element || rest.length > 0) return selection.find(selector);
+  return $(select(selector, element, { context: [element] }));
 }
 
 function storedInteger(name: string, text: string, fields: ItemFields): number | null {

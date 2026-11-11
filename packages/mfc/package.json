@@ -18,6 +18,7 @@
     "@myakiba/utils": "workspace:*",
     "better-result": "catalog:",
     "cheerio": "^1.2.0",
+    "cheerio-select": "^2.1.0",
     "domhandler": "^6.0.1",
     "htmlparser2": "^10.1.0",
     "zod": "catalog:"

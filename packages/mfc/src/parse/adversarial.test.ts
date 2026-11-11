@@ -70,7 +70,7 @@ function around(
  */
 const FIELD_DEPTH = 32 - 1;
 const PAGE_DEPTH = 64 - 5;
-const CHILDREN = 512;
+const CHILDREN = 1024;
 const NODES = 10_000;
 
 /** `levels` elements around `inner`, so a field inside sits that much deeper. */
@@ -577,7 +577,11 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
       padded({
         fields: deep(
           PAGE_DEPTH - 6,
-          release(`<small class="light">${"<em></em>".repeat(18)}</small>`.repeat(CHILDREN - 2)),
+          release(
+            `<small class="light">${"<em></em>".repeat(18)}</small>`.repeat(
+              Math.min(CHILDREN - 2, Math.floor((NODES - 200) / 19)),
+            ),
+          ),
         ),
       }),
   ],

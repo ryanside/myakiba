@@ -222,6 +222,30 @@ describe("parseMfcItemPage entries", () => {
     ]);
   });
 
+  test("reads 512 Characters in one comma-separated group", () => {
+    const names = Array.from({ length: 512 }, (_, index) => `C${index}`);
+    const links = names.map(
+      (name, index) =>
+        `<a href="/entry/${1_000_000 + index}" class="tbx-tooltip item-entry"><span switch="">${name}</span></a>`,
+    );
+    const page = parsedPage(
+      withField(
+        "Characters",
+        `<div class="item-entries">${links.join('<span class="light">,</span> ')}</div>`,
+      ),
+    );
+    expect(page.entries.filter((entry) => entry.externalId >= 1_000_000)).toEqual(
+      names.map((name, index) => ({
+        externalId: 1_000_000 + index,
+        category: "Characters",
+        name,
+        sourceLabel: name,
+        roles: [],
+        materialPercentage: null,
+      })),
+    );
+  });
+
   test("reads material percentages", () => {
     const html = edit(
       item98777,
@@ -375,7 +399,7 @@ const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])
   ],
   [
     "children",
-    512,
+    1024,
     (size) =>
       edit(item98777, CATEGORY_FIELD, `<div>${"<i></i>".repeat(size)}</div>${CATEGORY_FIELD}`),
   ],
