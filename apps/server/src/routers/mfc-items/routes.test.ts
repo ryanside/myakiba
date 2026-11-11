@@ -9,8 +9,6 @@ import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import { mfcItemId } from "@myakiba/mfc/page";
-import { mfcReleaseId } from "@myakiba/mfc/parse";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
@@ -246,9 +244,6 @@ async function uploadsWaitingOnLocks(expected: number) {
   }
 }
 
-const ID_98777 = mfcItemId(98_777);
-if (ID_98777 === null) throw new Error("98777 is an MFC item id");
-
 const RELEASE_98777 = {
   date: "2018-11-15",
   type: "Standard (Japan)",
@@ -305,9 +300,22 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
         link(23_761, "Origins", "Hello, Good-bye"),
         link(23_762, "Characters", "Yukishiro May"),
       ],
-      releases: [{ id: mfcReleaseId(ID_98777, RELEASE_98777), ...RELEASE_98777 }],
+      releases: [{ id: expect.any(String), ...RELEASE_98777 }],
     });
     expect(await counts()).toEqual({ items: 1, entries: 7, links: 7, releases: 1 });
+  });
+
+  test("two Items whose pages list the same release each get their own release id", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777 });
+    await upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage });
+
+    const { releases: firstReleases } = await itemRows(98_777);
+    const { releases: secondReleases } = await itemRows(98_779);
+    const [first] = firstReleases;
+    const [second] = secondReleases;
+    expect(first).toEqual({ id: expect.any(String), ...RELEASE_98777 });
+    expect(second).toEqual({ id: expect.any(String), ...RELEASE_98777 });
+    expect(second?.id).not.toBe(first?.id);
   });
 
   test("uploading it again answers existing and writes nothing", async () => {
@@ -520,9 +528,7 @@ describe("POST /api/mfc-items saves a page's text without NUL characters", () =>
       mfcTitle: "ハローグッバイ",
     });
     expect(rows.links).toContainEqual(link(7628, "Companies", "Orchid Seed", ["Manufacturer"]));
-    expect(rows.releases).toEqual([
-      { id: mfcReleaseId(ID_98777, RELEASE_98777), ...RELEASE_98777 },
-    ]);
+    expect(rows.releases).toEqual([{ id: expect.any(String), ...RELEASE_98777 }]);
   });
 });
 

@@ -1,7 +1,6 @@
 {
   "eslint(no-restricted-properties)": {},
   "myakiba(no-env-outside-env-package)": {
-    "apps/server/src/index.ts": 3,
     "apps/web/src/main.tsx": 1,
     "apps/web/src/routes/__root.tsx": 1,
     "packages/db/drizzle.config.ts": 1,

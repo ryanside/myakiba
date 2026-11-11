@@ -6,8 +6,14 @@ await mock.module("@myakiba/auth/server", () => ({
 }));
 
 let ttl = 1800;
+const counted: string[] = [];
 await mock.module("@myakiba/redis/client", () => ({
-  redis: { eval: async () => [121, ttl] },
+  redis: {
+    eval: async (_script: string, _keys: number, key: string) => {
+      counted.push(key);
+      return [121, ttl];
+    },
+  },
 }));
 
 const { rateLimit } = await import("./rate-limit");
@@ -35,3 +41,13 @@ test.each([
     });
   },
 );
+
+test("a new X-Forwarded-For on each request counts against the same user", async () => {
+  counted.length = 0;
+  for (const address of ["198.51.100.1", "198.51.100.2"]) {
+    await app.handle(
+      new Request("http://localhost/probe", { headers: { "x-forwarded-for": address } }),
+    );
+  }
+  expect(counted).toEqual(["rl:add-commit:user-1", "rl:add-commit:user-1"]);
+});

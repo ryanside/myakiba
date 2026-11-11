@@ -13,7 +13,7 @@ const validServer = {
   GOOGLE_CLIENT_ID: "id",
   GOOGLE_CLIENT_SECRET: "secret",
   TURNSTILE_SECRET_KEY: "key",
-  BETTER_AUTH_SECRET: "secret",
+  BETTER_AUTH_SECRET: "secret-secret-secret-secret-secret",
   BETTER_AUTH_URL: "http://localhost:3000",
 };
 

@@ -5,7 +5,7 @@ import { MFC_ITEM_METADATA_VERSION } from "@myakiba/contracts/shared/constants";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { mfcReleaseId, parseMfcItemPage } from "@myakiba/mfc/parse";
+import { parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
 import { itemImages } from "@/lib/item-images";
 import type { StoredPicture } from "@/lib/item-images";
@@ -134,12 +134,28 @@ export async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Pr
   );
 }
 
+type ReleaseContent = {
+  readonly date: string;
+  readonly type: string | null;
+  readonly price: number | null;
+  readonly priceCurrency: string | null;
+  readonly barcode: string | null;
+};
+
+/** A release's identity within its Item: two releases with the same key are the same release. */
+export function releaseKey(release: ReleaseContent): string {
+  return JSON.stringify([
+    release.date,
+    release.type,
+    release.price,
+    release.priceCurrency,
+    release.barcode,
+  ]);
+}
+
 export function releaseRows(itemId: string, page: MfcItemPage) {
-  return page.releases.map((release) => ({
-    id: mfcReleaseId(page.mfcItemId, release),
-    itemId,
-    ...release,
-  }));
+  const unique = new Map(page.releases.map((release) => [releaseKey(release), release]));
+  return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
 }
 
 async function createMfcItemIfAbsent(
@@ -156,10 +172,7 @@ async function createMfcItemIfAbsent(
 
   await linkEntries(tx, created.id, page);
   if (page.releases.length > 0) {
-    await tx
-      .insert(item_release)
-      .values(releaseRows(created.id, page))
-      .onConflictDoNothing({ target: [item_release.id] });
+    await tx.insert(item_release).values(releaseRows(created.id, page));
   }
   return created.id;
 }

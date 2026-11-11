@@ -27,6 +27,9 @@ const COLLECTOR_TIMEOUT_MS = PAGE_TIMEOUT_MS + INJECTION_DELAY_MS;
 const PICTURE_COLLECTOR_TIMEOUT_MS = PICTURE_TIMEOUT_MS + INJECTION_DELAY_MS;
 
 const MODULUS = 2_147_483_647;
+// The soak runs on a fake clock, so its wall time is event-loop turns: about 1 s locally, 2.3 s on a CI runner and 5 s
+// on a loaded one. Bun's 5 s default fails it on load alone.
+const SOAK_TIMEOUT_MS = 30_000;
 
 /** Park and Miller's minimal standard generator, so a failing mix replays exactly from its seed. */
 function seeded(seed: number): () => number {
@@ -313,4 +316,5 @@ test.each(COMMIT_STYLES)(
 
     expect([...total].filter(([, count]) => count === 0)).toEqual([]);
   },
+  SOAK_TIMEOUT_MS,
 );

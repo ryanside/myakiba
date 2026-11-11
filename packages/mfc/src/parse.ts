@@ -1,6 +1,5 @@
 import { Result } from "better-result";
 import * as cheerio from "cheerio";
-import { v5 as uuidv5 } from "uuid";
 import { CATEGORIES, CONTENT_LABELS } from "@myakiba/contracts/shared/constants";
 import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Category, ContentLabel, EntryCategory } from "@myakiba/contracts/shared/types";
@@ -156,15 +155,6 @@ export function splitContentLabel(rawTitle: string): {
   return match && contentLabel
     ? { title: rawTitle.slice(match[0].length), contentLabel }
     : { title: rawTitle, contentLabel: null };
-}
-
-const RELEASE_UUID_NAMESPACE = "2c8ed313-3f54-4401-a280-2410ce639ef3";
-
-export function mfcReleaseId(mfcItemId: MfcItemId, release: MfcRelease): string {
-  return uuidv5(
-    `${mfcItemId}-${release.date}-${release.type}-${release.price}-${release.priceCurrency}-${release.barcode}`,
-    RELEASE_UUID_NAMESPACE,
-  );
 }
 
 const NENDOROID_ENTRY_EXTERNAL_ID = 23_355;

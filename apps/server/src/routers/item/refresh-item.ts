@@ -2,9 +2,14 @@ import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
-import { mfcReleaseId } from "@myakiba/mfc/parse";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
-import { itemFields, linkEntries, linksInLockOrder, releaseRows } from "@/lib/mfc-item-ingest";
+import {
+  itemFields,
+  linkEntries,
+  linksInLockOrder,
+  releaseKey,
+  releaseRows,
+} from "@/lib/mfc-item-ingest";
 import { buildReleasePlan } from "./release-plan";
 import type { ReleasePlan } from "./release-plan";
 
@@ -79,45 +84,38 @@ export function storedPercentage(percentage: number | null): number | null {
 type Snapshot = {
   readonly fields: Omit<LockedItem, "id">;
   readonly links: readonly Link[];
-  readonly releaseIds: readonly string[];
+  readonly releaseKeys: readonly string[];
 };
 
-async function storedSnapshot(tx: Tx, locked: LockedItem): Promise<Snapshot> {
-  const { id, ...fields } = locked;
-  const links = await storedLinks(tx, id);
-  const releases = await tx
-    .select({ id: item_release.id })
+type ReleaseRow = ReturnType<typeof releaseRows>[number];
+
+async function storedReleases(tx: Tx, itemId: string) {
+  const rows = await tx
+    .select({
+      id: item_release.id,
+      date: item_release.date,
+      type: item_release.type,
+      price: item_release.price,
+      priceCurrency: item_release.priceCurrency,
+      barcode: item_release.barcode,
+    })
     .from(item_release)
-    .where(eq(item_release.itemId, id))
-    .orderBy(asc(item_release.id));
-  return { fields, links, releaseIds: releases.map((release) => release.id) };
+    .where(eq(item_release.itemId, itemId));
+  return rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
 }
 
-function pageSnapshot(page: MfcItemPage, image: string | null): Snapshot {
-  return {
-    fields: { ...itemFields(page), image },
-    links: linksInLockOrder(page).map(pageLink),
-    releaseIds: page.releases.map((release) => mfcReleaseId(page.mfcItemId, release)).toSorted(),
-  };
-}
+const sortedKeys = (releases: readonly { readonly key: string }[]) =>
+  releases.map((release) => release.key).toSorted();
 
 async function applyReleases(
   tx: Tx,
   itemId: string,
-  page: MfcItemPage,
-  existingReleaseIds: readonly string[],
+  plan: ReleasePlan,
+  rows: readonly ReleaseRow[],
 ): Promise<ReleasePlan["kind"]> {
-  const rows = releaseRows(itemId, page);
-  const plan = buildReleasePlan({
-    existingReleaseIds,
-    pageReleaseIds: rows.map((release) => release.id),
-  });
-  if (rows.length > 0) {
-    await tx
-      .insert(item_release)
-      .values(rows)
-      .onConflictDoNothing({ target: [item_release.id] });
-  }
+  const added = new Set(plan.addedReleaseIds);
+  const inserts = rows.filter((row) => added.has(row.id));
+  if (inserts.length > 0) await tx.insert(item_release).values(inserts);
 
   switch (plan.kind) {
     case "none":
@@ -164,14 +162,27 @@ export async function refreshItem(
   page: MfcItemPage,
   image: string | null,
 ): Promise<ReleasePlan["kind"] | "unchanged"> {
-  const current = await storedSnapshot(tx, locked);
-  if (Bun.deepEquals(current, pageSnapshot(page, image))) return "unchanged";
+  const { id, ...fields } = locked;
+  const existing = await storedReleases(tx, id);
+  const rows = releaseRows(id, page);
+  const keyed = rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
+  const current: Snapshot = {
+    fields,
+    links: await storedLinks(tx, id),
+    releaseKeys: sortedKeys(existing),
+  };
+  const next: Snapshot = {
+    fields: { ...itemFields(page), image },
+    links: linksInLockOrder(page).map(pageLink),
+    releaseKeys: sortedKeys(keyed),
+  };
+  if (Bun.deepEquals(current, next)) return "unchanged";
 
   await tx
     .update(item)
     .set({ ...itemFields(page), image, updatedAt: new Date() })
-    .where(eq(item.id, locked.id));
-  await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, locked.id));
-  await linkEntries(tx, locked.id, page);
-  return applyReleases(tx, locked.id, page, current.releaseIds);
+    .where(eq(item.id, id));
+  await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
+  await linkEntries(tx, id, page);
+  return applyReleases(tx, id, buildReleasePlan({ existing, page: keyed }), rows);
 }
