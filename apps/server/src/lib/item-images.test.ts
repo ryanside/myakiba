@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
-import { mfcItemId } from "@myakiba/mfc/page";
-import type { MfcItemId } from "@myakiba/mfc/page";
 import { createItemImages } from "./item-images";
 
-const ID = mfcItemId(98_777) as MfcItemId;
+const fits = async () => true;
+const sha256 = (data: Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 
 function fakeBucket() {
   const puts: PutObjectCommand["input"][] = [];
@@ -35,55 +34,62 @@ const SAMPLES = {
 
 describe("item pictures are stored by their bytes", () => {
   test.each(Object.entries(SAMPLES))(
-    "%s bytes are stored with their own type",
+    "%s bytes are stored with their own type at their content's key",
     async (ext, sample) => {
       const { images, puts } = fakeBucket();
 
-      const result = await images.store(ID, new Blob([sample], { type: "text/plain" }));
+      const result = await images.store(new Blob([sample], { type: "text/plain" }), fits);
 
+      const key = `items/${sha256(sample)}.${ext}`;
       expect(result).toEqual({
         kind: "stored",
-        url: expect.stringMatching(
-          new RegExp(`^https://cdn\\.example\\.test/items/mfc/98777/[0-9a-f]{16}\\.${ext}$`),
-        ),
+        url: `https://cdn.example.test/${key}`,
+        bytes: sample.byteLength,
       });
       expect(puts).toHaveLength(1);
       expect(puts[0]).toMatchObject({
         Bucket: "pictures",
-        Key: expect.stringMatching(new RegExp(`^items/mfc/98777/[0-9a-f]{16}\\.${ext}$`)),
+        Key: key,
         ContentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
         CacheControl: "public, max-age=31536000, immutable",
       });
     },
   );
 
-  test("the key is the first 16 hex of the bytes' SHA-256", async () => {
-    const { images } = fakeBucket();
-    const digest = new Bun.CryptoHasher("sha256").update(SAMPLES.png).digest("hex").slice(0, 16);
-
-    expect(await images.store(ID, new Blob([SAMPLES.png]))).toEqual({
-      kind: "stored",
-      url: `https://cdn.example.test/items/mfc/98777/${digest}.png`,
-    });
-  });
-
-  test("the same bytes get the same key and different bytes another", async () => {
+  test("the same bytes get the same key, stored again each time, and different bytes another", async () => {
     const { images, puts } = fakeBucket();
 
-    await images.store(ID, new Blob([SAMPLES.jpg]));
-    await images.store(ID, new Blob([SAMPLES.jpg], { type: "image/png" }));
-    await images.store(ID, new Blob([SAMPLES.jpg, new Uint8Array([1])]));
+    await images.store(new Blob([SAMPLES.jpg]), fits);
+    await images.store(new Blob([SAMPLES.jpg], { type: "image/png" }), fits);
+    await images.store(new Blob([SAMPLES.jpg, new Uint8Array([1])]), fits);
 
     const [first, second, third] = puts.map((put) => put.Key);
+    expect(first).toBe(`items/${sha256(SAMPLES.jpg)}.jpg`);
     expect(second).toBe(first);
     expect(third).not.toBe(first);
+  });
+
+  test("a picture that does not fit the owner's quota is rejected without a put", async () => {
+    const { images, puts } = fakeBucket();
+    const asked: [string, number][] = [];
+
+    const result = await images.store(new Blob([SAMPLES.png]), async (...args) => {
+      asked.push(args);
+      return false;
+    });
+
+    expect(result).toEqual({ kind: "rejected", reason: "over_quota" });
+    expect(asked).toEqual([
+      [`https://cdn.example.test/items/${sha256(SAMPLES.png)}.png`, SAMPLES.png.byteLength],
+    ]);
+    expect(puts).toHaveLength(0);
   });
 
   test("bytes that are no supported image are rejected without a put", async () => {
     const { images, puts } = fakeBucket();
 
     for (const body of ["<!DOCTYPE html><html>", "%PDF-1.7", "", "RIFF\0\0\0\0WAVEfmt "]) {
-      expect(await images.store(ID, new Blob([body], { type: "image/jpeg" }))).toEqual({
+      expect(await images.store(new Blob([body], { type: "image/jpeg" }), fits)).toEqual({
         kind: "rejected",
         reason: "not_an_image",
       });
@@ -96,7 +102,7 @@ describe("item pictures are stored by their bytes", () => {
     const oversized = new Uint8Array(10 * 1024 * 1024 + 1);
     oversized.set(SAMPLES.jpg);
 
-    expect(await images.store(ID, new Blob([oversized]))).toEqual({
+    expect(await images.store(new Blob([oversized]), fits)).toEqual({
       kind: "rejected",
       reason: "too_large",
     });
@@ -108,6 +114,6 @@ describe("item pictures are stored by their bytes", () => {
     const limit = new Uint8Array(10 * 1024 * 1024);
     limit.set(SAMPLES.jpg);
 
-    expect(await images.store(ID, new Blob([limit]))).toMatchObject({ kind: "stored" });
+    expect(await images.store(new Blob([limit]), fits)).toMatchObject({ kind: "stored" });
   });
 });

@@ -239,31 +239,34 @@ export const Items = {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, scope.viewer, input.id);
         if (!found) return Result.err(new ItemNotFound());
-        const read = await readMfcItemPage(found.id, input);
+        const read = await readMfcItemPage(scope.tx, scope.viewer, found.id, input, found.itemId);
         if (read.isErr()) {
           const failure = read.error;
           if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
           scope.log.set({ mfc: refusedPageLog(failure) });
           return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
         }
-        const { page, stored } = read.value;
-        return scope.proceed({ itemId: found.itemId, page, stored });
+        const { page, picture } = read.value;
+        return scope.proceed({ itemId: found.itemId, page, picture });
       },
     },
-    async (scope, { itemId, page, stored }) => {
-      const refreshed = await refreshItem(scope.tx, scope.viewer, itemId, page, stored);
+    async (scope, { itemId, page, picture }) => {
+      const refreshed = await refreshItem(scope.tx, scope.viewer, itemId, page, picture);
       if (refreshed.isErr()) return refreshed;
-      const outcome = refreshed.value;
+      const { saved, picture: outcome } = refreshed.value;
       scope.log.set({
         mfc: {
           itemId: page.mfcItemId,
           contentLabel: page.contentLabel,
-          outcome,
-          picture: pictureLog(stored),
+          outcome: saved,
+          picture: pictureLog(picture, outcome),
           warnings: page.warnings,
         },
       });
-      return Result.ok({ saved: outcome === "unchanged" ? "unchanged" : "refreshed" } as const);
+      return Result.ok({
+        saved: saved === "unchanged" ? ("unchanged" as const) : ("refreshed" as const),
+        picture: outcome,
+      });
     },
   ),
 };

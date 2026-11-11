@@ -6,8 +6,8 @@ import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { addMfcItemIfMissing } from "@/lib/item-database";
-import { pictureLog, pictureOutcome, prepareMfcItem, refusedPageLog } from "@/lib/mfc-item-ingest";
-import type { PictureOutcome } from "@/lib/mfc-item-ingest";
+import type { PictureOutcome } from "@/lib/item-images";
+import { pictureLog, prepareMfcItem, refusedPageLog } from "@/lib/mfc-item-ingest";
 
 type IngestResult =
   | { readonly saved: "existing"; readonly itemId: string; readonly mfcItemId: MfcItemId }
@@ -43,26 +43,24 @@ export const MfcItems = {
         });
       },
     },
-    async (scope, { page, stored }) => {
+    async (scope, { page, picture }) => {
       const id = page.mfcItemId;
-      const picture = pictureOutcome(stored);
-      const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, stored);
+      const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, picture);
       if (ensured.isErr()) return ensured;
-      const { itemId, created } = ensured.value;
-
+      const added = ensured.value;
       scope.log.set({
         mfc: {
           itemId: id,
           contentLabel: page.contentLabel,
-          outcome: created ? "created" : "existing",
-          picture: pictureLog(stored),
+          outcome: added.created ? "created" : "existing",
+          ...(added.created && { picture: pictureLog(picture, added.picture) }),
           warnings: page.warnings,
         },
       });
       return Result.ok<IngestResult>(
-        created
-          ? { saved: "created", itemId, mfcItemId: id, picture }
-          : { saved: "existing", itemId, mfcItemId: id },
+        added.created
+          ? { saved: "created", itemId: added.itemId, mfcItemId: id, picture: added.picture }
+          : { saved: "existing", itemId: added.itemId, mfcItemId: id },
       );
     },
   ),

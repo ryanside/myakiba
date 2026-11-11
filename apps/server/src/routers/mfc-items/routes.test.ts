@@ -3,15 +3,13 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 import path from "node:path";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import * as z from "zod";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
-import { createItemImages } from "@/lib/item-images";
 
 let drained = Promise.withResolvers<DrainContext>();
 initLogger({ silent: true, drain: (context) => drained.resolve(context) });
@@ -43,9 +41,14 @@ await mock.module("@myakiba/redis/client", () => ({
   },
 }));
 
-await mock.module("@/lib/item-images", () => ({
-  createItemImages,
-  itemImages: { store: (id: MfcItemId, picture: Blob) => store.images.store(id, picture) },
+const realS3 = await import("@aws-sdk/client-s3");
+await mock.module("@aws-sdk/client-s3", () => ({
+  ...realS3,
+  S3Client: class {
+    send(command: PutObjectCommand) {
+      return store.send(command);
+    }
+  },
 }));
 
 const db = await createTestDatabase();
@@ -84,22 +87,18 @@ const derivedSharedEntriesPage = edit(
 );
 const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
+// test.env names no AWS_BUCKET_URL, so pictures get the S3 default URL.
+const PUBLIC = "https://test.s3.us-east-1.amazonaws.com";
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const images = createItemImages({
-    client: {
-      send: async (command) => {
-        await gate?.();
-        objects.set(command.input.Key ?? "", command.input);
-        return { $metadata: { httpStatusCode: 200 } };
-      },
-    },
-    name: "pictures",
-    publicUrl: "https://pictures.example.test",
-  });
+  const send = async (command: PutObjectCommand) => {
+    await gate?.();
+    objects.set(command.input.Key ?? "", command.input);
+    return { $metadata: { httpStatusCode: 200 } };
+  };
   const releasePutsTogether = (parties: number) => {
     const { promise, resolve } = Promise.withResolvers<null>();
     let arrived = 0;
@@ -122,7 +121,7 @@ function memoryStore() {
     gate = () =>
       failure === "hang" ? new Promise<null>(() => {}) : Promise.reject(new Error("S3 is down"));
   };
-  return { images, objects, releasePutsTogether, holdPut, failPuts };
+  return { send, objects, releasePutsTogether, holdPut, failPuts };
 }
 
 let store = memoryStore();
@@ -182,6 +181,7 @@ async function itemRows(externalId: number) {
       contentLabel: item.contentLabel,
       mfcRatingId: item.mfcRatingId,
       image: item.image,
+      imageBytes: item.imageBytes,
     })
     .from(item)
     .where(eq(item.externalId, externalId));
@@ -273,8 +273,13 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
       mfcItemId: 98_777,
       picture: "stored",
     });
-    const [key] = store.objects.keys();
-    expect(key).toMatch(/^items\/mfc\/98777\/[0-9a-f]{16}\.jpg$/);
+    const digest = new Bun.CryptoHasher("sha256").update(JPEG).digest("hex");
+    expect([...store.objects.values()]).toEqual([
+      expect.objectContaining({
+        Key: `items/${digest}.jpg`,
+        CacheControl: "public, max-age=31536000, immutable",
+      }),
+    ]);
     expect(await itemRows(98_777)).toEqual({
       item: {
         title: "Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)",
@@ -289,7 +294,8 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
         mfcMetadataVersion: 1,
         contentLabel: "explicit",
         mfcRatingId: 3,
-        image: `https://pictures.example.test/${key}`,
+        image: `${PUBLIC}/items/${digest}.jpg`,
+        imageBytes: JPEG.byteLength,
       },
       links: [
         link(7628, "Companies", "Orchid Seed", ["Manufacturer"]),
@@ -606,5 +612,171 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
       budget.mockRestore();
     }
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
+  });
+});
+
+const GIB = 1024 ** 3;
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+const fileOf = (picture: Uint8Array, extension: string) =>
+  `${new Bun.CryptoHasher("sha256").update(picture).digest("hex")}.${extension}`;
+
+/** Other Items of the viewer that show private pictures of these sizes. */
+async function showPictures(
+  pictures: readonly { readonly file: string; readonly bytes: number }[],
+) {
+  await db.insert(item).values(
+    pictures.map(({ file, bytes }, index) => ({
+      ownerId: userId,
+      externalId: 1_000_000 + index,
+      title: `Filler ${index}`,
+      image: `${PUBLIC}/items/${file}`,
+      imageBytes: bytes,
+    })),
+  );
+}
+
+const quotaLeft = (bytes: number) => [
+  { file: `${"1".repeat(64)}.jpg`, bytes: GIB },
+  { file: `${"2".repeat(64)}.jpg`, bytes: GIB - bytes },
+];
+
+describe("POST /api/mfc-items keeps each account's pictures within 2 GiB", () => {
+  test("a picture over the quota is not stored, and the item is saved without it", async () => {
+    await showPictures(quotaLeft(JPEG.byteLength - 1));
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
+      status: 200,
+      body: { saved: "created", picture: "over_quota" },
+    });
+    const { item: saved98777 } = await itemRows(98_777);
+    expect(saved98777).toMatchObject({ image: null, imageBytes: null });
+    expect(store.objects.size).toBe(0);
+  });
+
+  test("a picture that exactly fills the quota is stored", async () => {
+    await showPictures(quotaLeft(JPEG.byteLength));
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
+      status: 200,
+      body: { saved: "created", picture: "stored" },
+    });
+    const { item: saved98777 } = await itemRows(98_777);
+    expect(saved98777).toMatchObject({
+      image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`,
+      imageBytes: JPEG.byteLength,
+    });
+  });
+
+  test("a picture another of the owner's Items already shows counts once", async () => {
+    await showPictures([
+      { file: fileOf(JPEG, "jpg"), bytes: JPEG.byteLength },
+      ...quotaLeft(JPEG.byteLength).map((picture) => ({
+        ...picture,
+        bytes: picture.bytes - JPEG.byteLength,
+      })),
+    ]);
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
+      status: 200,
+      body: { saved: "created", picture: "stored" },
+    });
+  });
+
+  test("another user's pictures do not count", async () => {
+    await db.insert(authSchema.user).values({
+      id: "user-2",
+      name: "Other",
+      email: "other@example.com",
+      username: "other",
+    });
+    await db.insert(item).values({
+      ownerId: "user-2",
+      externalId: 1,
+      title: "Theirs",
+      image: `${PUBLIC}/items/${"3".repeat(64)}.jpg`,
+      imageBytes: GIB,
+    });
+    await showPictures(quotaLeft(JPEG.byteLength));
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
+      body: { saved: "created", picture: "stored" },
+    });
+  });
+
+  test("two uploads that each fit alone, stored at once, end with one picture over the quota", async () => {
+    await showPictures(quotaLeft(JPEG.byteLength + PNG.byteLength - 1));
+    store.releasePutsTogether(2);
+
+    const answers = await Promise.all([
+      upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
+      upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: PNG }),
+    ]);
+
+    expect(answers.map((reply) => reply.status)).toEqual([200, 200]);
+    const pictureOf = z.object({ picture: z.string() });
+    expect(answers.map((reply) => pictureOf.parse(reply.body).picture).toSorted()).toEqual([
+      "over_quota",
+      "stored",
+    ]);
+    const shown = await db
+      .select({ image: item.image })
+      .from(item)
+      .where(inArray(item.externalId, [98_777, 98_779]));
+    expect(shown.filter((row) => row.image !== null)).toHaveLength(1);
+    expect(store.objects.size).toBe(2);
+  });
+});
+
+describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
+  const OTHER = "user-2";
+
+  beforeEach(async () => {
+    await db.insert(authSchema.user).values({
+      id: OTHER,
+      name: "Other",
+      email: "other@example.com",
+      username: "other",
+    });
+  });
+
+  const imageOf = async (owner: string) => {
+    const [row] = await db
+      .select({ image: item.image, imageBytes: item.imageBytes })
+      .from(item)
+      .where(and(eq(item.ownerId, owner), eq(item.externalId, 98_777)));
+    return row;
+  };
+
+  test("two users who save the same bytes share one object, and each Item shows it", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+    await upload({
+      mfcItemId: 98_777,
+      page: page98777,
+      picture: JPEG,
+      headers: { "x-test-user": OTHER },
+    });
+
+    const shown = { image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`, imageBytes: JPEG.byteLength };
+    expect(await imageOf(userId)).toEqual(shown);
+    expect(await imageOf(OTHER)).toEqual(shown);
+    expect([...store.objects.keys()]).toEqual([`items/${fileOf(JPEG, "jpg")}`]);
+  });
+
+  test("different bytes are separate objects, each shown only by its uploader's Item", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+    await upload({
+      mfcItemId: 98_777,
+      page: page98777,
+      picture: PNG,
+      headers: { "x-test-user": OTHER },
+    });
+
+    expect(await imageOf(userId)).toMatchObject({
+      image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`,
+    });
+    expect(await imageOf(OTHER)).toMatchObject({ image: `${PUBLIC}/items/${fileOf(PNG, "png")}` });
+    expect([...store.objects.keys()].toSorted()).toEqual(
+      [`items/${fileOf(JPEG, "jpg")}`, `items/${fileOf(PNG, "png")}`].toSorted(),
+    );
   });
 });

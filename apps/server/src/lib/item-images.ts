@@ -3,14 +3,25 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { PutObjectCommandOutput } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
-import type { MfcItemId } from "@myakiba/mfc/page";
 
+/** A picture read from an upload, before an Item shows it. */
 export type StoredPicture =
-  | { readonly kind: "stored"; readonly url: string }
-  | { readonly kind: "rejected"; readonly reason: "not_an_image" | "too_large" };
+  /** In the bucket at its content's key. No Item shows it until the writer saves it. */
+  | { readonly kind: "stored"; readonly url: string; readonly bytes: number }
+  | {
+      readonly kind: "rejected";
+      readonly reason: "not_an_image" | "too_large" | "over_quota";
+    };
+
+/** What a save answers about the picture it was sent. */
+export type PictureOutcome = "stored" | "absent" | "rejected" | "over_quota";
+
+/** Whether the owner can store `bytes` more for the picture at `url`, counting one they show once. */
+type Fits = (url: string, bytes: number) => Promise<boolean>;
 
 export type ItemImages = {
-  readonly store: (mfcItemId: MfcItemId, picture: Blob) => Promise<StoredPicture>;
+  /** Sniffs and hashes the picture, then stores it if it fits. Throws when S3 does not take it within 5 s. */
+  readonly store: (picture: Blob, fits: Fits) => Promise<StoredPicture>;
 };
 
 type Bucket = {
@@ -76,13 +87,16 @@ const FORMATS = [
 export function createItemImages(bucket: Bucket): ItemImages {
   const baseUrl = bucket.publicUrl.replace(/\/+$/u, "");
   return {
-    async store(mfcItemId, picture) {
+    async store(picture, fits) {
       if (picture.size > MAX_ITEM_PICTURE_BYTES) return { kind: "rejected", reason: "too_large" };
       const bytes = new Uint8Array(await picture.arrayBuffer());
       const format = FORMATS.find((candidate) => candidate.matches(bytes));
       if (!format) return { kind: "rejected", reason: "not_an_image" };
-      const contentHash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-      const contentKey = `items/mfc/${mfcItemId}/${contentHash}.${format.extension}`;
+      // The same bytes are one object and one CDN entry, whoever stores them and for which Item.
+      const contentHash = createHash("sha256").update(bytes).digest("hex");
+      const contentKey = `items/${contentHash}.${format.extension}`;
+      const url = `${baseUrl}/${contentKey}`;
+      if (!(await fits(url, bytes.byteLength))) return { kind: "rejected", reason: "over_quota" };
       const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
       const put = new PutObjectCommand({
         Bucket: bucket.name,
@@ -91,8 +105,9 @@ export function createItemImages(bucket: Bucket): ItemImages {
         ContentType: format.contentType,
         CacheControl: IMMUTABLE,
       });
+      // Stored again even when it exists, so its LastModified starts the reconcile grace anew.
       await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
-      return { kind: "stored", url: `${baseUrl}/${contentKey}` };
+      return { kind: "stored", url, bytes: bytes.byteLength };
     },
   };
 }
