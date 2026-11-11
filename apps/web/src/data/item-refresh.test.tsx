@@ -2,7 +2,6 @@ import { afterEach, expect, mock, spyOn, test } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Panic } from "better-result";
-import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import type { ReactNode } from "react";
 import { fakeExtension } from "../../test/fake-extension";
 import type { FakeRun } from "../../test/fake-extension";
@@ -114,8 +113,8 @@ test("an id that is no MFC item says it is not found under the title", async () 
 test.each([
   [
     "a refusal with text",
-    () => new Response(EMAIL_VERIFICATION_REQUIRED, { status: 403 }),
-    EMAIL_VERIFICATION_REQUIRED,
+    () => new Response("Rate limit exceeded, try again in 60 seconds", { status: 429 }),
+    "Rate limit exceeded, try again in 60 seconds",
   ],
   [
     "a server error",
