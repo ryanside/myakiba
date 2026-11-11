@@ -3723,7 +3723,12 @@
         "parseMfcItemPage size limits > a page past its nodes limit of 10000 is too_large"
       ],
       "testAt": "12f504f32c14474b4820d2fe261bfde945683a71",
-      "reason": "A later fix of this round made these cases assert the size a too_large page measured, which this fix does not report yet, so it keeps its own harness."
+      "reason": "A later fix of this round made these cases assert the size a too_large page measured, which this fix does not report yet, so it keeps its own harness. A later fix raised the children limit to 1024, so HEAD names that case by its new limit.",
+      "atHead": [
+        "parseMfcItemPage size limits > a page past its depth limit of 64 is too_large",
+        "parseMfcItemPage size limits > a page past its children limit of 1024 is too_large",
+        "parseMfcItemPage size limits > a page past its nodes limit of 10000 is too_large"
+      ]
     },
     {
       "fix": "9433359d5e31e6205ad9bc98891f3316db621c82",
@@ -3803,6 +3808,22 @@
         "parseMfcItemPage size limits > a page past its entryNameLength limit of 500 is too_large",
         "parseMfcItemPage size limits > a page past its warnings limit of 100 is too_large",
         "parseMfcItemPage size limits > a warning added after the fields are read counts toward the warnings limit"
+      ],
+      "testAt": "74e90c71d9d768dfc9851daee202592e620a4f3c",
+      "reason": "A later fix raised the children limit to 1024, which this fix's revision rejects at 513, so it keeps its own harness. HEAD names that case by its new limit.",
+      "atHead": [
+        "parseMfcItemPage size limits > a page past its depth limit of 64 is too_large",
+        "parseMfcItemPage size limits > a page past its children limit of 1024 is too_large",
+        "parseMfcItemPage size limits > a page past its nodes limit of 10000 is too_large",
+        "parseMfcItemPage size limits > a page past its fieldDepth limit of 32 is too_large",
+        "parseMfcItemPage size limits > a page past its dataFields limit of 300 is too_large",
+        "parseMfcItemPage size limits > a page past its entries limit of 1000 is too_large",
+        "parseMfcItemPage size limits > a page past its releases limit of 200 is too_large",
+        "parseMfcItemPage size limits > a page past its titleLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its valueLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its entryNameLength limit of 500 is too_large",
+        "parseMfcItemPage size limits > a page past its warnings limit of 100 is too_large",
+        "parseMfcItemPage size limits > a warning added after the fields are read counts toward the warnings limit"
       ]
     },
     {
@@ -3811,6 +3832,37 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items saves an MFC item page as a new item > a page past a size limit answers 400 and logs the limit and what it measured"
+      ],
+      "testAt": "74e90c71d9d768dfc9851daee202592e620a4f3c",
+      "reason": "A later fix raised the children limit to 1024, so HEAD's copy sends 1,025 children, which this fix's revision measures as 513. It keeps its own harness.",
+      "atHead": [
+        "POST /api/mfc-items saves an MFC item page as a new item > a page past a size limit answers 400 and logs the limit and what it measured"
+      ]
+    },
+    {
+      "fix": "93f981f5",
+      "bug": "readMaterials read every .item-entry below each .item-entries group, nested groups too, so an entry inside 28 nested groups was read 28 times: a page inside every limit took about 0.4 s, and nested groups multiplied the mentions that count toward the entries limit.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage stored values > entries in nested material groups count once toward the entries limit"
+      ]
+    },
+    {
+      "fix": "93f981f5",
+      "bug": "Material groups nested 28 deep around 9,750 entries read each entry once per group, so the page answered too_large:entries.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > material groups nested to the field depth limit around the most entries that fit answers parsed within 5000 ms"
+      ]
+    },
+    {
+      "fix": "2c3797ce",
+      "bug": "MFC writes a separator element between entries, so the 512 element children limit rejected a group of 257 or more Characters that staging read whole.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage entries > reads 512 Characters in one comma-separated group",
+        "parseMfcItemPage size limits > a page at its children limit of 1024 parses",
+        "parseMfcItemPage size limits > a page past its children limit of 1024 is too_large"
       ]
     },
     {
