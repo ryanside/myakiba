@@ -113,8 +113,8 @@ test("an id that is no MFC item says it is not found under the title", async () 
 test.each([
   [
     "a refusal with text",
-    () => new Response("Item details were recently refreshed", { status: 429 }),
-    "Item details were recently refreshed",
+    () => new Response("Rate limit exceeded, try again in 60 seconds", { status: 429 }),
+    "Rate limit exceeded, try again in 60 seconds",
   ],
   [
     "a server error",

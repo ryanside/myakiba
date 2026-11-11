@@ -113,7 +113,10 @@ void (true satisfies Equal<
   {
     list: S<500, "Failed to get collection table">;
     get: S<404, "Collection item not found"> | S<500, "Failed to get collection item">;
-    update: S<404, "Collection item not found"> | S<500, "Failed to update collection item">;
+    update:
+      | S<404, "A chosen release is not a release of its item">
+      | S<404, "Collection item not found">
+      | S<500, "Failed to update collection item">;
     remove: S<404, "Collection item not found"> | S<500, "Failed to delete collection item">;
     removeMany:
       | S<404, "Collection item(s) not found">
@@ -176,34 +179,25 @@ void (true satisfies Equal<
 >);
 
 // Items
-const itemsCreateCustom = () => serve(caller, Items.createCustom, inputOf(Items.createCustom));
 const itemsReleases = () => serve(caller, Items.releases, inputOf(Items.releases));
 const itemsGet = () => serve(caller, Items.get, inputOf(Items.get));
 const itemsRelatedOrders = () => serve(caller, Items.relatedOrders, inputOf(Items.relatedOrders));
 const itemsRelatedCollection = () =>
   serve(caller, Items.relatedCollection, inputOf(Items.relatedCollection));
-const itemsResyncStatus = () => serve(caller, Items.resyncStatus, inputOf(Items.resyncStatus));
 const itemsResync = () => serve(caller, Items.resync, inputOf(Items.resync));
 void (true satisfies Equal<
   {
-    createCustom: Failures<typeof itemsCreateCustom>;
     releases: Failures<typeof itemsReleases>;
     get: Failures<typeof itemsGet>;
     relatedOrders: Failures<typeof itemsRelatedOrders>;
     relatedCollection: Failures<typeof itemsRelatedCollection>;
-    resyncStatus: Failures<typeof itemsResyncStatus>;
     resync: Failures<typeof itemsResync>;
   },
   {
-    createCustom:
-      | S<400, "Entry category mismatch">
-      | S<404, "Entry not found">
-      | S<500, "Failed to create custom item">;
     releases: S<500, "Failed to get item releases">;
     get: S<404, "Item not found"> | S<500, "Failed to get item">;
     relatedOrders: S<500, "Failed to get item related orders">;
     relatedCollection: S<500, "Failed to get item related collections">;
-    resyncStatus: S<404, "Item not found"> | S<500, "Failed to check item refresh status">;
     resync:
       | S<
           400,
@@ -219,7 +213,6 @@ void (true satisfies Equal<
           400
         >
       | S<404, "Item not found">
-      | S<429, "Item details were recently refreshed">
       | S<500, "Failed to request item refresh">;
   }
 >);

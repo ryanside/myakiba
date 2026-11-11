@@ -5,6 +5,7 @@ import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
+import { MFC_PAGE_READS as READS } from "../reads";
 import { PAGE_LIMITS, clippedQuote } from "./limits";
 import type { PageLimit } from "./limits";
 
@@ -42,9 +43,9 @@ const PATTERNS = {
   depth: /[DL]=([\d,]+)mm/,
   price: /(?<![\d,])(\d+(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /(?<![A-Z0-9-])([A-Z0-9-]+)$/,
-  entryId: /\/entry\/(\d+)/,
+  entryId: READS.entryHref,
   materialPercentage: /(?<!\d)(\d+(?:\.\d+)?)\s*%/,
-  ratingId: /[?&]ratingId=(\d+)/,
+  ratingId: READS.ratingHref,
 } as const;
 
 const plainEntries =
@@ -212,7 +213,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     releases: [],
     warnings: [],
   };
-  const found = dataFields($(".item-object").first()[0]);
+  const found = dataFields($(READS.itemObject).first()[0]);
   if (found.fields.length > PAGE_LIMITS.dataFields) return Result.err("dataFields");
   if (found.fieldDepth > PAGE_LIMITS.fieldDepth) return Result.err("fieldDepth");
 

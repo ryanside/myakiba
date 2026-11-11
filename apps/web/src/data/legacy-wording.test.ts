@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { getRefreshStatus, requestRefresh } from "@/queries/item";
+import { requestRefresh } from "@/queries/item";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -7,7 +7,6 @@ afterEach(() => {
 });
 
 const callers = [
-  ["refresh status", () => getRefreshStatus(1), "Failed to check item refresh status"],
   [
     "refresh item",
     () => requestRefresh(1, { page: new File(["page"], "page.html") }),

@@ -151,8 +151,7 @@ await mock.module("@/data/item-refresh", () => ({
   ...realRefresh,
   refreshItemWithExtension: () =>
     new Promise((resolve) => {
-      server.finishRefresh = () =>
-        resolve(Result.ok({ status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" }));
+      server.finishRefresh = () => resolve(Result.ok({ saved: "refreshed" }));
     }),
 }));
 const realRouter = await import("@tanstack/react-router");

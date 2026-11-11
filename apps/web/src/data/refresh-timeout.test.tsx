@@ -159,11 +159,7 @@ test("an answered refresh clears its deadline and uploads the page once", async 
   globalThis.fetch = Object.assign(
     async () => {
       uploads += 1;
-      return Response.json({
-        status: "cooldown",
-        cooldownExpiresAt: "2026-10-25T00:00:00Z",
-        saved: "refreshed",
-      });
+      return Response.json({ saved: "refreshed" });
     },
     { preconnect: realFetch.preconnect },
   );

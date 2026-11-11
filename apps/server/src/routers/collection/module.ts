@@ -3,6 +3,7 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { Result } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
+import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
@@ -188,10 +189,22 @@ export const Collection = {
       scope.log.set({ collection: { id: input.id } });
       const selected = and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id));
       const [existing] = await scope.tx
-        .select({ releaseId: collection.releaseId })
+        .select({ itemId: collection.itemId, releaseId: collection.releaseId })
         .from(collection)
         .where(selected);
       if (!existing) return Result.err(new CollectionItemNotFound());
+      if (input.update.releaseId !== null) {
+        const [release] = await scope.tx
+          .select({ id: item_release.id })
+          .from(item_release)
+          .where(
+            and(
+              eq(item_release.id, input.update.releaseId),
+              eq(item_release.itemId, existing.itemId),
+            ),
+          );
+        if (!release) return Result.err(new ReleaseNotOfItem());
+      }
 
       const updated = await scope.tx
         .update(collection)

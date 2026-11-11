@@ -248,8 +248,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@myakiba/env": "workspace:*",
-        "@myakiba/utils": "workspace:*",
-        "better-result": "catalog:",
         "evlog": "catalog:",
         "ioredis": "catalog:",
       },
