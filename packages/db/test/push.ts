@@ -1,7 +1,7 @@
 import path from "node:path";
 
 export const PUSH_TIMEOUT = 60_000;
-const OWNED_SCHEMA = Bun.fileURLToPath(import.meta.resolve("./owned-schema.ts"));
+const SCHEMA = path.join(import.meta.dir, "../src/schema");
 
 // drizzle-kit 0.31.10 reads a composite primary key's columns through an unordered join. On
 // Postgres 18 a migrated database's catalog statistics often make it read add_commit's in
@@ -11,8 +11,8 @@ const ADD_COMMIT_KEY_REBUILD = [
   'ALTER TABLE "add_commit" DROP CONSTRAINT "add_commit_user_id_commit_id_pk"',
 ];
 
-/** Pushes test/owned-schema.ts as push-schema.ts pushes the app's schema: no TTY, so any prompt fails. */
-export async function pushOwnedSchema(url: string) {
+/** Pushes the app's schema as push-schema.ts does, with no TTY, so any prompt fails. */
+export async function pushSchema(url: string) {
   const child = Bun.spawn(
     [
       "bunx",
@@ -20,7 +20,7 @@ export async function pushOwnedSchema(url: string) {
       "push",
       "--verbose",
       "--dialect=postgresql",
-      `--schema=${OWNED_SCHEMA}`,
+      `--schema=${SCHEMA}`,
       `--url=${url}`,
       "--schemaFilters=public",
     ],

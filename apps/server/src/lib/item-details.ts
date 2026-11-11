@@ -40,6 +40,7 @@ export function releaseKey(release: ReleaseContent): string {
   ]);
 }
 
+// entry_to_item.material_percentage is decimal(5,2), so a finer share reads back rounded.
 export function storedPercentage(percentage: number | null): number | null {
   if (percentage === null) return null;
   const [coefficient = "0", exponent = "0"] = Math.abs(percentage).toString().split("e");

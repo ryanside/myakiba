@@ -36,7 +36,7 @@ test("a delete committed while a page is read leaves its rows and totals in agre
     email: "r@example.com",
     username: "ryan",
   });
-  await db.insert(item).values({ id: "item-1", externalId: 101, title: "Miku" });
+  await db.insert(item).values({ id: "item-1", ownerId: userId, externalId: 101, title: "Miku" });
   await db
     .insert(item_release)
     .values({ id: "00000000-0000-4000-8000-000000000001", itemId: "item-1", date: "2026-01-01" });

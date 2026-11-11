@@ -15,6 +15,7 @@ import type { ReadTx } from "@myakiba/db/tx";
 import { mfcItemId } from "@myakiba/mfc/page";
 import { Result } from "better-result";
 import { command, query } from "@/domain/kernel";
+import type { Viewer } from "@/domain/viewer";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
@@ -22,10 +23,10 @@ import { findMfcItem, refreshItem } from "@/lib/item-database";
 import { pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
 import type { EntriesWithRoles } from "./model";
 
-async function findResyncItem(tx: ReadTx, externalId: number) {
+async function findResyncItem(tx: ReadTx, viewer: Viewer, externalId: number) {
   const id = mfcItemId(externalId);
   if (id === null) return;
-  const itemId = await findMfcItem(tx, id);
+  const itemId = await findMfcItem(tx, viewer, id);
   return itemId === undefined ? undefined : { id, itemId };
 }
 
@@ -45,7 +46,8 @@ export const Items = {
           barcode: item_release.barcode,
         })
         .from(item_release)
-        .where(eq(item_release.itemId, input.id))
+        .innerJoin(item, eq(item.id, item_release.itemId))
+        .where(and(eq(item.ownerId, scope.viewer.userId), eq(item_release.itemId, input.id)))
         .orderBy(asc(item_release.date), asc(item_release.createdAt), asc(item_release.id));
 
       const result: ItemReleasesResponse = { releases };
@@ -129,7 +131,13 @@ export const Items = {
           wishlistItem,
           and(eq(wishlistItem.userId, scope.viewer.userId), eq(wishlistItem.itemId, item.id)),
         )
-        .where(and(eq(item.source, "mfc"), eq(item.externalId, input.id)));
+        .where(
+          and(
+            eq(item.ownerId, scope.viewer.userId),
+            eq(item.source, "mfc"),
+            eq(item.externalId, input.id),
+          ),
+        );
 
       if (!itemData) return Result.err(new ItemNotFound());
 
@@ -229,7 +237,7 @@ export const Items = {
       operational: [StoreItemPictureFailed],
       before: async (scope, input: { readonly id: number } & ItemRefresh) => {
         scope.log.set({ item: { externalId: input.id } });
-        const found = await findResyncItem(scope.tx, input.id);
+        const found = await findResyncItem(scope.tx, scope.viewer, input.id);
         if (!found) return Result.err(new ItemNotFound());
         const read = await readMfcItemPage(found.id, input);
         if (read.isErr()) {
@@ -243,7 +251,7 @@ export const Items = {
       },
     },
     async (scope, { itemId, page, stored }) => {
-      const refreshed = await refreshItem(scope.tx, itemId, page, stored);
+      const refreshed = await refreshItem(scope.tx, scope.viewer, itemId, page, stored);
       if (refreshed.isErr()) return refreshed;
       const outcome = refreshed.value;
       scope.log.set({

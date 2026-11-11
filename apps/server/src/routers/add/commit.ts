@@ -127,7 +127,7 @@ export async function writeCommit(
     })
     .from(item)
     .leftJoinLateral(release, sql`TRUE`)
-    .where(inArray(item.id, itemIds))
+    .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
     .for("key share", { of: item });
   const itemById = new Map(found.map((row) => [row.id, row]));
   const chosenIds = choices.rows.flatMap(({ releaseId }) => (releaseId ? [releaseId] : []));
@@ -142,7 +142,8 @@ export async function writeCommit(
             priceCurrency: item_release.priceCurrency,
           })
           .from(item_release)
-          .where(inArray(item_release.id, chosenIds));
+          .innerJoin(item, eq(item.id, item_release.itemId))
+          .where(and(eq(item.ownerId, userId), inArray(item_release.id, chosenIds)));
   const chosenById = new Map(chosenReleases.map((chosen) => [chosen.id, chosen]));
   const picked = [];
   for (const row of choices.rows) {

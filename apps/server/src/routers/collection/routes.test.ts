@@ -61,7 +61,9 @@ beforeEach(async () => {
   await db
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
-  await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
+  await db
+    .insert(item)
+    .values({ id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" });
   await db.insert(collection).values({
     id: "c-1",
     userId,
@@ -72,6 +74,18 @@ beforeEach(async () => {
     updatedAt: createdAt,
   });
 });
+
+async function addOtherUser() {
+  await db
+    .insert(authSchema.user)
+    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await db.insert(item).values({
+    id: "item-aki",
+    ownerId: "user-2",
+    externalId: 186,
+    title: "Nendoroid Hatsune Miku",
+  });
+}
 
 const call = async (method: string, body?: CollectionUpdateType) => {
   const response = await app.handle(
@@ -100,7 +114,9 @@ test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", 
 });
 
 test("an edit that selects another Item's release answers 404 and leaves the Collection Item as it was", async () => {
-  await db.insert(item).values({ id: "item-2", externalId: 187, title: "Nendoroid Kagamine Rin" });
+  await db
+    .insert(item)
+    .values({ id: "item-2", ownerId: userId, externalId: 187, title: "Nendoroid Kagamine Rin" });
   await db.insert(item_release).values([
     { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
     { id: "00000000-0000-0000-0000-000000000002", itemId: "item-2", date: "2026-04-01" },
@@ -147,12 +163,10 @@ test.each([
   ["an own and another user's item", ["c-1", "c-other"]],
   ["only another user's item", ["c-other"]],
 ])("a bulk delete of %s answers 404 and deletes nothing", async (_, ids) => {
-  await db
-    .insert(authSchema.user)
-    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await addOtherUser();
   await db
     .insert(collection)
-    .values({ id: "c-other", userId: "user-2", itemId: "item-1", status: "Ordered" });
+    .values({ id: "c-other", userId: "user-2", itemId: "item-aki", status: "Ordered" });
   const readItems = () => db.select().from(collection).orderBy(collection.id);
   const before = await readItems();
 
@@ -198,13 +212,11 @@ test("a bulk delete of an empty list answers 404 and deletes nothing", async () 
 });
 
 test("a list by ids answers only the viewer's Collection Items among them", async () => {
-  await db
-    .insert(authSchema.user)
-    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await addOtherUser();
   await db.insert(collection).values([
     { id: "c-2", userId, itemId: "item-1", status: "Owned" },
     { id: "c-3", userId, itemId: "item-1", status: "Owned" },
-    { id: "c-other", userId: "user-2", itemId: "item-1", status: "Owned" },
+    { id: "c-other", userId: "user-2", itemId: "item-aki", status: "Owned" },
   ]);
 
   const response = await app.handle(

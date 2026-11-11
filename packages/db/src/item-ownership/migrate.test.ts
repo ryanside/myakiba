@@ -1,10 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
-import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import { snapshot, testDatabases } from "../../test/database";
-import * as authSchema from "../schema/auth";
-import * as figureSchema from "../schema/figure";
-import { LEGACY_SCHEMA } from "./legacy-schema";
 import { MIGRATION_STEPS, migrateItemOwnership, verifyItemOwnership } from "./migrate";
 import { seedScaledSharedItems, seedSharedItems } from "./seed";
 
@@ -35,14 +31,6 @@ const PAIRS = `(VALUES ('u1', 'item-a'), ('u1', 'item-b'), ('u2', 'item-a'), ('u
 async function rows(sql: SQL, query: string) {
   return [...(await sql.unsafe(query))];
 }
-
-test("builds the pre-ownership database from the schema staging pushes today", async () => {
-  const today = await generateMigration(
-    generateDrizzleJson({}),
-    generateDrizzleJson({ ...authSchema, ...figureSchema }),
-  );
-  expect(today).toEqual([...LEGACY_SCHEMA]);
-});
 
 test("reports one copy per user and referenced Item, with its releases, Item Entries and links", async () => {
   const { report } = await migrated();

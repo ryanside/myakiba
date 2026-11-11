@@ -197,8 +197,10 @@ export const Collection = {
         const [release] = await scope.tx
           .select({ id: item_release.id })
           .from(item_release)
+          .innerJoin(item, eq(item.id, item_release.itemId))
           .where(
             and(
+              eq(item.ownerId, scope.viewer.userId),
               eq(item_release.id, input.update.releaseId),
               eq(item_release.itemId, existing.itemId),
             ),

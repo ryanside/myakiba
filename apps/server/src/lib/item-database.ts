@@ -5,6 +5,7 @@ import { collection, entry, entry_to_item, item, item_release } from "@myakiba/d
 import type { ReadTx, Tx } from "@myakiba/db/tx";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
+import type { Viewer } from "@/domain/viewer";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { itemFields, linksInLockOrder, releaseKey, storedPercentage } from "@/lib/item-details";
@@ -12,11 +13,16 @@ import type { StoredPicture } from "@/lib/item-images";
 import { buildReleasePlan } from "@/lib/release-plan";
 import type { ReleasePlan } from "@/lib/release-plan";
 
-export async function findMfcItem(tx: ReadTx, id: MfcItemId): Promise<string | undefined> {
+/** The viewer's Item for this MFC id. */
+export async function findMfcItem(
+  tx: ReadTx,
+  viewer: Viewer,
+  id: MfcItemId,
+): Promise<string | undefined> {
   const [found] = await tx
     .select({ id: item.id })
     .from(item)
-    .where(and(eq(item.source, "mfc"), eq(item.externalId, id)));
+    .where(and(eq(item.ownerId, viewer.userId), eq(item.source, "mfc"), eq(item.externalId, id)));
   return found?.id;
 }
 
@@ -25,13 +31,20 @@ function releaseRows(itemId: string, page: MfcItemPage) {
   return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
 }
 
-async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<void> {
+/** Upserts the owner's Item Entries, so a page renames only its uploader's, then links them. */
+async function linkEntries(
+  tx: Tx,
+  ownerId: string,
+  itemId: string,
+  page: MfcItemPage,
+): Promise<void> {
   const links = linksInLockOrder(page);
   if (links.length === 0) return;
   const entries = await tx
     .insert(entry)
     .values(
       links.map((link) => ({
+        ownerId,
         externalId: link.externalId,
         source: "mfc" as const,
         category: link.category,
@@ -39,7 +52,7 @@ async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<v
       })),
     )
     .onConflictDoUpdate({
-      target: [entry.source, entry.externalId],
+      target: [entry.ownerId, entry.source, entry.externalId],
       set: { name: sql`excluded.name`, category: sql`excluded.category`, updatedAt: new Date() },
     })
     .returning({ id: entry.id, externalId: entry.externalId });
@@ -53,6 +66,7 @@ async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<v
         );
       }
       return {
+        ownerId,
         entryId,
         itemId,
         role: link.roles[0] ?? "",
@@ -66,40 +80,44 @@ async function linkEntries(tx: Tx, itemId: string, page: MfcItemPage): Promise<v
 
 async function createMfcItemIfAbsent(
   tx: Tx,
+  ownerId: string,
   page: MfcItemPage,
   image: string | null,
 ): Promise<string | undefined> {
   const [created] = await tx
     .insert(item)
-    .values({ externalId: page.mfcItemId, source: "mfc", ...itemFields(page), image })
-    .onConflictDoNothing({ target: [item.source, item.externalId] })
+    .values({ ownerId, externalId: page.mfcItemId, source: "mfc", ...itemFields(page), image })
+    .onConflictDoNothing({ target: [item.ownerId, item.source, item.externalId] })
     .returning({ id: item.id });
   if (!created) return undefined;
 
-  await linkEntries(tx, created.id, page);
+  await linkEntries(tx, ownerId, created.id, page);
   if (page.releases.length > 0) {
     await tx.insert(item_release).values(releaseRows(created.id, page));
   }
   return created.id;
 }
 
-export async function ensureMfcItem(
+/** Adds the viewer's Item for this page, unless they have one. An existing Item comes back untouched. */
+export async function addMfcItemIfMissing(
   tx: Tx,
+  viewer: Viewer,
   page: MfcItemPage,
   stored: StoredPicture | null,
 ): Promise<Result<{ readonly itemId: string; readonly created: boolean }, MfcItemNotPersisted>> {
   const createdId = await createMfcItemIfAbsent(
     tx,
+    viewer.userId,
     page,
     stored?.kind === "stored" ? stored.url : null,
   );
   if (createdId) return Result.ok({ itemId: createdId, created: true });
-  const existingId = await findMfcItem(tx, page.mfcItemId);
+  const existingId = await findMfcItem(tx, viewer, page.mfcItemId);
   if (!existingId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
   return Result.ok({ itemId: existingId, created: false });
 }
 
-async function lockItem(tx: Tx, itemId: string) {
+async function lockItem(tx: Tx, ownerId: string, itemId: string) {
   const [locked] = await tx
     .select({
       id: item.id,
@@ -118,7 +136,7 @@ async function lockItem(tx: Tx, itemId: string) {
       image: item.image,
     })
     .from(item)
-    .where(eq(item.id, itemId))
+    .where(and(eq(item.ownerId, ownerId), eq(item.id, itemId)))
     .for("update");
   return locked;
 }
@@ -231,11 +249,12 @@ async function applyReleases(
 
 export async function refreshItem(
   tx: Tx,
+  viewer: Viewer,
   itemId: string,
   page: MfcItemPage,
   stored: StoredPicture | null,
 ): Promise<Result<ReleasePlan["kind"] | "unchanged", ItemNotFound>> {
-  const locked = await lockItem(tx, itemId);
+  const locked = await lockItem(tx, viewer.userId, itemId);
   if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
   const image = stored?.kind === "stored" ? stored.url : fields.image;
@@ -259,6 +278,6 @@ export async function refreshItem(
     .set({ ...itemFields(page), image, updatedAt: new Date() })
     .where(eq(item.id, id));
   await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
-  await linkEntries(tx, id, page);
+  await linkEntries(tx, viewer.userId, id, page);
   return Result.ok(await applyReleases(tx, id, buildReleasePlan({ existing, page: keyed }), rows));
 }

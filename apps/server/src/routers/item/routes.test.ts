@@ -33,21 +33,28 @@ beforeEach(async () => {
     { id: userId, name: "Ryan", email: "r@example.com", username: "ryan" },
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
-  await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
+  await db.insert(item).values([
+    { id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "aki-1", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
+  ]);
   await db.insert(item_release).values([
     { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
     { id: "00000000-0000-0000-0000-000000000002", itemId: "item-1", date: "2026-01-01" },
   ]);
-  await db.insert(entry).values({ id: "entry-1", name: "Hatsune Miku", category: "Characters" });
-  await db.insert(entry_to_item).values({ entryId: "entry-1", itemId: "item-1", role: "" });
-  await db.insert(wishlistItem).values({ userId: "user-2", itemId: "item-1" });
+  await db
+    .insert(entry)
+    .values({ id: "entry-1", ownerId: userId, name: "Hatsune Miku", category: "Characters" });
+  await db
+    .insert(entry_to_item)
+    .values({ ownerId: userId, entryId: "entry-1", itemId: "item-1", role: "" });
+  await db.insert(wishlistItem).values({ userId: "user-2", itemId: "aki-1" });
   await db.insert(order).values([
     { id: "order-1", userId, title: "AmiAmi preorder" },
     { id: "order-2", userId: "user-2", title: "Other user's order" },
   ]);
   await db.insert(collection).values([
     { id: "c-1", userId, itemId: "item-1", orderId: "order-1", status: "Ordered" },
-    { id: "c-other", userId: "user-2", itemId: "item-1", orderId: "order-2", status: "Ordered" },
+    { id: "c-other", userId: "user-2", itemId: "aki-1", orderId: "order-2", status: "Ordered" },
   ]);
 });
 

@@ -68,9 +68,15 @@ beforeEach(async () => {
     { id: otherUserId, name: "Aki", email: `${otherUserId}@example.com`, username: otherUserId },
   ]);
   await db.insert(item).values([
-    { id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku", image: "miku.jpg" },
-    { id: "item-2", externalId: 1860, title: "Figma Miku" },
-    { id: "item-3", externalId: null, source: "custom", title: "Custom Rin" },
+    {
+      id: "item-1",
+      ownerId: userId,
+      externalId: 186,
+      title: "Nendoroid Hatsune Miku",
+      image: "miku.jpg",
+    },
+    { id: "item-2", ownerId: userId, externalId: 1860, title: "Figma Miku" },
+    { id: "item-3", ownerId: userId, externalId: null, source: "custom", title: "Custom Rin" },
   ]);
   await db.insert(item_release).values([
     { id: "00000000-0000-4000-8000-000000000001", itemId: "item-1", date: "2026-01-01" },
@@ -759,7 +765,9 @@ test("a commit that failed leaves no answer, so its retry writes", async () => {
   const failed = await commit(body);
   expect(failed.status).toBe(404);
   expect(await records()).toEqual([]);
-  await db.insert(item).values({ id: "item-late", externalId: 2000, title: "Late arrival" });
+  await db
+    .insert(item)
+    .values({ id: "item-late", ownerId: userId, externalId: 2000, title: "Late arrival" });
 
   const retried = await commit(body);
 
@@ -850,8 +858,17 @@ test("a repeat after 10 minutes is a new commit and takes over the expired recor
 });
 
 test("a commit deletes the viewer's expired records and keeps live ones and other users'", async () => {
-  const wish = () => request({ rows: bare("item-1"), ownership: { kind: "none" }, wishlist: true });
-  const [expired, live, theirs, next] = [wish(), wish(), wish(), wish()];
+  await db
+    .insert(item)
+    .values({ id: "item-theirs", ownerId: otherUserId, externalId: 186, title: "Their Miku" });
+  const wish = (itemId: string) =>
+    request({ rows: bare(itemId), ownership: { kind: "none" }, wishlist: true });
+  const [expired, live, theirs, next] = [
+    wish("item-1"),
+    wish("item-1"),
+    wish("item-theirs"),
+    wish("item-1"),
+  ];
   await commit(expired);
   await commit(live);
   await commit(theirs, { "x-test-user": otherUserId });

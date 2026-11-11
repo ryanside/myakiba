@@ -24,7 +24,10 @@ export async function canTarget(
 ) {
   const [itemRows, collectionRows, orderRows] = await Promise.all([
     itemIds.length > 0
-      ? tx.select({ id: item.id }).from(item).where(inArray(item.id, itemIds))
+      ? tx
+          .select({ id: item.id })
+          .from(item)
+          .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds)))
       : Promise.resolve([]),
     collectionIds.length > 0
       ? tx
@@ -86,6 +89,7 @@ export async function addListMembers(
     const maxPosition = maxPositionByListId.get(listId) ?? -1;
     return targets.map((target, index) => ({
       listId,
+      userId,
       itemId: target.type === "item" ? target.id : null,
       collectionId: target.type === "collectionItem" ? target.id : null,
       orderId: target.type === "order" ? target.id : null,

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
-import { PUSH_TIMEOUT, pushOwnedSchema } from "../../test/push";
+import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
 import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards, ownerGuardsInstalled } from "./guards";
 import { migrateItemOwnership, verifyItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
@@ -273,7 +273,7 @@ test(
   async () => {
     const { sql, url } = await databases.create();
     await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
-    expect(await pushOwnedSchema(url)).toMatchObject({ applied: true });
+    expect(await pushSchema(url)).toMatchObject({ applied: true });
     expect(await ownerGuardsInstalled(sql)).toBe(false);
     expect(await installOwnerGuards(sql)).toBe("installed");
     expect(await ownerGuardsInstalled(sql)).toBe(true);
@@ -281,7 +281,7 @@ test(
     expect(installed.triggers).toHaveLength(8);
     expect(await installOwnerGuards(sql)).toBe("installed");
     expect(await guardsOf(sql)).toEqual(installed);
-    expect(await pushOwnedSchema(url)).toMatchObject({
+    expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: [`ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`],
     });

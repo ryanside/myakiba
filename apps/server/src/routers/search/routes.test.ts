@@ -36,21 +36,39 @@ beforeEach(async () => {
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
   await db.insert(item).values([
-    { id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" },
-    { id: "item-2", externalId: 1860, title: "Figma Miku" },
-    { id: "item-3", externalId: 300, title: "Rin" },
-    { id: "item-custom", externalId: null, source: "custom", title: "Custom Miku" },
+    { id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "item-2", ownerId: userId, externalId: 1860, title: "Figma Miku" },
+    { id: "item-3", ownerId: userId, externalId: 300, title: "Rin" },
+    {
+      id: "item-custom",
+      ownerId: userId,
+      externalId: null,
+      source: "custom",
+      title: "Custom Miku",
+    },
+    { id: "aki-1", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "aki-2", ownerId: "user-2", externalId: 1860, title: "Figma Miku" },
+    { id: "aki-3", ownerId: "user-2", externalId: 300, title: "Rin" },
   ]);
   await db.insert(item_release).values([
     { itemId: "item-1", date: "2026-01-01", price: 4000, priceCurrency: "JPY" },
     { itemId: "item-1", date: "2026-06-01", price: 4500, priceCurrency: "JPY" },
   ]);
   await db.insert(entry).values([
-    { id: "entry-1", name: "Miku Artist", category: "Artists" },
-    { id: "entry-2", name: "Another Miku", category: "Characters" },
-    { id: "entry-custom", name: "Custom Miku", category: "Artists", source: "custom" },
+    { id: "entry-1", ownerId: userId, name: "Miku Artist", category: "Artists" },
+    { id: "entry-2", ownerId: userId, name: "Another Miku", category: "Characters" },
+    {
+      id: "entry-custom",
+      ownerId: userId,
+      name: "Custom Miku",
+      category: "Artists",
+      source: "custom",
+    },
+    { id: "aki-entry", ownerId: "user-2", name: "Their Miku", category: "Characters" },
   ]);
-  await db.insert(entry_to_item).values({ entryId: "entry-1", itemId: "item-3", role: "" });
+  await db
+    .insert(entry_to_item)
+    .values({ ownerId: userId, entryId: "entry-1", itemId: "item-3", role: "" });
   await db.insert(order).values([
     { id: "order-1", userId, title: "Miku preorder" },
     { id: "order-2", userId, title: "Rin preorder" },
@@ -58,7 +76,7 @@ beforeEach(async () => {
   ]);
   await db.insert(collection).values([
     { id: "c-1", userId, itemId: "item-1", orderId: "order-1" },
-    { id: "c-other", userId: "user-2", itemId: "item-2", orderId: "order-3" },
+    { id: "c-other", userId: "user-2", itemId: "aki-2", orderId: "order-3" },
   ]);
 });
 
@@ -134,12 +152,12 @@ describe("each search route answers as before", () => {
       { id: "c-ordered", userId, itemId: "item-2", orderId: "order-2", status: "Ordered" },
       { id: "c-paid", userId, itemId: "item-3", status: "Paid" },
       { id: "c-shipped", userId, itemId: "item-3", status: "Shipped" },
-      { id: "c-other-2", userId: "user-2", itemId: "item-1", status: "Ordered" },
-      { id: "c-other-3", userId: "user-2", itemId: "item-3" },
+      { id: "c-other-2", userId: "user-2", itemId: "aki-1", status: "Ordered" },
+      { id: "c-other-3", userId: "user-2", itemId: "aki-3" },
     ]);
     await db.insert(wishlistItem).values([
       { userId, itemId: "item-2" },
-      { userId: "user-2", itemId: "item-1" },
+      { userId: "user-2", itemId: "aki-1" },
     ]);
 
     const { status, body } = await call("/items?query=miku");
@@ -162,7 +180,7 @@ describe("each search route answers as before", () => {
     });
   });
 
-  test("item database search with no query lists every MFC item, newest first", async () => {
+  test("item database search with no query lists every MFC item of the viewer's, newest first", async () => {
     expect(await call("/items?page=1&pageSize=2")).toMatchObject({
       status: 200,
       body: { items: [{}, {}], totalCount: 3 },
@@ -176,7 +194,7 @@ describe("each search route answers as before", () => {
     });
   });
 
-  test("entry search finds MFC entries by name", async () => {
+  test("entry search finds the viewer's MFC entries by name", async () => {
     expect(await call("/entries?search=miku")).toEqual({
       status: 200,
       body: {

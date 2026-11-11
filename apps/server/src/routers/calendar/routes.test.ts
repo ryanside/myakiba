@@ -34,8 +34,8 @@ beforeEach(async () => {
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
   await db.insert(item).values([
-    { id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" },
-    { id: "item-2", externalId: 187, title: "Figma Rin" },
+    { id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "item-2", ownerId: "user-2", externalId: 187, title: "Figma Rin" },
   ]);
   await db.insert(item_release).values([
     {

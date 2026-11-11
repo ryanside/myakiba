@@ -2,6 +2,7 @@ import process from "node:process";
 import { SQL } from "bun";
 import dotenv from "dotenv";
 import { installOwnerGuards } from "../item-ownership/guards";
+import { migrateItemOwnership } from "../item-ownership/migrate";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -14,9 +15,12 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required to push the database schema");
 }
 
+// The schema push needs every Item to have an owner, so the one-time migration runs first. It
+// leaves a fresh database and a migrated one alone.
 const database = new SQL({ url: databaseUrl });
 try {
   await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+  console.log(`Item ownership migration: ${JSON.stringify(await migrateItemOwnership(database))}`);
 } finally {
   await database.close();
 }
