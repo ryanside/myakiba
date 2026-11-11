@@ -272,6 +272,8 @@ function invalidateFamilies(queryClient: QueryClient, families: readonly Family[
 type Rollback = () => void;
 
 export type FailureToast = {
+  /** Toasts with one id show as one: each replaces the one before it. */
+  readonly id?: string;
   readonly title: string;
   readonly description?: string;
   /** In milliseconds. 0 keeps it until it is dismissed. */

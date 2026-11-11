@@ -1,5 +1,6 @@
 import { Result } from "better-result";
 import { requireExtension } from "@/lib/extension-gate";
+import { PICTURE_QUOTA_FULL } from "@/lib/pick-failure";
 import {
   getItem,
   getItemRelatedCollection,
@@ -51,7 +52,7 @@ export const refreshItemCommand = defineCommand({
             refreshed.saved === "refreshed"
               ? "Item details refreshed without the new picture"
               : "Item details are up to date, without the new picture",
-          description: "Your pictures already take the 2 GB one account can store.",
+          description: `${PICTURE_QUOTA_FULL}.`,
         }
       : undefined,
   failureToast: (_externalId, failure) => ({

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -69,7 +69,7 @@ await mock.module("@/lib/extension-bridge", () => ({
   extensionBridge: delegatingBridge(() => bridge),
 }));
 
-const { toast } = await import("@/components/ui/toast");
+const { Toaster, toast } = await import("@/components/ui/toast");
 const { inFamilies } = await import("../catalog");
 const { tabUploadSlots } = await import("../upload-slots");
 const { pickFailureCopy } = await import("@/lib/pick-failure");
@@ -513,21 +513,30 @@ describe("pick intake", () => {
 });
 
 describe("an account's limits", () => {
-  test("a pick saved over the picture quota joins the draft without its picture and says so", async () => {
-    loadExtension([fakePick(98_777, "Yukishiro May")]);
+  test("picks saved over the picture quota join the draft without their pictures and leave one toast", async () => {
+    loadExtension([fakePick(1), fakePick(2), fakePick(3)]);
     server.uploadAnswer = async (mfcItemId) =>
       ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId, picture: "over_quota" });
+    const draft: string[] = [];
+    const queryClient = new QueryClient();
+    renderHook(
+      () => usePickIntake({ emailVerified: true, onSaved: (itemIds) => draft.push(...itemIds) }),
+      {
+        wrapper: ({ children }: { readonly children: ReactNode }) => (
+          <QueryClientProvider client={queryClient}>
+            <Toaster>{children}</Toaster>
+          </QueryClientProvider>
+        ),
+      },
+    );
 
-    const { draft } = renderIntake();
-
-    await waitFor(() => expect(draft).toEqual(["item-98777"]));
-    expect(toastAdd).toHaveBeenCalledWith({
-      type: "warning",
-      title: "Saved without its picture",
-      description:
-        "Yukishiro May is in your Item Database, but your pictures already take the 2 GB one account can store.",
-      timeout: 0,
-    });
+    await waitFor(() => expect(draft.toSorted()).toEqual(["item-1", "item-2", "item-3"]));
+    expect(screen.getAllByText("Saved without pictures")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Your pictures already take the 2 GB one account can store, so new items are saved without them.",
+      ),
+    ).toBeTruthy();
   });
 
   test("a full Item Database keeps the pick and says why on its row and in a toast", async () => {

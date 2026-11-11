@@ -116,15 +116,18 @@ const savePickCommand = defineCommand({
         { fallback: "myakiba could not save this item." },
       ),
     ),
-  warningToast: ({ title }, saved) =>
+  // One toast stands for every pick saved without its picture, however many the intake sends.
+  warningToast: (_pick, saved) =>
     saved.saved === "created" && saved.picture === "over_quota"
       ? {
-          title: "Saved without its picture",
-          description: `${title ?? "This item"} is in your Item Database, but ${PICTURE_QUOTA_FULL}`,
+          id: "picture-quota",
+          title: "Saved without pictures",
+          description: `${PICTURE_QUOTA_FULL}, so new items are saved without them.`,
           timeout: 0,
         }
       : undefined,
-  // Each failed pick says why on its row. A full Item Database also stops every later pick.
+  // Each failed pick says why on its row. The intake still sends every pick, and each one a full
+  // Item Database refuses adds this same error toast, which replaces the one before it.
   failureToast: (_pick, failure) =>
     pickFailureOf(failure).kind === "full"
       ? {
