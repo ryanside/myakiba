@@ -3682,6 +3682,135 @@
       "reason": "This round rewrote the size-limit cases in this file, so this fix keeps the harness it was proven with."
     },
     {
+      "fix": "12f504f32c14474b4820d2fe261bfde945683a71",
+      "bug": "A cheerio find costs the element children squared times the depth of the element it searches from, so a 2 MB page of <br> inside a data field held the MFC parser for 518 s, inside the Category value for 226 s and at the page root for 118 s.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > version: many links answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Releases followed by sibling unlabelled releases answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > sibling fields with unknown labels answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > entry groups with roles answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > one entry with many distinct roles answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > many distinct entries answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements before the page's html element answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > headings before the page's html element answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in the body answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in a data field answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > data values in a data field answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > data labels in a data field answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in the Category value answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in an entry group answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in an entry link answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > elements in a release type answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > entry links nested in an entry link around many names answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > entry groups nested in an entry group around many percentages answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > release types nested in a release type around many parts answers too_large:children within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > comments in the body answers too_large:nodes within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > unmatched paragraph ends at the depth limit answers too_large:children within 5000 ms"
+      ]
+    },
+    {
+      "fix": "12f504f32c14474b4820d2fe261bfde945683a71",
+      "bug": "A page nested past 64 elements, with more than 512 element children in one element or more than 10,000 nodes, parsed instead of answering too_large.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage size limits > a page past its depth limit of 64 is too_large",
+        "parseMfcItemPage size limits > a page past its children limit of 512 is too_large",
+        "parseMfcItemPage size limits > a page past its nodes limit of 10000 is too_large"
+      ],
+      "testAt": "12f504f32c14474b4820d2fe261bfde945683a71",
+      "reason": "A later fix of this round made these cases assert the size a too_large page measured, which this fix does not report yet, so it keeps its own harness."
+    },
+    {
+      "fix": "9433359d5e31e6205ad9bc98891f3316db621c82",
+      "bug": "htmlparser2 keeps U+0000, which parse5 dropped, so a NUL in an MFC page's title, Title field, release type or entry name answered a logged 500 when Postgres refused it.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped"
+      ]
+    },
+    {
+      "fix": "95764a1244c723084e44794e0059f61ac1bf61d9",
+      "bug": "MFC readers took the text of nested matches too, so 28 nested em elements stored 112 MB of role text, and no stored string had a length limit.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage size limits > a page past its valueLength limit of 2000 is too_large",
+        "parseMfcItemPage stored values > a role longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a release type longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a barcode longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a scale longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a version longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a Title field longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a numbering longer than 2000 characters is too_large",
+        "parseMfcItemPage stored values > a role inside nested em elements reads once",
+        "parseMfcItemPage stored values > an entry name inside nested names reads once",
+        "parseMfcItemPage stored values > a release type and date inside nested elements read once",
+        "parseMfcItemPage stored values > a scale inside nested scale links reads once",
+        "parseMfcItemPage stored values > a version inside nested links reads once"
+      ],
+      "testAt": "95764a1244c723084e44794e0059f61ac1bf61d9",
+      "reason": "A later fix of this round made these cases assert the size a too_large page measured, which this fix does not report yet, so it keeps its own harness."
+    },
+    {
+      "fix": "95764a1244c723084e44794e0059f61ac1bf61d9",
+      "bug": "A 2 MB role, release type, version, scale, barcode or Title on an MFC page parsed and was stored whole.",
+      "test": "packages/mfc/src/parse/adversarial.test.ts",
+      "fixed": [
+        "parseMfcItemPage on adversarial pages at the upload limit > a role inside nested em elements answers too_large:valueLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > a release type inside nested em elements answers too_large:valueLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > a version inside nested links answers too_large:valueLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > a scale inside nested scale links answers too_large:valueLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > a barcode answers too_large:valueLength within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > a Title field answers too_large:valueLength within 5000 ms"
+      ]
+    },
+    {
+      "fix": "aae4ab9a3f7d7e7de7eaa432fd766b625ce1e727",
+      "bug": "normalizeMfcDate read the year 0000 as a date, and Postgres has no year 0, so an MFC release dated 0000 answered a logged 500.",
+      "test": "packages/utils/src/date-only.test.ts",
+      "fixed": [
+        "normalizeMfcDate with release dates as MFC prints them > \"0000\" is rejected, because Postgres has no year 0 and MFC prints no year before 1000",
+        "normalizeMfcDate with release dates as MFC prints them > \"01/0000\" is rejected, because Postgres has no year 0 and MFC prints no year before 1000",
+        "normalizeMfcDate with release dates as MFC prints them > \"01/01/0000\" is rejected, because Postgres has no year 0 and MFC prints no year before 1000",
+        "normalizeMfcDate with release dates as MFC prints them > \"0000-01-01\" is rejected, because Postgres has no year 0 and MFC prints no year before 1000",
+        "normalizeMfcDate with release dates as MFC prints them > \"0999\" is rejected, because Postgres has no year 0 and MFC prints no year before 1000"
+      ]
+    },
+    {
+      "fix": "aae4ab9a3f7d7e7de7eaa432fd766b625ce1e727",
+      "bug": "An MFC release dated 0000 was kept with a date Postgres refuses.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": ["parseMfcItemPage release dates > a release in the year 0000 is skipped and warns"]
+    },
+    {
+      "fix": "74e90c71d9d768dfc9851daee202592e620a4f3c",
+      "bug": "A too_large MFC page did not say which limit it went past or by how much, and release-date warnings were added after the warnings limit was checked.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage size limits > a page past its depth limit of 64 is too_large",
+        "parseMfcItemPage size limits > a page past its children limit of 512 is too_large",
+        "parseMfcItemPage size limits > a page past its nodes limit of 10000 is too_large",
+        "parseMfcItemPage size limits > a page past its fieldDepth limit of 32 is too_large",
+        "parseMfcItemPage size limits > a page past its dataFields limit of 300 is too_large",
+        "parseMfcItemPage size limits > a page past its entries limit of 1000 is too_large",
+        "parseMfcItemPage size limits > a page past its releases limit of 200 is too_large",
+        "parseMfcItemPage size limits > a page past its titleLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its valueLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its entryNameLength limit of 500 is too_large",
+        "parseMfcItemPage size limits > a page past its warnings limit of 100 is too_large",
+        "parseMfcItemPage size limits > a warning added after the fields are read counts toward the warnings limit"
+      ]
+    },
+    {
+      "fix": "74e90c71d9d768dfc9851daee202592e620a4f3c",
+      "bug": "A too_large MFC page logged only its kind, not which limit it went past or what it measured.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items saves an MFC item page as a new item > a page past a size limit answers 400 and logs the limit and what it measured"
+      ]
+    },
+    {
       "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
       "bug": "POST /api/item/custom let any signed-in account write an owner-less Item, Entries and releases with no limit, though the web never called it.",
       "test": "apps/server/src/routers/item/routes.test.ts",
