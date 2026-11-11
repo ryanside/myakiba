@@ -6,7 +6,7 @@ import { accountSlot } from "@/lib/account-storage";
 import { ApiRejected } from "@/lib/errors/api-rejected";
 import { extensionBridge } from "@/lib/extension-bridge";
 import type { TakenPick } from "@/lib/extension-bridge";
-import { pickFailureOf } from "@/lib/pick-failure";
+import { PICTURE_QUOTA_FULL, pickFailureOf } from "@/lib/pick-failure";
 import { app } from "@/lib/treaty-client";
 import { call } from "../api";
 import type { ApiFailure } from "../api";
@@ -116,6 +116,23 @@ const savePickCommand = defineCommand({
         { fallback: "myakiba could not save this item." },
       ),
     ),
+  warningToast: ({ title }, saved) =>
+    saved.saved === "created" && saved.picture === "over_quota"
+      ? {
+          title: "Saved without its picture",
+          description: `${title ?? "This item"} is in your Item Database, but ${PICTURE_QUOTA_FULL}`,
+          timeout: 0,
+        }
+      : undefined,
+  // Each failed pick says why on its row. A full Item Database also stops every later pick.
+  failureToast: (_pick, failure) =>
+    pickFailureOf(failure).kind === "full"
+      ? {
+          title: "Your Item Database is full",
+          description: "One account can hold 20,000 Items. Your picks stay in the extension.",
+          timeout: 0,
+        }
+      : undefined,
 });
 
 /** Pulls the extension's picks while this tab shows and saves each into the Item Database. */

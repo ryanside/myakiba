@@ -6,6 +6,7 @@ export type PickFailure =
   | { readonly kind: "rejected"; readonly message: string }
   | { readonly kind: "unverified" }
   | { readonly kind: "busy" }
+  | { readonly kind: "full" }
   | { readonly kind: "unsaved" }
   | { readonly kind: "stopped" };
 
@@ -19,9 +20,13 @@ export function pickFailureOf(cause: unknown): PickFailure {
   if (!ApiRejected.is(cause)) return { kind: "unsaved" };
   if (cause.status === 400) return { kind: "rejected", message: cause.message };
   if (cause.status === 403) return { kind: "unverified" };
+  if (cause.status === 409) return { kind: "full" };
   if (cause.status === 429) return { kind: "busy" };
   return { kind: "unsaved" };
 }
+
+/** Why a save left its picture out. */
+export const PICTURE_QUOTA_FULL = "your pictures already take the 2 GB one account can store.";
 
 export const EXTENSION_STOPPED_TEXT = "The extension stopped. Reload the page to see your picks.";
 
@@ -48,6 +53,8 @@ export function pickFailureCopy(failure: PickFailure, mfcItemId: number): PickFa
       };
     case "unsaved":
       return { text: "myakiba could not save this item.", actions: [RETRY] };
+    case "full":
+      return { text: "Your Item Database is full.", actions: [] };
     case "stopped":
       return { text: EXTENSION_STOPPED_TEXT, actions: [] };
   }

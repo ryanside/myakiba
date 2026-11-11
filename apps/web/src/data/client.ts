@@ -334,11 +334,14 @@ type CommandSpec<Input, Output, Failure extends Error, F extends WritableFamily>
   /** A success toast's title, or no toast when it returns undefined. */
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
   readonly successDescription?: (input: Input) => string;
+  /** A warning toast for a write that saved without part of what it was sent, or none. */
+  readonly warningToast?: (input: Input, output: Output) => FailureToast | undefined;
   /**
    * The failure toast for a declared failure, or for a defect when `failure` is null. A defect
-   * always shows the safe text under its title. A command without one shows no failure toast.
+   * always shows the safe text under its title. A command without one, or one that returns
+   * undefined, shows no failure toast.
    */
-  readonly failureToast?: (input: Input, failure: Failure | null) => FailureToast;
+  readonly failureToast?: (input: Input, failure: Failure | null) => FailureToast | undefined;
   /** Cache patches that run after the write and before the refetch. */
   readonly saved?: (queryClient: QueryClient, input: Input, output: Output) => Promise<void>;
   /** Runs last, once the write saved or failed. */
@@ -426,6 +429,8 @@ async function runCommand<Input, Output, Failure extends Error>(
         title: successTitle,
         ...(spec.successDescription && { description: spec.successDescription(input) }),
       });
+    const warning = spec.warningToast?.(input, output);
+    if (warning !== undefined) toast.add({ type: "warning", ...warning });
     await onSaved?.(input, output);
     await spec.saved?.(queryClient, input, output);
     if (spec.refetchBy === "background") void refetchSaved(output);
@@ -436,12 +441,10 @@ async function runCommand<Input, Output, Failure extends Error>(
   if (written.isErr()) {
     const failure = written.error;
     rollback?.();
-    if (spec.failureToast) {
-      const declared = Panic.is(failure) ? null : failure;
-      const shown = {
-        ...spec.failureToast(input, declared),
-        ...(declared === null && { description: DEFECT_TEXT }),
-      };
+    const declared = Panic.is(failure) ? null : failure;
+    const failureToast = spec.failureToast?.(input, declared);
+    if (failureToast !== undefined) {
+      const shown = { ...failureToast, ...(declared === null && { description: DEFECT_TEXT }) };
       if (onFailed) onFailed(input, shown);
       else toast.add({ type: "error", ...shown });
     }
