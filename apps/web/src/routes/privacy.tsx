@@ -131,9 +131,8 @@ function PrivacyPolicy() {
           <ul>
             <li>
               The item details read from the page, such as the name, releases, prices, and the
-              artists, characters and companies it lists. They go into myakiba&apos;s item database,
-              which every myakiba user shares, because an item&apos;s details are the same for
-              everyone.
+              artists, characters and companies it lists. They go into your own item database in
+              myakiba. Only you see them, and nothing another user saves changes them.
             </li>
             <li>The item&apos;s picture, in myakiba&apos;s image storage on Amazon S3.</li>
             <li>
