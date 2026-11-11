@@ -172,6 +172,10 @@ VITE_SERVER_URL=http://localhost:3000
 ```
 
 Fill in the remaining auth, email, Turnstile, and S3 values in the example files.
+`BETTER_AUTH_SECRET` must be at least 32 characters; `openssl rand -base64 32` makes one.
+Each `CORS_ORIGIN` entry is a bare origin such as `https://myakiba.app`. The server accepts an
+`http://localhost` origin only in development, or when `BETTER_AUTH_URL` is itself on localhost.
+Leave `REDIS_PASSWORD` empty for a local Redis without one; production requires it.
 `AWS_BUCKET_URL`, `POSTHOG_API_KEY`, and `BETTER_AUTH_API_KEY` are optional.
 Set `AWS_BUCKET_URL` if uploaded files should use a custom domain or CDN, such as
 `https://cdn.example.com`. If it is empty, the server builds each file's URL from

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/status-button";
 import { toast } from "@/components/ui/toast";
 import { useRead, useResourceMutation } from "@/data/client";
+import { Captcha } from "@/components/auth/captcha";
 import { useResendVerification } from "@/hooks/use-resend-verification";
 import { settings } from "@/data/resources/settings";
 import { authClient, decodeAuth } from "@/lib/auth-client";
@@ -99,7 +100,10 @@ function StatusText({
 }
 
 function EmailRow({ email, isVerified }: { readonly email: string; readonly isVerified: boolean }) {
-  const { resend, isSending, secondsLeft } = useResendVerification(email, RETURN_TO_ACCOUNT);
+  const { resend, isSending, secondsLeft, captcha } = useResendVerification(
+    email,
+    RETURN_TO_ACCOUNT,
+  );
 
   return (
     <SettingsRow
@@ -123,6 +127,7 @@ function EmailRow({ email, isVerified }: { readonly email: string; readonly isVe
           {secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend verification email"}
         </Button>
       )}
+      {isVerified ? null : <Captcha captcha={captcha} />}
     </SettingsRow>
   );
 }

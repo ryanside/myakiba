@@ -90,3 +90,35 @@ describe("the manifest policy", () => {
     ]);
   });
 });
+
+describe("the manifest policy refuses ways to reach the extension or the page it runs in", () => {
+  test.each(BROWSERS)("%s: names each one a manifest adds", (browser) => {
+    const manifest = built(browser);
+
+    expect(
+      checkManifest(
+        {
+          ...manifest,
+          externally_connectable: { matches: ["https://myakiba.app/*"] },
+          web_accessible_resources: [{ resources: ["picture.html"], matches: ["<all_urls>"] }],
+          content_security_policy: { extension_pages: "script-src 'self'" },
+          content_scripts: [
+            { matches: ["https://myakiba.app/*"], all_frames: true },
+            { matches: ["https://myfigurecollection.net/item/*"], world: "MAIN" },
+          ],
+        },
+        browser,
+      ),
+    ).toEqual([
+      `the ${browser} manifest sets externally_connectable, which lets other extensions and sites message this one`,
+      `the ${browser} manifest sets web_accessible_resources, which lets pages load the extension's files`,
+      `the ${browser} manifest sets content_security_policy, which replaces the browser's default CSP for the extension`,
+      `the ${browser} content script on https://myakiba.app/* runs in all frames, not only the top one`,
+      `the ${browser} content script on https://myfigurecollection.net/item/* runs in the page's MAIN world`,
+    ]);
+  });
+
+  test.each(BROWSERS)("%s: passes an empty web_accessible_resources list", (browser) => {
+    expect(checkManifest({ ...built(browser), web_accessible_resources: [] }, browser)).toEqual([]);
+  });
+});

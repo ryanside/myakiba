@@ -229,3 +229,58 @@ test.each(["get", "set", "delete"] as const)(
     expect(JSON.stringify(events)).not.toContain("private-value");
   },
 );
+
+const overLong = [
+  ["name", "n".repeat(101), "Name is longer than 100 characters"],
+  ["image", `https://example.com/${"i".repeat(2029)}`, "Image URL is longer than 2048 characters"],
+] as const;
+test.each(overLong)("sign-up rejects a %s over its limit", async (field, value, message) => {
+  sendFails = false;
+  const response = await testAuth().handler(
+    new Request("http://localhost:3000/api/auth/sign-up/email", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost:3001" },
+      body: JSON.stringify({
+        name: "New collector",
+        email: "new@example.com",
+        password: "password-123456",
+        [field]: value,
+      }),
+    }),
+  );
+  expect({ status: response.status, body: await response.json() }).toEqual({
+    status: 400,
+    body: { code: "VALIDATION_ERROR", message },
+  });
+});
+test.each(overLong)("update-user rejects a %s over its limit", async (field, value, message) => {
+  const instance = testAuth(false);
+  const context = await instance.$context;
+  await context.internalAdapter.linkAccount({
+    userId: "user-id",
+    accountId: "user-id",
+    providerId: "credential",
+    password: await context.password.hash("password-123456"),
+  });
+  const signedIn = await instance.api.signInEmail({
+    body: { email: "collector@example.com", password: "password-123456" },
+    asResponse: true,
+  });
+  const cookie = signedIn.headers
+    .getSetCookie()
+    .map((entry) => entry.split(";")[0])
+    .join("; ");
+  const response = await instance.handler(
+    new Request("http://localhost:3000/api/auth/update-user", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://localhost:3001", cookie },
+      body: JSON.stringify({ [field]: value }),
+    }),
+  );
+  expect({ status: response.status, body: await response.json() }).toEqual({
+    status: 400,
+    body: { code: "VALIDATION_ERROR", message },
+  });
+  const session = await instance.api.getSession({ headers: new Headers({ cookie }) });
+  expect(session?.user.name).toBe("Collector");
+});

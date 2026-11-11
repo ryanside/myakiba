@@ -4,6 +4,7 @@ import {
   newOrderSchema,
   orderItemsQuerySchema,
 } from "@myakiba/contracts/orders/schema";
+import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
 import { orderUpdateSchema, ordersQuerySchema, orderIdParamSchema } from "./model";
@@ -21,23 +22,23 @@ const ordersRouter = privateApi("/orders")
   })
   .post("/merge", (ctx) => serve(ctx, Orders.merge, ctx.body), {
     body: z.object({
-      orderIds: z.array(z.string()),
+      orderIds: idListSchema,
       newOrder: newOrderSchema,
       cascadeOptions: cascadeOptionsSchema,
     }),
   })
   .post("/split", (ctx) => serve(ctx, Orders.split, ctx.body), {
     body: z.object({
-      collectionIds: z.array(z.string()),
+      collectionIds: idListSchema,
       newOrder: newOrderSchema,
       cascadeOptions: cascadeOptionsSchema,
     }),
   })
   .put("/move-items", (ctx) => serve(ctx, Orders.moveItems, ctx.body), {
     body: z.object({
-      targetOrderId: z.string(),
-      collectionIds: z.array(z.string()),
-      orderIds: z.array(z.string()).optional(),
+      targetOrderId: z.string().max(WRITE_LIMITS.id),
+      collectionIds: idListSchema,
+      orderIds: idListSchema.optional(),
     }),
   })
   .put("/:orderId", (ctx) => serve(ctx, Orders.update, { ...ctx.params, ...ctx.body }), {
@@ -48,10 +49,10 @@ const ordersRouter = privateApi("/orders")
     }),
   })
   .delete("/", (ctx) => serve(ctx, Orders.remove, ctx.body), {
-    body: z.object({ orderIds: z.array(z.string()) }),
+    body: z.object({ orderIds: idListSchema }),
   })
   .delete("/items", (ctx) => serve(ctx, Orders.removeItems, ctx.body), {
-    body: z.object({ collectionIds: z.array(z.string()) }),
+    body: z.object({ collectionIds: idListSchema }),
   })
   .delete("/:orderId/items/:collectionId", (ctx) => serve(ctx, Orders.removeItem, ctx.params), {
     params: z.object({ orderId: z.string(), collectionId: z.string() }),

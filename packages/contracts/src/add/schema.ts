@@ -2,9 +2,10 @@ import * as z from "zod";
 import { newOrderSchema } from "../orders/schema";
 import { itemDatabaseReleaseSummarySchema } from "../search/schema";
 import { CATEGORIES, CONDITIONS, SHIPPING_METHODS } from "../shared/constants";
+import { WRITE_LIMITS } from "../shared/write-limits";
 import { MAX_ADD_ROWS, MAX_COMMIT_LISTS } from "./constants";
 
-const MAX_ITEM_ID_LENGTH = 64;
+const MAX_ITEM_ID_LENGTH = WRITE_LIMITS.id;
 
 export const itemIdField = z.string().min(1).max(MAX_ITEM_ID_LENGTH);
 
@@ -36,7 +37,7 @@ export const addItemsResponseSchema = z.object({ items: z.array(addItemSchema) }
 
 const dateOrNull = z.iso.date().nullable();
 const scoreSchema = z.string().regex(/^(?:10(?:\.0)?|\d(?:\.\d)?)$/u, "Score is 0 to 10");
-const shopSchema = z.string().trim().max(200);
+const shopSchema = z.string().trim().max(WRITE_LIMITS.shop);
 const countSchema = z.number().int().min(1).max(999);
 
 const isUnique = (values: readonly string[]) => new Set(values).size === values.length;
