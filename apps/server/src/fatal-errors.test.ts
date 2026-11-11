@@ -11,6 +11,7 @@ async function bootFatal(kind: string, flush: string) {
     import { Elysia } from "elysia";
     process.env.REDIS_HOST = "127.0.0.1";
     process.env.REDIS_PORT = "1";
+    process.env.DATABASE_URL = "postgres://unused@127.0.0.1:1/unused";
     process.env.OPENAPI_AUTH_DOCS = "true";
     process.env.POSTHOG_API_KEY = "test-key";
     const realSetTimeout = globalThis.setTimeout;
@@ -23,7 +24,7 @@ async function bootFatal(kind: string, flush: string) {
         console.log("FLUSHED");
       },
     }) }));
-    await mock.module("@myakiba/auth/server", () => ({ OpenAPI: {
+    await mock.module("@myakiba/auth/server", () => ({ auth: {}, hasSessionCookie: () => false, OpenAPI: {
       components: async () => ({}), getPaths: () => {
         realSetTimeout(() => {
           if (${JSON.stringify(kind)} === "uncaughtException") throw new Error("injected boot fatal");

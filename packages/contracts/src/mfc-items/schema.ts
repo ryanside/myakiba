@@ -1,7 +1,7 @@
 import * as z from "zod";
 import { MAX_MFC_ITEM_ID } from "../shared/constants";
 
-const MAX_ITEM_PAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_ITEM_PAGE_BYTES = 2 * 1024 * 1024;
 
 export const MAX_ITEM_PICTURE_BYTES = 10 * 1024 * 1024;
 
@@ -19,7 +19,10 @@ const itemPageFields = {
     z.instanceof(File).refine((page) => isPageSize(page.size), PAGE_SIZE_MESSAGE),
     itemPageHtmlSchema,
   ]),
-  picture: z.instanceof(File).optional(),
+  picture: z
+    .instanceof(File)
+    .refine((picture) => picture.size <= MAX_ITEM_PICTURE_BYTES, "The picture is larger than 10 MB")
+    .optional(),
 };
 
 export const itemUploadSchema = z.strictObject({

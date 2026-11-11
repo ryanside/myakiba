@@ -50,6 +50,10 @@
         document.documentElement.classList.add(t);
       })();
     </script>
+    <!-- Zod probes eval unless jitless, and the CSP refuses eval. Zod reads this when it loads. -->
+    <script>
+      globalThis.__zod_globalConfig = { jitless: true };
+    </script>
     <style>
       html.dark {
         background-color: oklch(0.145 0 0);
