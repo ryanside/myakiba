@@ -47,6 +47,11 @@ type ForeignKey = {
 
 const LOCK_ATTEMPTS = 3;
 const LOCK_NOT_AVAILABLE = "55P03";
+const DEADLOCK_DETECTED = "40P01";
+const LOCK_FAILURES: ReadonlySet<string | undefined> = new Set([
+  LOCK_NOT_AVAILABLE,
+  DEADLOCK_DETECTED,
+]);
 const REFERENCE_TABLES = ["collection", "wishlist_item", "list_member"] as const;
 
 // drizzle-kit push matches constraints by name, so each has the name the Drizzle schema will give it.
@@ -383,8 +388,8 @@ export async function migrateItemOwnership(
         milliseconds: Math.round(performance.now() - started),
       };
     } catch (error) {
-      const lockTimedOut = error instanceof SQL.PostgresError && error.errno === LOCK_NOT_AVAILABLE;
-      if (attempt === LOCK_ATTEMPTS || !lockTimedOut) throw error;
+      const lockFailed = error instanceof SQL.PostgresError && LOCK_FAILURES.has(error.errno);
+      if (attempt === LOCK_ATTEMPTS || !lockFailed) throw error;
     }
   }
 }
@@ -404,6 +409,9 @@ function describeMisses(misses: readonly OwnershipMiss[]): string {
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
   await tx`SELECT set_config('lock_timeout', ${options.lockTimeout ?? "10s"}, true)`;
+  // The owner keys into "user" need this lock. Taking it first means the run never waits for it
+  // while it holds the Item tables.
+  await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
   await tx.unsafe(
     `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
     IN ACCESS EXCLUSIVE MODE`,

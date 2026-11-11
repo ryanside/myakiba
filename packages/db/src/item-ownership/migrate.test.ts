@@ -287,6 +287,43 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
   });
 
+  async function crossMigration(sql: SQL, first: string, then: string) {
+    const holding = Promise.withResolvers<true>();
+    const migrationWaits = Promise.withResolvers<true>();
+    const crossing = sql.begin(async (tx) => {
+      await tx.unsafe(`LOCK TABLE ${first}`);
+      holding.resolve(true);
+      await migrationWaits.promise;
+      await tx.unsafe(`LOCK TABLE ${then}`);
+    });
+    await holding.promise;
+    const migration = migrateItemOwnership(sql);
+    await lockWaitStartedAt(sql);
+    migrationWaits.resolve(true);
+    await crossing;
+    return migration;
+  }
+
+  test("retries an attempt Postgres aborted to break a deadlock with another transaction", async () => {
+    const { sql } = await databases.create(seeded);
+    const migration = crossMigration(
+      sql,
+      "list_member IN ROW EXCLUSIVE MODE",
+      "item IN ACCESS SHARE MODE",
+    );
+    expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
+  });
+
+  test("waits for a transaction writing users before it locks the Item tables, so the two never deadlock", async () => {
+    const { sql } = await databases.create(seeded);
+    const migration = crossMigration(
+      sql,
+      `"user" IN ROW EXCLUSIVE MODE`,
+      "collection IN ACCESS SHARE MODE",
+    );
+    expect(await migration).toMatchObject({ status: "migrated", attempts: 1 });
+  });
+
   test("gives up after three attempts and leaves the database as it was", async () => {
     const { sql } = await databases.create(seeded);
     const before = await snapshot(sql);
