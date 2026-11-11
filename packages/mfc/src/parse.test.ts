@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { edit, fixture, itemId } from "../test/fixtures";
-import { mfcReleaseId, parseMfcItemPage, splitContentLabel } from "./parse";
+import { parseMfcItemPage, splitContentLabel } from "./parse";
 import type { MfcEntryLink, MfcItemPage, MfcPageProblem } from "./parse";
 
 const item98777 = await fixture("item-98777.html");
@@ -114,12 +114,6 @@ describe("parseMfcItemPage on the signed-in 98777 page", () => {
 
   test("a page for another item is wrong_item, so it can never overwrite that Item", () => {
     expect(problemOf(item98777, itemId(98_778))).toEqual({ kind: "wrong_item", found: ID_98777 });
-  });
-
-  test("its release id matches the ids already stored", () => {
-    const [release] = parsedPage(item98777).releases;
-    if (!release) throw new Error("98777 has a release");
-    expect(mfcReleaseId(ID_98777, release)).toBe("d47145d4-1ff9-5639-a506-e33114d5d23b");
   });
 });
 
@@ -330,14 +324,5 @@ describe("splitContentLabel", () => {
     ["Plain title", { title: "Plain title", contentLabel: null }],
   ] as const)("%p", (rawTitle, expected) => {
     expect(splitContentLabel(rawTitle)).toEqual(expected);
-  });
-});
-
-describe("mfcReleaseId", () => {
-  test("is deterministic over every release field", () => {
-    const id = mfcReleaseId(ID_98777, RELEASE_98777);
-    expect(mfcReleaseId(ID_98777, { ...RELEASE_98777 })).toBe(id);
-    expect(mfcReleaseId(itemId(98_778), RELEASE_98777)).not.toBe(id);
-    expect(mfcReleaseId(ID_98777, { ...RELEASE_98777, barcode: "" })).not.toBe(id);
   });
 });

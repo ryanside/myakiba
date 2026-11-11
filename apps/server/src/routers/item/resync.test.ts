@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import Redis from "ioredis";
 import path from "node:path";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import * as authSchema from "@myakiba/db/schema/auth";
@@ -15,8 +15,6 @@ import {
   item_release,
   order,
 } from "@myakiba/db/schema/figure";
-import { mfcItemId } from "@myakiba/mfc/page";
-import { mfcReleaseId } from "@myakiba/mfc/parse";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -87,6 +85,27 @@ const derivedTwoReleasesPage = edit(
   materials,
   limitedRelease("03/20/2019", "16,000") + materials,
 );
+const standardRelease =
+  '<div class="data-field"><div class="data-value"><a href="/?_tb=item" class="time">11/15/2018</a> <small class="light">as <em>Standard (Japan)</em></small><br/>13,500 <small>JPY</small> &bull; 4582292601715</div></div>';
+const derivedRepeatedReleasePage = edit(page98777, materials, `${standardRelease}${materials}`);
+const sameBarcodeLimitedRelease = limitedRelease("03/20/2019", "16,000").replace(
+  "4582292609999",
+  "4582292601715",
+);
+const derivedStandardThenLimitedPage = edit(
+  page98777,
+  materials,
+  sameBarcodeLimitedRelease + materials,
+);
+const derivedLimitedThenStandardPage = edit(
+  edit(
+    edit(edit(page98777, ">11/15/2018<", ">03/20/2019<"), "Standard (Japan)", "Limited (Japan)"),
+    "13,500 <small>JPY",
+    "16,000 <small>JPY",
+  ),
+  materials,
+  standardRelease + materials,
+);
 const derivedTwoRepricedPage = edit(
   edit(derivedTwoReleasesPage, "13,500 <small>JPY", "13,800 <small>JPY"),
   ">16,000 <small>JPY",
@@ -109,9 +128,6 @@ const REPRICED_LIMITED_98777 = {
   priceCurrency: "JPY",
   barcode: "4582292609999",
 };
-
-const ID_98777 = mfcItemId(98_777);
-if (ID_98777 === null) throw new Error("98777 is an MFC item id");
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
@@ -275,9 +291,8 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     const rows = await itemRows();
     expect(rows.item).toMatchObject({ title: RETITLED, image: imported?.image });
     expect(rows.links).toHaveLength(7);
-    const rescheduled = mfcReleaseId(ID_98777, RESCHEDULED_98777);
-    expect(rows.releases).toEqual([{ id: rescheduled, ...RESCHEDULED_98777 }]);
-    expect(await selectedReleases()).toEqual([rescheduled]);
+    expect(rows.releases).toEqual([{ id: expect.any(String), ...RESCHEDULED_98777 }]);
+    expect(await selectedReleases()).toEqual(rows.releases.map((release) => release.id));
     expect(await orderReleaseDate(orderId)).toBe("2018-12-20");
   });
 
@@ -291,8 +306,8 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await selectedReleases()).toEqual([null, null]);
     const { releases } = await itemRows();
     expect(releases).toEqual([
-      { id: mfcReleaseId(ID_98777, REPRICED_98777), ...REPRICED_98777 },
-      { id: mfcReleaseId(ID_98777, REPRICED_LIMITED_98777), ...REPRICED_LIMITED_98777 },
+      { id: expect.any(String), ...REPRICED_98777 },
+      { id: expect.any(String), ...REPRICED_LIMITED_98777 },
     ]);
   });
 
@@ -344,6 +359,42 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     const before = await itemRows();
 
     expect(await resync(page98777, JPEG)).toMatchObject(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
+  });
+
+  test("an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection", async () => {
+    const itemId = await upload(derivedTwoReleasesPage);
+    await db.update(item_release).set({ id: sql`gen_random_uuid()` });
+    const orderId = await collectEveryRelease(itemId, "2019-03-20");
+    const before = await itemRows();
+    const selected = await selectedReleases();
+
+    expect(await resync(derivedTwoReleasesPage)).toMatchObject(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
+    expect(await selectedReleases()).toEqual(selected);
+    expect(await orderReleaseDate(orderId)).toBe("2019-03-20");
+  });
+
+  test("a page that lists one release twice stores it once and refreshes as unchanged", async () => {
+    const itemId = await upload(derivedRepeatedReleasePage);
+    await collectEveryRelease(itemId, "2018-11-15");
+    const before = await itemRows();
+    expect(before.releases).toEqual([{ id: expect.any(String), ...RELEASE_98777 }]);
+
+    expect(await resync(derivedRepeatedReleasePage)).toMatchObject(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
+    expect(await selectedReleases()).toEqual(before.releases.map((release) => release.id));
+  });
+
+  test("a page that lists the stored releases in another order refreshes as unchanged", async () => {
+    await upload(derivedStandardThenLimitedPage);
+    const before = await itemRows();
+    expect(before.releases).toHaveLength(2);
+
+    expect(await resync(derivedLimitedThenStandardPage)).toMatchObject(refreshed("unchanged"));
 
     expect(await itemRows()).toEqual(before);
   });
@@ -404,9 +455,7 @@ describe("Item Refresh has no cooldown", () => {
 
     const { item: row, releases } = await itemRows();
     expect(row?.title).toBe(RETITLED);
-    expect(releases).toEqual([
-      { id: mfcReleaseId(ID_98777, RESCHEDULED_98777), ...RESCHEDULED_98777 },
-    ]);
+    expect(releases).toEqual([{ id: expect.any(String), ...RESCHEDULED_98777 }]);
   });
 
   test("two concurrent refreshes of one item run one after the other and both write", async () => {
