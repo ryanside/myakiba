@@ -5,6 +5,7 @@ import { normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Category, ContentLabel, EntryCategory } from "@myakiba/contracts/shared/types";
 import { normalizeMfcDate } from "@myakiba/utils/date-only";
 import { readMfcEnvelope } from "./page";
+import { MFC_PAGE_READS as READS } from "./reads";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
@@ -78,7 +79,7 @@ export function parseMfcItemPage(
   if (envelope.ogImage.kind === "sfw_hidden") return unreadable({ kind: "sfw_hidden" });
 
   const $ = cheerio.load(html);
-  const rawTitle = $("h1.title").first().text().trim();
+  const rawTitle = $(READS.heading).first().text().trim();
   if (!rawTitle) return unreadable({ kind: "missing_title" });
 
   const fields = readItemFields($);
