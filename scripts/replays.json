@@ -3776,6 +3776,15 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
       ]
+    },
+    {
+      "fix": "0602b6003abfa90c3510e04c29add7cea0676519",
+      "bug": "add_commit's key was a composite primary key, whose columns drizzle-kit 0.31.10 reads in no fixed order, so on a Postgres 18 catalog that made it read them reversed, every push dropped and re-added the key and every Add commit failed while it was gone.",
+      "test": "packages/db/src/add-commit-key.test.ts",
+      "fixed": [
+        "push moves add_commit to a key it reads back the same, so a second push leaves it alone",
+        "with the unique index built first, push only drops the old key, so commits always have one"
+      ]
     }
   ],
   "lint": [
