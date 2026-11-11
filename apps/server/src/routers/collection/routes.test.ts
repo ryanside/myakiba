@@ -135,7 +135,6 @@ test("an edit that selects another Item's release answers 404 and leaves the Col
   expect(await db.select().from(collection)).toEqual(before);
 });
 
-/** Deletes a release in a transaction it holds open until `commit`, as an Item Refresh does. */
 async function deletingRelease(releaseId: string) {
   const deleted = Promise.withResolvers<null>();
   const finish = Promise.withResolvers<null>();

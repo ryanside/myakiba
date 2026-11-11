@@ -40,7 +40,7 @@ export async function readMfcItemPage(
   return stored.map((saved) => ({ kind: "parsed", page, stored: saved }));
 }
 
-/** The slow half of an ingest: the viewer's Item already in the pool answers at once, otherwise the page is read. */
+/** The slow half of an ingest: an Item already in the pool answers at once, otherwise the page is read. */
 export async function prepareMfcItem(
   pool: ReadTx,
   viewer: Viewer,

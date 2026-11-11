@@ -6,9 +6,7 @@ import type { Node } from "oxc-parser";
 const TABLES = ["item", "item_release", "entry", "entry_to_item"] as const;
 const WRITER = "apps/server/src/lib/item-database.ts";
 
-// The one-time ownership migration copies Items in raw SQL, its cleanup deletes the retired ones,
-// and its seed builds the pre-ownership rows the tests migrate.
-const EXEMPT = new Set([
+const OWNERSHIP_MIGRATION_FILES = new Set([
   "packages/db/src/item-ownership/migrate.ts",
   "packages/db/src/item-ownership/cleanup.ts",
   "packages/db/src/item-ownership/seed.ts",
@@ -61,7 +59,6 @@ function truncated(names: string): string[] {
     .filter(isTable);
 }
 
-/** The expression a cast, await or parentheses wrap. */
 function unwrapped(node: Node): Node {
   switch (node.type) {
     case "AwaitExpression":
@@ -88,11 +85,6 @@ const nameOf = (node: Node): string | undefined => {
   return undefined;
 };
 
-/**
- * Every write to an Item table in a file, and every way a table leaves its import: a re-export,
- * a binding that holds it, directly or in an object or array, or a destructure of the schema
- * namespace. A table passed as a function argument is not followed.
- */
 function itemWrites(file: string, text: string): ItemWrite[] {
   const writes: ItemWrite[] = [];
   const write = (offset: number, verb: string, table: string) =>
@@ -327,7 +319,7 @@ test(`only ${WRITER} writes ${TABLES.join(", ")}`, async () => {
   const files = listed.stdout
     .toString()
     .split("\n")
-    .filter((file) => isProduction(file) && !EXEMPT.has(file));
+    .filter((file) => isProduction(file) && !OWNERSHIP_MIGRATION_FILES.has(file));
   expect(files).toContain(WRITER);
 
   const strays: string[] = [];

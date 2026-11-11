@@ -8,7 +8,7 @@ const rejection = z.object({
   constraint: z.enum(Object.keys(OWNER_CHECKS) as [OwnerCheck, ...OwnerCheck[]]),
 });
 
-/** The owner check that rejected a write, read through Drizzle's wrapper to the driver's error. */
+// Drizzle wraps the driver's error, so the guard's rejection is on a cause.
 function rejectedBy(error: Error): OwnerCheck | undefined {
   for (let current: unknown = error; current instanceof Error; current = current.cause) {
     const parsed = rejection.safeParse(current);
@@ -17,11 +17,8 @@ function rejectedBy(error: Error): OwnerCheck | undefined {
   return undefined;
 }
 
-/**
- * Runs a write the owner guards check. When a guard rejects it with a check `failures` names,
- * which a concurrent write can cause after the operation's own read passed, it answers that
- * Failure. Any other error throws.
- */
+// A concurrent write, such as an Item Refresh deleting a release, can make a guard reject a write
+// after the operation's own read passed. Any other rejection is a broken invariant and throws.
 export async function guardedWrite<T, F>(
   write: PromiseLike<T>,
   failures: Partial<Record<OwnerCheck, () => F>>,

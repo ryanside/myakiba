@@ -11,7 +11,7 @@ const ADD_COMMIT_KEY_REBUILD = [
   'ALTER TABLE "add_commit" DROP CONSTRAINT "add_commit_user_id_commit_id_pk"',
 ];
 
-/** Pushes the app's schema as push-schema.ts does, with no TTY, so any prompt fails. */
+// drizzle-kit fails any prompt when it has no TTY, so a push that would prompt fails here.
 export async function pushSchema(url: string) {
   const child = Bun.spawn(
     [

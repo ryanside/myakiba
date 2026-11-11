@@ -15,8 +15,7 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required to push the database schema");
 }
 
-// The schema push needs every Item to have an owner, so the one-time migration runs first. It
-// leaves a fresh database and a migrated one alone.
+// The pushed schema declares per-owner indexes, so pre-ownership Items get their owners first.
 const database = new SQL({ url: databaseUrl });
 try {
   await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;

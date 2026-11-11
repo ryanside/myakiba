@@ -294,6 +294,8 @@ test(
   PUSH_TIMEOUT,
 );
 
+const REISSUE_LOCK = 7;
+
 async function waitsForALock(sql: SQL, marker: string): Promise<boolean> {
   const [{ waiting }] = await sql<[{ waiting: number }]>`
     SELECT count(*)::int AS waiting FROM pg_stat_activity
@@ -308,20 +310,19 @@ test("a guard locks the Item it checks, so an id deleted and reissued to another
   const reissued = Promise.withResolvers<true>();
   const release = Promise.withResolvers<true>();
   const reissuing = sql.begin(async (tx) => {
-    await tx`SELECT pg_advisory_xact_lock(7)`;
+    await tx`SELECT pg_advisory_xact_lock(${REISSUE_LOCK})`;
     await tx`DELETE FROM item WHERE id = 'item-u1'`;
     await tx`INSERT INTO item (id, owner_id, title) VALUES ('item-u1', 'u2', 'Reissued')`;
     reissued.resolve(true);
     await release.promise;
   });
   await reissued.promise;
-  // The second row waits for the reissue to commit, so the statement's foreign key checks,
-  // which run after its last row, find the reissued Item.
+  // Postgres runs a statement's foreign key checks after its last row, so they find the reissued Item.
   const write = outcome(sql`
     INSERT INTO collection (id, user_id, item_id, tags)
     SELECT v.id, 'u1', v.item_id, '{}'
-    FROM (VALUES (1, 'col-x', 'item-u1'), (2, 'col-y', 'item-u1-other')) v(n, id, item_id)
-    WHERE v.n = 1 OR (SELECT true FROM pg_advisory_xact_lock(5 + v.n))
+    FROM (VALUES ('col-x', 'item-u1', 0), ('col-y', 'item-u1-other', ${REISSUE_LOCK}::int)) v(id, item_id, waits_for)
+    WHERE v.waits_for = 0 OR (SELECT true FROM pg_advisory_xact_lock(v.waits_for))
   `);
   while (!(await waitsForALock(sql, "col-x"))) await Bun.sleep(10);
   release.resolve(true);

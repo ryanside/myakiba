@@ -13,7 +13,6 @@ import type { StoredPicture } from "@/lib/item-images";
 import { buildReleasePlan } from "@/lib/release-plan";
 import type { ReleasePlan } from "@/lib/release-plan";
 
-/** The viewer's Item for this MFC id. */
 export async function findMfcItem(
   tx: ReadTx,
   viewer: Viewer,
@@ -31,7 +30,6 @@ function releaseRows(itemId: string, page: MfcItemPage) {
   return [...unique.values()].map((release) => ({ id: crypto.randomUUID(), itemId, ...release }));
 }
 
-/** Upserts the owner's Item Entries, so a page renames only its uploader's, then links them. */
 async function linkEntries(
   tx: Tx,
   ownerId: string,
@@ -98,7 +96,6 @@ async function createMfcItemIfAbsent(
   return created.id;
 }
 
-/** Adds the viewer's Item for this page, unless they have one. An existing Item comes back untouched. */
 export async function addMfcItemIfMissing(
   tx: Tx,
   viewer: Viewer,

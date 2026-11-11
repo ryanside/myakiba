@@ -8,7 +8,6 @@ import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
 
-/** Runs `bun run db:push` as the deploy does, with no TTY, so any prompt fails. */
 async function dbPush(url: string) {
   const child = Bun.spawn(["bun", "src/scripts/push-schema.ts"], {
     cwd: path.join(import.meta.dir, "../.."),

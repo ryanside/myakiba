@@ -72,14 +72,13 @@ const forgedPage = edit(
   ">Forged Sculptor</span>",
 );
 
-/** A request body: an upload form, or the JSON a write route parses. */
-type Sent =
+type RequestBody =
   | FormData
   | z.input<typeof addCommitSchema>
   | z.input<typeof addTargetsToListsSchema>
   | CollectionUpdateType;
 
-function requestOf(as: string, method: string, url: string, body?: Sent): Request {
+function requestOf(as: string, method: string, url: string, body?: RequestBody): Request {
   const headers = new Headers({ "x-test-user": as });
   if (body === undefined || body instanceof FormData) {
     return new Request(`http://localhost/api${url}`, { method, headers, body });
@@ -92,13 +91,13 @@ function requestOf(as: string, method: string, url: string, body?: Sent): Reques
   });
 }
 
-async function call(as: string, method: string, url: string, body?: Sent) {
+async function call(as: string, method: string, url: string, body?: RequestBody) {
   const response = await app.handle(requestOf(as, method, url, body));
   const json = response.headers.get("content-type")?.includes("json");
   return { status: response.status, body: json ? await response.json() : await response.text() };
 }
 
-async function bodyOf(as: string, method: string, url: string, body?: Sent) {
+async function bodyOf(as: string, method: string, url: string, body?: RequestBody) {
   const answered = await call(as, method, url, body);
   return answered.body;
 }
@@ -141,7 +140,6 @@ function addCommit(
   };
 }
 
-/** Alice's Item for MFC_ID, with its first release and Item Entry, in her Collection and on her List. */
 async function aliceHolds() {
   const { itemId } = await ingest(ALICE);
   const { releases } = releasesSchema.parse(await bodyOf(ALICE, "GET", `/item/${itemId}/releases`));
@@ -169,7 +167,6 @@ async function aliceHolds() {
 
 type Held = Awaited<ReturnType<typeof aliceHolds>>;
 
-/** Everything Alice reads about her Item, through the routes and in the rows behind them. */
 async function aliceSees(held: Held) {
   const [itemRow] = await db.select().from(item).where(eq(item.id, held.itemId));
   const links = await db
