@@ -394,7 +394,7 @@ export async function migrateItemOwnership(
   }
 }
 
-async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
+export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
   const present = await foreignKeyNames(sql);
   return OWNER_KEYS.every((key) => present.has(key.name));
 }
@@ -403,7 +403,7 @@ export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {
   return missesOf(sql, OWNERSHIP_CHECKS);
 }
 
-function describeMisses(misses: readonly OwnershipMiss[]): string {
+export function describeMisses(misses: readonly OwnershipMiss[]): string {
   return misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
 }
 
