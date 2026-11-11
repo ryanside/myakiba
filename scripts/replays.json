@@ -3668,9 +3668,12 @@
       "bug": "The web app's HTML carried no Content-Security-Policy and no X-Frame-Options, so any site could frame it.",
       "test": "apps/server/src/html-headers.test.ts",
       "fixed": [
-        "the web app at / may not be framed and runs only its own scripts and Turnstile",
-        "the web app at /dashboard may not be framed and runs only its own scripts and Turnstile",
-        "the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile"
+        "in test mode > the web app at / may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > the web app at / may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > the web app at /dashboard may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > the web app at /dashboard may not be framed and runs only its own scripts and Turnstile",
+        "in test mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile",
+        "in production mode > the web app at /item/some-item may not be framed and runs only its own scripts and Turnstile"
       ]
     },
     {

@@ -52,6 +52,8 @@ const resolveServerDistPath = (): string => {
   return path.resolve(process.cwd(), "dist");
 };
 
+/** The static plugin tests a string pattern with `pattern.includes(file)`, so only a RegExp excludes. */
+const HTML_FILE = /\.html$/u;
 const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gu;
 
@@ -130,12 +132,14 @@ export function createApp({ drain, authDocs }: AppOptions) {
             }),
       )
       .use(routes)
+      // Every HTML response comes from serveIndexHtml, which sets the CSP and X-Frame-Options.
       .get("/", () => serveIndexHtml(serverDistPath))
+      .get("/index.html", () => serveIndexHtml(serverDistPath))
       .use(
         staticPlugin({
           assets: serverDistPath,
           prefix: "/",
-          ignorePatterns: ["index.html"],
+          ignorePatterns: [HTML_FILE],
         }),
       )
       // SPA fallback (TanStack Router) for deep links, but only for real HTML navigations.
