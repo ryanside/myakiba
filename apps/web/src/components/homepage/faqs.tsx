@@ -70,13 +70,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. Once an item is saved, its details are shared across myakiba, and anyone can add it from the Add page's search without picking it again. An item refresh loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
+      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. myakiba gets only what it reads from the page: the title, address, item heading, picture and item details, whether MFC found the item, and whether you are signed in. Nothing else of yours leaves MFC. The items you save are yours. Nobody else sees or changes them, and myakiba keeps their pictures private. An item refresh needs a verified email and updates only your item. It loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
   },
   {
     id: "faq-add-items",
     question: "How do I add items?",
     answer:
-      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. Items already in myakiba can be added from the Add page's search, without the extension.",
+      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. To add an item you saved before, search for it on the Add page. You do not need the extension for that.",
   },
   {
     id: EXTENSION_FAQ_ID,
