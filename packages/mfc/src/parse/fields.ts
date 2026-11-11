@@ -134,7 +134,7 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   if (dateLink.length === 0) return;
   const text = $release.find(".data-value").first().text();
   const types: string[] = [];
-  for (const em of $release.find("small.light").find("em")) {
+  for (const em of $release.find("small.light em")) {
     const part = $(em).text().trim();
     if (part) types.push(part);
   }

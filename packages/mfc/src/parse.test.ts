@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { AnyNode } from "domhandler";
+import { parseDocument } from "htmlparser2";
 import { edit, fixture, itemId } from "../test/fixtures";
 import { mfcReleaseId, parseMfcItemPage, splitContentLabel } from "./parse";
 import type { MfcEntryLink, MfcItemPage, MfcPageProblem } from "./parse";
@@ -323,13 +325,37 @@ const CATEGORY_FIELD = '<div class="data-field"><div class="data-label">Category
 const MATERIALS_FIELD = '<div class="data-field"><div class="data-label">Materials';
 const RAW_TITLE = "[Explicit] - Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)</h1>";
 
+const LINKS_PER_FIELD = 500;
+
 function characters(count: number, id: (index: number) => number): string {
   const links = Array.from(
     { length: count },
     (_, index) =>
       `<a href="/entry/${id(index)}" class="item-entry"><span switch="">C${index}</span></a>`,
   );
-  return `<div class="data-field"><div class="data-label">Characters</div><div class="data-value">${links.join("")}</div></div>`;
+  const fields: string[] = [];
+  for (let start = 0; start < links.length; start += LINKS_PER_FIELD) {
+    const value = links.slice(start, start + LINKS_PER_FIELD).join("");
+    fields.push(
+      `<div class="data-field"><div class="data-label">Characters</div><div class="data-value">${value}</div></div>`,
+    );
+  }
+  return fields.join("");
+}
+
+function nodesOf(html: string): number {
+  const count = (node: AnyNode): number =>
+    "children" in node ? node.children.reduce((sum, child) => sum + 1 + count(child), 0) : 0;
+  return count(parseDocument(html));
+}
+
+/** Exactly `count` empty elements, none with more than 400 element children. */
+function elements(count: number): string {
+  const groups: string[] = [];
+  for (let left = count; left > 0; left -= 401) {
+    groups.push(`<div>${"<i></i>".repeat(Math.min(left - 1, 400))}</div>`);
+  }
+  return groups.join("");
 }
 
 type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
@@ -337,13 +363,24 @@ type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
 const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])[] = [
   [
     "depth",
-    256,
+    64,
     (size) =>
       edit(
         item98777,
         ITEM_OBJECT,
         ITEM_OBJECT + "<div>".repeat(size - 9) + "</div>".repeat(size - 9),
       ),
+  ],
+  [
+    "children",
+    512,
+    (size) =>
+      edit(item98777, CATEGORY_FIELD, `<div>${"<i></i>".repeat(size)}</div>${CATEGORY_FIELD}`),
+  ],
+  [
+    "nodes",
+    10_000,
+    (size) => edit(item98777, CATEGORY_FIELD, elements(size - nodesOf(item98777)) + CATEGORY_FIELD),
   ],
   [
     "fieldDepth",

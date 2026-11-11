@@ -10,13 +10,23 @@ const DEADLINE_MS = 10_000;
 const TIME_PARSE = new URL("../../test/time-parse.ts", import.meta.url).pathname;
 
 type Page = {
+  readonly before?: string;
   readonly head?: string;
   readonly title?: string;
+  readonly category?: string;
   readonly fields: string;
+  readonly after?: string;
 };
 
-function shell({ head = "", title = "T", fields }: Page): string {
-  return `<html><head>${head}<link rel="canonical" href="https://myfigurecollection.net/item/1"></head><body><h1 class="title">${title}</h1><div class="item-object">${field("Category", "<span>Prepainted</span>")}${fields}</div></body></html>`;
+function shell({
+  before = "",
+  head = "",
+  title = "T",
+  category = "<span>Prepainted</span>",
+  fields,
+  after = "",
+}: Page): string {
+  return `${before}<html><head>${head}<link rel="canonical" href="https://myfigurecollection.net/item/1"></head><body><h1 class="title">${title}</h1><div class="item-object">${field("Category", category)}${fields}</div>${after}</body></html>`;
 }
 
 function field(label: string, value: string): string {
@@ -53,12 +63,24 @@ function around(
 }
 
 /**
- * PAGE_LIMITS.fieldDepth and .depth, written out so this file also loads at revisions before the
- * limits existed. A field's own .data-value is one level of its depth; html, body, .item-object and
- * the field are four more of the page's.
+ * PAGE_LIMITS.fieldDepth, .depth, .children and .nodes, written out so this file also loads at
+ * revisions before the limits existed. A field's own .data-value is one level of its depth; html,
+ * body, .item-object and the field are four more of the page's.
  */
 const FIELD_DEPTH = 32 - 1;
-const PAGE_DEPTH = 256 - 5;
+const PAGE_DEPTH = 64 - 5;
+const CHILDREN = 512;
+const NODES = 10_000;
+
+/** `levels` elements around `inner`, so a field inside sits that much deeper. */
+const deep = (levels: number, inner: string) =>
+  "<b>".repeat(levels) + inner + "</b>".repeat(levels);
+
+/** Pads a page to the upload limit with text no reader reads. */
+const padded = (page: Page) => fill("x ", (run) => ({ ...page, after: run }));
+
+/** As many copies of `unit`, each `nodes` nodes, as the nodes limit leaves room for. */
+const asManyAsFit = (unit: string, nodes: number) => unit.repeat(Math.floor((NODES - 200) / nodes));
 
 const release = (value: string) => field("Releases", `<a class="time">01/01/2020</a> ${value}`);
 const entry = (id: string, label: string) =>
@@ -152,12 +174,12 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "version: many links",
-    "parsed",
+    "too_large:children",
     () => fill("<a>v</a>", (run) => ({ fields: field("Version", run) })),
   ],
   [
     "sibling Releases fields",
-    "too_large:dataFields",
+    "too_large:children",
     () =>
       fill('<div class="data-field"><div class="data-label">Releases</div></div>', (run) => ({
         fields: run,
@@ -165,7 +187,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "Releases followed by sibling unlabelled releases",
-    "too_large:dataFields",
+    "too_large:children",
     () =>
       fill('<div class="data-field"><a class="time">01/01/2020</a></div>', (run) => ({
         fields: release("1 JPY") + run,
@@ -173,7 +195,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "sibling fields with unknown labels",
-    "too_large:dataFields",
+    "too_large:children",
     () => fill(field("Sculpting", "x"), (run) => ({ fields: run })),
   ],
   [
@@ -211,7 +233,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "entry groups with roles",
-    "too_large:entries",
+    "too_large:children",
     () =>
       fill(
         `<div class="item-entries">${entry("1", "x")}<small class="light"><em>r</em></small></div>`,
@@ -222,7 +244,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "one entry with many distinct roles",
-    "too_large:entries",
+    "too_large:children",
     () =>
       fillWith(
         (role) =>
@@ -232,7 +254,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   ],
   [
     "many distinct entries",
-    "too_large:entries",
+    "too_large:children",
     () =>
       fillWith(
         (id) => entry(String(id + 1), String(id)),
@@ -280,6 +302,196 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     "page title: whitespace",
     "parsed",
     () => fill(" ", (run) => ({ head: `<title>${run}x</title>`, fields: "" })),
+  ],
+  [
+    "elements before the page's html element",
+    "too_large:children",
+    () => fill("<br>", (run) => ({ before: run, fields: "" })),
+  ],
+  [
+    "headings before the page's html element",
+    "too_large:children",
+    () => fill('<h1 class="title"></h1>', (run) => ({ before: run, fields: "" })),
+  ],
+  [
+    "elements in the body",
+    "too_large:children",
+    () => fill("<br>", (run) => ({ fields: "", after: run })),
+  ],
+  [
+    "elements in a data field",
+    "too_large:children",
+    () =>
+      fill("<br>", (run) => ({
+        fields: `<div class="data-field"><div class="data-label">Title</div><div class="data-value">x</div>${run}</div>`,
+      })),
+  ],
+  [
+    "data values in a data field",
+    "too_large:children",
+    () =>
+      fill('<p class="data-value"></p>', (run) => ({
+        fields: `<div class="data-field"><div class="data-label">Title</div>${run}</div>`,
+      })),
+  ],
+  [
+    "data labels in a data field",
+    "too_large:children",
+    () =>
+      fill('<p class="data-label"></p>', (run) => ({
+        fields: `<div class="data-field">${run}</div>`,
+      })),
+  ],
+  [
+    "elements in the Category value",
+    "too_large:children",
+    () => fill("<br>", (run) => ({ category: `<span>Prepainted</span>${run}`, fields: "" })),
+  ],
+  [
+    "elements in an entry group",
+    "too_large:children",
+    () =>
+      fill("<br>", (run) => ({
+        fields: field(
+          "Materials",
+          `<div class="item-entries">${entry("1", "x")}<small class="light">1%</small>${run}</div>`,
+        ),
+      })),
+  ],
+  [
+    "elements in an entry link",
+    "too_large:children",
+    () =>
+      fill("<br>", (run) => ({
+        fields: field(
+          "Origin",
+          `<div class="item-entries"><a href="/entry/1" class="item-entry"><span switch="">x</span>${run}</a></div>`,
+        ),
+      })),
+  ],
+  [
+    "elements in a release type",
+    "too_large:children",
+    () =>
+      fill("<br>", (run) => ({
+        fields: release(`<small class="light"><em>Standard</em>${run}</small> 1,000 JPY`),
+      })),
+  ],
+  [
+    "entry links nested in an entry link around many names",
+    "too_large:children",
+    () =>
+      fill('<span switch="">x</span>', (run) => ({
+        fields: field(
+          "Origin",
+          '<a class="item-entry" href="/entry/1">'.repeat(30) + run + "</a>".repeat(30),
+        ),
+      })),
+  ],
+  [
+    "entry groups nested in an entry group around many percentages",
+    "too_large:children",
+    () =>
+      fill('<small class="light">1%</small>', (run) => ({
+        fields: field(
+          "Materials",
+          '<div class="item-entries">'.repeat(15) + run + "</div>".repeat(15),
+        ),
+      })),
+  ],
+  [
+    "release types nested in a release type around many parts",
+    "too_large:children",
+    () =>
+      fill("<em>t</em>", (run) => ({
+        fields: release('<small class="light">'.repeat(29) + run + "</small>".repeat(29)),
+      })),
+  ],
+  [
+    "comments in the body",
+    "too_large:nodes",
+    () => fill("<!---->", (run) => ({ fields: "", after: run })),
+  ],
+  [
+    "unmatched paragraph ends at the depth limit",
+    "too_large:children",
+    () => fill("</p>", (run) => ({ fields: "", after: "<b>".repeat(PAGE_DEPTH) + run })),
+  ],
+  [
+    "unmatched end tags at the depth limit",
+    "parsed",
+    () => fill("</x>", (run) => ({ fields: "", after: "<b>".repeat(PAGE_DEPTH) + run })),
+  ],
+  [
+    "release fields as wide and deep as the tree limits allow",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - 3,
+          release("1 JPY") +
+            asManyAsFit(
+              `<div class="data-field"><a class="time">01/01/2020</a><div class="data-value">1 JPY</div>${"<br>".repeat(CHILDREN - 2)}</div>`,
+              CHILDREN + 3,
+            ),
+        ),
+      }),
+  ],
+  [
+    "Title fields as wide and deep as the tree limits allow",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - 3,
+          asManyAsFit(
+            `<div class="data-field"><div class="data-label">Title</div><div class="data-value">x</div>${"<br>".repeat(CHILDREN - 2)}</div>`,
+            CHILDREN + 3,
+          ),
+        ),
+      }),
+  ],
+  [
+    "entry links as wide and deep as the tree limits allow",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - 6,
+          field(
+            "Origin",
+            `<div class="item-entries">${asManyAsFit(`<a href="/entry/1" class="item-entry">${'<span switch=""></span>'.repeat(CHILDREN)}</a>`, CHILDREN + 1)}</div>`,
+          ),
+        ),
+      }),
+  ],
+  [
+    "entry groups as wide and deep as the tree limits allow",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - 6,
+          field(
+            "Materials",
+            asManyAsFit(
+              `<div class="item-entries">${entry("1", "x")}${'<small class="light">1%</small>'.repeat(CHILDREN - 1)}</div>`,
+              2 * CHILDREN + 1,
+            ),
+          ),
+        ),
+      }),
+  ],
+  [
+    "release types in as many small.light elements as the tree limits allow",
+    "parsed",
+    () =>
+      padded({
+        fields: deep(
+          PAGE_DEPTH - 6,
+          release(`<small class="light">${"<em></em>".repeat(18)}</small>`.repeat(CHILDREN - 2)),
+        ),
+      }),
   ],
 ];
 

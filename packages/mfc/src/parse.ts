@@ -10,7 +10,7 @@ import { MFC_PAGE_READS as READS } from "./reads";
 import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
-import { PAGE_LIMITS, parseShallowDocument, clippedQuote } from "./parse/limits";
+import { PAGE_LIMITS, parseBoundedDocument, clippedQuote } from "./parse/limits";
 import type { PageLimit } from "./parse/limits";
 import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
@@ -75,8 +75,8 @@ export function parseMfcItemPage(
 ): Result<MfcItemPage, MfcPageUnreadable> {
   const unreadable = (problem: MfcPageProblem) =>
     Result.err(new MfcPageUnreadable({ mfcItemId: expected, problem }));
-  const document = parseShallowDocument(html);
-  if (!document) return unreadable({ kind: "too_large", limit: "depth" });
+  const tree = parseBoundedDocument(html);
+  if ("exceeded" in tree) return unreadable({ kind: "too_large", limit: tree.exceeded });
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
   if (envelope.kind !== "item") return unreadable(ENVELOPE_PROBLEMS[envelope.kind]);
   if (envelope.mfcItemId !== expected) {
@@ -84,7 +84,7 @@ export function parseMfcItemPage(
   }
   if (envelope.ogImage.kind === "sfw_hidden") return unreadable({ kind: "sfw_hidden" });
 
-  const $ = cheerio.load(document);
+  const $ = cheerio.load(tree.root);
   const rawTitle = $(READS.heading).first().text().trim();
   if (!rawTitle) return unreadable({ kind: "missing_title" });
   if (rawTitle.length > PAGE_LIMITS.titleLength) {

@@ -3584,7 +3584,9 @@
       "fix": "d846980d3fa445fa1075c0430b6ff1c64b8aac71",
       "bug": "The MFC price pattern read at most three digits before a comma group, so an ungrouped price such as 13500 JPY read as 500 JPY.",
       "test": "packages/mfc/src/parse.test.ts",
-      "fixed": ["parseMfcItemPage release prices > an ungrouped price reads whole"]
+      "fixed": ["parseMfcItemPage release prices > an ungrouped price reads whole"],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "This round rewrote the size-limit cases in this file, so this fix keeps the harness it was proven with."
     },
     {
       "fix": "16a2bf9424d4fe139570ba1143627a3c673c7b5a",
@@ -3596,7 +3598,7 @@
       "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
       "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
       "atHead": [
-        "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers too_large:dataFields within 5000 ms"
+        "parseMfcItemPage on adversarial pages at the upload limit > sibling Releases fields answers too_large:children within 5000 ms"
       ]
     },
     {
@@ -3615,7 +3617,7 @@
       "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
       "reason": "The adversarial harness now names each page's outcome and bounds it at 5 s, so this fix keeps the 1 s harness it was proven with; atHead names the same pages at HEAD.",
       "atHead": [
-        "parseMfcItemPage on adversarial pages at the upload limit > Releases followed by sibling unlabelled releases answers too_large:dataFields within 5000 ms",
+        "parseMfcItemPage on adversarial pages at the upload limit > Releases followed by sibling unlabelled releases answers too_large:children within 5000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > nested data fields answers too_large:depth within 5000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > nested data values answers too_large:depth within 5000 ms",
         "parseMfcItemPage on adversarial pages at the upload limit > nested entry groups answers too_large:depth within 5000 ms",
@@ -3630,6 +3632,18 @@
       "test": "packages/mfc/src/parse.test.ts",
       "fixed": [
         "parseMfcItemPage size limits > a page past its depth limit of 256 is too_large",
+        "parseMfcItemPage size limits > a page past its fieldDepth limit of 32 is too_large",
+        "parseMfcItemPage size limits > a page past its dataFields limit of 300 is too_large",
+        "parseMfcItemPage size limits > a page past its entries limit of 1000 is too_large",
+        "parseMfcItemPage size limits > a page past its releases limit of 200 is too_large",
+        "parseMfcItemPage size limits > a page past its titleLength limit of 2000 is too_large",
+        "parseMfcItemPage size limits > a page past its entryNameLength limit of 500 is too_large",
+        "parseMfcItemPage size limits > a warning quotes at most 100 characters of a crafted value"
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "This round lowered the depth limit to 64 and rewrote the size-limit cases, so this fix keeps the harness it was proven with; atHead names the same cases at HEAD.",
+      "atHead": [
+        "parseMfcItemPage size limits > a page past its depth limit of 64 is too_large",
         "parseMfcItemPage size limits > a page past its fieldDepth limit of 32 is too_large",
         "parseMfcItemPage size limits > a page past its dataFields limit of 300 is too_large",
         "parseMfcItemPage size limits > a page past its entries limit of 1000 is too_large",
@@ -3663,7 +3677,9 @@
         "parseMfcItemPage values too large to store > an entry id past the integer column drops the entry and warns",
         "parseMfcItemPage values too large to store > a material percentage over 100 reads as none and warns",
         "parseMfcItemPage size limits > a page past its warnings limit of 100 is too_large"
-      ]
+      ],
+      "testAt": "028ccd93931d3ebe67459300a6c899b09cb9baef",
+      "reason": "This round rewrote the size-limit cases in this file, so this fix keeps the harness it was proven with."
     },
     {
       "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
