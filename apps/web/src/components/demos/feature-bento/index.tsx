@@ -7,9 +7,6 @@ import type { Act, Theme } from "@/components/stageshow/kit";
 import type { DemoProps } from "../demo-props";
 import "./feature-bento.css";
 
-// The homepage's feature grid: five tiles, one picture. It replaces the
-// screenshot gallery (homepage/panel-gallery.tsx).
-//
 //   Tile        Span   Kind        The one thing                          Moves
 //   Collection  2 × 1  Collection  the gallery, one figure selected        (still)
 //   Releases    1 × 1  Component   this month's release list              (still)

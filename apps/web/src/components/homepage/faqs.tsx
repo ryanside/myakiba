@@ -13,6 +13,8 @@ import {
   underReviewBody,
 } from "@/components/extension/extension-notice";
 import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
+import { HomeSection } from "@/components/homepage/kit";
+import { DISCORD_URL } from "@/components/homepage/links";
 import type { ExtensionStore } from "@/lib/extension-listings";
 
 const STORE_BROWSERS = {
@@ -68,13 +70,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. Saved items are shared, so an item added once never needs adding again. An item refresh loads that item's MFC page with your MFC sign-in, at most one every few seconds, so it never hammers their site.",
+      "Yes. When you pick an item on its MFC page, the myakiba browser extension keeps that page and its picture in your browser until myakiba's Add page saves the item. Once an item is saved, its details are shared across myakiba, and anyone can add it from the Add page's search without picking it again. An item refresh loads that item's MFC page with the MFC sign-in in your browser, at most one every few seconds, to go easy on their site.",
   },
   {
     id: "faq-add-items",
     question: "How do I add items?",
     answer:
-      "Open an item on MFC and click Pick for myakiba, next to MFC's own buttons. Your picks wait in the extension until you open the Add page in myakiba, where you choose where they go: your collection, an order, your wishlist or a list. Items already in myakiba can be added from the Add page's search, without the extension.",
+      "Open an item on MFC and click Pick for myakiba, the button the extension adds next to MFC's own. Your picks wait in the extension until you save them on myakiba's Add page, where you choose where they go: your collection, an order, your wishlist or a list. Items already in myakiba can be added from the Add page's search, without the extension.",
   },
   {
     id: EXTENSION_FAQ_ID,
@@ -89,9 +91,9 @@ const FAQ_ITEMS: readonly {
   },
   {
     id: "item-2",
-    question: "Is myakiba a MFC alternative?",
+    question: "Is myakiba an MFC alternative?",
     answer:
-      "myakiba is an alternative for MFC's manager. It does not aim to replace MFC's community, database, or marketplace features.",
+      "myakiba is an alternative to MFC's manager. It does not aim to replace MFC's community, database, or marketplace features.",
   },
   {
     id: "item-3",
@@ -114,34 +116,45 @@ function openedFromLink(): string[] {
 
 export default function FAQsSection() {
   return (
-    <section id="faqs" className="bg-background py-16">
-      <div className="mx-auto max-w-5xl px-6">
-        <h2 className="text-xl font-medium tracking-tight">FAQs</h2>
-        <Accordion className="mt-8" defaultValue={openedFromLink()}>
-          {FAQ_ITEMS.map((item) => (
-            <AccordionItem key={item.id} id={item.id} value={item.id} className="scroll-mt-16">
-              <AccordionTrigger className="cursor-pointer text-sm">
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent>
-                <p className="text-sm text-muted-foreground">{item.answer}</p>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        <p className="text-muted-foreground mt-8 text-sm">
-          Something else?{" "}
-          <a
-            href="https://discord.gg/VKHVvhcC2z"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground font-medium hover:underline"
-          >
-            Ask on Discord
-          </a>
-        </p>
+    <HomeSection id="faqs" labelledBy="faqs-title" className="py-16 md:py-24">
+      <div className="grid gap-12 md:grid-cols-2 md:gap-6">
+        <h2
+          id="faqs-title"
+          className="max-w-sm text-3xl font-medium tracking-tight text-balance md:text-4xl"
+        >
+          Questions
+        </h2>
+        <div>
+          <Accordion defaultValue={openedFromLink()}>
+            {FAQ_ITEMS.map((item) => (
+              <AccordionItem
+                key={item.id}
+                id={item.id}
+                value={item.id}
+                className="scroll-mt-16 border-dashed"
+              >
+                <AccordionTrigger className="cursor-pointer py-3 text-[15px]">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-[15px] leading-relaxed text-muted-foreground">{item.answer}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Something else?{" "}
+            <a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground hover:underline"
+            >
+              Ask on Discord
+            </a>
+          </p>
+        </div>
       </div>
-    </section>
+    </HomeSection>
   );
 }
