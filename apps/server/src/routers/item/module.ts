@@ -18,9 +18,9 @@ import { command, query } from "@/domain/kernel";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import { findMfcItem, pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
+import { findMfcItem, refreshItem } from "@/lib/item-database";
+import { pictureLog, readMfcItemPage } from "@/lib/mfc-item-ingest";
 import type { EntriesWithRoles } from "./model";
-import { lockItem, refreshItem } from "./refresh-item";
 
 async function findResyncItem(tx: ReadTx, externalId: number) {
   const id = mfcItemId(externalId);
@@ -243,10 +243,9 @@ export const Items = {
       },
     },
     async (scope, { itemId, page, stored }) => {
-      const locked = await lockItem(scope.tx, itemId);
-      if (!locked) return Result.err(new ItemNotFound());
-      const image = stored?.kind === "stored" ? stored.url : locked.image;
-      const outcome = await refreshItem(scope.tx, locked, page, image);
+      const refreshed = await refreshItem(scope.tx, itemId, page, stored);
+      if (refreshed.isErr()) return refreshed;
+      const outcome = refreshed.value;
       scope.log.set({
         mfc: {
           itemId: page.mfcItemId,

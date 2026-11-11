@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { releaseKey } from "./mfc-item-ingest";
+import { releaseKey, storedPercentage } from "./item-details";
 
 const release = {
   date: "2018-11-15",
@@ -23,4 +23,24 @@ describe("releaseKey is a release's identity within its Item", () => {
   ] as const)("a different %s is a different release", (_field, change) => {
     expect(releaseKey({ ...release, ...change })).not.toBe(releaseKey(release));
   });
+});
+
+test.each([
+  [null, null],
+  [-1.005, -1.01],
+  [-1.004, -1],
+  [-0, 0],
+  [-0.001, 0],
+  [1.005, 1.01],
+  [1.004, 1],
+  [1.125, 1.13],
+  [-1.125, -1.13],
+  [9.995, 10],
+  [-9.995, -10],
+  [1e-7, 0],
+  [-1e-7, 0],
+  [5e-3, 0.01],
+  [-5e-3, -0.01],
+])("storedPercentage(%s) matches Postgres numeric rounding", (input, expected) => {
+  expect(storedPercentage(input)).toBe(expected);
 });
