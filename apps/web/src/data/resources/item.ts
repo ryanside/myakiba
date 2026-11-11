@@ -5,7 +5,6 @@ import {
   getItemRelatedCollection,
   getItemRelatedOrders,
   getItemReleases,
-  getRefreshStatus,
 } from "@/queries/item";
 import { refreshResultFamilies } from "../catalog";
 import { defineCommand, rootedRead, useResourceMutation } from "../client";
@@ -34,19 +33,10 @@ export const items = {
     load: getItemReleases,
     ...cache,
   }),
-  refreshStatus: rootedRead("item", {
-    key: (externalId: number) => ["item", externalId, "refreshStatus"] as const,
-    load: getRefreshStatus,
-    staleTime: 1000 * 30,
-    retry: false,
-  }),
 };
 
 export const refreshItemCommand = defineCommand({
   invalidates: refreshResultFamilies,
-  failureRefetchKeys: (externalId: number) => [
-    { queryKey: items.refreshStatus.key(externalId), exact: true },
-  ],
   persist: (externalId: number) => refreshItemWithExtension(externalId),
   successTitle: (_externalId, refreshed) =>
     refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",

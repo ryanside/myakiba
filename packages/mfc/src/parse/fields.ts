@@ -3,6 +3,7 @@ import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
+import { MFC_PAGE_READS as READS } from "../reads";
 
 export type EntryMention = {
   readonly externalId: number;
@@ -35,9 +36,9 @@ const PATTERNS = {
   depth: /[DL]=([\d,]+)mm/,
   price: /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
   barcode: /([A-Z0-9-]+)$/,
-  entryId: /\/entry\/(\d+)/,
+  entryId: READS.entryHref,
   materialPercentage: /(\d+(?:\.\d+)?)\s*%/,
-  ratingId: /[?&]ratingId=(\d+)/,
+  ratingId: READS.ratingHref,
 } as const;
 
 const plainEntries =
@@ -192,7 +193,7 @@ export function readItemFields($: CheerioAPI): ItemFields {
     releases: [],
     warnings: [],
   };
-  for (const element of $(".item-object").first().find(".data-field")) {
+  for (const element of $(READS.itemObject).first().find(READS.itemField)) {
     const field = $(element);
     const label = field.find(".data-label").text().trim();
     if (!label) continue;

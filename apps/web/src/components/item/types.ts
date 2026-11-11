@@ -1,10 +1,5 @@
 import type { InferOk } from "better-result";
-import type {
-  getItem,
-  getItemRelatedCollection,
-  getItemRelatedOrders,
-  getRefreshStatus,
-} from "@/queries/item";
+import type { getItem, getItemRelatedCollection, getItemRelatedOrders } from "@/queries/item";
 
 export type ItemDetail = NonNullable<InferOk<Awaited<ReturnType<typeof getItem>>>>["item"];
 export type ItemCollectionEntry = InferOk<
@@ -13,5 +8,3 @@ export type ItemCollectionEntry = InferOk<
 export type ItemRelatedOrder = InferOk<
   Awaited<ReturnType<typeof getItemRelatedOrders>>
 >["orders"][number];
-
-export type RefreshStatus = InferOk<Awaited<ReturnType<typeof getRefreshStatus>>>["status"];

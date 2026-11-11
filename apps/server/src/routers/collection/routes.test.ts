@@ -7,7 +7,7 @@ import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 import type { CollectionUpdateType } from "./model";
 
-const { collection, item } = figureSchema;
+const { collection, item, item_release } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -81,7 +81,8 @@ const call = async (method: string, body?: CollectionUpdateType) => {
       body: body && JSON.stringify(body),
     }),
   );
-  return { status: response.status, body: await response.json() };
+  const json = response.headers.get("content-type")?.includes("json");
+  return { status: response.status, body: json ? await response.json() : await response.text() };
 };
 
 test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", async () => {
@@ -96,6 +97,25 @@ test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", 
       },
     },
   });
+});
+
+test("an edit that selects another Item's release answers 404 and leaves the Collection Item as it was", async () => {
+  await db.insert(item).values({ id: "item-2", externalId: 187, title: "Nendoroid Kagamine Rin" });
+  await db.insert(item_release).values([
+    { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
+    { id: "00000000-0000-0000-0000-000000000002", itemId: "item-2", date: "2026-04-01" },
+  ]);
+  const own = { ...edit, releaseId: "00000000-0000-0000-0000-000000000001" };
+  const foreign = { ...edit, notes: "foreign", releaseId: "00000000-0000-0000-0000-000000000002" };
+  expect(await call("PUT", own)).toMatchObject({ status: 200 });
+  const before = await db.select().from(collection);
+
+  expect(await call("PUT", foreign)).toEqual({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
+
+  expect(await db.select().from(collection)).toEqual(before);
 });
 
 test("a delete answers its row with ISO timestamp strings", async () => {
