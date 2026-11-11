@@ -13,6 +13,11 @@ import { RouteError } from "@/components/errors/route-error";
 import { AuthRouterProvider } from "@/components/auth/auth-router-provider";
 import { createSessionSource } from "@/lib/session";
 import { createQueryClient } from "@/data/client";
+import { loadFont } from "@/lib/load-font";
+
+// Browsers lay text out in a fallback face until its webfont arrives, then move it. Starting
+// Inter here, before the first route renders, lets the first layout use it.
+void loadFont('1em "Inter Variable"');
 
 const queryClient = createQueryClient();
 const sessions = createSessionSource();
