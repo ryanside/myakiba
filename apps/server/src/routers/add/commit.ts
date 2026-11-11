@@ -14,6 +14,7 @@ import { appendToWishlist } from "@/lib/wishlist-append";
 import { OrderNotFound } from "@/routers/orders/errors/order-not-found";
 import { ItemsMissing } from "./errors/items-missing";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
+import { guardedWrite } from "@/lib/owner-guard";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
 
 type CollectionInsert = typeof collection.$inferInsert;
@@ -195,7 +196,10 @@ export async function writeCommit(
   }));
 
   if (collectionItems.length > 0) {
-    await tx.insert(collection).values(collectionItems);
+    const inserted = await guardedWrite(tx.insert(collection).values(collectionItems), {
+      collection_release_of_item: () => new ReleaseNotOfItem(),
+    });
+    if (inserted.isErr()) return Result.err(inserted.error);
     if (place?.orderId) {
       await advanceOrderReleaseDatesForCollectionItems(
         tx,

@@ -1,6 +1,7 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia, ElysiaCustomStatusResponse } from "elysia";
 import { createRequestLogger, initLogger } from "evlog";
+import { eq, sql } from "drizzle-orm";
 import * as z from "zod";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
@@ -131,6 +132,52 @@ test("an edit that selects another Item's release answers 404 and leaves the Col
     body: "A chosen release is not a release of its item",
   });
 
+  expect(await db.select().from(collection)).toEqual(before);
+});
+
+/** Deletes a release in a transaction it holds open until `commit`, as an Item Refresh does. */
+async function deletingRelease(releaseId: string) {
+  const deleted = Promise.withResolvers<null>();
+  const finish = Promise.withResolvers<null>();
+  const deleting = db.transaction(async (tx) => {
+    await tx.delete(item_release).where(eq(item_release.id, releaseId));
+    deleted.resolve(null);
+    await finish.promise;
+  });
+  await deleted.promise;
+  return {
+    commit: async () => {
+      finish.resolve(null);
+      await deleting;
+    },
+  };
+}
+
+async function waitForALockOn(table: string) {
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      sql`SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND query ILIKE ${`update "${table}"%`}`,
+    );
+    if (waiting && waiting.count > 0) return;
+    await Bun.sleep(10);
+  }
+}
+
+test("an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing", async () => {
+  const release = "00000000-0000-0000-0000-000000000003";
+  await db.insert(item_release).values({ id: release, itemId: "item-1", date: "2026-03-01" });
+  const before = await db.select().from(collection);
+  const refresh = await deletingRelease(release);
+
+  const edited = call("PUT", { ...edit, releaseId: release });
+  await waitForALockOn("collection");
+  await refresh.commit();
+
+  expect(await edited).toEqual({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
   expect(await db.select().from(collection)).toEqual(before);
 });
 

@@ -22,7 +22,7 @@ export const OWNER_CHECKS = {
   item_release_item_fixed: "an Item Release's Item never changes",
 } as const;
 
-type OwnerCheck = keyof typeof OWNER_CHECKS;
+export type OwnerCheck = keyof typeof OWNER_CHECKS;
 
 const OWNER_COLUMNS = [
   "item.owner_id",

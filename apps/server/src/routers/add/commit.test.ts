@@ -412,6 +412,41 @@ test("a row's chosen release is saved, and a blank price takes that release's", 
   ]);
 });
 
+test("a chosen release an Item Refresh deletes meanwhile answers 404 and writes nothing", async () => {
+  const deleted = Promise.withResolvers<null>();
+  const finish = Promise.withResolvers<null>();
+  const refresh = db.transaction(async (tx) => {
+    await tx.delete(item_release).where(eq(item_release.id, LATE_RELEASE));
+    deleted.resolve(null);
+    await finish.promise;
+  });
+  await deleted.promise;
+
+  const sent = commit(
+    request({
+      rows: [{ itemId: "item-1", price: null, releaseId: LATE_RELEASE }],
+      ownership: toCollection(),
+    }),
+  );
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      sql`SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND query ILIKE 'insert into "collection"%'`,
+    );
+    if (waiting && waiting.count > 0) break;
+    await Bun.sleep(10);
+  }
+  finish.resolve(null);
+  await refresh;
+
+  expect(await sent).toMatchObject({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
+  expect(await ownedRows()).toEqual([]);
+  expect(await records()).toEqual([]);
+});
+
 test("a chosen release in another currency saves no price, and a typed price wins", async () => {
   await db.insert(item_release).values({
     id: MID_RELEASE,

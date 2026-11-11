@@ -4,6 +4,7 @@ import { collection, entry_to_item, item, item_release } from "@myakiba/db/schem
 import { Result } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
+import { guardedWrite } from "@/lib/owner-guard";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
@@ -208,11 +209,16 @@ export const Collection = {
         if (!release) return Result.err(new ReleaseNotOfItem());
       }
 
-      const updated = await scope.tx
-        .update(collection)
-        .set({ ...input.update, updatedAt: new Date() })
-        .where(selected)
-        .returning();
+      const written = await guardedWrite(
+        scope.tx
+          .update(collection)
+          .set({ ...input.update, updatedAt: new Date() })
+          .where(selected)
+          .returning(),
+        { collection_release_of_item: () => new ReleaseNotOfItem() },
+      );
+      if (written.isErr()) return written;
+      const updated = written.value;
 
       if (input.update.releaseId !== null && input.update.releaseId !== existing.releaseId) {
         await advanceOrderReleaseDatesForCollectionItems(
