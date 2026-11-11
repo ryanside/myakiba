@@ -1,6 +1,7 @@
 import { Parser } from "htmlparser2";
 import { MAX_MFC_ITEM_ID } from "@myakiba/contracts/shared/constants";
 import { isSignInLink } from "./guest";
+import { MFC_PAGE_READS as READS } from "./reads";
 
 export type MfcItemId = number & { readonly __brand: "MfcItemId" };
 
@@ -50,7 +51,6 @@ export function isItemPicturePath(pathname: string): boolean {
 }
 
 const CHALLENGE_TITLE = /^\s*Just a moment/i;
-const NOT_FOUND_SENTENCE = "The page you requested was not found";
 const CANONICAL_ITEM_URL = /^https:\/\/myfigurecollection\.net\/item\/(\d+)$/;
 
 export function readMfcEnvelope(response: {
@@ -83,7 +83,6 @@ type PageMarkers = {
   notFoundSentence: boolean;
 };
 
-const HIDDEN_ELEMENTS = new Set(["script", "style", "template"]);
 const ASCII_WHITESPACE = /[\t\n\f\r ]+/;
 
 function scanPage(html: string): PageMarkers {
@@ -100,7 +99,7 @@ function scanPage(html: string): PageMarkers {
   let userMenuOpened = false;
   const parser = new Parser({
     onopentag(name, attributes) {
-      if (HIDDEN_ELEMENTS.has(name)) hiddenDepth += 1;
+      if (READS.hiddenElements.has(name)) hiddenDepth += 1;
       if (hiddenDepth > 0) return;
       if (name === "title" && titleState === "before") titleState = "inside";
       if (name === "link" && attributes.rel === "canonical") {
@@ -109,25 +108,25 @@ function scanPage(html: string): PageMarkers {
       if (name === "meta" && attributes.property === "og:image") {
         page.ogImage ??= attributes.content ?? "";
       }
-      if (attributes.class?.split(ASCII_WHITESPACE).includes("user-menu")) {
+      if (attributes.class?.split(ASCII_WHITESPACE).includes(READS.userMenuClass)) {
         page.signedIn = true;
         userMenuOpened = true;
       } else if (name === "a" && userMenuOpened) {
         userMenuOpened = false;
         const guestHandle =
-          attributes.class?.split(ASCII_WHITESPACE).includes("handle") &&
+          attributes.class?.split(ASCII_WHITESPACE).includes(READS.handleClass) &&
           isSignInLink(attributes.href ?? "");
         if (guestHandle) page.signedIn = false;
       }
     },
     onclosetag(name) {
-      if (HIDDEN_ELEMENTS.has(name)) hiddenDepth -= 1;
+      if (READS.hiddenElements.has(name)) hiddenDepth -= 1;
       else if (name === "title" && titleState === "inside") titleState = "after";
     },
     ontext(text) {
       if (hiddenDepth > 0) return;
       if (titleState === "inside") page.title += text;
-      if (text.includes(NOT_FOUND_SENTENCE)) page.notFoundSentence = true;
+      if (text.includes(READS.notFoundSentence)) page.notFoundSentence = true;
     },
   });
   parser.end(html);

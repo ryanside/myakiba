@@ -34,7 +34,7 @@ Use the same text in both stores.
 
   On an MFC item page, click "Pick for myakiba" next to MFC's own buttons. Click it again to unpick. A small note shows how many items you picked. Click "Review in myakiba" to open myakiba's Add page, choose where they go (your collection, an order, your wishlist or a list) and add them.
 
-  The extension sends nothing when you open an MFC page. It reads an item page only when you click Pick on it, and keeps the page and the item's picture in your browser until myakiba's Add page collects them. It removes your MFC username and profile links from the page first. It does not read your MFC password or cookies, other websites, or your browsing history.
+  The extension sends nothing when you open an MFC page. It reads an item page only when you click Pick on it, and keeps the page and the item's picture in your browser until myakiba's Add page collects them. It keeps only the item's details from the page and drops the rest first, your MFC username, notes and collection status included. It does not read your MFC password or cookies, other websites, or your browsing history.
 
   When you ask myakiba to refresh an item's details, the extension reads that one MFC item page in a tab with your own MFC sign-in, at a pace that does not overload MFC.
 
@@ -74,7 +74,7 @@ The extension does not use the `tabs` permission. A host permission is enough to
 - **Permission justification.** Paste each Chrome row from the table above. Chrome lists `scripting`, `storage` and the host permissions.
 - **Are you using remote code?** No, I am not using remote code. Every script is in the package, and the extension runs only its own files (`entrypoints/background.ts`, `executeScript` with `files: ["/collector.js"]`).
 - **Data usage. What user data do you plan to collect?** Check only **Website content**. The extension sends the MFC item pages and pictures the user picked or asked to refresh to myakiba. Leave every other type unchecked:
-  - It sends no personally identifiable information. `packages/mfc/src/capture.ts` (`scrubMfcPage`) removes the MFC account menu and profile links before a page leaves the MFC tab.
+  - It sends no personally identifiable information. Before a page leaves the MFC tab, `packages/mfc/src/capture.ts` (`scrubMfcPage`) keeps only what `packages/mfc/src/reads.ts` lists as read: the page title, canonical link, picture address, item heading, item detail fields, not-found sentence and whether the user is signed in. It drops the rest of the page, the account menu, profile links, notes and collection status included.
   - It reads no authentication information. The browser attaches MFC cookies to the requests, and the extension never reads or sends them.
   - It records no web history and no user activity. It reads an MFC item page only after the user clicks Pick on it, and sends it only to the myakiba page when that page asks. It keeps the items the user chose, not the pages they viewed. For a refresh, it reads only the URL and title of MFC tabs, and keeps them in the browser.
 - **Certifications.** Check all three. They state that the data is not sold or transferred to third parties outside the approved uses, not used for anything unrelated to the single purpose, and not used to decide creditworthiness or lending. The privacy page says the same and states compliance with the Limited Use requirements, which Chrome's Limited Use policy asks for.
@@ -125,7 +125,7 @@ Permissions
 - Content script on https://myakiba.app/*: receives requests from the myakiba web app and hands over picks when the Add page asks.
 
 Data
-The extension sends picked or refreshed MFC item pages and pictures only to the myakiba page, which uploads them to myakiba's server. It removes the MFC username and profile links from each page first. Privacy policy: https://myakiba.app/privacy
+The extension sends picked or refreshed MFC item pages and pictures only to the myakiba page, which uploads them to myakiba's server. It keeps only the item's details from each page and drops the rest first, the MFC username, notes and collection status included. Privacy policy: https://myakiba.app/privacy
 ```
 
 For AMO, add this paragraph:
