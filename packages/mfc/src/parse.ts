@@ -11,7 +11,7 @@ import type { MfcEnvelope, MfcItemId, MfcPicture } from "./page";
 import { readItemFields } from "./parse/fields";
 import type { EntryMention } from "./parse/fields";
 import { PAGE_LIMITS, parseBoundedDocument, clippedQuote } from "./parse/limits";
-import type { PageLimit } from "./parse/limits";
+import type { TooLarge } from "./parse/limits";
 import { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
 
 export { MfcPageUnreadable } from "./errors/mfc-page-unreadable";
@@ -61,7 +61,7 @@ export type MfcPageProblem =
   | { readonly kind: "missing_title" }
   | { readonly kind: "missing_category" }
   | { readonly kind: "unsupported_category"; readonly raw: string }
-  | { readonly kind: "too_large"; readonly limit: PageLimit };
+  | ({ readonly kind: "too_large" } & TooLarge);
 
 const ENVELOPE_PROBLEMS = {
   challenge: { kind: "challenge" },
@@ -78,7 +78,7 @@ export function parseMfcItemPage(
   // htmlparser2 keeps U+0000, which a browser drops from page text and Postgres refuses in text.
   const html = page.replaceAll("\u0000", "");
   const tree = parseBoundedDocument(html);
-  if ("exceeded" in tree) return unreadable({ kind: "too_large", limit: tree.exceeded });
+  if ("exceeded" in tree) return unreadable({ kind: "too_large", ...tree.exceeded });
   const envelope = readMfcEnvelope({ status: 200, cfMitigated: null, html });
   if (envelope.kind !== "item") return unreadable(ENVELOPE_PROBLEMS[envelope.kind]);
   if (envelope.mfcItemId !== expected) {
@@ -90,11 +90,11 @@ export function parseMfcItemPage(
   const rawTitle = $(READS.heading).first().text().trim();
   if (!rawTitle) return unreadable({ kind: "missing_title" });
   if (rawTitle.length > PAGE_LIMITS.titleLength) {
-    return unreadable({ kind: "too_large", limit: "titleLength" });
+    return unreadable({ kind: "too_large", limit: "titleLength", measured: rawTitle.length });
   }
 
   const read = readItemFields($);
-  if (read.isErr()) return unreadable({ kind: "too_large", limit: read.error });
+  if (read.isErr()) return unreadable({ kind: "too_large", ...read.error });
   const fields = read.value;
   const category = CATEGORIES.find((known) => known === fields.rawCategory);
   if (!category) {
@@ -119,6 +119,9 @@ export function parseMfcItemPage(
     const date = normalizeMfcDate(rawDate);
     if (date) releases.push({ date, ...release });
     else warnings.push(`release skipped: unsupported date ${clippedQuote(rawDate)}`);
+  }
+  if (warnings.length > PAGE_LIMITS.warnings) {
+    return unreadable({ kind: "too_large", limit: "warnings", measured: warnings.length });
   }
 
   return Result.ok({

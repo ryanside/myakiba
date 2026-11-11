@@ -6,8 +6,8 @@ import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
 import { MFC_PAGE_READS as READS } from "../reads";
-import { PAGE_LIMITS, clippedQuote } from "./limits";
-import type { PageLimit } from "./limits";
+import { clippedQuote, firstPast } from "./limits";
+import type { TooLarge } from "./limits";
 
 export type EntryMention = {
   readonly externalId: number;
@@ -198,7 +198,7 @@ function dataFields(root: AnyNode | undefined): DataFields {
   return { fields, fieldDepth };
 }
 
-export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
+export function readItemFields($: CheerioAPI): Result<ItemFields, TooLarge> {
   const fields: ItemFields = {
     rawCategory: "",
     mfcTitle: null,
@@ -214,8 +214,11 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     warnings: [],
   };
   const found = dataFields($(READS.itemObject).first()[0]);
-  if (found.fields.length > PAGE_LIMITS.dataFields) return Result.err("dataFields");
-  if (found.fieldDepth > PAGE_LIMITS.fieldDepth) return Result.err("fieldDepth");
+  const tooMany = firstPast([
+    ["dataFields", found.fields.length],
+    ["fieldDepth", found.fieldDepth],
+  ]);
+  if (tooMany) return Result.err(tooMany);
 
   // MFC lists a second release as a sibling field with no label, or with the item-extra-release class.
   const releases: ReleaseGroup = { parent: null, fields: [] };
@@ -240,11 +243,6 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
   }
   for (const release of releases.fields) readRelease(release, $, fields);
 
-  if (fields.mentions.length > PAGE_LIMITS.entries) return Result.err("entries");
-  if (fields.mentions.some(({ sourceLabel }) => sourceLabel.length > PAGE_LIMITS.entryNameLength)) {
-    return Result.err("entryNameLength");
-  }
-  if (fields.releases.length > PAGE_LIMITS.releases) return Result.err("releases");
   const stored = [
     fields.mfcTitle ?? "",
     fields.numbering ?? "",
@@ -253,11 +251,19 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, PageLimit> {
     ...fields.mentions.map(({ role }) => role),
     ...fields.releases.flatMap(({ type, barcode }) => [type, barcode]),
   ];
-  if (stored.some((value) => value.length > PAGE_LIMITS.valueLength)) {
-    return Result.err("valueLength");
-  }
-  if (fields.warnings.length > PAGE_LIMITS.warnings) return Result.err("warnings");
-  return Result.ok(fields);
+  const tooLarge = firstPast([
+    ["entries", fields.mentions.length],
+    ["entryNameLength", longest(fields.mentions.map(({ sourceLabel }) => sourceLabel))],
+    ["releases", fields.releases.length],
+    ["valueLength", longest(stored)],
+  ]);
+  return tooLarge ? Result.err(tooLarge) : Result.ok(fields);
+}
+
+function longest(values: readonly string[]): number {
+  let length = 0;
+  for (const value of values) length = Math.max(length, value.length);
+  return length;
 }
 
 /** The elements of `selection` that no other element of it contains, so nested matches never repeat text. */

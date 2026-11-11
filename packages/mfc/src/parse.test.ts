@@ -457,7 +457,16 @@ describe("parseMfcItemPage size limits", () => {
   });
 
   test.each(LIMIT_CASES)("a page past its %s limit of %d is too_large", (limit, size, build) => {
-    expect(problemOf(build(size + 1))).toEqual({ kind: "too_large", limit });
+    expect(problemOf(build(size + 1))).toEqual({ kind: "too_large", limit, measured: size + 1 });
+  });
+
+  test("a warning added after the fields are read counts toward the warnings limit", () => {
+    const page = edit(
+      edit(item98777, 'class="time">11/15/2018</a>', 'class="time">13/45/2018</a>'),
+      MATERIALS_FIELD,
+      characters(100, (index) => 3_000_000_000 + index) + MATERIALS_FIELD,
+    );
+    expect(problemOf(page)).toEqual({ kind: "too_large", limit: "warnings", measured: 101 });
   });
 
   test("a warning quotes at most 100 characters of a crafted value", () => {
@@ -486,7 +495,7 @@ describe("parseMfcItemPage stored values", () => {
     ["Title field", () => withField("Title", PAST_VALUE_LENGTH)],
     ["numbering", () => withField("Numbering", PAST_VALUE_LENGTH)],
   ])("a %s longer than 2000 characters is too_large", (_value, build) => {
-    expect(problemOf(build())).toEqual({ kind: "too_large", limit: "valueLength" });
+    expect(problemOf(build())).toMatchObject({ kind: "too_large", limit: "valueLength" });
   });
 
   test("a role inside nested em elements reads once", () => {

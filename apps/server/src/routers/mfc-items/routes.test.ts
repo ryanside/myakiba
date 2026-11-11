@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import type { DrainContext } from "evlog";
 import path from "node:path";
 import { asc, eq } from "drizzle-orm";
 import * as z from "zod";
@@ -14,7 +15,8 @@ import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
 import { createItemImages } from "@/lib/item-images";
 
-initLogger({ enabled: false });
+let drained = Promise.withResolvers<DrainContext>();
+initLogger({ silent: true, drain: (context) => drained.resolve(context) });
 
 const userId = "user-1";
 
@@ -439,6 +441,25 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
     });
     expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
     expect(store.objects.size).toBe(0);
+  });
+
+  test("a page past a size limit answers 400 and logs the limit and what it measured", async () => {
+    const tooWide = edit(
+      page98777,
+      field("Category"),
+      `<div>${"<i></i>".repeat(513)}</div>${field("Category")}`,
+    );
+    drained = Promise.withResolvers<DrainContext>();
+
+    expect(await upload({ mfcItemId: 98_777, page: tooWide })).toEqual({
+      status: 400,
+      body: "The page is larger than any MyFigureCollection item page",
+    });
+    const { event } = await drained.promise;
+    expect(event).toMatchObject({
+      mfc: { itemId: 98_777, outcome: "too_large", limit: "children", measured: 513 },
+    });
+    expect(await counts()).toEqual({ items: 0, entries: 0, links: 0, releases: 0 });
   });
 
   test("the page of 98778 posted as 98777 answers 400 and writes nothing", async () => {

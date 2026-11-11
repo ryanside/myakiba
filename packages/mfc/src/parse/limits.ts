@@ -34,17 +34,27 @@ export const PAGE_LIMITS = {
 
 export type PageLimit = keyof typeof PAGE_LIMITS;
 
+/** A limit the page went past, and the size it measured. A tree limit stops at its first node past the limit. */
+export type TooLarge = { readonly limit: PageLimit; readonly measured: number };
+
+/** The first of `sizes` past its limit. */
+export function firstPast(sizes: readonly (readonly [PageLimit, number])[]): TooLarge | null {
+  const past = sizes.find(([limit, measured]) => measured > PAGE_LIMITS[limit]);
+  return past ? { limit: past[0], measured: past[1] } : null;
+}
+
 class BoundedTree extends DomHandler {
   /** The element children of each open element, the document's first. */
   readonly #elementChildren = [0];
   #nodes = 0;
-  exceeded: PageLimit | null = null;
+  exceeded: TooLarge | null = null;
   pausable: Parser | null = null;
 
   override onopentag(name: string, attribs: Record<string, string>): void {
     super.onopentag(name, attribs);
     this.#elementChildren.push(0);
-    if (this.#elementChildren.length - 1 > PAGE_LIMITS.depth) this.#stop("depth");
+    const depth = this.#elementChildren.length - 1;
+    if (depth > PAGE_LIMITS.depth) this.#stop("depth", depth);
   }
 
   override onclosetag(): void {
@@ -55,16 +65,16 @@ class BoundedTree extends DomHandler {
   protected override addNode(node: ChildNode): void {
     super.addNode(node);
     this.#nodes += 1;
-    if (this.#nodes > PAGE_LIMITS.nodes) this.#stop("nodes");
+    if (this.#nodes > PAGE_LIMITS.nodes) this.#stop("nodes", this.#nodes);
     if (!isTag(node)) return;
     const parent = this.#elementChildren.length - 1;
     const children = (this.#elementChildren[parent] ?? 0) + 1;
     this.#elementChildren[parent] = children;
-    if (children > PAGE_LIMITS.children) this.#stop("children");
+    if (children > PAGE_LIMITS.children) this.#stop("children", children);
   }
 
-  #stop(limit: PageLimit): void {
-    this.exceeded ??= limit;
+  #stop(limit: PageLimit, measured: number): void {
+    this.exceeded ??= { limit, measured };
     this.pausable?.pause();
   }
 }
@@ -72,7 +82,7 @@ class BoundedTree extends DomHandler {
 /** Parses with htmlparser2 and stops at the first node past the depth, children or nodes limit. */
 export function parseBoundedDocument(
   html: string,
-): { readonly root: DomHandler["root"] } | { readonly exceeded: PageLimit } {
+): { readonly root: DomHandler["root"] } | { readonly exceeded: TooLarge } {
   const tree = new BoundedTree();
   const parser = new Parser(tree);
   tree.pausable = parser;
