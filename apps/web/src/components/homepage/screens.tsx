@@ -3,6 +3,7 @@ import { ScreenPlaceholder } from "@/components/homepage/framed-screen";
 import type { ShowcaseScreenName } from "@/components/showcase/screens";
 import { prepareShowcaseScreens } from "@/components/showcase/prepare";
 import { ShowcaseScreen } from "@/components/showcase/showcase-screen";
+import { reportDefect } from "@/lib/as-panic";
 
 export default function HomeScreen({
   name,
@@ -17,7 +18,11 @@ export default function HomeScreen({
   useEffect(() => {
     let live = true;
     const prepare = async () => {
-      await prepareShowcaseScreens([name]);
+      try {
+        await prepareShowcaseScreens([name]);
+      } catch (error) {
+        reportDefect(error);
+      }
       if (live) setReady(true);
     };
     void prepare();
