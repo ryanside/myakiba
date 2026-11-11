@@ -3750,7 +3750,9 @@
         "pushes the owned schema onto a migrated database with no prompt and no lost row",
         "an empty database pushed twice ends with the schema a migrated database gets"
       ],
-      "test": "packages/db/src/item-ownership/push.test.ts"
+      "test": "packages/db/src/item-ownership/push.test.ts",
+      "testAt": "5f00011df6bfe1d4d8637b31f20d3dc8880fb8ed",
+      "reason": "The ownership switch deletes test/owned-schema.ts, which this test pushed, and its push tests push the app's own schema instead. Before the switch that schema has no owner columns."
     },
     {
       "bug": "The Item ownership migration gave owner x's copy of Item y:z and owner x:y's copy of Item z the same id, so it failed with a duplicate key.",
@@ -3776,6 +3778,46 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
       ]
+    },
+    {
+      "bug": "An owner guard read the parent it checked without a lock, so an Item deleted and reissued to another user while a write waited passed the guard and the foreign key check. Two overlapping guard installs failed with tuple concurrently updated, and a guard that fired only on a replica counted as installed.",
+      "fix": "c847974e4ec40c076fb7bec9d9c6d335a4407443",
+      "fixed": [
+        "a guard locks the Item it checks, so an id deleted and reissued to another user mid-write cannot pass it",
+        "overlapping installs all succeed",
+        "a guard that fires only on a replica is not installed, and installing enables it again"
+      ],
+      "test": "packages/db/src/item-ownership/guards.test.ts"
+    },
+    {
+      "bug": "Every user shared one Item Database, so a user read another user's Item, releases and Item Entries by id or MFC id, and a forged page or Item Refresh from one user rewrote Items and Item Entries other users held.",
+      "fix": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "fixed": [
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the Item page of her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > her Item's releases",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Item Refresh of her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the Add page's items for her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Add commit of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > a Wishlist add of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > a List add of her Item",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the item database search for her MFC id",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > the entry search for her Item Entry",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an Add commit of his own Item with her release",
+        "Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were > an edit of his own Collection Item that selects her release",
+        "Bob's forged page for an MFC id Alice holds makes his own Item and changes nothing Alice reads",
+        "Bob's Item Refresh renames only his own Item Entries",
+        "the item database search shows each user only their own Items"
+      ],
+      "test": "apps/server/src/routers/owner-isolation.test.ts"
+    },
+    {
+      "bug": "db-push pushed the schema without the Item ownership migration, so a pre-ownership database never got its owners and a fresh one never said it skipped the migration.",
+      "fix": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "fixed": [
+        "db-push migrates a legacy database, pushes with no prompt and no lost row, and installs the guards; a second run changes nothing",
+        "db-push skips the migration on a fresh database and installs the guards; a second run changes nothing"
+      ],
+      "test": "packages/db/src/scripts/push-schema.test.ts"
     }
   ],
   "lint": [
