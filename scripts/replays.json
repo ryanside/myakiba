@@ -3611,6 +3611,12 @@
       ]
     },
     {
+      "fix": "d846980d3fa445fa1075c0430b6ff1c64b8aac71",
+      "bug": "The MFC price pattern read at most three digits before a comma group, so an ungrouped price such as 13500 JPY read as 500 JPY.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": ["parseMfcItemPage release prices > an ungrouped price reads whole"]
+    },
+    {
       "fix": "16a2bf9424d4fe139570ba1143627a3c673c7b5a",
       "bug": "Each MFC Releases field searched every later sibling field, so a page of 4,000 sibling Releases fields took 13 s.",
       "test": "packages/mfc/src/parse/adversarial.test.ts",

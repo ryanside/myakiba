@@ -418,6 +418,16 @@ describe("parseMfcItemPage size limits", () => {
   });
 });
 
+describe("parseMfcItemPage release prices", () => {
+  test("an ungrouped price reads whole", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "13500 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+});
+
 describe("parseMfcItemPage values too large to store", () => {
   test("a release price past safe money reads as no price and warns", () => {
     const page = parsedPage(
