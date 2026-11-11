@@ -3567,6 +3567,15 @@
       "fixed": [
         "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
       ]
+    },
+    {
+      "fix": "b4c7f77f2fdc82480f4812645158486a51a62387",
+      "bug": "Item Refresh matched stored and page releases by an id derived from the MFC id, so an Item whose release ids were made any other way refreshed its own page as changed and cleared every selection, and a page that listed one release twice never read as unchanged.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged"
+      ]
     }
   ],
   "lint": [
