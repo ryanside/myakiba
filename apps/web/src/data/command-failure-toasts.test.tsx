@@ -3,11 +3,17 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Panic, Result } from "better-result";
 import type { ReactNode } from "react";
+import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import { ApiRejected } from "@/lib/errors/api-rejected";
 
-const COOLDOWN_TEXT = "Item details were recently refreshed";
 const refresh = async () =>
-  Result.err(new ApiRejected({ status: 429, body: COOLDOWN_TEXT, message: COOLDOWN_TEXT }));
+  Result.err(
+    new ApiRejected({
+      status: 403,
+      body: EMAIL_VERIFICATION_REQUIRED,
+      message: EMAIL_VERIFICATION_REQUIRED,
+    }),
+  );
 const realRefresh = await import("@/data/item-refresh");
 await mock.module("@/data/item-refresh", () => ({
   ...realRefresh,
@@ -68,7 +74,6 @@ async function lastToastAfter<Outcome>(write: () => Promise<Outcome>) {
 }
 
 test("a refused Item Refresh shows why under its title", async () => {
-  answerWith(() => Response.json({ status: "idle", cooldownExpiresAt: null }));
   const queryClient = new QueryClient();
   const { result } = renderHook(() => useResourceMutation(refreshItemCommand), {
     wrapper: wrapperFor(queryClient),
@@ -77,7 +82,7 @@ test("a refused Item Refresh shows why under its title", async () => {
   expect(await lastToastAfter(() => result.current.run(98_777))).toEqual({
     type: "error",
     title: "Failed to request item refresh",
-    description: "Item details were recently refreshed",
+    description: EMAIL_VERIFICATION_REQUIRED,
   });
 });
 

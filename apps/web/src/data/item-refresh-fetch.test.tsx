@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, setDefaultTimeout, test } from "bun:
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { Result } from "better-result";
 import * as z from "zod";
+import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import { parseJson } from "@myakiba/utils/parse-json";
 import { delegatingBridge, fakeExtension } from "../../test/fake-extension";
 import type { FakeRun } from "../../test/fake-extension";
@@ -93,12 +94,7 @@ describe("refreshing an item", () => {
 
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
-    answer = () =>
-      Response.json({
-        status: "cooldown",
-        cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
-        saved: "refreshed",
-      });
+    answer = () => Response.json({ saved: "refreshed" });
     loadExtension((fetch) => {
       fetch.item(98_777, "<html>fresh</html>");
       fetch.done("complete");
@@ -106,21 +102,17 @@ describe("refreshing an item", () => {
 
     const refreshed = await refreshItemWithExtension(98_777);
 
-    expect(refreshed.isOk() && refreshed.value).toEqual({
-      status: "cooldown",
-      cooldownExpiresAt: "2026-10-25T00:00:00.000Z",
-      saved: "refreshed",
-    });
+    expect(refreshed.isOk() && refreshed.value).toEqual({ saved: "refreshed" });
     const [refresh] = posted("/api/item/98777/resync");
     expect(refresh?.formKeys).toEqual(["page"]);
     expect(await refresh?.page?.text()).toBe("<html>fresh</html>");
   });
 
-  test("reads a refresh in cooldown as the server's message", async () => {
+  test("reads a refused refresh as the server's message", async () => {
     fakeFetch();
     answer = () =>
-      new Response("Item details were recently refreshed", {
-        status: 429,
+      new Response(EMAIL_VERIFICATION_REQUIRED, {
+        status: 403,
         headers: { "content-type": "text/plain" },
       });
     loadExtension((fetch) => {
@@ -128,12 +120,12 @@ describe("refreshing an item", () => {
       fetch.done("complete");
     });
 
-    expect(await failureTextOf(98_777)).toBe("Item details were recently refreshed");
+    expect(await failureTextOf(98_777)).toBe(EMAIL_VERIFICATION_REQUIRED);
   });
 
   test("waits for a free upload slot while other refreshes hold both", async () => {
     const releases: (() => void)[] = [];
-    const refreshed = { status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" };
+    const refreshed = { saved: "refreshed" };
     fakeFetch();
     answer = async () => {
       await new Promise<void>((resolve) => {
@@ -162,8 +154,7 @@ describe("refreshing an item", () => {
 
   test("shows the extension's prompts for the refresh and clears them as it goes", async () => {
     fakeFetch();
-    answer = () =>
-      Response.json({ status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" });
+    answer = () => Response.json({ saved: "refreshed" });
     loadExtension((fetch) => {
       fetch.send({ type: "status", state: "needs_user", mfcItemId: 98_777, untilMs: null });
     });
@@ -188,8 +179,7 @@ describe("refreshing an item", () => {
 
   test("shows that it waits for the extension only once the wait lasts", async () => {
     fakeFetch();
-    answer = () =>
-      Response.json({ status: "cooldown", cooldownExpiresAt: null, saved: "refreshed" });
+    answer = () => Response.json({ saved: "refreshed" });
     loadExtension((fetch) => {
       fetch.status("queued");
     });

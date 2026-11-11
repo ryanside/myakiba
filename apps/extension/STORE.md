@@ -134,19 +134,36 @@ For AMO, add this paragraph:
 Source code: the add-on is bundled and minified by WXT (Vite). The sources zip contains apps/extension/SOURCE_CODE_REVIEW.md with the build steps: Bun 1.4.4, Node 24, then "bun install --frozen-lockfile" at the root and "bun run zip" in apps/extension. The output is apps/extension/.output/myakiba-1.0.0-firefox.zip. The "Function constructor" linter warnings come from zod 4's eval check, and the Android warning is expected because the add-on is for Firefox desktop only. SOURCE_CODE_REVIEW.md explains both.
 ```
 
-## Screenshots
+## Screenshots, promo tiles and video
 
-The Chrome Web Store needs at least one screenshot, up to five, each 1280x800 or 640x400, with square corners and no padding. AMO recommends 1280x800 too. Capture them in Chrome at a 1280x800 window size, signed in with a real account:
+What each store takes:
 
-1. An MFC item page with "✓ Picked" next to MFC's buttons and the note.
-2. The Add page with three picked rows, pictures and prices in one table.
-3. The sentence above the table set to New Order and a List, with the Order's title and fields.
-4. The commit toast over the collection filtered to the new items.
-5. An item page after "Refresh item details".
+- Chrome Web Store: one to five screenshots, each 1280x800 or 640x400, with square corners and no padding. The store shows them at 640x400 and has no caption field. The small promo tile (440x280) and the marquee tile (1400x560) are optional PNG or JPEG files that should carry little or no text. Chrome lists items without a small tile after those that have one. The video is a YouTube link.
+- AMO: screenshots at 1280x800 or another 1.6:1 size, with no practical limit on how many. Each screenshot has its own caption, and AMO asks for no text inside the images. AMO has no video or promo tile.
+
+### Screenshots
+
+Upload the same five PNGs, in this order, to both stores. The captions go in AMO's caption field.
+
+| #   | Shows                                                                                               | AMO caption                                                               |
+| --- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | MFC item 1618468, signed out of MFC, with "✓ Picked" next to MFC's buttons and the "1 picked" note. | Pick the item you're viewing on MyFigureCollection.                       |
+| 2   | The Add page with the picked item's row.                                                            | Your picks arrive on myakiba's Add page.                                  |
+| 3   | The same page with the destination menu open, next to the Wishlist and Lists controls.              | Choose where they go: your collection, an order, your wishlist or a list. |
+| 4   | The "Added 1 to your collection" toast over the emptied Add page.                                   | Add them with one click.                                                  |
+| 5   | The item's myakiba page after "Refresh item details", reading "Updated just now".                   | Refresh an item's details from MFC whenever you ask.                      |
+
+All five use myakiba's dark theme, and MFC's item page is in its own dark style. The screenshots and the video show MFC's item pictures, so they are not in the repo. To capture them again, use a fresh browser profile that is signed out of MFC and signed in to myakiba, switch to the dark theme, collapse the sidebar, and capture a 1024x640 viewport at 125% so each image is 1280x800 and still reads at 640x400. Every shot uses the one item, MFC 1618468.
 
 The repo's end-to-end tests run against a mock myakiba page and a mock MFC site with made-up pictures, so they cannot produce honest screenshots.
 
-The small promo tile (440x280) and the marquee tile (1400x560) are optional. Chrome lists items without a small tile after those that have one.
+### Promo tiles
+
+`store-assets/chrome-small-promo-440x280.png` and `store-assets/chrome-marquee-promo-1400x560.png` set the myakiba wordmark and a picked item card over the Akihabara street the app's sign-in page uses, drawn pixel-sharp like the app draws it. They hold no screenshot and no MFC picture. `bun run store-tiles` in `apps/web` redraws both from `apps/web/src/components/myakiba-logo.tsx` and `apps/web/src/assets/backgrounds/11-akihabara-bright-bitgrain.webp`. They live outside `apps/extension/` because the sources zip holds all of `apps/extension/`.
+
+### Demo video
+
+The Chrome listing's video is a 22-second, 1920x1080 recording of the real flow with item 1618468, framed over the same Akihabara street. It picks the item on MFC, opens "Review in myakiba", chooses Collection, clicks "Add 1 to collection", then clicks the toast's View and ends on the collection showing the item just added. Upload it to YouTube and paste the link in the Chrome listing. AMO has no video field.
 
 ## Release checklist
 
@@ -156,7 +173,7 @@ The small promo tile (440x280) and the marquee tile (1400x560) are optional. Chr
 4. Chrome Web Store, at https://chrome.google.com/webstore/devconsole:
    1. Register as a developer and pay the one-time registration fee.
    2. Choose **New item** and upload `myakiba-1.0.0-chrome.zip`.
-   3. **Store listing.** Paste the description, pick a category and language, and upload the screenshots. The 128x128 icon comes from the package.
+   3. **Store listing.** Paste the description, pick a category and language, upload the five screenshots and the two promo tiles from `store-assets/`, and paste the demo video's YouTube link. The 128x128 icon comes from the package.
    4. **Privacy.** Fill in the single purpose, each permission justification, "No" to remote code, Website content only, all three certifications, and the privacy policy URL.
    5. **Distribution.** Free, public, and the regions you want.
    6. **Test instructions.** Paste the reviewer notes with the test account.
@@ -168,7 +185,7 @@ The small promo tile (440x280) and the marquee tile (1400x560) are optional. Chr
    4. Answer yes to the source code question and upload `myakiba-1.0.0-sources.zip`.
    5. Fill in the name, summary, description, categories, support site, license and privacy policy.
    6. Paste the reviewer notes and the source code paragraph into **Notes to Reviewer**.
-   7. Upload the screenshots on the listing page after the version is submitted.
+   7. Upload the five screenshots on the listing page after the version is submitted, and give each its caption from the Screenshots table.
 6. When a store approves the extension, set that store's listing URL in `apps/web/src/lib/extension-listings.ts`: `chromeWebStore` for the Chrome Web Store, `firefoxAddons` for AMO. Release each store on its own day; the other stays under review until its URL is set. That one line is the whole release: visitors whose browser uses the store get an install link instead of the under-review notice, and the "How do I install the myakiba browser extension?" FAQ links the listing.
 
 ## Sources
@@ -186,3 +203,11 @@ The requirements above come from these pages, read on 2026-10-26:
 - Firefox built-in data consent: https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/
 - `browser_specific_settings`: https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings
 - WXT publishing: https://wxt.dev/guide/essentials/publishing
+
+The screenshot, promo tile and video requirements come from these pages, read on 2026-11-09:
+
+- Chrome store listing tab: https://developer.chrome.com/docs/webstore/cws-dashboard-listing
+- Chrome listing best practices: https://developer.chrome.com/docs/webstore/best-listing
+- Chrome listing requirements: https://developer.chrome.com/docs/webstore/program-policies/listing-requirements
+- AMO listing guide: https://extensionworkshop.com/documentation/develop/create-an-appealing-listing/
+- AMO add-on previews API: https://mozilla.github.io/addons-server/topics/api/addons.html
