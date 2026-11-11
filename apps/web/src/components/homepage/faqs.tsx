@@ -64,13 +64,13 @@ const FAQ_ITEMS: readonly {
     id: "item-1",
     question: "Does myakiba use data from MFC?",
     answer:
-      "Yes. The myakiba extension reads the MFC item pages you pick and sends myakiba only the details it needs.",
+      "Yes. When you add an item from its MFC page, the myakiba extension sends myakiba only what it needs from that page.",
   },
   {
     id: "faq-privacy",
     question: "Who can see my items?",
     answer:
-      "Only you. Your items and the pictures you save with them are private, and refreshing an item from MFC updates only yours.",
+      "Only you. Your items and the pictures you save with them are private, and nobody else can change them.",
   },
   {
     id: EXTENSION_FAQ_ID,
