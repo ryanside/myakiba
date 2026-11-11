@@ -34,12 +34,7 @@ export function buildReleasePlan({
   const [toReleaseId] = addedReleaseIds;
 
   if (fromReleaseId === undefined) return { kind: "none", staleReleaseIds: [], addedReleaseIds };
-  if (
-    existing.length === page.length &&
-    staleReleaseIds.length === 1 &&
-    addedReleaseIds.length === 1 &&
-    toReleaseId !== undefined
-  ) {
+  if (staleReleaseIds.length === 1 && addedReleaseIds.length === 1 && toReleaseId !== undefined) {
     return { kind: "remap", staleReleaseIds, addedReleaseIds, fromReleaseId, toReleaseId };
   }
   return { kind: "clear", staleReleaseIds, addedReleaseIds };
