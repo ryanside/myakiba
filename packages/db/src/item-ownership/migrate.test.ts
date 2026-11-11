@@ -213,6 +213,29 @@ test.each(MIGRATION_STEPS)(
   },
 );
 
+test("gives separate copies to two pairs whose owner and Item ids join to the same text", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    INSERT INTO "user" (id, name, email, email_verified, username, created_at, updated_at) VALUES
+      ('x', 'X', 'x@example.com', true, 'x', now(), now()),
+      ('x:y', 'X Y', 'xy@example.com', true, 'x_y', now(), now());
+    INSERT INTO item (id, title) VALUES ('y:z', 'Item Y Z'), ('z', 'Item Z');
+    INSERT INTO collection (id, user_id, item_id, tags) VALUES
+      ('col-x', 'x', 'y:z', '{}'), ('col-xy', 'x:y', 'z', '{}');
+  `);
+  expect(await migrateItemOwnership(sql)).toMatchObject({ status: "migrated", pairs: 7 });
+  expect(
+    await rows(
+      sql,
+      `SELECT c.user_id, i.title FROM collection c JOIN item i ON i.id = c.item_id
+      WHERE c.id IN ('col-x', 'col-xy') ORDER BY 1`,
+    ),
+  ).toEqual([
+    { user_id: "x", title: "Item Y Z" },
+    { user_id: "x:y", title: "Item Z" },
+  ]);
+});
+
 test("leaves a fresh database alone", async () => {
   const { sql } = await databases.create();
   expect(await migrateItemOwnership(sql)).toEqual({ status: "fresh-database" });

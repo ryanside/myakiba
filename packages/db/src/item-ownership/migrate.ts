@@ -444,8 +444,10 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
 }
 
 // A hash of the owner and the original, so a run after a crash writes the ids a clean run would.
+// The owner's length comes first, so no two pairs hash the same text even when an id holds a colon.
 function copyId(kind: "item" | "entry" | "release", ownerId: string, originalId: string): string {
-  const hash = `encode(sha256(convert_to('${kind}:' || ${ownerId} || ':' || ${originalId}, 'UTF8')), 'hex')`;
+  const text = `'${kind}:' || length(${ownerId}) || ':' || ${ownerId} || ':' || ${originalId}`;
+  const hash = `encode(sha256(convert_to(${text}, 'UTF8')), 'hex')`;
   // A release id is a version 8 UUID, which `z.uuid()` accepts.
   if (kind === "release") {
     return `overlay(overlay(left(${hash}, 32) placing '8' from 13) placing '8' from 17)::uuid`;
