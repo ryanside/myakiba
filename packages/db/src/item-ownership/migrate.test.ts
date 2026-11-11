@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
-import type { SQL } from "bun";
+import { SQL } from "bun";
 import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import { snapshot, testDatabases } from "../../test/database";
 import * as authSchema from "../schema/auth";
@@ -345,6 +345,32 @@ describe("table locks", () => {
       "collection IN ACCESS SHARE MODE",
     );
     expect(await migration).toMatchObject({ status: "migrated", attempts: 1 });
+  });
+
+  test("migrates a Collection Item committed while it waits for its lock, even under a repeatable read default", async () => {
+    const { sql, name, url } = await databases.create(seeded);
+    await sql.unsafe(
+      `ALTER DATABASE ${name} SET default_transaction_isolation TO 'repeatable read'`,
+    );
+    const repeatableRead = new SQL({ url, max: 1 });
+    try {
+      const written = Promise.withResolvers<true>();
+      const commit = Promise.withResolvers<true>();
+      const writing = sql.begin(async (tx) => {
+        await tx`INSERT INTO collection (id, user_id, item_id, tags) VALUES ('col-late', 'u4', 'item-a', '{}')`;
+        written.resolve(true);
+        await commit.promise;
+      });
+      await written.promise;
+      const migration = migrateItemOwnership(repeatableRead);
+      await lockWaitStartedAt(sql);
+      commit.resolve(true);
+      await writing;
+      expect(await migration).toMatchObject({ status: "migrated", pairs: 6 });
+      expect(await verifyItemOwnership(sql)).toEqual([]);
+    } finally {
+      await repeatableRead.close();
+    }
   });
 
   test("gives up after three attempts and leaves the database as it was", async () => {

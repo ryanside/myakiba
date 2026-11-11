@@ -390,7 +390,11 @@ export async function migrateItemOwnership(
 
   for (let attempt = 1; ; attempt++) {
     try {
-      const run = await sql.begin(async (tx) => runSteps(tx, options));
+      // Each step must see what committed while the run waited for its locks, whatever the
+      // database's default isolation.
+      const run = await sql.begin("ISOLATION LEVEL READ COMMITTED", async (tx) =>
+        runSteps(tx, options),
+      );
       return {
         status: "migrated",
         attempts: attempt,
