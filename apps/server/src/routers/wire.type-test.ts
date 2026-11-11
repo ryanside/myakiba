@@ -206,6 +206,7 @@ void (true satisfies Equal<
           | "The item page has no category"
           | "The item page has no title"
           | "The page is for a different item"
+          | "The page is larger than any MyFigureCollection item page"
           | "The page is not a MyFigureCollection item page"
           | "This item category is not supported"
           | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
@@ -285,6 +286,7 @@ void (true satisfies Equal<
           | "The item page has no category"
           | "The item page has no title"
           | "The page is for a different item"
+          | "The page is larger than any MyFigureCollection item page"
           | "The page is not a MyFigureCollection item page"
           | "This item category is not supported"
           | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",

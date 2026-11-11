@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { AnyNode } from "domhandler";
+import { parseDocument } from "htmlparser2";
 import { edit, fixture, itemId } from "../test/fixtures";
 import { parseMfcItemPage, splitContentLabel } from "./parse";
 import type { MfcEntryLink, MfcItemPage, MfcPageProblem } from "./parse";
@@ -220,6 +222,30 @@ describe("parseMfcItemPage entries", () => {
     ]);
   });
 
+  test("reads 512 Characters in one comma-separated group", () => {
+    const names = Array.from({ length: 512 }, (_, index) => `C${index}`);
+    const links = names.map(
+      (name, index) =>
+        `<a href="/entry/${1_000_000 + index}" class="tbx-tooltip item-entry"><span switch="">${name}</span></a>`,
+    );
+    const page = parsedPage(
+      withField(
+        "Characters",
+        `<div class="item-entries">${links.join('<span class="light">,</span> ')}</div>`,
+      ),
+    );
+    expect(page.entries.filter((entry) => entry.externalId >= 1_000_000)).toEqual(
+      names.map((name, index) => ({
+        externalId: 1_000_000 + index,
+        category: "Characters",
+        name,
+        sourceLabel: name,
+        roles: [],
+        materialPercentage: null,
+      })),
+    );
+  });
+
   test("reads material percentages", () => {
     const html = edit(
       item98777,
@@ -309,6 +335,309 @@ describe("parseMfcItemPage warnings", () => {
     const page = parsedPage(html);
     expect(page.mfcRatingId).toBeNull();
     expect(page.warnings).toEqual(['unread field "Sculpting"']);
+  });
+});
+
+const ITEM_OBJECT = '<div class="object-wrapper item-object">';
+const CATEGORY_FIELD = '<div class="data-field"><div class="data-label">Category';
+const MATERIALS_FIELD = '<div class="data-field"><div class="data-label">Materials';
+const RAW_TITLE = "[Explicit] - Hello, Good-bye - Yukishiro May - 1/7 (Orchid Seed)</h1>";
+
+const LINKS_PER_FIELD = 500;
+
+function characters(count: number, id: (index: number) => number): string {
+  const links = Array.from(
+    { length: count },
+    (_, index) =>
+      `<a href="/entry/${id(index)}" class="item-entry"><span switch="">C${index}</span></a>`,
+  );
+  const fields: string[] = [];
+  for (let start = 0; start < links.length; start += LINKS_PER_FIELD) {
+    const value = links.slice(start, start + LINKS_PER_FIELD).join("");
+    fields.push(
+      `<div class="data-field"><div class="data-label">Characters</div><div class="data-value">${value}</div></div>`,
+    );
+  }
+  return fields.join("");
+}
+
+function nodesOf(html: string): number {
+  const count = (node: AnyNode): number =>
+    "children" in node ? node.children.reduce((sum, child) => sum + 1 + count(child), 0) : 0;
+  return count(parseDocument(html));
+}
+
+/** Exactly `count` empty elements, none with more than 400 element children. */
+function elements(count: number): string {
+  const groups: string[] = [];
+  for (let left = count; left > 0; left -= 401) {
+    groups.push(`<div>${"<i></i>".repeat(Math.min(left - 1, 400))}</div>`);
+  }
+  return groups.join("");
+}
+
+function withField(label: string, value: string): string {
+  return edit(
+    item98777,
+    CATEGORY_FIELD,
+    `<div class="data-field"><div class="data-label">${label}</div><div class="data-value">${value}</div></div>${CATEGORY_FIELD}`,
+  );
+}
+
+type Limit = Extract<MfcPageProblem, { kind: "too_large" }>["limit"];
+
+const LIMIT_CASES: readonly (readonly [Limit, number, (size: number) => string])[] = [
+  [
+    "depth",
+    64,
+    (size) =>
+      edit(
+        item98777,
+        ITEM_OBJECT,
+        ITEM_OBJECT + "<div>".repeat(size - 9) + "</div>".repeat(size - 9),
+      ),
+  ],
+  [
+    "children",
+    1024,
+    (size) =>
+      edit(item98777, CATEGORY_FIELD, `<div>${"<i></i>".repeat(size)}</div>${CATEGORY_FIELD}`),
+  ],
+  [
+    "nodes",
+    10_000,
+    (size) => edit(item98777, CATEGORY_FIELD, elements(size - nodesOf(item98777)) + CATEGORY_FIELD),
+  ],
+  [
+    "fieldDepth",
+    32,
+    (size) =>
+      edit(item98777, ">Orchid Seed</span>", `>${"<b>".repeat(size - 4)}Orchid Seed</span>`),
+  ],
+  [
+    "dataFields",
+    300,
+    (size) =>
+      edit(
+        item98777,
+        CATEGORY_FIELD,
+        '<div class="data-field"></div>'.repeat(size - 9) + CATEGORY_FIELD,
+      ),
+  ],
+  [
+    "entries",
+    1000,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        characters(size - 7, (index) => 1_000_000 + index) + MATERIALS_FIELD,
+      ),
+  ],
+  [
+    "releases",
+    200,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        '<div class="data-field"><div class="data-value"><a class="time">11/15/2018</a></div></div>'.repeat(
+          size - 1,
+        ) + MATERIALS_FIELD,
+      ),
+  ],
+  ["titleLength", 2000, (size) => edit(item98777, RAW_TITLE, `${"a".repeat(size)}</h1>`)],
+  [
+    "valueLength",
+    2000,
+    (size) => edit(item98777, "<em>Standard (Japan)</em>", `<em>${"a".repeat(size)}</em>`),
+  ],
+  [
+    "entryNameLength",
+    500,
+    (size) => edit(item98777, ">Orchid Seed</span>", `>${"a".repeat(size)}</span>`),
+  ],
+  [
+    "warnings",
+    100,
+    (size) =>
+      edit(
+        item98777,
+        MATERIALS_FIELD,
+        characters(size, (index) => 3_000_000_000 + index) + MATERIALS_FIELD,
+      ),
+  ],
+];
+
+describe("parseMfcItemPage size limits", () => {
+  test.each(LIMIT_CASES)("a page at its %s limit of %d parses", (_limit, size, build) => {
+    expect(problemOf(build(size))).toBeNull();
+  });
+
+  test.each(LIMIT_CASES)("a page past its %s limit of %d is too_large", (limit, size, build) => {
+    expect(problemOf(build(size + 1))).toEqual({ kind: "too_large", limit, measured: size + 1 });
+  });
+
+  test("a warning added after the fields are read counts toward the warnings limit", () => {
+    const page = edit(
+      edit(item98777, 'class="time">11/15/2018</a>', 'class="time">13/45/2018</a>'),
+      MATERIALS_FIELD,
+      characters(100, (index) => 3_000_000_000 + index) + MATERIALS_FIELD,
+    );
+    expect(problemOf(page)).toEqual({ kind: "too_large", limit: "warnings", measured: 101 });
+  });
+
+  test("a warning quotes at most 100 characters of a crafted value", () => {
+    const page = parsedPage(
+      edit(item98777, 'class="time">11/15/2018</a>', `class="time">${"9".repeat(5000)}</a>`),
+    );
+    expect(page.warnings).toEqual([`release skipped: unsupported date "${"9".repeat(100)}…"`]);
+  });
+});
+
+const PAST_VALUE_LENGTH = "a".repeat(2001);
+
+describe("parseMfcItemPage stored values", () => {
+  test.each([
+    ["role", () => edit(item98777, "<em>Manufacturer</em>", `<em>${PAST_VALUE_LENGTH}</em>`)],
+    [
+      "release type",
+      () => edit(item98777, "<em>Standard (Japan)</em>", `<em>${PAST_VALUE_LENGTH}</em>`),
+    ],
+    ["barcode", () => edit(item98777, ">4582292601715<meta", `>${"4".repeat(2001)}<meta`)],
+    [
+      "scale",
+      () => edit(item98777, "<small>1/</small>7</a>", `<small>1/</small>${"7".repeat(2001)}</a>`),
+    ],
+    ["version", () => withField("Version", `<a>${PAST_VALUE_LENGTH}</a>`)],
+    ["Title field", () => withField("Title", PAST_VALUE_LENGTH)],
+    ["numbering", () => withField("Numbering", PAST_VALUE_LENGTH)],
+  ])("a %s longer than 2000 characters is too_large", (_value, build) => {
+    expect(problemOf(build())).toMatchObject({ kind: "too_large", limit: "valueLength" });
+  });
+
+  test("a role inside nested em elements reads once", () => {
+    const page = parsedPage(
+      edit(item98777, "<em>Manufacturer</em>", "<em><em>Manufacturer</em></em>"),
+    );
+    expect(page.entries).toEqual(ENTRIES_98777);
+  });
+
+  test("an entry name inside nested names reads once", () => {
+    const page = parsedPage(
+      edit(item98777, ">Orchid Seed</span>", '><span switch="">Orchid Seed</span></span>'),
+    );
+    expect(page.entries).toEqual(ENTRIES_98777);
+  });
+
+  test("a release type and date inside nested elements read once", () => {
+    const nestedType = edit(
+      item98777,
+      "<em>Standard (Japan)</em>",
+      "<em><em>Standard (Japan)</em></em>",
+    );
+    const page = parsedPage(
+      edit(
+        nestedType,
+        'class="time">11/15/2018</a>',
+        'class="time"><a class="time">11/15/2018</a></a>',
+      ),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a scale inside nested scale links reads once", () => {
+    const page = parsedPage(
+      edit(item98777, "<small>1/</small>7</a>", '<a class="item-scale"><small>1/</small>7</a></a>'),
+    );
+    expect(page.scale).toBe("1/7");
+  });
+
+  test("entries in nested material groups count once toward the entries limit", () => {
+    const links = Array.from(
+      { length: 600 },
+      (_, index) =>
+        `<a href="/entry/${2_000_000 + index}" class="item-entry"><span switch="">M${index}</span></a>`,
+    );
+    const page = parsedPage(
+      withField(
+        "Materials",
+        `<div class="item-entries"><div class="item-entries"><b>${links.slice(0, 300).join("")}</b><b>${links.slice(300).join("")}</b></div></div>`,
+      ),
+    );
+    expect(page.entries.filter((entry) => entry.category === "Materials")).toHaveLength(602);
+  });
+
+  test("a version inside nested links reads once", () => {
+    expect(parsedPage(withField("Version", "<a><a>Reissue</a></a>")).version).toEqual(["Reissue"]);
+  });
+});
+
+describe("parseMfcItemPage release dates", () => {
+  test("a release in the year 0000 is skipped and warns", () => {
+    const page = parsedPage(
+      edit(item98777, 'class="time">11/15/2018</a>', 'class="time">11/15/0000</a>'),
+    );
+    expect(page.releases).toEqual([]);
+    expect(page.warnings).toEqual(['release skipped: unsupported date "11/15/0000"']);
+  });
+});
+
+describe("parseMfcItemPage release prices", () => {
+  test("an ungrouped price reads whole", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "13500 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+});
+
+describe("parseMfcItemPage values too large to store", () => {
+  test("a release price past safe money reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "999,999,999,999,999,999 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual(['unreadable release price "999,999,999,999,999,999"']);
+  });
+
+  test("a dimension past the integer column reads as none and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "<strong>140</strong>", "<strong>99,999,999,999</strong>"),
+    );
+    expect(page.height).toBeNull();
+    expect(page.warnings).toEqual(['unreadable height "99,999,999,999"']);
+  });
+
+  test("a rating id past the integer column reads as none and warns", () => {
+    const page = parsedPage(edit(item98777, "ratingId=3", "ratingId=99999999999"));
+    expect(page.mfcRatingId).toBeNull();
+    expect(page.warnings).toEqual(['unreadable rating id "99999999999"']);
+  });
+
+  test("an entry id past the integer column drops the entry and warns", () => {
+    const page = parsedPage(edit(item98777, 'href="/entry/7628"', 'href="/entry/99999999999"'));
+    expect(page.entries.map((entry) => entry.externalId)).not.toContain(7628);
+    expect(page.entries).toHaveLength(ENTRIES_98777.length - 1);
+    expect(page.warnings).toEqual(['unreadable entry id "99999999999"']);
+  });
+
+  test("a material percentage over 100 reads as none and warns", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        '<span switch="塩ビ">PVC</span></a></div>',
+        '<span switch="塩ビ">PVC</span></a> <small class="light">170%</small></div>',
+      ),
+    );
+    expect(
+      page.entries
+        .filter((entry) => entry.category === "Materials")
+        .map((entry) => entry.materialPercentage),
+    ).toEqual([null, null]);
+    expect(page.warnings).toEqual(['unreadable material percentage "170"']);
   });
 });
 

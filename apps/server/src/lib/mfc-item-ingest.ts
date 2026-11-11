@@ -52,6 +52,13 @@ export async function prepareMfcItem(
   return readMfcItemPage(id, upload);
 }
 
+/** What the request log says about a page the parser refused, with the limit and size a too_large page went past. */
+export function refusedPageLog({ mfcItemId, problem }: MfcPageUnreadable) {
+  return problem.kind === "too_large"
+    ? { itemId: mfcItemId, outcome: problem.kind, limit: problem.limit, measured: problem.measured }
+    : { itemId: mfcItemId, outcome: problem.kind };
+}
+
 export const pictureOutcome = (stored: StoredPicture | null): PictureOutcome =>
   stored?.kind ?? "absent";
 

@@ -1,15 +1,10 @@
 import { expect, test } from "bun:test";
 import { snapshot, testDatabases } from "../../test/database";
-import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
+import { PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { isItemOwnershipMigrated, migrateItemOwnership, verifyItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
 const databases = testDatabases();
-
-// drizzle-kit 0.31.10 rewrites this default on every push of today's schema too.
-const REPEATED_ON_EVERY_PUSH = [
-  `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
-];
 
 // The migration installs these. Push reads no triggers, so it neither declares nor drops them.
 const OWNER_GUARDS = [
