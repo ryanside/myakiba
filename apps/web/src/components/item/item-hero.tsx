@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelativeTimeToNow } from "@/lib/date-display";
 import { ItemRefreshButton } from "@/components/item/item-refresh-button";
 import { ItemImageInspector } from "@/components/item/item-image-inspector";
-import type { ItemDetail, RefreshStatus } from "@/components/item/types";
+import type { ItemDetail } from "@/components/item/types";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { WishlistToggleButton } from "@/components/wishlist/wishlist-toggle-button";
 
@@ -14,8 +14,6 @@ export function ItemHero({
   item,
   isLoading,
   externalId,
-  refreshStatus,
-  cooldownExpiresAt,
   isRefreshPending,
   onRequestRefresh,
   isWishlisted,
@@ -23,8 +21,6 @@ export function ItemHero({
   readonly item: ItemDetail | undefined;
   readonly isLoading: boolean;
   readonly externalId: number;
-  readonly refreshStatus: RefreshStatus;
-  readonly cooldownExpiresAt: string | null;
   readonly isRefreshPending: boolean;
   readonly onRequestRefresh: () => void;
   readonly isWishlisted: boolean;
@@ -70,9 +66,7 @@ export function ItemHero({
 
         <div className="flex flex-wrap items-center gap-2">
           <ItemRefreshButton
-            status={refreshStatus}
             isPending={isRefreshPending}
-            cooldownExpiresAt={cooldownExpiresAt}
             onRequest={onRequestRefresh}
             disabled={isLoading}
           />

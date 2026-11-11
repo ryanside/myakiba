@@ -39,10 +39,6 @@ function RouteComponent(): ReactNode {
 
   const isNotFound = data === null;
 
-  const { data: refreshStatusData } = useRead(items.refreshStatus, externalId, {
-    enabled: data != null,
-  });
-
   const refresh = useRefreshItem();
 
   const { data: itemRelatedOrders } = useRead(items.relatedOrders, externalId, {
@@ -91,8 +87,6 @@ function RouteComponent(): ReactNode {
         item={item}
         isLoading={isPending}
         externalId={externalId}
-        refreshStatus={refreshStatusData?.status ?? "idle"}
-        cooldownExpiresAt={refreshStatusData?.cooldownExpiresAt ?? null}
         isRefreshPending={refresh.isPending}
         onRequestRefresh={() => refresh.run(externalId)}
         isWishlisted={data?.isWishlisted ?? false}
