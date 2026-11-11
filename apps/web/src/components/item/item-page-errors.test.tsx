@@ -37,7 +37,6 @@ await mock.module("@/queries/item", () => ({
       isWishlisted: false,
     }),
   getItemRelatedOrders: async () => Result.ok({ orders: [] }),
-  getRefreshStatus: async () => Result.ok({ status: "idle", cooldownExpiresAt: null }),
   getItemRelatedCollection: async () => {
     throw thrown;
   },

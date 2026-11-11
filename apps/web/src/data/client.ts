@@ -320,8 +320,6 @@ type CommandSpec<Input, Output, Failure extends Error, F extends WritableFamily>
 > & {
   /** Families this write can change, or `"nothing"` for one that changes no cached data. */
   readonly invalidates: readonly [F, ...F[]] | "nothing";
-  /** Keys to refetch when the write fails, such as a status that says why. */
-  readonly failureRefetchKeys?: (input: Input) => readonly RefetchKey<F>[];
   /** The write. Its failure is the command's declared failure, and a throw is a defect. */
   readonly persist: (input: Input) => Promise<Result<Output, Failure>>;
   /**
@@ -447,7 +445,6 @@ async function runCommand<Input, Output, Failure extends Error>(
       if (onFailed) onFailed(input, shown);
       else toast.add({ type: "error", ...shown });
     }
-    await invalidateKeys(spec.failureRefetchKeys?.(input) ?? []);
   }
   if (spec.refetchBy === "settled") await refetchFamilies();
   spec.settled?.(queryClient, input);

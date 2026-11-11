@@ -3,8 +3,6 @@
   "duplicates": ["packages/contracts/src/orders/schema.ts orderFiltersSchema|searchSchema"],
   "exports": [
     "apps/server/src/routers/calendar/model.ts CALENDAR_VIEWS",
-    "apps/server/src/routers/item/model.ts customItemEntrySchema",
-    "apps/server/src/routers/item/model.ts customItemReleaseSchema",
     "apps/server/src/routers/item/model.ts entriesWithRolesSchema",
     "apps/web/src/components/evilcharts/charts/recharts-area-chart.tsx useLoadingData",
     "apps/web/src/components/evilcharts/charts/recharts-bar-chart.tsx useLoadingData",

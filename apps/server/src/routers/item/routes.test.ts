@@ -4,7 +4,6 @@ import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
-import type { CustomItemInput } from "./model";
 
 const { collection, entry, entry_to_item, item, item_release, order, wishlistItem } = figureSchema;
 
@@ -52,12 +51,12 @@ beforeEach(async () => {
   ]);
 });
 
-const call = async (method: string, path: string, body?: CustomItemInput) => {
+const call = async (method: string, path: string, body?: string) => {
   const response = await app.handle(
     new Request(`http://localhost/api/item${path}`, {
       method,
       headers: { "x-test-user": userId, "content-type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body,
     }),
   );
   const json = response.headers.get("content-type")?.includes("json");
@@ -71,34 +70,7 @@ const counts = async () => ({
   releases: await db.$count(item_release),
 });
 
-const customItem = {
-  title: "Custom figure",
-  category: "Prepainted",
-  releases: [{ date: "2026-05-01", price: 1000 }],
-} satisfies CustomItemInput;
-
 describe("each item route answers as before", () => {
-  test("create a custom item with a new entry and a release", async () => {
-    const { status, body } = await call("POST", "/custom", {
-      ...customItem,
-      entries: [{ name: "New artist", category: "Artists", role: "Sculptor" }],
-    });
-
-    expect(status).toBe(200);
-    expect(body).toMatchObject({
-      item: {
-        source: "custom",
-        externalId: null,
-        title: "Custom figure",
-        releases: [{ date: "2026-05-01", price: 1000 }],
-        entries: [
-          { name: "New artist", category: "Artists", role: "Sculptor", roles: ["Sculptor"] },
-        ],
-      },
-    });
-    expect(await counts()).toEqual({ items: 2, entries: 2, links: 2, releases: 3 });
-  });
-
   test("get an item with the viewer's wishlist flag and its releases newest first", async () => {
     expect(await call("GET", "/186")).toMatchObject({
       status: 200,
@@ -137,50 +109,20 @@ describe("each item route answers as before", () => {
   });
 });
 
-describe("a custom item that fails after its insert leaves nothing behind", () => {
-  test("an unknown entry id", async () => {
-    const before = await counts();
-
-    expect(
-      await call("POST", "/custom", {
-        ...customItem,
-        entries: [{ entryId: "missing", category: "Artists" }],
-      }),
-    ).toEqual({ status: 404, body: "Entry not found" });
-    expect(await counts()).toEqual(before);
-  });
-
-  test("an entry of another category", async () => {
-    const before = await counts();
-
-    expect(
-      await call("POST", "/custom", {
-        ...customItem,
-        entries: [{ entryId: "entry-1", category: "Artists" }],
-      }),
-    ).toEqual({ status: 400, body: "Entry category mismatch" });
-    expect(await counts()).toEqual(before);
-  });
-});
-
-test("a named Entry missing after insert rolls back the custom Item instead of dropping its link", async () => {
-  await db.execute(
-    `CREATE FUNCTION drop_entry() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$`,
-  );
-  await db.execute(
-    `CREATE TRIGGER drop_entry BEFORE INSERT ON entry FOR EACH ROW EXECUTE FUNCTION drop_entry()`,
-  );
+test("POST /api/item/custom is not a route, so it creates no Item, Entry or release", async () => {
   const before = await counts();
-  try {
-    expect(
-      await call("POST", "/custom", {
-        ...customItem,
-        entries: [{ name: "Dropped artist", category: "Artists" }],
-      }),
-    ).toMatchObject({ status: 500 });
-    expect(await counts()).toEqual(before);
-  } finally {
-    await db.execute("DROP TRIGGER drop_entry ON entry");
-    await db.execute("DROP FUNCTION drop_entry()");
-  }
+
+  const created = await call(
+    "POST",
+    "/custom",
+    JSON.stringify({
+      title: "Custom figure",
+      category: "Prepainted",
+      releases: [{ date: "2026-05-01", price: 1000 }],
+      entries: [{ name: "New artist", category: "Artists", role: "Sculptor" }],
+    }),
+  );
+
+  expect(created.status).toBe(404);
+  expect(await counts()).toEqual(before);
 });

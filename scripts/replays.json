@@ -1032,16 +1032,6 @@
       ]
     },
     {
-      "fix": "33f44f9bc81c5fc8e532bc7816144f90044358ee",
-      "bug": "an item resync whose commit failed after the cooldown write answered 500, left the item as it was and still held a 3-day cooldown",
-      "test": "apps/server/src/routers/item/resync.test.ts",
-      "fixed": [
-        "a resync that fails part way leaves no cooldown and no refresh > a commit that fails after the cooldown write answers 500, keeps no cooldown, and a retry refreshes"
-      ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
       "fix": "25fd8793bf4949b0645a15b6f66811e7d93586dc",
       "bug": "an item resync read a page with a material share finer than 2 decimals as changed every time, because the column stores it rounded",
       "test": "apps/server/src/routers/item/resync.test.ts",
@@ -1322,14 +1312,6 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
-      "fix": "ea0f1215b0d4399637213312aaecf502b33608fb",
-      "bug": "a refresh refused for the item's cooldown left the button idle until the status refetched",
-      "test": "apps/web/src/data/resources/item.test.tsx",
-      "fixed": ["a refresh refused during the item's cooldown shows the cooldown at once"],
-      "testAt": "5296da28181978c2fba2f91c3c0e7703ad4489ab",
-      "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
       "fix": "48c53fa1fcda2d9fdae6221057629e18fb90a8fb",
       "bug": "the extension probe threw in browsers without Promise.withResolvers",
       "test": "apps/web/src/lib/extension-bridge.test.ts",
@@ -1417,10 +1399,7 @@
       "head": [
         {
           "test": "apps/web/src/data/legacy-wording.test.ts",
-          "fixed": [
-            "refresh status hides server, validator and network details",
-            "refresh item hides server, validator and network details"
-          ],
+          "fixed": ["refresh item hides server, validator and network details"],
           "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; the Item Refresh callers remain."
         }
       ]
@@ -1497,17 +1476,6 @@
       ]
     },
     {
-      "fix": "31e122b927e8362597b91b6f22eecc0ad98fda33",
-      "bug": "best-effort cooldown write failures rolled back Item Refresh and status read failures answered 500",
-      "test": "apps/server/src/routers/item/resync.test.ts",
-      "fixed": [
-        "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
-        "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
-      ],
-      "testAt": "76db84ea763498c531ee6e549c1669c4163a136a",
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
       "fix": "f75b692b5f6069590b333da9cd93718a14840a7d",
       "testAt": "b1bfe8eb368ed73a7719863ab511206bed8006f1",
       "bug": "email provider failure disclosed account existence and failed sign-up after persistence",
@@ -1519,28 +1487,6 @@
         "sign-up succeeds and logs when verification email fails"
       ],
       "reason": "Keep the recorded library harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
-      "fix": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
-      "testAt": "9e4020af8aeced1a5ef814b67eb98bf9d98bb71c",
-      "bug": "optional Redis calls could hang indefinitely",
-      "test": "apps/server/src/routers/item/resync.test.ts",
-      "fixed": [
-        "hanging cooldown write settles within its deadline",
-        "hanging cooldown status settles within its deadline",
-        "hanging cooldown guard settles within its deadline"
-      ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
-    },
-    {
-      "fix": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
-      "testAt": "a5ffe3c77fcb13d7f0fd13ec6ba7eae83ba72a1a",
-      "bug": "server silently discarded an invariant failure and reported success",
-      "test": "apps/server/src/routers/item/routes.test.ts",
-      "fixed": [
-        "a named Entry missing after insert rolls back the custom Item instead of dropping its link"
-      ],
-      "reason": "Use the fix-era harness so later test changes do not alter the historical failing-to-passing assertions."
     },
     {
       "fix": "dc8e898ce3e4f173544db2c87a96d9db92a6d5b4",
@@ -1644,19 +1590,6 @@
       ],
       "testAt": "8db9d3a266407d65deb28669fd64e5a9288c2bd0",
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
-    },
-    {
-      "fix": "c5400c79f66f52887674336d8b7b2660a1fffe5f",
-      "testAt": "1fe79c998962b8848b719ff1d6a72c475afbb75b",
-      "bug": "fail-open cooldown status reads and writes queued disconnected Redis commands and logged outages at error",
-      "test": "apps/server/src/routers/item/resync.test.ts",
-      "fixed": [
-        "best-effort cooldown failures > status skips a disconnected Redis cache and warns while reporting idle",
-        "best-effort cooldown failures > Redis disconnected after the cooldown guard commits the refresh without queueing a write",
-        "best-effort cooldown failures > Redis lost at the cooldown write commits the refresh without a cooldown and logs the failure",
-        "best-effort cooldown failures > Redis lost during a status read reports idle and logs the failure"
-      ],
-      "reason": "Keep the recorded router and operation harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
       "fix": "c6607a0bf8dbb9f1cc08c4b05991fb17e2917095",
@@ -2768,7 +2701,10 @@
         "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400, leaves the item as it was and starts no cooldown"
       ],
       "testAt": "0511bc129c7302a1670f8125297bcce3067cea83",
-      "reason": "The head's test differs from this fix's only in one expected string, \"settings to import\" against \"menu to save\", which later wording changed."
+      "reason": "The head's test differs from this fix's only in one expected string, \"settings to import\" against \"menu to save\", which later wording changed. HEAD names the test without its cooldown clause, since Item Refresh has no cooldown.",
+      "atHead": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400 and leaves the item as it was"
+      ]
     },
     {
       "fix": "a4e8b2a28121837aa51b25d92124300af7c6d908",
@@ -3597,6 +3533,39 @@
       "fixed": [
         "stageshow reduced motion > follows the app's Reduce motion switch when the device setting is off",
         "stageshow reduced motion > a demo holds its poster and never runs its script under the app's switch"
+      ]
+    },
+    {
+      "fix": "d2efa322b5a4646a76b4552891429435acf255ff",
+      "bug": "POST /api/item/custom let any signed-in account write an owner-less Item, Entries and releases with no limit, though the web never called it.",
+      "test": "apps/server/src/routers/item/routes.test.ts",
+      "fixed": ["POST /api/item/custom is not a route, so it creates no Item, Entry or release"]
+    },
+    {
+      "fix": "10cd59403523c9bb425f9d4c6f8b1a3edc6be7ed",
+      "bug": "Item Refresh refused a second refresh of an Item for three days, and its answer carried the cooldown.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "Item Refresh has no cooldown > a refresh answers only whether it saved",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ]
+    },
+    {
+      "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
+      "bug": "Item Refresh rewrote an Item for an account without a verified email, though saving a Pick needed one.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing"
+      ]
+    },
+    {
+      "fix": "562eada1705d62a04754cd69390ac5725056999d",
+      "bug": "A Collection Item edit saved any releaseId the client sent, so it could select a release of another Item.",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": [
+        "an edit that selects another Item's release answers 404 and leaves the Collection Item as it was"
       ]
     }
   ],
