@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { HeadObjectCommand, NotFound } from "@aws-sdk/client-s3";
+import { HeadObjectCommand, NotFound, S3ServiceException } from "@aws-sdk/client-s3";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createItemImages } from "./item-images";
 
 const fits = async () => true;
 const sha256 = (data: Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 
-function fakeBucket({ headFails = false } = {}) {
+function fakeBucket({ headFails = false, headForbidden = false } = {}) {
   const puts: PutObjectCommand["input"][] = [];
   const heads: string[] = [];
   const stored = new Set<string>();
@@ -17,6 +17,13 @@ function fakeBucket({ headFails = false } = {}) {
         if (command instanceof HeadObjectCommand) {
           heads.push(key);
           if (headFails) throw new Error("S3 is down");
+          if (headForbidden) {
+            throw new S3ServiceException({
+              name: "Forbidden",
+              $fault: "client",
+              $metadata: { httpStatusCode: 403 },
+            });
+          }
           if (stored.has(key)) return { $metadata: { httpStatusCode: 200 } };
           throw new NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
         }
@@ -163,6 +170,15 @@ describe("a stored picture is stored again only if it is gone", () => {
       ContentType: "image/jpeg",
       CacheControl: "public, max-age=31536000, immutable",
     });
+  });
+
+  test("a HEAD S3 forbids, as it does for a missing key without s3:ListBucket, stores it again", async () => {
+    const bucket = fakeBucket({ headForbidden: true });
+    const picture = await storedJpeg(bucket);
+
+    await bucket.images.ensure(picture);
+
+    expect(bucket.puts).toHaveLength(2);
   });
 
   test("a HEAD that fails for another reason throws", async () => {

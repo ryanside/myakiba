@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { HeadObjectCommand, NotFound, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  S3ServiceException,
+} from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 
@@ -134,9 +139,11 @@ export function createItemImages(bucket: Bucket): ItemImages {
       const found = await racingAbort(
         bucket.client.send(head, { abortSignal: timeout }).then(
           () => true,
-          // The SDK answers a HEAD for a missing object with NotFound.
+          // S3 answers a HEAD for a missing key with 404, or with 403 to a user without
+          // s3:ListBucket. Storing the picture again is safe either way.
           (error: Error) => {
-            if (error instanceof NotFound) return false;
+            const status = error instanceof S3ServiceException && error.$metadata.httpStatusCode;
+            if (status === 403 || status === 404) return false;
             throw error;
           },
         ),
