@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScreenPlaceholder } from "@/components/homepage/framed-screen";
-import type { ShowcaseScreenName } from "@/components/showcase/names";
+import type { ShowcaseScreenName } from "@/components/showcase/screens";
 import { prepareShowcaseScreens } from "@/components/showcase/prepare";
 import { ShowcaseScreen } from "@/components/showcase/showcase-screen";
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import type { ShowcaseScreenName } from "@/components/showcase/names";
+import type { ShowcaseScreenName } from "@/components/showcase/screens";
 
 const HomeScreen = lazy(() => import("@/components/homepage/screens"));
 

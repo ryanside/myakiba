@@ -1,7 +1,7 @@
 import { loadFont } from "@/lib/load-font";
 import { getPageBackground } from "@/lib/page-background";
 import { SHOWCASE_SCREENS } from "./screens";
-import type { ShowcaseScreenName } from "./names";
+import type { ShowcaseScreenName } from "./screens";
 
 // The screens paint in these. The page loads them first, so no screen shows a fallback font.
 const SCREEN_FONTS = ['16px "Inter Variable"', '16px "Orbitron Variable"'] as const;
