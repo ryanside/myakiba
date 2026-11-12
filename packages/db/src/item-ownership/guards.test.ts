@@ -2,8 +2,9 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
-import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards, ownerGuardsInstalled } from "./guards";
-import { migrateItemOwnership, verifyItemOwnership } from "./migrate";
+import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
+import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards } from "./guards";
+import { migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
 const databases = testDatabases();
@@ -177,9 +178,6 @@ describe("each guard rejects a write across users and lets the owner's own write
     expect(await outcome(sql`UPDATE item SET owner_id = 'u2' WHERE id = 'item-u1'`)).toBe(
       "item_owner_fixed",
     );
-    expect(await outcome(sql`UPDATE item SET owner_id = 'u1' WHERE id = 'item-a'`)).toBe(
-      "item_owner_fixed",
-    );
     expect(await outcome(sql`UPDATE entry SET owner_id = NULL WHERE id = 'entry-u1'`)).toBe(
       "entry_owner_fixed",
     );
@@ -198,19 +196,25 @@ describe("each guard rejects a write across users and lets the owner's own write
   });
 });
 
-test("rows without an owner stay writable, as they were before the migration", async () => {
+test("an Item Entry link without an owner is rejected, even between an Item and an Item Entry without one", async () => {
   const { sql } = await migrated();
-  expect(await outcome(sql`UPDATE item SET title = 'Retired' WHERE owner_id IS NULL`)).toBe(
-    "written",
-  );
+  await sql.unsafe(`
+    ALTER TABLE item ALTER COLUMN owner_id DROP NOT NULL;
+    ALTER TABLE entry ALTER COLUMN owner_id DROP NOT NULL;
+    ALTER TABLE entry_to_item ALTER COLUMN owner_id DROP NOT NULL;
+  `);
+  await sql`INSERT INTO item (id, title) VALUES ('item-none', 'No owner')`;
+  await sql`INSERT INTO entry (id, category, name) VALUES ('entry-none', 'Characters', 'No owner')`;
   expect(
-    await outcome(sql`UPDATE entry_to_item SET roles = '{Sculptor}' WHERE owner_id IS NULL`),
-  ).toBe("written");
+    await outcome(
+      sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-none', 'item-none')`,
+    ),
+  ).toBe("entry_to_item_item_owner");
   expect(
-    await outcome(sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-6', 'item-f')`),
-  ).toBe("written");
-  expect(await outcome(sql`DELETE FROM item WHERE owner_id IS NULL`)).toBe("written");
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+    await outcome(
+      sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-u1', 'item-u1')`,
+    ),
+  ).toBe("entry_to_item_item_owner");
 });
 
 test("a delete that cascades through a Selected Item Release passes every guard", async () => {
@@ -328,7 +332,7 @@ test("a guard locks the Item it checks, so an id deleted and reissued to another
   release.resolve(true);
   await reissuing;
   expect(await write).toBe("collection_item_owner");
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });
 
 test("overlapping installs all succeed", async () => {

@@ -1,7 +1,9 @@
 import { SQL } from "bun";
-import { installOwnerGuards, ownerGuardsInstalled } from "./guards";
+import { installOwnerGuards } from "./guards";
 
 export const MIGRATION_STEPS = [
+  "dropRetiredTables",
+  "lockTables",
   "expand",
   "plan",
   "copyItems",
@@ -11,6 +13,8 @@ export const MIGRATION_STEPS = [
   "repoint",
   "contract",
   "verify",
+  "deleteOwnerless",
+  "requireOwners",
 ] as const;
 type MigrationStep = (typeof MIGRATION_STEPS)[number];
 
@@ -27,15 +31,19 @@ export type MigrationReport =
       readonly repointed: Counts<
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"
       >;
+      readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
+      readonly droppedTables: readonly DroppedTable[];
       readonly milliseconds: number;
     };
+
+type DroppedTable = { readonly table: (typeof RETIRED_TABLES)[number]; readonly rows: number };
 
 type MigrationOptions = {
   readonly lockTimeout?: string;
   readonly afterStep?: (step: MigrationStep) => void | Promise<void>;
 };
 
-export type OwnershipMiss = { readonly check: string; readonly rows: number };
+type OwnershipMiss = { readonly check: string; readonly rows: number };
 
 type Counts<K extends string> = { [key in K]: number };
 
@@ -47,6 +55,15 @@ const LOCK_FAILURES: ReadonlySet<string | undefined> = new Set([
   DEADLOCK_DETECTED,
 ]);
 const REFERENCE_TABLES = ["collection", "wishlist_item", "list_member"] as const;
+
+// Retired in 0d74a0d1, each after the tables that reference it. main's database still has them, and
+// push cannot drop them without a prompt: it asks whether add_commit is one of them renamed.
+const RETIRED_TABLES = [
+  "data_transfer_import_item",
+  "data_transfer_import",
+  "sync_session_item",
+  "sync_session",
+] as const;
 
 // drizzle-kit names a column's foreign key this way, so push finds these as the schema declares them.
 const OWNER_KEYS = [
@@ -100,9 +117,10 @@ const OWNERSHIP_CHECKS = [
       WHERE l.owner_id IS DISTINCT FROM i.owner_id OR l.owner_id IS DISTINCT FROM e.owner_id`,
   },
   {
-    check: "a table this migration does not re-point references Items or Item Entries",
+    check: "a table this migration does not re-point references Items, Item Entries or their links",
     count: `SELECT count(*) FROM pg_constraint WHERE contype = 'f'
-      AND confrelid IN ('public.item'::regclass, 'public.item_release'::regclass, 'public.entry'::regclass)
+      AND confrelid IN ('public.item'::regclass, 'public.item_release'::regclass, 'public.entry'::regclass,
+        'public.entry_to_item'::regclass)
       AND conrelid NOT IN ('public.item_release'::regclass, 'public.entry_to_item'::regclass,
         'public.collection'::regclass, 'public.wishlist_item'::regclass, 'public.list_member'::regclass)`,
   },
@@ -138,6 +156,8 @@ const COPY_CHECKS = [
   },
 ] as const;
 
+const OWNER_TABLES = ["item", "entry", "entry_to_item"] as const;
+
 type Run = {
   readonly startCounts: Counts<(typeof REFERENCE_TABLES)[number]>;
   pairs: number;
@@ -145,9 +165,31 @@ type Run = {
   foreignReleasesCleared: number;
   otherUsersListTargets: number;
   readonly repointed: Counts<"collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner">;
+  readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
+  readonly droppedTables: DroppedTable[];
 };
 
 const STEPS = {
+  async dropRetiredTables(tx, run) {
+    for (const table of RETIRED_TABLES) {
+      const [found] = await tx<[{ exists: boolean }]>`
+        SELECT to_regclass(${`public.${table}`}) IS NOT NULL AS exists
+      `;
+      if (!found.exists) continue;
+      const rows = await count(tx, `SELECT count(*) FROM ${ident(table)}`);
+      await tx.unsafe(`DROP TABLE ${ident(table)}`);
+      run.droppedTables.push({ table, rows });
+    }
+  },
+
+  async lockTables(tx) {
+    await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
+    await tx.unsafe(
+      `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
+      IN ACCESS EXCLUSIVE MODE`,
+    );
+  },
+
   async expand(tx) {
     await tx.unsafe(`
       ALTER TABLE item ADD COLUMN IF NOT EXISTS owner_id text;
@@ -302,25 +344,38 @@ const STEPS = {
   },
 
   async verify(tx, run) {
-    const misses = [...(await verifyItemOwnership(tx)), ...(await missesOf(tx, COPY_CHECKS))];
-    for (const table of REFERENCE_TABLES) {
-      const now = await count(tx, `SELECT count(*) FROM ${table}`);
-      if (now !== run.startCounts[table]) {
-        misses.push({
-          check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
-          rows: Math.abs(now - run.startCounts[table]),
-        });
-      }
+    failOn([
+      ...(await missesOf(tx, OWNERSHIP_CHECKS)),
+      ...(await missesOf(tx, COPY_CHECKS)),
+      ...(await referenceCountMisses(tx, run)),
+    ]);
+  },
+
+  async deleteOwnerless(tx, run) {
+    const links = await tx`DELETE FROM entry_to_item WHERE owner_id IS NULL`;
+    const releases = await tx`
+      DELETE FROM item_release r USING item i WHERE i.id = r.item_id AND i.owner_id IS NULL
+    `;
+    const items = await tx`DELETE FROM item WHERE owner_id IS NULL`;
+    const entries = await tx`DELETE FROM entry WHERE owner_id IS NULL`;
+    run.deleted.links = links.count;
+    run.deleted.releases = releases.count;
+    run.deleted.items = items.count;
+    run.deleted.entries = entries.count;
+    failOn(await referenceCountMisses(tx, run));
+  },
+
+  async requireOwners(tx) {
+    for (const table of OWNER_TABLES) {
+      await tx.unsafe(`ALTER TABLE ${ident(table)} ALTER COLUMN owner_id SET NOT NULL`);
     }
-    if (misses.length > 0)
-      throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
   },
 } satisfies Record<MigrationStep, (tx: SQL, run: Run) => Promise<void>>;
 
 /**
  * Gives every user their own copy of each pre-ownership Item they reference, with its Item
- * Releases, Item Entries and links, re-points their references to it, and installs the owner guards.
- * One transaction: a crash or a failed check leaves the database as it was. A fresh database
+ * Releases, Item Entries and links, re-points their references to it, deletes every row without an
+ * owner, and installs the owner guards. One transaction: a crash or a failed check leaves the database as it was. A fresh database
  * and a migrated one are left alone.
  */
 export async function migrateItemOwnership(
@@ -349,6 +404,8 @@ export async function migrateItemOwnership(
         foreignReleasesCleared: run.foreignReleasesCleared,
         otherUsersListTargets: run.otherUsersListTargets,
         repointed: run.repointed,
+        deleted: run.deleted,
+        droppedTables: run.droppedTables,
         milliseconds: Math.round(performance.now() - started),
       };
     } catch (error) {
@@ -358,28 +415,38 @@ export async function migrateItemOwnership(
   }
 }
 
-/** The run installs the owner guards last, in its transaction, so they mark a finished run. */
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
-  return ownerGuardsInstalled(sql);
+  const [{ required }] = await sql<[{ required: number }]>`
+    SELECT count(*)::int AS required FROM pg_attribute
+    WHERE attrelid IN (to_regclass('public.item'), to_regclass('public.entry'),
+        to_regclass('public.entry_to_item'))
+      AND attname = 'owner_id' AND attnotnull AND NOT attisdropped
+  `;
+  return required === OWNER_TABLES.length;
 }
 
-export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {
-  return missesOf(sql, OWNERSHIP_CHECKS);
+function failOn(misses: readonly OwnershipMiss[]): void {
+  if (misses.length === 0) return;
+  const described = misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
+  throw new Error(`Item ownership migration failed: ${described}`);
 }
 
-export function describeMisses(misses: readonly OwnershipMiss[]): string {
-  return misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
+async function referenceCountMisses(tx: SQL, run: Run): Promise<OwnershipMiss[]> {
+  const misses: OwnershipMiss[] = [];
+  for (const table of REFERENCE_TABLES) {
+    const now = await count(tx, `SELECT count(*) FROM ${table}`);
+    if (now !== run.startCounts[table]) {
+      misses.push({
+        check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
+        rows: Math.abs(now - run.startCounts[table]),
+      });
+    }
+  }
+  return misses;
 }
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
   await tx`SELECT set_config('lock_timeout', ${options.lockTimeout ?? "10s"}, true)`;
-  // The owner keys into "user" need this lock. Taking it first means the run never waits for it
-  // while it holds the Item tables.
-  await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
-  await tx.unsafe(
-    `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
-    IN ACCESS EXCLUSIVE MODE`,
-  );
   const run: Run = {
     startCounts: { collection: 0, wishlist_item: 0, list_member: 0 },
     pairs: 0,
@@ -387,6 +454,8 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
     foreignReleasesCleared: 0,
     otherUsersListTargets: 0,
     repointed: { collection: 0, wishlistItem: 0, listMemberItem: 0, listMemberOwner: 0 },
+    deleted: { items: 0, entries: 0, links: 0, releases: 0 },
+    droppedTables: [],
   };
   for (const step of MIGRATION_STEPS) {
     await STEPS[step](tx, run);
