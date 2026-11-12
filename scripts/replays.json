@@ -4180,7 +4180,73 @@
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
       ],
-      "test": "packages/db/src/scripts/push-schema.test.ts"
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "testAt": "cee9295fa9fd0ffd95dee0537b4387ea5ac51b18",
+      "reason": "The owner-required switch makes the migration delete the originals and push require owners, so HEAD's db-push tests expect deleted counts and NOT NULL owner columns that this fix predates."
+    },
+    {
+      "fix": "882faae5c29b28d4eaf9d7b38d894e6818f15b29",
+      "bug": "The Item ownership migration left the originals it copied, with their releases, Item Entries and links, and Items nobody referenced, in the database without an owner, invisible to every user.",
+      "test": "packages/db/src/item-ownership/migrate.test.ts",
+      "fixed": [
+        "reports one copy per user and referenced Item, with its releases, Item Entries and links",
+        "deletes every Item, Item Entry, link and release without an owner, unreferenced Items included",
+        "gives each user one copy of every Item they referenced, equal to it down to the picture",
+        "gives every copied release a version 8 UUID, which the contracts' z.uuid() accepts",
+        "copies each user's Item Entries once, with every link and its roles and material percentage",
+        "migrates a generated seed of 20 users with 9 references each"
+      ]
+    },
+    {
+      "fix": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
+      "bug": "The Item ownership migration counted a database as migrated only while all 8 owner guards were installed, so dropping one guard ran the whole migration again under its table locks.",
+      "test": "packages/db/src/item-ownership/migrate.test.ts",
+      "fixed": [
+        "a migrated database missing an owner guard is still migrated, so the migration does not run again"
+      ]
+    },
+    {
+      "fix": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
+      "bug": "A database the first ownership migration had migrated counted as migrated while it still held the originals that migration left without an owner, so db-push never deleted them.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing"
+      ],
+      "testAt": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
+      "reason": "HEAD's test also checks the NOT NULL owner columns that a later commit adds."
+    },
+    {
+      "fix": "4dba04e20f1c401e568d9ba92525555c9c18049a",
+      "bug": "The Item Entry link guard compared owners with IS NOT DISTINCT FROM, so a link without an owner between an Item and an Item Entry without one passed it.",
+      "test": "packages/db/src/item-ownership/guards.test.ts",
+      "fixed": [
+        "an Item Entry link without an owner is rejected, even between an Item and an Item Entry without one"
+      ]
+    },
+    {
+      "fix": "a18fd383a5359d634e92cf4a6a7d5998b91c1927",
+      "bug": "owner_id on item, entry and entry_to_item stayed nullable, so a writer that forgot the owner wrote an Item, Item Entry or link nobody could see.",
+      "test": "packages/db/src/owner.test.ts",
+      "fixed": ["an Item, Item Entry or link insert without an owner does not compile"]
+    },
+    {
+      "fix": "a18fd383a5359d634e92cf4a6a7d5998b91c1927",
+      "bug": "db-push left the owner columns nullable on main's and staging's databases.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
+        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
+        "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
+      ]
+    },
+    {
+      "fix": "f48a80fa08eeac071237bffbef18af99792bd871",
+      "bug": "db-push dropped main's retired tables before the ownership migration, so a migration that failed and rolled back still left main's running server without Import/Export and sync.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
+        "a table that depends on a retired table stops db-push after the migration, with nothing dropped, and db-push run again once it is gone finishes the deploy"
+      ]
     }
   ],
   "lint": [
