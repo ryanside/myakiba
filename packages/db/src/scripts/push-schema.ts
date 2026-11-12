@@ -81,12 +81,12 @@ if (exitCode !== 0 || !completed) {
     "SCHEMA PUSH FAILED. drizzle-kit's output above shows where it stopped. A TTY error means it stopped at a prompt.",
     ...(migration.status === "migrated"
       ? [
-          "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+          "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
         ]
       : []),
     ...(droppedTables.length > 0
       ? [
-          "main's Import/Export and sync no longer work, because the retired tables went with that commit, and its Item writes fail until the new server starts.",
+          "main's Import/Export and sync no longer work, because the retired tables went with that commit.",
         ]
       : []),
     "Fix the cause and run db-push again. It reports already-migrated and finishes the push.",

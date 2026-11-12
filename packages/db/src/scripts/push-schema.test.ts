@@ -374,10 +374,10 @@ test(
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
-      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+      "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
     );
     expect(failed.output).toContain(
-      "main's Import/Export and sync no longer work, because the retired tables went with that commit, and its Item writes fail until the new server starts.",
+      "main's Import/Export and sync no longer work, because the retired tables went with that commit.",
     );
     expect(await isItemOwnershipMigrated(sql)).toBe(true);
     expect(await tables(sql)).not.toEqual(expect.arrayContaining(["sync_session"]));
@@ -395,7 +395,7 @@ test(
 );
 
 test(
-  "a push that fails after migrating a database without the retired tables does not say main's Import/Export and sync went with them",
+  "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them",
   async () => {
     const { sql, url } = await databases.create(await databases.legacyTemplate(seedSharedItems));
     await sql`CREATE TABLE stray (id integer)`;
@@ -404,7 +404,7 @@ test(
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
-      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+      "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
     );
     expect(failed.output).not.toContain("Import/Export");
   },
