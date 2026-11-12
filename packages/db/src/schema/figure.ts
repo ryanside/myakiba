@@ -32,7 +32,9 @@ export const item = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
-    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     title: text("title").notNull(),
@@ -90,7 +92,9 @@ export const entry = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
-    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     category: text("category").notNull(), // classifications, origin, character, company, artist, material, event
@@ -108,7 +112,7 @@ export const entry = pgTable(
 export const entry_to_item = pgTable(
   "entry_to_item",
   {
-    ownerId: text("owner_id"),
+    ownerId: text("owner_id").notNull(),
     entryId: text("entry_id")
       .notNull()
       .references(() => entry.id, { onDelete: "cascade" }),

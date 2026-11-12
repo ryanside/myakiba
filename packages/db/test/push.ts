@@ -8,6 +8,13 @@ export const REPEATED_ON_EVERY_PUSH = [
   `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
+// The ownership migration adds the owner columns without NOT NULL, so its first push requires them.
+export const OWNERS_REQUIRED = [
+  `ALTER TABLE "entry" ALTER COLUMN "owner_id" SET NOT NULL`,
+  `ALTER TABLE "entry_to_item" ALTER COLUMN "owner_id" SET NOT NULL`,
+  `ALTER TABLE "item" ALTER COLUMN "owner_id" SET NOT NULL`,
+];
+
 /** Pushes the app schema as push-schema.ts does: no TTY, so any prompt fails. */
 export async function pushSchema(url: string) {
   const child = Bun.spawn(

@@ -239,6 +239,17 @@ async function tables(sql: SQL) {
   return rows.map((row) => row.name);
 }
 
+const OWNER_COLUMNS_REQUIRED = [
+  { table_name: "entry", is_nullable: "NO" },
+  { table_name: "entry_to_item", is_nullable: "NO" },
+  { table_name: "item", is_nullable: "NO" },
+];
+
+const ownerColumns = (sql: SQL) => sql`
+  SELECT table_name, is_nullable FROM information_schema.columns
+  WHERE table_schema = 'public' AND column_name = 'owner_id' ORDER BY table_name
+`;
+
 const migrationReport = (output: string) =>
   /Item ownership migration: (.*)/
     .exec(output)?.[1]
@@ -283,6 +294,7 @@ test(
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
     expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
     const pushed = await snapshot(sql);
     expect({
       columns: pushed.columns,
@@ -330,6 +342,7 @@ test(
       await sql`SELECT id FROM item WHERE id IN ('item-u1-1005', 'item-u3-1006') ORDER BY id`,
     ).toEqual([{ id: "item-u1-1005" }, { id: "item-u3-1006" }]);
     expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
     const pushed = await snapshot(sql);
     expect({
       columns: pushed.columns,
@@ -377,6 +390,7 @@ test(
     expect(rerun.output).toContain("Item owner guards installed.");
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
   },
   PUSH_TIMEOUT * 2,
 );

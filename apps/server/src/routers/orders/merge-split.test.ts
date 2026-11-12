@@ -60,7 +60,9 @@ beforeEach(async () => {
   await db
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
-  await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
+  await db
+    .insert(item)
+    .values({ id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" });
   await db.insert(order).values([
     { id: "order-1", userId, title: "AmiAmi preorder" },
     { id: "order-2", userId, title: "HLJ preorder" },
