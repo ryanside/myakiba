@@ -364,6 +364,15 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
   });
 
+  async function waitsForALock(sql: SQL) {
+    const [{ waiting }] = await rows(
+      sql,
+      `SELECT count(*)::int AS waiting FROM pg_stat_activity
+      WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+    );
+    return waiting > 0;
+  }
+
   async function crossMigration(sql: SQL, first: string, then: string) {
     const holding = Promise.withResolvers<true>();
     const migrationWaits = Promise.withResolvers<true>();
@@ -375,7 +384,11 @@ describe("table locks", () => {
     });
     await holding.promise;
     const migration = migrateItemOwnership(sql);
-    await lockWaitStartedAt(sql);
+    const settled = migration.then(
+      () => true,
+      () => true,
+    );
+    while (!(await Promise.race([settled, waitsForALock(sql)]))) await Bun.sleep(10);
     migrationWaits.resolve(true);
     await crossing;
     return migration;
