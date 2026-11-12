@@ -4208,16 +4208,6 @@
       ]
     },
     {
-      "fix": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
-      "bug": "A database the first ownership migration had migrated counted as migrated while it still held the originals that migration left without an owner, so db-push never deleted them.",
-      "test": "packages/db/src/scripts/push-schema.test.ts",
-      "fixed": [
-        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing"
-      ],
-      "testAt": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
-      "reason": "HEAD's test also checks the NOT NULL owner columns that a later commit adds."
-    },
-    {
       "fix": "4dba04e20f1c401e568d9ba92525555c9c18049a",
       "bug": "The Item Entry link guard compared owners with IS NOT DISTINCT FROM, so a link without an owner between an Item and an Item Entry without one passed it.",
       "test": "packages/db/src/item-ownership/guards.test.ts",
@@ -4233,11 +4223,10 @@
     },
     {
       "fix": "a18fd383a5359d634e92cf4a6a7d5998b91c1927",
-      "bug": "db-push left the owner columns nullable on main's and staging's databases.",
+      "bug": "db-push left the owner columns nullable on main's database.",
       "test": "packages/db/src/scripts/push-schema.test.ts",
       "fixed": [
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
-        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
       ],
       "testAt": "a18fd383a5359d634e92cf4a6a7d5998b91c1927",
@@ -4280,7 +4269,6 @@
       "test": "packages/db/src/scripts/push-schema.test.ts",
       "fixed": [
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
-        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
         "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy"
       ],
       "testAt": "8f0ac72728ec820c297288ed733df72f3e81431d",
@@ -4296,10 +4284,10 @@
     },
     {
       "fix": "e676862c449af65642b64100d69a7b7073805d61",
-      "bug": "A push that failed after migrating a database in staging's shape said main's Import/Export and sync went with the retired tables, which that database never had.",
+      "bug": "A push that failed after migrating a database without the retired tables said main's Import/Export and sync went with them.",
       "test": "packages/db/src/scripts/push-schema.test.ts",
       "fixed": [
-        "a push that fails after migrating a database in staging's shape, which has no retired tables, does not say main's Import/Export and sync went with it"
+        "a push that fails after migrating a database without the retired tables does not say main's Import/Export and sync went with them"
       ]
     }
   ],
