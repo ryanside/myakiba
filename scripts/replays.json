@@ -4233,15 +4233,6 @@
       ]
     },
     {
-      "fix": "8855dbbeb14fd9ffad15789a1160bea3df152159",
-      "bug": "A command's before could only read the pool, so nothing could be recorded before an effect outside the database, such as a picture's ledger row before the picture is stored.",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": [
-        "a write before's commitFirst makes > commits before the body, and the body's rollback leaves it",
-        "a write before's commitFirst makes > stays when before itself answers a failure"
-      ]
-    },
-    {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
       "bug": "The schema had no picture ledger and no image_key, so a push could not add them; the db-push tests also see the empty picture table the push now adds.",
       "test": "packages/db/src/scripts/push-schema.test.ts",
@@ -4372,23 +4363,6 @@
         "pictures:reconcile against an S3-compatible store > a legacy image written with a path-style bucket URL still shows its key",
         "pictures:reconcile against an S3-compatible store > a deleted account's Items and ledger rows go with it, and its unshared pictures show as unused",
         "pictures:reconcile against an S3-compatible store > the script prints a report, deletes nothing and refuses --apply"
-      ]
-    },
-    {
-      "fix": "a57a1cafb17f9cf349a9ff64634749901726d8ab",
-      "bug": "commitFirst could be called twice in one run, or passed to the body through scope.proceed, where its write survived the body's rollback.",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": [
-        "a write before's commitFirst makes > a second call in one run is a defect, and writes nothing",
-        "a write before's commitFirst makes > a call after before returned, such as from the body, is a defect, and writes nothing"
-      ]
-    },
-    {
-      "fix": "2a02060f794344ed0dc4797cccc600917d8f4023",
-      "bug": "before could call commitFirst without awaiting it, with a write that waited on a gate the body opened, so the body picked a row that stayed committed after its own rollback.",
-      "test": "apps/server/src/domain/kernel.test.ts",
-      "fixed": [
-        "a write before's commitFirst makes > a write still running when before returns is a defect, and commits nothing"
       ]
     },
     {

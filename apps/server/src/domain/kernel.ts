@@ -21,6 +21,7 @@ import {
   poolBodies,
   befores,
   operationals,
+  reservations,
   SNAPSHOT,
   snapshots,
   proceeding,
@@ -133,7 +134,7 @@ async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLog
   }
 }
 
-/** Runs `before`, if any, then the body in one transaction. */
+/** Runs `before`, then `reserve` and `store`, each if declared, then the body in one transaction. */
 async function runInTransaction(
   op: AnyOp,
   viewer: Viewer,
@@ -144,7 +145,6 @@ async function runInTransaction(
   const before = befores.get(op);
   if (before) {
     let first: AnyResult;
-    const commits = { made: 0, open: true, running: false };
     try {
       first = await before(
         {
@@ -153,51 +153,28 @@ async function runInTransaction(
           read: readPrepared,
           log,
           proceed: (value) => Result.ok(proceeding(value)),
-          commitFirst: (write) => {
-            if (!commits.open) {
-              panic(
-                `commitFirst ran after before returned in ${op.action}; only before may commit`,
-              );
-            }
-            commits.made += 1;
-            if (commits.made > 1)
-              panic(`commitFirst ran twice in ${op.action}; one run commits once`);
-            commits.running = true;
-            const committed = db.transaction(async (tx) => {
-              const written = await write(tx);
-              if (!commits.open) {
-                panic(
-                  `commitFirst's write finished after before returned in ${op.action}; it rolls back`,
-                );
-              }
-              return written;
-            });
-            // The error reaches before when it awaits; unawaited, the run answers its own defect.
-            committed
-              .finally(() => {
-                commits.running = false;
-              })
-              .catch(() => {});
-            return committed;
-          },
         },
         input,
       );
     } catch (error) {
       return classify(error);
-    } finally {
-      commits.open = false;
-    }
-    if (commits.running) {
-      return {
-        kind: "defect",
-        panic: new Panic({
-          message: `before returned in ${op.action} while commitFirst ran; before must await it`,
-        }),
-      };
     }
     if (!isProceed(first)) return settle(first);
     handoff = first.value["~proceed"];
+  }
+  const reservation = reservations.get(op);
+  if (reservation) {
+    let stored: AnyResult;
+    try {
+      const reserved = await db.transaction((tx) =>
+        reservation.reserve(tx, viewer, handoff as never),
+      );
+      stored = await reservation.store(reserved as never);
+    } catch (error) {
+      return classify(error);
+    }
+    if (stored.isErr()) return settle(stored);
+    handoff = stored.value;
   }
   const body = bodyOf(op);
   try {

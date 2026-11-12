@@ -3,7 +3,7 @@ import { Panic, Result, panic } from "better-result";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
-import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { ReadTx } from "@myakiba/db/tx";
 import { createTestDatabase } from "../../test/database";
 
 initLogger({ enabled: false });
@@ -215,113 +215,47 @@ describe("a command's before step", () => {
   });
 });
 
-describe("a write before's commitFirst makes", () => {
-  const commitFirstThen = (ending: "proceed" | "fail") =>
-    command(
+describe("a write's declared reserve step", () => {
+  const reserveThen = (stored: "ok" | "fail") => {
+    const bodyRuns = { count: 0 };
+    const op = command(
       {
         ...config,
-        before: async (scope, input: { readonly id: string }) => {
-          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-first`)));
-          if (ending === "fail") return Result.err(new NotThisOne());
-          return scope.proceed(input);
+        before: async (scope, input: { readonly id: string }) => scope.proceed(input),
+        reserve: async (tx, _viewer, input) => {
+          await tx.insert(user).values(newUser(`${input.id}-reserved`));
+          return input;
         },
+        store: async (input) => (stored === "ok" ? Result.ok(input) : Result.err(new NotThisOne())),
       },
       async (scope, input) => {
+        bodyRuns.count += 1;
         await scope.tx.insert(user).values(newUser(input.id));
         return Result.err(new NothingToWrite());
       },
     );
+    return { op, bodyRuns: () => bodyRuns.count };
+  };
 
   test("commits before the body, and the body's rollback leaves it", async () => {
-    const outcome = await run(viewer, commitFirstThen("proceed"), { id: "kept" }, log);
+    const { op, bodyRuns } = reserveThen("ok");
+
+    const outcome = await run(viewer, op, { id: "kept" }, log);
 
     expect(outcome.isErr()).toBe(true);
+    expect(bodyRuns()).toBe(1);
     expect(await userExists("kept")).toBe(false);
-    expect(await userExists("kept-first")).toBe(true);
+    expect(await userExists("kept-reserved")).toBe(true);
   });
 
-  test("stays when before itself answers a failure", async () => {
-    await run(viewer, commitFirstThen("fail"), { id: "answered" }, log);
+  test("a store that fails answers its failure without the body, and keeps the reservation", async () => {
+    const { op, bodyRuns } = reserveThen("fail");
 
-    expect(await userExists("answered-first")).toBe(true);
-  });
+    const outcome = await run(viewer, op, { id: "unstored" }, log);
 
-  test("a second call in one run is a defect, and writes nothing", async () => {
-    const twice = command(
-      {
-        ...config,
-        before: async (scope, input: { readonly id: string }) => {
-          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-1`)));
-          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-2`)));
-          return scope.proceed(input);
-        },
-      },
-      async (scope, input) => {
-        await scope.tx.insert(user).values(newUser(input.id));
-        return Result.ok("written" as const);
-      },
-    );
-
-    await expect(run(viewer, twice, { id: "twice" }, log)).rejects.toThrow(
-      "commitFirst ran twice in test.write",
-    );
-    expect(await userExists("twice-1")).toBe(true);
-    expect(await userExists("twice-2")).toBe(false);
-    expect(await userExists("twice")).toBe(false);
-  });
-
-  test("a call after before returned, such as from the body, is a defect, and writes nothing", async () => {
-    type Handoff = {
-      readonly id: string;
-      readonly commitFirst: (write: (tx: Tx) => Promise<void>) => Promise<void>;
-    };
-    const handedOver = command(
-      {
-        ...config,
-        before: async (scope, input: { readonly id: string }) =>
-          scope.proceed<Handoff>({ id: input.id, commitFirst: scope.commitFirst }),
-      },
-      async (_scope, input: Handoff) => {
-        await input.commitFirst(async (tx) => {
-          await tx.insert(user).values(newUser(input.id));
-        });
-        return Result.ok("written" as const);
-      },
-    );
-
-    await expect(run(viewer, handedOver, { id: "late" }, log)).rejects.toThrow(
-      "commitFirst ran after before returned in test.write",
-    );
-    expect(await userExists("late")).toBe(false);
-  });
-
-  test("a write still running when before returns is a defect, and commits nothing", async () => {
-    type Handoff = { readonly id: string; readonly pick: (id: string) => void };
-    const pick = Promise.withResolvers<string>();
-    let firstCommit: Promise<void> | undefined;
-    const floating = command(
-      {
-        ...config,
-        before: async (scope, input: { readonly id: string }) => {
-          firstCommit = scope.commitFirst(async (tx) => {
-            await tx.insert(user).values(newUser(await pick.promise));
-          });
-          return scope.proceed<Handoff>({ id: input.id, pick: pick.resolve });
-        },
-      },
-      async (scope, input: Handoff) => {
-        await scope.tx.insert(user).values(newUser(input.id));
-        input.pick(`${input.id}-picked`);
-        return Result.err(new NothingToWrite());
-      },
-    );
-
-    const outcome = run(viewer, floating, { id: "floating" }, log);
-    await expect(outcome).rejects.toThrow("before returned in test.write while commitFirst ran");
-    pick.resolve("floating-picked");
-    await expect(firstCommit).rejects.toThrow("commitFirst's write finished after before returned");
-    expect(await userExists("floating")).toBe(false);
-    expect(await userExists("floating-picked")).toBe(false);
+    expect(outcome.isErr() && outcome.error).toBeInstanceOf(NotThisOne);
+    expect(bodyRuns()).toBe(0);
+    expect(await userExists("unstored-reserved")).toBe(true);
   });
 });
 

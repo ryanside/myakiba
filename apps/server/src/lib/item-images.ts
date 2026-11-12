@@ -3,7 +3,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 
-type ReadPicture =
+export type ReadPicture =
   | {
       readonly kind: "read";
       /** `items/<sha256>.<ext>`: the same bytes are one object, whoever stores them. */

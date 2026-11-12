@@ -108,17 +108,32 @@ command(
   async (_scope, input: number) => Result.ok(input),
 );
 
-command({ ...config, before: async (scope) => scope.proceed(1) }, async (scope, input: number) => {
-  // @ts-expect-error the body has no commitFirst; only before may commit first
-  await scope.commitFirst(async () => input);
-  return Result.ok(input);
-});
+command(
+  {
+    ...config,
+    before: async (scope) => scope.proceed(1),
+    reserve: async (tx, _viewer, input) => {
+      await tx.insert(order).values({ userId: "u1", title: "Order" });
+      return input;
+    },
+    store: async (input) => Result.ok(input),
+  },
+  async (_scope, input: number) => Result.ok(input),
+);
 
-command(config, async (scope) => {
-  // @ts-expect-error a command without before has no commitFirst either
-  await scope.commitFirst(async () => 1);
-  return Result.ok(1);
-});
+command(
+  {
+    ...config,
+    before: async (scope) => scope.proceed(1),
+    reserve: async (_tx, _viewer, input) => input,
+    store: async (...handed) => {
+      // @ts-expect-error store runs outside any transaction: it is handed reserve's value and no Tx
+      const [value, tx]: [number, Tx] = handed;
+      return Result.ok(tx ? value : 0);
+    },
+  },
+  async (_scope, input: number) => Result.ok(input),
+);
 
 const writesBeforeTheTransaction = {
   ...config,
