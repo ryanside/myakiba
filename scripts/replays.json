@@ -4241,7 +4241,9 @@
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
         "push adds the picture ledger and image_key to a database in the owned shape with no prompt and no lost row; a second push changes nothing"
-      ]
+      ],
+      "testAt": "41dee35a0e1b12681424258071f3a20560bb0c5a",
+      "reason": "The reserved_at change added a column to PICTURE_LEDGER in the shared push harness, which this fix's push never creates, so the replay takes the test file and harness from before it."
     },
     {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
@@ -4311,7 +4313,9 @@
         "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > a refresh loop with new bytes stops storing once the ledger reaches the quota",
         "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > an over-quota refresh keeps the Item's picture",
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
-      ]
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
     },
     {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
@@ -4327,7 +4331,9 @@
         "a picture is read by its bytes, and stores nothing until asked > bytes that are no supported image are rejected",
         "a picture is read by its bytes, and stores nothing until asked > a picture over 10 MB is rejected, and one of exactly 10 MB is read",
         "storing a read picture puts it at its key, public and immutable, with its type"
-      ]
+      ],
+      "testAt": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "reason": "A later commit made the picture PUT conditional, which the store test now expects, so the replay takes the test file from before it."
     },
     {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
@@ -4349,7 +4355,9 @@
         "/expenses/shops/shop:Shop/expansion?scope=collection shows a keyed picture by its URL and a legacy picture as stored",
         "/add/items?ids=keyed&ids=legacy shows a keyed picture by its URL and a legacy picture as stored",
         "/item/98777 shows its own picture"
-      ]
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
     },
     {
       "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
@@ -4363,7 +4371,9 @@
         "pictures:reconcile against an S3-compatible store > a legacy image written with a path-style bucket URL still shows its key",
         "pictures:reconcile against an S3-compatible store > a deleted account's Items and ledger rows go with it, and its unshared pictures show as unused",
         "pictures:reconcile against an S3-compatible store > the script prints a report, deletes nothing and refuses --apply"
-      ]
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed GRACE_MS to UNCOMMITTED_SAVE_GRACE_MS, which this fix does not export, so the replay takes the test file from before the rename."
     },
     {
       "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
@@ -4379,6 +4389,39 @@
       "test": "apps/server/src/routers/mfc-items/routes.test.ts",
       "fixed": [
         "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is stored again, and recorded once"
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
+    },
+    {
+      "fix": "eb504d78bdd1709f30bef185bf2d41797cb40a48",
+      "bug": "A command's before could commit a write only through commitFirst, a handle it could call twice, late, without awaiting it, or lend to the body; nothing let a command declare a reservation the kernel runs once.",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "a write's declared reserve step > commits before the body, and the body's rollback leaves it",
+        "a write's declared reserve step > a store that fails answers its failure without the body, and keeps the reservation"
+      ]
+    },
+    {
+      "fix": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "bug": "A save that reserved a key its owner already recorded left the row's reservation time as it was, so a future deleter could not tell the key was in use again.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > saving a picture the owner already recorded stamps its reservation again"
+      ],
+      "testAt": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this revision's parent lacks, so the replay takes the test file as this fix left it.",
+      "atHead": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > saving a picture the owner already recorded stamps its reservation again"
+      ]
+    },
+    {
+      "fix": "7a2e3386d1f8577e97001e0e5a47d25411ac4d71",
+      "bug": "A picture PUT overwrote any object already at its key, so a versioned bucket kept new versions of the same bytes and nothing stopped a rewrite.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "storing a read picture puts it at its key, public and immutable, with its type",
+        "storing against an S3-compatible store > an object already at the key is never overwritten, and a missing one is stored again"
       ]
     }
   ],
