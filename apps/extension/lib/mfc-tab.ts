@@ -7,9 +7,10 @@ import type { SessionStorageUnavailable } from "./errors/session-storage-unavail
 import type { TabEditRefused } from "./errors/tab-edit-refused";
 import type { TabQueryFailed } from "./errors/tab-query-failed";
 import type { WindowFocusRefused } from "./errors/window-focus-refused";
+import { withoutPort } from "./match-pattern";
 import { mfcItemUrl } from "./origins";
 import type { Origins } from "./origins";
-import { inContext, ownedTab } from "./owned-tab";
+import { inContext, onOrigin, ownedTab } from "./owned-tab";
 import type { LiveRequester, OwnedTab, TabOpenFailure } from "./owned-tab";
 import type { SessionValue } from "./session-value";
 import type { Tabs } from "./tabs";
@@ -47,12 +48,16 @@ export function createMfcTabs(deps: {
     context: Parameters<typeof inContext>[1],
   ): Promise<Result<number | null, TabQueryFailed>> {
     if (!borrowing) return Result.ok(null);
+    // Firefox finds no tab for a pattern with a port, so the query names the host alone and the origin is checked here.
     const open = await tabs.query({
-      url: `${origins.mfc}/*`,
+      url: withoutPort(`${origins.mfc}/*`),
       status: "complete",
       discarded: false,
     });
-    return open.map((found) => found.find((tab) => inContext(tab, context))?.id ?? null);
+    return open.map(
+      (found) =>
+        found.find((tab) => inContext(tab, context) && onOrigin(tab.url, origins.mfc))?.id ?? null,
+    );
   }
 
   return {

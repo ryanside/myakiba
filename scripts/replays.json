@@ -4563,6 +4563,67 @@
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
         "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them"
       ]
+    },
+    {
+      "fix": "e085bfcd9e9f2886947312abce50f77a7cb7ae63",
+      "bug": "Firefox ignores a match pattern whose host carries a port, so a Firefox build for http://localhost:3001 never ran the page bridge and the Add page said the extension was missing.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": [
+        "a Firefox build for origins with ports > runs the page bridge on the myakiba Add page",
+        "a Firefox build for origins with ports > runs the Pick script on an MFC Item page",
+        "a Firefox build for origins with ports > may reach MFC and its pictures"
+      ]
+    },
+    {
+      "fix": "1b95d2f5d232dcc2742e67f3a2e0b6fce5d6c835",
+      "bug": "Zod probed eval in every extension script, so Firefox logged two CSP eval violations in the background console after a Pick.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": [
+        "a Firefox build turns off zod's eval probe in every script before zod loads, so its CSP reports nothing"
+      ],
+      "testAt": "1b95d2f5d232dcc2742e67f3a2e0b6fce5d6c835",
+      "reason": "That test asserted the banner this fix wrote ahead of every script, which broke Item Refresh, so its harness stays at the fix's own build.",
+      "head": [
+        {
+          "test": "apps/extension/lib/built-scripts.test.ts",
+          "fixed": [
+            "a chrome build > turns off zod's eval probe in every script before zod sets up its config",
+            "a firefox build > turns off zod's eval probe in every script before zod sets up its config"
+          ],
+          "reason": "The config now goes inside each script's wrapper, so the head checks it is set before zod's first read of it rather than at the start of the file."
+        }
+      ]
+    },
+    {
+      "fix": "f75d6361236286512211363e764365c062f5aa66",
+      "bug": "The zod config banner sat ahead of WXT's `var collector=`, so WXT kept that prefix, executeScript answered with the config object, and every Item Refresh failed as unexpected_page in Chrome and Firefox release builds.",
+      "test": "apps/extension/lib/built-scripts.test.ts",
+      "fixed": [
+        "a chrome build > starts every script with the wrapper WXT writes, so an injected script answers with its wrapper's value",
+        "a chrome build > answers an injected collector run with the collector's answer",
+        "a firefox build > starts every script with the wrapper WXT writes, so an injected script answers with its wrapper's value",
+        "a firefox build > answers an injected collector run with the collector's answer"
+      ]
+    },
+    {
+      "fix": "fa33e575ec83be56d1f8a549685417bce86a7603",
+      "bug": "Firefox finds no tab for a tabs.query pattern with a port, so a build for an MFC origin with a port never reused the MFC tab the user had open.",
+      "test": "apps/extension/lib/mfc-tab.test.ts",
+      "fixed": ["an MFC origin with a port, in Firefox > borrows the MFC tab the user has open"]
+    },
+    {
+      "fix": "8c2afa61f6c18763d7178bae119d53e1d8c05e43",
+      "bug": "Dropping the ports from a Firefox build's host permissions listed http://127.0.0.1/* twice when MFC and its pictures share a host.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": ["a Firefox build for origins with ports > lists each host permission once"]
+    },
+    {
+      "fix": "f58dfa43c5cebdb42a9661722606423bf497f305",
+      "bug": "Dropping the port from a Firefox match pattern skipped a bracketed IPv6 host, so a build for http://[::1]:4601 never reused the MFC tab the user had open.",
+      "test": "apps/extension/lib/mfc-tab.test.ts",
+      "fixed": [
+        "an MFC origin on an IPv6 host with a port, in Firefox > borrows the MFC tab the user has open"
+      ]
     }
   ],
   "lint": [
