@@ -2,6 +2,7 @@ import { SQL } from "bun";
 import { installOwnerGuards } from "./guards";
 
 export const MIGRATION_STEPS = [
+  "dropRetiredTables",
   "expand",
   "plan",
   "copyItems",
@@ -31,8 +32,11 @@ export type MigrationReport =
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"
       >;
       readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
+      readonly droppedTables: readonly DroppedTable[];
       readonly milliseconds: number;
     };
+
+type DroppedTable = { readonly table: (typeof RETIRED_TABLES)[number]; readonly rows: number };
 
 type MigrationOptions = {
   readonly lockTimeout?: string;
@@ -51,6 +55,15 @@ const LOCK_FAILURES: ReadonlySet<string | undefined> = new Set([
   DEADLOCK_DETECTED,
 ]);
 const REFERENCE_TABLES = ["collection", "wishlist_item", "list_member"] as const;
+
+// Retired in 0d74a0d1, each after the tables that reference it. main's database still has them, and
+// push cannot drop them without a prompt: it asks whether add_commit is one of them renamed.
+const RETIRED_TABLES = [
+  "data_transfer_import_item",
+  "data_transfer_import",
+  "sync_session_item",
+  "sync_session",
+] as const;
 
 // drizzle-kit names a column's foreign key this way, so push finds these as the schema declares them.
 const OWNER_KEYS = [
@@ -168,9 +181,24 @@ type Run = {
   otherUsersListTargets: number;
   readonly repointed: Counts<"collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner">;
   readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
+  readonly droppedTables: DroppedTable[];
 };
 
 const STEPS = {
+  // main's running server reads these until the new server starts, so they go in this transaction:
+  // a run that fails leaves them. No CASCADE, so a table that depends on one stops the run.
+  async dropRetiredTables(tx, run) {
+    for (const table of RETIRED_TABLES) {
+      const [found] = await tx<[{ exists: boolean }]>`
+        SELECT to_regclass(${`public.${table}`}) IS NOT NULL AS exists
+      `;
+      if (!found.exists) continue;
+      const rows = await count(tx, `SELECT count(*) FROM ${ident(table)}`);
+      await tx.unsafe(`DROP TABLE ${ident(table)}`);
+      run.droppedTables.push({ table, rows });
+    }
+  },
+
   async expand(tx) {
     await tx.unsafe(`
       ALTER TABLE item ADD COLUMN IF NOT EXISTS owner_id text;
@@ -387,6 +415,7 @@ export async function migrateItemOwnership(
         otherUsersListTargets: run.otherUsersListTargets,
         repointed: run.repointed,
         deleted: run.deleted,
+        droppedTables: run.droppedTables,
         milliseconds: Math.round(performance.now() - started),
       };
     } catch (error) {
@@ -436,6 +465,7 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
     otherUsersListTargets: 0,
     repointed: { collection: 0, wishlistItem: 0, listMemberItem: 0, listMemberOwner: 0 },
     deleted: { items: 0, entries: 0, links: 0, releases: 0 },
+    droppedTables: [],
   };
   for (const step of MIGRATION_STEPS) {
     await STEPS[step](tx, run);

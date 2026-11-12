@@ -284,7 +284,7 @@ test(
       expect(first.output).toContain(`Dropped retired table ${dropped}.`);
     }
     expect(migrationReport(first.output)).toBe(
-      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"milliseconds":0}',
+      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"droppedTables":[{"table":"data_transfer_import_item","rows":1},{"table":"data_transfer_import","rows":1},{"table":"sync_session_item","rows":3},{"table":"sync_session","rows":2}],"milliseconds":0}',
     );
     expect(first.output).toContain("Item owner guards installed.");
 
@@ -334,7 +334,7 @@ test(
     const first = await dbPush(url);
     expect(first.exitCode).toBe(0);
     expect(migrationReport(first.output)).toBe(
-      '{"status":"migrated","attempts":1,"pairs":0,"copied":{"items":0,"entries":0,"links":0,"releases":0},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":0,"wishlistItem":0,"listMemberItem":0,"listMemberOwner":0},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"milliseconds":0}',
+      '{"status":"migrated","attempts":1,"pairs":0,"copied":{"items":0,"entries":0,"links":0,"releases":0},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":0,"wishlistItem":0,"listMemberItem":0,"listMemberOwner":0},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"droppedTables":[],"milliseconds":0}',
     );
     expect(first.output).toContain("Item owner guards installed.");
     expect(await whatUsersSee(sql)).toEqual(seen);
@@ -390,28 +390,27 @@ test(
 );
 
 test(
-  "a table that depends on a retired table stops db-push after the migration, with nothing dropped, and db-push run again once it is gone finishes the deploy",
+  "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy",
   async () => {
     const { sql, url } = await databases.create(await mainTemplate());
     const seen = await whatUsersSee(sql);
     await sql`CREATE TABLE stray (session_id text REFERENCES sync_session (id))`;
+    const before = await snapshot(sql);
 
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
-    expect(failed.output).toContain('Item ownership migration: {"status":"migrated"');
     expect(failed.output).toContain(
-      "DROPPING THE RETIRED TABLES FAILED, so none was dropped and drizzle-kit push did not run.",
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
     );
-    expect(failed.output).toContain(
-      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
-    );
-    expect(await tables(sql)).toEqual(expect.arrayContaining([...RETIRED_TABLES, "stray"]));
+    expect(failed.output).not.toContain("Dropped retired table");
+    expect(await snapshot(sql)).toEqual(before);
 
     await sql`DROP TABLE stray`;
     const rerun = await dbPush(url);
     expect(rerun.exitCode).toBe(0);
-    expect(rerun.output).toContain('Item ownership migration: {"status":"already-migrated"}');
+    expect(rerun.output).toContain('Item ownership migration: {"status":"migrated"');
     expect(rerun.output).toContain("Dropped retired table sync_session (2 rows).");
+    expect(await tables(sql)).not.toEqual(expect.arrayContaining(["sync_session"]));
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
   },

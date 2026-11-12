@@ -54,6 +54,7 @@ test("reports one copy per user and referenced Item, with its releases, Item Ent
     otherUsersListTargets: 0,
     repointed: { collection: 5, wishlistItem: 2, listMemberItem: 2, listMemberOwner: 5 },
     deleted: { items: 6, entries: 6, links: 6, releases: 7 },
+    droppedTables: [],
     milliseconds: expect.any(Number),
   });
 });
