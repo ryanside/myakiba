@@ -370,7 +370,6 @@ test(
   "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
   async () => {
     const { sql, url } = await databases.create(await mainTemplate());
-    // A table the migration does not re-point that references Items makes its verify fail.
     await sql`CREATE TABLE stray (item_id text REFERENCES item (id))`;
     const before = await snapshot(sql);
 

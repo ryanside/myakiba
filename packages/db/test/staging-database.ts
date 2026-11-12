@@ -1,10 +1,3 @@
-/**
- * staging's database after #219 (b278b54d): the seed of `main`'s shape in push-schema.test.ts after
- * staging's db-push, plus an Item u1 saved and added to their Collection after the switch and an Item
- * u3 saved but never added. Its originals have no owner, and its owner guards let a link without an
- * owner through. Dumped from Postgres 18.6 with `pg_dump --no-owner --no-privileges --no-comments
- * --inserts --rows-per-insert=100`, without its comments and session settings.
- */
 export const STAGING_DATABASE = `
 CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 CREATE FUNCTION public.collection_owner_guard() RETURNS trigger

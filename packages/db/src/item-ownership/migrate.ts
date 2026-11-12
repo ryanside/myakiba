@@ -185,8 +185,6 @@ type Run = {
 };
 
 const STEPS = {
-  // main's running server reads these until the new server starts, so they go in this transaction:
-  // a run that fails leaves them. No CASCADE, so a table that depends on one stops the run.
   async dropRetiredTables(tx, run) {
     for (const table of RETIRED_TABLES) {
       const [found] = await tx<[{ exists: boolean }]>`
@@ -356,7 +354,6 @@ const STEPS = {
     await verifyRun(tx, run, COPY_CHECKS);
   },
 
-  // Every reference now reaches a copy, so the originals are what no user can reach.
   async deleteOwnerless(tx, run) {
     const links = await tx`DELETE FROM entry_to_item WHERE owner_id IS NULL`;
     const releases = await tx`
@@ -374,7 +371,6 @@ const STEPS = {
     await verifyRun(tx, run, OWNERLESS_CHECKS);
   },
 
-  // In the same transaction, so a write without an owner fails from the moment the run commits.
   async requireOwners(tx) {
     for (const table of OWNER_TABLES) {
       await tx.unsafe(`ALTER TABLE ${ident(table)} ALTER COLUMN owner_id SET NOT NULL`);
@@ -425,11 +421,6 @@ export async function migrateItemOwnership(
   }
 }
 
-/**
- * Migrated once every owner column is NOT NULL, which the run sets last. The catalog decides, not
- * the owner guards, so a missing guard never runs the migration again: db-push installs the guards
- * after every push.
- */
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
   const [{ required }] = await sql<[{ required: number }]>`
     SELECT count(*)::int AS required FROM pg_attribute
@@ -450,10 +441,6 @@ function describeMisses(misses: readonly OwnershipMiss[]): string {
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
   await tx`SELECT set_config('lock_timeout', ${options.lockTimeout ?? "10s"}, true)`;
-  // The owner keys into "user" need this lock, so the run takes it before the Item tables. Dropping a
-  // retired table that references "user" later waits for ACCESS EXCLUSIVE on it while the run holds
-  // the Item tables. That wait fails closed at lock_timeout and the run retries; the runbook stops
-  // the server before the deploy, so nothing holds "user" then.
   await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
   await tx.unsafe(
     `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member

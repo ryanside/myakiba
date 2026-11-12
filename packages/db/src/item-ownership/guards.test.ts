@@ -197,7 +197,6 @@ describe("each guard rejects a write across users and lets the owner's own write
 
 test("an Item Entry link without an owner is rejected, even between an Item and an Item Entry without one", async () => {
   const { sql } = await migrated();
-  // NOT NULL rejects these rows too, so the test lifts it to see the guard alone.
   await sql.unsafe(`
     ALTER TABLE item ALTER COLUMN owner_id DROP NOT NULL;
     ALTER TABLE entry ALTER COLUMN owner_id DROP NOT NULL;

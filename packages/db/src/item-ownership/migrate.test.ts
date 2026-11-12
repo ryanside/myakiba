@@ -8,7 +8,6 @@ const databases = testDatabases();
 let seeded: string;
 let cleanRun: Awaited<ReturnType<typeof snapshot>>;
 
-// The migration deletes the originals it copies, so each database keeps them aside to compare with.
 async function seedWithOriginals(sql: SQL) {
   await seedSharedItems(sql);
   await sql.unsafe(`
