@@ -9,9 +9,10 @@ export default defineConfig({
   imports: false,
   manifestVersion: 3,
   // Zod probes eval unless jitless, and the extension CSP refuses eval, so Firefox logs a violation. Zod reads this when it loads.
+  // It goes inside the wrapper: a banner ahead of WXT's `var collector=` keeps WXT from dropping it, so executeScript answers with this config.
   vite: () => ({
     build: {
-      rollupOptions: { output: { banner: "globalThis.__zod_globalConfig = { jitless: true };" } },
+      rollupOptions: { output: { intro: "globalThis.__zod_globalConfig = { jitless: true };" } },
     },
   }),
   hooks: {

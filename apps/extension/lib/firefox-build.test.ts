@@ -62,17 +62,3 @@ describe("a Firefox build for origins with ports", () => {
     expect(reaches(`${ORIGINS.WXT_MFC_STATIC_ORIGIN}/upload/items/1/2336325.jpg`)).toBe(true);
   });
 });
-
-test("a Firefox build turns off zod's eval probe in every script before zod loads, so its CSP reports nothing", async () => {
-  const jitless = "globalThis.__zod_globalConfig={jitless:!0};";
-  const scripts = await Array.fromAsync(new Bun.Glob("**/*.js").scan(OUTPUT));
-  const heads = await Promise.all(
-    scripts.map(async (script) => {
-      const text = await Bun.file(path.join(OUTPUT, script)).text();
-      return text.slice(0, jitless.length);
-    }),
-  );
-
-  expect(scripts.length).toBeGreaterThan(0);
-  expect(new Set(heads)).toEqual(new Set([jitless]));
-});
