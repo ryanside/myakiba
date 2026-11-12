@@ -139,7 +139,8 @@ function PrivacyPolicy() {
               its CDN. A picture is stored once by its content, so users who save the same picture
               share one copy. Pictures are public but unlisted: no page lists them, and their links
               are served for myakiba&apos;s own pages. Your items and their details are your own.
-              myakiba may delete a picture once no item shows it.
+              Each picture you save counts toward the 2 GB your account can store, even after no
+              item shows it.
             </li>
             <li>
               A log entry for each item request with your myakiba account ID, the MFC item number

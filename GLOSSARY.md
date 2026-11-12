@@ -15,7 +15,7 @@ The description of one collectible in one user's Item Database, separate from th
 _Avoid_: Catalog Item, database item, global item
 
 **Item Picture**:
-The picture an Item shows, stored by its content, so two Items with the same picture share one stored copy. It is public but unlisted: its link is served for myakiba's own pages. Each user's pictures count toward their 2 GiB, each distinct picture once.
+The picture an Item shows, stored by its content, so two Items with the same picture share one stored copy. It is public but unlisted: its link is served for myakiba's own pages. Each picture a user saves is recorded in their picture ledger, and the ledger holds at most 2 GiB, each distinct picture counted once, whether or not an Item still shows it.
 _Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
