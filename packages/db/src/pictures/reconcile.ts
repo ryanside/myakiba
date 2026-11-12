@@ -1,19 +1,18 @@
 import type { S3Client, SQL } from "bun";
-import { pictureLock } from "./lock";
-
-/** A picture stored by its content: `items/<sha256>.<ext>`. */
-const CONTENT_KEY = /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u;
 
 /**
- * Pictures stored before keys were content addresses. main's worker put MFC's own file name at the
- * bucket root, for a JPEG, PNG, WebP, GIF or AVIF response only. Staging put
- * `items/mfc/<id>/<hash16>.<ext>`. Any other key, such as a root `robots.txt`, is never considered.
+ * The keys pictures:reconcile reports on. Content keys are `items/<sha256>.<ext>`. Legacy pictures
+ * are main's worker's root-level files, stored under MFC's own name for a JPEG, PNG, WebP, GIF or
+ * AVIF response only, and staging's `items/mfc/<id>/<hash16>.<ext>`. No other key is ever
+ * considered, so a root `robots.txt` is never reported.
  */
-const LEGACY_KEYS = [
-  /^[^/]+\.(?:jpe?g|png|webp|gif|avif)$/iu,
-  /^items\/mfc\/\d+\/[0-9a-f]{16}\.(?:jpg|png|gif|webp|avif)$/u,
-];
-const isLegacyKey = (key: string) => LEGACY_KEYS.some((pattern) => pattern.test(key));
+const KEY_SETS = {
+  content: /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u,
+  legacyRoot: /^[^/]+\.(?:jpe?g|png|webp|gif|avif)$/iu,
+  legacyMfc: /^items\/mfc\/\d+\/[0-9a-f]{16}\.(?:jpg|png|gif|webp|avif)$/u,
+} as const;
+
+type KeySet = keyof typeof KEY_SETS;
 
 /**
  * A save stores its picture before its transaction commits, so a young object may be one a save
@@ -23,33 +22,27 @@ export const GRACE_MS = 24 * 60 * 60 * 1000;
 
 export type ReconcileOptions = {
   readonly now: Date;
-  /** Also reconcile the root-level and `items/mfc/` pictures stored before content keys. */
+  /** Also report the root-level and `items/mfc/` pictures stored before content keys. */
   readonly legacy: boolean;
-  readonly apply: boolean;
-  /** Deletes nothing when there is more garbage than this. */
-  readonly maxDelete: number;
 };
 
 type StoredObject = { readonly key: string; readonly lastModified: string; readonly size: number };
 
-export type ReconcileReport = {
-  readonly applied: boolean;
-  readonly legacy: boolean;
-  readonly counts: {
-    readonly objects: number;
-    readonly shown: number;
-    readonly young: number;
-    readonly garbage: number;
-    readonly deleted: number;
-  };
-  readonly garbage: readonly StoredObject[];
-  /** Garbage that was stored again, or that an Item showed, by the time of its delete. */
-  readonly kept: readonly string[];
-  /** Why nothing was deleted, when apply was asked for. */
-  readonly refused: string | null;
+type SetReport = {
+  readonly objects: number;
+  readonly shown: number;
+  /** Not shown, but stored within the grace period. */
+  readonly young: number;
+  /** Not shown and older than the grace period. */
+  readonly unused: readonly StoredObject[];
 };
 
-type Bucket = Pick<S3Client, "list" | "stat" | "delete">;
+export type ReconcileReport = {
+  readonly legacy: boolean;
+  readonly sets: Partial<Record<KeySet, SetReport>>;
+};
+
+type Bucket = Pick<S3Client, "list">;
 
 async function listObjects(bucket: Bucket, prefix: string): Promise<StoredObject[]> {
   const objects: StoredObject[] = [];
@@ -68,12 +61,20 @@ async function listObjects(bucket: Bucket, prefix: string): Promise<StoredObject
   return objects;
 }
 
+/** The content keys Items show, exactly as they store them. */
+async function shownContentKeys(sql: SQL): Promise<Set<string>> {
+  const rows = await sql<{ key: string }[]>`
+    SELECT DISTINCT image_key AS key FROM item WHERE image_key IS NOT NULL
+  `;
+  return new Set(rows.map((row) => row.key));
+}
+
 /**
- * Every key an Item's image could name. An image is the public URL of its key, whatever host or
+ * Every key a legacy Item's image URL could name. A legacy image is a full URL, whatever host or
  * path-style bucket prefix it was written with, so each trailing part of its path counts. Reading
- * more keys as shown can only keep more objects.
+ * more keys as shown only shortens the report.
  */
-async function shownKeys(sql: SQL): Promise<Set<string>> {
+async function shownLegacyKeys(sql: SQL): Promise<Set<string>> {
   const rows = await sql<{ image: string }[]>`
     SELECT DISTINCT image FROM item WHERE image IS NOT NULL
   `;
@@ -87,71 +88,36 @@ async function shownKeys(sql: SQL): Promise<Set<string>> {
   return keys;
 }
 
-async function isShown(sql: SQL, key: string): Promise<boolean> {
-  const [row] = await sql<{ shown: boolean }[]>`
-    SELECT EXISTS (
-      SELECT 1 FROM item WHERE right(image, ${key.length + 1}) = ${`/${key}`}
-    ) AS shown
-  `;
-  return row?.shown ?? true;
-}
-
 /**
- * Finds stored pictures no Item shows that are older than the grace period, and deletes them when
- * asked. It lists the bucket before it reads the Items, so an object a save stores after the
- * listing is not seen, and one stored before it is young. Each delete holds the picture's lock,
- * and under it reconcile asks the database again and reads the object's LastModified again, and
- * keeps the object if either moved.
- * It never considers a key outside the content keys, or the legacy keys with `legacy`.
+ * Reports the stored pictures no Item shows, per key set. It deletes nothing: deletion comes after
+ * launch, built on the picture ledger. It lists the bucket before it reads the Items, so an object
+ * a save stores after the listing is not seen, and one stored before it counts as young.
  */
 export async function reconcilePictures(
   sql: SQL,
   bucket: Bucket,
-  { now, legacy, apply, maxDelete }: ReconcileOptions,
+  { now, legacy }: ReconcileOptions,
 ): Promise<ReconcileReport> {
   const listed = await listObjects(bucket, legacy ? "" : "items/");
-  const objects = listed.filter(({ key }) => CONTENT_KEY.test(key) || (legacy && isLegacyKey(key)));
-  const shown = await shownKeys(sql);
+  const shown = {
+    content: await shownContentKeys(sql),
+    legacy: legacy ? await shownLegacyKeys(sql) : new Set<string>(),
+  };
   const cutoff = now.getTime() - GRACE_MS;
-  const unshown = objects.filter((object) => !shown.has(object.key));
-  const garbage = unshown.filter((object) => Date.parse(object.lastModified) < cutoff);
-  const refused =
-    apply && garbage.length > maxDelete
-      ? `${garbage.length} objects are garbage, more than --max-delete ${maxDelete}, so nothing was deleted.`
-      : null;
+  const sets: (readonly [KeySet, Set<string>])[] = [["content", shown.content]];
+  if (legacy) sets.push(["legacyRoot", shown.legacy], ["legacyMfc", shown.legacy]);
 
-  const deleted: string[] = [];
-  const kept: string[] = [];
-  if (apply && refused === null) {
-    for (const object of garbage) {
-      // A save that shows this key waits for the commit, then stores the picture again if it is gone.
-      const removed = await sql.begin(async (tx) => {
-        await tx`SELECT pg_advisory_xact_lock(hashtextextended(${pictureLock(object.key)}, 0))`;
-        if (await isShown(tx, object.key)) return false;
-        const current = await bucket.stat(object.key);
-        // A HEAD's Last-Modified has whole seconds, and a listing's may have milliseconds.
-        const listedAt = Math.floor(Date.parse(object.lastModified) / 1000);
-        const storedAt = Math.floor(current.lastModified.getTime() / 1000);
-        if (storedAt !== listedAt) return false;
-        await bucket.delete(object.key);
-        return true;
-      });
-      (removed ? deleted : kept).push(object.key);
-    }
-  }
-
-  return {
-    applied: apply && refused === null,
-    legacy,
-    counts: {
+  const report: Partial<Record<KeySet, SetReport>> = {};
+  for (const [name, keys] of sets) {
+    const objects = listed.filter((object) => KEY_SETS[name].test(object.key));
+    const unshown = objects.filter((object) => !keys.has(object.key));
+    const unused = unshown.filter((object) => Date.parse(object.lastModified) < cutoff);
+    report[name] = {
       objects: objects.length,
       shown: objects.length - unshown.length,
-      young: unshown.length - garbage.length,
-      garbage: garbage.length,
-      deleted: deleted.length,
-    },
-    garbage,
-    kept,
-    refused,
-  };
+      young: unshown.length - unused.length,
+      unused,
+    };
+  }
+  return { legacy, sets: report };
 }

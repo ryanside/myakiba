@@ -7,6 +7,7 @@ import { latestRelease } from "@/lib/latest-release";
 import { writeCommit } from "./commit";
 import { commitOnce } from "./commit-record";
 import type { AddCommit, AddItemsQuery } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 export const Add = {
   items: query(
@@ -18,7 +19,7 @@ export const Add = {
           itemId: item.id,
           externalId: item.externalId,
           title: item.title,
-          image: item.image,
+          image: itemImageSql().as("image"),
           category: item.category,
           releaseId: release.id,
           releaseDate: release.date,

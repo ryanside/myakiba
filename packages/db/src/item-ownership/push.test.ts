@@ -1,11 +1,6 @@
 import { expect, test } from "bun:test";
 import { snapshot, testDatabases } from "../../test/database";
-import {
-  PICTURE_BYTES_COLUMN,
-  PUSH_TIMEOUT,
-  REPEATED_ON_EVERY_PUSH,
-  pushSchema,
-} from "../../test/push";
+import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { isItemOwnershipMigrated, migrateItemOwnership, verifyItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
@@ -39,10 +34,11 @@ test(
     expect(before.triggers.map((trigger) => trigger.tgname)).toEqual(OWNER_GUARDS);
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [...REPEATED_ON_EVERY_PUSH, ...PICTURE_BYTES_COLUMN].toSorted(),
+      statements: [...REPEATED_ON_EVERY_PUSH, ...PICTURE_LEDGER].toSorted(),
     });
     const after = await snapshot(sql);
-    expect(after.rows).toEqual(before.rows);
+    // The push adds the empty picture ledger.
+    expect(after.rows).toEqual({ ...before.rows, picture: "" });
     expect(after.triggers).toEqual(before.triggers);
     expect(after.functions).toEqual(before.functions);
     expect(await isItemOwnershipMigrated(sql)).toBe(true);

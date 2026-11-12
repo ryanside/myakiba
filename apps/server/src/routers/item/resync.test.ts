@@ -5,7 +5,7 @@ import Redis from "ioredis";
 import path from "node:path";
 import { asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
-import type { HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import * as authSchema from "@myakiba/db/schema/auth";
 import {
   collection,
@@ -14,6 +14,7 @@ import {
   item,
   item_release,
   order,
+  picture as pictureLedger,
 } from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -52,7 +53,7 @@ const realS3 = await import("@aws-sdk/client-s3");
 await mock.module("@aws-sdk/client-s3", () => ({
   ...realS3,
   S3Client: class {
-    send(command: PutObjectCommand | HeadObjectCommand) {
+    send(command: PutObjectCommand) {
       return store.send(command);
     }
   },
@@ -132,8 +133,6 @@ const REPRICED_LIMITED_98777 = {
   barcode: "4582292609999",
 };
 
-// test.env names no AWS_BUCKET_URL, so pictures get the S3 default URL.
-const PUBLIC = "https://test.s3.us-east-1.amazonaws.com";
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
 const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
@@ -141,14 +140,11 @@ const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const send = async (command: PutObjectCommand | HeadObjectCommand) => {
-    const key = command.input.Key ?? "";
-    if (command instanceof realS3.HeadObjectCommand) {
-      if (objects.has(key)) return { $metadata: { httpStatusCode: 200 } };
-      throw new realS3.NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
-    }
+  let puts = 0;
+  const send = async (command: PutObjectCommand) => {
     await gate?.();
-    objects.set(key, command.input);
+    puts += 1;
+    objects.set(command.input.Key ?? "", command.input);
     return { $metadata: { httpStatusCode: 200 } };
   };
   const holdPut = () => {
@@ -163,7 +159,7 @@ function memoryStore() {
   const failPut = () => {
     gate = () => Promise.reject(new Error("bucket unreachable"));
   };
-  return { send, objects, holdPut, failPut };
+  return { send, objects, puts: () => puts, holdPut, failPut };
 }
 
 let store = memoryStore();
@@ -221,7 +217,7 @@ async function itemRows() {
     .select({
       title: item.title,
       image: item.image,
-      imageBytes: item.imageBytes,
+      imageKey: item.imageKey,
       updatedAt: item.updatedAt,
     })
     .from(item)
@@ -543,10 +539,7 @@ describe("the posted picture", () => {
 
     const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({
-      image: `${PUBLIC}/items/${digest}.png`,
-      imageBytes: PNG.byteLength,
-    });
+    expect(row).toMatchObject({ image: null, imageKey: `items/${digest}.png` });
     expect(store.objects.get(`items/${digest}.png`)).toMatchObject({
       CacheControl: "public, max-age=31536000, immutable",
     });
@@ -575,10 +568,7 @@ describe("the posted picture", () => {
     expect(await resync(page98777, PNG)).toMatchObject(refreshed("refreshed"));
     const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({
-      image: `${PUBLIC}/items/${digest}.png`,
-      imageBytes: PNG.byteLength,
-    });
+    expect(row).toMatchObject({ image: null, imageKey: `items/${digest}.png` });
   });
 
   test("a rejected picture keeps the old image", async () => {
@@ -588,7 +578,7 @@ describe("the posted picture", () => {
     expect(await resync(derivedRetitledPage, NOT_AN_IMAGE)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
   });
 
   test("no picture keeps the old image", async () => {
@@ -598,7 +588,7 @@ describe("the posted picture", () => {
     expect(await resync(derivedRetitledPage)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
   });
 });
 
@@ -607,49 +597,54 @@ async function storedVersion(itemId: string) {
   return row?.version;
 }
 
-const GIB = 1024 ** 3;
+const QUOTA = 2 * 1024 ** 3;
 
-describe("a refreshed picture stays within the owner's 2 GiB of pictures", () => {
-  async function fillQuota(left: number) {
-    await db.insert(item).values(
-      [GIB, GIB - left].map((bytes, index) => ({
-        ownerId: userId,
-        externalId: 1_000_000 + index,
-        title: `Filler ${index}`,
-        image: `${PUBLIC}/items/${String(index + 1).repeat(64)}.jpg`,
-        imageBytes: bytes,
-      })),
-    );
-  }
+/** A distinct PNG of PNG's size for each n, so each refresh brings new bytes. */
+const pngNumber = (n: number) => {
+  const bytes = [...PNG];
+  bytes[9] = n;
+  return new Uint8Array(bytes);
+};
 
-  test("a new picture over the quota is not stored and the item keeps its picture", async () => {
+describe("Item Refresh stores pictures only while the owner's ledger is under 2 GiB", () => {
+  test("a refresh loop with new bytes stops storing once the ledger reaches the quota", async () => {
+    await upload(page98777, JPEG);
+    await db.insert(pictureLedger).values({
+      ownerId: userId,
+      key: `items/${"0".repeat(64)}.jpg`,
+      bytes: QUOTA - JPEG.byteLength - 2 * PNG.byteLength,
+    });
+
+    const outcomes = [];
+    for (let n = 1; n <= 4; n += 1) {
+      const refreshedWith = await resync(page98777, pngNumber(n));
+      outcomes.push(z.object({ picture: z.string() }).parse(refreshedWith.body).picture);
+    }
+
+    expect(outcomes).toEqual(["stored", "stored", "over_quota", "over_quota"]);
+    expect(store.puts()).toBe(3);
+    const [used] = await db
+      .select({ bytes: sql<number>`sum(${pictureLedger.bytes})`.mapWith(Number) })
+      .from(pictureLedger)
+      .where(eq(pictureLedger.ownerId, userId));
+    expect(used?.bytes).toBe(QUOTA);
+  });
+
+  test("an over-quota refresh keeps the Item's picture", async () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
-    await fillQuota(PNG.byteLength - 1);
+    await db.insert(pictureLedger).values({
+      ownerId: userId,
+      key: `items/${"0".repeat(64)}.jpg`,
+      bytes: QUOTA - JPEG.byteLength,
+    });
 
     expect(await resync(derivedRetitledPage, PNG)).toEqual({
       status: 200,
       body: { saved: "refreshed", picture: "over_quota" },
     });
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({
-      title: RETITLED,
-      image: imported?.image,
-      imageBytes: JPEG.byteLength,
-    });
-    expect(store.objects.size).toBe(1);
-  });
-
-  test("the picture a refresh replaces does not count against its replacement", async () => {
-    await upload(page98777, JPEG);
-    await fillQuota(JPEG.byteLength + PNG.byteLength - 1);
-
-    expect(await resync(page98777, PNG)).toMatchObject({
-      body: { saved: "refreshed", picture: "stored" },
-    });
-    const { item: row } = await itemRows();
-    expect(row).toMatchObject({ imageBytes: PNG.byteLength });
-    expect(row?.image).toEndWith(".png");
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
   });
 });
 

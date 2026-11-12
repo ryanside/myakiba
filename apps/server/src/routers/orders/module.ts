@@ -14,6 +14,7 @@ import { OrderNotFound } from "./errors/order-not-found";
 import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrderUpdateType, OrdersQuery } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
 const itemCount = sql<number>`COUNT(${collection.id})`;
@@ -247,7 +248,7 @@ export const Orders = {
         releaseId: collection.releaseId,
         status: collection.status,
         itemTitle: item.title,
-        itemImage: item.image,
+        itemImage: itemImageSql().as("item_image"),
         itemCategory: item.category,
         price: collection.price,
         count: collection.count,
@@ -304,7 +305,7 @@ export const Orders = {
       const releases = await scope.tx
         .select({
           releaseDate: item_release.date,
-          itemImage: item.image,
+          itemImage: itemImageSql().as("item_image"),
         })
         .from(collection)
         .innerJoin(item, eq(collection.itemId, item.id))

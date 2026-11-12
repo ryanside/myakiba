@@ -16,6 +16,7 @@ import { ItemsMissing } from "./errors/items-missing";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
 import { guardedWrite } from "@/lib/owner-guard";
 import type { AddChoices, AddOwnership, AddRow } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 type CollectionInsert = typeof collection.$inferInsert;
 
@@ -121,7 +122,7 @@ export async function writeCommit(
       id: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
       releaseId: release.id,
       releasePrice: release.price,
       releaseCurrency: release.priceCurrency,

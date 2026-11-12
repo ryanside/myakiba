@@ -26,10 +26,14 @@ export const MfcItems = {
       // Neither failure has a fallback, so each answers the logged 500.
       operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {
-        const prepared = await prepareMfcItem(scope.tx, scope.viewer, input);
+        const prepared = await prepareMfcItem(scope, input);
         if (prepared.isErr()) {
           const failure = prepared.error;
           if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
+          if (failure._tag === "ItemDatabaseFull") {
+            scope.log.set({ mfc: { itemId: input.mfcItemId, outcome: "database_full" } });
+            return Result.err(failure);
+          }
           scope.log.set({ mfc: refusedPageLog(failure) });
           return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
         }

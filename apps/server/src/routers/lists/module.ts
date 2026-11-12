@@ -11,6 +11,7 @@ import { command, query } from "@/domain/kernel";
 import { ListOrSelectionNotFound } from "@/lib/errors/list-or-selection-not-found";
 import { ListNotFound } from "./errors/list-not-found";
 import { SelectionNotFound } from "./errors/selection-not-found";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const listOrder = [asc(list.position), asc(list.createdAt), asc(list.id)];
 
@@ -67,26 +68,26 @@ export const Lists = {
               LIMIT 20
             ) list_member_row
             CROSS JOIN LATERAL (
-              SELECT item_record.image, item_record.created_at, item_record.id AS sort_key
+              SELECT ${itemImageSql("item_record")} AS image, item_record.created_at, item_record.id AS sort_key
               FROM item item_record
               WHERE item_record.id = list_member_row.item_id
-                AND item_record.image IS NOT NULL
+                AND ${itemImageSql("item_record")} IS NOT NULL
 
               UNION ALL
 
-              SELECT collection_item.image, collection_member.created_at, collection_member.id AS sort_key
+              SELECT ${itemImageSql("collection_item")} AS image, collection_member.created_at, collection_member.id AS sort_key
               FROM "collection" collection_member
               INNER JOIN item collection_item ON collection_item.id = collection_member.item_id
               WHERE collection_member.id = list_member_row.collection_id
-                AND collection_item.image IS NOT NULL
+                AND ${itemImageSql("collection_item")} IS NOT NULL
 
               UNION ALL
 
-              SELECT order_item.image, order_collection.created_at, order_collection.id AS sort_key
+              SELECT ${itemImageSql("order_item")} AS image, order_collection.created_at, order_collection.id AS sort_key
               FROM "collection" order_collection
               INNER JOIN item order_item ON order_item.id = order_collection.item_id
               WHERE order_collection.order_id = list_member_row.order_id
-                AND order_item.image IS NOT NULL
+                AND ${itemImageSql("order_item")} IS NOT NULL
             ) candidate
             ORDER BY
               candidate.image,
@@ -418,7 +419,7 @@ export const Lists = {
                 id: item.id,
                 externalId: item.externalId,
                 title: item.title,
-                image: item.image,
+                image: itemImageSql().as("image"),
               })
               .from(item)
               .where(and(eq(item.ownerId, userId), inArray(item.id, itemIds))),
@@ -430,7 +431,7 @@ export const Lists = {
                 itemId: item.id,
                 itemExternalId: item.externalId,
                 title: item.title,
-                image: item.image,
+                image: itemImageSql().as("image"),
               })
               .from(collection)
               .innerJoin(item, eq(collection.itemId, item.id))

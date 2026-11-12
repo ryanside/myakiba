@@ -5,6 +5,7 @@ import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result } from "better-result";
 import { query } from "@/domain/kernel";
 import type { CalendarQuery } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 export const Calendar = {
   items: query(
@@ -19,7 +20,7 @@ export const Calendar = {
           itemId: item.id,
           itemExternalId: item.externalId,
           title: item.title,
-          image: item.image,
+          image: itemImageSql().as("image"),
           category: item.category,
           price: item_release.price,
           priceCurrency: item_release.priceCurrency,

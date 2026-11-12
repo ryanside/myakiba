@@ -22,6 +22,7 @@ import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result } from "better-result";
 import { paginateBy, prepared, query } from "@/domain/kernel";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
 
@@ -31,7 +32,7 @@ const collectionResultsRead = prepared("search_collection", (pool) =>
       itemId: item.id,
       itemExternalId: item.externalId,
       itemTitle: item.title,
-      itemImage: item.image,
+      itemImage: itemImageSql().as("item_image"),
       itemCategory: item.category,
     })
     .from(collection)
@@ -42,7 +43,7 @@ const collectionResultsRead = prepared("search_collection", (pool) =>
         eq(collection.userId, sql.placeholder("userId")),
       ),
     )
-    .groupBy(item.id, item.externalId, item.title, item.image, item.category)
+    .groupBy(item.id, item.externalId, item.title, item.image, item.imageKey, item.category)
     .orderBy(desc(latestOwnedAt), desc(item.id))
     .limit(SEARCH_COLLECTION_RESULT_LIMIT),
 );
@@ -191,7 +192,7 @@ export const Search = {
         itemId: item.id,
         externalId: sql<number>`${item.externalId}`,
         title: item.title,
-        image: item.image,
+        image: itemImageSql().as("image"),
         category: item.category,
         releaseDate: latestRelease.date,
         releasePrice: latestRelease.price,

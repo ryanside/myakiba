@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { Elysia } from "elysia";
-import { SQL } from "bun";
 import { initLogger } from "evlog";
 import type { DrainContext } from "evlog";
 import path from "node:path";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import * as z from "zod";
-import type { HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
-import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
+import {
+  entry,
+  entry_to_item,
+  item,
+  item_release,
+  picture as pictureLedger,
+} from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 
 let drained = Promise.withResolvers<DrainContext>();
@@ -46,7 +51,7 @@ const realS3 = await import("@aws-sdk/client-s3");
 await mock.module("@aws-sdk/client-s3", () => ({
   ...realS3,
   S3Client: class {
-    send(command: PutObjectCommand | HeadObjectCommand) {
+    send(command: PutObjectCommand) {
       return store.send(command);
     }
   },
@@ -88,21 +93,16 @@ const derivedSharedEntriesPage = edit(
 );
 const derivedWrongItemPage = edit(page98777, "/item/98777", "/item/98778");
 
-// test.env names no AWS_BUCKET_URL, so pictures get the S3 default URL.
-const PUBLIC = "https://test.s3.us-east-1.amazonaws.com";
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
 
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const send = async (command: PutObjectCommand | HeadObjectCommand) => {
-    const key = command.input.Key ?? "";
-    if (command instanceof realS3.HeadObjectCommand) {
-      if (objects.has(key)) return { $metadata: { httpStatusCode: 200 } };
-      throw new realS3.NotFound({ message: "NotFound", $metadata: { httpStatusCode: 404 } });
-    }
+  let puts = 0;
+  const send = async (command: PutObjectCommand) => {
     await gate?.();
-    objects.set(key, command.input);
+    puts += 1;
+    objects.set(command.input.Key ?? "", command.input);
     return { $metadata: { httpStatusCode: 200 } };
   };
   const releasePutsTogether = (parties: number) => {
@@ -127,7 +127,7 @@ function memoryStore() {
     gate = () =>
       failure === "hang" ? new Promise<null>(() => {}) : Promise.reject(new Error("S3 is down"));
   };
-  return { send, objects, releasePutsTogether, holdPut, failPuts };
+  return { send, objects, puts: () => puts, releasePutsTogether, holdPut, failPuts };
 }
 
 let store = memoryStore();
@@ -187,7 +187,7 @@ async function itemRows(externalId: number) {
       contentLabel: item.contentLabel,
       mfcRatingId: item.mfcRatingId,
       image: item.image,
-      imageBytes: item.imageBytes,
+      imageKey: item.imageKey,
     })
     .from(item)
     .where(eq(item.externalId, externalId));
@@ -300,8 +300,8 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
         mfcMetadataVersion: 1,
         contentLabel: "explicit",
         mfcRatingId: 3,
-        image: `${PUBLIC}/items/${digest}.jpg`,
-        imageBytes: JPEG.byteLength,
+        image: null,
+        imageKey: `items/${digest}.jpg`,
       },
       links: [
         link(7628, "Companies", "Orchid Seed", ["Manufacturer"]),
@@ -622,114 +622,112 @@ describe("POST /api/mfc-items fails the item when its picture cannot be stored",
 });
 
 const GIB = 1024 ** 3;
+const QUOTA = 2 * GIB;
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
-const fileOf = (picture: Uint8Array, extension: string) =>
-  `${new Bun.CryptoHasher("sha256").update(picture).digest("hex")}.${extension}`;
+const keyOf = (bytes: Uint8Array, extension: string) =>
+  `items/${new Bun.CryptoHasher("sha256").update(bytes).digest("hex")}.${extension}`;
 
-/** Other Items of the viewer that show private pictures of these sizes. */
-async function showPictures(
-  pictures: readonly { readonly file: string; readonly bytes: number }[],
-) {
-  await db.insert(item).values(
-    pictures.map(({ file, bytes }, index) => ({
-      ownerId: userId,
-      externalId: 1_000_000 + index,
-      title: `Filler ${index}`,
-      image: `${PUBLIC}/items/${file}`,
-      imageBytes: bytes,
+/** Ledger rows for pictures no Item shows, filling the owner's quota to `used` bytes. */
+async function recordPictures(used: number, owner = userId) {
+  const halves = [Math.ceil(used / 2), Math.floor(used / 2)].filter((bytes) => bytes > 0);
+  await db.insert(pictureLedger).values(
+    halves.map((bytes, index) => ({
+      ownerId: owner,
+      key: `items/${String(index).repeat(64)}.jpg`,
+      bytes,
     })),
   );
 }
 
-const quotaLeft = (bytes: number) => [
-  { file: `${"1".repeat(64)}.jpg`, bytes: GIB },
-  { file: `${"2".repeat(64)}.jpg`, bytes: GIB - bytes },
-];
+const ledgerOf = (owner = userId) =>
+  db
+    .select({ key: pictureLedger.key, bytes: pictureLedger.bytes })
+    .from(pictureLedger)
+    .where(eq(pictureLedger.ownerId, owner))
+    .orderBy(asc(pictureLedger.key));
 
-describe("POST /api/mfc-items keeps each account's pictures within 2 GiB", () => {
-  test("a picture over the quota is not stored, and the item is saved without it", async () => {
-    await showPictures(quotaLeft(JPEG.byteLength - 1));
+describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB", () => {
+  test("the ledger is written before the picture is stored, and records what was stored", async () => {
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
+      body: { saved: "created", picture: "stored" },
+    });
+
+    expect(await ledgerOf()).toEqual([{ key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength }]);
+  });
+
+  test("pictures no Item shows still count, so one past the quota is not recorded or stored", async () => {
+    await recordPictures(QUOTA - JPEG.byteLength + 1);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
       status: 200,
       body: { saved: "created", picture: "over_quota" },
     });
     const { item: saved98777 } = await itemRows(98_777);
-    expect(saved98777).toMatchObject({ image: null, imageBytes: null });
-    expect(store.objects.size).toBe(0);
+    expect(saved98777).toMatchObject({ image: null, imageKey: null });
+    expect(await ledgerOf()).not.toContainEqual(
+      expect.objectContaining({ key: keyOf(JPEG, "jpg") }),
+    );
+    expect(store.puts()).toBe(0);
   });
 
   test("a picture that exactly fills the quota is stored", async () => {
-    await showPictures(quotaLeft(JPEG.byteLength));
+    await recordPictures(QUOTA - JPEG.byteLength);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
-      status: 200,
       body: { saved: "created", picture: "stored" },
     });
-    const { item: saved98777 } = await itemRows(98_777);
-    expect(saved98777).toMatchObject({
-      image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`,
-      imageBytes: JPEG.byteLength,
-    });
+    expect(store.puts()).toBe(1);
   });
 
-  test("a picture another of the owner's Items already shows counts once", async () => {
-    await showPictures([
-      { file: fileOf(JPEG, "jpg"), bytes: JPEG.byteLength },
-      ...quotaLeft(JPEG.byteLength).map((picture) => ({
-        ...picture,
-        bytes: picture.bytes - JPEG.byteLength,
-      })),
-    ]);
+  test("a picture the owner already recorded counts once", async () => {
+    await db
+      .insert(pictureLedger)
+      .values({ ownerId: userId, key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength });
+    await recordPictures(QUOTA - JPEG.byteLength);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
-      status: 200,
       body: { saved: "created", picture: "stored" },
     });
   });
 
-  test("another user's pictures do not count", async () => {
+  test("another user's ledger does not count", async () => {
     await db.insert(authSchema.user).values({
       id: "user-2",
       name: "Other",
       email: "other@example.com",
       username: "other",
     });
-    await db.insert(item).values({
-      ownerId: "user-2",
-      externalId: 1,
-      title: "Theirs",
-      image: `${PUBLIC}/items/${"3".repeat(64)}.jpg`,
-      imageBytes: GIB,
-    });
-    await showPictures(quotaLeft(JPEG.byteLength));
+    await recordPictures(QUOTA, "user-2");
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
       body: { saved: "created", picture: "stored" },
     });
   });
 
-  test("two uploads that each fit alone, stored at once, end with one picture over the quota", async () => {
-    await showPictures(quotaLeft(JPEG.byteLength + PNG.byteLength - 1));
-    store.releasePutsTogether(2);
+  test("two uploads that each fit alone but not together record and store one picture", async () => {
+    await recordPictures(QUOTA - JPEG.byteLength - PNG.byteLength + 1);
 
     const answers = await Promise.all([
       upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }),
       upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: PNG }),
     ]);
 
-    expect(answers.map((reply) => reply.status)).toEqual([200, 200]);
     const pictureOf = z.object({ picture: z.string() });
     expect(answers.map((reply) => pictureOf.parse(reply.body).picture).toSorted()).toEqual([
       "over_quota",
       "stored",
     ]);
-    const shown = await db
-      .select({ image: item.image })
-      .from(item)
-      .where(inArray(item.externalId, [98_777, 98_779]));
-    expect(shown.filter((row) => row.image !== null)).toHaveLength(1);
-    expect(store.objects.size).toBe(2);
+    expect(store.puts()).toBe(1);
+    expect(await ledgerOf()).toHaveLength(3);
+  });
+
+  test("a picture one of the owner's Items already shows is not stored again", async () => {
+    await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+    await upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: JPEG });
+
+    expect(store.puts()).toBe(1);
+    const { item: second } = await itemRows(98_779);
+    expect(second).toMatchObject({ imageKey: keyOf(JPEG, "jpg") });
   });
 });
 
@@ -745,15 +743,15 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
     });
   });
 
-  const imageOf = async (owner: string) => {
+  const pictureOfItem = async (owner: string) => {
     const [row] = await db
-      .select({ image: item.image, imageBytes: item.imageBytes })
+      .select({ image: item.image, imageKey: item.imageKey })
       .from(item)
       .where(and(eq(item.ownerId, owner), eq(item.externalId, 98_777)));
     return row;
   };
 
-  test("two users who save the same bytes share one object, and each Item shows it", async () => {
+  test("two users who save the same bytes share one object, and each Item stores its key", async () => {
     await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
     await upload({
       mfcItemId: 98_777,
@@ -762,10 +760,11 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
       headers: { "x-test-user": OTHER },
     });
 
-    const shown = { image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`, imageBytes: JPEG.byteLength };
-    expect(await imageOf(userId)).toEqual(shown);
-    expect(await imageOf(OTHER)).toEqual(shown);
-    expect([...store.objects.keys()]).toEqual([`items/${fileOf(JPEG, "jpg")}`]);
+    const shown = { image: null, imageKey: keyOf(JPEG, "jpg") };
+    expect(await pictureOfItem(userId)).toEqual(shown);
+    expect(await pictureOfItem(OTHER)).toEqual(shown);
+    expect([...store.objects.keys()]).toEqual([keyOf(JPEG, "jpg")]);
+    expect(await ledgerOf(OTHER)).toEqual([{ key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength }]);
   });
 
   test("different bytes are separate objects, each shown only by its uploader's Item", async () => {
@@ -777,12 +776,10 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
       headers: { "x-test-user": OTHER },
     });
 
-    expect(await imageOf(userId)).toMatchObject({
-      image: `${PUBLIC}/items/${fileOf(JPEG, "jpg")}`,
-    });
-    expect(await imageOf(OTHER)).toMatchObject({ image: `${PUBLIC}/items/${fileOf(PNG, "png")}` });
+    expect(await pictureOfItem(userId)).toMatchObject({ imageKey: keyOf(JPEG, "jpg") });
+    expect(await pictureOfItem(OTHER)).toMatchObject({ imageKey: keyOf(PNG, "png") });
     expect([...store.objects.keys()].toSorted()).toEqual(
-      [`items/${fileOf(JPEG, "jpg")}`, `items/${fileOf(PNG, "png")}`].toSorted(),
+      [keyOf(JPEG, "jpg"), keyOf(PNG, "png")].toSorted(),
     );
   });
 });
@@ -796,7 +793,7 @@ describe("POST /api/mfc-items holds at most 20,000 Items per account", () => {
     `);
   }
 
-  test("a full Item Database answers 409 and adds nothing", async () => {
+  test("a full Item Database answers 409, and records and stores nothing", async () => {
     await holdItems(20_000);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
@@ -804,6 +801,8 @@ describe("POST /api/mfc-items holds at most 20,000 Items per account", () => {
       body: "Your Item Database is full. One account can hold 20,000 Items.",
     });
     expect(await itemRows(98_777)).toMatchObject({ item: undefined });
+    expect(await ledgerOf()).toEqual([]);
+    expect(store.puts()).toBe(0);
   });
 
   test("the 20,000th Item is added", async () => {
@@ -823,47 +822,5 @@ describe("POST /api/mfc-items holds at most 20,000 Items per account", () => {
       status: 200,
       body: { saved: "existing", itemId: saved(first).itemId, mfcItemId: 98_777 },
     });
-  });
-});
-
-describe("POST /api/mfc-items and pictures:reconcile", () => {
-  /** Whether a statement waits on an advisory lock before `settled` says the race is over. */
-  async function waitsOnAdvisoryLock(watcher: SQL, settled: () => boolean) {
-    const deadline = Date.now() + 5000;
-    while (!settled() && Date.now() < deadline) {
-      const [row] = await watcher<{ waiting: number }[]>`
-        SELECT count(*)::int AS waiting FROM pg_stat_activity
-        WHERE datname = current_database() AND wait_event = 'advisory'
-      `;
-      if ((row?.waiting ?? 0) > 0) return true;
-      await Bun.sleep(10);
-    }
-    return false;
-  }
-
-  test("a save waits on reconcile's lock on its picture, and stores the picture again if reconcile deleted it", async () => {
-    const key = `items/${fileOf(JPEG, "jpg")}`;
-    const lock = `picture:${key}`;
-    const reconcile = new SQL({ url: process.env.DATABASE_URL, max: 1 });
-    const watcher = new SQL({ url: process.env.DATABASE_URL, max: 1 });
-    try {
-      await reconcile`SELECT pg_advisory_lock(hashtextextended(${lock}, 0))`;
-      let finished = false;
-      const saving = upload({ mfcItemId: 98_777, page: page98777, picture: JPEG }).finally(() => {
-        finished = true;
-      });
-
-      expect(await waitsOnAdvisoryLock(watcher, () => finished)).toBe(true);
-      expect(finished).toBe(false);
-      store.objects.delete(key);
-      await reconcile`SELECT pg_advisory_unlock(hashtextextended(${lock}, 0))`;
-
-      expect(await saving).toMatchObject({ status: 200, body: { picture: "stored" } });
-      expect(store.objects.has(key)).toBe(true);
-      const { item: shown } = await itemRows(98_777);
-      expect(shown).toMatchObject({ image: `${PUBLIC}/${key}` });
-    } finally {
-      await Promise.all([reconcile.close(), watcher.close()]);
-    }
   });
 });

@@ -3,12 +3,7 @@ import path from "node:path";
 import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
-import {
-  PICTURE_BYTES_COLUMN,
-  PUSH_TIMEOUT,
-  REPEATED_ON_EVERY_PUSH,
-  pushSchema,
-} from "../../test/push";
+import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { ownerGuardsInstalled } from "../item-ownership/guards";
 import {
   isItemOwnershipMigrated,
@@ -49,7 +44,8 @@ test(
     expect(first.output).toContain('Item ownership migration: {"status":"migrated"');
     expect(first.output).toContain("Item owner guards installed.");
     const pushed = await snapshot(sql);
-    expect(pushed.rows).toEqual(expected.rows);
+    // The push adds the empty picture ledger, which the migration does not.
+    expect(pushed.rows).toEqual({ ...expected.rows, picture: "" });
     expect(pushed.triggers).toEqual(expected.triggers);
     expect(pushed.functions).toEqual(expected.functions);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
@@ -190,7 +186,7 @@ async function whatUsersSee(sql: SQL) {
   const [view] = await sql<[{ rows: unknown }]>`
     WITH item_view AS (
       SELECT i.id, jsonb_build_object(
-        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_bytes}'::text[],
+        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_key}'::text[],
         'releases', (
           SELECT coalesce(jsonb_agg(to_jsonb(r) - '{id,item_id}'::text[] ORDER BY r.date, r.price), '[]')
           FROM item_release r WHERE r.item_id = i.id
@@ -282,7 +278,11 @@ test(
     expect(first.output).toContain("Item owner guards installed.");
 
     expect(await tables(sql)).toEqual(
-      [...before.filter((table) => !RETIRED_TABLES.includes(table)), "add_commit"].toSorted(),
+      [
+        ...before.filter((table) => !RETIRED_TABLES.includes(table)),
+        "add_commit",
+        "picture",
+      ].toSorted(),
     );
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
@@ -338,12 +338,13 @@ test(
 );
 
 test(
-  "push adds the picture size column to a database in the owned shape with no prompt and no lost row; a second push changes nothing",
+  "push adds the picture ledger and image_key to a database in the owned shape with no prompt and no lost row; a second push changes nothing",
   async () => {
     const { sql, url } = await databases.create();
     const fresh = await dbPush(url);
     expect(fresh.exitCode).toBe(0);
-    await sql`ALTER TABLE item DROP COLUMN image_bytes`;
+    await sql`DROP TABLE picture`;
+    await sql`ALTER TABLE item DROP COLUMN image_key`;
     await sql`
       INSERT INTO "user" (id, name, email, email_verified, username)
       VALUES ('u1', 'User One', 'u1@example.com', true, 'user_one')
@@ -357,10 +358,10 @@ test(
 
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [...PICTURE_BYTES_COLUMN, ...REPEATED_ON_EVERY_PUSH].toSorted(),
+      statements: [...PICTURE_LEDGER, ...REPEATED_ON_EVERY_PUSH].toSorted(),
     });
     const after = await snapshot(sql);
-    expect(after.rows).toEqual(before.rows);
+    expect(after.rows).toEqual({ ...before.rows, picture: "" });
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: REPEATED_ON_EVERY_PUSH,

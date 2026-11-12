@@ -22,6 +22,7 @@ import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { findMfcItem, refreshItem } from "@/lib/item-database";
 import { pictureLog, readMfcItemPage, refusedPageLog } from "@/lib/mfc-item-ingest";
 import type { EntriesWithRoles } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 async function findResyncItem(tx: ReadTx, viewer: Viewer, externalId: number) {
   const id = mfcItemId(externalId);
@@ -74,7 +75,7 @@ export const Items = {
           height: item.height,
           width: item.width,
           depth: item.depth,
-          image: item.image,
+          image: itemImageSql().as("image"),
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
           isWishlisted: sql<boolean>`${wishlistItem.id} IS NOT NULL`,
@@ -239,7 +240,7 @@ export const Items = {
         scope.log.set({ item: { externalId: input.id } });
         const found = await findResyncItem(scope.tx, scope.viewer, input.id);
         if (!found) return Result.err(new ItemNotFound());
-        const read = await readMfcItemPage(scope.tx, scope.viewer, found.id, input, found.itemId);
+        const read = await readMfcItemPage(scope, found.id, input);
         if (read.isErr()) {
           const failure = read.error;
           if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);

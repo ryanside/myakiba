@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import path from "node:path";
-import { S3Client, SQL } from "bun";
+import { S3Client } from "bun";
+import type { SQL } from "bun";
 import { testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
 import { GRACE_MS, reconcilePictures } from "./reconcile";
@@ -66,11 +67,15 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
         ('u1', 'One', 'u1@example.com', 'one'), ('u2', 'Two', 'u2@example.com', 'two')
     `;
     await sql`
-      INSERT INTO item (id, owner_id, external_id, title, image, image_bytes) VALUES
-        ('item-1', 'u1', 1, 'Shared', ${`${CDN}/${SHARED}`}, 7),
-        ('item-2', 'u2', 1, 'Shared', ${`${CDN}/${SHARED}`}, 7),
-        ('item-3', 'u1', 2, 'Mine', ${`${CDN}/${MINE}`}, 7),
-        ('item-4', 'u2', 3, 'Legacy', ${`${CDN}/${ROOT_SHOWN}`}, NULL)
+      INSERT INTO item (id, owner_id, external_id, title, image_key, image) VALUES
+        ('item-1', 'u1', 1, 'Shared', ${SHARED}, NULL),
+        ('item-2', 'u2', 1, 'Shared', ${SHARED}, NULL),
+        ('item-3', 'u1', 2, 'Mine', ${MINE}, NULL),
+        ('item-4', 'u2', 3, 'Legacy', NULL, ${`${CDN}/${ROOT_SHOWN}`})
+    `;
+    await sql`
+      INSERT INTO picture (owner_id, key, bytes) VALUES
+        ('u1', ${SHARED}, 7), ('u2', ${SHARED}, 7), ('u1', ${MINE}, 7), ('u1', ${UNUSED}, 7)
     `;
     await Promise.all(STORED_KEYS.map((key) => bucket.write(key, "picture")));
   });
@@ -79,171 +84,75 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
   const options = (overrides: Partial<ReconcileOptions> = {}): ReconcileOptions => ({
     now: later(),
     legacy: false,
-    apply: false,
-    maxDelete: 500,
     ...overrides,
   });
-  const garbageKeys = (report: Awaited<ReturnType<typeof reconcilePictures>>) =>
-    report.garbage.map((object) => object.key).toSorted();
+  const unusedKeys = (set: { readonly unused: readonly { readonly key: string }[] } | undefined) =>
+    (set?.unused ?? []).map((object) => object.key).toSorted();
 
-  test("a dry run reports the content-keyed objects no Item shows, and deletes nothing", async () => {
+  test("reports the content-keyed objects no Item shows by key, and deletes nothing", async () => {
     const report = await reconcilePictures(sql, bucket, options());
 
-    expect(report).toMatchObject({
-      applied: false,
-      counts: { objects: 3, shown: 2, young: 0, garbage: 1, deleted: 0 },
-      refused: null,
+    expect(report.sets).toEqual({
+      content: {
+        objects: 3,
+        shown: 2,
+        young: 0,
+        unused: [expect.objectContaining({ key: UNUSED })],
+      },
     });
-    expect(garbageKeys(report)).toEqual([UNUSED]);
     expect(await keys()).toHaveLength(STORED);
   });
 
-  test("an object younger than 24 hours is kept", async () => {
-    const report = await reconcilePictures(sql, bucket, options({ now: new Date(), apply: true }));
+  test("an Item shows a content key only by image_key, never by a URL that ends in it", async () => {
+    await sql`UPDATE item SET image_key = NULL, image = ${`${CDN}/${MINE}`} WHERE id = 'item-3'`;
 
-    expect(report.counts).toEqual({ objects: 3, shown: 2, young: 1, garbage: 0, deleted: 0 });
+    const report = await reconcilePictures(sql, bucket, options());
+
+    expect(unusedKeys(report.sets.content)).toEqual([MINE, UNUSED].toSorted());
+  });
+
+  test("an object stored within 24 hours counts as young, not unused", async () => {
+    const report = await reconcilePictures(sql, bucket, options({ now: new Date() }));
+
+    expect(report.sets.content).toEqual({ objects: 3, shown: 2, young: 1, unused: [] });
+  });
+
+  test("--legacy also reports root-level and items/mfc/ pictures, and never another key", async () => {
+    const report = await reconcilePictures(sql, bucket, options({ legacy: true }));
+
+    expect(Object.keys(report.sets).toSorted()).toEqual(["content", "legacyMfc", "legacyRoot"]);
+    expect(report.sets.legacyRoot).toMatchObject({ objects: 2, shown: 1 });
+    expect(unusedKeys(report.sets.legacyRoot)).toEqual([ROOT_UNUSED]);
+    expect(unusedKeys(report.sets.legacyMfc)).toEqual([STAGING_UNUSED]);
+    const reported = Object.values(report.sets).flatMap((set) => set.unused.map((o) => o.key));
+    for (const key of OUTSIDE) expect(reported).not.toContain(key);
     expect(await keys()).toHaveLength(STORED);
   });
 
-  test("--apply deletes only content-keyed garbage, and a root-level object stays", async () => {
-    const report = await reconcilePictures(sql, bucket, options({ apply: true }));
-
-    expect(report.counts.deleted).toBe(1);
-    expect(await keys()).not.toContain(UNUSED);
-    expect(await keys()).toContain(ROOT_UNUSED);
-    expect(await keys()).toContain(STAGING_UNUSED);
-    expect(await keys()).toHaveLength(STORED - 1);
-  });
-
-  test("--legacy also deletes unused root-level and items/mfc/ pictures, and nothing outside", async () => {
-    const report = await reconcilePictures(sql, bucket, options({ apply: true, legacy: true }));
-
-    expect(report.counts).toMatchObject({ objects: 6, shown: 3, garbage: 3, deleted: 3 });
-    expect(await keys()).toEqual([ROOT_SHOWN, ...OUTSIDE, SHARED, MINE].toSorted());
-  });
-
-  test("--legacy never considers a root robots.txt or any other key that is not a picture", async () => {
-    const report = await reconcilePictures(sql, bucket, options({ apply: true, legacy: true }));
-
-    expect(garbageKeys(report)).toEqual([ROOT_UNUSED, STAGING_UNUSED, UNUSED].toSorted());
-    for (const key of OUTSIDE) expect(await keys()).toContain(key);
-  });
-
-  test("an image written with a path-style bucket URL still shows its key", async () => {
+  test("a legacy image written with a path-style bucket URL still shows its key", async () => {
     await sql`
-      UPDATE item SET image = ${`http://localhost:9000/pictures/${ROOT_UNUSED}`}
-      WHERE id = 'item-3'
+      UPDATE item SET image = ${`http://localhost:9000/pictures/${ROOT_UNUSED}`} WHERE id = 'item-4'
     `;
 
     const report = await reconcilePictures(sql, bucket, options({ legacy: true }));
 
-    expect(garbageKeys(report)).not.toContain(ROOT_UNUSED);
+    expect(unusedKeys(report.sets.legacyRoot)).toEqual([ROOT_SHOWN]);
   });
 
-  test("more garbage than --max-delete deletes nothing", async () => {
-    const report = await reconcilePictures(
-      sql,
-      bucket,
-      options({ apply: true, legacy: true, maxDelete: 2 }),
-    );
-
-    expect(report).toMatchObject({ applied: false, counts: { garbage: 3, deleted: 0 } });
-    expect(report.refused).toContain("more than --max-delete 2");
-    expect(await keys()).toHaveLength(STORED);
-  });
-
-  test("an object stored again, or shown by an Item, before its delete is kept", async () => {
-    const racing = {
-      list: bucket.list.bind(bucket),
-      delete: bucket.delete.bind(bucket),
-      // Garbage is handled in key order, so both changes land after the listing and before
-      // STAGING_UNUSED's turn.
-      stat: async (key: string) => {
-        if (key === ROOT_UNUSED) {
-          await Bun.sleep(1100);
-          await bucket.write(key, "picture");
-          await sql`
-            INSERT INTO item (id, owner_id, external_id, title, image)
-            VALUES ('item-5', 'u1', 5, 'Saved meanwhile', ${`${CDN}/${STAGING_UNUSED}`})
-          `;
-        }
-        return bucket.stat(key);
-      },
-    };
-
-    const report = await reconcilePictures(sql, racing, options({ apply: true, legacy: true }));
-
-    expect(report.kept.toSorted()).toEqual([ROOT_UNUSED, STAGING_UNUSED].toSorted());
-    expect(report.counts.deleted).toBe(1);
-    expect(await keys()).toContain(ROOT_UNUSED);
-    expect(await keys()).toContain(STAGING_UNUSED);
-  });
-
-  test("a save that commits while reconcile deletes its object still leaves the object", async () => {
-    const watcher = new SQL({ url: databaseUrl, max: 1 });
-    // A save of the same bytes as the server makes it: under the picture's lock, it stores the
-    // picture again if it is gone, then commits the Item that shows it.
-    const save = (saver: SQL) =>
-      saver.begin(async (tx) => {
-        await tx`SELECT pg_advisory_xact_lock(hashtextextended(${`picture:${UNUSED}`}, 0))`;
-        if (!(await bucket.exists(UNUSED))) await bucket.write(UNUSED, "picture");
-        await tx`
-          INSERT INTO item (id, owner_id, external_id, title, image, image_bytes)
-          VALUES ('item-9', 'u2', 9, 'Saved meanwhile', ${`${CDN}/${UNUSED}`}, 7)
-        `;
-      });
-    const saver = new SQL({ url: databaseUrl, max: 1 });
-    let saving: Promise<unknown> = Promise.resolve();
-    const racing = {
-      list: bucket.list.bind(bucket),
-      stat: bucket.stat.bind(bucket),
-      delete: async (key: string) => {
-        if (key === UNUSED) {
-          const race = { settled: false };
-          saving = save(saver).finally(() => {
-            race.settled = true;
-          });
-          // Wait until the save commits, or until it waits on the picture's lock.
-          for (let tries = 0; tries < 500 && !race.settled; tries += 1) {
-            const [row] = await watcher<{ waiting: number }[]>`
-              SELECT count(*)::int AS waiting FROM pg_stat_activity
-              WHERE datname = current_database() AND wait_event = 'advisory'
-            `;
-            if ((row?.waiting ?? 0) > 0) break;
-            await Bun.sleep(10);
-          }
-        }
-        return bucket.delete(key);
-      },
-    };
-    try {
-      await reconcilePictures(sql, racing, options({ apply: true }));
-      await saving;
-
-      const [shown] = await sql`SELECT image FROM item WHERE id = 'item-9'`;
-      expect(shown).toEqual({ image: `${CDN}/${UNUSED}` });
-      expect(await bucket.exists(UNUSED)).toBe(true);
-    } finally {
-      await Promise.all([watcher.close(), saver.close()]);
-    }
-  });
-
-  test("a deleted account's Items go with it, and only pictures no one else shows become garbage", async () => {
+  test("a deleted account's Items and ledger rows go with it, and its unshared pictures show as unused", async () => {
     await sql`DELETE FROM "user" WHERE id = 'u1'`;
 
-    const [left] = await sql`SELECT count(*)::int AS items FROM item WHERE owner_id = 'u1'`;
-    expect(left).toEqual({ items: 0 });
+    const [left] = await sql`
+      SELECT (SELECT count(*) FROM item WHERE owner_id = 'u1')::int AS items,
+             (SELECT count(*) FROM picture WHERE owner_id = 'u1')::int AS pictures
+    `;
+    expect(left).toEqual({ items: 0, pictures: 0 });
+    const report = await reconcilePictures(sql, bucket, options());
+    expect(unusedKeys(report.sets.content)).toEqual([MINE, UNUSED].toSorted());
     expect(await keys()).toContain(MINE);
-
-    const soon = await reconcilePictures(sql, bucket, options({ now: new Date(), apply: true }));
-    expect(soon.counts.deleted).toBe(0);
-    const day = await reconcilePictures(sql, bucket, options({ apply: true }));
-    expect(garbageKeys(day)).toEqual([MINE, UNUSED].toSorted());
-    expect(await keys()).toContain(SHARED);
-    expect(await keys()).not.toContain(MINE);
   });
 
-  test("the script runs a dry run by default and refuses an unknown flag", async () => {
+  test("the script prints a report, deletes nothing and refuses --apply", async () => {
     const run = async (...args: string[]) => {
       const child = Bun.spawn(["bun", "src/scripts/reconcile-pictures.ts", ...args], {
         cwd: path.join(import.meta.dir, "../.."),
@@ -267,16 +176,15 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
       return { stdout, stderr, exitCode };
     };
 
-    const dryRun = await run();
-    expect(dryRun.exitCode).toBe(0);
-    expect(dryRun.stdout).toContain('"applied": false');
-    expect(dryRun.stdout).toContain('"young": 1');
-    expect(dryRun.stdout).toContain('"garbage": 0');
-    expect(dryRun.stderr).toContain("Dry run: nothing was deleted.");
+    const report = await run("--legacy");
+    expect(report.exitCode).toBe(0);
+    expect(report.stdout).toContain('"legacyRoot"');
+    expect(report.stdout).toContain('"young": 1');
+    expect(report.stderr).toContain("Report only: pictures:reconcile deletes nothing.");
 
-    const unknown = await run("--delete");
-    expect(unknown.exitCode).not.toBe(0);
-    expect(unknown.stderr).toContain("pictures:reconcile takes --apply, --legacy and --max-delete");
+    const apply = await run("--apply");
+    expect(apply.exitCode).not.toBe(0);
+    expect(apply.stderr).toContain("pictures:reconcile only reports, and takes only --legacy");
     expect(await keys()).toHaveLength(STORED);
   });
 });

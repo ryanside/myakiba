@@ -1,23 +1,27 @@
 import { Result, panic } from "better-result";
-import { and, asc, count, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
-import { collection, entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
+import {
+  collection,
+  entry,
+  entry_to_item,
+  item,
+  item_release,
+  picture as ledger,
+} from "@myakiba/db/schema/figure";
 import type { ReadTx, Tx } from "@myakiba/db/tx";
-import { pictureLock } from "@myakiba/db/picture-lock";
 import type { MfcItemId } from "@myakiba/mfc/page";
 import type { MfcEntryLink, MfcItemPage } from "@myakiba/mfc/parse";
 import type { Viewer } from "@/domain/viewer";
 import { ItemDatabaseFull } from "@/lib/errors/item-database-full";
 import { ItemNotFound } from "@/lib/errors/item-not-found";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
-import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
 import { itemFields, linksInLockOrder, releaseKey, storedPercentage } from "@/lib/item-details";
-import { itemImages } from "@/lib/item-images";
-import type { PictureOutcome, StoredPicture } from "@/lib/item-images";
+import type { PictureOutcome, SavedPicture } from "@/lib/item-images";
 import { buildReleasePlan } from "@/lib/release-plan";
 import type { ReleasePlan } from "@/lib/release-plan";
 
-/** How many bytes of pictures stored by content one account's Items may show. */
+/** How many bytes of pictures one account may record in its ledger, and so store. */
 const PICTURE_QUOTA_BYTES = 2 * 1024 ** 3;
 
 /** How many Items one account's Item Database may hold. */
@@ -36,39 +40,8 @@ export async function findMfcItem(
 }
 
 /**
- * Whether the owner's pictures stay within the quota with `image` too. Only pictures stored by
- * content count, each distinct one once, so one the owner already shows adds nothing. `replacing`
- * leaves out the Item whose picture an Item Refresh replaces.
- */
-export async function pictureFits(
-  tx: ReadTx,
-  viewer: Viewer,
-  { image, bytes, replacing }: { image: string; bytes: number; replacing?: string },
-): Promise<boolean> {
-  const pictures = tx
-    .selectDistinct({ image: item.image, bytes: item.imageBytes })
-    .from(item)
-    .where(
-      and(
-        eq(item.ownerId, viewer.userId),
-        isNotNull(item.imageBytes),
-        replacing === undefined ? undefined : ne(item.id, replacing),
-      ),
-    )
-    .as("pictures");
-  const [usage] = await tx
-    .select({
-      used: sql<number>`coalesce(sum(${pictures.bytes}), 0)`.mapWith(Number),
-      shown: sql<boolean>`coalesce(bool_or(${pictures.image} = ${image}), false)`,
-    })
-    .from(pictures);
-  if (!usage) panic(`An aggregate over ${viewer.userId}'s pictures returned no row`);
-  return usage.shown || usage.used + bytes <= PICTURE_QUOTA_BYTES;
-}
-
-/**
- * Serializes one owner's Item writes, so the Item cap and the picture quota see every write
- * before it. Taken before any Item row lock.
+ * Serializes one owner's Item writes and picture reservations, so the Item cap and the picture
+ * quota see every write before it. Taken before any Item row lock.
  */
 function lockItemDatabase(tx: Tx, viewer: Viewer) {
   return tx.execute(
@@ -76,39 +49,61 @@ function lockItemDatabase(tx: Tx, viewer: Viewer) {
   );
 }
 
-type ShownPicture = { readonly image: string; readonly imageBytes: number } | null;
+/** Whether the viewer's Item Database already holds as many Items as one account may. */
+export async function itemDatabaseIsFull(tx: ReadTx, viewer: Viewer): Promise<boolean> {
+  const [held] = await tx
+    .select({ items: count() })
+    .from(item)
+    .where(eq(item.ownerId, viewer.userId));
+  return (held?.items ?? 0) >= MAX_ITEMS_PER_ACCOUNT;
+}
+
+/**
+ * Records a picture in the owner's ledger before it is stored, unless it would take the owner's
+ * ledger past the quota. A key the owner already recorded counts once. Rows stay when an Item
+ * stops showing the picture, so the ledger bounds what an account stores.
+ */
+export async function reservePicture(
+  tx: Tx,
+  viewer: Viewer,
+  { key, bytes }: { readonly key: string; readonly bytes: number },
+): Promise<"reserved" | "over_quota"> {
+  await lockItemDatabase(tx, viewer);
+  const [recorded] = await tx
+    .select({
+      used: sql<number>`coalesce(sum(${ledger.bytes}), 0)`.mapWith(Number),
+      held: sql<boolean>`coalesce(bool_or(${ledger.key} = ${key}), false)`,
+    })
+    .from(ledger)
+    .where(eq(ledger.ownerId, viewer.userId));
+  if (!recorded) panic(`An aggregate over ${viewer.userId}'s picture ledger returned no row`);
+  if (recorded.held) return "reserved";
+  if (recorded.used + bytes > PICTURE_QUOTA_BYTES) return "over_quota";
+  await tx.insert(ledger).values({ ownerId: viewer.userId, key, bytes }).onConflictDoNothing();
+  return "reserved";
+}
+
+/** Whether one of the viewer's Items shows the picture at `key`, so it is already stored. */
+export async function showsPicture(tx: ReadTx, viewer: Viewer, key: string): Promise<boolean> {
+  const [shown] = await tx
+    .select({ id: item.id })
+    .from(item)
+    .where(and(eq(item.ownerId, viewer.userId), eq(item.imageKey, key)))
+    .limit(1);
+  return shown !== undefined;
+}
+
+type ShownPicture = { readonly image: null; readonly imageKey: string } | null;
 
 type ToShow = { readonly shown: ShownPicture; readonly outcome: PictureOutcome };
 
-/**
- * The picture a write shows, after the quota check that counts: the one under the owner's lock.
- * It then takes the picture's lock, which pictures:reconcile deletes under, and holds it until the
- * commit. If reconcile deleted the object meanwhile, the picture is stored again first.
- */
-async function pictureToShow(
-  tx: Tx,
-  viewer: Viewer,
-  mfcItemId: MfcItemId,
-  picture: StoredPicture | null,
-  replacing?: string,
-): Promise<Result<ToShow, StoreItemPictureFailed>> {
-  if (picture === null) return Result.ok({ shown: null, outcome: "absent" });
+/** The picture a write shows, from what `before` stored and recorded in the ledger. */
+function pictureToShow(picture: SavedPicture | null): ToShow {
+  if (picture === null) return { shown: null, outcome: "absent" };
   if (picture.kind === "rejected") {
-    const outcome = picture.reason === "over_quota" ? "over_quota" : "rejected";
-    return Result.ok({ shown: null, outcome });
+    return { shown: null, outcome: picture.reason === "over_quota" ? "over_quota" : "rejected" };
   }
-  const { url: image, bytes } = picture;
-  if (!(await pictureFits(tx, viewer, { image, bytes, replacing }))) {
-    return Result.ok({ shown: null, outcome: "over_quota" });
-  }
-  await tx.execute(
-    sql`select pg_advisory_xact_lock(hashtextextended(${pictureLock(picture.key)}, 0))`,
-  );
-  const ensured = await Result.tryPromise({
-    try: () => itemImages.ensure(picture),
-    catch: (cause) => new StoreItemPictureFailed({ mfcItemId, cause }),
-  });
-  return ensured.map(() => ({ shown: { image, imageBytes: bytes }, outcome: "stored" }));
+  return { shown: { image: null, imageKey: picture.key }, outcome: "stored" };
 }
 
 function releaseRows(itemId: string, page: MfcItemPage) {
@@ -175,8 +170,8 @@ async function createMfcItemIfAbsent(
       externalId: page.mfcItemId,
       source: "mfc",
       ...itemFields(page),
-      image: shown?.image ?? null,
-      imageBytes: shown?.imageBytes ?? null,
+      image: null,
+      imageKey: shown?.imageKey ?? null,
     })
     .onConflictDoNothing({ target: [item.ownerId, item.source, item.externalId] })
     .returning({ id: item.id });
@@ -201,19 +196,13 @@ export async function addMfcItemIfMissing(
   tx: Tx,
   viewer: Viewer,
   page: MfcItemPage,
-  picture: StoredPicture | null,
-): Promise<Result<Added, MfcItemNotPersisted | ItemDatabaseFull | StoreItemPictureFailed>> {
+  picture: SavedPicture | null,
+): Promise<Result<Added, MfcItemNotPersisted | ItemDatabaseFull>> {
   await lockItemDatabase(tx, viewer);
   const existingId = await findMfcItem(tx, viewer, page.mfcItemId);
   if (existingId) return Result.ok({ itemId: existingId, created: false });
-  const [held] = await tx
-    .select({ items: count() })
-    .from(item)
-    .where(eq(item.ownerId, viewer.userId));
-  if ((held?.items ?? 0) >= MAX_ITEMS_PER_ACCOUNT) return Result.err(new ItemDatabaseFull());
-  const toShow = await pictureToShow(tx, viewer, page.mfcItemId, picture);
-  if (toShow.isErr()) return toShow;
-  const { shown, outcome } = toShow.value;
+  if (await itemDatabaseIsFull(tx, viewer)) return Result.err(new ItemDatabaseFull());
+  const { shown, outcome } = pictureToShow(picture);
   const createdId = await createMfcItemIfAbsent(tx, viewer.userId, page, shown);
   if (!createdId) return Result.err(new MfcItemNotPersisted({ mfcItemId: page.mfcItemId }));
   return Result.ok({ itemId: createdId, created: true, picture: outcome });
@@ -236,7 +225,7 @@ async function lockItem(tx: Tx, ownerId: string, itemId: string) {
       contentLabel: item.contentLabel,
       mfcRatingId: item.mfcRatingId,
       image: item.image,
-      imageBytes: item.imageBytes,
+      imageKey: item.imageKey,
     })
     .from(item)
     .where(and(eq(item.ownerId, ownerId), eq(item.id, itemId)))
@@ -361,16 +350,14 @@ export async function refreshItem(
   viewer: Viewer,
   itemId: string,
   page: MfcItemPage,
-  picture: StoredPicture | null,
-): Promise<Result<Refreshed, ItemNotFound | StoreItemPictureFailed>> {
+  picture: SavedPicture | null,
+): Promise<Result<Refreshed, ItemNotFound>> {
   await lockItemDatabase(tx, viewer);
   const locked = await lockItem(tx, viewer.userId, itemId);
   if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
-  const toShow = await pictureToShow(tx, viewer, page.mfcItemId, picture, id);
-  if (toShow.isErr()) return toShow;
-  const { shown, outcome } = toShow.value;
-  const { image, imageBytes } = shown ?? fields;
+  const { shown, outcome } = pictureToShow(picture);
+  const { image, imageKey } = shown ?? fields;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);
   const keyed = rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
@@ -380,7 +367,7 @@ export async function refreshItem(
     releaseKeys: sortedKeys(existing),
   };
   const next: Snapshot = {
-    fields: { ...itemFields(page), image, imageBytes },
+    fields: { ...itemFields(page), image, imageKey },
     links: linksInLockOrder(page).map(pageLink),
     releaseKeys: sortedKeys(keyed),
   };
@@ -388,7 +375,7 @@ export async function refreshItem(
 
   await tx
     .update(item)
-    .set({ ...itemFields(page), image, imageBytes, updatedAt: new Date() })
+    .set({ ...itemFields(page), image, imageKey, updatedAt: new Date() })
     .where(eq(item.id, id));
   await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
   await linkEntries(tx, viewer.userId, id, page);

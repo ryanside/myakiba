@@ -50,9 +50,10 @@ export const item = pgTable(
     mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
     contentLabel: text("content_label", { enum: CONTENT_LABELS }),
     mfcRatingId: integer("mfc_rating_id"),
+    // A picture stored before pictures were keyed by content: a full URL, kept as it was.
     image: text("image"),
-    // Set only for a picture stored by its content: its size counts toward the owner's quota.
-    imageBytes: integer("image_bytes"),
+    // A picture stored by its content, by its key in the bucket. The read sites build its URL.
+    imageKey: text("image_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -60,6 +61,23 @@ export const item = pgTable(
     uniqueIndex("item_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
     index("item_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
   ],
+);
+
+/**
+ * Every picture each user stored, by key. A save writes its row before it stores the picture,
+ * so the rows bound what an account stores, whether or not an Item still shows the picture.
+ */
+export const picture = pgTable(
+  "picture",
+  {
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    bytes: integer("bytes").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("picture_owner_id_key_idx").on(t.ownerId, t.key)],
 );
 
 export const item_release = pgTable(

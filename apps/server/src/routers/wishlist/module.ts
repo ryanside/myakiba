@@ -7,6 +7,7 @@ import { Result } from "better-result";
 import { command, query } from "@/domain/kernel";
 import { WishlistItemNotFound } from "./errors/wishlist-item-not-found";
 import type { WishlistPageQuery } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 export const Wishlist = {
   list: query(
@@ -38,7 +39,7 @@ export const Wishlist = {
             itemId: wishlistItem.itemId,
             itemExternalId: item.externalId,
             title: item.title,
-            image: item.image,
+            image: itemImageSql().as("image"),
             category: item.category,
             position: wishlistItem.position,
             createdAt: wishlistItem.createdAt,
