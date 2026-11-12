@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { env } from "@myakiba/env/server";
 
-/** Where the bucket's pictures are served: `AWS_BUCKET_URL`, or the bucket's own S3 address. */
 const PICTURE_BASE_URL = (
   env.AWS_BUCKET_URL ?? `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`
 ).replace(/\/+$/u, "");

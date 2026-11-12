@@ -58,8 +58,7 @@ const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 const INLINE_SCRIPT = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gu;
 
 /**
- * Images allow any `https:` source because a custom Item's picture may be any URL, and the
- * bucket's public URL, which a local S3-compatible store serves on `http:`. The charts,
+ * Images allow any `https:` source because a custom Item's picture may be any URL. The charts,
  * Base UI and index.html add `<style>` elements, so styles need `'unsafe-inline'`.
  */
 function contentSecurityPolicy(html: string): string {

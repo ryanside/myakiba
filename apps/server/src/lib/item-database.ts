@@ -21,10 +21,8 @@ import type { PictureOutcome, SavedPicture } from "@/lib/item-images";
 import { buildReleasePlan } from "@/lib/release-plan";
 import type { ReleasePlan } from "@/lib/release-plan";
 
-/** How many bytes of pictures one account may record in its ledger, and so store. */
 const PICTURE_QUOTA_BYTES = 2 * 1024 ** 3;
 
-/** How many Items one account's Item Database may hold. */
 const MAX_ITEMS_PER_ACCOUNT = 20_000;
 
 export async function findMfcItem(
@@ -39,17 +37,12 @@ export async function findMfcItem(
   return found?.id;
 }
 
-/**
- * Serializes one owner's Item writes and picture reservations, so the Item cap and the picture
- * quota see every write before it. Taken before any Item row lock.
- */
 function lockItemDatabase(tx: Tx, viewer: Viewer) {
   return tx.execute(
     sql`select pg_advisory_xact_lock(hashtextextended(${`items:${viewer.userId}`}, 0))`,
   );
 }
 
-/** Whether the viewer's Item Database already holds as many Items as one account may. */
 export async function itemDatabaseIsFull(tx: ReadTx, viewer: Viewer): Promise<boolean> {
   const [held] = await tx
     .select({ items: count() })
@@ -87,7 +80,6 @@ type ShownPicture = { readonly image: null; readonly imageKey: string } | null;
 
 type ToShow = { readonly shown: ShownPicture; readonly outcome: PictureOutcome };
 
-/** The picture a write shows, from what `before` stored and recorded in the ledger. */
 function pictureToShow(picture: SavedPicture | null): ToShow {
   if (picture === null) return { shown: null, outcome: "absent" };
   if (picture.kind === "rejected") {

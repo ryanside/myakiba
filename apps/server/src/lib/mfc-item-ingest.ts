@@ -11,7 +11,6 @@ import { findMfcItem, itemDatabaseIsFull, reservePicture } from "@/lib/item-data
 import { itemImages } from "@/lib/item-images";
 import type { PictureOutcome, SavedPicture } from "@/lib/item-images";
 
-/** What a command's `before` lends a save: the pool, the viewer, and its one committed write. */
 type SaveScope = {
   readonly tx: ReadTx;
   readonly viewer: Viewer;
@@ -28,11 +27,6 @@ type PreparedMfcItem =
   | { readonly kind: "existing"; readonly mfcItemId: MfcItemId; readonly itemId: string }
   | ParsedMfcItem;
 
-/**
- * Records the picture in the viewer's ledger, then stores it, unless the ledger is past the
- * quota. The row commits first, so every stored picture counts against its owner even when the
- * save later fails. Nothing here runs inside the save's transaction.
- */
 async function savePicture(
   scope: SaveScope,
   id: MfcItemId,
@@ -44,8 +38,6 @@ async function savePicture(
     reservePicture(tx, scope.viewer, { key: read.key, bytes: read.body.byteLength }),
   );
   if (reserved === "over_quota") return Result.ok({ kind: "rejected", reason: "over_quota" });
-  // Stored every time: the upload is keyed by its content, so it is idempotent, and it puts back
-  // an object that went missing even when an Item already shows its key.
   const stored = await Result.tryPromise({
     try: () => itemImages.store(read),
     catch: (cause) => new StoreItemPictureFailed({ mfcItemId: id, cause }),
@@ -53,7 +45,6 @@ async function savePicture(
   return stored.map(() => ({ kind: "stored", key: read.key }));
 }
 
-/** Parses the page, then records and stores its picture. Run it in `before`, outside the transaction. */
 export async function readMfcItemPage(
   scope: SaveScope,
   id: MfcItemId,
@@ -91,6 +82,5 @@ export function refusedPageLog({ mfcItemId, problem }: MfcPageUnreadable) {
     : { itemId: mfcItemId, outcome: problem.kind };
 }
 
-/** What the request log says about the picture a save was sent and what the writer did with it. */
 export const pictureLog = (picture: SavedPicture | null, outcome: PictureOutcome) =>
   picture?.kind === "rejected" ? `rejected: ${picture.reason}` : outcome;

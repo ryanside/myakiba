@@ -37,7 +37,6 @@ test(
       statements: [...REPEATED_ON_EVERY_PUSH, ...PICTURE_LEDGER].toSorted(),
     });
     const after = await snapshot(sql);
-    // The push adds the empty picture ledger.
     expect(after.rows).toEqual({ ...before.rows, picture: "" });
     expect(after.triggers).toEqual(before.triggers);
     expect(after.functions).toEqual(before.functions);

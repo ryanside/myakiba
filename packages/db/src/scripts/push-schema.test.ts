@@ -44,7 +44,6 @@ test(
     expect(first.output).toContain('Item ownership migration: {"status":"migrated"');
     expect(first.output).toContain("Item owner guards installed.");
     const pushed = await snapshot(sql);
-    // The push adds the empty picture ledger, which the migration does not.
     expect(pushed.rows).toEqual({ ...expected.rows, picture: "" });
     expect(pushed.triggers).toEqual(expected.triggers);
     expect(pushed.functions).toEqual(expected.functions);

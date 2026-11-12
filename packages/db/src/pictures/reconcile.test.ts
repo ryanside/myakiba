@@ -7,7 +7,6 @@ import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
 import { GRACE_MS, reconcilePictures } from "./reconcile";
 import type { ReconcileOptions } from "./reconcile";
 
-/** An S3-compatible store with an existing bucket, such as http://key:secret@localhost:9000/bucket. */
 const s3Url = process.env.TEST_S3_URL ? new URL(process.env.TEST_S3_URL) : null;
 if (s3Url === null && process.env.CI) {
   throw new Error("TEST_S3_URL is required in CI, so pictures:reconcile runs against MinIO");

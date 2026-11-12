@@ -52,7 +52,6 @@ const routers = await Promise.all(
 );
 const app = routers.reduce((built, router) => built.use(router), new Elysia({ prefix: "/api" }));
 
-// test.env names no AWS_BUCKET_URL, so a key's picture is served from the bucket's own address.
 const KEY = `items/${"a".repeat(64)}.jpg`;
 const KEYED_URL = `https://test.s3.us-east-1.amazonaws.com/${KEY}`;
 const LEGACY_URL = "https://static.myakiba.app/98778-legacy.jpg";
@@ -104,7 +103,6 @@ beforeAll(async () => {
       shop: "Shop",
       price: 1000,
     },
-    // Ordered, with their releases selected, for the release calendars.
     ...(
       [
         { itemId: "keyed", releaseId: KEYED_RELEASE },

@@ -3,7 +3,6 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 
-/** A picture read from an upload, keyed by its content, before anything is stored. */
 type ReadPicture =
   | {
       readonly kind: "read";
@@ -14,7 +13,6 @@ type ReadPicture =
     }
   | { readonly kind: "rejected"; readonly reason: "not_an_image" | "too_large" };
 
-/** What a save hands its writer about the picture it was sent. */
 export type SavedPicture =
   /** In the bucket, and in the owner's picture ledger. */
   | { readonly kind: "stored"; readonly key: string }
@@ -23,7 +21,6 @@ export type SavedPicture =
       readonly reason: "not_an_image" | "too_large" | "over_quota";
     };
 
-/** What a save answers about the picture it was sent. */
 export type PictureOutcome = "stored" | "absent" | "rejected" | "over_quota";
 
 export type ItemImages = {

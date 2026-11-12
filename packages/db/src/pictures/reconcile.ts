@@ -1,11 +1,5 @@
 import type { S3Client, SQL } from "bun";
 
-/**
- * The keys pictures:reconcile reports on. Content keys are `items/<sha256>.<ext>`. Legacy pictures
- * are main's worker's root-level files, stored under MFC's own name for a JPEG, PNG, WebP, GIF or
- * AVIF response only, and staging's `items/mfc/<id>/<hash16>.<ext>`. No other key is ever
- * considered, so a root `robots.txt` is never reported.
- */
 const KEY_SETS = {
   content: /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u,
   legacyRoot: /^[^/]+\.(?:jpe?g|png|webp|gif|avif)$/iu,
@@ -14,10 +8,6 @@ const KEY_SETS = {
 
 type KeySet = keyof typeof KEY_SETS;
 
-/**
- * A save stores its picture before its transaction commits, so a young object may be one a save
- * is about to show.
- */
 export const GRACE_MS = 24 * 60 * 60 * 1000;
 
 export type ReconcileOptions = {
@@ -61,7 +51,6 @@ async function listObjects(bucket: Bucket, prefix: string): Promise<StoredObject
   return objects;
 }
 
-/** The content keys Items show, exactly as they store them. */
 async function shownContentKeys(sql: SQL): Promise<Set<string>> {
   const rows = await sql<{ key: string }[]>`
     SELECT DISTINCT image_key AS key FROM item WHERE image_key IS NOT NULL
@@ -69,11 +58,6 @@ async function shownContentKeys(sql: SQL): Promise<Set<string>> {
   return new Set(rows.map((row) => row.key));
 }
 
-/**
- * Every key a legacy Item's image URL could name. A legacy image is a full URL, whatever host or
- * path-style bucket prefix it was written with, so each trailing part of its path counts. Reading
- * more keys as shown only shortens the report.
- */
 async function shownLegacyKeys(sql: SQL): Promise<Set<string>> {
   const rows = await sql<{ image: string }[]>`
     SELECT DISTINCT image FROM item WHERE image IS NOT NULL
@@ -89,9 +73,9 @@ async function shownLegacyKeys(sql: SQL): Promise<Set<string>> {
 }
 
 /**
- * Reports the stored pictures no Item shows, per key set. It deletes nothing: deletion comes after
- * launch, built on the picture ledger. It lists the bucket before it reads the Items, so an object
- * a save stores after the listing is not seen, and one stored before it counts as young.
+ * Reports the stored pictures no Item shows, per key set. It deletes nothing. It lists the bucket
+ * before it reads the Items, so an object a save stores after the listing is not seen, and one
+ * stored before it counts as young.
  */
 export async function reconcilePictures(
   sql: SQL,

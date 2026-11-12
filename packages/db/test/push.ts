@@ -8,7 +8,6 @@ export const REPEATED_ON_EVERY_PUSH = [
   `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
-/** What a push adds to a database in the owned shape from before pictures were stored by content. */
 export const PICTURE_LEDGER = [
   `CREATE TABLE "picture" (\n\t"owner_id" text NOT NULL,\n\t"key" text NOT NULL,\n\t"bytes" integer NOT NULL,\n\t"created_at" timestamp DEFAULT now() NOT NULL\n)`,
   `ALTER TABLE "item" ADD COLUMN "image_key" text`,

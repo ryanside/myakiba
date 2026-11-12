@@ -127,7 +127,6 @@ function memoryStore() {
     send,
     objects,
     puts: () => puts,
-    /** Runs at the start of every put, before the object is stored. */
     whenPutting: (observe: (key: string) => Promise<void>) => {
       beforePut = observe;
     },
@@ -634,14 +633,12 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
 const keyOf = (bytes: Uint8Array, extension: string) =>
   `items/${new Bun.CryptoHasher("sha256").update(bytes).digest("hex")}.${extension}`;
 
-// The ledger is read and written in SQL, so this file also loads before the table existed.
 async function recordPicture(owner: string, key: string, bytes: number) {
   await db.execute(
     sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${owner}, ${key}, ${bytes})`,
   );
 }
 
-/** Ledger rows for pictures no Item shows, filling the owner's quota to `used` bytes. */
 async function recordPictures(used: number, owner = userId) {
   const halves = [Math.ceil(used / 2), Math.floor(used / 2)].filter((bytes) => bytes > 0);
   for (const [index, bytes] of halves.entries()) {
@@ -659,7 +656,6 @@ async function ledgerOf(owner = userId) {
 describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB", () => {
   test("the ledger row is committed when the picture is stored", async () => {
     const seenAtPut: Awaited<ReturnType<typeof ledgerOf>>[] = [];
-    // The ledger is read from another connection, so only a committed row is seen.
     store.whenPutting(async () => {
       seenAtPut.push(await ledgerOf());
     });

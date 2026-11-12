@@ -25,7 +25,6 @@ export function pickFailureOf(cause: unknown): PickFailure {
   return { kind: "unsaved" };
 }
 
-/** Why a save left its picture out. */
 export const PICTURE_QUOTA_FULL = "Your pictures already take the 2 GB one account can store";
 
 export const EXTENSION_STOPPED_TEXT = "The extension stopped. Reload the page to see your picks.";

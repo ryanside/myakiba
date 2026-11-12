@@ -608,14 +608,12 @@ async function storedVersion(itemId: string) {
 
 const QUOTA = 2 * 1024 ** 3;
 
-/** A distinct PNG of PNG's size for each n, so each refresh brings new bytes. */
 const pngNumber = (n: number) => {
   const bytes = [...PNG];
   bytes[9] = n;
   return new Uint8Array(bytes);
 };
 
-// The ledger is written in SQL, so this file also loads before the table existed.
 async function recordPicture(bytes: number) {
   await db.execute(
     sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${userId}, ${`items/${"0".repeat(64)}.jpg`}, ${bytes})`,

@@ -116,7 +116,6 @@ const savePickCommand = defineCommand({
         { fallback: "myakiba could not save this item." },
       ),
     ),
-  // One toast stands for every pick saved without its picture, however many the intake sends.
   warningToast: (_pick, saved) =>
     saved.saved === "created" && saved.picture === "over_quota"
       ? {
@@ -126,8 +125,6 @@ const savePickCommand = defineCommand({
           timeout: 0,
         }
       : undefined,
-  // Each failed pick says why on its row. The intake still sends every pick, and each one a full
-  // Item Database refuses adds this same error toast, which replaces the one before it.
   failureToast: (_pick, failure) =>
     pickFailureOf(failure).kind === "full"
       ? {

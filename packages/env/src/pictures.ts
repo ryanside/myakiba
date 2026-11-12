@@ -4,7 +4,6 @@ import { z } from "zod";
 import { databaseSchema, itemPictureBucketSchema } from "./schemas";
 import { panicOnInvalidEnv } from "./panic-on-invalid-env";
 
-/** What pictures:reconcile reads: the Items and the bucket their pictures are stored in. */
 export const env = createEnv({
   server: {
     ...databaseSchema,
