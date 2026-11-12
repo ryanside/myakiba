@@ -377,7 +377,7 @@ test(
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
-      "a table this migration does not re-point references Items or Item Entries",
+      "a table this migration does not re-point references Items, Item Entries or their links",
     );
     expect(failed.output).toContain(
       "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",

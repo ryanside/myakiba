@@ -103,9 +103,10 @@ const OWNERSHIP_CHECKS = [
       WHERE l.owner_id IS DISTINCT FROM i.owner_id OR l.owner_id IS DISTINCT FROM e.owner_id`,
   },
   {
-    check: "a table this migration does not re-point references Items or Item Entries",
+    check: "a table this migration does not re-point references Items, Item Entries or their links",
     count: `SELECT count(*) FROM pg_constraint WHERE contype = 'f'
-      AND confrelid IN ('public.item'::regclass, 'public.item_release'::regclass, 'public.entry'::regclass)
+      AND confrelid IN ('public.item'::regclass, 'public.item_release'::regclass, 'public.entry'::regclass,
+        'public.entry_to_item'::regclass)
       AND conrelid NOT IN ('public.item_release'::regclass, 'public.entry_to_item'::regclass,
         'public.collection'::regclass, 'public.wishlist_item'::regclass, 'public.list_member'::regclass)`,
   },

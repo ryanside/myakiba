@@ -228,6 +228,20 @@ test("a migrated database missing an owner guard is still migrated, so the migra
   expect(await snapshot(sql)).toEqual(before);
 });
 
+test("refuses a table it does not re-point that references Item Entry links, and changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE TABLE link_note (entry_id text, item_id text, note text,
+      FOREIGN KEY (entry_id, item_id) REFERENCES entry_to_item (entry_id, item_id) ON DELETE CASCADE);
+    INSERT INTO link_note VALUES ('entry-2', 'item-a', 'kept');
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toThrow(
+    "a table this migration does not re-point references Items, Item Entries or their links (1)",
+  );
+  expect(await snapshot(sql)).toEqual(before);
+});
+
 test.each(MIGRATION_STEPS)(
   "a crash after %s leaves the database as seeded, and the next run equals a clean run",
   async (step) => {
