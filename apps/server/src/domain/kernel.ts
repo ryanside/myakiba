@@ -21,6 +21,7 @@ import {
   poolBodies,
   befores,
   operationals,
+  reservations,
   SNAPSHOT,
   snapshots,
   proceeding,
@@ -133,7 +134,7 @@ async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLog
   }
 }
 
-/** Runs `before`, if any, then the body in one transaction. */
+/** Runs `before`, then `reserve` and `store`, each if declared, then the body in one transaction. */
 async function runInTransaction(
   op: AnyOp,
   viewer: Viewer,
@@ -160,6 +161,20 @@ async function runInTransaction(
     }
     if (!isProceed(first)) return settle(first);
     handoff = first.value["~proceed"];
+  }
+  const reservation = reservations.get(op);
+  if (reservation) {
+    let stored: AnyResult;
+    try {
+      const reserved = await db.transaction((tx) =>
+        reservation.reserve(tx, viewer, handoff as never),
+      );
+      stored = await reservation.store(reserved as never);
+    } catch (error) {
+      return classify(error);
+    }
+    if (stored.isErr()) return settle(stored);
+    handoff = stored.value;
   }
   const body = bodyOf(op);
   try {

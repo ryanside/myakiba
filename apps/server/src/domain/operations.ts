@@ -175,6 +175,12 @@ export const poolBodies = new WeakMap<
   (scope: PoolScope, input: never) => Promise<AnyResult>
 >();
 export const befores = new WeakMap<AnyOp, Hook>();
+/** A command's declared `reserve` and the `store` that takes what it returned. */
+type Stages<V> = {
+  readonly reserve: (tx: Tx, viewer: Viewer, value: never) => Promise<V>;
+  readonly store: (reserved: V) => Promise<AnyResult>;
+};
+export const reservations = new WeakMap<AnyOp, Stages<unknown>>();
 export const operationals = new WeakMap<AnyOp, Operational>();
 
 export const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
@@ -216,6 +222,32 @@ type HandoffOf<B> = B extends Ok<Proceed<infer P>, unknown> ? P : never;
 type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 
 /**
+ * A write whose `before` needs a record committed before an effect outside the database, such as
+ * a picture's ledger row before the picture is stored. Once `before` proceeds, the kernel runs
+ * `reserve` once, in a transaction of its own that commits at once, so the body's rollback never
+ * undoes it. Then `store` runs outside any transaction with what `reserve` returned: its Ok value
+ * is the body's input, and its Err answers without the body.
+ */
+export function command<
+  I,
+  B extends AnyResult,
+  V,
+  S extends AnyResult,
+  R extends AnyResult,
+  const M extends string,
+  const O extends Operational = [],
+>(
+  config: OpConfig<M, O> & {
+    readonly before: Before<I, B>;
+    readonly reserve: (tx: Tx, viewer: Viewer, value: HandoffOf<B>) => Promise<V>;
+    readonly store: (reserved: V) => Promise<S>;
+  },
+  body: (
+    scope: CommandScope,
+    input: InferOk<S>,
+  ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | S | R>, OperationalOf<O>>>,
+): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | S | R>>, M>;
+/**
  * A write. Everything the body does through `scope.tx` commits together or not at all:
  * any Err or throw rolls it back. `before` runs first, for work such as parsing or a network call,
  * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
@@ -231,29 +263,40 @@ export function command<
   const M extends string,
   const O extends Operational = [],
 >(
-  config: OpConfig<M, O> & { readonly before: Before<I, B> },
+  config: OpConfig<M, O> & {
+    readonly before: Before<I, B>;
+    readonly reserve?: never;
+    readonly store?: never;
+  },
   body: (
     scope: CommandScope,
     input: HandoffOf<B>,
   ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, OperationalOf<O>>>,
 ): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | R>>, M>;
-// Only the overload above takes a `before`: it reads the pool, so it can never be handed a Tx.
+// Only the overloads above take a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
   R extends AnyResult,
   const M extends string,
   const O extends Operational = [],
 >(
-  config: OpConfig<M, O> & { readonly before?: never },
+  config: OpConfig<M, O> & {
+    readonly before?: never;
+    readonly reserve?: never;
+    readonly store?: never;
+  },
   body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M>;
-export function command(
-  config: OpConfig<string> & { readonly before?: Before<never, AnyResult> },
+export function command<V>(
+  config: OpConfig<string> & { readonly before?: Before<never, AnyResult> } & Partial<Stages<V>>,
   body: (scope: CommandScope, input: never) => Promise<AnyResult>,
 ): AnyOp {
   const op = { action: config.action, failure: config.failure };
   bodies.set(op, body as Body);
   if (config.before) befores.set(op, config.before);
+  if (config.reserve && config.store) {
+    reservations.set(op, { reserve: config.reserve, store: config.store } as Stages<unknown>);
+  }
   if (config.operational) operationals.set(op, config.operational);
   return op;
 }

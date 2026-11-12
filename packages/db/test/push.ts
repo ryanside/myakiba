@@ -8,6 +8,13 @@ export const REPEATED_ON_EVERY_PUSH = [
   `ALTER TABLE "entry_to_item" ALTER COLUMN "roles" SET DEFAULT '{}'::text[]`,
 ];
 
+export const PICTURE_LEDGER = [
+  `CREATE TABLE "picture" (\n\t"owner_id" text NOT NULL,\n\t"key" text NOT NULL,\n\t"bytes" integer NOT NULL,\n\t"created_at" timestamp DEFAULT now() NOT NULL,\n\t"reserved_at" timestamp DEFAULT now() NOT NULL\n)`,
+  `ALTER TABLE "item" ADD COLUMN "image_key" text`,
+  `ALTER TABLE "picture" ADD CONSTRAINT "picture_owner_id_user_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action`,
+  `CREATE UNIQUE INDEX "picture_owner_id_key_idx" ON "picture" USING btree ("owner_id","key")`,
+];
+
 /** Pushes the app schema as push-schema.ts does: no TTY, so any prompt fails. */
 export async function pushSchema(url: string) {
   const child = Bun.spawn(

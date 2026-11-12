@@ -222,7 +222,7 @@ describe("each search route answers as before", () => {
   });
 
   test("order search gives each Order its Items' pictures", async () => {
-    await db.update(item).set({ image: "miku.jpg" }).where(eq(item.id, "item-1"));
+    await db.update(item).set({ legacyImageUrl: "miku.jpg" }).where(eq(item.id, "item-1"));
     expect(await call("/orders?title=miku")).toEqual({
       status: 200,
       body: {

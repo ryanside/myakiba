@@ -72,6 +72,18 @@ test("repeated errors leave one toast and dismiss without revealing an older cop
   expect(screen.getAllByText("Invalid email or password")).toHaveLength(1);
 });
 
+test("a toast of any type with an id replaces the one before it", () => {
+  render(<Toaster />);
+
+  act(() => {
+    for (let pick = 0; pick < 3; pick++) {
+      toast.add({ id: "picture-quota", type: "warning", title: "Saved without pictures" });
+    }
+  });
+
+  expect(screen.getAllByText("Saved without pictures")).toHaveLength(1);
+});
+
 test("error identity includes its description and preserves caller-provided ids", () => {
   render(<Toaster limit={10} />);
 

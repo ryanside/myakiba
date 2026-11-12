@@ -108,6 +108,33 @@ command(
   async (_scope, input: number) => Result.ok(input),
 );
 
+command(
+  {
+    ...config,
+    before: async (scope) => scope.proceed(1),
+    reserve: async (tx, _viewer, input) => {
+      await tx.insert(order).values({ userId: "u1", title: "Order" });
+      return input;
+    },
+    store: async (input) => Result.ok(input),
+  },
+  async (_scope, input: number) => Result.ok(input),
+);
+
+command(
+  {
+    ...config,
+    before: async (scope) => scope.proceed(1),
+    reserve: async (_tx, _viewer, input) => input,
+    store: async (...handed) => {
+      // @ts-expect-error store runs outside any transaction: it is handed reserve's value and no Tx
+      const [value, tx]: [number, Tx] = handed;
+      return Result.ok(tx ? value : 0);
+    },
+  },
+  async (_scope, input: number) => Result.ok(input),
+);
+
 const writesBeforeTheTransaction = {
   ...config,
   before: async (scope: {
@@ -120,6 +147,14 @@ const writesBeforeTheTransaction = {
 };
 // @ts-expect-error a before held in a variable took a Tx, got the pool and committed its write early
 command(writesBeforeTheTransaction, async () => Result.ok(1));
+
+const stagesWithoutBefore = {
+  ...config,
+  reserve: async () => "reserved",
+  store: async (reserved: string) => Result.ok(reserved),
+};
+// @ts-expect-error reserve and store run only after a before, or the body is handed store's string as its input
+command(stagesWithoutBefore, async (_scope, input: number) => Result.ok(input));
 
 type ValuesOf<O> = O extends { readonly "~types"?: { readonly value: infer T } } ? T : never;
 type Equal<A, B> =

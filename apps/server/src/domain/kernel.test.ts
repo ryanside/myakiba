@@ -215,6 +215,50 @@ describe("a command's before step", () => {
   });
 });
 
+describe("a write's declared reserve step", () => {
+  const reserveThen = (stored: "ok" | "fail") => {
+    const bodyRuns = { count: 0 };
+    const op = command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) => scope.proceed(input),
+        reserve: async (tx, _viewer, input) => {
+          await tx.insert(user).values(newUser(`${input.id}-reserved`));
+          return input;
+        },
+        store: async (input) => (stored === "ok" ? Result.ok(input) : Result.err(new NotThisOne())),
+      },
+      async (scope, input) => {
+        bodyRuns.count += 1;
+        await scope.tx.insert(user).values(newUser(input.id));
+        return Result.err(new NothingToWrite());
+      },
+    );
+    return { op, bodyRuns: () => bodyRuns.count };
+  };
+
+  test("commits before the body, and the body's rollback leaves it", async () => {
+    const { op, bodyRuns } = reserveThen("ok");
+
+    const outcome = await run(viewer, op, { id: "kept" }, log);
+
+    expect(outcome.isErr()).toBe(true);
+    expect(bodyRuns()).toBe(1);
+    expect(await userExists("kept")).toBe(false);
+    expect(await userExists("kept-reserved")).toBe(true);
+  });
+
+  test("a store that fails answers its failure without the body, and keeps the reservation", async () => {
+    const { op, bodyRuns } = reserveThen("fail");
+
+    const outcome = await run(viewer, op, { id: "unstored" }, log);
+
+    expect(outcome.isErr() && outcome.error).toBeInstanceOf(NotThisOne);
+    expect(bodyRuns()).toBe(0);
+    expect(await userExists("unstored-reserved")).toBe(true);
+  });
+});
+
 describe("a prepared read", () => {
   let builds = 0;
   const createdAt = prepared("test_user_created_at", (pool) => {

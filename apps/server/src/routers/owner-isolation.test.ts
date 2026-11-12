@@ -355,7 +355,7 @@ test("Bob's Item Refresh renames only his own Item Entries", async () => {
   await ingest(BOB);
   const before = await aliceSees(held);
 
-  expect(await call(BOB, "POST", `/item/${MFC_ID}/resync`, pageForm(forgedPage))).toEqual({
+  expect(await call(BOB, "POST", `/item/${MFC_ID}/resync`, pageForm(forgedPage))).toMatchObject({
     status: 200,
     body: { saved: "refreshed" },
   });

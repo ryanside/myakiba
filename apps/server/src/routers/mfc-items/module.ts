@@ -5,9 +5,17 @@ import { command } from "@/domain/kernel";
 import { MfcItemNotPersisted } from "@/lib/errors/mfc-item-not-persisted";
 import { MfcPageRejected } from "@/lib/errors/mfc-page-rejected";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import { addMfcItemIfMissing } from "@/lib/item-database";
-import { pictureLog, pictureOutcome, prepareMfcItem, refusedPageLog } from "@/lib/mfc-item-ingest";
-import type { PictureOutcome } from "@/lib/mfc-item-ingest";
+import { ItemDatabaseFull } from "@/lib/errors/item-database-full";
+import { addMfcItemIfMissing, findMfcItem, itemDatabaseIsFull } from "@/lib/item-database";
+import type { PictureOutcome } from "@/lib/item-images";
+import {
+  pictureLog,
+  readMfcItemPage,
+  readPagePicture,
+  refusedPageLog,
+  reservePagePicture,
+  storePagePicture,
+} from "@/lib/mfc-item-ingest";
 
 type IngestResult =
   | { readonly saved: "existing"; readonly itemId: string; readonly mfcItemId: MfcItemId }
@@ -26,43 +34,50 @@ export const MfcItems = {
       // Neither failure has a fallback, so each answers the logged 500.
       operational: [StoreItemPictureFailed, MfcItemNotPersisted],
       before: async (scope, input: ItemUpload) => {
-        const prepared = await prepareMfcItem(scope.tx, scope.viewer, input);
-        if (prepared.isErr()) {
-          const failure = prepared.error;
-          if (failure._tag === "StoreItemPictureFailed") return Result.err(failure);
-          scope.log.set({ mfc: refusedPageLog(failure) });
-          return Result.err(new MfcPageRejected({ problem: failure.problem.kind }));
+        const id = input.mfcItemId as MfcItemId;
+        const existingId = await findMfcItem(scope.tx, scope.viewer, id);
+        if (existingId) {
+          scope.log.set({ mfc: { itemId: id, outcome: "existing" } });
+          return Result.ok<IngestResult>({ saved: "existing", itemId: existingId, mfcItemId: id });
         }
-        const ready = prepared.value;
-        if (ready.kind === "parsed") return scope.proceed(ready);
-        scope.log.set({ mfc: { itemId: ready.mfcItemId, outcome: "existing" } });
-        return Result.ok<IngestResult>({
-          saved: "existing",
-          itemId: ready.itemId,
-          mfcItemId: ready.mfcItemId,
-        });
+        if (await itemDatabaseIsFull(scope.tx, scope.viewer)) {
+          scope.log.set({ mfc: { itemId: id, outcome: "database_full" } });
+          return Result.err(new ItemDatabaseFull());
+        }
+        const read = await readMfcItemPage(id, input);
+        if (read.isErr()) {
+          scope.log.set({ mfc: refusedPageLog(read.error) });
+          return Result.err(new MfcPageRejected({ problem: read.error.problem.kind }));
+        }
+        const page = read.value;
+        return scope.proceed({ page, picture: await readPagePicture(page, input.picture) });
       },
+      reserve: (tx, viewer, pending) => reservePagePicture(tx, viewer, pending),
+      store: (reserved) => storePagePicture(reserved),
     },
-    async (scope, { page, stored }) => {
+    async (scope, { page, picture }) => {
       const id = page.mfcItemId;
-      const picture = pictureOutcome(stored);
-      const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, stored);
-      if (ensured.isErr()) return ensured;
-      const { itemId, created } = ensured.value;
-
+      const ensured = await addMfcItemIfMissing(scope.tx, scope.viewer, page, picture);
+      if (ensured.isErr()) {
+        if (ensured.error._tag === "ItemDatabaseFull") {
+          scope.log.set({ mfc: { itemId: id, outcome: "database_full" } });
+        }
+        return ensured;
+      }
+      const added = ensured.value;
       scope.log.set({
         mfc: {
           itemId: id,
           contentLabel: page.contentLabel,
-          outcome: created ? "created" : "existing",
-          picture: pictureLog(stored),
+          outcome: added.created ? "created" : "existing",
+          ...(added.created && { picture: pictureLog(picture, added.picture) }),
           warnings: page.warnings,
         },
       });
       return Result.ok<IngestResult>(
-        created
-          ? { saved: "created", itemId, mfcItemId: id, picture }
-          : { saved: "existing", itemId, mfcItemId: id },
+        added.created
+          ? { saved: "created", itemId: added.itemId, mfcItemId: id, picture: added.picture }
+          : { saved: "existing", itemId: added.itemId, mfcItemId: id },
       );
     },
   ),

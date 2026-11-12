@@ -37,6 +37,7 @@ import type {
   AnalyticsSectionResult,
   EntrySection,
 } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
@@ -489,7 +490,7 @@ async function getSectionItems(
       id: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -534,7 +535,7 @@ async function getSectionRelationships(
       itemId: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
       category: item.category,
       scale: item.scale,
       shop: collection.shop,

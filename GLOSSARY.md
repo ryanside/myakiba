@@ -7,12 +7,16 @@ myakiba helps collectors track Japanese pop-culture collectibles, purchases, Ord
 ### Item database
 
 **Item Database**:
-All of one user's Items and their details. Each user has their own, and nobody else sees or changes it.
+All of one user's Items and their details. Each user has their own, and nobody else sees or changes it. It holds at most 20,000 Items.
 _Avoid_: Catalog, library, shared database
 
 **Item**:
 The description of one collectible in one user's Item Database, separate from that user's purchase or ownership details. An Item can come from MyFigureCollection or be custom. Two users who save the same MyFigureCollection page each have their own Item.
 _Avoid_: Catalog Item, database item, global item
+
+**Item Picture**:
+The picture an Item shows, stored by its content, so two Items with the same picture share one stored copy. It is public but unlisted: its link is served for myakiba's own pages. Each picture a user saves is recorded in their picture ledger, and the ledger holds at most 2 GiB, each distinct picture counted once, whether or not an Item still shows it.
+_Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
 A dated release of an Item for sale. One Item can have several Item Releases.

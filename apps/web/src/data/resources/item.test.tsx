@@ -7,8 +7,12 @@ import type { ApiRejected } from "@/lib/errors/api-rejected";
 
 setDefaultTimeout(20_000);
 
-type Refreshed = Result<{ readonly saved: "refreshed" }, ApiRejected>;
-const refreshed = async (): Promise<Refreshed> => Result.ok({ saved: "refreshed" });
+type Refreshed = Result<
+  { readonly saved: "refreshed" | "unchanged"; readonly picture: "absent" | "over_quota" },
+  ApiRejected
+>;
+const refreshed = async (): Promise<Refreshed> =>
+  Result.ok({ saved: "refreshed", picture: "absent" });
 let refresh = refreshed;
 const realRefresh = await import("@/data/item-refresh");
 await mock.module("@/data/item-refresh", () => ({
@@ -83,3 +87,28 @@ test("an Item Refresh refetches the dashboard, analytics, searches, Wishlist, li
 
   expect(shown.filter((key) => !queryClient.getQueryState(key)?.isInvalidated)).toEqual([]);
 });
+
+test.each([
+  ["refreshed", "Item details refreshed without the new picture"],
+  ["unchanged", "Item details are up to date, without the new picture"],
+] as const)(
+  "an Item Refresh %s over the picture quota says the picture was left out",
+  async (saved, title) => {
+    refresh = async () => Result.ok({ saved, picture: "over_quota" });
+    const { result } = renderRefresh(new QueryClient());
+
+    await act(async () => {
+      await result.current.run(98_777);
+    });
+
+    expect(toastAdd.mock.calls).toEqual([
+      [
+        {
+          type: "warning",
+          title,
+          description: "Your pictures already take the 2 GB one account can store.",
+        },
+      ],
+    ]);
+  },
+);

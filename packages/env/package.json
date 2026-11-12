@@ -7,6 +7,7 @@
     "./server": "./src/server.ts",
     "./web": "./src/web.ts",
     "./shared": "./src/shared.ts",
+    "./pictures": "./src/pictures.ts",
     "./redis": "./src/redis.ts",
     "./extension": "./src/extension.ts"
   },

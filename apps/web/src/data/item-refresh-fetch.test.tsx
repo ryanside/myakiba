@@ -94,7 +94,7 @@ describe("refreshing an item", () => {
 
   test("posts the fetched page to the item's resync", async () => {
     fakeFetch();
-    answer = () => Response.json({ saved: "refreshed" });
+    answer = () => Response.json({ saved: "refreshed", picture: "absent" });
     loadExtension((fetch) => {
       fetch.item(98_777, "<html>fresh</html>");
       fetch.done("complete");
@@ -102,7 +102,7 @@ describe("refreshing an item", () => {
 
     const refreshed = await refreshItemWithExtension(98_777);
 
-    expect(refreshed.isOk() && refreshed.value).toEqual({ saved: "refreshed" });
+    expect(refreshed.isOk() && refreshed.value).toEqual({ saved: "refreshed", picture: "absent" });
     const [refresh] = posted("/api/item/98777/resync");
     expect(refresh?.formKeys).toEqual(["page"]);
     expect(await refresh?.page?.text()).toBe("<html>fresh</html>");

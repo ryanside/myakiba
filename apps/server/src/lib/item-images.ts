@@ -1,16 +1,36 @@
 import { createHash } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import type { PutObjectCommandOutput } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, S3ServiceException } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
-import type { MfcItemId } from "@myakiba/mfc/page";
 
-export type StoredPicture =
-  | { readonly kind: "stored"; readonly url: string }
+export type ReadPicture =
+  | {
+      readonly kind: "read";
+      /** `items/<sha256>.<ext>`: the same bytes are one object, whoever stores them. */
+      readonly key: string;
+      readonly body: Uint8Array;
+      readonly contentType: string;
+    }
   | { readonly kind: "rejected"; readonly reason: "not_an_image" | "too_large" };
 
+export type SavedPicture =
+  /** In the bucket, and in the owner's picture ledger. */
+  | { readonly kind: "stored"; readonly key: string }
+  | {
+      readonly kind: "rejected";
+      readonly reason: "not_an_image" | "too_large" | "over_quota";
+    };
+
+export type PictureOutcome = "stored" | "absent" | "rejected" | "over_quota";
+
 export type ItemImages = {
-  readonly store: (mfcItemId: MfcItemId, picture: Blob) => Promise<StoredPicture>;
+  /** Sniffs and hashes the picture. It stores nothing. */
+  readonly read: (picture: Blob) => Promise<ReadPicture>;
+  /**
+   * Stores a read picture at its key, unless an object is already there, which it never
+   * overwrites. Throws when S3 does not answer within 5 s.
+   */
+  readonly store: (picture: Extract<ReadPicture, { readonly kind: "read" }>) => Promise<void>;
 };
 
 type Bucket = {
@@ -18,10 +38,9 @@ type Bucket = {
     readonly send: (
       command: PutObjectCommand,
       options: { readonly abortSignal: AbortSignal },
-    ) => Promise<PutObjectCommandOutput>;
+    ) => Promise<{ readonly $metadata: object }>;
   };
   readonly name: string;
-  readonly publicUrl: string;
 };
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -73,26 +92,41 @@ const FORMATS = [
   readonly matches: (bytes: Uint8Array) => boolean;
 }[];
 
+/** S3 refuses a put with `If-None-Match: *` when an object is already at its key. */
+const isAlreadyStored = (cause: unknown) =>
+  cause instanceof S3ServiceException && cause.$metadata.httpStatusCode === 412;
+
 export function createItemImages(bucket: Bucket): ItemImages {
-  const baseUrl = bucket.publicUrl.replace(/\/+$/u, "");
   return {
-    async store(mfcItemId, picture) {
+    async read(picture) {
       if (picture.size > MAX_ITEM_PICTURE_BYTES) return { kind: "rejected", reason: "too_large" };
-      const bytes = new Uint8Array(await picture.arrayBuffer());
-      const format = FORMATS.find((candidate) => candidate.matches(bytes));
+      const body = new Uint8Array(await picture.arrayBuffer());
+      const format = FORMATS.find((candidate) => candidate.matches(body));
       if (!format) return { kind: "rejected", reason: "not_an_image" };
-      const contentHash = createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-      const contentKey = `items/mfc/${mfcItemId}/${contentHash}.${format.extension}`;
+      const hash = createHash("sha256").update(body).digest("hex");
+      return {
+        kind: "read",
+        key: `items/${hash}.${format.extension}`,
+        body,
+        contentType: format.contentType,
+      };
+    },
+    async store({ key, body, contentType }) {
       const timeout = AbortSignal.timeout(PUT_TIMEOUT_MS);
       const put = new PutObjectCommand({
         Bucket: bucket.name,
-        Key: contentKey,
-        Body: bytes,
-        ContentType: format.contentType,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
         CacheControl: IMMUTABLE,
+        IfNoneMatch: "*",
       });
-      await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
-      return { kind: "stored", url: `${baseUrl}/${contentKey}` };
+      try {
+        await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
+      } catch (error) {
+        if (isAlreadyStored(error)) return;
+        throw error;
+      }
     },
   };
 }
@@ -103,7 +137,4 @@ export const itemImages = createItemImages({
     ...(env.S3_ENDPOINT_URL && { endpoint: env.S3_ENDPOINT_URL, forcePathStyle: true }),
   }),
   name: env.AWS_BUCKET_NAME,
-  publicUrl:
-    env.AWS_BUCKET_URL ??
-    `https://${env.AWS_BUCKET_NAME}.s3.${env.AWS_BUCKET_REGION}.amazonaws.com`,
 });

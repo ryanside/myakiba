@@ -37,8 +37,6 @@ export const env = createEnv({
     OPENAPI_AUTH_DOCS: z.stringbool().optional().default(false),
     STATIC_ASSETS_DIR: z.string().min(1).optional(),
     POSTHOG_API_KEY: z.string().min(1).optional(),
-    // Named so the AWS SDK does not read it on its own, as it does AWS_ENDPOINT_URL.
-    S3_ENDPOINT_URL: z.url().optional(),
   },
   createFinalSchema: (variables) =>
     z

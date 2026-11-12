@@ -3,7 +3,7 @@ import path from "node:path";
 import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
-import { PUSH_TIMEOUT } from "../../test/push";
+import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
@@ -40,7 +40,7 @@ test(
     expect(first.output).toContain('Item ownership migration: {"status":"migrated"');
     expect(first.output).toContain("Item owner guards installed.");
     const pushed = await snapshot(sql);
-    expect(pushed.rows).toEqual(expected.rows);
+    expect(pushed.rows).toEqual({ ...expected.rows, picture: "" });
     expect(pushed.triggers).toEqual(expected.triggers);
     expect(pushed.functions).toEqual(expected.functions);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
@@ -181,7 +181,7 @@ async function whatUsersSee(sql: SQL) {
   const [view] = await sql<[{ rows: unknown }]>`
     WITH item_view AS (
       SELECT i.id, jsonb_build_object(
-        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id}'::text[],
+        'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_key}'::text[],
         'releases', (
           SELECT coalesce(jsonb_agg(to_jsonb(r) - '{id,item_id}'::text[] ORDER BY r.date, r.price), '[]')
           FROM item_release r WHERE r.item_id = i.id
@@ -242,7 +242,9 @@ const OWNER_COLUMNS_REQUIRED = [
 
 const ownerColumns = (sql: SQL) => sql`
   SELECT table_name, is_nullable FROM information_schema.columns
-  WHERE table_schema = 'public' AND column_name = 'owner_id' ORDER BY table_name
+  WHERE table_schema = 'public' AND column_name = 'owner_id'
+    AND table_name IN ('item', 'entry', 'entry_to_item')
+  ORDER BY table_name
 `;
 
 const migrationReport = (output: string) =>
@@ -284,7 +286,11 @@ test(
     expect(first.output).toContain("Item owner guards installed.");
 
     expect(await tables(sql)).toEqual(
-      [...before.filter((table) => !RETIRED_TABLES.includes(table)), "add_commit"].toSorted(),
+      [
+        ...before.filter((table) => !RETIRED_TABLES.includes(table)),
+        "add_commit",
+        "picture",
+      ].toSorted(),
     );
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
@@ -390,6 +396,70 @@ test(
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownershipMismatches(sql)).toEqual([]);
     expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
+  },
+  PUSH_TIMEOUT * 2,
+);
+
+test(
+  "push adds the picture ledger and image_key to a database in the owned shape with no prompt and no lost row; a second push changes nothing",
+  async () => {
+    const { sql, url } = await databases.create();
+    const fresh = await dbPush(url);
+    expect(fresh.exitCode).toBe(0);
+    await sql`DROP TABLE picture`;
+    await sql`ALTER TABLE item DROP COLUMN image_key`;
+    await sql`
+      INSERT INTO "user" (id, name, email, email_verified, username)
+      VALUES ('u1', 'User One', 'u1@example.com', true, 'user_one')
+    `;
+    await sql`
+      INSERT INTO item (id, owner_id, external_id, source, title, image) VALUES
+        ('item-a', 'u1', 1001, 'mfc', 'Item A', 'https://static.myakiba.app/items/mfc/1001/aaaaaaaaaaaaaaaa.jpg'),
+        ('item-b', 'u1', 1002, 'mfc', 'Item B', NULL)
+    `;
+    const before = await snapshot(sql);
+
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: [...PICTURE_LEDGER, ...REPEATED_ON_EVERY_PUSH].toSorted(),
+    });
+    const after = await snapshot(sql);
+    expect(after.rows).toEqual({ ...before.rows, picture: "" });
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: REPEATED_ON_EVERY_PUSH,
+    });
+    expect(await snapshot(sql)).toEqual(after);
+  },
+  PUSH_TIMEOUT * 3,
+);
+
+test(
+  "push adds reserved_at to a picture ledger that holds rows, with no prompt, stamping each row",
+  async () => {
+    const { sql, url } = await databases.create();
+    const pushed = await dbPush(url);
+    expect(pushed.exitCode).toBe(0);
+    await sql`ALTER TABLE picture DROP COLUMN reserved_at`;
+    await sql`
+      INSERT INTO "user" (id, name, email, email_verified, username)
+      VALUES ('u1', 'User One', 'u1@example.com', true, 'user_one')
+    `;
+    await sql`INSERT INTO picture (owner_id, key, bytes) VALUES ('u1', ${`items/${"a".repeat(64)}.jpg`}, 10)`;
+    const ledger = () => sql`SELECT owner_id, key, bytes, created_at FROM picture`;
+    const before = await ledger();
+
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: [
+        `ALTER TABLE "picture" ADD COLUMN "reserved_at" timestamp DEFAULT now() NOT NULL`,
+        ...REPEATED_ON_EVERY_PUSH,
+      ].toSorted(),
+    });
+    expect(await ledger()).toEqual(before);
+    const [unstamped] =
+      await sql`SELECT count(*)::int AS rows FROM picture WHERE reserved_at IS NULL`;
+    expect(unstamped).toEqual({ rows: 0 });
   },
   PUSH_TIMEOUT * 2,
 );

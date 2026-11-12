@@ -1,5 +1,6 @@
 import { Result } from "better-result";
 import { requireExtension } from "@/lib/extension-gate";
+import { PICTURE_QUOTA_FULL } from "@/lib/pick-failure";
 import {
   getItem,
   getItemRelatedCollection,
@@ -38,8 +39,22 @@ export const items = {
 export const refreshItemCommand = defineCommand({
   invalidates: refreshResultFamilies,
   persist: (externalId: number) => refreshItemWithExtension(externalId),
-  successTitle: (_externalId, refreshed) =>
-    refreshed.saved === "refreshed" ? "Item details refreshed" : "Item details are up to date",
+  successTitle: (_externalId, refreshed) => {
+    if (refreshed.picture === "over_quota") return;
+    return refreshed.saved === "refreshed"
+      ? "Item details refreshed"
+      : "Item details are up to date";
+  },
+  warningToast: (_externalId, refreshed) =>
+    refreshed.picture === "over_quota"
+      ? {
+          title:
+            refreshed.saved === "refreshed"
+              ? "Item details refreshed without the new picture"
+              : "Item details are up to date, without the new picture",
+          description: `${PICTURE_QUOTA_FULL}.`,
+        }
+      : undefined,
   failureToast: (_externalId, failure) => ({
     title: "Failed to request item refresh",
     ...(failure && { description: refreshFailureText(failure) }),

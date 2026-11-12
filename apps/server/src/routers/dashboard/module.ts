@@ -6,6 +6,7 @@ import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-on
 import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-preview";
 import { Result } from "better-result";
 import { prepared, query } from "@/domain/kernel";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -240,7 +241,7 @@ const releaseCalendarRead = prepared("release_calendar", (tx) =>
       itemId: item.id,
       itemExternalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
       category: item.category,
       releaseDate: item_release.date,
       price: item_release.price,

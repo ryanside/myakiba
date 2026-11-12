@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
-import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { act, cleanup, renderHook, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -69,7 +69,7 @@ await mock.module("@/lib/extension-bridge", () => ({
   extensionBridge: delegatingBridge(() => bridge),
 }));
 
-const { toast } = await import("@/components/ui/toast");
+const { Toaster, toast } = await import("@/components/ui/toast");
 const { inFamilies } = await import("../catalog");
 const { tabUploadSlots } = await import("../upload-slots");
 const { pickFailureCopy } = await import("@/lib/pick-failure");
@@ -512,6 +512,63 @@ describe("pick intake", () => {
   });
 });
 
+describe("an account's limits", () => {
+  test("picks saved over the picture quota join the draft without their pictures and leave one toast", async () => {
+    loadExtension([fakePick(1), fakePick(2), fakePick(3)]);
+    server.uploadAnswer = async (mfcItemId) =>
+      ok({ saved: "created", itemId: `item-${mfcItemId}`, mfcItemId, picture: "over_quota" });
+    const draft: string[] = [];
+    const queryClient = new QueryClient();
+    renderHook(
+      () => usePickIntake({ emailVerified: true, onSaved: (itemIds) => draft.push(...itemIds) }),
+      {
+        wrapper: ({ children }: { readonly children: ReactNode }) => (
+          <QueryClientProvider client={queryClient}>
+            <Toaster>{children}</Toaster>
+          </QueryClientProvider>
+        ),
+      },
+    );
+
+    await waitFor(() => expect(draft.toSorted()).toEqual(["item-1", "item-2", "item-3"]));
+    expect(screen.getAllByText("Saved without pictures")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Your pictures already take the 2 GB one account can store, so new items are saved without them.",
+      ),
+    ).toBeTruthy();
+  });
+
+  test("a full Item Database keeps the pick and says why on its row and in a toast", async () => {
+    loadExtension([fakePick(1)]);
+    server.uploadAnswer = async () =>
+      refused(409, "Your Item Database is full. One account can hold 20,000 Items.");
+
+    const { result, draft } = renderIntake();
+
+    await waitFor(() => expect(result.current.rows[0]?.state).toBe("failed"));
+    expect(result.current.rows[0]).toMatchObject({ reason: { kind: "full" } });
+    expect(draft).toEqual([]);
+    expect(extension.picks()).toHaveLength(1);
+    expect(toastAdd).toHaveBeenCalledWith({
+      type: "error",
+      title: "Your Item Database is full",
+      description: "One account can hold 20,000 Items. Your picks stay in the extension.",
+      timeout: 0,
+    });
+  });
+
+  test("another failed save shows no toast", async () => {
+    loadExtension([fakePick(1)]);
+    server.uploadAnswer = async () => refused(500, "boom");
+
+    const { result } = renderIntake();
+
+    await waitFor(() => expect(result.current.rows[0]?.state).toBe("failed"));
+    expect(toastAdd).not.toHaveBeenCalled();
+  });
+});
+
 describe("pick failure copy", () => {
   test.each([
     "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
@@ -534,6 +591,7 @@ describe("pick failure copy", () => {
       [{ kind: "retry" }],
     ],
     ["unsaved", "myakiba could not save this item.", [{ kind: "retry" }]],
+    ["full", "Your Item Database is full.", []],
     ["stopped", "The extension stopped. Reload the page to see your picks.", []],
   ] as const)("words %s", (kind, text, actions) => {
     expect(pickFailureCopy({ kind }, 1)).toEqual({ text, actions });

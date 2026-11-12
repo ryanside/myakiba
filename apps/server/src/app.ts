@@ -69,7 +69,7 @@ function contentSecurityPolicy(html: string): string {
     "default-src 'self'",
     `script-src 'self' ${TURNSTILE_ORIGIN} ${hashes.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
+    `img-src 'self' data: https:${env.AWS_BUCKET_URL ? ` ${new URL(env.AWS_BUCKET_URL).origin}` : ""}`,
     "font-src 'self'",
     `connect-src 'self' ${new URL(env.BETTER_AUTH_URL).origin}`,
     `frame-src ${TURNSTILE_ORIGIN}`,

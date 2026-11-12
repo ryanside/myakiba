@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { snapshot, testDatabases } from "../../test/database";
-import { PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
+import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { ownershipMismatches } from "../../test/ownership";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
@@ -35,10 +35,10 @@ test(
     expect(before.triggers.map((trigger) => trigger.tgname)).toEqual(OWNER_GUARDS);
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: REPEATED_ON_EVERY_PUSH,
+      statements: [...REPEATED_ON_EVERY_PUSH, ...PICTURE_LEDGER].toSorted(),
     });
     const after = await snapshot(sql);
-    expect(after.rows).toEqual(before.rows);
+    expect(after.rows).toEqual({ ...before.rows, picture: "" });
     expect(after.triggers).toEqual(before.triggers);
     expect(after.functions).toEqual(before.functions);
     expect(await isItemOwnershipMigrated(sql)).toBe(true);

@@ -4035,7 +4035,13 @@
         "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
       ],
       "testAt": "db3ddc0773b3adde6e0d5cc21b16d383d408a567",
-      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch."
+      "reason": "The server test harness after the owner guards imports @myakiba/db/owner-guards, which this revision does not export, so the test runs with staging's harness from before the ownership switch.",
+      "atHead": [
+        "Item Refresh has no cooldown > a refresh answers whether it saved and what became of its picture",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ]
     },
     {
       "fix": "8a46ad31f47968abe935b3fde2f50725b5014d22",
@@ -4146,7 +4152,9 @@
         "db-push migrates a legacy database, pushes with no prompt and no lost row, and installs the guards; a second run changes nothing",
         "db-push skips the migration on a fresh database and installs the guards; a second run changes nothing"
       ],
-      "test": "packages/db/src/scripts/push-schema.test.ts"
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "testAt": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "reason": "The picture ledger PR made this test file expect the empty picture table a push now adds, which this revision's schema lacks, so the replay takes this revision's test file and harness."
     },
     {
       "bug": "An Item Refresh that deleted a release while a Collection edit or an Add commit selected it made the owner guard reject the write, which answered a logged 500 instead of the operation's ReleaseNotOfItem.",
@@ -4184,7 +4192,239 @@
       ],
       "test": "packages/db/src/scripts/push-schema.test.ts",
       "testAt": "cee9295fa9fd0ffd95dee0537b4387ea5ac51b18",
-      "reason": "The owner-required switch makes the migration delete the originals and push require owners, so HEAD's db-push tests expect deleted counts and NOT NULL owner columns that this fix predates."
+      "reason": "Later PRs changed this test file's expectations, so the replay takes this revision's test file and harness. The picture ledger PR expects the empty picture table a push now adds, which this revision's schema lacks. The owner-required switch makes the migration delete the originals and push require owners, so HEAD's db-push tests expect deleted counts and NOT NULL owner columns that this fix predates."
+    },
+    {
+      "fix": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "bug": "A Pick saved without its picture over the quota, or refused because the Item Database was full, showed no message, and the full pick's row said only that myakiba could not save it.",
+      "test": "apps/web/src/data/resources/add.test.tsx",
+      "fixed": [
+        "an account's limits > a pick saved over the picture quota joins the draft without its picture and says so",
+        "an account's limits > a full Item Database keeps the pick and says why on its row and in a toast",
+        "pick failure copy > words full"
+      ],
+      "testAt": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "reason": "813a2e5e replaced the one-toast-per-pick test with one that expects a single shared toast, so the replay takes this revision's test file.",
+      "atHead": [
+        "an account's limits > picks saved over the picture quota join the draft without their pictures and leave one toast",
+        "an account's limits > a full Item Database keeps the pick and says why on its row and in a toast",
+        "pick failure copy > words full"
+      ]
+    },
+    {
+      "fix": "f79165ae71c32db3b09498ddb135b496c9c4f836",
+      "bug": "An Item Refresh that left out its new picture over the quota still said only that the details were refreshed or up to date.",
+      "test": "apps/web/src/data/resources/item.test.tsx",
+      "fixed": [
+        "an Item Refresh refreshed over the picture quota says the picture was left out",
+        "an Item Refresh unchanged over the picture quota says the picture was left out"
+      ]
+    },
+    {
+      "fix": "6a4d5558aafef88d8fe55ee187c385d863f87840",
+      "bug": "The web app's Content-Security-Policy allowed only https: images, so pictures from a bucket URL on http, such as a local MinIO, did not load.",
+      "test": "apps/server/src/html-headers-bucket.test.ts",
+      "fixed": ["the web app may show pictures from the bucket's public URL, even on http"]
+    },
+    {
+      "fix": "813a2e5e9c036c623c278b9e10e40d8a412e5829",
+      "bug": "Each pick saved over the picture quota added its own sticky warning toast, so a batch of picks left a stack of toasts.",
+      "test": "apps/web/src/data/resources/add.test.tsx",
+      "fixed": [
+        "an account's limits > picks saved over the picture quota join the draft without their pictures and leave one toast"
+      ]
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "The schema had no picture ledger and no image_key, so a push could not add them; the db-push tests also see the empty picture table the push now adds.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "db-push migrates a legacy database, pushes with no prompt and no lost row, and installs the guards; a second run changes nothing",
+        "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
+        "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
+        "push adds the picture ledger and image_key to a database in the owned shape with no prompt and no lost row; a second push changes nothing"
+      ],
+      "testAt": "41dee35a0e1b12681424258071f3a20560bb0c5a",
+      "reason": "The reserved_at change added a column to PICTURE_LEDGER in the shared push harness, which this fix's push never creates, so the replay takes the test file and harness from before it."
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "A save stored its picture before anything recorded it, checked the Item cap after the upload, counted only the pictures Items showed, and kept full URLs in item.image; the other tests here flip only because the shared row helper reads image_key, which the parent lacks.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items saves an MFC item page as a new item > the 98777 page creates one item with its label, rating, entries, links and release",
+        "POST /api/mfc-items saves an MFC item page as a new item > two Items whose pages list the same release each get their own release id",
+        "POST /api/mfc-items saves an MFC item page as a new item > uploading it again answers existing and writes nothing",
+        "POST /api/mfc-items saves an MFC item page as a new item > a picture that is not an image is rejected and the item is still created",
+        "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > the ledger is written before the picture is stored, and records what was stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > pictures no Item shows still count, so one past the quota is not recorded or stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture that exactly fills the quota is stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture the owner already recorded counts once",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > another user's ledger does not count",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > two uploads that each fit alone but not together record and store one picture",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is not stored again",
+        "POST /api/mfc-items stores each picture once, by its bytes > two users who save the same bytes share one object, and each Item stores its key",
+        "POST /api/mfc-items stores each picture once, by its bytes > different bytes are separate objects, each shown only by its uploader's Item",
+        "POST /api/mfc-items holds at most 20,000 Items per account > a full Item Database answers 409, and records and stores nothing"
+      ],
+      "testAt": "85fcaffcc408b6fdd7b454a0f07bfdffd7c7c702",
+      "reason": "The always-store fix renamed two of these tests and reversed one, so the replay takes the test file as this fix left it, with its ledger read in SQL.",
+      "atHead": [
+        "POST /api/mfc-items saves an MFC item page as a new item > the 98777 page creates one item with its label, rating, entries, links and release",
+        "POST /api/mfc-items saves an MFC item page as a new item > two Items whose pages list the same release each get their own release id",
+        "POST /api/mfc-items saves an MFC item page as a new item > uploading it again answers existing and writes nothing",
+        "POST /api/mfc-items saves an MFC item page as a new item > a picture that is not an image is rejected and the item is still created",
+        "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > the ledger row is committed when the picture is stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > pictures no Item shows still count, so one past the quota is not recorded or stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture that exactly fills the quota is stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture the owner already recorded counts once",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > another user's ledger does not count",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > two uploads that each fit alone but not together record and store one picture",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is stored again, and recorded once",
+        "POST /api/mfc-items stores each picture once, by its bytes > two users who save the same bytes share one object, and each Item stores its key",
+        "POST /api/mfc-items stores each picture once, by its bytes > different bytes are separate objects, each shown only by its uploader's Item",
+        "POST /api/mfc-items holds at most 20,000 Items per account > a full Item Database answers 409, and records and stores nothing"
+      ]
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "An Item Refresh with new bytes left the replaced picture uncounted, so a refresh loop kept storing past the quota, and it kept full URLs in item.image; the other tests here flip only because the shared row helper reads image_key, which the parent lacks.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a new title and one rescheduled release remap the selection and advance the order",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > two repriced releases clear both selections and leave only the new releases",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a material share finer than the stored 2 decimals reads unchanged on the next refresh",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > the page as it is stored answers unchanged and writes nothing",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists one release twice stores it once and refreshes as unchanged",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page that lists the stored releases in another order refreshes as unchanged",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a challenge page answers 400 and leaves the item as it was",
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a page whose picture SFW mode hides answers 400 and leaves the item as it was",
+        "Item Refresh has no cooldown > two refreshes in a row both write",
+        "Item Refresh has no cooldown > two concurrent refreshes of one item run one after the other and both write",
+        "Item Refresh has no cooldown > a picture store that throws answers 500 and leaves the item as it was",
+        "who may refresh an Item > an account without a verified email gets 403 and refreshes nothing",
+        "the per-user resync rate limit > the 61st resync in an hour answers 429 and refreshes nothing",
+        "the posted picture > a different picture replaces the item's image with one at its content's key",
+        "the posted picture > the same bytes again change nothing",
+        "the posted picture > a legacy picture refreshed with new bytes moves to their content's key",
+        "the posted picture > a rejected picture keeps the old image",
+        "the posted picture > no picture keeps the old image",
+        "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > a refresh loop with new bytes stops storing once the ledger reaches the quota",
+        "Item Refresh stores pictures only while the owner's ledger is under 2 GiB > an over-quota refresh keeps the Item's picture",
+        "pages the refresh refuses or rewrites > a legacy scraper row reads as changed, is rewritten, and then reads unchanged"
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "The picture store hashed, checked the quota and uploaded in one step, so nothing could record a picture between reading it and storing it.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "a picture is read by its bytes, and stores nothing until asked > jpg bytes are keyed by their content with their own type",
+        "a picture is read by its bytes, and stores nothing until asked > png bytes are keyed by their content with their own type",
+        "a picture is read by its bytes, and stores nothing until asked > gif bytes are keyed by their content with their own type",
+        "a picture is read by its bytes, and stores nothing until asked > webp bytes are keyed by their content with their own type",
+        "a picture is read by its bytes, and stores nothing until asked > avif bytes are keyed by their content with their own type",
+        "a picture is read by its bytes, and stores nothing until asked > the same bytes get the same key, whatever the upload says its type is",
+        "a picture is read by its bytes, and stores nothing until asked > bytes that are no supported image are rejected",
+        "a picture is read by its bytes, and stores nothing until asked > a picture over 10 MB is rejected, and one of exactly 10 MB is read",
+        "storing a read picture puts it at its key, public and immutable, with its type"
+      ],
+      "testAt": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "reason": "A later commit made the picture PUT conditional, which the store test now expects, so the replay takes the test file from before it."
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "Items stored full picture URLs, so a picture stored by its key had no URL any read could build.",
+      "test": "apps/server/src/routers/item-picture-urls.test.ts",
+      "fixed": [
+        "/collection shows a keyed picture by its URL and a legacy picture as stored",
+        "/orders shows a keyed picture by its URL and a legacy picture as stored",
+        "/orders/order-1/items shows a keyed picture by its URL and a legacy picture as stored",
+        "/lists shows a keyed picture by its URL and a legacy picture as stored",
+        "/lists/list-1/members shows a keyed picture by its URL and a legacy picture as stored",
+        "/wishlist?today=2026-06-01 shows a keyed picture by its URL and a legacy picture as stored",
+        "/search/items?query=Figure shows a keyed picture by its URL and a legacy picture as stored",
+        "/search/command?search=Figure shows a keyed picture by its URL and a legacy picture as stored",
+        "/calendar?view=items&month=6&year=2026 shows a keyed picture by its URL and a legacy picture as stored",
+        "/calendar?view=orders&month=6&year=2026 shows a keyed picture by its URL and a legacy picture as stored",
+        "/dashboard/release-calendar?month=6&year=2026 shows a keyed picture by its URL and a legacy picture as stored",
+        "/analytics/shops/items?match=Shop shows a keyed picture by its URL and a legacy picture as stored",
+        "/expenses/shops/shop:Shop/expansion?scope=collection shows a keyed picture by its URL and a legacy picture as stored",
+        "/add/items?ids=keyed&ids=legacy shows a keyed picture by its URL and a legacy picture as stored",
+        "/item/98777 shows its own picture"
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
+    },
+    {
+      "fix": "5b24098e5697f5514e997ff0e81b1979fd764751",
+      "bug": "pictures:reconcile matched new pictures to Items by URL suffix and could delete; it now matches image_key exactly and only reports.",
+      "test": "packages/db/src/pictures/reconcile.test.ts",
+      "fixed": [
+        "pictures:reconcile against an S3-compatible store > reports the content-keyed objects no Item shows by key, and deletes nothing",
+        "pictures:reconcile against an S3-compatible store > an Item shows a content key only by image_key, never by a URL that ends in it",
+        "pictures:reconcile against an S3-compatible store > an object stored within 24 hours counts as young, not unused",
+        "pictures:reconcile against an S3-compatible store > --legacy also reports root-level and items/mfc/ pictures, and never another key",
+        "pictures:reconcile against an S3-compatible store > a legacy image written with a path-style bucket URL still shows its key",
+        "pictures:reconcile against an S3-compatible store > a deleted account's Items and ledger rows go with it, and its unshared pictures show as unused",
+        "pictures:reconcile against an S3-compatible store > the script prints a report, deletes nothing and refuses --apply"
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed GRACE_MS to UNCOMMITTED_SAVE_GRACE_MS, which this fix does not export, so the replay takes the test file from before the rename."
+    },
+    {
+      "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
+      "bug": "A refresh with the same bytes skipped the upload when the Item already showed its key, so an object that went missing stayed missing.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "the posted picture > a refresh with the same bytes stores a picture whose object went missing"
+      ]
+    },
+    {
+      "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
+      "bug": "A save skipped the upload when one of the owner's Items already showed the picture's key, so the object was never stored again.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is stored again, and recorded once"
+      ],
+      "testAt": "8fd2984d257914d11a5dbac4805ec50ca4dd274e",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this fix lacks, so the replay takes the test file from before the rename."
+    },
+    {
+      "fix": "eb504d78bdd1709f30bef185bf2d41797cb40a48",
+      "bug": "A command's before could commit a write only through commitFirst, a handle it could call twice, late, without awaiting it, or lend to the body; nothing let a command declare a reservation the kernel runs once.",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "a write's declared reserve step > commits before the body, and the body's rollback leaves it",
+        "a write's declared reserve step > a store that fails answers its failure without the body, and keeps the reservation"
+      ]
+    },
+    {
+      "fix": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "bug": "A save that reserved a key its owner already recorded left the row's reservation time as it was, so a future deleter could not tell the key was in use again.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > saving a picture the owner already recorded stamps its reservation again"
+      ],
+      "testAt": "927d98c66706877e85306535d3fe20f335cc8f6b",
+      "reason": "A later commit renamed the item's image property to legacyImageUrl, which this revision's parent lacks, so the replay takes the test file as this fix left it.",
+      "atHead": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > saving a picture the owner already recorded stamps its reservation again"
+      ]
+    },
+    {
+      "fix": "7a2e3386d1f8577e97001e0e5a47d25411ac4d71",
+      "bug": "A picture PUT overwrote any object already at its key, so a versioned bucket kept new versions of the same bytes and nothing stopped a rewrite.",
+      "test": "apps/server/src/lib/item-images.test.ts",
+      "fixed": [
+        "storing a read picture puts it at its key, public and immutable, with its type",
+        "storing against an S3-compatible store > an object already at the key is never overwritten, and a missing one is stored again"
+      ]
     },
     {
       "fix": "882faae5c29b28d4eaf9d7b38d894e6818f15b29",

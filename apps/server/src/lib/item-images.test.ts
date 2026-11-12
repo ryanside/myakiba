@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { S3Client } from "@aws-sdk/client-s3";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
-import { mfcItemId } from "@myakiba/mfc/page";
-import type { MfcItemId } from "@myakiba/mfc/page";
 import { createItemImages } from "./item-images";
 
-const ID = mfcItemId(98_777) as MfcItemId;
+const sha256 = (data: Uint8Array) => new Bun.CryptoHasher("sha256").update(data).digest("hex");
 
 function fakeBucket() {
   const puts: PutObjectCommand["input"][] = [];
@@ -16,7 +15,6 @@ function fakeBucket() {
       },
     },
     name: "pictures",
-    publicUrl: "https://cdn.example.test/",
   });
   return { images, puts };
 }
@@ -33,81 +31,136 @@ const SAMPLES = {
   avif: bytes([0, 0, 0, 0x1c], ascii("ftypavif"), [0, 0, 0, 0]),
 } as const;
 
-describe("item pictures are stored by their bytes", () => {
+describe("a picture is read by its bytes, and stores nothing until asked", () => {
   test.each(Object.entries(SAMPLES))(
-    "%s bytes are stored with their own type",
+    "%s bytes are keyed by their content with their own type",
     async (ext, sample) => {
       const { images, puts } = fakeBucket();
 
-      const result = await images.store(ID, new Blob([sample], { type: "text/plain" }));
+      const read = await images.read(new Blob([sample], { type: "text/plain" }));
 
-      expect(result).toEqual({
-        kind: "stored",
-        url: expect.stringMatching(
-          new RegExp(`^https://cdn\\.example\\.test/items/mfc/98777/[0-9a-f]{16}\\.${ext}$`),
-        ),
+      expect(read).toEqual({
+        kind: "read",
+        key: `items/${sha256(sample)}.${ext}`,
+        body: sample,
+        contentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
       });
-      expect(puts).toHaveLength(1);
-      expect(puts[0]).toMatchObject({
-        Bucket: "pictures",
-        Key: expect.stringMatching(new RegExp(`^items/mfc/98777/[0-9a-f]{16}\\.${ext}$`)),
-        ContentType: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
-        CacheControl: "public, max-age=31536000, immutable",
-      });
+      expect(puts).toHaveLength(0);
     },
   );
 
-  test("the key is the first 16 hex of the bytes' SHA-256", async () => {
+  test("the same bytes get the same key, whatever the upload says its type is", async () => {
     const { images } = fakeBucket();
-    const digest = new Bun.CryptoHasher("sha256").update(SAMPLES.png).digest("hex").slice(0, 16);
 
-    expect(await images.store(ID, new Blob([SAMPLES.png]))).toEqual({
-      kind: "stored",
-      url: `https://cdn.example.test/items/mfc/98777/${digest}.png`,
-    });
+    const first = await images.read(new Blob([SAMPLES.jpg]));
+    const second = await images.read(new Blob([SAMPLES.jpg], { type: "image/png" }));
+    const other = await images.read(new Blob([SAMPLES.jpg, new Uint8Array([1])]));
+
+    expect(second).toEqual(first);
+    expect(other).not.toEqual(first);
   });
 
-  test("the same bytes get the same key and different bytes another", async () => {
-    const { images, puts } = fakeBucket();
-
-    await images.store(ID, new Blob([SAMPLES.jpg]));
-    await images.store(ID, new Blob([SAMPLES.jpg], { type: "image/png" }));
-    await images.store(ID, new Blob([SAMPLES.jpg, new Uint8Array([1])]));
-
-    const [first, second, third] = puts.map((put) => put.Key);
-    expect(second).toBe(first);
-    expect(third).not.toBe(first);
-  });
-
-  test("bytes that are no supported image are rejected without a put", async () => {
-    const { images, puts } = fakeBucket();
+  test("bytes that are no supported image are rejected", async () => {
+    const { images } = fakeBucket();
 
     for (const body of ["<!DOCTYPE html><html>", "%PDF-1.7", "", "RIFF\0\0\0\0WAVEfmt "]) {
-      expect(await images.store(ID, new Blob([body], { type: "image/jpeg" }))).toEqual({
+      expect(await images.read(new Blob([body], { type: "image/jpeg" }))).toEqual({
         kind: "rejected",
         reason: "not_an_image",
       });
     }
-    expect(puts).toHaveLength(0);
   });
 
-  test("a picture over 10 MB is rejected without a put", async () => {
-    const { images, puts } = fakeBucket();
-    const oversized = new Uint8Array(10 * 1024 * 1024 + 1);
-    oversized.set(SAMPLES.jpg);
-
-    expect(await images.store(ID, new Blob([oversized]))).toEqual({
-      kind: "rejected",
-      reason: "too_large",
-    });
-    expect(puts).toHaveLength(0);
-  });
-
-  test("a picture of exactly 10 MB is stored", async () => {
+  test("a picture over 10 MB is rejected, and one of exactly 10 MB is read", async () => {
     const { images } = fakeBucket();
     const limit = new Uint8Array(10 * 1024 * 1024);
     limit.set(SAMPLES.jpg);
+    const oversized = new Uint8Array(10 * 1024 * 1024 + 1);
+    oversized.set(SAMPLES.jpg);
 
-    expect(await images.store(ID, new Blob([limit]))).toMatchObject({ kind: "stored" });
+    expect(await images.read(new Blob([oversized]))).toEqual({
+      kind: "rejected",
+      reason: "too_large",
+    });
+    expect(await images.read(new Blob([limit]))).toMatchObject({ kind: "read" });
+  });
+});
+
+test("storing a read picture puts it at its key, public and immutable, with its type", async () => {
+  const { images, puts } = fakeBucket();
+  const read = await images.read(new Blob([SAMPLES.png]));
+  if (read.kind !== "read") throw new Error("expected a read picture");
+
+  await images.store(read);
+
+  expect(puts).toEqual([
+    {
+      Bucket: "pictures",
+      Key: `items/${sha256(SAMPLES.png)}.png`,
+      Body: SAMPLES.png,
+      ContentType: "image/png",
+      CacheControl: "public, max-age=31536000, immutable",
+      IfNoneMatch: "*",
+    },
+  ]);
+});
+
+const s3Url = process.env.TEST_S3_URL ? new URL(process.env.TEST_S3_URL) : null;
+if (s3Url === null && process.env.CI) {
+  throw new Error("TEST_S3_URL is required in CI, so pictures are stored against MinIO");
+}
+
+describe.skipIf(s3Url === null)("storing against an S3-compatible store", () => {
+  const url = s3Url ?? new URL("http://unused");
+  const credentials = {
+    accessKeyId: decodeURIComponent(url.username),
+    secretAccessKey: decodeURIComponent(url.password),
+  };
+  const bucket = url.pathname.slice(1);
+  const client = new S3Client({
+    region: "us-east-1",
+    endpoint: url.origin,
+    forcePathStyle: true,
+    credentials,
+  });
+  const images = createItemImages({ client, name: bucket });
+  const objects = new Bun.S3Client({ ...credentials, bucket, endpoint: url.origin });
+
+  test("an object already at the key is never overwritten, and a missing one is stored again", async () => {
+    const read = await images.read(new Blob([SAMPLES.png]));
+    if (read.kind !== "read") throw new Error("expected a read picture");
+    const first = { ...read, key: `test/${crypto.randomUUID()}.png` };
+
+    await images.store(first);
+    await images.store({ ...first, body: SAMPLES.jpg, contentType: "image/jpeg" });
+    expect(await objects.file(first.key).bytes()).toEqual(SAMPLES.png);
+
+    await objects.delete(first.key);
+    await images.store(first);
+    expect(await objects.file(first.key).bytes()).toEqual(SAMPLES.png);
+  });
+
+  test("a put the store refuses for any reason but an existing object still throws", async () => {
+    const read = await images.read(new Blob([SAMPLES.png]));
+    if (read.kind !== "read") throw new Error("expected a read picture");
+    const picture = { ...read, key: `test/${crypto.randomUUID()}.png` };
+    const missingBucket = createItemImages({ client, name: `missing-${crypto.randomUUID()}` });
+    const badCredentials = createItemImages({
+      client: new S3Client({
+        region: "us-east-1",
+        endpoint: url.origin,
+        forcePathStyle: true,
+        credentials: { ...credentials, secretAccessKey: "wrong-secret" },
+      }),
+      name: bucket,
+    });
+
+    await expect(missingBucket.store(picture)).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 404 },
+    });
+    await expect(badCredentials.store(picture)).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 403 },
+    });
+    expect(await objects.exists(picture.key)).toBe(false);
   });
 });

@@ -8,6 +8,7 @@ import { guardedWrite } from "@/lib/owner-guard";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
@@ -60,7 +61,7 @@ export const Collection = {
         itemId: item.id,
         itemExternalId: item.externalId,
         itemTitle: item.title,
-        itemImage: item.image,
+        itemImage: itemImageSql().as("item_image"),
         itemCategory: item.category,
         itemScale: item.scale,
         status: collection.status,
@@ -146,7 +147,7 @@ export const Collection = {
           itemId: item.id,
           itemExternalId: item.externalId,
           itemTitle: item.title,
-          itemImage: item.image,
+          itemImage: itemImageSql().as("item_image"),
           itemCategory: item.category,
           itemScale: item.scale,
           status: collection.status,

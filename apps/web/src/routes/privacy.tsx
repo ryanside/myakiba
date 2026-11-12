@@ -50,7 +50,7 @@ function PrivacyPolicy() {
           <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
             Privacy policy
           </h1>
-          <p className="text-muted-foreground">Last updated October 30, 2026.</p>
+          <p className="text-muted-foreground">Last updated November 11, 2026.</p>
           <p>
             This policy covers the myakiba browser extension for Chrome and Firefox. It says what
             the extension reads, where that data goes, and what myakiba keeps.
@@ -134,7 +134,14 @@ function PrivacyPolicy() {
               artists, characters and companies it lists. They go into your own item database in
               myakiba. Only you see them, and nothing another user saves changes them.
             </li>
-            <li>The item&apos;s picture, in myakiba&apos;s image storage on Amazon S3.</li>
+            <li>
+              The item&apos;s picture, in myakiba&apos;s image storage on Amazon S3, served through
+              its CDN. A picture is stored once by its content, so users who save the same picture
+              share one copy. Pictures are public but unlisted: no page lists them, and their links
+              are served for myakiba&apos;s own pages. Your items and their details are your own.
+              Each picture you save counts toward the 2 GB your account can store, even after no
+              item shows it.
+            </li>
             <li>
               A log entry for each item request with your myakiba account ID, the MFC item number
               and whether the request worked. myakiba uses these logs to find and fix problems, and

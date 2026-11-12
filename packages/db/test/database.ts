@@ -82,7 +82,13 @@ export async function snapshot(sql: SQL) {
   const rows: Record<string, string> = {};
   for (const { name } of tables) {
     const [table] = await sql.unsafe<[{ rows: string }]>(
-      `SELECT coalesce(string_agg(t::text, E'\\n' ORDER BY t::text), '') AS rows FROM "${name}" t`,
+      `SELECT coalesce(string_agg(r, E'\\n' ORDER BY r), '') AS rows FROM (
+        SELECT coalesce((
+          SELECT jsonb_object_agg(c.key, c.value) FROM jsonb_each(to_jsonb(t)) c
+          WHERE c.value <> 'null'::jsonb
+        ), '{}')::text AS r
+        FROM "${name}" t
+      ) s`,
     );
     rows[name] = table.rows;
   }

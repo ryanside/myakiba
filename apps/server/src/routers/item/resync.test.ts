@@ -15,10 +15,9 @@ import {
   item_release,
   order,
 } from "@myakiba/db/schema/figure";
-import type { MfcItemId } from "@myakiba/mfc/page";
 import { createTestDatabase } from "../../../test/database";
+import { replaySafePictureLedger } from "../../../test/replay-safe-picture-ledger";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
-import { createItemImages } from "@/lib/item-images";
 
 initLogger({ enabled: false });
 
@@ -50,9 +49,14 @@ await mock.module("@myakiba/auth/server", () => ({
   },
 }));
 
-await mock.module("@/lib/item-images", () => ({
-  createItemImages,
-  itemImages: { store: (id: MfcItemId, picture: Blob) => store.images.store(id, picture) },
+const realS3 = await import("@aws-sdk/client-s3");
+await mock.module("@aws-sdk/client-s3", () => ({
+  ...realS3,
+  S3Client: class {
+    send(command: PutObjectCommand) {
+      return store.send(command);
+    }
+  },
 }));
 
 const db = await createTestDatabase();
@@ -136,17 +140,13 @@ const NOT_AN_IMAGE = new TextEncoder().encode("not a picture");
 function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
-  const images = createItemImages({
-    client: {
-      send: async (command) => {
-        await gate?.();
-        objects.set(command.input.Key ?? "", command.input);
-        return { $metadata: { httpStatusCode: 200 } };
-      },
-    },
-    name: "pictures",
-    publicUrl: "https://pictures.example.test",
-  });
+  let puts = 0;
+  const send = async (command: PutObjectCommand) => {
+    await gate?.();
+    puts += 1;
+    objects.set(command.input.Key ?? "", command.input);
+    return { $metadata: { httpStatusCode: 200 } };
+  };
   const holdPut = () => {
     const arrived = Promise.withResolvers<null>();
     const release = Promise.withResolvers<null>();
@@ -159,7 +159,7 @@ function memoryStore() {
   const failPut = () => {
     gate = () => Promise.reject(new Error("bucket unreachable"));
   };
-  return { images, objects, holdPut, failPut };
+  return { send, objects, puts: () => puts, holdPut, failPut };
 }
 
 let store = memoryStore();
@@ -214,7 +214,12 @@ const refreshed = (saved: "refreshed" | "unchanged") => ({ status: 200, body: { 
 
 async function itemRows() {
   const [row] = await db
-    .select({ title: item.title, image: item.image, updatedAt: item.updatedAt })
+    .select({
+      title: item.title,
+      legacyImageUrl: item.legacyImageUrl,
+      imageKey: item.imageKey,
+      updatedAt: item.updatedAt,
+    })
     .from(item)
     .where(eq(item.externalId, 98_777));
   const links = await db
@@ -289,7 +294,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await resync(derivedRescheduledPage)).toMatchObject(refreshed("refreshed"));
 
     const rows = await itemRows();
-    expect(rows.item).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(rows.item).toMatchObject({ title: RETITLED, legacyImageUrl: imported?.legacyImageUrl });
     expect(rows.links).toHaveLength(7);
     expect(rows.releases).toEqual([{ id: expect.any(String), ...RESCHEDULED_98777 }]);
     expect(await selectedReleases()).toEqual(rows.releases.map((release) => release.id));
@@ -438,12 +443,16 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
 });
 
 describe("Item Refresh has no cooldown", () => {
-  test("a refresh answers only whether it saved", async () => {
+  test("a refresh answers whether it saved and what became of its picture", async () => {
     await upload(page98777);
 
     expect(await resync(derivedRetitledPage)).toEqual({
       status: 200,
-      body: { saved: "refreshed" },
+      body: { saved: "refreshed", picture: "absent" },
+    });
+    expect(await resync(derivedRetitledPage, PNG)).toEqual({
+      status: 200,
+      body: { saved: "refreshed", picture: "stored" },
     });
   });
 
@@ -523,16 +532,53 @@ describe("the per-user resync rate limit", () => {
 });
 
 describe("the posted picture", () => {
-  test("a different picture replaces the item's image", async () => {
+  test("a different picture replaces the item's image with one at its content's key", async () => {
     await upload(page98777, JPEG);
-    const { item: imported } = await itemRows();
 
     expect(await resync(page98777, PNG)).toMatchObject(refreshed("refreshed"));
 
+    const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
     const { item: row } = await itemRows();
-    expect(row?.image).toEndWith(".png");
-    expect(row?.image).not.toBe(imported?.image);
+    expect(row).toMatchObject({ legacyImageUrl: null, imageKey: `items/${digest}.png` });
+    expect(store.objects.get(`items/${digest}.png`)).toMatchObject({
+      CacheControl: "public, max-age=31536000, immutable",
+    });
     expect(store.objects.size).toBe(2);
+  });
+
+  test("the same bytes again change nothing", async () => {
+    await upload(page98777, JPEG);
+    const { item: before } = await itemRows();
+
+    expect(await resync(page98777, JPEG)).toEqual({
+      status: 200,
+      body: { saved: "unchanged", picture: "stored" },
+    });
+    const { item: after } = await itemRows();
+    expect(after).toEqual(before);
+  });
+
+  test("a refresh with the same bytes stores a picture whose object went missing", async () => {
+    await upload(page98777, JPEG);
+    const digest = new Bun.CryptoHasher("sha256").update(JPEG).digest("hex");
+    store.objects.delete(`items/${digest}.jpg`);
+
+    expect(await resync(page98777, JPEG)).toMatchObject({ body: { picture: "stored" } });
+
+    expect(store.objects.has(`items/${digest}.jpg`)).toBe(true);
+  });
+
+  test("a legacy picture refreshed with new bytes moves to their content's key", async () => {
+    await upload(page98777);
+    await db
+      .update(item)
+      .set({ legacyImageUrl: "https://static.myakiba.app/legacy-mfc-name.jpg" })
+      .where(eq(item.ownerId, userId));
+
+    expect(await resync(page98777, PNG)).toMatchObject(refreshed("refreshed"));
+    const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
+    const { item: row } = await itemRows();
+    expect(row).toMatchObject({ legacyImageUrl: null, imageKey: `items/${digest}.png` });
   });
 
   test("a rejected picture keeps the old image", async () => {
@@ -542,7 +588,7 @@ describe("the posted picture", () => {
     expect(await resync(derivedRetitledPage, NOT_AN_IMAGE)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
   });
 
   test("no picture keeps the old image", async () => {
@@ -552,7 +598,7 @@ describe("the posted picture", () => {
     expect(await resync(derivedRetitledPage)).toMatchObject(refreshed("refreshed"));
 
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
   });
 });
 
@@ -560,6 +606,51 @@ async function storedVersion(itemId: string) {
   const [row] = await db.select({ version: item.version }).from(item).where(eq(item.id, itemId));
   return row?.version;
 }
+
+const QUOTA = 2 * 1024 ** 3;
+
+const pngNumber = (n: number) => {
+  const bytes = [...PNG];
+  bytes[9] = n;
+  return new Uint8Array(bytes);
+};
+
+const ledger = replaySafePictureLedger(db);
+const recordPicture = (bytes: number) =>
+  ledger.record(userId, `items/${"0".repeat(64)}.jpg`, bytes);
+
+describe("Item Refresh stores pictures only while the owner's ledger is under 2 GiB", () => {
+  test("a refresh loop with new bytes stops storing once the ledger reaches the quota", async () => {
+    await upload(page98777, JPEG);
+    await recordPicture(QUOTA - JPEG.byteLength - 2 * PNG.byteLength);
+
+    const outcomes = [];
+    for (let n = 1; n <= 4; n += 1) {
+      const refreshedWith = await resync(page98777, pngNumber(n));
+      outcomes.push(z.object({ picture: z.string() }).parse(refreshedWith.body).picture);
+    }
+
+    expect(outcomes).toEqual(["stored", "stored", "over_quota", "over_quota"]);
+    expect(store.puts()).toBe(3);
+    const [used] = await db.execute<{ bytes: number }>(
+      sql`SELECT sum(bytes)::bigint AS bytes FROM picture WHERE owner_id = ${userId}`,
+    );
+    expect(Number(used?.bytes)).toBe(QUOTA);
+  });
+
+  test("an over-quota refresh keeps the Item's picture", async () => {
+    await upload(page98777, JPEG);
+    const { item: imported } = await itemRows();
+    await recordPicture(QUOTA - JPEG.byteLength);
+
+    expect(await resync(derivedRetitledPage, PNG)).toEqual({
+      status: 200,
+      body: { saved: "refreshed", picture: "over_quota" },
+    });
+    const { item: row } = await itemRows();
+    expect(row).toMatchObject({ title: RETITLED, imageKey: imported?.imageKey });
+  });
+});
 
 describe("pages the refresh refuses or rewrites", () => {
   test("a page for a different item answers 400 and leaves that item as it was", async () => {
@@ -573,10 +664,10 @@ describe("pages the refresh refuses or rewrites", () => {
     });
 
     const [other] = await db
-      .select({ title: item.title, image: item.image })
+      .select({ title: item.title, legacyImageUrl: item.legacyImageUrl })
       .from(item)
       .where(eq(item.externalId, 12_345));
-    expect(other).toEqual({ title: "Another item", image: null });
+    expect(other).toEqual({ title: "Another item", legacyImageUrl: null });
     expect(store.objects.size).toBe(0);
   });
 

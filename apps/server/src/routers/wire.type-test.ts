@@ -292,6 +292,7 @@ void (true satisfies Equal<
           | "Turn off SFW mode in your MyFigureCollection menu to save this NSFW item",
           400
         >
+      | S<409, "Your Item Database is full. One account can hold 20,000 Items.">
       | S<500, "Failed to save item">;
   }
 >);
