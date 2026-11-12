@@ -4,7 +4,7 @@ import { S3Client } from "bun";
 import type { SQL } from "bun";
 import { testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
-import { GRACE_MS, reconcilePictures } from "./reconcile";
+import { UNCOMMITTED_SAVE_GRACE_MS, reconcilePictures } from "./reconcile";
 import type { ReconcileOptions } from "./reconcile";
 
 const s3Url = process.env.TEST_S3_URL ? new URL(process.env.TEST_S3_URL) : null;
@@ -79,7 +79,7 @@ describe.skipIf(s3Url === null)("pictures:reconcile against an S3-compatible sto
     await Promise.all(STORED_KEYS.map((key) => bucket.write(key, "picture")));
   });
 
-  const later = () => new Date(Date.now() + GRACE_MS + 60 * 60 * 1000);
+  const later = () => new Date(Date.now() + UNCOMMITTED_SAVE_GRACE_MS + 60 * 60 * 1000);
   const options = (overrides: Partial<ReconcileOptions> = {}): ReconcileOptions => ({
     now: later(),
     legacy: false,

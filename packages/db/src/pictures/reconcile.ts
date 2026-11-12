@@ -8,7 +8,7 @@ const KEY_SETS = {
 
 type KeySet = keyof typeof KEY_SETS;
 
-export const GRACE_MS = 24 * 60 * 60 * 1000;
+export const UNCOMMITTED_SAVE_GRACE_MS = 24 * 60 * 60 * 1000;
 
 export type ReconcileOptions = {
   readonly now: Date;
@@ -62,14 +62,12 @@ async function shownLegacyKeys(sql: SQL): Promise<Set<string>> {
   const rows = await sql<{ image: string }[]>`
     SELECT DISTINCT image FROM item WHERE image IS NOT NULL
   `;
-  const keys = new Set<string>();
-  for (const { image } of rows) {
-    const parts = (URL.parse(image)?.pathname ?? image).split("/").filter(Boolean);
-    for (let start = 0; start < parts.length; start += 1) {
-      keys.add(parts.slice(start).join("/"));
-    }
-  }
-  return keys;
+  return new Set(rows.flatMap(({ image }) => pathSuffixes(image)));
+}
+
+function pathSuffixes(urlOrPath: string): string[] {
+  const parts = (URL.parse(urlOrPath)?.pathname ?? urlOrPath).split("/").filter(Boolean);
+  return parts.map((_part, start) => parts.slice(start).join("/"));
 }
 
 /**
@@ -87,7 +85,7 @@ export async function reconcilePictures(
     content: await shownContentKeys(sql),
     legacy: legacy ? await shownLegacyKeys(sql) : new Set<string>(),
   };
-  const cutoff = now.getTime() - GRACE_MS;
+  const cutoff = now.getTime() - UNCOMMITTED_SAVE_GRACE_MS;
   const sets: (readonly [KeySet, Set<string>])[] = [["content", shown.content]];
   if (legacy) sets.push(["legacyRoot", shown.legacy], ["legacyMfc", shown.legacy]);
 

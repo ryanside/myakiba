@@ -16,6 +16,7 @@ import {
   order,
 } from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
+import { replaySafePictureLedger } from "../../../test/replay-safe-picture-ledger";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 
 initLogger({ enabled: false });
@@ -614,11 +615,9 @@ const pngNumber = (n: number) => {
   return new Uint8Array(bytes);
 };
 
-async function recordPicture(bytes: number) {
-  await db.execute(
-    sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${userId}, ${`items/${"0".repeat(64)}.jpg`}, ${bytes})`,
-  );
-}
+const ledger = replaySafePictureLedger(db);
+const recordPicture = (bytes: number) =>
+  ledger.record(userId, `items/${"0".repeat(64)}.jpg`, bytes);
 
 describe("Item Refresh stores pictures only while the owner's ledger is under 2 GiB", () => {
   test("a refresh loop with new bytes stops storing once the ledger reaches the quota", async () => {

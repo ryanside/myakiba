@@ -10,6 +10,7 @@ import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages"
 import * as authSchema from "@myakiba/db/schema/auth";
 import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
+import { replaySafePictureLedger } from "../../../test/replay-safe-picture-ledger";
 
 let drained = Promise.withResolvers<DrainContext>();
 initLogger({ silent: true, drain: (context) => drained.resolve(context) });
@@ -633,24 +634,14 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
 const keyOf = (bytes: Uint8Array, extension: string) =>
   `items/${new Bun.CryptoHasher("sha256").update(bytes).digest("hex")}.${extension}`;
 
-async function recordPicture(owner: string, key: string, bytes: number) {
-  await db.execute(
-    sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${owner}, ${key}, ${bytes})`,
-  );
-}
+const ledger = replaySafePictureLedger(db);
+const ledgerOf = (owner = userId) => ledger.rowsOf(owner);
 
 async function recordPictures(used: number, owner = userId) {
   const halves = [Math.ceil(used / 2), Math.floor(used / 2)].filter((bytes) => bytes > 0);
   for (const [index, bytes] of halves.entries()) {
-    await recordPicture(owner, `items/${String(index).repeat(64)}.jpg`, bytes);
+    await ledger.record(owner, `items/${String(index).repeat(64)}.jpg`, bytes);
   }
-}
-
-async function ledgerOf(owner = userId) {
-  const rows = await db.execute<{ key: string; bytes: number }>(
-    sql`SELECT key, bytes FROM picture WHERE owner_id = ${owner} ORDER BY key`,
-  );
-  return [...rows];
 }
 
 describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB", () => {
@@ -704,7 +695,7 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
   });
 
   test("a picture the owner already recorded counts once", async () => {
-    await recordPicture(userId, keyOf(JPEG, "jpg"), JPEG.byteLength);
+    await ledger.record(userId, keyOf(JPEG, "jpg"), JPEG.byteLength);
     await recordPictures(QUOTA - JPEG.byteLength);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
@@ -714,7 +705,7 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
 
   test("saving a picture the owner already recorded stamps its reservation again", async () => {
     const key = keyOf(JPEG, "jpg");
-    await recordPicture(userId, key, JPEG.byteLength);
+    await ledger.record(userId, key, JPEG.byteLength);
     await db.execute(sql`UPDATE picture SET reserved_at = now() - interval '2 days'`);
 
     await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
