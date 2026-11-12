@@ -148,6 +148,14 @@ const writesBeforeTheTransaction = {
 // @ts-expect-error a before held in a variable took a Tx, got the pool and committed its write early
 command(writesBeforeTheTransaction, async () => Result.ok(1));
 
+const stagesWithoutBefore = {
+  ...config,
+  reserve: async () => "reserved",
+  store: async (reserved: string) => Result.ok(reserved),
+};
+// @ts-expect-error reserve and store run only after a before, or the body is handed store's string as its input
+command(stagesWithoutBefore, async (_scope, input: number) => Result.ok(input));
+
 type ValuesOf<O> = O extends { readonly "~types"?: { readonly value: infer T } } ? T : never;
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;

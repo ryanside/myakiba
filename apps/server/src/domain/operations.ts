@@ -280,7 +280,11 @@ export function command<
   const M extends string,
   const O extends Operational = [],
 >(
-  config: OpConfig<M, O> & { readonly before?: never },
+  config: OpConfig<M, O> & {
+    readonly before?: never;
+    readonly reserve?: never;
+    readonly store?: never;
+  },
   body: (scope: CommandScope, input: I) => Promise<R & Checked<R, InferErr<R>, OperationalOf<O>>>,
 ): Op<I, InferOk<R>, PublicOf<InferErr<R>>, M>;
 export function command<V>(
