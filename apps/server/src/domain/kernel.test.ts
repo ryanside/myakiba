@@ -294,6 +294,35 @@ describe("a write before's commitFirst makes", () => {
     );
     expect(await userExists("late")).toBe(false);
   });
+
+  test("a write still running when before returns is a defect, and commits nothing", async () => {
+    type Handoff = { readonly id: string; readonly pick: (id: string) => void };
+    const pick = Promise.withResolvers<string>();
+    let firstCommit: Promise<void> | undefined;
+    const floating = command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) => {
+          firstCommit = scope.commitFirst(async (tx) => {
+            await tx.insert(user).values(newUser(await pick.promise));
+          });
+          return scope.proceed<Handoff>({ id: input.id, pick: pick.resolve });
+        },
+      },
+      async (scope, input: Handoff) => {
+        await scope.tx.insert(user).values(newUser(input.id));
+        input.pick(`${input.id}-picked`);
+        return Result.err(new NothingToWrite());
+      },
+    );
+
+    const outcome = run(viewer, floating, { id: "floating" }, log);
+    await expect(outcome).rejects.toThrow("before returned in test.write while commitFirst ran");
+    pick.resolve("floating-picked");
+    await expect(firstCommit).rejects.toThrow("commitFirst's write finished after before returned");
+    expect(await userExists("floating")).toBe(false);
+    expect(await userExists("floating-picked")).toBe(false);
+  });
 });
 
 describe("a prepared read", () => {

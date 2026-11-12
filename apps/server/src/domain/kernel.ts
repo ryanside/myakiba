@@ -144,7 +144,7 @@ async function runInTransaction(
   const before = befores.get(op);
   if (before) {
     let first: AnyResult;
-    const commits = { made: 0, open: true };
+    const commits = { made: 0, open: true, running: false };
     try {
       first = await before(
         {
@@ -162,7 +162,23 @@ async function runInTransaction(
             commits.made += 1;
             if (commits.made > 1)
               panic(`commitFirst ran twice in ${op.action}; one run commits once`);
-            return db.transaction(write);
+            commits.running = true;
+            const committed = db.transaction(async (tx) => {
+              const written = await write(tx);
+              if (!commits.open) {
+                panic(
+                  `commitFirst's write finished after before returned in ${op.action}; it rolls back`,
+                );
+              }
+              return written;
+            });
+            // The error reaches before when it awaits; unawaited, the run answers its own defect.
+            committed
+              .finally(() => {
+                commits.running = false;
+              })
+              .catch(() => {});
+            return committed;
           },
         },
         input,
@@ -171,6 +187,14 @@ async function runInTransaction(
       return classify(error);
     } finally {
       commits.open = false;
+    }
+    if (commits.running) {
+      return {
+        kind: "defect",
+        panic: new Panic({
+          message: `before returned in ${op.action} while commitFirst ran; before must await it`,
+        }),
+      };
     }
     if (!isProceed(first)) return settle(first);
     handoff = first.value["~proceed"];
