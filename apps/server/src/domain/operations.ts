@@ -75,6 +75,12 @@ type PoolScope = ReadScope & {
 /** A command's `before`: the pool, plus the one way to hand a value to the body. */
 type BeforeScope = PoolScope & {
   readonly proceed: <P>(value: P) => Ok<Proceed<P>, never>;
+  /**
+   * Runs one short write in its own transaction and commits it before `before` goes on. Nothing
+   * the body does undoes it. It is for a record that must exist before an effect outside the
+   * database, such as a picture's ledger row before the picture is stored.
+   */
+  readonly commitFirst: <T>(write: (tx: Tx) => Promise<T>) => Promise<T>;
 };
 
 export type CommandScope = Omit<ReadScope, "tx"> & {
@@ -218,7 +224,8 @@ type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 /**
  * A write. Everything the body does through `scope.tx` commits together or not at all:
  * any Err or throw rolls it back. `before` runs first, for work such as parsing or a network call,
- * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
+ * and reads the pool outside the transaction. Its only write is `scope.commitFirst`, which
+ * commits on its own and is never rolled back. It returns `scope.proceed(value)` to run
  * the body with `value`, or a Result that answers without opening a transaction. A row
  * it read can change before the body runs, so the body must re-check inside the
  * transaction anything it writes against. Its effects outside the database, such as a

@@ -152,6 +152,7 @@ async function runInTransaction(
           read: readPrepared,
           log,
           proceed: (value) => Result.ok(proceeding(value)),
+          commitFirst: (write) => db.transaction(write),
         },
         input,
       );

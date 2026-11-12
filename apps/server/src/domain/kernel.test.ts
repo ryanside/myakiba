@@ -215,6 +215,38 @@ describe("a command's before step", () => {
   });
 });
 
+describe("a write before's commitFirst makes", () => {
+  const commitFirstThen = (ending: "proceed" | "fail") =>
+    command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) => {
+          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-first`)));
+          if (ending === "fail") return Result.err(new NotThisOne());
+          return scope.proceed(input);
+        },
+      },
+      async (scope, input) => {
+        await scope.tx.insert(user).values(newUser(input.id));
+        return Result.err(new NothingToWrite());
+      },
+    );
+
+  test("commits before the body, and the body's rollback leaves it", async () => {
+    const outcome = await run(viewer, commitFirstThen("proceed"), { id: "kept" }, log);
+
+    expect(outcome.isErr()).toBe(true);
+    expect(await userExists("kept")).toBe(false);
+    expect(await userExists("kept-first")).toBe(true);
+  });
+
+  test("stays when before itself answers a failure", async () => {
+    await run(viewer, commitFirstThen("fail"), { id: "answered" }, log);
+
+    expect(await userExists("answered-first")).toBe(true);
+  });
+});
+
 describe("a prepared read", () => {
   let builds = 0;
   const createdAt = prepared("test_user_created_at", (pool) => {
