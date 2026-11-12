@@ -4563,6 +4563,24 @@
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
         "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them"
       ]
+    },
+    {
+      "fix": "e085bfcd9e9f2886947312abce50f77a7cb7ae63",
+      "bug": "Firefox ignores a match pattern whose host carries a port, so a Firefox build for http://localhost:3001 never ran the page bridge and the Add page said the extension was missing.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": [
+        "a Firefox build for origins with ports > runs the page bridge on the myakiba Add page",
+        "a Firefox build for origins with ports > runs the Pick script on an MFC Item page",
+        "a Firefox build for origins with ports > may reach MFC and its pictures"
+      ]
+    },
+    {
+      "fix": "1b95d2f5d232dcc2742e67f3a2e0b6fce5d6c835",
+      "bug": "Zod probed eval in every extension script, so Firefox logged two CSP eval violations in the background console after a Pick.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": [
+        "a Firefox build turns off zod's eval probe in every script before zod loads, so its CSP reports nothing"
+      ]
     }
   ],
   "lint": [
