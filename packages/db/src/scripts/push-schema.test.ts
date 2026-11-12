@@ -4,12 +4,8 @@ import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
 import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
-import { ownerGuardsInstalled } from "../item-ownership/guards";
-import {
-  isItemOwnershipMigrated,
-  migrateItemOwnership,
-  verifyItemOwnership,
-} from "../item-ownership/migrate";
+import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
+import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
@@ -48,7 +44,7 @@ test(
     expect(pushed.triggers).toEqual(expected.triggers);
     expect(pushed.functions).toEqual(expected.functions);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
 
     const second = await dbPush(url);
     expect(second.exitCode).toBe(0);
@@ -238,6 +234,19 @@ async function tables(sql: SQL) {
   return rows.map((row) => row.name);
 }
 
+const OWNER_COLUMNS_REQUIRED = [
+  { table_name: "entry", is_nullable: "NO" },
+  { table_name: "entry_to_item", is_nullable: "NO" },
+  { table_name: "item", is_nullable: "NO" },
+];
+
+const ownerColumns = (sql: SQL) => sql`
+  SELECT table_name, is_nullable FROM information_schema.columns
+  WHERE table_schema = 'public' AND column_name = 'owner_id'
+    AND table_name IN ('item', 'entry', 'entry_to_item')
+  ORDER BY table_name
+`;
+
 const migrationReport = (output: string) =>
   /Item ownership migration: (.*)/
     .exec(output)?.[1]
@@ -272,7 +281,7 @@ test(
       expect(first.output).toContain(`Dropped retired table ${dropped}.`);
     }
     expect(migrationReport(first.output)).toBe(
-      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"milliseconds":0}',
+      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"droppedTables":[{"table":"data_transfer_import_item","rows":1},{"table":"data_transfer_import","rows":1},{"table":"sync_session_item","rows":3},{"table":"sync_session","rows":2}],"milliseconds":0}',
     );
     expect(first.output).toContain("Item owner guards installed.");
 
@@ -285,7 +294,8 @@ test(
     );
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
     const pushed = await snapshot(sql);
     expect({
       columns: pushed.columns,
@@ -309,6 +319,56 @@ test(
 );
 
 test(
+  "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
+  async () => {
+    const { sql, url } = await databases.create(await mainTemplate());
+    await sql`CREATE TABLE stray (item_id text REFERENCES item (id))`;
+    const before = await snapshot(sql);
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain(
+      "a table this migration does not re-point references Items, Item Entries or their links",
+    );
+    expect(failed.output).toContain(
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
+    );
+    expect(failed.output).not.toContain("Dropped retired table");
+    expect(await tables(sql)).toEqual(expect.arrayContaining(RETIRED_TABLES));
+    expect(await snapshot(sql)).toEqual(before);
+  },
+  PUSH_TIMEOUT,
+);
+
+test(
+  "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy",
+  async () => {
+    const { sql, url } = await databases.create(await mainTemplate());
+    const seen = await whatUsersSee(sql);
+    await sql`CREATE TABLE stray (session_id text REFERENCES sync_session (id))`;
+    const before = await snapshot(sql);
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain(
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
+    );
+    expect(failed.output).not.toContain("Dropped retired table");
+    expect(await snapshot(sql)).toEqual(before);
+
+    await sql`DROP TABLE stray`;
+    const rerun = await dbPush(url);
+    expect(rerun.exitCode).toBe(0);
+    expect(rerun.output).toContain('Item ownership migration: {"status":"migrated"');
+    expect(rerun.output).toContain("Dropped retired table sync_session (2 rows).");
+    expect(await tables(sql)).not.toEqual(expect.arrayContaining(["sync_session"]));
+    expect(await whatUsersSee(sql)).toEqual(seen);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
+  },
+  PUSH_TIMEOUT * 2,
+);
+
+test(
   "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
   async () => {
     const { sql, url } = await databases.create(await mainTemplate());
@@ -320,7 +380,10 @@ test(
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
-      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+      "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
+    );
+    expect(failed.output).toContain(
+      "main's Import/Export and sync no longer work, because the retired tables went with that commit.",
     );
     expect(await isItemOwnershipMigrated(sql)).toBe(true);
     expect(await tables(sql)).not.toEqual(expect.arrayContaining(["sync_session"]));
@@ -331,7 +394,8 @@ test(
     expect(rerun.output).toContain('Item ownership migration: {"status":"already-migrated"}');
     expect(rerun.output).toContain("Item owner guards installed.");
     expect(await whatUsersSee(sql)).toEqual(seen);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
   },
   PUSH_TIMEOUT * 2,
 );
@@ -398,4 +462,21 @@ test(
     expect(unstamped).toEqual({ rows: 0 });
   },
   PUSH_TIMEOUT * 2,
+);
+
+test(
+  "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them",
+  async () => {
+    const { sql, url } = await databases.create(await databases.legacyTemplate(seedSharedItems));
+    await sql`CREATE TABLE stray (id integer)`;
+    await sql`INSERT INTO stray VALUES (1)`;
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain(
+      "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
+    );
+    expect(failed.output).not.toContain("Import/Export");
+  },
+  PUSH_TIMEOUT,
 );

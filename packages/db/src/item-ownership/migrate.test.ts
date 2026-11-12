@@ -1,15 +1,27 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
-import { MIGRATION_STEPS, migrateItemOwnership, verifyItemOwnership } from "./migrate";
+import { ownershipMismatches } from "../../test/ownership";
+import { MIGRATION_STEPS, migrateItemOwnership } from "./migrate";
 import { seedScaledSharedItems, seedSharedItems } from "./seed";
 
 const databases = testDatabases();
 let seeded: string;
 let cleanRun: Awaited<ReturnType<typeof snapshot>>;
 
+async function seedWithOriginals(sql: SQL) {
+  await seedSharedItems(sql);
+  await sql.unsafe(`
+    CREATE SCHEMA original;
+    CREATE TABLE original.item AS TABLE item;
+    CREATE TABLE original.item_release AS TABLE item_release;
+    CREATE TABLE original.entry AS TABLE entry;
+    CREATE TABLE original.entry_to_item AS TABLE entry_to_item;
+  `);
+}
+
 beforeAll(async () => {
-  seeded = await databases.legacyTemplate(seedSharedItems);
+  seeded = await databases.legacyTemplate(seedWithOriginals);
   const { sql } = await databases.create(seeded);
   await migrateItemOwnership(sql);
   cleanRun = await snapshot(sql);
@@ -22,8 +34,7 @@ async function migrated() {
 }
 
 const COPIES = `SELECT c.id, c.owner_id, o.id AS original FROM item c
-  JOIN item o ON o.owner_id IS NULL AND to_jsonb(o) - 'id' - 'owner_id' = to_jsonb(c) - 'id' - 'owner_id'
-  WHERE c.owner_id IS NOT NULL`;
+  JOIN original.item o ON to_jsonb(o) - 'id' = to_jsonb(c) - 'id' - 'owner_id'`;
 
 const PAIRS = `(VALUES ('u1', 'item-a'), ('u1', 'item-b'), ('u2', 'item-a'), ('u2', 'item-e'),
   ('u3', 'item-a')) p (owner_id, item_id)`;
@@ -42,8 +53,28 @@ test("reports one copy per user and referenced Item, with its releases, Item Ent
     foreignReleasesCleared: 1,
     otherUsersListTargets: 0,
     repointed: { collection: 5, wishlistItem: 2, listMemberItem: 2, listMemberOwner: 5 },
+    deleted: { items: 6, entries: 6, links: 6, releases: 7 },
+    droppedTables: [],
     milliseconds: expect.any(Number),
   });
+});
+
+test("deletes every Item, Item Entry, link and release without an owner, unreferenced Items included", async () => {
+  const { sql } = await migrated();
+  const ownerless = `SELECT 'item' AS kind, id FROM item WHERE owner_id IS NULL
+    UNION ALL SELECT 'entry', id FROM entry WHERE owner_id IS NULL
+    UNION ALL SELECT 'link', entry_id || ' ' || item_id FROM entry_to_item WHERE owner_id IS NULL
+    UNION ALL SELECT 'release', r.id::text FROM item_release r JOIN item i ON i.id = r.item_id
+      WHERE i.owner_id IS NULL`;
+  expect(await rows(sql, ownerless)).toEqual([]);
+  expect(
+    await rows(sql, "SELECT owner_id, count(*)::int AS items FROM item GROUP BY 1 ORDER BY 1"),
+  ).toEqual([
+    { owner_id: "u1", items: 2 },
+    { owner_id: "u2", items: 2 },
+    { owner_id: "u3", items: 1 },
+  ]);
+  expect(await rows(sql, "SELECT id FROM item WHERE id LIKE 'item-%'")).toEqual([]);
 });
 
 test("gives each user one copy of every Item they referenced, equal to it down to the picture", async () => {
@@ -55,7 +86,7 @@ test("gives each user one copy of every Item they referenced, equal to it down t
     { owner_id: "u2", original: "item-e" },
     { owner_id: "u3", original: "item-a" },
   ]);
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });
 
 test("re-points every reference to its user's copy of the Item it pointed at", async () => {
@@ -119,7 +150,7 @@ test("moves each Selected Item Release to its copy, and clears and counts a rele
     sql,
     `SELECT c.id, c.release_id IS NULL AS cleared, o.id AS original FROM collection c
     LEFT JOIN item_release r ON r.id = c.release_id AND r.item_id = c.item_id
-    LEFT JOIN (item_release o JOIN item oi ON oi.id = o.item_id AND oi.owner_id IS NULL)
+    LEFT JOIN original.item_release o
       ON to_jsonb(o) - 'id' - 'item_id' = to_jsonb(r) - 'id' - 'item_id'
     ORDER BY c.id`,
   );
@@ -148,10 +179,7 @@ test("counts List Members whose Collection Item or Order belongs to another user
 
 test("gives every copied release a version 8 UUID, which the contracts' z.uuid() accepts", async () => {
   const { sql } = await migrated();
-  const ids = await rows(
-    sql,
-    `SELECT r.id FROM item_release r JOIN item i ON i.id = r.item_id WHERE i.owner_id IS NOT NULL`,
-  );
+  const ids = await rows(sql, "SELECT id FROM item_release");
   expect(ids).toHaveLength(12);
   for (const { id } of ids) {
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
@@ -166,21 +194,18 @@ test("copies each user's Item Entries once, with every link and its roles and ma
     sql,
     `SELECT l.owner_id, copy.original AS item, ${link} FROM entry_to_item l
     JOIN (${COPIES}) copy ON copy.id = l.item_id JOIN entry e ON e.id = l.entry_id
-    WHERE l.owner_id IS NOT NULL ORDER BY 1, 2, 3`,
+    ORDER BY 1, 2, 3`,
   );
   const expected = await rows(
     sql,
     `SELECT p.owner_id, p.item_id AS item, ${link} FROM ${PAIRS}
-    JOIN entry_to_item l ON l.item_id = p.item_id JOIN entry e ON e.id = l.entry_id
+    JOIN original.entry_to_item l ON l.item_id = p.item_id JOIN original.entry e ON e.id = l.entry_id
     ORDER BY 1, 2, 3`,
   );
   expect(expected).toHaveLength(11);
   expect(owned).toEqual(expected);
   expect(
-    await rows(
-      sql,
-      "SELECT owner_id, count(*)::int AS entries FROM entry WHERE owner_id IS NOT NULL GROUP BY 1 ORDER BY 1",
-    ),
+    await rows(sql, "SELECT owner_id, count(*)::int AS entries FROM entry GROUP BY 1 ORDER BY 1"),
   ).toEqual([
     { owner_id: "u1", entries: 3 },
     { owner_id: "u2", entries: 4 },
@@ -194,6 +219,76 @@ test("a second run changes nothing, and two clean runs write the same rows", asy
   expect(first).toEqual(cleanRun);
   expect(await migrateItemOwnership(sql)).toEqual({ status: "already-migrated" });
   expect(await snapshot(sql)).toEqual(first);
+});
+
+test("leaves the owner columns NOT NULL, so a write without an owner fails from the moment it commits", async () => {
+  const { sql } = await migrated();
+  expect(
+    await rows(
+      sql,
+      `SELECT table_name, is_nullable FROM information_schema.columns
+      WHERE table_schema = 'public' AND column_name = 'owner_id' ORDER BY 1`,
+    ),
+  ).toEqual([
+    { table_name: "entry", is_nullable: "NO" },
+    { table_name: "entry_to_item", is_nullable: "NO" },
+    { table_name: "item", is_nullable: "NO" },
+  ]);
+  await expect(
+    sql`INSERT INTO item (id, title) VALUES ('item-late', 'Late')`,
+  ).rejects.toMatchObject({
+    errno: "23502",
+  });
+});
+
+test("a migrated database missing an owner guard is still migrated, so the migration does not run again", async () => {
+  const { sql } = await migrated();
+  await sql`DROP TRIGGER wishlist_item_owner_guard ON wishlist_item`;
+  const before = await snapshot(sql);
+  expect(await migrateItemOwnership(sql)).toEqual({ status: "already-migrated" });
+  expect(await snapshot(sql)).toEqual(before);
+});
+
+test("refuses a table it does not re-point that references Item Entry links, and changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE TABLE link_note (entry_id text, item_id text, note text,
+      FOREIGN KEY (entry_id, item_id) REFERENCES entry_to_item (entry_id, item_id) ON DELETE CASCADE);
+    INSERT INTO link_note VALUES ('entry-2', 'item-a', 'kept');
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toThrow(
+    "a table this migration does not re-point references Items, Item Entries or their links (1)",
+  );
+  expect(await snapshot(sql)).toEqual(before);
+});
+
+test("an Item left without an owner after the delete fails the run, which changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE FUNCTION leave_ownerless_item() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN INSERT INTO item (id, title) VALUES ('item-left', 'Left'); RETURN NULL; END $$;
+    CREATE TRIGGER leave_ownerless_item AFTER DELETE ON entry
+      FOR EACH STATEMENT EXECUTE FUNCTION leave_ownerless_item();
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toMatchObject({ errno: "23502" });
+  expect(await snapshot(sql)).toEqual(before);
+});
+
+test("a reference deleted along with the ownerless rows fails the run, which changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE FUNCTION drop_a_wish() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN DELETE FROM wishlist_item WHERE id = 'wish-1'; RETURN NULL; END $$;
+    CREATE TRIGGER drop_a_wish AFTER DELETE ON entry
+      FOR EACH STATEMENT EXECUTE FUNCTION drop_a_wish();
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toThrow(
+    "wishlist_item has 1 rows instead of 2 (1)",
+  );
+  expect(await snapshot(sql)).toEqual(before);
 });
 
 test.each(MIGRATION_STEPS)(
@@ -284,6 +379,15 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
   });
 
+  async function waitsForALock(sql: SQL) {
+    const [{ waiting }] = await rows(
+      sql,
+      `SELECT count(*)::int AS waiting FROM pg_stat_activity
+      WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+    );
+    return waiting > 0;
+  }
+
   async function crossMigration(sql: SQL, first: string, then: string) {
     const holding = Promise.withResolvers<true>();
     const migrationWaits = Promise.withResolvers<true>();
@@ -295,7 +399,11 @@ describe("table locks", () => {
     });
     await holding.promise;
     const migration = migrateItemOwnership(sql);
-    await lockWaitStartedAt(sql);
+    const settled = migration.then(
+      () => true,
+      () => true,
+    );
+    while (!(await Promise.race([settled, waitsForALock(sql)]))) await Bun.sleep(10);
     migrationWaits.resolve(true);
     await crossing;
     return migration;
@@ -311,7 +419,7 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
   });
 
-  test("waits for a transaction writing users before it locks the Item tables, so the two never deadlock", async () => {
+  test("waits for a transaction that locked users first before it locks the Item tables, and migrates on its first attempt", async () => {
     const { sql } = await databases.create(seeded);
     const migration = crossMigration(
       sql,
@@ -319,6 +427,21 @@ describe("table locks", () => {
       "collection IN ACCESS SHARE MODE",
     );
     expect(await migration).toMatchObject({ status: "migrated", attempts: 1 });
+  });
+
+  test("drops a retired table that references Orders before it locks the Item tables, so a transaction that locked Orders first finishes and the run migrates on its first attempt", async () => {
+    const { sql } = await databases.create(seeded);
+    await sql`CREATE TABLE sync_session (id text PRIMARY KEY, order_id text REFERENCES "order" (id))`;
+    const migration = crossMigration(
+      sql,
+      `"order" IN ROW EXCLUSIVE MODE`,
+      "collection IN ACCESS SHARE MODE",
+    );
+    expect(await migration).toMatchObject({
+      status: "migrated",
+      attempts: 1,
+      droppedTables: [{ table: "sync_session", rows: 0 }],
+    });
   });
 
   test("migrates a Collection Item committed while it waits for its lock, even under a repeatable read default", async () => {
@@ -341,7 +464,7 @@ describe("table locks", () => {
       commit.resolve(true);
       await writing;
       expect(await migration).toMatchObject({ status: "migrated", pairs: 6 });
-      expect(await verifyItemOwnership(sql)).toEqual([]);
+      expect(await ownershipMismatches(sql)).toEqual([]);
     } finally {
       await repeatableRead.close();
     }
@@ -369,6 +492,7 @@ test("migrates a generated seed of 20 users with 9 references each", async () =>
     pairs: 180,
     copied: { items: 180, links: 720, releases: 360 },
     repointed: { collection: 60, wishlistItem: 60, listMemberItem: 60, listMemberOwner: 60 },
+    deleted: { items: 50, entries: 30, links: 200, releases: 100 },
   });
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });

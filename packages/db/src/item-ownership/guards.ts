@@ -77,14 +77,13 @@ const CHILD_GUARDS = {
       (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("list_member_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
     END IF;`,
-  // A link without an owner joins an Item and an Item Entry without one, as before the migration.
   entry_to_item: `
     IF ${written(["owner_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_item_owner", "format('owner %s, Item %s', NEW.owner_id, NEW.item_id)")}
     END IF;
     IF ${written(["owner_id", "entry_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
+      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id = NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_entry_owner", "format('owner %s, Item Entry %s', NEW.owner_id, NEW.entry_id)")}
     END IF;`,
 } as const;
@@ -96,11 +95,6 @@ const FIXED_OWNERS = [
   { table: "list", column: "user_id", check: "list_owner_fixed" },
   { table: "item_release", column: "item_id", check: "item_release_item_fixed" },
 ] as const satisfies readonly { table: string; column: string; check: OwnerCheck }[];
-
-const OWNER_GUARD_TRIGGERS: readonly { readonly table: string; readonly name: string }[] = [
-  ...Object.keys(CHILD_GUARDS),
-  ...FIXED_OWNERS.map((fixed) => fixed.table),
-].map((table) => ({ table, name: `${table}_owner_guard` }));
 
 // Two installs that replace the same function at once fail with "tuple concurrently updated".
 const GUARDS_SQL = [
@@ -145,14 +139,4 @@ export async function installOwnerGuards(sql: SQL): Promise<"installed" | "pre-o
   }
   await sql.unsafe(GUARDS_SQL);
   return "installed";
-}
-
-export async function ownerGuardsInstalled(sql: SQL): Promise<boolean> {
-  const rows = await sql<{ table: string; name: string }[]>`
-    SELECT c.relname AS table, t.tgname AS name FROM pg_trigger t
-    JOIN pg_class c ON c.oid = t.tgrelid
-    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal AND t.tgenabled IN ('O', 'A')
-  `;
-  const present = new Set(rows.map((row) => `${row.table}.${row.name}`));
-  return OWNER_GUARD_TRIGGERS.every((guard) => present.has(`${guard.table}.${guard.name}`));
 }

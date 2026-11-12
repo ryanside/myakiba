@@ -8,7 +8,6 @@ const WRITER = "apps/server/src/lib/item-database.ts";
 
 const OWNERSHIP_MIGRATION_FILES = new Set([
   "packages/db/src/item-ownership/migrate.ts",
-  "packages/db/src/item-ownership/cleanup.ts",
   "packages/db/src/item-ownership/seed.ts",
 ]);
 

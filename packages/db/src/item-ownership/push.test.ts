@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { snapshot, testDatabases } from "../../test/database";
 import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
-import { isItemOwnershipMigrated, migrateItemOwnership, verifyItemOwnership } from "./migrate";
+import { ownershipMismatches } from "../../test/ownership";
+import { isItemOwnershipMigrated, migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
 const databases = testDatabases();
@@ -41,7 +42,7 @@ test(
     expect(after.triggers).toEqual(before.triggers);
     expect(after.functions).toEqual(before.functions);
     expect(await isItemOwnershipMigrated(sql)).toBe(true);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
       statements: REPEATED_ON_EVERY_PUSH,
