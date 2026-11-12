@@ -78,7 +78,8 @@ type BeforeScope = PoolScope & {
   /**
    * Runs one short write in its own transaction and commits it before `before` goes on. Nothing
    * the body does undoes it. It is for a record that must exist before an effect outside the
-   * database, such as a picture's ledger row before the picture is stored.
+   * database, such as a picture's ledger row before the picture is stored. A second call in one
+   * run, or a call after `before` returned, is a defect, and only the picture reservation calls it.
    */
   readonly commitFirst: <T>(write: (tx: Tx) => Promise<T>) => Promise<T>;
 };

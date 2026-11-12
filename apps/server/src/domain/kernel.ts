@@ -144,6 +144,7 @@ async function runInTransaction(
   const before = befores.get(op);
   if (before) {
     let first: AnyResult;
+    const commits = { made: 0, open: true };
     try {
       first = await before(
         {
@@ -152,12 +153,24 @@ async function runInTransaction(
           read: readPrepared,
           log,
           proceed: (value) => Result.ok(proceeding(value)),
-          commitFirst: (write) => db.transaction(write),
+          commitFirst: (write) => {
+            if (!commits.open) {
+              panic(
+                `commitFirst ran after before returned in ${op.action}; only before may commit`,
+              );
+            }
+            commits.made += 1;
+            if (commits.made > 1)
+              panic(`commitFirst ran twice in ${op.action}; one run commits once`);
+            return db.transaction(write);
+          },
         },
         input,
       );
     } catch (error) {
       return classify(error);
+    } finally {
+      commits.open = false;
     }
     if (!isProceed(first)) return settle(first);
     handoff = first.value["~proceed"];

@@ -3,7 +3,7 @@ import { Panic, Result, panic } from "better-result";
 import { eq, sql } from "drizzle-orm";
 import { createRequestLogger, initLogger } from "evlog";
 import { user } from "@myakiba/db/schema/auth";
-import type { ReadTx } from "@myakiba/db/tx";
+import type { ReadTx, Tx } from "@myakiba/db/tx";
 import { createTestDatabase } from "../../test/database";
 
 initLogger({ enabled: false });
@@ -244,6 +244,55 @@ describe("a write before's commitFirst makes", () => {
     await run(viewer, commitFirstThen("fail"), { id: "answered" }, log);
 
     expect(await userExists("answered-first")).toBe(true);
+  });
+
+  test("a second call in one run is a defect, and writes nothing", async () => {
+    const twice = command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) => {
+          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-1`)));
+          await scope.commitFirst((tx) => tx.insert(user).values(newUser(`${input.id}-2`)));
+          return scope.proceed(input);
+        },
+      },
+      async (scope, input) => {
+        await scope.tx.insert(user).values(newUser(input.id));
+        return Result.ok("written" as const);
+      },
+    );
+
+    await expect(run(viewer, twice, { id: "twice" }, log)).rejects.toThrow(
+      "commitFirst ran twice in test.write",
+    );
+    expect(await userExists("twice-1")).toBe(true);
+    expect(await userExists("twice-2")).toBe(false);
+    expect(await userExists("twice")).toBe(false);
+  });
+
+  test("a call after before returned, such as from the body, is a defect, and writes nothing", async () => {
+    type Handoff = {
+      readonly id: string;
+      readonly commitFirst: (write: (tx: Tx) => Promise<void>) => Promise<void>;
+    };
+    const handedOver = command(
+      {
+        ...config,
+        before: async (scope, input: { readonly id: string }) =>
+          scope.proceed<Handoff>({ id: input.id, commitFirst: scope.commitFirst }),
+      },
+      async (_scope, input: Handoff) => {
+        await input.commitFirst(async (tx) => {
+          await tx.insert(user).values(newUser(input.id));
+        });
+        return Result.ok("written" as const);
+      },
+    );
+
+    await expect(run(viewer, handedOver, { id: "late" }, log)).rejects.toThrow(
+      "commitFirst ran after before returned in test.write",
+    );
+    expect(await userExists("late")).toBe(false);
   });
 });
 
