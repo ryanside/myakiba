@@ -19,6 +19,7 @@ import { ITEM_FETCH_ERROR_CODES } from "@myakiba/contracts/mfc-items/fetch-error
 import { itemId } from "../test/fixtures";
 
 const REQUEST_ID = "6f1c1f43-1e5b-4c39-9df5-5b0c2a3e8b11";
+const captureId = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
 type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
 type WireMessage = { readonly [key: string]: Json };
@@ -90,30 +91,40 @@ describe("decodeBridgeRequest is strict", () => {
     expect(decodeBridgeRequest(request({ type: "take-picks" }))?.request).toEqual({
       type: "take-picks",
     });
+    const captureIds = [captureId(1), captureId(2)];
     for (const type of ["picks-saved", "picks-discarded"] as const) {
-      expect(decodeBridgeRequest(request({ type, mfcItemIds: [98_777, 1] }))?.request).toEqual({
+      expect(decodeBridgeRequest(request({ type, captureIds }))?.request).toEqual({
         type,
-        mfcItemIds: [itemId(98_777), itemId(1)],
+        captureIds,
       });
     }
   });
 
   test("acknowledges more picks than one fetch may ask for", () => {
-    const mfcItemIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) => index + 1);
+    const captureIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) =>
+      captureId(index + 1),
+    );
     for (const type of ["picks-saved", "picks-discarded"] as const) {
-      expect(decodeBridgeRequest(request({ type, mfcItemIds }))?.request).toEqual({
+      expect(decodeBridgeRequest(request({ type, captureIds }))?.request).toEqual({
         type,
-        mfcItemIds: mfcItemIds.map(itemId),
+        captureIds,
       });
     }
   });
 
   test.each([
     ["take-picks with a field", { type: "take-picks", mfcItemIds: [1] }],
-    ["picks-saved without ids", { type: "picks-saved", mfcItemIds: [] }],
-    ["picks-saved with duplicate ids", { type: "picks-saved", mfcItemIds: [1, 1] }],
-    ["picks-discarded with a string id", { type: "picks-discarded", mfcItemIds: ["98777"] }],
-    ["picks-saved with a page", { type: "picks-saved", mfcItemIds: [1], html: "<html></html>" }],
+    ["picks-saved without ids", { type: "picks-saved", captureIds: [] }],
+    [
+      "picks-saved with duplicate ids",
+      { type: "picks-saved", captureIds: [captureId(1), captureId(1)] },
+    ],
+    ["picks-discarded with an id that is no UUID", { type: "picks-discarded", captureIds: ["1"] }],
+    ["picks-saved naming Items", { type: "picks-saved", mfcItemIds: [1] }],
+    [
+      "picks-saved with a page",
+      { type: "picks-saved", captureIds: [captureId(1)], html: "<html></html>" },
+    ],
   ])("rejects %s", (_, body) => {
     expect(decodeBridgeRequest(request(body))).toBeNull();
   });
@@ -161,13 +172,21 @@ describe("decodeBridgeEvent is lenient", () => {
         type: "picks",
         picks: [
           {
+            captureId: captureId(1),
             mfcItemId: itemId(98_777),
             title: "Rem",
             pickedAt: 1_798_000_000_000,
             html: "<html></html>",
             picture: { bytes, contentType: "image/jpeg" },
           },
-          { mfcItemId: itemId(1), title: null, pickedAt: 1, html: "<html></html>", picture: null },
+          {
+            captureId: captureId(2),
+            mfcItemId: itemId(1),
+            title: null,
+            pickedAt: 1,
+            html: "<html></html>",
+            picture: null,
+          },
         ],
       },
     };
@@ -180,6 +199,7 @@ describe("decodeBridgeEvent is lenient", () => {
 
   test("reads a newer extension's picks, whose titles may be longer and carry more fields", () => {
     const pick = {
+      captureId: captureId(1),
       mfcItemId: 98_777,
       title: "R".repeat(MAX_PICK_TITLE + 1),
       pickedAt: 1.5,
@@ -312,30 +332,36 @@ describe("port messages inside the extension", () => {
     expect(portRequestSchema.safeParse({ type: "take-picks", requestId: REQUEST_ID }).success).toBe(
       true,
     );
+    const captureIds = [captureId(1)];
     for (const type of ["picks-saved", "picks-discarded"]) {
+      expect(portRequestSchema.safeParse({ type, requestId: REQUEST_ID, captureIds }).success).toBe(
+        true,
+      );
+      expect(portRequestSchema.safeParse({ type, captureIds }).success).toBe(false);
       expect(
         portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds: [1] }).success,
-      ).toBe(true);
-      expect(portRequestSchema.safeParse({ type, mfcItemIds: [1] }).success).toBe(false);
+      ).toBe(false);
       expect(
-        portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds: [1], url: "x" })
-          .success,
+        portRequestSchema.safeParse({ type, requestId: REQUEST_ID, captureIds, url: "x" }).success,
       ).toBe(false);
     }
     expect(portRequestSchema.safeParse({ type: "take-picks" }).success).toBe(false);
   });
 
   test("a pick acknowledgement has no fetch count limit", () => {
-    const mfcItemIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) => index + 1);
+    const captureIds = Array.from({ length: MAX_ITEMS_PER_REQUEST + 1 }, (_, index) =>
+      captureId(index + 1),
+    );
     for (const type of ["picks-saved", "picks-discarded"] as const) {
-      expect(portRequestSchema.safeParse({ type, requestId: REQUEST_ID, mfcItemIds }).data).toEqual(
-        { type, requestId: REQUEST_ID, mfcItemIds: mfcItemIds.map(itemId) },
+      expect(portRequestSchema.safeParse({ type, requestId: REQUEST_ID, captureIds }).data).toEqual(
+        { type, requestId: REQUEST_ID, captureIds },
       );
     }
   });
 
   test("a picks event is strict and carries each picture as base64", () => {
     const pick = {
+      captureId: captureId(1),
       mfcItemId: itemId(98_777),
       title: "R".repeat(MAX_PICK_TITLE),
       pickedAt: 1_798_000_000_000,
@@ -352,6 +378,7 @@ describe("port messages inside the extension", () => {
       portEventSchema.safeParse(picks({ title: "R".repeat(MAX_PICK_TITLE + 1) })).success,
     ).toBe(false);
     expect(portEventSchema.safeParse(picks({ pickedAt: 1.5 })).success).toBe(false);
+    expect(portEventSchema.safeParse(picks({ captureId: "1" })).success).toBe(false);
     expect(
       portEventSchema.safeParse(picks({ picture: { base64: "%", contentType: "" } })).success,
     ).toBe(false);

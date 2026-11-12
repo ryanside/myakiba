@@ -20,7 +20,9 @@ const OWN_CONTENT_SCRIPT: PortSender = {
   tab: { id: 7, incognito: false },
 };
 
-type PortMessage = { readonly [key: string]: string | number | readonly number[] };
+type PortMessage = {
+  readonly [key: string]: string | number | readonly number[] | readonly string[];
+};
 
 function pickStore(localQuota?: number) {
   const local = fakeStorageArea(localQuota);
@@ -37,6 +39,11 @@ function pickStore(localQuota?: number) {
 async function ids(picks: Picks, context: TabContext) {
   const read = await ok(picks.read(context));
   return read.map((pick) => pick.mfcItemId);
+}
+
+async function captureIds(picks: Picks, context: TabContext, mfcItemIds: readonly number[]) {
+  const read = await ok(picks.read(context));
+  return read.filter((pick) => mfcItemIds.includes(pick.mfcItemId)).map((pick) => pick.captureId);
 }
 
 function connect(sender: PortSender, picks: Picks = pickStore().picks) {
@@ -229,7 +236,11 @@ describe("picks over the port", () => {
       requestId: REQUEST_ID,
       event: {
         type: "picks",
-        picks: [1, 2, 3].map((id) => ({ ...capture(id), pickedAt: 1 })),
+        picks: [1, 2, 3].map((id) => ({
+          ...capture(id),
+          captureId: expect.any(String),
+          pickedAt: 1,
+        })),
       },
     });
     expect(await ok(picks.read(NORMAL))).toHaveLength(3);
@@ -253,11 +264,15 @@ describe("picks over the port", () => {
   });
 
   test.each(["picks-saved", "picks-discarded"])(
-    "%s deletes those picks of the requester's context only, then answers done",
+    "%s deletes those captures of the requester's context only, then answers done",
     async (type) => {
       const { picks } = await stocked();
+      const named = [
+        ...(await captureIds(picks, NORMAL, [1, 3])),
+        ...(await captureIds(picks, CONTAINER, [4])),
+      ];
       const port = connect(OWN_CONTENT_SCRIPT, picks);
-      port.send({ type, requestId: REQUEST_ID, mfcItemIds: [1, 3, 4] });
+      port.send({ type, requestId: REQUEST_ID, captureIds: named });
 
       expect(await answered(port, 1)).toEqual([
         { requestId: REQUEST_ID, event: { type: "done", reason: "complete" } },
@@ -267,11 +282,39 @@ describe("picks over the port", () => {
     },
   );
 
+  test.each(["picks-saved", "picks-discarded"])(
+    "a late %s deletes only the capture the page took, so a re-pick made since stays",
+    async (type) => {
+      const { picks } = pickStore();
+      await ok(picks.add(NORMAL, capture(1)));
+      const port = connect(OWN_CONTENT_SCRIPT, picks);
+      port.send({ type: "take-picks", requestId: REQUEST_ID });
+      const [taken] = await answered(port, 1);
+      const takenIds =
+        taken?.event.type === "picks" ? taken.event.picks.map((pick) => pick.captureId) : [];
+      await ok(picks.remove(NORMAL, [itemId(1)]));
+      await ok(picks.add(NORMAL, { ...capture(1), html: "<html>again</html>" }));
+
+      port.send({ type, requestId: OTHER_REQUEST_ID, captureIds: takenIds });
+
+      const [, done] = await answered(port, 2);
+      expect(done).toEqual({
+        requestId: OTHER_REQUEST_ID,
+        event: { type: "done", reason: "complete" },
+      });
+      const kept = await ok(picks.read(NORMAL));
+      expect(kept.map((pick) => pick.html)).toEqual(["<html>again</html>"]);
+    },
+  );
+
   test("picks-saved may name more picks than a fetch may name Items", async () => {
     const { picks } = await stocked();
     const port = connect(OWN_CONTENT_SCRIPT, picks);
-    const many = Array.from({ length: 1500 }, (_, index) => index + 1);
-    port.send({ type: "picks-saved", requestId: REQUEST_ID, mfcItemIds: many });
+    const many = [
+      ...(await captureIds(picks, NORMAL, [1, 2, 3])),
+      ...Array.from({ length: 1500 }, () => crypto.randomUUID()),
+    ];
+    port.send({ type: "picks-saved", requestId: REQUEST_ID, captureIds: many });
 
     expect(await answered(port, 1)).toEqual([
       { requestId: REQUEST_ID, event: { type: "done", reason: "complete" } },
@@ -284,13 +327,17 @@ describe("picks over the port", () => {
     const store = await stocked();
     const refusing = {
       ...store.picks,
-      remove: async () =>
+      settle: async () =>
         Result.err(
           new PickStorageFailed({ area: "local", op: "write", cause: new Error("quota") }),
         ),
     };
     const port = connect(OWN_CONTENT_SCRIPT, refusing);
-    port.send({ type: "picks-saved", requestId: OTHER_REQUEST_ID, mfcItemIds: [1] });
+    port.send({
+      type: "picks-saved",
+      requestId: OTHER_REQUEST_ID,
+      captureIds: await captureIds(store.picks, NORMAL, [1]),
+    });
 
     expect(await answered(port, 1)).toEqual([
       { requestId: OTHER_REQUEST_ID, event: { type: "done", reason: "interrupted" } },
@@ -315,7 +362,11 @@ describe("picks over the port", () => {
       { ...OWN_CONTENT_SCRIPT, origin: ORIGINS.mfc, url: `${ORIGINS.mfc}/item/1` },
       picks,
     );
-    port.send({ type: "picks-discarded", requestId: REQUEST_ID, mfcItemIds: [1, 2, 3] });
+    port.send({
+      type: "picks-discarded",
+      requestId: REQUEST_ID,
+      captureIds: await captureIds(picks, NORMAL, [1, 2, 3]),
+    });
 
     await answered(port, 1);
     expect(port.disconnected()).toBe(true);

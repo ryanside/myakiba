@@ -3,7 +3,7 @@ import { waitFor } from "@testing-library/react";
 import { BRIDGE_CHANNEL, BRIDGE_PROTOCOL } from "@myakiba/mfc/bridge";
 import { mfcItemId } from "@myakiba/mfc/page";
 import type { MfcItemId } from "@myakiba/mfc/page";
-import { PAGE_ORIGIN, fakeExtension, fakePick } from "../../test/fake-extension";
+import { PAGE_ORIGIN, captureIdOf, fakeExtension, fakePick } from "../../test/fake-extension";
 import { ExtensionStopped } from "./errors/extension-stopped";
 import { createExtensionBridge } from "./extension-bridge";
 import type { ExtensionBridge, ExtensionFetchEvent } from "./extension-bridge";
@@ -385,17 +385,17 @@ describe("picks", () => {
     expect(taken.isErr() && ExtensionStopped.is(taken.error)).toBe(true);
   });
 
-  test("picksSaved and picksDiscarded name their ids and resolve once the extension is done", async () => {
+  test("picksSaved and picksDiscarded name their captures and resolve once the extension is done", async () => {
     const extension = fakeExtension({ picks: [fakePick(1), fakePick(2), fakePick(3)] });
     const bridge = createExtensionBridge(extension.window, QUICK);
 
-    const saved = await bridge.picksSaved(ids(1, 2) as [MfcItemId, ...MfcItemId[]]);
-    const discarded = await bridge.picksDiscarded(ids(3) as [MfcItemId]);
+    const saved = await bridge.picksSaved([captureIdOf(1), captureIdOf(2)]);
+    const discarded = await bridge.picksDiscarded([captureIdOf(3)]);
 
     expect([saved.isOk(), discarded.isOk()]).toEqual([true, true]);
     expect(requestsOf(extension)).toEqual([
-      { type: "picks-saved", mfcItemIds: [1, 2] },
-      { type: "picks-discarded", mfcItemIds: [3] },
+      { type: "picks-saved", captureIds: [captureIdOf(1), captureIdOf(2)] },
+      { type: "picks-discarded", captureIds: [captureIdOf(3)] },
     ]);
     expect(extension.picks()).toEqual([]);
   });
@@ -404,7 +404,7 @@ describe("picks", () => {
     const extension = fakeExtension({ answersPicks: false });
     const bridge = createExtensionBridge(extension.window, QUICK);
 
-    const discarded = await bridge.picksDiscarded(ids(3) as [MfcItemId]);
+    const discarded = await bridge.picksDiscarded([captureIdOf(3)]);
 
     expect(discarded.isErr() && ExtensionStopped.is(discarded.error)).toBe(true);
   });

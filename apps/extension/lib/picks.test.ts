@@ -13,6 +13,8 @@ const PICTURE = { base64: "/9j/2Q==", contentType: "image/jpeg" };
 const MIB = 1024 * 1024;
 /** A time past int32, which Chrome stores as a double and writes as `1.730000000123e+12`. */
 const REAL_TIME = 1_730_000_000_123;
+/** A capture id as stored, which the store makes with `crypto.randomUUID`, so every one has this length. */
+const CAPTURE_ID = "00000000-0000-4000-8000-000000000000";
 
 function capture(id: number, html = `<html>${id}</html>`) {
   return { mfcItemId: itemId(id), title: `Item ${id}`, html, picture: PICTURE };
@@ -53,6 +55,7 @@ describe("a pick", () => {
 
     expect(await ok(picks.read(NORMAL))).toEqual([
       {
+        captureId: expect.any(String),
         mfcItemId: itemId(1),
         title: "Item 1",
         pickedAt: 1_000_000,
@@ -106,6 +109,54 @@ describe("removing picks", () => {
     expect(await ids(NORMAL)).toEqual([itemId(1)]);
     expect(await ids(CONTAINER)).toEqual([itemId(2)]);
     expect(local.keys()).toEqual(["pick:n:default:1", "pick:n:firefox-container-1:2", "picks"]);
+  });
+
+  test("a settled capture goes, and a re-pick of its Item made since it was taken stays", async () => {
+    const { picks } = store();
+    await ok(picks.add(NORMAL, capture(1)));
+    await ok(picks.add(NORMAL, capture(2)));
+    const taken = await ok(picks.read(NORMAL));
+    await ok(picks.remove(NORMAL, [itemId(1)]));
+    await ok(picks.add(NORMAL, capture(1, "<html>again</html>")));
+
+    await ok(
+      picks.settle(
+        NORMAL,
+        taken.map((pick) => pick.captureId),
+      ),
+    );
+
+    const kept = await ok(picks.read(NORMAL));
+    expect(kept.map(({ mfcItemId, html }) => ({ mfcItemId, html }))).toEqual([
+      { mfcItemId: itemId(1), html: "<html>again</html>" },
+    ]);
+  });
+
+  test("a settled capture that a re-pick replaced leaves the re-pick", async () => {
+    const { picks } = store();
+    await ok(picks.add(NORMAL, capture(1)));
+    const [taken] = await ok(picks.read(NORMAL));
+    await ok(picks.add(NORMAL, capture(1, "<html>again</html>")));
+
+    await ok(picks.settle(NORMAL, taken ? [taken.captureId] : []));
+
+    const kept = await ok(picks.read(NORMAL));
+    expect(kept.map((pick) => pick.html)).toEqual(["<html>again</html>"]);
+  });
+
+  test("settles only the context's own captures", async () => {
+    const { picks, ids } = store();
+    await ok(picks.add(NORMAL, capture(1)));
+    const taken = await ok(picks.read(NORMAL));
+
+    await ok(
+      picks.settle(
+        CONTAINER,
+        taken.map((pick) => pick.captureId),
+      ),
+    );
+
+    expect(await ids(NORMAL)).toEqual([itemId(1)]);
   });
 
   test("reading picks deletes none of them", async () => {
@@ -163,7 +214,7 @@ describe("browsing contexts", () => {
   test("forgetting private picks also deletes a private page its index lost", async () => {
     const { picks, session } = store();
     await ok(picks.add(PRIVATE, capture(1)));
-    session.put("pick:p:default:2", { ...capture(2), pickedAt: 1_000_000 });
+    session.put("pick:p:default:2", { ...capture(2), captureId: CAPTURE_ID, pickedAt: 1_000_000 });
 
     await ok(picks.forgetPrivate());
 
@@ -208,10 +259,20 @@ describe("the byte cap", () => {
 
   test("reads as full once its picks and their index take the whole cap, as Chrome counts them", async () => {
     const { picks, local } = store({ now: REAL_TIME });
-    const page = storedBytes("pick:n:default:1", { ...capture(1, ""), pickedAt: REAL_TIME });
+    const page = storedBytes("pick:n:default:1", {
+      ...capture(1, ""),
+      captureId: CAPTURE_ID,
+      pickedAt: REAL_TIME,
+    });
     // The index's `bytes` has seven digits at either size below.
     const index = storedBytes("picks", [
-      { contextKey: "n:default", mfcItemId: itemId(1), pickedAt: REAL_TIME, bytes: 1_000_000 },
+      {
+        contextKey: "n:default",
+        mfcItemId: itemId(1),
+        captureId: CAPTURE_ID,
+        pickedAt: REAL_TIME,
+        bytes: 1_000_000,
+      },
     ]);
     const room = MAX_PICK_STORE_BYTES - page - index;
     // Chrome writes each `<` as the six bytes `\u003C`.
@@ -248,7 +309,11 @@ describe("the byte cap", () => {
 
   test("counts the index, so the stored picks never take more than the cap", async () => {
     const { picks, local } = store();
-    const page = storedBytes("pick:n:default:1", { ...capture(1, ""), pickedAt: 1_000_000 });
+    const page = storedBytes("pick:n:default:1", {
+      ...capture(1, ""),
+      captureId: CAPTURE_ID,
+      pickedAt: 1_000_000,
+    });
     const quarter = "a".repeat(MAX_PICK_STORE_BYTES / 4 - page);
 
     const added = [];
@@ -309,7 +374,7 @@ describe("a store call stopped partway", () => {
   test("leaves no page behind that an add wrote without its index", async () => {
     const { picks, local, restart } = store();
     await ok(picks.add(NORMAL, capture(1)));
-    local.put("pick:n:default:2", { ...capture(2), pickedAt: 1_000_000 });
+    local.put("pick:n:default:2", { ...capture(2), captureId: CAPTURE_ID, pickedAt: 1_000_000 });
 
     expect(await ok(restart().state(NORMAL, itemId(2)))).toEqual({
       picked: false,
@@ -322,7 +387,11 @@ describe("a store call stopped partway", () => {
   test("counts a replacement page an add wrote without its index at the page's own size", async () => {
     const { picks, local, restart } = store();
     await ok(picks.add(NORMAL, capture(1)));
-    local.put("pick:n:default:1", { ...capture(1, "a".repeat(6 * MIB)), pickedAt: 1_000_000 });
+    local.put("pick:n:default:1", {
+      ...capture(1, "a".repeat(6 * MIB)),
+      captureId: CAPTURE_ID,
+      pickedAt: 1_000_000,
+    });
 
     const refused = await restart().add(CONTAINER, capture(2, "a".repeat(3 * MIB)));
 
@@ -334,8 +403,20 @@ describe("a store call stopped partway", () => {
     const { picks, local, restart } = store();
     await ok(picks.add(NORMAL, capture(1)));
     local.put("picks", [
-      { contextKey: "n:default", mfcItemId: 1, pickedAt: 1_000_000, bytes: 100 },
-      { contextKey: "n:default", mfcItemId: 2, pickedAt: 1_000_000, bytes: 100 },
+      {
+        contextKey: "n:default",
+        mfcItemId: 1,
+        captureId: CAPTURE_ID,
+        pickedAt: 1_000_000,
+        bytes: 100,
+      },
+      {
+        contextKey: "n:default",
+        mfcItemId: 2,
+        captureId: CAPTURE_ID,
+        pickedAt: 1_000_000,
+        bytes: 100,
+      },
     ]);
 
     expect(await ok(restart().state(NORMAL, itemId(2)))).toEqual({

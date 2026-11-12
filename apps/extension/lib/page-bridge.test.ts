@@ -8,6 +8,7 @@ import type { BridgePort, PageWindow } from "./page-bridge";
 
 const REQUEST_ID = "6f1c1f43-1e5b-4c39-9df5-5b0c2a3e8b11";
 const OTHER_REQUEST_ID = "0b6c1d0e-55aa-4a4e-9a51-0c2b8b1c7e02";
+const captureId = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const INVALIDATED = "Extension context invalidated.";
 
 const consoleWarn = spyOn(console, "warn").mockImplementation(() => {});
@@ -16,7 +17,7 @@ afterEach(() => {
   consoleWarn.mockClear();
 });
 
-type PageRequest = { readonly [key: string]: string | readonly number[] };
+type PageRequest = { readonly [key: string]: string | readonly number[] | readonly string[] };
 type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
 
 function fakePage() {
@@ -334,24 +335,31 @@ describe("relaying picks", () => {
   test("passes each pick request to the background with its request id", () => {
     const bridge = start();
     bridge.send({ type: "take-picks" });
-    bridge.send({ type: "picks-saved", mfcItemIds: [1, 2] }, OTHER_REQUEST_ID);
-    bridge.send({ type: "picks-discarded", mfcItemIds: [3] });
+    bridge.send(
+      { type: "picks-saved", captureIds: [captureId(1), captureId(2)] },
+      OTHER_REQUEST_ID,
+    );
+    bridge.send({ type: "picks-discarded", captureIds: [captureId(3)] });
 
     expect<readonly unknown[]>(bridge.extension.sent).toEqual([
       { type: "take-picks", requestId: REQUEST_ID },
-      { type: "picks-saved", requestId: OTHER_REQUEST_ID, mfcItemIds: [1, 2] },
-      { type: "picks-discarded", requestId: REQUEST_ID, mfcItemIds: [3] },
+      {
+        type: "picks-saved",
+        requestId: OTHER_REQUEST_ID,
+        captureIds: [captureId(1), captureId(2)],
+      },
+      { type: "picks-discarded", requestId: REQUEST_ID, captureIds: [captureId(3)] },
     ]);
     expect(bridge.extension.ticks).toEqual([]);
   });
 
   test("relays a saved acknowledgement of any number of picks", () => {
     const bridge = start();
-    const many = Array.from({ length: 1500 }, (_, index) => index + 1);
-    bridge.send({ type: "picks-saved", mfcItemIds: many });
+    const many = Array.from({ length: 1500 }, (_, index) => captureId(index + 1));
+    bridge.send({ type: "picks-saved", captureIds: many });
 
     expect<readonly unknown[]>(bridge.extension.sent).toEqual([
-      { type: "picks-saved", requestId: REQUEST_ID, mfcItemIds: many },
+      { type: "picks-saved", requestId: REQUEST_ID, captureIds: many },
     ]);
   });
 
@@ -361,6 +369,7 @@ describe("relaying picks", () => {
     bridge.posted.length = 0;
     bridge.transfers.length = 0;
     const pick = (id: number, picture: Json) => ({
+      captureId: captureId(id),
       mfcItemId: id,
       title: null,
       pickedAt: 5,
@@ -409,7 +418,7 @@ describe("relaying picks", () => {
   test("a restarted worker interrupts an open pick request, and an answered one is not", () => {
     const bridge = start();
     bridge.send({ type: "take-picks" });
-    bridge.send({ type: "picks-saved", mfcItemIds: [1] }, OTHER_REQUEST_ID);
+    bridge.send({ type: "picks-saved", captureIds: [captureId(1)] }, OTHER_REQUEST_ID);
     bridge.extension.receive({ requestId: REQUEST_ID, event: { type: "picks", picks: [] } });
     bridge.posted.length = 0;
 
@@ -422,7 +431,7 @@ describe("relaying picks", () => {
     const bridge = start();
     bridge.extension.invalidate();
     bridge.send({ type: "take-picks" });
-    bridge.send({ type: "picks-discarded", mfcItemIds: [1] }, OTHER_REQUEST_ID);
+    bridge.send({ type: "picks-discarded", captureIds: [captureId(1)] }, OTHER_REQUEST_ID);
 
     expect(bridge.posted.slice(1)).toEqual([
       interrupted(REQUEST_ID),

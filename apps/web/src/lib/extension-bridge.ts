@@ -44,6 +44,7 @@ export type ExtensionFetchEvent =
 
 /** A pick the extension handed over, ready to upload. It stays in the extension until reported saved or discarded. */
 export type TakenPick = {
+  readonly captureId: string;
   readonly mfcItemId: MfcItemId;
   readonly title: string | null;
   readonly pickedAt: number;
@@ -51,7 +52,7 @@ export type TakenPick = {
   readonly picture: File | null;
 };
 
-type PickIds = readonly [MfcItemId, ...MfcItemId[]];
+type CaptureIds = readonly [string, ...string[]];
 
 export type ExtensionBridge = {
   readonly status: () => ExtensionStatus;
@@ -63,8 +64,9 @@ export type ExtensionBridge = {
   ) => AsyncIterable<ExtensionFetchEvent>;
   /** The picks kept for this browser context. No answer within 5 s reads as no picks. */
   readonly takePicks: () => Promise<Result<readonly TakenPick[], ExtensionStopped>>;
-  readonly picksSaved: (mfcItemIds: PickIds) => Promise<Result<void, ExtensionStopped>>;
-  readonly picksDiscarded: (mfcItemIds: PickIds) => Promise<Result<void, ExtensionStopped>>;
+  /** Each names the captures it settles, so the extension keeps any later capture of the same Item. */
+  readonly picksSaved: (captureIds: CaptureIds) => Promise<Result<void, ExtensionStopped>>;
+  readonly picksDiscarded: (captureIds: CaptureIds) => Promise<Result<void, ExtensionStopped>>;
 };
 
 type BridgeMessageEvent = {
@@ -103,8 +105,16 @@ function statusFromAnnounce(
 
 type PicksEvent = Extract<ReceivedEvent, { type: "picks" }>;
 
-function takenPick({ mfcItemId, title, pickedAt, html, picture }: PicksEvent["picks"][number]) {
+function takenPick({
+  captureId,
+  mfcItemId,
+  title,
+  pickedAt,
+  html,
+  picture,
+}: PicksEvent["picks"][number]) {
   return {
+    captureId,
     mfcItemId,
     title,
     pickedAt,
@@ -272,9 +282,9 @@ export function createExtensionBridge(
     });
   }
 
-  const acknowledge = (type: "picks-saved" | "picks-discarded", mfcItemIds: PickIds) =>
+  const acknowledge = (type: "picks-saved" | "picks-discarded", captureIds: CaptureIds) =>
     ask(
-      { type, mfcItemIds: [...mfcItemIds] },
+      { type, captureIds: [...captureIds] },
       (event): Result<void, ExtensionStopped> | undefined => {
         if (event.type !== "done") return undefined;
         return event.reason === "complete" ? Result.ok() : Result.err(new ExtensionStopped());
@@ -300,8 +310,8 @@ export function createExtensionBridge(
         },
         Result.ok([]),
       ),
-    picksSaved: (mfcItemIds) => acknowledge("picks-saved", mfcItemIds),
-    picksDiscarded: (mfcItemIds) => acknowledge("picks-discarded", mfcItemIds),
+    picksSaved: (captureIds) => acknowledge("picks-saved", captureIds),
+    picksDiscarded: (captureIds) => acknowledge("picks-discarded", captureIds),
   };
 }
 

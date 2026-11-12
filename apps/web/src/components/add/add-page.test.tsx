@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, setDefaultTimeout, test } from "bun:test
 import { act, cleanup, configure, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SAFARI, SUPPORTED_BROWSERS, browseWith, listIn } from "../../../test/extension-browser";
-import { fakePick } from "../../../test/fake-extension";
+import { captureIdOf, fakePick } from "../../../test/fake-extension";
 import {
   item,
   loadExtension,
@@ -381,7 +381,9 @@ test("saved picks appear as rows, and the extension hears only after the save", 
   await screen.findByRole("checkbox", { name: "Select Picked Miku" });
   expect(screen.queryByText("Saving…")).toBeNull();
   await waitFor(() =>
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [98_777] }]),
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [captureIdOf(98_777)] },
+    ]),
   );
 });
 
@@ -403,7 +405,9 @@ test("a pick that fails stays on the page and retry saves it", async () => {
 
   await screen.findByRole("checkbox", { name: "Select Picked Miku" });
   await waitFor(() =>
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [98_777] }]),
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [captureIdOf(98_777)] },
+    ]),
   );
 });
 

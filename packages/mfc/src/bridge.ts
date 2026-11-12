@@ -26,13 +26,20 @@ export const mfcItemIdSchema = z.number().transform((value, ctx): MfcItemId => {
   return id;
 });
 
-// The pick store is capped by size, not count, so an acknowledgement may name any number of picks.
-const pickIdsSchema = z
+const itemIdsSchema = z
   .array(mfcItemIdSchema)
   .min(1)
+  .max(MAX_ITEMS_PER_REQUEST)
   .refine((ids) => new Set(ids).size === ids.length, "MFC item ids must be unique");
 
-const itemIdsSchema = pickIdsSchema.max(MAX_ITEMS_PER_REQUEST);
+/**
+ * The captures an acknowledgement settles. It names captures, not Items, so a late one never deletes a re-pick of the
+ * same Item. The pick store is capped by size, not count, so it may name any number of them.
+ */
+const captureIdsSchema = z
+  .array(z.uuid())
+  .min(1)
+  .refine((ids) => new Set(ids).size === ids.length, "capture ids must be unique");
 
 export const bridgeRequestSchema = z.strictObject({
   channel: z.literal(BRIDGE_CHANNEL),
@@ -43,8 +50,8 @@ export const bridgeRequestSchema = z.strictObject({
     z.strictObject({ type: z.literal("fetch-items"), mfcItemIds: itemIdsSchema }),
     z.strictObject({ type: z.literal("cancel"), targetRequestId: z.uuid() }),
     z.strictObject({ type: z.literal("take-picks") }),
-    z.strictObject({ type: z.literal("picks-saved"), mfcItemIds: pickIdsSchema }),
-    z.strictObject({ type: z.literal("picks-discarded"), mfcItemIds: pickIdsSchema }),
+    z.strictObject({ type: z.literal("picks-saved"), captureIds: captureIdsSchema }),
+    z.strictObject({ type: z.literal("picks-discarded"), captureIds: captureIdsSchema }),
   ]),
 });
 
@@ -84,6 +91,8 @@ type WireEvent<Picture> =
 
 /** A pick as the extension keeps it: the Item page the user picked, scrubbed, and its picture. */
 type PickedItem<Picture> = {
+  /** Names this capture, which the page's acknowledgement settles. A re-pick of the Item is a new capture. */
+  readonly captureId: string;
   readonly mfcItemId: MfcItemId;
   readonly title: string | null;
   readonly pickedAt: number;
@@ -222,6 +231,7 @@ const receivedEventSchema = z.union([
     picks: z
       .array(
         z.object({
+          captureId: z.string(),
           mfcItemId: mfcItemIdSchema,
           title: z.string().nullable(),
           pickedAt: z.number(),
@@ -256,12 +266,12 @@ export const portRequestSchema = z.discriminatedUnion("type", [
   z.strictObject({
     type: z.literal("picks-saved"),
     requestId: z.uuid(),
-    mfcItemIds: pickIdsSchema,
+    captureIds: captureIdsSchema,
   }),
   z.strictObject({
     type: z.literal("picks-discarded"),
     requestId: z.uuid(),
-    mfcItemIds: pickIdsSchema,
+    captureIds: captureIdsSchema,
   }),
 ]);
 export type PortRequest = z.output<typeof portRequestSchema>;
@@ -289,6 +299,7 @@ export const portEventSchema = z.strictObject({
       picks: z
         .array(
           z.strictObject({
+            captureId: z.uuid(),
             mfcItemId: mfcItemIdSchema,
             title: z.string().max(MAX_PICK_TITLE).nullable(),
             pickedAt: z.number().int(),
