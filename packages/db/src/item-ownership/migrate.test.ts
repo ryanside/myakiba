@@ -262,6 +262,19 @@ test("refuses a table it does not re-point that references Item Entry links, and
   expect(await snapshot(sql)).toEqual(before);
 });
 
+test("an Item left without an owner after the delete fails the run, which changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE FUNCTION leave_ownerless_item() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN INSERT INTO item (id, title) VALUES ('item-left', 'Left'); RETURN NULL; END $$;
+    CREATE TRIGGER leave_ownerless_item AFTER DELETE ON entry
+      FOR EACH STATEMENT EXECUTE FUNCTION leave_ownerless_item();
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toMatchObject({ errno: "23502" });
+  expect(await snapshot(sql)).toEqual(before);
+});
+
 test.each(MIGRATION_STEPS)(
   "a crash after %s leaves the database as seeded, and the next run equals a clean run",
   async (step) => {

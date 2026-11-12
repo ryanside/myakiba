@@ -14,7 +14,6 @@ export const MIGRATION_STEPS = [
   "contract",
   "verify",
   "deleteOwnerless",
-  "verifyDeleted",
   "requireOwners",
 ] as const;
 type MigrationStep = (typeof MIGRATION_STEPS)[number];
@@ -158,21 +157,6 @@ const COPY_CHECKS = [
 ] as const;
 
 const OWNER_TABLES = ["item", "entry", "entry_to_item"] as const;
-
-const OWNERLESS_CHECKS = [
-  {
-    check: "an Item has no owner",
-    count: "SELECT count(*) FROM item WHERE owner_id IS NULL",
-  },
-  {
-    check: "an Item Entry has no owner",
-    count: "SELECT count(*) FROM entry WHERE owner_id IS NULL",
-  },
-  {
-    check: "an Item Entry link has no owner",
-    count: "SELECT count(*) FROM entry_to_item WHERE owner_id IS NULL",
-  },
-] as const;
 
 type Run = {
   readonly startCounts: Counts<(typeof REFERENCE_TABLES)[number]>;
@@ -360,7 +344,21 @@ const STEPS = {
   },
 
   async verify(tx, run) {
-    await verifyRun(tx, run, COPY_CHECKS);
+    const misses = [
+      ...(await missesOf(tx, OWNERSHIP_CHECKS)),
+      ...(await missesOf(tx, COPY_CHECKS)),
+    ];
+    for (const table of REFERENCE_TABLES) {
+      const now = await count(tx, `SELECT count(*) FROM ${table}`);
+      if (now !== run.startCounts[table]) {
+        misses.push({
+          check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
+          rows: Math.abs(now - run.startCounts[table]),
+        });
+      }
+    }
+    if (misses.length > 0)
+      throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
   },
 
   async deleteOwnerless(tx, run) {
@@ -374,10 +372,6 @@ const STEPS = {
     run.deleted.releases = releases.count;
     run.deleted.items = items.count;
     run.deleted.entries = entries.count;
-  },
-
-  async verifyDeleted(tx, run) {
-    await verifyRun(tx, run, OWNERLESS_CHECKS);
   },
 
   async requireOwners(tx) {
@@ -465,26 +459,6 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
     await options.afterStep?.(step);
   }
   return run;
-}
-
-/** Fails the run unless every reference still reaches its user's own Item and these checks find nothing. */
-async function verifyRun(
-  tx: SQL,
-  run: Run,
-  checks: readonly { readonly check: string; readonly count: string }[],
-): Promise<void> {
-  const misses = [...(await verifyItemOwnership(tx)), ...(await missesOf(tx, checks))];
-  for (const table of REFERENCE_TABLES) {
-    const now = await count(tx, `SELECT count(*) FROM ${table}`);
-    if (now !== run.startCounts[table]) {
-      misses.push({
-        check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
-        rows: Math.abs(now - run.startCounts[table]),
-      });
-    }
-  }
-  if (misses.length > 0)
-    throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
 }
 
 // A hash of the owner and the original, so a run after a crash writes the ids a clean run would.
