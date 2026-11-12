@@ -96,11 +96,6 @@ const FIXED_OWNERS = [
   { table: "item_release", column: "item_id", check: "item_release_item_fixed" },
 ] as const satisfies readonly { table: string; column: string; check: OwnerCheck }[];
 
-const OWNER_GUARD_TRIGGERS: readonly { readonly table: string; readonly name: string }[] = [
-  ...Object.keys(CHILD_GUARDS),
-  ...FIXED_OWNERS.map((fixed) => fixed.table),
-].map((table) => ({ table, name: `${table}_owner_guard` }));
-
 // Two installs that replace the same function at once fail with "tuple concurrently updated".
 const GUARDS_SQL = [
   "SELECT pg_advisory_xact_lock(hashtextextended('myakiba:owner-guards', 0));",
@@ -144,14 +139,4 @@ export async function installOwnerGuards(sql: SQL): Promise<"installed" | "pre-o
   }
   await sql.unsafe(GUARDS_SQL);
   return "installed";
-}
-
-export async function ownerGuardsInstalled(sql: SQL): Promise<boolean> {
-  const rows = await sql<{ table: string; name: string }[]>`
-    SELECT c.relname AS table, t.tgname AS name FROM pg_trigger t
-    JOIN pg_class c ON c.oid = t.tgrelid
-    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal AND t.tgenabled IN ('O', 'A')
-  `;
-  const present = new Set(rows.map((row) => `${row.table}.${row.name}`));
-  return OWNER_GUARD_TRIGGERS.every((guard) => present.has(`${guard.table}.${guard.name}`));
 }

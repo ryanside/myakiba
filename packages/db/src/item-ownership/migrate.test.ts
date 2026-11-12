@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
-import { MIGRATION_STEPS, migrateItemOwnership, verifyItemOwnership } from "./migrate";
+import { ownershipMismatches } from "../../test/ownership";
+import { MIGRATION_STEPS, migrateItemOwnership } from "./migrate";
 import { seedScaledSharedItems, seedSharedItems } from "./seed";
 
 const databases = testDatabases();
@@ -85,7 +86,7 @@ test("gives each user one copy of every Item they referenced, equal to it down t
     { owner_id: "u2", original: "item-e" },
     { owner_id: "u3", original: "item-a" },
   ]);
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });
 
 test("re-points every reference to its user's copy of the Item it pointed at", async () => {
@@ -435,7 +436,7 @@ describe("table locks", () => {
       commit.resolve(true);
       await writing;
       expect(await migration).toMatchObject({ status: "migrated", pairs: 6 });
-      expect(await verifyItemOwnership(sql)).toEqual([]);
+      expect(await ownershipMismatches(sql)).toEqual([]);
     } finally {
       await repeatableRead.close();
     }
@@ -465,5 +466,5 @@ test("migrates a generated seed of 20 users with 9 references each", async () =>
     repointed: { collection: 60, wishlistItem: 60, listMemberItem: 60, listMemberOwner: 60 },
     deleted: { items: 50, entries: 30, links: 200, releases: 100 },
   });
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });

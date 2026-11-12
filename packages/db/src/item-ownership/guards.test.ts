@@ -2,8 +2,9 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { PUSH_TIMEOUT, pushSchema } from "../../test/push";
-import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards, ownerGuardsInstalled } from "./guards";
-import { migrateItemOwnership, verifyItemOwnership } from "./migrate";
+import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
+import { OWNER_CHECKS, OWNER_MISMATCH, installOwnerGuards } from "./guards";
+import { migrateItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
 const databases = testDatabases();
@@ -331,7 +332,7 @@ test("a guard locks the Item it checks, so an id deleted and reissued to another
   release.resolve(true);
   await reissuing;
   expect(await write).toBe("collection_item_owner");
-  expect(await verifyItemOwnership(sql)).toEqual([]);
+  expect(await ownershipMismatches(sql)).toEqual([]);
 });
 
 test("overlapping installs all succeed", async () => {

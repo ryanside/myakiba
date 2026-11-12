@@ -5,12 +5,8 @@ import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
 import { PUSH_TIMEOUT } from "../../test/push";
 import { STAGING_DATABASE } from "../../test/staging-database";
-import { ownerGuardsInstalled } from "../item-ownership/guards";
-import {
-  isItemOwnershipMigrated,
-  migrateItemOwnership,
-  verifyItemOwnership,
-} from "../item-ownership/migrate";
+import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
+import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
@@ -49,7 +45,7 @@ test(
     expect(pushed.triggers).toEqual(expected.triggers);
     expect(pushed.functions).toEqual(expected.functions);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
 
     const second = await dbPush(url);
     expect(second.exitCode).toBe(0);
@@ -293,7 +289,7 @@ test(
     );
     expect(await whatUsersSee(sql)).toEqual(seen);
     expect(await ownerGuardsInstalled(sql)).toBe(true);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
     expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
     const pushed = await snapshot(sql);
     expect({
@@ -341,7 +337,7 @@ test(
     expect(
       await sql`SELECT id FROM item WHERE id IN ('item-u1-1005', 'item-u3-1006') ORDER BY id`,
     ).toEqual([{ id: "item-u1-1005" }, { id: "item-u3-1006" }]);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
     expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
     const pushed = await snapshot(sql);
     expect({
@@ -442,7 +438,7 @@ test(
     expect(rerun.output).toContain('Item ownership migration: {"status":"already-migrated"}');
     expect(rerun.output).toContain("Item owner guards installed.");
     expect(await whatUsersSee(sql)).toEqual(seen);
-    expect(await verifyItemOwnership(sql)).toEqual([]);
+    expect(await ownershipMismatches(sql)).toEqual([]);
     expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
   },
   PUSH_TIMEOUT * 2,

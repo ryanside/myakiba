@@ -43,7 +43,7 @@ type MigrationOptions = {
   readonly afterStep?: (step: MigrationStep) => void | Promise<void>;
 };
 
-export type OwnershipMiss = { readonly check: string; readonly rows: number };
+type OwnershipMiss = { readonly check: string; readonly rows: number };
 
 type Counts<K extends string> = { [key in K]: number };
 
@@ -432,10 +432,6 @@ export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
       AND attname = 'owner_id' AND attnotnull AND NOT attisdropped
   `;
   return required === OWNER_TABLES.length;
-}
-
-export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {
-  return missesOf(sql, OWNERSHIP_CHECKS);
 }
 
 function describeMisses(misses: readonly OwnershipMiss[]): string {
