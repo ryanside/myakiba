@@ -419,7 +419,7 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 2 });
   });
 
-  test("waits for a transaction writing users before it locks the Item tables, so the two never deadlock", async () => {
+  test("waits for a transaction that locked users first before it locks the Item tables, and migrates on its first attempt", async () => {
     const { sql } = await databases.create(seeded);
     const migration = crossMigration(
       sql,
@@ -429,7 +429,7 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 1 });
   });
 
-  test("drops a retired table that references Orders before it locks the Item tables, so a transaction writing Orders never deadlocks with it", async () => {
+  test("drops a retired table that references Orders before it locks the Item tables, so a transaction that locked Orders first finishes and the run migrates on its first attempt", async () => {
     const { sql } = await databases.create(seeded);
     await sql`CREATE TABLE sync_session (id text PRIMARY KEY, order_id text REFERENCES "order" (id))`;
     const migration = crossMigration(

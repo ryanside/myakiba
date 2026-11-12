@@ -4291,7 +4291,7 @@
       "bug": "The Item ownership migration locked the Item tables before it dropped the retired tables, so dropping sync_session waited for \"order\" while holding them, and a transaction writing Orders that then touched a Collection Item deadlocked with it.",
       "test": "packages/db/src/item-ownership/migrate.test.ts",
       "fixed": [
-        "table locks > drops a retired table that references Orders before it locks the Item tables, so a transaction writing Orders never deadlocks with it"
+        "table locks > drops a retired table that references Orders before it locks the Item tables, so a transaction that locked Orders first finishes and the run migrates on its first attempt"
       ]
     },
     {
