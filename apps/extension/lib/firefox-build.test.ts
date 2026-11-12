@@ -3,6 +3,7 @@ import path from "node:path";
 import { parseJson } from "@myakiba/utils/parse-json";
 import { manifestSchema } from "./manifest-policy";
 import type { Manifest } from "./manifest-policy";
+import { firefoxMatches } from "../test/firefox-match";
 
 const ROOT = path.join(import.meta.dir, "..");
 const ORIGINS = {
@@ -10,22 +11,6 @@ const ORIGINS = {
   WXT_MFC_ORIGIN: "http://127.0.0.1:4601",
   WXT_MFC_STATIC_ORIGIN: "http://127.0.0.1:4602",
 } as const;
-
-/**
- * How Firefox matches a URL: a pattern whose host carries a port matches nothing, so its content script never runs
- * (https://bugzil.la/1362809, https://bugzil.la/1468162).
- */
-function firefoxMatches(pattern: string, url: string): boolean {
-  const parts = /^(?<scheme>[a-z]+):\/\/(?<host>[^/]+)(?<path>\/.*)$/u.exec(pattern)?.groups;
-  if (!parts?.scheme || !parts.host || !parts.path || parts.host.includes(":")) return false;
-  const target = new URL(url);
-  const glob = new RegExp(`^${parts.path.split("*").map(RegExp.escape).join(".*")}$`, "u");
-  return (
-    `${parts.scheme}:` === target.protocol &&
-    parts.host === target.hostname &&
-    glob.test(`${target.pathname}${target.search}`)
-  );
-}
 
 const OUTPUT = path.join(ROOT, ".output/firefox-mv3-e2e");
 
