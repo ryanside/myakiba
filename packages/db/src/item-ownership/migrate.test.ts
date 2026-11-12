@@ -8,8 +8,20 @@ const databases = testDatabases();
 let seeded: string;
 let cleanRun: Awaited<ReturnType<typeof snapshot>>;
 
+// The migration deletes the originals it copies, so each database keeps them aside to compare with.
+async function seedWithOriginals(sql: SQL) {
+  await seedSharedItems(sql);
+  await sql.unsafe(`
+    CREATE SCHEMA original;
+    CREATE TABLE original.item AS TABLE item;
+    CREATE TABLE original.item_release AS TABLE item_release;
+    CREATE TABLE original.entry AS TABLE entry;
+    CREATE TABLE original.entry_to_item AS TABLE entry_to_item;
+  `);
+}
+
 beforeAll(async () => {
-  seeded = await databases.legacyTemplate(seedSharedItems);
+  seeded = await databases.legacyTemplate(seedWithOriginals);
   const { sql } = await databases.create(seeded);
   await migrateItemOwnership(sql);
   cleanRun = await snapshot(sql);
@@ -22,8 +34,7 @@ async function migrated() {
 }
 
 const COPIES = `SELECT c.id, c.owner_id, o.id AS original FROM item c
-  JOIN item o ON o.owner_id IS NULL AND to_jsonb(o) - 'id' - 'owner_id' = to_jsonb(c) - 'id' - 'owner_id'
-  WHERE c.owner_id IS NOT NULL`;
+  JOIN original.item o ON to_jsonb(o) - 'id' = to_jsonb(c) - 'id' - 'owner_id'`;
 
 const PAIRS = `(VALUES ('u1', 'item-a'), ('u1', 'item-b'), ('u2', 'item-a'), ('u2', 'item-e'),
   ('u3', 'item-a')) p (owner_id, item_id)`;
@@ -42,8 +53,27 @@ test("reports one copy per user and referenced Item, with its releases, Item Ent
     foreignReleasesCleared: 1,
     otherUsersListTargets: 0,
     repointed: { collection: 5, wishlistItem: 2, listMemberItem: 2, listMemberOwner: 5 },
+    deleted: { items: 6, entries: 6, links: 6, releases: 7 },
     milliseconds: expect.any(Number),
   });
+});
+
+test("deletes every Item, Item Entry, link and release without an owner, unreferenced Items included", async () => {
+  const { sql } = await migrated();
+  const ownerless = `SELECT 'item' AS kind, id FROM item WHERE owner_id IS NULL
+    UNION ALL SELECT 'entry', id FROM entry WHERE owner_id IS NULL
+    UNION ALL SELECT 'link', entry_id || ' ' || item_id FROM entry_to_item WHERE owner_id IS NULL
+    UNION ALL SELECT 'release', r.id::text FROM item_release r JOIN item i ON i.id = r.item_id
+      WHERE i.owner_id IS NULL`;
+  expect(await rows(sql, ownerless)).toEqual([]);
+  expect(
+    await rows(sql, "SELECT owner_id, count(*)::int AS items FROM item GROUP BY 1 ORDER BY 1"),
+  ).toEqual([
+    { owner_id: "u1", items: 2 },
+    { owner_id: "u2", items: 2 },
+    { owner_id: "u3", items: 1 },
+  ]);
+  expect(await rows(sql, "SELECT id FROM item WHERE id LIKE 'item-%'")).toEqual([]);
 });
 
 test("gives each user one copy of every Item they referenced, equal to it down to the picture", async () => {
@@ -119,7 +149,7 @@ test("moves each Selected Item Release to its copy, and clears and counts a rele
     sql,
     `SELECT c.id, c.release_id IS NULL AS cleared, o.id AS original FROM collection c
     LEFT JOIN item_release r ON r.id = c.release_id AND r.item_id = c.item_id
-    LEFT JOIN (item_release o JOIN item oi ON oi.id = o.item_id AND oi.owner_id IS NULL)
+    LEFT JOIN original.item_release o
       ON to_jsonb(o) - 'id' - 'item_id' = to_jsonb(r) - 'id' - 'item_id'
     ORDER BY c.id`,
   );
@@ -148,10 +178,7 @@ test("counts List Members whose Collection Item or Order belongs to another user
 
 test("gives every copied release a version 8 UUID, which the contracts' z.uuid() accepts", async () => {
   const { sql } = await migrated();
-  const ids = await rows(
-    sql,
-    `SELECT r.id FROM item_release r JOIN item i ON i.id = r.item_id WHERE i.owner_id IS NOT NULL`,
-  );
+  const ids = await rows(sql, "SELECT id FROM item_release");
   expect(ids).toHaveLength(12);
   for (const { id } of ids) {
     expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
@@ -166,21 +193,18 @@ test("copies each user's Item Entries once, with every link and its roles and ma
     sql,
     `SELECT l.owner_id, copy.original AS item, ${link} FROM entry_to_item l
     JOIN (${COPIES}) copy ON copy.id = l.item_id JOIN entry e ON e.id = l.entry_id
-    WHERE l.owner_id IS NOT NULL ORDER BY 1, 2, 3`,
+    ORDER BY 1, 2, 3`,
   );
   const expected = await rows(
     sql,
     `SELECT p.owner_id, p.item_id AS item, ${link} FROM ${PAIRS}
-    JOIN entry_to_item l ON l.item_id = p.item_id JOIN entry e ON e.id = l.entry_id
+    JOIN original.entry_to_item l ON l.item_id = p.item_id JOIN original.entry e ON e.id = l.entry_id
     ORDER BY 1, 2, 3`,
   );
   expect(expected).toHaveLength(11);
   expect(owned).toEqual(expected);
   expect(
-    await rows(
-      sql,
-      "SELECT owner_id, count(*)::int AS entries FROM entry WHERE owner_id IS NOT NULL GROUP BY 1 ORDER BY 1",
-    ),
+    await rows(sql, "SELECT owner_id, count(*)::int AS entries FROM entry GROUP BY 1 ORDER BY 1"),
   ).toEqual([
     { owner_id: "u1", entries: 3 },
     { owner_id: "u2", entries: 4 },
@@ -369,6 +393,7 @@ test("migrates a generated seed of 20 users with 9 references each", async () =>
     pairs: 180,
     copied: { items: 180, links: 720, releases: 360 },
     repointed: { collection: 60, wishlistItem: 60, listMemberItem: 60, listMemberOwner: 60 },
+    deleted: { items: 50, entries: 30, links: 200, releases: 100 },
   });
   expect(await verifyItemOwnership(sql)).toEqual([]);
 });

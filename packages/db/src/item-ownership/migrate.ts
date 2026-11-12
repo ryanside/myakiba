@@ -11,6 +11,8 @@ export const MIGRATION_STEPS = [
   "repoint",
   "contract",
   "verify",
+  "deleteOwnerless",
+  "verifyDeleted",
 ] as const;
 type MigrationStep = (typeof MIGRATION_STEPS)[number];
 
@@ -27,6 +29,7 @@ export type MigrationReport =
       readonly repointed: Counts<
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"
       >;
+      readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
       readonly milliseconds: number;
     };
 
@@ -138,6 +141,21 @@ const COPY_CHECKS = [
   },
 ] as const;
 
+const OWNERLESS_CHECKS = [
+  {
+    check: "an Item has no owner",
+    count: "SELECT count(*) FROM item WHERE owner_id IS NULL",
+  },
+  {
+    check: "an Item Entry has no owner",
+    count: "SELECT count(*) FROM entry WHERE owner_id IS NULL",
+  },
+  {
+    check: "an Item Entry link has no owner",
+    count: "SELECT count(*) FROM entry_to_item WHERE owner_id IS NULL",
+  },
+] as const;
+
 type Run = {
   readonly startCounts: Counts<(typeof REFERENCE_TABLES)[number]>;
   pairs: number;
@@ -145,6 +163,7 @@ type Run = {
   foreignReleasesCleared: number;
   otherUsersListTargets: number;
   readonly repointed: Counts<"collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner">;
+  readonly deleted: Counts<"items" | "entries" | "links" | "releases">;
 };
 
 const STEPS = {
@@ -302,25 +321,32 @@ const STEPS = {
   },
 
   async verify(tx, run) {
-    const misses = [...(await verifyItemOwnership(tx)), ...(await missesOf(tx, COPY_CHECKS))];
-    for (const table of REFERENCE_TABLES) {
-      const now = await count(tx, `SELECT count(*) FROM ${table}`);
-      if (now !== run.startCounts[table]) {
-        misses.push({
-          check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
-          rows: Math.abs(now - run.startCounts[table]),
-        });
-      }
-    }
-    if (misses.length > 0)
-      throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
+    await verifyRun(tx, run, COPY_CHECKS);
+  },
+
+  // Every reference now reaches a copy, so the originals are what no user can reach.
+  async deleteOwnerless(tx, run) {
+    const links = await tx`DELETE FROM entry_to_item WHERE owner_id IS NULL`;
+    const releases = await tx`
+      DELETE FROM item_release r USING item i WHERE i.id = r.item_id AND i.owner_id IS NULL
+    `;
+    const items = await tx`DELETE FROM item WHERE owner_id IS NULL`;
+    const entries = await tx`DELETE FROM entry WHERE owner_id IS NULL`;
+    run.deleted.links = links.count;
+    run.deleted.releases = releases.count;
+    run.deleted.items = items.count;
+    run.deleted.entries = entries.count;
+  },
+
+  async verifyDeleted(tx, run) {
+    await verifyRun(tx, run, OWNERLESS_CHECKS);
   },
 } satisfies Record<MigrationStep, (tx: SQL, run: Run) => Promise<void>>;
 
 /**
  * Gives every user their own copy of each pre-ownership Item they reference, with its Item
- * Releases, Item Entries and links, re-points their references to it, and installs the owner guards.
- * One transaction: a crash or a failed check leaves the database as it was. A fresh database
+ * Releases, Item Entries and links, re-points their references to it, deletes every row without an
+ * owner, and installs the owner guards. One transaction: a crash or a failed check leaves the database as it was. A fresh database
  * and a migrated one are left alone.
  */
 export async function migrateItemOwnership(
@@ -349,6 +375,7 @@ export async function migrateItemOwnership(
         foreignReleasesCleared: run.foreignReleasesCleared,
         otherUsersListTargets: run.otherUsersListTargets,
         repointed: run.repointed,
+        deleted: run.deleted,
         milliseconds: Math.round(performance.now() - started),
       };
     } catch (error) {
@@ -367,7 +394,7 @@ export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {
   return missesOf(sql, OWNERSHIP_CHECKS);
 }
 
-export function describeMisses(misses: readonly OwnershipMiss[]): string {
+function describeMisses(misses: readonly OwnershipMiss[]): string {
   return misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
 }
 
@@ -387,12 +414,33 @@ async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
     foreignReleasesCleared: 0,
     otherUsersListTargets: 0,
     repointed: { collection: 0, wishlistItem: 0, listMemberItem: 0, listMemberOwner: 0 },
+    deleted: { items: 0, entries: 0, links: 0, releases: 0 },
   };
   for (const step of MIGRATION_STEPS) {
     await STEPS[step](tx, run);
     await options.afterStep?.(step);
   }
   return run;
+}
+
+/** Fails the run unless every reference still reaches its user's own Item and these checks find nothing. */
+async function verifyRun(
+  tx: SQL,
+  run: Run,
+  checks: readonly { readonly check: string; readonly count: string }[],
+): Promise<void> {
+  const misses = [...(await verifyItemOwnership(tx)), ...(await missesOf(tx, checks))];
+  for (const table of REFERENCE_TABLES) {
+    const now = await count(tx, `SELECT count(*) FROM ${table}`);
+    if (now !== run.startCounts[table]) {
+      misses.push({
+        check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
+        rows: Math.abs(now - run.startCounts[table]),
+      });
+    }
+  }
+  if (misses.length > 0)
+    throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
 }
 
 // A hash of the owner and the original, so a run after a crash writes the ids a clean run would.

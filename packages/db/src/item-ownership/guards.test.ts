@@ -177,9 +177,6 @@ describe("each guard rejects a write across users and lets the owner's own write
     expect(await outcome(sql`UPDATE item SET owner_id = 'u2' WHERE id = 'item-u1'`)).toBe(
       "item_owner_fixed",
     );
-    expect(await outcome(sql`UPDATE item SET owner_id = 'u1' WHERE id = 'item-a'`)).toBe(
-      "item_owner_fixed",
-    );
     expect(await outcome(sql`UPDATE entry SET owner_id = NULL WHERE id = 'entry-u1'`)).toBe(
       "entry_owner_fixed",
     );
@@ -196,21 +193,6 @@ describe("each guard rejects a write across users and lets the owner's own write
       "written",
     );
   });
-});
-
-test("rows without an owner stay writable, as they were before the migration", async () => {
-  const { sql } = await migrated();
-  expect(await outcome(sql`UPDATE item SET title = 'Retired' WHERE owner_id IS NULL`)).toBe(
-    "written",
-  );
-  expect(
-    await outcome(sql`UPDATE entry_to_item SET roles = '{Sculptor}' WHERE owner_id IS NULL`),
-  ).toBe("written");
-  expect(
-    await outcome(sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-6', 'item-f')`),
-  ).toBe("written");
-  expect(await outcome(sql`DELETE FROM item WHERE owner_id IS NULL`)).toBe("written");
-  expect(await verifyItemOwnership(sql)).toEqual([]);
 });
 
 test("a delete that cascades through a Selected Item Release passes every guard", async () => {

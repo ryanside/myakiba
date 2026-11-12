@@ -272,7 +272,7 @@ test(
       expect(first.output).toContain(`Dropped retired table ${dropped}.`);
     }
     expect(migrationReport(first.output)).toBe(
-      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"milliseconds":0}',
+      '{"status":"migrated","attempts":1,"pairs":6,"copied":{"items":6,"entries":7,"links":9,"releases":8},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":4,"wishlistItem":2,"listMemberItem":2,"listMemberOwner":6},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"milliseconds":0}',
     );
     expect(first.output).toContain("Item owner guards installed.");
 
