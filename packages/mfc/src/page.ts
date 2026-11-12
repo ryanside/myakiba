@@ -1,0 +1,178 @@
+import { Parser } from "htmlparser2";
+import { MAX_MFC_ITEM_ID } from "@myakiba/contracts/shared/constants";
+import { isSignInLink } from "./guest";
+import { MFC_PAGE_READS as READS } from "./reads";
+
+export type MfcItemId = number & { readonly __brand: "MfcItemId" };
+
+export function mfcItemId(value: number): MfcItemId | null {
+  return Number.isInteger(value) && value >= 1 && value <= MAX_MFC_ITEM_ID
+    ? (value as MfcItemId)
+    : null;
+}
+
+export type MfcEnvelope =
+  | {
+      readonly kind: "item";
+      readonly mfcItemId: MfcItemId;
+      readonly signedIn: boolean;
+      readonly ogImage: MfcOgImage;
+    }
+  | { readonly kind: "not_found"; readonly signedIn: boolean }
+  | { readonly kind: "challenge" }
+  | { readonly kind: "unexpected"; readonly status: number };
+
+export type MfcOgImage =
+  | { readonly kind: "picture"; readonly picture: MfcPicture }
+  | { readonly kind: "rejected"; readonly raw: string }
+  | { readonly kind: "sfw_hidden" }
+  | { readonly kind: "absent" };
+
+export type MfcPicture = {
+  readonly access: "gated" | "public";
+  readonly url: string;
+};
+
+/** MFC's canonical origins, which its pages link to whatever origin served them. */
+export const MFC_ORIGIN = "https://myfigurecollection.net";
+export const MFC_STATIC_ORIGIN = "https://static.myfigurecollection.net";
+
+/** Cloudflare marks the challenge it serves with a `cf-mitigated: challenge` header. */
+export function isCloudflareChallenge(cfMitigated: string | null): boolean {
+  return cfMitigated?.trim().toLowerCase() === "challenge";
+}
+
+/** What MFC shows in place of an NSFW item's picture while the viewer's SFW mode is on. */
+const SFW_PLACEHOLDER = `${MFC_STATIC_ORIGIN}/ressources/icons/nsfw.png`;
+
+/** Only pictures under this path on the static origin are item pictures. */
+export function isItemPicturePath(pathname: string): boolean {
+  return pathname.startsWith("/upload/items/");
+}
+
+const CHALLENGE_TITLE = /^\s*Just a moment/i;
+const CANONICAL_ITEM_URL = /^https:\/\/myfigurecollection\.net\/item\/(\d+)$/;
+
+export function readMfcEnvelope(response: {
+  readonly status: number;
+  readonly cfMitigated: string | null;
+  readonly html: string;
+}): MfcEnvelope {
+  const { status, cfMitigated, html } = response;
+  const page = scanPage(html);
+  if (isCloudflareChallenge(cfMitigated) || CHALLENGE_TITLE.test(page.title)) {
+    return { kind: "challenge" };
+  }
+  const { signedIn } = page;
+  if (status === 404) return { kind: "not_found", signedIn };
+  if (status !== 200) return { kind: "unexpected", status };
+  const match = CANONICAL_ITEM_URL.exec(page.canonicalHref ?? "");
+  const id = match?.[1] ? mfcItemId(Number(match[1])) : null;
+  if (id !== null) {
+    return { kind: "item", mfcItemId: id, signedIn, ogImage: readOgImage(page.ogImage, id) };
+  }
+  if (page.notFoundSentence) return { kind: "not_found", signedIn };
+  return { kind: "unexpected", status };
+}
+
+type PageMarkers = {
+  canonicalHref: string | null;
+  ogImage: string | null;
+  title: string;
+  signedIn: boolean;
+  notFoundSentence: boolean;
+};
+
+const ASCII_WHITESPACE = /[\t\n\f\r ]+/;
+
+function scanPage(html: string): PageMarkers {
+  const page: PageMarkers = {
+    canonicalHref: null,
+    ogImage: null,
+    title: "",
+    signedIn: false,
+    notFoundSentence: false,
+  };
+  let hiddenDepth = 0;
+  let titleState: "before" | "inside" | "after" = "before";
+  // A signed-in menu reaches the parser scrubbed empty; a guest menu's first link is its sign-in handle.
+  let userMenuOpened = false;
+  const parser = new Parser({
+    onopentag(name, attributes) {
+      if (READS.hiddenElements.has(name)) hiddenDepth += 1;
+      if (hiddenDepth > 0) return;
+      if (name === "title" && titleState === "before") titleState = "inside";
+      if (name === "link" && attributes.rel === "canonical") {
+        page.canonicalHref ??= attributes.href ?? "";
+      }
+      if (name === "meta" && attributes.property === "og:image") {
+        page.ogImage ??= attributes.content ?? "";
+      }
+      if (attributes.class?.split(ASCII_WHITESPACE).includes(READS.userMenuClass)) {
+        page.signedIn = true;
+        userMenuOpened = true;
+      } else if (name === "a" && userMenuOpened) {
+        userMenuOpened = false;
+        const guestHandle =
+          attributes.class?.split(ASCII_WHITESPACE).includes(READS.handleClass) &&
+          isSignInLink(attributes.href ?? "");
+        if (guestHandle) page.signedIn = false;
+      }
+    },
+    onclosetag(name) {
+      if (READS.hiddenElements.has(name)) hiddenDepth -= 1;
+      else if (name === "title" && titleState === "inside") titleState = "after";
+    },
+    ontext(text) {
+      if (hiddenDepth > 0) return;
+      if (titleState === "inside") page.title += text;
+      if (text.includes(READS.notFoundSentence)) page.notFoundSentence = true;
+    },
+  });
+  parser.end(html);
+  return page;
+}
+
+function readOgImage(raw: string | null, id: MfcItemId): MfcOgImage {
+  if (raw === null) return { kind: "absent" };
+  if (raw === SFW_PLACEHOLDER) return { kind: "sfw_hidden" };
+  const picture = allowPicture(raw, id);
+  return picture ? { kind: "picture", picture } : { kind: "rejected", raw };
+}
+
+function allowPicture(raw: string, id: MfcItemId): MfcPicture | null {
+  const url = URL.parse(raw);
+  if (!url || url.protocol !== "https:" || url.username || url.password || url.port) return null;
+  if (url.origin === MFC_ORIGIN && url.pathname === "/") {
+    const size = gatedPictureSize(url.searchParams, id);
+    return size === null
+      ? null
+      : {
+          access: "gated",
+          url: `${MFC_ORIGIN}/?_tb=commit&commit=nsp&objectType=item&objectId=${id}&size=${size}`,
+        };
+  }
+  if (url.origin === MFC_STATIC_ORIGIN && isItemPicturePath(url.pathname)) {
+    return { access: "public", url: url.origin + url.pathname };
+  }
+  return null;
+}
+
+const GATED_PARAMETERS = new Set(["_tb", "commit", "objectType", "objectId", "size"]);
+const PICTURE_SIZE = /^(?:0|[1-9]\d?)$/;
+
+function gatedPictureSize(query: URLSearchParams, id: MfcItemId): string | null {
+  const values = new Map<string, string>();
+  for (const [name, value] of query) {
+    if (!GATED_PARAMETERS.has(name) || values.has(name)) return null;
+    values.set(name, value);
+  }
+  const size = values.get("size") ?? "";
+  return values.get("_tb") === "commit" &&
+    values.get("commit") === "nsp" &&
+    values.get("objectType") === "item" &&
+    values.get("objectId") === String(id) &&
+    PICTURE_SIZE.test(size)
+    ? size
+    : null;
+}

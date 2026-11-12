@@ -8,10 +8,10 @@ import {
   Loading03Icon,
   MoreHorizontalIcon,
   MoveIcon,
-  PackageIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons";
-import { Checkbox } from "@/components/ui/checkbox";
+import { ItemTitleCell } from "@/components/cells/item-title-cell";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import { EmptyValue } from "@/components/cells/empty-value";
@@ -24,13 +24,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
-import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "@/components/ui/toast";
+import { writeClipboard } from "@/lib/clipboard";
 import CollectionItemForm from "./collection-item-form";
 import { withCollectionPending } from "./collection-pending-context";
 import { editableCell } from "@/components/data-table/row-pending";
@@ -46,23 +46,24 @@ import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
 import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
+import type { Saving } from "@/data/client";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { itemDestination } from "@/lib/item-destination";
 
 interface CollectionColumnsParams {
-  onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   onAddCollectionItemsToOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   onAddCollectionItemsToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -146,9 +147,8 @@ function CollectionActionsCell({
                       return;
                     }
 
-                    try {
-                      await navigator.clipboard.writeText(String(item.itemExternalId));
-                    } catch {
+                    const copied = await writeClipboard(String(item.itemExternalId));
+                    if (copied.isErr()) {
                       toast.add({
                         type: "error",
                         title: "Could not copy MFC item ID to clipboard",
@@ -213,7 +213,7 @@ function CollectionActionsCell({
         targets={[{ type: "collectionItem", id: item.id }]}
         targetTitle={item.itemTitle}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete item?"
@@ -241,29 +241,21 @@ export function createCollectionColumns({
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <SelectionCheckbox
+          label="Select all"
           checked={table.getIsAllPageRowsSelected()}
           indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-          className="align-[inherit] mb-0.5 rounded-xs"
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
         />
       ),
       cell: ({ row }) => (
-        <>
-          <div
-            className={cn(
-              "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block",
-            )}
-          />
-          <Checkbox
+        <SelectionCell selected={row.getIsSelected()}>
+          <SelectionCheckbox
+            label="Select row"
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="align-[inherit] mb-0.5 rounded-xs"
+            onCheckedChange={(value) => row.toggleSelected(value)}
           />
-        </>
+        </SelectionCell>
       ),
       size: 32,
       enableSorting: false,
@@ -282,29 +274,14 @@ export function createCollectionColumns({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex items-center gap-3 pe-4">
-            <Link
-              {...itemDestination(item.itemId, item.itemExternalId)}
-              aria-label={`View ${item.itemTitle}`}
-            >
-              <ImageThumbnail
-                images={item.itemImage ? [item.itemImage] : []}
-                title={item.itemTitle}
-                fallbackIcon={<HugeiconsIcon icon={PackageIcon} className="size-4" />}
-                className="size-8 shrink-0 rounded-md"
-              />
-            </Link>
-            <div className="min-w-0 space-y-px">
-              <Link
-                {...itemDestination(item.itemId, item.itemExternalId)}
-                className="block truncate font-medium text-foreground"
-                title={item.itemTitle}
-              >
-                {item.itemTitle}
-              </Link>
-              <CategoryLabel category={item.itemCategory} />
-            </div>
-          </div>
+          <ItemTitleCell
+            itemId={item.itemId}
+            title={item.itemTitle}
+            externalId={item.itemExternalId}
+            image={item.itemImage}
+          >
+            <CategoryLabel category={item.itemCategory} />
+          </ItemTitleCell>
         );
       },
       enableSorting: true,

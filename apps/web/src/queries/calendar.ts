@@ -1,4 +1,6 @@
-import { requireData } from "@/lib/api-response";
+import type { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 import type { CalendarQuery } from "@myakiba/contracts/calendar/schema";
 
@@ -12,6 +14,9 @@ export type CalendarOrdersResponse = Extract<CalendarResponse, { view: "orders" 
 export type CalendarItem = CalendarItemsResponse["items"][number];
 export type CalendarOrder = CalendarOrdersResponse["orders"][number];
 
-export async function getCalendar(query: CalendarQuery): Promise<CalendarResponse> {
-  return requireData(app.api.calendar.get({ query }), "Failed to get calendar");
+export function getCalendar(query: CalendarQuery): Promise<Result<CalendarResponse, ApiFailure>> {
+  return call(app.api.calendar.get({ query }), {
+    fallback: "Failed to get calendar",
+    empty: "Failed to get calendar",
+  });
 }

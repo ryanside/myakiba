@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
@@ -40,8 +41,8 @@ function orderItem(id: string): OrderItem {
 
 const columns = createOrderItemSubColumns({
   orderId: "order-1",
-  onEditItem: async () => {},
-  onDeleteItem: async () => {},
+  onEditItem: async () => Result.ok(),
+  onDeleteItem: async () => Result.ok(),
   currency: "USD",
   locale: "en-US",
   dateFormat: "MM/DD/YYYY",

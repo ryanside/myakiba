@@ -8,7 +8,7 @@ function resultIds(query: string) {
 test("a search matches titles, keywords and descriptions, whatever their case", () => {
   expect(resultIds("Currency")).toContain("currency");
   expect(resultIds("yen")).toEqual(["currency"]);
-  expect(resultIds("json")).toEqual(["export", "import"]);
+  expect(resultIds("pixel")).toEqual(["page-backgrounds"]);
 });
 
 test("every word of a search must match the same setting", () => {
@@ -17,9 +17,9 @@ test("every word of a search must match the same setting", () => {
 });
 
 test("results group by section in nav order, and a title match outranks a description match", () => {
-  const groups = searchSettings("account");
-  expect(groups.map((group) => group.section)).toEqual(["account", "data-transfer"]);
-  expect(groups[0]?.settings[0]).toBe("delete-account");
+  const groups = searchSettings("device");
+  expect(groups.map((group) => group.section)).toEqual(["appearance", "account"]);
+  expect(groups[1]?.settings).toEqual(["devices", "sign-out-others"]);
 });
 
 test("a blank search finds nothing", () => {

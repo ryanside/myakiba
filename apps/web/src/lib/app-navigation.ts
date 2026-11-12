@@ -4,7 +4,6 @@ import {
   ChartColumnIcon,
   CreditCardIcon,
   DatabaseIcon,
-  Clock02Icon,
   Home01Icon,
   LibraryIcon,
   Folder01Icon,
@@ -23,7 +22,6 @@ export type AppNavigationTarget =
   | "/lists"
   | "/items"
   | "/calendar"
-  | "/sync"
   | "/settings";
 
 export type AppNavigationItem = {
@@ -82,12 +80,6 @@ const APP_PRIMARY_NAVIGATION_ITEMS = [
 
 export const APP_COMMAND_NAVIGATION_ITEMS = [
   ...APP_PRIMARY_NAVIGATION_ITEMS,
-  {
-    title: "Import history",
-    to: "/sync",
-    icon: Clock02Icon,
-    keywords: ["history", "sessions", "import", "csv", "mfc"],
-  },
   {
     title: "Settings",
     to: "/settings",

@@ -3,7 +3,9 @@
 /// <reference types="jose" />
 import "dotenv/config";
 import { betterAuth } from "better-auth";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { getSessionCookie } from "better-auth/cookies";
 import { db } from "@myakiba/db/client";
 import * as schema from "@myakiba/db/schema/auth";
 import { admin, captcha, username, openAPI } from "better-auth/plugins";
@@ -14,21 +16,50 @@ import { redis } from "@myakiba/redis/client";
 import { incrementWithTtl } from "@myakiba/redis/counter";
 import { env } from "@myakiba/env/server";
 import { dash } from "@better-auth/infra";
+import { z } from "zod";
+import { CURRENCIES, DATE_FORMATS } from "@myakiba/contracts/shared/constants";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
+
+import { accessSessionStore } from "./session-store";
+import { sendAuthEmail } from "./send-auth-email";
 
 const resend = new Resend(env.RESEND_API_KEY);
+
+/** Better Auth leaves a user's name and image unbounded, and every session read loads them. */
+const profileTextSchema = z.looseObject({
+  name: z
+    .string()
+    .max(WRITE_LIMITS.name, `Name is longer than ${WRITE_LIMITS.name} characters`)
+    .optional(),
+  image: z
+    .string()
+    .max(WRITE_LIMITS.imageUrl, `Image URL is longer than ${WRITE_LIMITS.imageUrl} characters`)
+    .nullish(),
+});
+
+const capProfileText = createAuthMiddleware(async (ctx) => {
+  if (ctx.path !== "/sign-up/email" && ctx.path !== "/update-user") return;
+  const parsed = profileTextSchema.safeParse(ctx.body ?? {});
+  if (parsed.success) return;
+  throw new APIError("BAD_REQUEST", {
+    code: "VALIDATION_ERROR",
+    message: parsed.error.issues[0]?.message ?? "Invalid profile",
+  });
+});
 
 export const auth = betterAuth({
   appName: "myakiba",
   secondaryStorage: {
     get: async (key) => {
-      return await redis.get(key);
+      return await accessSessionStore("get", () => redis.get(key));
     },
     set: async (key, value, ttl) => {
-      if (ttl) await redis.set(key, value, "EX", ttl);
-      else await redis.set(key, value);
+      await accessSessionStore("set", () =>
+        ttl ? redis.set(key, value, "EX", ttl) : redis.set(key, value),
+      );
     },
     delete: async (key) => {
-      await redis.del(key);
+      await accessSessionStore("delete", () => redis.del(key));
     },
     getAndDelete: async (key) => {
       return await redis.getdel(key);
@@ -40,6 +71,12 @@ export const auth = betterAuth({
   advanced: {
     database: {
       joins: true,
+    },
+    // Cloudflare overwrites cf-connecting-ip, so long as the origin is reachable only through
+    // Cloudflare; a client sets X-Forwarded-For to anything. Without the header, Better Auth keys
+    // dev and tests on 127.0.0.1 and production on one shared bucket.
+    ipAddress: {
+      ipAddressHeaders: ["cf-connecting-ip"],
     },
   },
   database: drizzleAdapter(db, {
@@ -64,6 +101,9 @@ export const auth = betterAuth({
       },
     },
   },
+  hooks: {
+    before: capProfileText,
+  },
   trustedOrigins: env.CORS_ORIGIN.split(",").map((origin) => origin.trim()) || [],
   rateLimit: {
     enabled: true,
@@ -76,8 +116,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "reset", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Reset your password",
@@ -90,7 +131,7 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     sendOnSignIn: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await resend.emails.send({
+      await sendAuthEmail(resend, "verification", {
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
         subject: "Verify your email address",
@@ -108,10 +149,19 @@ export const auth = betterAuth({
     captcha({
       provider: "cloudflare-turnstile",
       secretKey: env.TURNSTILE_SECRET_KEY,
+      // Every endpoint that checks a password or sends mail without a session or a mailed token.
+      endpoints: [
+        "/sign-up/email",
+        "/sign-in/email",
+        "/sign-in/username",
+        "/request-password-reset",
+        "/send-verification-email",
+      ],
     }),
     username(),
     emailHarmony({}),
-    openAPI(),
+    // The reference page loads an unpinned script from a CDN, so it stays off the production origin.
+    ...(env.NODE_ENV === "production" ? [] : [openAPI()]),
     admin(),
     ...(env.BETTER_AUTH_API_KEY
       ? [
@@ -150,15 +200,20 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         defaultValue: "USD",
+        validator: { input: z.enum(CURRENCIES) },
       },
       dateFormat: {
         type: "string",
         required: true,
         defaultValue: "MM/DD/YYYY",
+        validator: { input: z.enum(DATE_FORMATS) },
       },
     },
   },
 });
+
+/** Whether a request carries a session cookie at all, valid or not. */
+export const hasSessionCookie = (headers: Headers): boolean => getSessionCookie(headers) !== null;
 
 type OpenAPISchema = Awaited<ReturnType<typeof auth.api.generateOpenAPISchema>>;
 type OpenAPIOperation = { tags?: string[] };
@@ -171,7 +226,12 @@ type OpenAPIComponents = NonNullable<OpenAPISchema["components"]>;
 let schemaPromise: ReturnType<typeof auth.api.generateOpenAPISchema> | undefined;
 const getSchema = async (): Promise<OpenAPISchema> => {
   schemaPromise ??= auth.api.generateOpenAPISchema();
-  return await schemaPromise;
+  try {
+    return await schemaPromise;
+  } catch (error) {
+    schemaPromise = undefined;
+    throw error;
+  }
 };
 
 export const OpenAPI = {
@@ -193,8 +253,8 @@ export const OpenAPI = {
 
     return reference;
   },
-  components: (async (): Promise<OpenAPIComponents> => {
+  components: async (): Promise<OpenAPIComponents> => {
     const { components } = await getSchema();
     return components as OpenAPIComponents;
-  })(),
+  },
 } as const;

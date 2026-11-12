@@ -7,6 +7,9 @@
     "./client": {
       "default": "./src/client.ts"
     },
+    "./owner-guards": {
+      "default": "./src/item-ownership/guards.ts"
+    },
     "./order-release-date": {
       "default": "./src/order-release-date.ts"
     },
@@ -19,6 +22,8 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
+    "test": "bun test --isolate",
+    "pictures:reconcile": "bun src/scripts/reconcile-pictures.ts",
     "db:push": "bun src/scripts/push-schema.ts",
     "db:push:interactive": "drizzle-kit push --verbose",
     "db:studio": "drizzle-kit studio",

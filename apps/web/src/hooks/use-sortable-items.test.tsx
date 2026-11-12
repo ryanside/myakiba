@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, mock, spyOn, test } from "bun:test";
+import { Result } from "better-result";
+import type { Saving } from "@/data/client";
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
@@ -41,7 +43,7 @@ function renderSortable() {
       hasNextPage: false,
       isFetchingNextPage: false,
       onLoadMore: async () => ({ isFetchNextPageError: false }),
-      onMove: async () => {},
+      onMove: async () => Result.ok(),
       onClearSelection: () => {},
     }),
   );
@@ -143,7 +145,7 @@ function stubGridLayout(): void {
 
 // List detail's grid, whose drag overlay is a small label like the Lists and Wishlist grids'.
 async function renderGrid(
-  onMove: (intent: PositionOrderInput) => Promise<void>,
+  onMove: (intent: PositionOrderInput) => Saving,
   members = MEMBERS,
 ): Promise<void> {
   const root = createRootRoute({ component: Outlet });
@@ -162,7 +164,7 @@ async function renderGrid(
         isFetchingNextPage={false}
         selectedIds={new Set()}
         onLoadMore={async () => ({ isFetchNextPageError: false })}
-        onRemove={async () => {}}
+        onRemove={async () => Result.ok()}
         onMove={onMove}
         onClearSelection={() => {}}
         onToggleSelection={() => {}}
@@ -182,7 +184,7 @@ async function moveWithKeyboard(
   arrow: string,
   members = MEMBERS,
 ): Promise<readonly unknown[]> {
-  const onMove = mock(async (_intent: PositionOrderInput) => {});
+  const onMove = mock(async (_intent: PositionOrderInput) => Result.ok());
   await renderGrid(onMove, members);
   const handle = screen.getByRole("button", {
     name: `${REORDER}${members.find((member) => member.id === id)?.title}`,

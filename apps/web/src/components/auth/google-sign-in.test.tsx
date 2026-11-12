@@ -10,8 +10,9 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/toast";
 import type { RouterAppContext } from "@/routes/__root";
+import { PassingTurnstile } from "../../../test/turnstile";
 
-await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: () => null }));
+await mock.module("@marsidev/react-turnstile", () => ({ Turnstile: PassingTurnstile }));
 
 const consentURL = "https://accounts.google.com/o/oauth2/auth?client_id=myakiba";
 const loginURL = "http://localhost:3001/login";

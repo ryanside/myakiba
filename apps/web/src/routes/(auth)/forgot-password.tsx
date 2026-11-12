@@ -1,7 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { authClient } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
@@ -14,6 +14,7 @@ import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { useState } from "react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { getAuthRedirectUrl } from "@/lib/auth-redirect-url";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 export const Route = createFileRoute("/(auth)/forgot-password")({
   component: RouteComponent,
@@ -42,31 +43,25 @@ function RouteComponent() {
   });
 
   const handleForgotPassword = async (email: string, captchaToken: string) => {
-    await run(
+    const requested = await run(
       () =>
-        authClient.requestPasswordReset(
-          {
-            email,
-            redirectTo: getAuthRedirectUrl("/reset-password"),
-          },
-          {
-            headers: {
-              "x-captcha-response": captchaToken,
-            },
-            onSuccess: () => {
-              setSentEmail(email);
-              setEmailSent(true);
-            },
-            onError: (error) => {
-              toast.add({
-                type: "error",
-                title: error.error.message || "Failed to send password reset email",
-              });
-            },
-          },
+        decodeAuth(() =>
+          authClient.requestPasswordReset(
+            { email, redirectTo: getAuthRedirectUrl("/reset-password") },
+            { headers: { "x-captcha-response": captchaToken } },
+          ),
         ),
-      (result) => !result.error,
+      (result) => result.isOk(),
     );
+    if (requested.isErr()) {
+      toast.add({
+        type: "error",
+        title: requested.error.message || "Failed to send password reset email",
+      });
+      return;
+    }
+    setSentEmail(email);
+    setEmailSent(true);
   };
 
   if (emailSent) {
@@ -119,14 +114,7 @@ function RouteComponent() {
             </p>
           </div>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-          className="grid gap-4"
-        >
+        <form onSubmit={formSubmitHandler(form)} className="grid gap-4">
           <form.Field name="email">
             {(field) => (
               <div className="space-y-2">

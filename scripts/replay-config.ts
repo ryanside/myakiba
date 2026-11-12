@@ -4,8 +4,13 @@ type TestReplayEntry = {
   bug: string;
   test: string;
   fixed: string[];
+  /** The revision to take the test file and its harness from, on both sides of the fix. */
   testAt?: string;
   atHead?: string[];
+  /** Current coverage when the historical harness uses names or files that HEAD renamed. */
+  head?: { test: string; fixed: string[]; reason: string }[];
+  /** Why historical coverage was partially retired or its harness pinned. */
+  reason?: string;
 };
 
 /** `base` is the revision the test fails at: the given one for WORKTREE, else the fix's parent. */
@@ -35,6 +40,8 @@ export type TypesReplay = {
   package: string;
   config: string[];
   errors: string[];
+  /** The revision to take `config` from, when HEAD's copy no longer compiles against the fix. */
+  configAt?: string;
 };
 
 /** A type test whose `@ts-expect-error` lines must each fail with the listed error. */

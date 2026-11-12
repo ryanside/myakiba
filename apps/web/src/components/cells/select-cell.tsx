@@ -11,31 +11,34 @@ import { cn } from "@/lib/utils";
 import { QUIET_SELECT_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { useMemo } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 
-type ColoredOption = {
-  readonly value: string;
+type ColoredOption<Value extends string> = {
+  readonly value: Value;
   readonly label: string;
   readonly color: string;
 };
 
-interface SelectCellProps {
+interface SelectCellProps<Value extends string> {
+  id?: string;
   /** What the cell holds, such as "Status", for the combobox's accessible name. */
   label: string;
-  value: string;
-  options: readonly string[];
-  onSubmit: (value: string) => Promise<void>;
+  value: Value;
+  options: readonly Value[];
+  onSubmit: (value: Value) => Saving;
   disabled?: boolean;
   colorMap?: Readonly<Record<string, string>>;
 }
 
-export function SelectCell({
+export function SelectCell<Value extends string>({
+  id,
   label,
   value,
   options,
   onSubmit,
   disabled = false,
   colorMap,
-}: SelectCellProps) {
+}: SelectCellProps<Value>) {
   const [displayValue, submit] = usePendingValue(value, onSubmit);
 
   const coloredItems = useMemo(() => {
@@ -54,15 +57,15 @@ export function SelectCell({
       <Field>
         <Select
           value={currentItem}
-          onValueChange={(item: ColoredOption | null) => {
+          onValueChange={(item: ColoredOption<Value> | null) => {
             if (item) submit(item.value);
           }}
           disabled={disabled}
           items={coloredItems}
         >
-          <SelectTrigger className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
+          <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
             <SelectValue>
-              {(item: ColoredOption) => (
+              {(item: ColoredOption<Value>) => (
                 <span className="flex items-center gap-2">
                   <span className={cn("size-1.5 rounded-full", item?.color)} />
                   <span>{item?.label}</span>
@@ -91,12 +94,12 @@ export function SelectCell({
     <Field>
       <Select
         value={displayValue}
-        onValueChange={(val: string | null) => {
+        onValueChange={(val: Value | null) => {
           if (val) submit(val);
         }}
         disabled={disabled}
       >
-        <SelectTrigger className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
+        <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

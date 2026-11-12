@@ -3,6 +3,9 @@ import { act, cleanup, configure, render, screen, waitFor } from "@testing-libra
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
+import type { Saving } from "@/data/client";
+import { ApiServerError } from "@/lib/errors/api-server-error";
+import { Result } from "better-result";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -45,15 +48,24 @@ const listRow = (order: ServerOrder) => ({
 
 const held =
   (name: string, apply: (...args: never[]) => void) =>
-  (...args: never[]): Promise<void> =>
-    new Promise((resolve, reject) => {
+  (...args: never[]) =>
+    new Promise((resolve) => {
       server.writes.push({
         name,
         finish: () => {
           apply(...args);
-          resolve();
+          resolve(Result.ok(null));
         },
-        fail: () => reject(new Error(`${name} rejected by server`)),
+        fail: () =>
+          resolve(
+            Result.err(
+              new ApiServerError({
+                status: 500,
+                body: `${name} rejected by server`,
+                message: `${name} rejected by server`,
+              }),
+            ),
+          ),
       });
     });
 
@@ -74,18 +86,13 @@ await mock.module("@/queries/orders", () => ({
     await server.heldReads;
     const matching = server.orders.filter((order) => order.title.includes(filters.search ?? ""));
     const totals = { totalCount: matching.length, totalSpent: 0, activeOrders: 0, unpaidCosts: 0 };
-    // The 52f1b8fa replay runs this file from before S9, when the list was an array of rows that
-    // each carried the totals, so the page is also that array.
-    return Object.assign(
-      matching.map((order) => ({ ...listRow(order), ...totals })),
-      { items: matching.map(listRow), ...totals },
-    );
+    return Result.ok({ items: matching.map(listRow), ...totals });
   },
   getOrder: async () => {
     throw new Error("no order page in these tests");
   },
-  getOrderItems: async () => ({ items: [], totalCount: 0 }),
-  getOrderItemReleases: async () => [],
+  getOrderItems: async () => Result.ok({ items: [], totalCount: 0 }),
+  getOrderItemReleases: async () => Result.ok([]),
   editOrder: held("edit order", editServerOrder),
   deleteOrders: held("delete orders", removeOrders),
   mergeOrders: held("merge", removeOrders),
@@ -166,12 +173,9 @@ function renderOrdersPage(initialFilters: OrderFilters) {
         for (const listener of url.listeners) listener();
       });
     },
-    act: (run: (current: Actions) => Promise<void>) => {
+    act: (run: (current: Actions) => Saving) => {
       if (!actions) throw new Error("the orders page has not rendered");
-      return run(actions).then(
-        () => "resolved",
-        () => "rejected",
-      );
+      return run(actions).then((saved) => saved.status);
     },
   };
 }
@@ -222,7 +226,7 @@ describe("an Order write on the orders page", () => {
     );
 
     await answer(0, "finish");
-    expect(await deleting).toBe("resolved");
+    expect(await deleting).toBe("ok");
     await waitFor(() => expect(server.listReads).toBe(readsBeforeWrite + 1));
     expect({ shown: shown(), toasts: toastTitles() }).toEqual({
       shown: { count: "2", orders: ["Alpha 1000", "Charlie 200"] },
@@ -245,7 +249,7 @@ describe("an Order write on the orders page", () => {
     expect(toastTitles()).toEqual(["loading: Deleting orders..."]);
 
     await answer(0, "finish");
-    expect(await deleting).toBe("resolved");
+    expect(await deleting).toBe("ok");
     await waitFor(() =>
       expect(shown()).toEqual({ count: "2", orders: ["Alpha 1000", "Charlie 200"] }),
     );
@@ -274,7 +278,7 @@ describe("an Order write on the orders page", () => {
     expect(server.listReads).toBe(readsBeforeWrite + 1);
     await releaseReads();
     expect({ settled: await editing, toasts: toastTitles() }).toEqual({
-      settled: "rejected",
+      settled: "error",
       toasts: ["error: Failed to update order. Please try again."],
     });
   });
@@ -297,7 +301,7 @@ describe("an Order write on the orders page", () => {
     );
 
     await answer(0, "fail");
-    expect(await editing).toBe("rejected");
+    expect(await editing).toBe("error");
     await waitFor(() =>
       expect(shown()).toEqual({
         count: "3",
@@ -306,7 +310,7 @@ describe("an Order write on the orders page", () => {
     );
 
     await answer(1, "finish");
-    expect(await deleting).toBe("resolved");
+    expect(await deleting).toBe("ok");
     await waitFor(() =>
       expect(shown()).toEqual({ count: "2", orders: ["Bravo 500", "Charlie 200"] }),
     );
@@ -343,6 +347,6 @@ describe("a failed Order write after the filter changes", () => {
     expect(shown()).toEqual({ count: "1", orders: ["Alpha 1000"] });
 
     await releaseReads();
-    expect(await deleting).toBe("rejected");
+    expect(await deleting).toBe("error");
   });
 });

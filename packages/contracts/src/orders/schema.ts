@@ -6,8 +6,8 @@ import {
   sortDirectionSchema,
 } from "../shared/pagination";
 import { ORDER_CASCADE_OPTIONS } from "./constants";
-import { syncOrderSchema } from "../sync/schema";
 import { orderSearchSortSchema } from "../search/schema";
+import { WRITE_LIMITS } from "../shared/write-limits";
 
 export const orderFiltersSchema = z.object({
   limit: paginationLimitSchema.optional(),
@@ -55,14 +55,30 @@ export const orderItemsQuerySchema = z.object({
   order: sortDirectionSchema.default("desc"),
 });
 
-export const newOrderSchema = syncOrderSchema.omit({ id: true, userId: true }).strict();
+export const newOrderSchema = z.strictObject({
+  status: z.enum(ORDER_STATUSES),
+  title: z.string().max(WRITE_LIMITS.title),
+  shop: z.string().trim().max(WRITE_LIMITS.shop),
+  orderDate: z.iso.date().nullable(),
+  releaseDate: z.iso.date().nullable(),
+  paymentDate: z.iso.date().nullable(),
+  shippingDate: z.iso.date().nullable(),
+  collectionDate: z.iso.date().nullable(),
+  shippingMethod: z.enum(SHIPPING_METHODS),
+  shippingFee: z.number().int(),
+  taxes: z.number().int(),
+  duties: z.number().int(),
+  tariffs: z.number().int(),
+  miscFees: z.number().int(),
+  notes: z.string().max(WRITE_LIMITS.notes),
+});
 
 export const editedOrderSchema = newOrderSchema.extend({
-  orderId: z.string(),
+  orderId: z.string().max(WRITE_LIMITS.id),
 });
 
 export const cascadeOptionSchema = z.enum(ORDER_CASCADE_OPTIONS);
-export const cascadeOptionsSchema = z.array(cascadeOptionSchema);
+export const cascadeOptionsSchema = z.array(cascadeOptionSchema).max(ORDER_CASCADE_OPTIONS.length);
 
 export type OrderFilters = z.infer<typeof orderFiltersSchema>;
 export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;

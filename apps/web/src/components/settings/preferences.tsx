@@ -48,15 +48,13 @@ export function Preferences({ user }: { user: User }) {
         event.preventDefault();
         event.stopPropagation();
         if (anySaveInFlight || !dirty) return;
-        if (
-          await run(
-            () => save(changes),
-            (ok) => ok,
-          )
-        ) {
-          setSaved((current) => ({ ...current, ...changes }));
-          setEdits({});
-        }
+        const updated = await run(
+          () => save(changes),
+          (result) => result.isOk(),
+        );
+        if (updated.isErr()) return;
+        setSaved((current) => ({ ...current, ...changes }));
+        setEdits({});
       }}
     >
       <SettingsGroup title="Formats">

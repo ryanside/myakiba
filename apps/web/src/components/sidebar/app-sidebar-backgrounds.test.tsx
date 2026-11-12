@@ -92,7 +92,7 @@ test("warm-up starts every background download together after the route code, wi
 
   ordersCode.resolve(null);
   await act(() => ordersImported);
-  await waitFor(() => expect(downloadedSources()).toHaveLength(11));
+  await waitFor(() => expect(downloadedSources()).toHaveLength(10));
   expect(downloadedSources()).toContainEqual(expect.stringContaining(ordersBackground));
   expect(decodedSources(), "warm-up never decodes").toEqual([
     expect.stringContaining(dashboardBackground),
@@ -102,7 +102,7 @@ test("warm-up starts every background download together after the route code, wi
 test("a background that never downloads does not hold back the others", async () => {
   stalled.add(analyticsBackground);
   await renderWarmedSidebar();
-  await waitFor(() => expect(downloadedSources()).toHaveLength(11));
+  await waitFor(() => expect(downloadedSources()).toHaveLength(10));
   expect(downloadedSources()).toContainEqual(expect.stringContaining(settingsBackground));
 });
 

@@ -108,13 +108,6 @@ test("leaving the search from outside the field, such as Back or a nav link, cle
   expect(field.value).toBe("");
 });
 
-test("a result for a setting with no row of its own opens its section, with no dead link", async () => {
-  openSearch("export");
-  const result = await screen.findByRole("link", { name: /^Export/ });
-
-  expect(result.getAttribute("href")).toBe("/settings?section=data-transfer");
-});
-
 test("opening a section before the first search settles cancels the pending text", async () => {
   const router = openSearch("");
   const field = await typeQuickly("theme");

@@ -1,12 +1,6 @@
 {
-  "eslint(no-restricted-properties)": {
-    "apps/web/src/hooks/use-local-storage.ts": 1,
-    "apps/web/src/lib/data-transfer.ts": 1,
-    "packages/redis/src/job-status.ts": 1
-  },
+  "eslint(no-restricted-properties)": {},
   "myakiba(no-env-outside-env-package)": {
-    "apps/server/src/index.ts": 3,
-    "apps/web/src/lib/sync.ts": 2,
     "apps/web/src/main.tsx": 1,
     "apps/web/src/routes/__root.tsx": 1,
     "packages/db/drizzle.config.ts": 1,
@@ -14,40 +8,27 @@
   },
   "myakiba(no-iso-slice)": {},
   "myakiba(no-window-total)": {},
-  "myakiba(require-suppression-reason)": {
-    "apps/server/src/routers/sync/index.ts": 1,
-    "apps/web/src/lib/sync.ts": 1
-  },
+  "myakiba(require-suppression-reason)": {},
   "typescript(no-floating-promises)": {
     "apps/server/src/route-auth.test.ts": 1,
     "apps/web/src/components/analytics/leaderboard-table.tsx": 1,
-    "apps/web/src/components/auth/sign-in-form.tsx": 1,
-    "apps/web/src/components/auth/sign-up-form.tsx": 2,
+    "apps/web/src/components/auth/sign-up-form.tsx": 1,
     "apps/web/src/components/cells/inline-release-cell.tsx": 2,
-    "apps/web/src/components/cells/popover-multi-input-cell.tsx": 1,
     "apps/web/src/components/cells/select-cell.tsx": 2,
     "apps/web/src/components/collection/collection-data-grid.tsx": 2,
     "apps/web/src/components/collection/collection-item-form.tsx": 1,
     "apps/web/src/components/collection/collection-quick-filters.tsx": 1,
     "apps/web/src/components/collection/collection-toolbar.tsx": 2,
-    "apps/web/src/components/collection/filters-form.tsx": 1,
     "apps/web/src/components/dashboard/orders-bar-chart.tsx": 1,
     "apps/web/src/components/orders/orders-data-grid.tsx": 2,
-    "apps/web/src/components/orders/orders-filters-form.tsx": 1,
     "apps/web/src/components/orders/orders-quick-filters.tsx": 1,
     "apps/web/src/components/orders/orders-toolbar.tsx": 2,
     "apps/web/src/components/sidebar/user-menu.tsx": 2,
-    "apps/web/src/components/sync/sync-quick-filters.tsx": 2,
-    "apps/web/src/components/sync/sync-sessions-data-grid.tsx": 1,
     "apps/web/src/routes/(app)/analytics_.$sectionName.tsx": 2,
     "apps/web/src/routes/(app)/calendar.tsx": 1,
     "apps/web/src/routes/(app)/dashboard.tsx": 1,
     "apps/web/src/routes/(app)/expenses.tsx": 3,
-    "apps/web/src/routes/(app)/sync_.$id.tsx": 1,
-    "apps/web/src/routes/(app)/sync.tsx": 1,
     "apps/web/src/routes/(app)/wishlist.tsx": 1,
-    "apps/web/src/routes/(auth)/forgot-password.tsx": 1,
-    "apps/web/src/routes/(auth)/reset-password.tsx": 2,
-    "apps/worker/index.ts": 1
+    "apps/web/src/routes/(auth)/reset-password.tsx": 1
   }
 }

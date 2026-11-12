@@ -43,10 +43,7 @@ const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly Na
   },
   {
     label: "Account",
-    items: [
-      { title: "Import history", url: "/sync", pathnameMatch: "prefix" },
-      { title: "Settings", url: "/settings" },
-    ],
+    items: [{ title: "Settings", url: "/settings" }],
   },
 ];
 

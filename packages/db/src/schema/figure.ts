@@ -18,23 +18,13 @@ import { createId } from "@paralleldrive/cuid2";
 import {
   CATEGORIES,
   COLLECTION_STATUSES,
+  CONTENT_LABELS,
   SHIPPING_METHODS,
   ORDER_STATUSES,
   CONDITIONS,
-  SYNC_TYPES,
-  SYNC_SESSION_STATUSES,
-  SYNC_SESSION_ITEM_STATUSES,
 } from "@myakiba/contracts/shared/constants";
 import { NO_SCALE } from "@myakiba/contracts/shared/scale";
-import {
-  DATA_TRANSFER_IMPORT_PHASES,
-  DATA_TRANSFER_IMPORT_STATUSES,
-} from "@myakiba/contracts/data-transfer/constants";
-import type {
-  DataTransferArchiveV1,
-  DataTransferImportReport,
-} from "@myakiba/contracts/data-transfer/schema";
-import type { JobData } from "@myakiba/contracts/sync/schema";
+import type { AddCommitResponse } from "@myakiba/contracts/add/schema";
 
 export const item = pgTable(
   "item",
@@ -42,6 +32,9 @@ export const item = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     title: text("title").notNull(),
@@ -56,14 +49,38 @@ export const item = pgTable(
     width: integer("width"),
     depth: integer("depth"),
     mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
-    image: text("image"),
+    contentLabel: text("content_label", { enum: CONTENT_LABELS }),
+    mfcRatingId: integer("mfc_rating_id"),
+    legacyImageUrl: text("image"),
+    imageKey: text("image_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("item_source_external_id_idx").on(t.source, t.externalId),
+    uniqueIndex("item_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
     index("item_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
   ],
+);
+
+/**
+ * Every picture each user stored, by key. A save writes its row before it stores the picture,
+ * so the rows bound what an account stores, whether or not an Item still shows the picture.
+ * Every reservation stamps `reserved_at`, even of a key the owner already recorded, so a future
+ * deleter can spare a key a save reserved recently. Deletion will only ever consider
+ * `items/<64 hex>.<ext>` keys.
+ */
+export const picture = pgTable(
+  "picture",
+  {
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    bytes: integer("bytes").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    reservedAt: timestamp("reserved_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("picture_owner_id_key_idx").on(t.ownerId, t.key)],
 );
 
 export const item_release = pgTable(
@@ -97,6 +114,9 @@ export const entry = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     externalId: integer("external_id"),
     source: text("source").$type<"mfc" | "custom">().notNull().default("mfc"),
     category: text("category").notNull(), // classifications, origin, character, company, artist, material, event
@@ -107,13 +127,14 @@ export const entry = pgTable(
   (t) => [
     index("entry_name_category_idx").on(t.name, t.category),
     index("entry_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops")),
-    uniqueIndex("entry_source_external_id_idx").on(t.source, t.externalId),
+    uniqueIndex("entry_owner_id_source_external_id_idx").on(t.ownerId, t.source, t.externalId),
   ],
 );
 
 export const entry_to_item = pgTable(
   "entry_to_item",
   {
+    ownerId: text("owner_id").notNull(),
     entryId: text("entry_id")
       .notNull()
       .references(() => entry.id, { onDelete: "cascade" }),
@@ -283,6 +304,7 @@ export const listMember = pgTable(
     listId: text("list_id")
       .notNull()
       .references(() => list.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
     itemId: text("item_id").references(() => item.id, { onDelete: "cascade" }),
     collectionId: text("collection_id").references(() => collection.id, {
       onDelete: "cascade",
@@ -334,81 +356,19 @@ export const wishlistItem = pgTable(
   ],
 );
 
-export const dataTransferImport = pgTable("data_transfer_import", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  importId: text("import_id").notNull(),
-  jobId: text("job_id").notNull(),
-  fileName: text("file_name").notNull(),
-  archive: jsonb("archive").$type<DataTransferArchiveV1>(),
-  status: text("status", { enum: DATA_TRANSFER_IMPORT_STATUSES }).notNull().default("queued"),
-  phase: text("phase", { enum: DATA_TRANSFER_IMPORT_PHASES }).notNull().default("queued"),
-  report: jsonb("report").$type<DataTransferImportReport>(),
-  importedOrders: integer("imported_orders").notNull().default(0),
-  importedCollectionItems: integer("imported_collection_items").notNull().default(0),
-  failedCollectionItems: integer("failed_collection_items").notNull().default(0),
-  error: text("error"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const syncSession = pgTable(
-  "sync_session",
+/** One Add commit's answer, written in the commit's own transaction, so it exists only if the commit does. */
+export const addCommit = pgTable(
+  "add_commit",
   {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    syncType: text("sync_type", { enum: SYNC_TYPES }).notNull(),
-    jobId: text("job_id"),
-    status: text("status", { enum: SYNC_SESSION_STATUSES }).notNull().default("pending"),
-    statusMessage: text("status_message").notNull().default(""),
-    orderId: text("order_id").references(() => order.id, {
-      onDelete: "set null",
-    }),
-    totalItems: integer("total_items").notNull().default(0),
-    successCount: integer("success_count").notNull().default(0),
-    failCount: integer("fail_count").notNull().default(0),
-    requestPayload: jsonb("request_payload").$type<JobData>(),
+    commitId: uuid("commit_id").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    answer: jsonb("answer").$type<AddCommitResponse>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-    completedAt: timestamp("completed_at"),
   },
-  (t) => [
-    index("sync_session_job_id_user_id_idx").on(t.jobId, t.userId),
-    index("sync_session_user_id_status_idx").on(t.userId, t.status),
-    index("sync_session_user_id_created_at_idx").on(t.userId, t.createdAt.desc()),
-  ],
+  // Not a composite primary key: drizzle-kit 0.31.10 reads one's columns in no fixed order, so
+  // push would drop and re-add it, and every Add commit fails while it is gone.
+  (t) => [uniqueIndex("add_commit_user_id_commit_id_idx").on(t.userId, t.commitId)],
 );
-
-export const syncSessionItem = pgTable(
-  "sync_session_item",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => createId()),
-    syncSessionId: text("sync_session_id")
-      .notNull()
-      .references(() => syncSession.id, { onDelete: "cascade" }),
-    itemExternalId: integer("item_external_id").notNull(),
-    status: text("status", { enum: SYNC_SESSION_ITEM_STATUSES }).notNull().default("pending"),
-    errorReason: text("error_reason"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [
-    index("sync_session_item_session_id_external_id_idx").on(t.syncSessionId, t.itemExternalId),
-    index("sync_session_item_session_id_status_idx").on(t.syncSessionId, t.status),
-  ],
-);
-
-export type DbSyncSessionRow = typeof syncSession.$inferSelect;
-export type DbSyncSessionItemRow = typeof syncSessionItem.$inferSelect;
-export type DbEnrichedSyncSessionItemRow = DbSyncSessionItemRow & {
-  readonly itemId: string | null;
-  readonly itemTitle: string | null;
-  readonly itemImage: string | null;
-};

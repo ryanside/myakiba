@@ -20,6 +20,11 @@ export {
   ArrowLeft02Icon as BackIcon,
   // Opens a page in a new tab.
   ExternalLinkIcon as ExternalIcon,
+  // Pins a table column to one side, or moves it one place along the table.
+  ArrowLeft03Icon as PinLeftIcon,
+  ArrowRight03Icon as PinRightIcon,
+  MoveLeftIcon,
+  MoveRightIcon,
   ArrowUp02Icon as SortAscendingIcon,
   ArrowDown02Icon as SortDescendingIcon,
   ArrowUpDownIcon as UnsortedIcon,

@@ -4,13 +4,14 @@ import { sql } from "drizzle-orm";
 import type { Query } from "drizzle-orm";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import type { PgSession } from "drizzle-orm/pg-core";
+import { Result } from "better-result";
 import { createRequestLogger, initLogger } from "evlog";
 import { createTestDatabase } from "../../test/database";
 
 initLogger({ enabled: false });
 
 const db = await createTestDatabase();
-const { command, ok, paginateBy, run } = await import("./kernel");
+const { command, paginateBy, run } = await import("./kernel");
 const { Viewer } = await import("./viewer");
 
 const writer = new SQL({ url: process.env.DATABASE_URL, max: 1 });
@@ -120,7 +121,7 @@ describe("a page past the end, read while rows arrive and leave", () => {
     await reset([[1, "a"]]);
     afterStatement = arriveThenLeave;
     const op = command({ action: "test.page", failure: "Failed to page" }, async (scope) =>
-      ok(await paginateBy(scope, { limit: 1, offset: 1 }, source(scope.tx))),
+      Result.ok(await paginateBy(scope, { limit: 1, offset: 1 }, source(scope.tx))),
     );
     const outcome = await run(
       Viewer.fromSession({ user: { id: "viewer-1" } }),
@@ -128,8 +129,7 @@ describe("a page past the end, read while rows arrive and leave", () => {
       undefined,
       createRequestLogger(),
     );
-    if (!outcome.ok) throw new Error("the command failed");
-    agrees(outcome.value);
+    agrees(outcome.unwrap("the command failed"));
   });
 
   test("on the pool, when the second row stays, the re-read returns the page it reaches", async () => {

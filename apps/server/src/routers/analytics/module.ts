@@ -23,7 +23,9 @@ import type {
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
 import type { Page } from "@myakiba/contracts/shared/pagination";
-import { fail, ok, paginateBy, prepared, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { paginateBy, prepared, query } from "@/domain/kernel";
+import { RelatedSectionSameAsSource } from "./errors/related-section-same-as-source";
 import type {
   AnalyticsResult,
   AnalyticsSectionItemsResult,
@@ -35,6 +37,7 @@ import type {
   AnalyticsSectionResult,
   EntrySection,
 } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
@@ -487,7 +490,7 @@ async function getSectionItems(
       id: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -532,7 +535,7 @@ async function getSectionRelationships(
       itemId: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
       category: item.category,
       scale: item.scale,
       shop: collection.shop,
@@ -768,7 +771,7 @@ export const Analytics = {
         scope.read(scaleRankingsRead, { userId }),
       ]);
       const analytics = rankAnalytics(entryRows, shopRows, scaleRows);
-      return ok({ analytics });
+      return Result.ok({ analytics });
     },
   ),
 
@@ -802,7 +805,7 @@ export const Analytics = {
           totalCount: analytics.totalCount,
         },
       });
-      return ok({ analytics });
+      return Result.ok({ analytics });
     },
   ),
 
@@ -833,7 +836,7 @@ export const Analytics = {
           totalCount: items.totalCount,
         },
       });
-      return ok(items);
+      return Result.ok(items);
     },
   ),
 
@@ -852,7 +855,7 @@ export const Analytics = {
       },
     ) => {
       if (input.sectionName === input.relatedSection) {
-        return fail("bad_request", "Related section must differ from source section");
+        return Result.err(new RelatedSectionSameAsSource());
       }
 
       const analytics = {
@@ -877,7 +880,7 @@ export const Analytics = {
           totalCount: relationships.totalCount,
         },
       });
-      return ok(relationships);
+      return Result.ok(relationships);
     },
   ),
 };

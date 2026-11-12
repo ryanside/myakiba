@@ -25,7 +25,7 @@ import { ExpensePanel } from "@/components/expenses/dashboard-shell";
 import { ShopTableRowExpansion } from "@/components/expenses/shop-table-row-expansion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 
 const PAGE_SIZE = 10;
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";

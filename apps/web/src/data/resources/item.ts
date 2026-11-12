@@ -1,10 +1,15 @@
+import { Result } from "better-result";
+import { requireExtension } from "@/lib/extension-gate";
+import { PICTURE_QUOTA_FULL } from "@/lib/pick-failure";
 import {
   getItem,
   getItemRelatedCollection,
   getItemRelatedOrders,
   getItemReleases,
 } from "@/queries/item";
-import { rootedRead } from "../client";
+import { refreshResultFamilies } from "../catalog";
+import { defineCommand, rootedRead, useResourceMutation } from "../client";
+import { refreshFailureText, refreshItemWithExtension } from "../item-refresh";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
 
@@ -30,3 +35,39 @@ export const items = {
     ...cache,
   }),
 };
+
+export const refreshItemCommand = defineCommand({
+  invalidates: refreshResultFamilies,
+  persist: (externalId: number) => refreshItemWithExtension(externalId),
+  successTitle: (_externalId, refreshed) => {
+    if (refreshed.picture === "over_quota") return;
+    return refreshed.saved === "refreshed"
+      ? "Item details refreshed"
+      : "Item details are up to date";
+  },
+  warningToast: (_externalId, refreshed) =>
+    refreshed.picture === "over_quota"
+      ? {
+          title:
+            refreshed.saved === "refreshed"
+              ? "Item details refreshed without the new picture"
+              : "Item details are up to date, without the new picture",
+          description: `${PICTURE_QUOTA_FULL}.`,
+        }
+      : undefined,
+  failureToast: (_externalId, failure) => ({
+    title: "Failed to request item refresh",
+    ...(failure && { description: refreshFailureText(failure) }),
+  }),
+});
+
+/** Asks for the extension first, so a refused refresh writes nothing and shows the notice that says why. */
+export function useRefreshItem() {
+  const refresh = useResourceMutation(refreshItemCommand);
+  const run = async (externalId: number) => {
+    const ready = await requireExtension();
+    if (ready.isErr()) return Result.err(ready.error);
+    return refresh.run(externalId);
+  };
+  return { run, isPending: refresh.isPending } as const;
+}

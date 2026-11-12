@@ -11,7 +11,7 @@ import { calendar } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
-import { shownMessageOf } from "@/lib/api-response";
+import { shownMessageOf } from "@/data/api";
 import { NextIcon, PreviousIcon } from "@/lib/icons";
 
 interface ReleaseCalendarProps {

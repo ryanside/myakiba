@@ -1,6 +1,9 @@
-import { requireData, checkResponse } from "@/lib/api-response";
+import { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
-import { MoveNotFoundError } from "./move-not-found-error";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
+import { MoveTargetGone } from "@/lib/errors/move-target-gone";
 import type {
   CascadeOptions,
   EditedOrder,
@@ -13,7 +16,7 @@ import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 
-export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
+export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, ApiFailure>> {
   const queryParams = {
     limit: filters.limit ?? DEFAULT_LIMIT,
     offset: filters.offset ?? 0,
@@ -49,7 +52,10 @@ export async function getOrders(filters: OrderFilters): Promise<OrdersPage> {
     miscFeesMax: filters.miscFeesMax,
   };
 
-  return requireData(app.api.orders.get({ query: queryParams }), "Failed to get orders");
+  return call(app.api.orders.get({ query: queryParams }), {
+    fallback: "Failed to get orders",
+    empty: "Failed to get orders",
+  });
 }
 
 type OrdersClient = ReturnType<typeof app.api.orders>;
@@ -57,100 +63,129 @@ export type OrderItemRelease = NonNullable<
   Awaited<ReturnType<OrdersClient["item-releases"]["get"]>>["data"]
 >[number];
 
-export async function getOrderItemReleases(orderId: string): Promise<readonly OrderItemRelease[]> {
-  return requireData(
-    app.api.orders({ orderId })["item-releases"].get(),
-    "Failed to get order item releases",
-  );
+export function getOrderItemReleases(
+  orderId: string,
+): Promise<Result<readonly OrderItemRelease[], ApiFailure>> {
+  return call(app.api.orders({ orderId })["item-releases"].get(), {
+    fallback: "Failed to get order item releases",
+    empty: "Failed to get order item releases",
+  });
 }
 
-export async function getOrderItems(
+export function getOrderItems(
   orderId: string,
   query: OrderItemsQuery,
-): Promise<Page<OrderItem>> {
-  return requireData(app.api.orders({ orderId }).items.get({ query }), "Failed to get order items");
+): Promise<Result<Page<OrderItem>, ApiFailure>> {
+  return call(app.api.orders({ orderId }).items.get({ query }), {
+    fallback: "Failed to get order items",
+    empty: "Failed to get order items",
+  });
 }
 
-export async function mergeOrders(
+export function mergeOrders(
   values: NewOrder,
   orderIds: Set<string>,
   cascadeOptions: CascadeOptions,
 ) {
-  return checkResponse(
-    app.api.orders.merge.post({ orderIds: [...orderIds], newOrder: values, cascadeOptions }),
-    "Failed to merge orders",
+  return call(
+    app.api.orders.merge.post({
+      orderIds: [...orderIds],
+      newOrder: values,
+      cascadeOptions,
+    }),
+    { fallback: "Failed to merge orders" },
   );
 }
 
-export async function splitOrders(
+export function splitOrders(
   values: NewOrder,
   collectionIds: ReadonlySet<string>,
   cascadeOptions: CascadeOptions,
 ) {
-  return checkResponse(
+  return call(
     app.api.orders.split.post({
       collectionIds: [...collectionIds],
       newOrder: values,
       cascadeOptions,
     }),
-    "Failed to split orders",
+    { fallback: "Failed to split orders" },
   );
 }
 
-export async function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
-  await checkResponse(
-    app.api.orders({ orderId: values.orderId }).put({ order: values, cascadeOptions }),
-    "Failed to edit order",
+export function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
+  return call(
+    app.api.orders({ orderId: values.orderId }).put({
+      order: values,
+      cascadeOptions,
+    }),
+    { fallback: "Failed to edit order" },
   );
 }
 
-export async function deleteOrders(orderIds: Set<string>) {
-  await checkResponse(
-    app.api.orders.delete({ orderIds: [...orderIds] }),
-    "Failed to delete orders",
+export function deleteOrders(orderIds: Set<string>) {
+  return call(
+    app.api.orders.delete({
+      orderIds: [...orderIds],
+    }),
+    { fallback: "Failed to delete orders" },
   );
 }
 
-export async function deleteOrderItem(orderId: string, collectionId: string) {
-  await checkResponse(
-    app.api.orders({ orderId }).items({ collectionId }).delete(),
-    "Failed to delete order item",
+export function deleteOrderItem(orderId: string, collectionId: string) {
+  return call(app.api.orders({ orderId }).items({ collectionId }).delete(), {
+    fallback: "Failed to delete order item",
+  });
+}
+
+export function deleteOrderItems(collectionIds: Set<string>) {
+  return call(
+    app.api.orders.items.delete({
+      collectionIds: [...collectionIds],
+    }),
+    { fallback: "Failed to delete order items" },
   );
 }
 
-export async function deleteOrderItems(collectionIds: Set<string>) {
-  await checkResponse(
-    app.api.orders.items.delete({ collectionIds: [...collectionIds] }),
-    "Failed to delete order items",
-  );
-}
-
-export async function moveItem(
+export function moveItem(
   targetOrderId: string,
   collectionIds: ReadonlySet<string>,
   orderIds?: ReadonlySet<string>,
-): Promise<void> {
+) {
   const moveItemPayload = {
     targetOrderId,
     collectionIds: [...collectionIds],
     orderIds: [...(orderIds ?? [])],
   };
 
-  const response = await app.api.orders["move-items"].put(moveItemPayload);
-  if (response.error?.status === 404) throw new MoveNotFoundError(response.error.value);
-  await checkResponse(response, "Failed to move items");
+  return call(app.api.orders["move-items"].put(moveItemPayload), {
+    fallback: "Failed to move items",
+  }).then(
+    Result.mapError((failure) =>
+      ApiNotFound.is(failure)
+        ? new MoveTargetGone({ message: failure.body === undefined ? "" : String(failure.body) })
+        : failure,
+    ),
+  );
 }
 
 export const ORDER_LOAD_FAILED = "Couldn't load this order. Check your connection and try again.";
 
-export async function getOrder(orderId: string): Promise<Order> {
-  return requireData(app.api.orders({ orderId }).get(), ORDER_LOAD_FAILED);
+export function getOrder(orderId: string): Promise<Result<Order, ApiFailure>> {
+  return call(app.api.orders({ orderId }).get(), {
+    fallback: ORDER_LOAD_FAILED,
+    empty: "Failed to get order",
+  });
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
-  await checkResponse(
-    app.api.orders({ orderId }).put({ order: { status }, cascadeOptions: ["status"] }),
-    "Failed to update order status",
+export function updateOrderStatus(orderId: string, status: OrderStatus) {
+  return call(
+    app.api.orders({ orderId }).put({
+      order: {
+        status,
+      },
+      cascadeOptions: ["status"],
+    }),
+    { fallback: "Failed to update order status. Please try again." },
   );
 }
 
@@ -161,13 +196,12 @@ export type OrderDateField =
   | "shippingDate"
   | "collectionDate";
 
-export async function updateOrderDate(
-  orderId: string,
-  field: OrderDateField,
-  date: string | null,
-): Promise<void> {
-  await checkResponse(
-    app.api.orders({ orderId }).put({ order: { [field]: date }, cascadeOptions: [] }),
-    "Failed to update order date",
+export function updateOrderDate(orderId: string, field: OrderDateField, date: string | null) {
+  return call(
+    app.api.orders({ orderId }).put({
+      order: { [field]: date },
+      cascadeOptions: [],
+    }),
+    { fallback: "Failed to update order date" },
   );
 }

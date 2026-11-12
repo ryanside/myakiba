@@ -2,6 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { InlineCountCell } from "./inline-count-cell";
 import { InlineTextCell } from "./inline-text-cell";
+import { Result } from "better-result";
+import { WriteFailed } from "@/lib/errors/write-failed";
 
 afterEach(() => {
   cleanup();
@@ -9,9 +11,11 @@ afterEach(() => {
 
 function failingWrite<Value>() {
   const writes: Value[] = [];
-  const onSubmit = async (value: Value) => {
+  const onSubmit = (value: Value) => {
     writes.push(value);
-    throw new Error("write failed");
+    return Promise.resolve(
+      Result.err(new WriteFailed({ cause: new Error("write failed"), message: "write failed" })),
+    );
   };
   return { writes, onSubmit };
 }

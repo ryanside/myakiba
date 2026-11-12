@@ -1,2 +1,2 @@
-bun x lint-staged
+bun x lint-staged --no-stash
 bun run check-types

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ItemSyncActions } from "@/components/item/item-sync-actions";
+import { AddLink } from "@/components/add/add-link";
 import { LoadError } from "@/components/page-states";
 import { CollectionItemCard } from "@/components/item/collection-item-card";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/compon
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import type { Saving } from "@/data/client";
 
 export function ItemCollection({
   item,
@@ -16,8 +17,6 @@ export function ItemCollection({
   isPending,
   isError,
   error,
-  onSyncCollection,
-  onSyncOrder,
   onEditCollectionItem,
   onDeleteCollectionItems,
   onMoveToExistingOrder,
@@ -31,20 +30,18 @@ export function ItemCollection({
   readonly isPending: boolean;
   readonly isError: boolean;
   readonly error: Error | null;
-  readonly onSyncCollection: () => void;
-  readonly onSyncOrder: () => void;
-  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Promise<void>;
-  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  readonly onEditCollectionItem: (values: CollectionItemFormValues) => Saving;
+  readonly onDeleteCollectionItems: (collectionIds: ReadonlySet<string>) => Saving;
   readonly onMoveToExistingOrder: (
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onMoveToNewOrder: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly isCollectionOrderPending: (collectionId: string) => boolean;
 }): ReactNode {
   const { currency, locale, dateFormat } = useUserPreferences();
@@ -63,11 +60,14 @@ export function ItemCollection({
             <p className="text-sm text-pretty text-muted-foreground">
               Not in your collection yet. Add it to your collection, or start a new order with it.
             </p>
-            <ItemSyncActions
-              onSyncCollection={onSyncCollection}
-              onSyncOrder={onSyncOrder}
-              className="justify-start"
-            />
+            {item ? (
+              <div className="flex w-full flex-col justify-start gap-2 sm:flex-row">
+                <AddLink search={{ item: item.id, to: "collection" }}>Add to collection</AddLink>
+                <AddLink search={{ item: item.id, to: "order-new" }} variant="outline">
+                  Add to an order
+                </AddLink>
+              </div>
+            ) : null}
           </div>
         )}
 

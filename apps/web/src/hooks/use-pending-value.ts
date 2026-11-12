@@ -1,8 +1,9 @@
 import { useState } from "react";
+import type { Saving } from "@/data/client";
 
 function usePendingValue<T>(
   value: T,
-  onSubmit: (newValue: T) => Promise<void> | void,
+  onSubmit: (newValue: T) => Saving,
 ): readonly [T, (newValue: T) => Promise<void>] {
   const [pending, setPending] = useState<{ readonly value: T } | null>(null);
 
@@ -11,13 +12,9 @@ function usePendingValue<T>(
   const submit = async (newValue: T): Promise<void> => {
     if (Object.is(newValue, value)) return;
     setPending({ value: newValue });
-    try {
-      await onSubmit(newValue);
-    } catch {
-      // The edit action has already shown its failure toast. No cell caller acts on the rejection.
-    } finally {
-      setPending(null);
-    }
+    // A failed edit already showed its toast and rolled back, so the cell only drops its draft.
+    await onSubmit(newValue);
+    setPending(null);
   };
 
   return [displayValue, submit] as const;

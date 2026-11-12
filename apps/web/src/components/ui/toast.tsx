@@ -52,6 +52,8 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
       data-slot="toast-viewport"
       className={cn(
         "pointer-events-none fixed inset-x-4 top-4 mx-auto w-auto max-w-sm outline-none sm:w-full",
+        // F6 focuses this viewport, which has no height of its own, so its toasts show the focus.
+        "focus-visible:**:data-[slot=toast]:border-ring focus-visible:**:data-[slot=toast]:ring-2 focus-visible:**:data-[slot=toast]:ring-ring",
         className,
       )}
       style={{ zIndex: Z_INDEX.toast }}
@@ -146,6 +148,8 @@ function ToastClose({
     <ToastPrimitive.Close
       data-slot="toast-close"
       aria-label="Close toast"
+      // The primitive hides Close from assistive technology, though Tab still reaches it.
+      aria-hidden={false}
       render={render}
       className={cn(
         "relative shrink-0 text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
@@ -230,22 +234,48 @@ function ToastIcon({ type }: { type: string | undefined }) {
   );
 }
 
+/** Optional extras a toast can carry in its `data`. */
+type ToastExtras = {
+  /** Shown in place of the type's icon, beside the title. */
+  readonly media?: React.ReactNode;
+  readonly secondaryAction?: { readonly label: string; readonly onClick: () => void };
+};
+
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
-  return toasts.map((toastItem) => (
-    <Toast key={toastItem.id} toast={toastItem}>
-      <ToastContent>
-        <ToastIcon type={toastItem.type} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <ToastTitle />
-          <ToastDescription />
-        </div>
-        <ToastAction />
-        <ToastClose />
-      </ToastContent>
-    </Toast>
-  ));
+  return toasts.map((toastItem) => {
+    const { media, secondaryAction }: ToastExtras = toastItem.data ?? {};
+    return (
+      <Toast key={toastItem.id} toast={toastItem}>
+        <ToastContent className={media ? "p-3" : undefined}>
+          {media ?? <ToastIcon type={toastItem.type} />}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <ToastTitle />
+            <ToastDescription
+              className={
+                media
+                  ? "line-clamp-3 text-xs [overflow-wrap:anywhere] whitespace-pre-line"
+                  : undefined
+              }
+            />
+            {secondaryAction ? (
+              <Button
+                variant="link"
+                size="sm"
+                className="w-fit px-0"
+                onClick={() => secondaryAction.onClick()}
+              >
+                {secondaryAction.label}
+              </Button>
+            ) : null}
+          </div>
+          <ToastAction />
+          <ToastClose />
+        </ToastContent>
+      </Toast>
+    );
+  });
 }
 
 function Toaster({ children, toastManager = toast, ...props }: ToastPrimitive.Provider.Props) {

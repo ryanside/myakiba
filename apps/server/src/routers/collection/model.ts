@@ -6,8 +6,11 @@ import {
   SHIPPING_METHODS,
 } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
+import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
+import { itemIdField } from "@myakiba/contracts/add/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
+import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import {
   commaSeparatedStringArraySchema,
   createCommaSeparatedEnumArraySchema,
@@ -27,38 +30,39 @@ export const collectionQuerySchema = collectionSearchSchema.extend({
   scale: commaSeparatedStringArraySchema,
   tags: commaSeparatedStringArraySchema,
   condition: commaSeparatedConditionArray,
+  ids: commaSeparatedStringArraySchema.pipe(z.array(itemIdField).max(MAX_ADD_ROWS).optional()),
 });
 
 export type CollectionQuery = z.infer<typeof collectionQuerySchema>;
 
 export const collectionParamSchema = z.object({
-  id: z.string(),
+  id: z.string().max(WRITE_LIMITS.id),
 });
 
 export const collectionUpdateSchema = z.object({
   status: z.enum(COLLECTION_STATUSES),
   count: z.number(),
-  score: z.string(),
+  score: z.string().max(WRITE_LIMITS.label),
   price: z.number().int(),
-  shop: z.string().trim(),
+  shop: z.string().trim().max(WRITE_LIMITS.shop),
   orderDate: z.iso.date().nullable(),
   paymentDate: z.iso.date().nullable(),
   shippingDate: z.iso.date().nullable(),
   collectionDate: z.iso.date().nullable(),
   shippingMethod: z.enum(SHIPPING_METHODS),
-  tags: z.array(z.string()),
-  notes: z.string(),
-  releaseId: z.string().nullable(),
+  tags: z.array(z.string().max(WRITE_LIMITS.tag)).max(WRITE_LIMITS.tags),
+  notes: z.string().max(WRITE_LIMITS.notes),
+  releaseId: z.string().max(WRITE_LIMITS.id).nullable(),
   releaseDate: z.iso.date().nullable(),
   releasePrice: z.number().int().nullable(),
-  releaseCurrency: z.string().nullable(),
-  releaseBarcode: z.string().nullable(),
-  releaseType: z.string().nullable(),
+  releaseCurrency: z.string().max(WRITE_LIMITS.label).nullable(),
+  releaseBarcode: z.string().max(WRITE_LIMITS.label).nullable(),
+  releaseType: z.string().max(WRITE_LIMITS.label).nullable(),
   condition: z.enum(CONDITIONS),
 });
 
 export type CollectionUpdateType = z.infer<typeof collectionUpdateSchema>;
 
 export const collectionDeleteSchema = z.object({
-  ids: z.array(z.string()),
+  ids: idListSchema,
 });

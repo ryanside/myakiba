@@ -1,7 +1,10 @@
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Result } from "better-result";
 import { MotionGlobalConfig } from "motion/react";
+import type { Saving } from "@/data/client";
+import { WriteFailed } from "@/lib/errors/write-failed";
 import { ListFormDialog } from "./list-form-dialog";
 
 beforeAll(() => {
@@ -15,7 +18,7 @@ afterEach(cleanup);
 // Browsers move focus off a button that becomes disabled. happy-dom keeps it, so the test watches
 // the attribute itself.
 test("the submit button is never disabled through a submit that fails, so it keeps focus", async () => {
-  const submits: PromiseWithResolvers<undefined>[] = [];
+  const submits: PromiseWithResolvers<Awaited<Saving>>[] = [];
   render(
     <ListFormDialog
       renderTrigger={<button type="button">Open</button>}
@@ -23,7 +26,7 @@ test("the submit button is never disabled through a submit that fails, so it kee
       description="Group items."
       submitLabel="Create"
       onSubmit={() => {
-        const submit = Promise.withResolvers<undefined>();
+        const submit = Promise.withResolvers<Awaited<Saving>>();
         submits.push(submit);
         return submit.promise;
       }}
@@ -42,7 +45,11 @@ test("the submit button is never disabled through a submit that fails, so it kee
   await waitFor(() => expect(submits).toHaveLength(1));
   expect(create.getAttribute("aria-busy")).toBe("true");
 
-  await act(async () => submits[0]?.reject(new Error("offline")));
+  await act(async () =>
+    submits[0]?.resolve(
+      Result.err(new WriteFailed({ cause: new Error("offline"), message: "offline" })),
+    ),
+  );
   await waitFor(() => expect(create.dataset.status).toBe("idle"));
   await act(async () => {});
   observer.disconnect();

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { readFileSync } from "node:fs";
 import { cleanup, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -194,7 +195,7 @@ const expenseShop = {
   averageItemCost: 12_000,
 } satisfies ExpenseShopRow;
 
-const noop = async () => {};
+const noop = async () => Result.ok();
 const ListsScreen = ListsRoute.options.component;
 
 const tableRows = [{ id: "row-1", title: "Hatsune Miku" }];

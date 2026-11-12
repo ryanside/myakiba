@@ -11,7 +11,8 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
+import type { Saving } from "@/data/client";
 
 export function OrderItemsActionBar({
   selectedItems,
@@ -39,13 +40,13 @@ export function OrderItemsActionBar({
     targetOrderId: string,
     collectionIds: ReadonlySet<string>,
     orderIds?: ReadonlySet<string>,
-  ) => Promise<void>;
+  ) => Saving;
   readonly onMoveToNew: (
     values: NewOrder,
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
-  ) => Promise<void>;
-  readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Promise<void>;
+  ) => Saving;
+  readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Saving;
 }): React.JSX.Element {
   const selectedItemCount = selectedItems.collectionIds.size;
 
@@ -80,7 +81,7 @@ export function OrderItemsActionBar({
           clearSelections={onClearSelection}
           currency={currency}
         />
-        <ConfirmDialog
+        <WriteConfirmDialog
           renderTrigger={
             <ActionBarItem
               disabled={selectedItemCount === 0 || isDeletingItems || isDeletingOrders}
@@ -94,8 +95,9 @@ export function OrderItemsActionBar({
           title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
           description='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
           onConfirm={async () => {
-            await onDeleteItems(selectedItems.collectionIds);
-            onClearSelection();
+            const saved = await onDeleteItems(selectedItems.collectionIds);
+            if (saved.isOk()) onClearSelection();
+            return saved;
           }}
         />
       </ActionBarGroup>

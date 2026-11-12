@@ -1,4 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
+import { optionalMinorUnits } from "@/lib/money-input";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
@@ -12,7 +13,7 @@ import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { MaskInput } from "@/components/ui/mask-input";
+import { MoneyField } from "@/components/money-field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { FieldTrigger } from "@/components/ui/field-trigger";
@@ -25,10 +26,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
-import { minorUnitsToMajorString, parseMoneyToMinorUnits } from "@myakiba/utils/currency";
+import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
-import { getCurrencyLocale } from "@/lib/locale";
+import { formSubmitHandler } from "@/lib/form-submit";
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
@@ -62,8 +63,6 @@ function OrdersFiltersDraft({
   onApplyFilters,
   currency,
 }: Omit<OrdersFiltersFormProps, "renderTrigger">): React.JSX.Element {
-  const userLocale = getCurrencyLocale(currency);
-
   const form = useForm({
     defaultValues: {
       shop: currentFilters?.shop ?? [],
@@ -143,30 +142,18 @@ function OrdersFiltersDraft({
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
         status: value.status && value.status.length > 0 ? value.status : undefined,
-        totalMin: value.totalMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.totalMin),
-        totalMax: value.totalMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.totalMax),
-        shippingFeeMin:
-          value.shippingFeeMin.trim() === ""
-            ? undefined
-            : parseMoneyToMinorUnits(value.shippingFeeMin),
-        shippingFeeMax:
-          value.shippingFeeMax.trim() === ""
-            ? undefined
-            : parseMoneyToMinorUnits(value.shippingFeeMax),
-        taxesMin: value.taxesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.taxesMin),
-        taxesMax: value.taxesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.taxesMax),
-        dutiesMin:
-          value.dutiesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.dutiesMin),
-        dutiesMax:
-          value.dutiesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.dutiesMax),
-        tariffsMin:
-          value.tariffsMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.tariffsMin),
-        tariffsMax:
-          value.tariffsMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.tariffsMax),
-        miscFeesMin:
-          value.miscFeesMin.trim() === "" ? undefined : parseMoneyToMinorUnits(value.miscFeesMin),
-        miscFeesMax:
-          value.miscFeesMax.trim() === "" ? undefined : parseMoneyToMinorUnits(value.miscFeesMax),
+        totalMin: optionalMinorUnits(value.totalMin),
+        totalMax: optionalMinorUnits(value.totalMax),
+        shippingFeeMin: optionalMinorUnits(value.shippingFeeMin),
+        shippingFeeMax: optionalMinorUnits(value.shippingFeeMax),
+        taxesMin: optionalMinorUnits(value.taxesMin),
+        taxesMax: optionalMinorUnits(value.taxesMax),
+        dutiesMin: optionalMinorUnits(value.dutiesMin),
+        dutiesMax: optionalMinorUnits(value.dutiesMax),
+        tariffsMin: optionalMinorUnits(value.tariffsMin),
+        tariffsMax: optionalMinorUnits(value.tariffsMax),
+        miscFeesMin: optionalMinorUnits(value.miscFeesMin),
+        miscFeesMax: optionalMinorUnits(value.miscFeesMax),
       };
 
       onApplyFilters(filters);
@@ -179,11 +166,7 @@ function OrdersFiltersDraft({
     return `${items.length} selected`;
   };
 
-  const handleSubmit = (e: React.FormEvent): void => {
-    e.preventDefault();
-    e.stopPropagation();
-    form.handleSubmit();
-  };
+  const handleSubmit = formSubmitHandler(form);
 
   const formFieldsContent = (
     <div className="grid gap-4">
@@ -458,32 +441,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Total Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="totalMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="totalMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="totalMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="totalMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
@@ -491,32 +450,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Shipping Fee Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="shippingFeeMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="shippingFeeMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="shippingFeeMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="shippingFeeMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
@@ -524,32 +459,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Taxes Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="taxesMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="taxesMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="taxesMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="taxesMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
@@ -557,32 +468,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Duties Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="dutiesMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="dutiesMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="dutiesMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="dutiesMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
@@ -590,32 +477,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Tariffs Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="tariffsMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="tariffsMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="tariffsMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="tariffsMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
@@ -623,32 +486,8 @@ function OrdersFiltersDraft({
       <Field>
         <FieldTitle>Misc Fees Range</FieldTitle>
         <div className="grid grid-cols-2 gap-2">
-          <form.Field
-            name="miscFeesMin"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Min"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
-          <form.Field
-            name="miscFeesMax"
-            children={(field) => (
-              <MaskInput
-                mask="currency"
-                currency={currency}
-                locale={userLocale}
-                placeholder="Max"
-                value={field.state.value || ""}
-                onValueChange={(_, unmaskedValue) => field.handleChange(unmaskedValue)}
-              />
-            )}
-          />
+          <MoneyField form={form} name="miscFeesMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="miscFeesMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
     </div>

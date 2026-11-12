@@ -1,18 +1,22 @@
 # myakiba
 
-myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means collectible information in the Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
+myakiba helps collectors track Japanese pop-culture collectibles, purchases, Orders, personal Lists, and spending. Item means collectible information in a user's own Item Database, Collection Item means one user's purchase or ownership details, and Order Item means that Collection Item when it is linked to an Order.
 
 ## Language
 
 ### Item database
 
 **Item Database**:
-All the Items and their details in myakiba. An Item's details are the same for every user.
-_Avoid_: Catalog, library
+All of one user's Items and their details. Each user has their own, and nobody else sees or changes it. It holds at most 20,000 Items.
+_Avoid_: Catalog, library, shared database
 
 **Item**:
-The description of one collectible, separate from any one user's purchase or ownership details. An Item can come from MyFigureCollection or be custom.
+The description of one collectible in one user's Item Database, separate from that user's purchase or ownership details. An Item can come from MyFigureCollection or be custom. Two users who save the same MyFigureCollection page each have their own Item.
 _Avoid_: Catalog Item, database item, global item
+
+**Item Picture**:
+The picture an Item shows, stored by its content, so two Items with the same picture share one stored copy. It is public but unlisted: its link is served for myakiba's own pages. Each picture a user saves is recorded in their picture ledger, and the ledger holds at most 2 GiB, each distinct picture counted once, whether or not an Item still shows it.
+_Avoid_: Thumbnail when the stored picture is meant
 
 **Item Release**:
 A dated release of an Item for sale. One Item can have several Item Releases.
@@ -23,7 +27,7 @@ An optional Item Release picked for a Collection Item. It must be a release of t
 _Avoid_: Selected Release, Latest release, Order Release Date
 
 **Item Entry**:
-A named detail linked to one or more Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job.
+A named detail linked to one or more of one user's Items, such as an artist, character, or company. Its link to an Item can include extra context, such as an artist's job. Each user has their own Item Entries, so a page renames only its uploader's.
 _Avoid_: Catalog Entry, Item Attribute, Entry, tag
 
 **Item Entry Category**:
@@ -177,44 +181,42 @@ Collection Spend shown under a matching Item Entry, the Collection Item's named 
 How many different Item Entries, Shops, or Scales appear in one Analytics section. It is not the number of different Collection Items.
 _Avoid_: Unique Owned
 
-### Imports and data transfer
+### Adding items
 
-In the Add menu, use Collection, Order, MyFigureCollection CSV, and Item Database. Within a collection, order, or the Item Database, use Add for the local add button. Keep full action names for standalone commands and sheet titles.
+Use Add for the header button and the Add Page; keep full action names for destinations.
+
+**Add Page**:
+The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
+_Avoid_: Add menu, Add tray, sheet
+
+**Pick**:
+Choosing the MyFigureCollection Item page you are viewing with the Browser Extension's Pick for myakiba button. The extension keeps the page and its picture in the browser until the Add Page saves the Item.
+_Avoid_: Import, bookmark
 
 **Add to item database**:
-An action that adds missing Items to the Item Database using MyFigureCollection item links or IDs, without creating Collection Items or Orders. Existing Items are reused with their saved details.
+Saving a Pick: myakiba reads the picked page and adds its Item to your Item Database, or reuses your Item already there. It never reuses or changes another user's Item for the same page, and it creates no Collection Item.
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-An action that creates Collection Items for the user, using existing Item details or scraping missing details from MyFigureCollection.
+On the Add Page, creating one Owned Collection Item per selected row. Items not yet owned go through Create order or Add to order.
 _Avoid_: Sync Collection
 
 **Create order**:
-An action that creates an Order and its Order Items using MyFigureCollection item links or IDs.
+On the Add Page, creating an Order whose Order Items copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order, Add to order when creating a new Order
 
 **Add to order**:
-An action that adds Order Items to an existing Order.
+On the Add Page, adding Order Items to an existing Order; they copy its status, Shop, dates and Shipping Method.
 _Avoid_: Sync Order Items
 
-**Import MyFigureCollection CSV**:
-An action that reads a MyFigureCollection CSV export and creates new Collection Items and Orders for its supported Owned and Ordered items, reusing or adding the needed Items. Importing the same file again creates additional Collection Items and Orders.
-_Avoid_: Sync CSV, Import from MyFigureCollection when a CSV file is required
-
-**MyFigureCollection Import**:
-A MyFigureCollection Import brings data from MyFigureCollection into myakiba by finding existing Items or adding missing ones, without sending changes back to MyFigureCollection. It can add Items on their own, add Collection Items, create Orders, or add Order Items.
-_Avoid_: Sync, two-way sync
-
-**Import History**:
-A saved record of one MyFigureCollection Import request and its successful and failed item results; requests that only add Items to the Item Database are included, and separate Collection Items can give it repeated results for the same MyFigureCollection ID. The record expires 30 days after the original request was created, even if unfinished, and the user can retry only its failed item results for the first 20 days without starting a new record.
-
 **Item Refresh**:
-An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible to every user and may change or clear Selected Item Releases on Collection Items linked to that Item.
+An update of a MyFigureCollection Item using current MyFigureCollection data. The action is called Refresh item details; its update is visible only to you and may change or clear Selected Item Releases on your Collection Items linked to that Item.
 _Avoid_: Catalog Item Refresh, Item Resync, refresh my item
 
-**Data Transfer Archive**:
-A myakiba export of all a user's Orders and Collection Items, available only when every Collection Item uses a MyFigureCollection Item. It stores Item references instead of a copy of the Item Database and leaves out Lists, Wishlist, preferences, and Import History.
-_Avoid_: Backup, all your data
+**Browser Extension**:
+The myakiba extension for desktop Chrome, other Chromium browsers, and Firefox. It keeps the MFC Item page a user picks, and fetches an MFC page only for an Item Refresh, with the user's own MFC sign-in.
+_Avoid_: Plugin, add-on
 
-**Data Transfer Import**:
-Each new Data Transfer Import reuses or adds the needed Items and creates new Orders and Collection Items without changing existing ones. Importing the same archive again can create duplicates, and myakiba may replace a missing Selected Item Release with another Item Release or leave it unselected.
+**Extension Listing**:
+A store's public page for the Browser Extension: the Chrome Web Store for Chromium browsers, and Firefox Add-ons for Firefox. Each store reviews and lists it on its own; until a store has an Extension Listing, visitors whose browser uses that store are told the extension is under review.
+_Avoid_: Release state, released when a store is meant

@@ -1,11 +1,14 @@
+import { Result } from "better-result";
 import { log } from "evlog";
+import { DependencyUnavailable } from "@/lib/errors/dependency-unavailable";
 
 export type Dependency = {
   readonly name: string;
   readonly ping: () => Promise<void>;
 };
 
-type Waiter = (failure: string | undefined) => void;
+type Ping = Result<void, DependencyUnavailable>;
+type Waiter = (answer: Ping) => void;
 
 export const readinessCheck = (
   dependencies: readonly Dependency[],
@@ -14,28 +17,36 @@ export const readinessCheck = (
   const waitersByName = new Map<string, Set<Waiter>>();
 
   const probe = async ({ name, ping }: Dependency, waiters: Set<Waiter>): Promise<void> => {
-    let failure: string | undefined;
-    try {
-      await ping();
-    } catch (error) {
-      const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
-      failure = cause instanceof Error ? cause.message : String(cause);
-    }
+    const answer = await Result.tryPromise({
+      try: () => ping(),
+      catch: (error) => {
+        const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
+        const reason = cause instanceof Error ? cause.message : String(cause);
+        return new DependencyUnavailable({ dependency: name, reason });
+      },
+    });
     waitersByName.delete(name);
-    for (const settle of waiters) settle(failure);
+    for (const settle of waiters) settle(answer);
   };
 
-  const pingFailure = (dependency: Dependency): Promise<string | undefined> =>
+  const pingOf = (dependency: Dependency): Promise<Ping> =>
     new Promise((resolve) => {
       const pending = waitersByName.get(dependency.name);
       const waiters = pending ?? new Set<Waiter>();
       const timer = setTimeout(() => {
         waiters.delete(settle);
-        resolve(`no answer within ${timeoutMs} ms`);
+        resolve(
+          Result.err(
+            new DependencyUnavailable({
+              dependency: dependency.name,
+              reason: `no answer within ${timeoutMs} ms`,
+            }),
+          ),
+        );
       }, timeoutMs);
-      const settle: Waiter = (failure) => {
+      const settle: Waiter = (answer) => {
         clearTimeout(timer);
-        resolve(failure);
+        resolve(answer);
       };
       waiters.add(settle);
       if (pending) return;
@@ -44,9 +55,13 @@ export const readinessCheck = (
     });
 
   const failedPing = async (dependency: Dependency): Promise<string | undefined> => {
-    const failure = await pingFailure(dependency);
-    if (failure === undefined) return undefined;
-    log.error({ msg: "health check failed", dependency: dependency.name, reason: failure });
+    const answer = await pingOf(dependency);
+    if (answer.isOk()) return undefined;
+    log.error({
+      msg: "health check failed",
+      dependency: dependency.name,
+      reason: answer.error.reason,
+    });
     return dependency.name;
   };
 

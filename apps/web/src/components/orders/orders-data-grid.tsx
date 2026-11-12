@@ -22,9 +22,9 @@ import { OrdersActionBar } from "./orders-action-bar";
 import { OrdersCardGrid } from "./orders-card-grid";
 import { OrdersGalleryGrid } from "./orders-gallery-grid";
 import { createOrdersColumns, OrderItemSelectionContext } from "./orders-columns";
+import { AddLink } from "@/components/add/add-link";
 import { OrderPendingContext } from "./order-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
-import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
@@ -256,7 +256,7 @@ export default function OrdersDataGrid() {
           value={viewMode}
           onValueChange={setViewMode}
         />
-        <SyncSheetButton syncType="order" label="Add" className="ml-auto" />
+        <AddLink search={{ to: "order-new" }} className="ml-auto" />
       </div>
       <OrdersActionBar
         selectedOrderIds={selectedOrderIds}

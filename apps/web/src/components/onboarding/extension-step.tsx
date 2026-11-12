@@ -1,0 +1,78 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import type { IconSvgElement } from "@hugeicons/react";
+import {
+  AlertCircleIcon,
+  CancelCircleIcon,
+  Loading03Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import {
+  ExtensionLink,
+  ExtensionNotice,
+  UPDATE_LINK,
+  pickExtensionCopy,
+} from "@/components/extension/extension-notice";
+import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
+import { extensionAvailability } from "@/lib/extension-availability";
+import { useExtensionStatus } from "@/lib/extension-gate";
+import type { ExtensionStatus } from "@/lib/extension-bridge";
+import { cn } from "@/lib/utils";
+
+const STATUS_LINE = {
+  checking: { icon: Loading03Icon, label: "Looking for the extension…", tone: "" },
+  absent: { icon: CancelCircleIcon, label: "Not installed", tone: "text-muted-foreground" },
+  outdated: { icon: AlertCircleIcon, label: "Update needed", tone: "text-warning-foreground" },
+  ready: { icon: Tick02Icon, label: "Extension connected", tone: "text-success-foreground" },
+} as const satisfies Record<
+  ExtensionStatus["kind"],
+  { readonly icon: IconSvgElement; readonly label: string; readonly tone: string }
+>;
+
+export function ExtensionStep() {
+  const status = useExtensionStatus();
+  if (status.kind !== "absent") {
+    return <InstallStatus status={status} link={status.kind === "outdated" ? UPDATE_LINK : null} />;
+  }
+  const copy = pickExtensionCopy(extensionAvailability());
+  return copy.link ? (
+    <InstallStatus status={status} link={copy.link} />
+  ) : (
+    <ExtensionNotice copy={copy} />
+  );
+}
+
+function InstallStatus({
+  status,
+  link,
+}: {
+  readonly status: ExtensionStatus;
+  readonly link: ExtensionNoticeCopy["link"];
+}) {
+  const line = STATUS_LINE[status.kind];
+  const spinning = status.kind === "checking";
+
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border p-4">
+      <p className={cn("flex items-center gap-2 text-sm font-medium", line.tone)} role="status">
+        <HugeiconsIcon
+          icon={spinning ? Loading03Icon : line.icon}
+          strokeWidth={2}
+          className={cn("size-4", spinning && "animate-spin motion-reduce:animate-none")}
+        />
+        {line.label}
+      </p>
+      {link ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <ExtensionLink link={link} />
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Reload page
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Reload this page after you {status.kind === "absent" ? "install" : "update"} it.
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}

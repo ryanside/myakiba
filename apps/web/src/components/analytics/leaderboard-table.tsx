@@ -190,6 +190,7 @@ export function LeaderboardTable<TRow extends Record<string, CellValue>>({
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
+    enableSorting: false,
     state: { sorting: [{ id: rankedBy, desc: true }] },
     getRowId: (row) => String(row[rowIdKey]),
   });

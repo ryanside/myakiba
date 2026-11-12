@@ -1,8 +1,30 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { Toaster, toast, useToastManager } from "./toast";
+import userEvent from "@testing-library/user-event";
+import { Toaster, createToastManager, toast, useToastManager } from "./toast";
 
 afterEach(cleanup);
+
+test("F6 twice still lets Shift+Tab return to where the keyboard was", async () => {
+  const manager = createToastManager();
+  render(
+    <Toaster toastManager={manager}>
+      <input aria-label="Origin" />
+    </Toaster>,
+  );
+  const origin = screen.getByRole("textbox", { name: "Origin" });
+  const user = userEvent.setup();
+  await user.click(origin);
+  act(() => {
+    manager.add({ title: "Saved", timeout: 0 });
+  });
+  await screen.findByText("Saved");
+
+  await user.keyboard("{F6}{F6}");
+  await user.tab({ shift: true });
+
+  expect(document.activeElement).toBe(origin);
+});
 
 function Timeouts(): React.JSX.Element {
   const { toasts } = useToastManager();
@@ -48,6 +70,18 @@ test("repeated errors leave one toast and dismiss without revealing an older cop
     toast.add({ type: "error", title: "Invalid email or password" });
   });
   expect(screen.getAllByText("Invalid email or password")).toHaveLength(1);
+});
+
+test("a toast of any type with an id replaces the one before it", () => {
+  render(<Toaster />);
+
+  act(() => {
+    for (let pick = 0; pick < 3; pick++) {
+      toast.add({ id: "picture-quota", type: "warning", title: "Saved without pictures" });
+    }
+  });
+
+  expect(screen.getAllByText("Saved without pictures")).toHaveLength(1);
 });
 
 test("error identity includes its description and preserves caller-provided ids", () => {

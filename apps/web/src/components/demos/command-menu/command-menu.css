@@ -1,0 +1,789 @@
+/* Command menu: the app's Cmd+K dialog over the dashboard, then the order it
+   opens. Anatomy from components/command/app-command.tsx, ui/command.tsx,
+   ui/dialog.tsx, the (app) route's header and orders/order-hero.tsx. */
+
+@property --mk-command-menu-fade {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes mk-command-menu-caret {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-command-menu-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.mk-command-menu {
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* The keycaps sit in the window's empty title bar, clear of the dialog */
+  & .ss-keys[data-at="top"] {
+    top: 29px;
+  }
+
+  /* The window: inset top and sides, off the bottom */
+  & .mk-command-menu-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 520px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  /* The phone column: off the right, an even gutter top, left and bottom */
+  /* The phone column: off the right, a square of the app, so it keeps a
+     desktop window's shape by stopping short of the foot */
+  & .ss-stage[data-layout="compact"] .mk-command-menu-window {
+    width: 380px;
+    height: 334px;
+  }
+
+  & .mk-command-menu-window .ss-window__body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  & .mk-command-menu-app {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* ---- The app's header: sidebar toggle and search, add and the account ---- */
+
+  & .mk-command-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 56px;
+    padding: 0 32px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-header {
+    padding: 0 16px;
+  }
+
+  & .mk-command-menu-header-button {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--foreground);
+  }
+
+  & .mk-command-menu-header-button:first-child {
+    margin-left: -4px;
+  }
+
+  & .mk-command-menu-spacer {
+    flex: 1;
+  }
+
+  & .mk-command-menu-add {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  & .mk-command-menu-avatar {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(
+      to bottom right,
+      var(--background),
+      var(--muted),
+      var(--background)
+    );
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  /* ---- Pages: one body crossfades to the next under the same header ---- */
+
+  & .mk-command-menu-pages {
+    position: absolute;
+    inset: 56px 0 0;
+  }
+
+  & .mk-command-menu-page {
+    position: absolute;
+    inset: 0;
+    padding: 16px 32px 0;
+    opacity: 0;
+    transform: translateY(8px);
+    /* A lasting layer, so the page's text rests drawn exactly as it rose */
+    will-change: transform;
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+
+  & .mk-command-menu-page[data-show] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.24s ease 0.06s,
+      transform 0.32s cubic-bezier(0.25, 0.8, 0.25, 1) 0.06s;
+  }
+
+  /* The words end a gutter inside the stage; only filler runs off the right */
+  & .ss-stage[data-layout="compact"] .mk-command-menu-page {
+    padding: 16px 62px 0 16px;
+  }
+
+  /* ---- Dashboard, as filler ---- */
+
+  & .mk-command-menu-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+  }
+
+  & .mk-command-menu-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-tabs {
+    display: none;
+  }
+
+  & .mk-command-menu-tab {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 12px;
+    border-radius: 999px;
+  }
+
+  & .mk-command-menu-tab[data-active] {
+    background: var(--background);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+
+  & .mk-command-menu-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px 40px;
+    margin-top: 32px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 24px;
+  }
+
+  & .mk-command-menu-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  & .mk-command-menu-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 40px;
+    margin-top: 40px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-panels {
+    grid-template-columns: 340px;
+    margin-top: 32px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-panel:not(:nth-child(2)) {
+    display: none;
+  }
+
+  & .mk-command-menu-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  & .mk-command-menu-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 20px;
+  }
+
+  /* Cost rows sit as close as the app's: 10px apart, the heading 12px over them */
+  & .mk-command-menu-section.mk-command-menu-costs {
+    gap: 10px;
+  }
+
+  & .mk-command-menu-costs > .ss-bar:first-child {
+    margin-bottom: 2px;
+  }
+
+  & .mk-command-menu-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 96px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  & .mk-command-menu-column {
+    flex: 1;
+    border-radius: 4px 4px 0 0;
+    background: color-mix(in oklab, var(--muted-foreground) 22%, transparent);
+  }
+
+  & .mk-command-menu-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  & .mk-command-menu-day {
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 6px;
+    background: color-mix(in oklab, var(--muted) 70%, transparent);
+  }
+
+  & .mk-command-menu-day img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  /* ---- The order's page: Back, the hero, then its summary as filler ---- */
+
+  & .mk-command-menu-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    margin-bottom: -4px;
+    padding: 10px 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--muted-foreground);
+    transition: color 0.15s ease;
+  }
+
+  & .mk-command-menu-back[data-hover] {
+    color: var(--foreground);
+  }
+
+  & .mk-command-menu-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 32px;
+  }
+
+  & .mk-command-menu-hero-thumbs {
+    display: grid;
+    flex: none;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    width: 80px;
+    height: 80px;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 1.4);
+    background: var(--muted);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+
+  & .mk-command-menu-hero-thumbs img,
+  & .mk-command-menu-thumbs img {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-command-menu-hero-thumbs img:first-child,
+  & .mk-command-menu-thumbs img:first-child {
+    grid-row: span 2;
+  }
+
+  & .mk-command-menu-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  & .mk-command-menu-hero-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 12px;
+  }
+
+  /* OrderHero: text-2xl leading-tight, the status inline after it */
+  & .mk-command-menu-hero-title {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 30px;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  & .mk-command-menu-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+
+  & .mk-command-menu-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mk-paid);
+  }
+
+  & .mk-command-menu-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  & .mk-command-menu-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  & .mk-command-menu-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--background);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  & .mk-command-menu-button-icon {
+    justify-content: center;
+    width: 32px;
+    padding: 0;
+  }
+
+  & .mk-command-menu-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 48px;
+    margin-top: 32px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-summary {
+    grid-template-columns: 420px;
+  }
+
+  & .mk-command-menu-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  & .mk-command-menu-timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* The rail behind the step marks */
+  & .mk-command-menu-timeline::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--border);
+  }
+
+  & .mk-command-menu-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  & .mk-command-menu-step-mark {
+    width: 12px;
+    height: 12px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--background);
+  }
+
+  & .mk-command-menu-step[data-state="done"] .mk-command-menu-step-mark,
+  & .mk-command-menu-step[data-state="current"] .mk-command-menu-step-mark {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+
+  & .mk-command-menu-step[data-state="current"] .mk-command-menu-step-mark {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 15%, transparent);
+  }
+
+  /* ---- The dialog's backdrop: the app dims and softens behind it ---- */
+
+  & .mk-command-menu-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: rgb(0 0 0 / 0);
+    backdrop-filter: blur(0);
+    pointer-events: none;
+    transition:
+      background-color 0.2s ease,
+      backdrop-filter 0.2s ease;
+  }
+
+  & .mk-command-menu-scrim[data-show] {
+    background: rgb(0 0 0 / 0.1);
+    backdrop-filter: blur(4px);
+  }
+
+  /* ---- The command dialog ---- */
+
+  & .mk-command-menu-dialog {
+    position: absolute;
+    top: 18px;
+    left: 152px;
+    z-index: 20;
+    width: 608px;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 1.4);
+    background: var(--background);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 18px 40px -12px rgb(0 0 0 / 0.18),
+      0 4px 12px -4px rgb(0 0 0 / 0.08);
+    opacity: 0;
+    transform: scale(0.98);
+    /* A lasting layer, so its text rests drawn exactly as it scaled in */
+    will-change: transform;
+    pointer-events: none;
+    transition:
+      opacity 0.14s ease,
+      transform 0.14s cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  & .mk-command-menu-dialog[data-show] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.16s ease-out,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* On dark, the dialog lifts by a lighter surface */
+  & .ss-stage[data-theme="dark"] .mk-command-menu-dialog {
+    background: var(--popover);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
+      0 18px 40px -12px rgb(0 0 0 / 0.6);
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-dialog {
+    top: 8px;
+    left: 12px;
+    width: 298px;
+  }
+
+  & .mk-command-menu-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 48px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+
+  & .mk-command-menu-search-icon {
+    display: flex;
+    flex: none;
+    color: var(--foreground);
+    opacity: 0.6;
+  }
+
+  & .mk-command-menu-field {
+    position: relative;
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-width: 0;
+    font-size: 15px;
+    line-height: 20px;
+    white-space: nowrap;
+  }
+
+  & .mk-command-menu-caret {
+    flex: none;
+    width: 1.5px;
+    height: 18px;
+    margin-left: 1px;
+    border-radius: 1px;
+    background: var(--foreground);
+    animation: mk-command-menu-caret 1.06s steps(1) 0.5s infinite;
+  }
+
+  & .mk-command-menu-placeholder {
+    position: absolute;
+    left: 1px;
+    overflow: hidden;
+    max-width: 100%;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+  }
+
+  & .mk-command-menu-placeholder[data-hidden] {
+    opacity: 0;
+  }
+
+  /* The list: capped, its foot fading while more sits below */
+  & .mk-command-menu-list {
+    --mk-command-menu-fade: 0px;
+    max-height: 281px;
+    margin: 0 8px;
+    overflow: hidden;
+    /* While more sits below, the list stops 12px short of the dialog's foot,
+       so the cut rows keep an inset; the dialog's height stays the same */
+
+    mask-image: linear-gradient(
+      to bottom,
+      #000 calc(100% - var(--mk-command-menu-fade)),
+      transparent 100%
+    );
+    transition:
+      --mk-command-menu-fade 0.3s ease,
+      max-height 0.3s ease,
+      margin-bottom 0.3s ease;
+  }
+
+  /* The app's scroll fade: 12% of the list, at most 40px */
+  & .mk-command-menu-list[data-overflow] {
+    --mk-command-menu-fade: min(12%, 40px);
+    max-height: 269px;
+    margin-bottom: 12px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-list[data-overflow] {
+    max-height: 217px;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-list {
+    max-height: 229px;
+  }
+
+  /* A row's text is laid out in the list's width, never its own */
+  & .mk-command-menu-collapse {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  & .mk-command-menu-group {
+    padding: 4px;
+  }
+
+  & .mk-command-menu-heading {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--muted-foreground);
+  }
+
+  /* A search's first row: its loading row, then its result in the same place,
+     the slot easing from the loading row's height to the result's */
+  & .mk-command-menu-slot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    height: 48px;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  & .mk-command-menu-slot[data-searched] {
+    height: 52px;
+  }
+
+  & .mk-command-menu-slot > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  & .mk-command-menu-slot-loading {
+    transition: opacity 0.15s ease;
+  }
+
+  & .mk-command-menu-slot-result {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  & .mk-command-menu-slot[data-searched] .mk-command-menu-slot-loading {
+    opacity: 0;
+  }
+
+  & .mk-command-menu-slot[data-searched] .mk-command-menu-slot-result {
+    opacity: 1;
+    transition: opacity 0.24s ease 0.06s;
+  }
+
+  & .mk-command-menu-separator {
+    height: 1px;
+    background: var(--border);
+  }
+
+  & .mk-command-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: var(--radius);
+    transition:
+      background-color 0.1s ease,
+      box-shadow 0.1s ease;
+  }
+
+  & .mk-command-menu-item[data-selected] {
+    background: var(--muted);
+    box-shadow: inset 0 0 0 1px var(--ring);
+  }
+
+  & .mk-command-menu-lead {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: calc(var(--radius) * 0.8);
+    color: var(--muted-foreground);
+  }
+
+  & .mk-command-menu-lead-muted {
+    background: var(--muted);
+  }
+
+  & .mk-command-menu-thumbs {
+    display: grid;
+    flex: none;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+    border-radius: calc(var(--radius) * 0.8);
+    background: var(--muted);
+  }
+
+  & .mk-command-menu-thumb {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: calc(var(--radius) * 0.8);
+    object-fit: cover;
+    object-position: top;
+  }
+
+  & .mk-command-menu-item-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  & .mk-command-menu-item-title {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  & .mk-command-menu-item-subtitle {
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* A search still running: the app's disabled row, its spinner turning */
+  & .mk-command-menu-loading {
+    opacity: 0.5;
+  }
+
+  & .mk-command-menu-spinner {
+    display: flex;
+    animation: mk-command-menu-spin 1s linear infinite;
+  }
+
+  & .mk-command-menu-loading-label {
+    color: var(--muted-foreground);
+  }
+
+  /* Where the pointer rests: empty space in the dashboard's title row */
+  & .mk-command-menu-rest {
+    position: absolute;
+    top: 150px;
+    left: 430px;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .mk-command-menu-rest {
+    top: 150px;
+    left: 216px;
+  }
+}

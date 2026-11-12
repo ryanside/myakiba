@@ -6,7 +6,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -20,7 +20,7 @@ services:
     image: redis:8.8.0
     command: redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -56,7 +56,7 @@ services:
         VITE_SERVER_URL: ${VITE_SERVER_URL}
         VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
@@ -68,40 +68,18 @@ services:
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - POSTHOG_API_KEY=${POSTHOG_API_KEY}
-    healthcheck:
-      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  worker1:
-    depends_on:
-      db-push:
-        condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
-    environment:
-      - WORKER_PROXY_URL=${WORKER_PROXY_URL}
-      - DATABASE_URL=${DATABASE_URL}
       - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - AWS_BUCKET_REGION=${AWS_BUCKET_REGION}
       - AWS_BUCKET_URL=${AWS_BUCKET_URL}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - POSTHOG_API_KEY=${POSTHOG_API_KEY}
     healthcheck:
-      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://127.0.0.1:3002/health"]
+      test: ["CMD", "/usr/bin/wget", "-q", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

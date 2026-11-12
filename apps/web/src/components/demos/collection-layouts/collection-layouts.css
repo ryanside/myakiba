@@ -1,0 +1,355 @@
+/* Collection: the Compact table and the Gallery, one set of figures between
+   them. Anatomy from collection-data-grid.tsx, collection-columns.tsx,
+   collection-gallery-grid.tsx, view-toggle.tsx and media-tile.tsx. The window
+   is pinned a gutter from the top and sides and runs off the bottom, so the
+   gallery's second row leaves through the crop. */
+.mk-collection-layouts {
+  --mk-travel: cubic-bezier(0.45, 0, 0.1, 1);
+
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  & .mk-collection-layouts-mask {
+    position: absolute;
+    inset: 0;
+  }
+
+  & .mk-collection-layouts-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 480px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .mk-collection-layouts-window .ss-window__body {
+    background: var(--background);
+  }
+
+  & .mk-collection-layouts-body {
+    padding: 16px 24px 0;
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* The page title beside the toolbar: the search pill, Filters, Sort and
+     Columns on the left, the view toggle and Add on the right */
+  & .mk-collection-layouts-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+  }
+
+  & .mk-collection-layouts-title {
+    margin-right: 16px;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  & .mk-collection-layouts-search {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 232px;
+    height: 32px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    background: var(--muted);
+    color: var(--muted-foreground);
+  }
+
+  & .mk-collection-layouts-button {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--foreground);
+    transition:
+      opacity 160ms ease-out,
+      scale 160ms ease-out;
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-collection-layouts-button {
+    border-color: var(--input);
+    background: transparent;
+  }
+
+  & .mk-collection-layouts-button[data-gone] {
+    opacity: 0;
+    scale: 0.92;
+  }
+
+  & .mk-collection-layouts-spacer {
+    flex: 1;
+  }
+
+  /* The segmented view toggle: a muted pill, the chosen mode on a raised
+     thumb that slides between them */
+  & .mk-collection-layouts-toggle {
+    --item: 36px;
+    --step: calc(var(--item) + 2px);
+    position: relative;
+    display: flex;
+    flex: none;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .mk-collection-layouts-toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: var(--item);
+    height: 28px;
+    border-radius: 999px;
+    background: var(--background);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+    transition: translate 240ms cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-collection-layouts-toggle-thumb {
+    background: var(--input);
+  }
+
+  & .mk-collection-layouts-toggle[data-value="gallery"] .mk-collection-layouts-toggle-thumb {
+    translate: calc(var(--step) * 3) 0;
+  }
+
+  & .mk-collection-layouts-toggle-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--item);
+    height: 28px;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+    transition:
+      color 150ms ease,
+      scale 120ms ease;
+
+    & svg {
+      display: block;
+    }
+  }
+
+  & .mk-collection-layouts-toggle-item[data-hover] {
+    color: var(--foreground);
+  }
+
+  & .mk-collection-layouts-toggle-item[data-on] {
+    color: var(--foreground);
+  }
+
+  & .mk-collection-layouts-toggle-item[data-pressed] {
+    scale: 0.94;
+  }
+
+  & .mk-collection-layouts-add {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    margin-left: 8px;
+    padding: 0 14px 0 10px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-weight: 500;
+  }
+
+  /* The table and the gallery share one content column */
+  & .mk-collection-layouts-content {
+    position: relative;
+    margin-top: 16px;
+  }
+
+  /* The dense data grid: select, Item, Price, Shop, Collected, actions */
+  & .mk-collection-layouts-row {
+    display: grid;
+    grid-template-columns: 40px 392px 100px 168px 108px 56px;
+    align-items: center;
+    justify-items: start;
+    height: 52px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+
+  & .mk-collection-layouts-row > .ss-bar:not(.mk-collection-layouts-end) {
+    margin-left: 8px;
+  }
+
+  & .mk-collection-layouts-head {
+    height: 32px;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-collection-layouts-check {
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--input);
+    border-radius: 4px;
+  }
+
+  & .mk-collection-layouts-item-head {
+    padding-left: 8px;
+  }
+
+  /* The thumbnail's slot is kept empty: the figure layer draws it. The title
+     sits over the MFC number and the category, 1px apart */
+  & .mk-collection-layouts-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    padding-left: 52px;
+  }
+
+  & .mk-collection-layouts-item-title {
+    display: flex;
+    align-items: center;
+    height: 20px;
+    overflow: hidden;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  & .mk-collection-layouts-item-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 16px;
+  }
+
+  /* Price is numeric: right-aligned, clear of the next column */
+  & .mk-collection-layouts-end {
+    justify-self: end;
+    margin-right: 24px;
+  }
+
+  & .mk-collection-layouts-more {
+    display: flex;
+    justify-self: end;
+    margin-right: 12px;
+    color: var(--muted-foreground);
+  }
+
+  /* The rows' words leave fast as the figures lift, and come back once the
+     figures are nearly home */
+  & .mk-collection-layouts-table {
+    transition: opacity 300ms ease-out 620ms;
+  }
+
+  & .mk-collection-layouts-content[data-gallery] .mk-collection-layouts-table {
+    opacity: 0;
+    transition: opacity 220ms ease-out;
+  }
+
+  & .mk-collection-layouts-figures {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* One figure: a thumbnail in a row, a tile in the gallery. It travels with
+     its size, on a soft start and a long settle, a step behind the one before */
+  & .mk-collection-layouts-figure {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--muted);
+    transition-property: left, top, width, height, border-radius;
+    transition-duration: 820ms;
+    transition-timing-function: var(--mk-travel);
+    transition-delay: calc(var(--i) * 45ms);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--image-edge);
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    & img[data-crop="low"] {
+      object-position: 50% 85%;
+    }
+  }
+
+  & .mk-collection-layouts-figure[data-tile] {
+    border-radius: 12px;
+  }
+
+  /* The phone column: the window off the right edge, fading at its foot over
+     the gallery's second row; the table keeps Item and Price */
+  & .ss-stage[data-layout="compact"] {
+    & .mk-collection-layouts-mask {
+      mask-image: linear-gradient(to bottom, #000 300px, transparent 356px);
+    }
+
+    /* A square of the window shows: off the right, ending as it fades */
+    & .mk-collection-layouts-window {
+      top: 16px;
+      left: 16px;
+      width: 380px;
+      height: 342px;
+    }
+
+    /* The content keeps its right inset inside the stage */
+    & .mk-collection-layouts-body {
+      padding: 12px 54px 0 16px;
+    }
+
+    & .mk-collection-layouts-title {
+      font-size: 17px;
+      line-height: 24px;
+    }
+
+    & .mk-collection-layouts-content {
+      margin-top: 12px;
+    }
+
+    & .mk-collection-layouts-row {
+      grid-template-columns: minmax(0, 1fr) 72px;
+    }
+
+    & .mk-collection-layouts-item {
+      padding-left: 52px;
+    }
+
+    & .mk-collection-layouts-end {
+      margin-right: 8px;
+    }
+  }
+}

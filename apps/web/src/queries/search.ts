@@ -1,4 +1,3 @@
-import { requireData } from "@/lib/api-response";
 import type {
   ItemDatabaseSearch,
   ItemDatabaseSearchResponse,
@@ -8,6 +7,9 @@ import type {
   SearchOrdersQuery,
   SearchOrdersResponse,
 } from "@myakiba/contracts/search/schema";
+import { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 
 export type OrderCommandMatch = {
@@ -21,32 +23,53 @@ export type CommandSearchResults = {
   readonly itemMatches: readonly SearchCommandCollectionResult[];
 };
 
-export async function searchCommandResults(search: string): Promise<CommandSearchResults> {
-  const data = await requireData(
-    app.api.search.command.get({ query: { search } }),
-    "Failed to search orders and items",
-  );
-
-  return {
-    orderMatches: data.searchData.orderResults.map((order) => ({
-      id: order.orderId,
-      title: order.orderTitle,
-      itemImages: order.itemImages,
+export function searchCommandResults(
+  search: string,
+): Promise<Result<CommandSearchResults, ApiFailure>> {
+  return call(app.api.search.command.get({ query: { search } }), {
+    fallback: "Failed to search orders and items",
+    empty: "Failed to search orders and items",
+  }).then(
+    Result.map((data): CommandSearchResults => ({
+      orderMatches: data.searchData.orderResults.map((order) => ({
+        id: order.orderId,
+        title: order.orderTitle,
+        itemImages: order.itemImages,
+      })),
+      itemMatches: data.searchData.collectionResults,
     })),
-    itemMatches: data.searchData.collectionResults,
-  };
+  );
 }
 
-export async function getItemDatabaseItems(
+export function getItemDatabaseItems(
   params: ItemDatabaseSearch,
-): Promise<ItemDatabaseSearchResponse> {
-  return requireData(app.api.search.items.get({ query: params }), "Failed to search item database");
+): Promise<Result<ItemDatabaseSearchResponse, ApiFailure>> {
+  return call(
+    app.api.search.items.get({
+      query: params,
+    }),
+    { fallback: "Failed to search item database", empty: "Failed to search item database" },
+  );
 }
 
-export async function searchEntries(params: SearchEntriesQuery): Promise<SearchEntriesResponse> {
-  return requireData(app.api.search.entries.get({ query: params }), "Failed to search entries");
+export function searchEntries(
+  params: SearchEntriesQuery,
+): Promise<Result<SearchEntriesResponse, ApiFailure>> {
+  return call(
+    app.api.search.entries.get({
+      query: params,
+    }),
+    { fallback: "Failed to search entries", empty: "Failed to search entries" },
+  );
 }
 
-export async function searchOrders(params: SearchOrdersQuery): Promise<SearchOrdersResponse> {
-  return requireData(app.api.search.orders.get({ query: params }), "Failed to search orders");
+export function searchOrders(
+  params: SearchOrdersQuery,
+): Promise<Result<SearchOrdersResponse, ApiFailure>> {
+  return call(
+    app.api.search.orders.get({
+      query: params,
+    }),
+    { fallback: "Failed to search orders", empty: "Failed to search orders" },
+  );
 }

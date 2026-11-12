@@ -1,0 +1,397 @@
+/* The Wishlist in its All view, as a gallery: wishlist.tsx's PageHeader over
+   media-tile.tsx's gallery tiles. Every rule is scoped to the demo. */
+.mk-wishlist-rank {
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* Pinned a gutter in from the top and both sides, off the bottom through
+     the second row */
+  & .mk-wishlist-rank-window {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 912px;
+    height: 520px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  & .mk-wishlist-rank-window .ss-window__body {
+    background: var(--ss-surface);
+  }
+
+  & .mk-wishlist-rank-page {
+    padding: 24px 24px 0;
+    color: var(--foreground);
+  }
+
+  /* PageHeader: the title and its count, the filters and the view toggle */
+  & .mk-wishlist-rank-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 36px;
+    margin-bottom: 24px;
+  }
+
+  & .mk-wishlist-rank-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  & .mk-wishlist-rank-title {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 32px;
+    letter-spacing: -0.02em;
+  }
+
+  & .mk-wishlist-rank-count {
+    font-size: 17px;
+    line-height: 24px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  & .mk-wishlist-rank-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* The segmented ToggleGroup: a muted track, the pressed item on the page's own surface */
+  & .mk-wishlist-rank-segmented {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+
+  & .mk-wishlist-rank-segment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  & .mk-wishlist-rank-segment[data-on] {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-wishlist-rank-segment[data-on] {
+    background: var(--input);
+  }
+
+  & .mk-wishlist-rank-view {
+    width: 28px;
+    padding: 0;
+  }
+
+  /* AddLink: the primary button, its icon leading Add */
+  & .mk-wishlist-rank-add {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 14px 0 12px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  /* The gallery: square photos 8px apart, each at its place by a transform,
+     so a change of order glides */
+  & .mk-wishlist-rank-grid {
+    position: relative;
+  }
+
+  & .mk-wishlist-rank-place {
+    position: absolute;
+    width: var(--tile);
+    height: var(--tile);
+    pointer-events: none;
+  }
+
+  & .mk-wishlist-rank-tile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--tile);
+    height: var(--tile);
+    will-change: transform;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Across the row break the tile takes its new place at once and its face
+     comes in from beside it, while a copy leaves the old place the other way */
+  & .mk-wishlist-rank-tile[data-wrap] {
+    transition: none;
+  }
+
+  & .mk-wishlist-rank-face {
+    display: block;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+  }
+
+  & .mk-wishlist-rank-tile[data-wrap="down"]:not(.mk-wishlist-rank-ghost) .mk-wishlist-rank-face {
+    animation: mk-wishlist-rank-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  & .mk-wishlist-rank-tile[data-wrap="up"]:not(.mk-wishlist-rank-ghost) .mk-wishlist-rank-face {
+    animation: mk-wishlist-rank-in-right 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* At rest the copy is gone, so it can never show without its animation */
+  & .mk-wishlist-rank-ghost {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* One name per direction, so the copy's fade restarts when the direction does */
+  & .mk-wishlist-rank-ghost[data-wrap="down"] {
+    animation: mk-wishlist-rank-fade-down 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  & .mk-wishlist-rank-ghost[data-wrap="up"] {
+    animation: mk-wishlist-rank-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  & .mk-wishlist-rank-ghost[data-wrap="down"] .mk-wishlist-rank-face {
+    animation: mk-wishlist-rank-out-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  & .mk-wishlist-rank-ghost[data-wrap="up"] .mk-wishlist-rank-face {
+    animation: mk-wishlist-rank-out-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* The figure that moves passes over its neighbors, never under */
+  & .mk-wishlist-rank-tile[data-moved] {
+    z-index: 2;
+    transition-duration: 0.62s;
+  }
+
+  & .mk-wishlist-rank-image {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--muted);
+  }
+
+  & .mk-wishlist-rank-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--image-edge);
+    border-radius: inherit;
+    pointer-events: none;
+    transition: border-color 0.15s ease-out;
+  }
+
+  & .mk-wishlist-rank-tile[data-shown] .mk-wishlist-rank-image::after {
+    border-color: var(--image-edge-hover);
+  }
+
+  & .mk-wishlist-rank-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+
+  /* A repeated figure shows a closer photo of itself */
+  & .mk-wishlist-rank-image img[data-alt] {
+    object-position: 50% 20%;
+    scale: 1.45;
+    transform-origin: 50% 22%;
+  }
+
+  /* ItemControls on a photo: a dark glass pill in the corner, shown on hover
+     and while the tile is dragged */
+  & .mk-wishlist-rank-controls {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 1px;
+    padding: 2px;
+    border-radius: 6px;
+    background: oklch(0 0 0 / 0.6);
+    box-shadow:
+      0 0 0 1px oklch(1 0 0 / 0.16),
+      0 1px 2px oklch(0 0 0 / 0.2),
+      0 8px 24px oklch(0 0 0 / 0.16);
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+
+  & .mk-wishlist-rank-tile[data-shown] .mk-wishlist-rank-controls {
+    opacity: 1;
+  }
+
+  & .mk-wishlist-rank-control {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    color: #fff;
+    transition: background-color 0.15s ease-out;
+  }
+
+  & .mk-wishlist-rank-control[data-hover] {
+    background: oklch(1 0 0 / 0.15);
+  }
+
+  & .mk-wishlist-rank-star {
+    color: var(--color-yellow-400);
+  }
+
+  /* The drop line: 2px, centered in the gap, jumping from gap to gap and
+     only fading */
+  & .mk-wishlist-rank-line {
+    position: absolute;
+    z-index: 3;
+    width: 2px;
+    border-radius: 999px;
+    background: var(--primary);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease-out;
+  }
+
+  & .mk-wishlist-rank-line[data-show] {
+    opacity: 1;
+  }
+
+  /* The DragOverlay's label: a small popover centered on the pointer */
+  & .mk-wishlist-rank-pill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: var(--popover);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 4px 6px -1px oklch(0 0 0 / 0.1),
+      0 2px 4px -2px oklch(0 0 0 / 0.1);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--popover-foreground);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    translate: -50% -50%;
+    scale: 0.96;
+    will-change: transform;
+    transition:
+      opacity 0.12s ease-out,
+      scale 0.12s ease-out;
+  }
+
+  & .mk-wishlist-rank-pill[data-show] {
+    opacity: 1;
+    scale: 1;
+  }
+
+  /* Compact: a phone column, two columns of photos. The window's surface
+     without its chrome, pinned a gutter in from the top and left, off the
+     right and the foot */
+  & .ss-stage[data-layout="compact"] {
+    & .mk-wishlist-rank-panel {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 380px;
+      height: 420px;
+      overflow: hidden;
+      background: var(--ss-surface);
+      box-shadow: var(--ss-shadow-hero);
+    }
+
+    & .mk-wishlist-rank-page {
+      padding: 14px 16px 0;
+    }
+
+    /* PageHeader wraps on a phone: the title and count, the filters under them */
+    & .mk-wishlist-rank-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      height: auto;
+      margin-bottom: 14px;
+    }
+  }
+}
+
+@keyframes mk-wishlist-rank-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+@keyframes mk-wishlist-rank-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+@keyframes mk-wishlist-rank-fade-down {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-wishlist-rank-fade-up {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mk-wishlist-rank-out-right {
+  to {
+    transform: translateX(40px);
+  }
+}
+
+@keyframes mk-wishlist-rank-out-left {
+  to {
+    transform: translateX(-40px);
+  }
+}

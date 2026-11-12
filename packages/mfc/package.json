@@ -1,0 +1,34 @@
+{
+  "name": "@myakiba/mfc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./bridge": "./src/bridge.ts",
+    "./capture": "./src/capture.ts",
+    "./page": "./src/page.ts",
+    "./parse": "./src/parse.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test --isolate"
+  },
+  "dependencies": {
+    "@myakiba/contracts": "workspace:*",
+    "@myakiba/utils": "workspace:*",
+    "better-result": "catalog:",
+    "cheerio": "^1.2.0",
+    "cheerio-select": "^2.1.0",
+    "domhandler": "^6.0.1",
+    "htmlparser2": "^10.1.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^21.0.3",
+    "@myakiba/config": "workspace:*",
+    "@types/bun": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "catalog:"
+  }
+}

@@ -5,15 +5,21 @@ import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { createRouter } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type { RouterAppContext } from "./routes/__root";
 import { NotFound } from "@/components/errors/not-found";
 import { RouteError } from "@/components/errors/route-error";
 import { AuthRouterProvider } from "@/components/auth/auth-router-provider";
 import { createSessionSource } from "@/lib/session";
+import { createQueryClient } from "@/data/client";
+import { loadFont } from "@/lib/load-font";
 
-const queryClient = new QueryClient();
+// Browsers lay text out in a fallback face until its webfont arrives, then move it. Starting
+// Inter here, before the first route renders, lets the first layout use it.
+void loadFont('1em "Inter Variable"');
+
+const queryClient = createQueryClient();
 const sessions = createSessionSource();
 
 const router = createRouter({

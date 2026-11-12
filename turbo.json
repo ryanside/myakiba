@@ -13,7 +13,7 @@
     },
     "test": {
       "cache": false,
-      "passThroughEnv": ["TEST_DATABASE_URL", "TEST_REDIS_URL"]
+      "passThroughEnv": ["TEST_DATABASE_URL", "TEST_REDIS_URL", "TEST_S3_URL", "CI"]
     },
     "dev": {
       "cache": false,
@@ -26,12 +26,6 @@
       "persistent": true
     },
     "server#dev": {
-      "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
-      "with": ["@myakiba/db#db:studio"],
-      "cache": false,
-      "persistent": true
-    },
-    "worker#dev": {
       "dependsOn": ["@myakiba/db#db:start", "@myakiba/redis#redis:start"],
       "with": ["@myakiba/db#db:studio"],
       "cache": false,

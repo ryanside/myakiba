@@ -17,6 +17,7 @@ import {
   orderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
   shipping: 0,
@@ -355,7 +356,7 @@ function loadCollectionItems(tx: ReadTx, userId: string, filters: ExpenseFilters
       itemId: item.id,
       externalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))

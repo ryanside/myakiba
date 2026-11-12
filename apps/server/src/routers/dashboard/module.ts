@@ -4,7 +4,9 @@ import type { ReadTx } from "@myakiba/db/tx";
 import type { Category } from "@myakiba/contracts/shared/types";
 import { getDateOnlyMonthBounds, toDateOnlyString } from "@myakiba/utils/date-only";
 import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-preview";
-import { ok, prepared, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { prepared, query } from "@/domain/kernel";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
@@ -239,7 +241,7 @@ const releaseCalendarRead = prepared("release_calendar", (tx) =>
       itemId: item.id,
       itemExternalId: item.externalId,
       title: item.title,
-      image: item.image,
+      image: itemImageSql().as("image"),
       category: item.category,
       releaseDate: item_release.date,
       price: item_release.price,
@@ -424,7 +426,7 @@ export const Dashboard = {
       const unpaidOrderCount = Number(unpaidSummary.unpaidOrderCount ?? 0);
       const unpaidCosts = Number(unpaidSummary.unpaidCosts ?? 0);
 
-      return ok({
+      return Result.ok({
         collectionStats,
         categoriesOwned,
         orders,
@@ -449,7 +451,7 @@ export const Dashboard = {
         endDate,
       });
 
-      return ok({ releaseCalendar: { releases } });
+      return Result.ok({ releaseCalendar: { releases } });
     },
   ),
 
@@ -495,7 +497,7 @@ export const Dashboard = {
         miscFees: Number(monthlySummary.miscFees),
       };
 
-      return ok({
+      return Result.ok({
         itemCount: Number(monthlySummary.itemCount),
         orderCount: monthlySummary.orderCount,
         unpaidOrderCount: Number(monthlySummary.unpaidOrderCount),

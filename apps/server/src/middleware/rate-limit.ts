@@ -1,5 +1,4 @@
 import { Elysia, status } from "elysia";
-import { createHash } from "node:crypto";
 import { redis } from "@myakiba/redis/client";
 import { auth } from "@myakiba/auth/server";
 
@@ -21,7 +20,6 @@ interface RateLimitConfig {
   readonly maxRequests: number;
   readonly windowSeconds: number;
   readonly keyPrefix: string;
-  readonly strategy: "userId" | "ipFingerprint";
 }
 
 interface RateLimitResult {
@@ -32,53 +30,24 @@ interface RateLimitResult {
 }
 
 const rateLimitConfigs = {
-  item: {
-    maxRequests: 30,
+  mfcIngest: {
+    maxRequests: 2000,
     windowSeconds: 3600,
-    keyPrefix: "rl:item",
-    strategy: "userId",
+    keyPrefix: "rl:mfc-ingest",
   },
-  csv: {
-    maxRequests: 7,
+  itemResync: {
+    maxRequests: 60,
     windowSeconds: 3600,
-    keyPrefix: "rl:csv",
-    strategy: "userId",
+    keyPrefix: "rl:item-resync",
   },
-  collection: {
-    maxRequests: 30,
+  addCommit: {
+    maxRequests: 120,
     windowSeconds: 3600,
-    keyPrefix: "rl:collection",
-    strategy: "userId",
-  },
-  order: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:order",
-    strategy: "userId",
-  },
-  retry: {
-    maxRequests: 30,
-    windowSeconds: 3600,
-    keyPrefix: "rl:sync-retry",
-    strategy: "userId",
+    keyPrefix: "rl:add-commit",
   },
 } as const satisfies Record<string, RateLimitConfig>;
 
 type RateLimitName = keyof typeof rateLimitConfigs;
-
-function getIpFingerprint(headers: Headers): string {
-  const ip =
-    headers.get("cf-connecting-ip") ??
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  const userAgent = headers.get("user-agent") ?? "";
-  const acceptLanguage = headers.get("accept-language") ?? "";
-
-  return createHash("sha256")
-    .update(`${ip}:${userAgent}:${acceptLanguage}`)
-    .digest("hex")
-    .slice(0, 16);
-}
 
 async function getUserId(headers: Headers): Promise<string | null> {
   const session = await auth.api.getSession({ headers });
@@ -106,15 +75,8 @@ export const rateLimit = new Elysia({ name: "rate-limit" }).macro({
   rateLimit: (name: RateLimitName) => ({
     async beforeHandle({ request, set }) {
       const config = rateLimitConfigs[name];
-
-      let identifier: string | null;
-
-      if (config.strategy === "userId") {
-        identifier = await getUserId(request.headers);
-        if (!identifier) return;
-      } else {
-        identifier = getIpFingerprint(request.headers);
-      }
+      const identifier = await getUserId(request.headers);
+      if (!identifier) return;
 
       const key = `${config.keyPrefix}:${identifier}`;
       const result = await checkRateLimit(key, config);

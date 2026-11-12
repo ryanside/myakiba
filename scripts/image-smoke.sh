@@ -14,6 +14,7 @@ network=$prefix-net
 postgres=$prefix-postgres
 redis=$prefix-redis
 database_url=postgres://smoke:smoke@$postgres:5432/smoke
+redis_password=image-smoke-redis-password
 unreachable_host=10.255.255.1
 unreachable=
 vite_args=(VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke)
@@ -74,6 +75,39 @@ answer() {
   echo "server: $path answered $want after $(elapsed "$start")s"
 }
 
+html_guarded() {
+  local container=$1 address=$2 path=$3 must=${4:-} reply
+  reply=$(curl -sS -m 5 -o /dev/null -D - -H 'accept: text/html' "http://$address$path" | tr -d '\r' | tr '[:upper:]' '[:lower:]') ||
+    fail "$container: $path did not answer" "$container"
+  if ! grep -q '^content-type: text/html' <<<"$reply"; then
+    [ -z "$must" ] || fail "$container: $path is not the web app, it answered: $(head -1 <<<"$reply")" "$container"
+    return 0
+  fi
+  grep -qx 'x-frame-options: deny' <<<"$reply" && grep -q "^content-security-policy: .*frame-ancestors 'none'" <<<"$reply" ||
+    fail "$container: $path serves HTML without X-Frame-Options: DENY and a CSP with frame-ancestors 'none'" "$container"
+}
+
+smoke_html() {
+  local container=$1 address=$2 path file url folder pages=0
+  for path in / /index.html '/index.html?x=1' /index.html/ /dashboard; do
+    html_guarded "$container" "$address" "$path" must
+  done
+  while IFS= read -r file; do
+    url=${file#"$work/dist"}
+    html_guarded "$container" "$address" "$url"
+    case $url in
+      */index.html)
+        folder=${url%index.html}
+        html_guarded "$container" "$address" "$folder"
+        [ -z "${folder%/}" ] || html_guarded "$container" "$address" "${folder%/}"
+        ;;
+    esac
+    pages=$((pages + 1))
+  done < <(find "$work/dist" -name '*.html')
+  [ "$pages" -gt 0 ] || fail "the web bundle in $container has no .html file" "$container"
+  echo "server: the web app and the bundle's $pages .html files carry X-Frame-Options and the CSP"
+}
+
 dockerfile() {
   case $1 in
     db-push) echo packages/db/Dockerfile ;;
@@ -112,11 +146,13 @@ smoke_server() {
   start=$(now)
   docker run -d --label "$label" --name "$container" --network "$network" -p 127.0.0.1::3000 \
     -e DATABASE_URL="$server_database_url" -e REDIS_HOST="$redis_host" -e REDIS_PORT=6379 \
+    -e REDIS_PASSWORD="$redis_password" \
     -e CORS_ORIGIN=http://localhost:3000 -e BETTER_AUTH_URL=http://localhost:3000 \
     -e BETTER_AUTH_SECRET=image-smoke-secret-0123456789abcdef \
     -e TURNSTILE_SECRET_KEY=image-smoke -e RESEND_API_KEY=re_image_smoke \
     -e RESEND_FROM_EMAIL=smoke@example.invalid \
     -e GOOGLE_CLIENT_ID=image-smoke -e GOOGLE_CLIENT_SECRET=image-smoke \
+    -e AWS_BUCKET_REGION=us-east-1 -e AWS_BUCKET_NAME=image-smoke \
     ${server_env[@]+"${server_env[@]/#/--env=}"} "$1" >/dev/null
   echo "server: docker run returned after $(elapsed "$start")s"
   start=$(now)
@@ -137,6 +173,7 @@ smoke_server() {
     grep -rqF "$value" "$work/dist" ||
       fail "the web bundle in $1 lacks $name=$value. Vite inlines VITE_* at the web build, so pass it as a build arg to the stage that runs that build. A prebuilt image must use the placeholder from vite_args in scripts/image-smoke.sh, as .github/workflows/ci.yml does."
   done
+  smoke_html "$container" "$address"
   [ "$(docker inspect -f '{{.State.Running}}' "$container")" = true ] || crashed "$container"
   echo "server: web bundle has" $required
 }
@@ -174,7 +211,8 @@ main() {
   docker network create --label "$label" "$network" >/dev/null
   docker run -d --label "$label" --name "$postgres" --network "$network" \
     -e POSTGRES_USER=smoke -e POSTGRES_PASSWORD=smoke -e POSTGRES_DB=smoke postgres:18.6 >/dev/null
-  docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 >/dev/null
+  docker run -d --label "$label" --name "$redis" --network "$network" redis:8.8.0 \
+    redis-server --requirepass "$redis_password" >/dev/null
 
   for target in "$@"; do
     name=${target%%=*}
@@ -184,7 +222,7 @@ main() {
       image=$prefix-$name
     fi
     wait_until 60 docker exec "$postgres" pg_isready -h 127.0.0.1 -U smoke || fail "Postgres did not start" "$postgres"
-    wait_until 60 docker exec "$redis" redis-cli ping || fail "Redis did not start" "$redis"
+    wait_until 60 docker exec -e REDISCLI_AUTH="$redis_password" "$redis" redis-cli ping || fail "Redis did not start" "$redis"
     "smoke_${name//-/_}" "$image"
   done
   [ -z "$unreachable" ] || set -- "$@" "with $unreachable unreachable"

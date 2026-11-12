@@ -17,13 +17,14 @@ import { ScrollArea } from "../ui/scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { CollectionToolbar } from "./collection-toolbar";
+import { JustAddedChip } from "./just-added-chip";
 import { CollectionActionBar } from "./collection-action-bar";
 import { CollectionCardGrid } from "./collection-card-grid";
 import { CollectionGalleryGrid } from "./collection-gallery-grid";
 import { createCollectionColumns } from "./collection-columns";
+import { AddLink } from "@/components/add/add-link";
 import { CollectionPendingContext } from "./collection-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
-import { SyncSheetButton } from "@/components/sync/sync-sheet-button";
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
@@ -255,8 +256,14 @@ export const CollectionDataGrid = () => {
           value={viewMode}
           onValueChange={setViewMode}
         />
-        <SyncSheetButton syncType="collection" label="Add" className="ml-auto" />
+        <AddLink search={{ to: "collection" }} className="ml-auto" />
       </div>
+      {filters.ids ? (
+        <JustAddedChip
+          count={filters.ids.length}
+          onShowAll={() => setFilters({ ids: undefined })}
+        />
+      ) : null}
       <CollectionActionBar
         selectedItems={selectedItems}
         onClearSelection={() => setCollectionSelection({})}

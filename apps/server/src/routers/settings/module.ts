@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { account } from "@myakiba/db/schema/auth";
-import { ok, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { query } from "@/domain/kernel";
 
 export const Settings = {
   accountType: query(
@@ -12,7 +13,7 @@ export const Settings = {
         .where(and(eq(account.userId, scope.viewer.userId), eq(account.providerId, "credential")))
         .limit(1);
 
-      return ok({ hasCredentialAccount: !!credentialAccount });
+      return Result.ok({ hasCredentialAccount: !!credentialAccount });
     },
   ),
 };

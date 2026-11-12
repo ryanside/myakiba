@@ -1,6 +1,10 @@
-import { requireData } from "@/lib/api-response";
+import { call } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 
-export async function getVersion() {
-  return requireData(app.api.version.get(), "Failed to get version");
+export function getVersion() {
+  return call(app.api.version.get(), {
+    fallback: "Failed to get version",
+    empty: "Failed to get version",
+    policy: "bodyMessage",
+  });
 }

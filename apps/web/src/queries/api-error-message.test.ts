@@ -34,52 +34,72 @@ const ORDER_FALLBACK = "Couldn't load this order. Check your connection and try 
 
 describe("an order that fails to load", () => {
   test("reads as a connection problem when the server cannot be reached", async () => {
-    await expect(loadOrder(unreachable)).rejects.toMatchObject({ message: ORDER_FALLBACK });
+    expect(await loadOrder(unreachable)).toMatchObject({
+      status: "error",
+      error: { message: ORDER_FALLBACK },
+    });
   });
 
   test("reads as a connection problem when the server answers 500 with a JSON body", async () => {
     const json = JSON.stringify({ message: "lane forced failure" });
-    await expect(loadOrder(body(500, json, "application/json"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
+    expect(await loadOrder(body(500, json, "application/json"))).toMatchObject({
+      status: "error",
+      error: {
+        message: ORDER_FALLBACK,
+      },
     });
   });
 
   test("reads as a connection problem when a gateway answers 502 with a page", async () => {
     const page = "<html><body><h1>502 Bad Gateway</h1></body></html>";
-    await expect(loadOrder(body(502, page, "text/html"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
+    expect(await loadOrder(body(502, page, "text/html"))).toMatchObject({
+      status: "error",
+      error: {
+        message: ORDER_FALLBACK,
+      },
     });
   });
 
   test("reads as a connection problem when the server answers 500 with text", async () => {
-    await expect(loadOrder(body(500, "Failed to get order", "text/plain"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
+    expect(await loadOrder(body(500, "Failed to get order", "text/plain"))).toMatchObject({
+      status: "error",
+      error: { message: ORDER_FALLBACK },
     });
   });
 
   test("reads as a connection problem when the server answers 422 with a validation body", async () => {
     const json = JSON.stringify({ type: "validation", message: "Expected string" });
-    await expect(loadOrder(body(422, json, "application/json"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
+    expect(await loadOrder(body(422, json, "application/json"))).toMatchObject({
+      status: "error",
+      error: {
+        message: ORDER_FALLBACK,
+      },
     });
   });
 
   test("reads as a connection problem when the server answers 401 without a message", async () => {
-    await expect(loadOrder(body(401, "", "text/plain"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
+    expect(await loadOrder(body(401, "", "text/plain"))).toMatchObject({
+      status: "error",
+      error: {
+        message: ORDER_FALLBACK,
+      },
     });
   });
 
-  test("keeps the server's message when the server answers 404 with text", async () => {
-    await expect(loadOrder(body(404, "Order not found", "text/plain"))).rejects.toMatchObject({
-      message: ORDER_FALLBACK,
-      status: 404,
-      cause: "Order not found",
+  test("shows the server's message when the server answers 404 with text", async () => {
+    expect(await loadOrder(body(404, "Order not found", "text/plain"))).toMatchObject({
+      status: "error",
+      error: {
+        message: "Order not found",
+      },
     });
   });
 });
 
 test("a dashboard that cannot reach the server fails with a readable message", async () => {
   answerWith(unreachable);
-  await expect(getDashboard()).rejects.toMatchObject({ message: "Failed to get dashboard" });
+  expect(await getDashboard()).toMatchObject({
+    status: "error",
+    error: { message: "Failed to get dashboard" },
+  });
 });

@@ -90,6 +90,9 @@ export const itemDatabaseItemSchema = z.object({
   image: z.string().nullable(),
   category: z.enum(CATEGORIES).nullable(),
   latestRelease: itemDatabaseReleaseSummarySchema.nullable(),
+  collectionCount: z.number().int().nonnegative(),
+  onOrderCount: z.number().int().nonnegative(),
+  wishlisted: z.boolean(),
 });
 
 export const itemDatabaseSearchResponseSchema = z.object({
@@ -122,6 +125,7 @@ export const searchOrdersQuerySchema = z.object({
 export const searchOrderIdAndTitleSchema = z.object({
   id: z.string(),
   title: z.string(),
+  images: z.array(z.string()),
 });
 
 export const searchOrdersResponseSchema = z.object({

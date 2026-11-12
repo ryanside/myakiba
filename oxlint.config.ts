@@ -23,11 +23,6 @@ const testImports = [
 ];
 const routeMatcherBans = [
   {
-    name: "@myakiba/utils/result",
-    importNames: ["tryCatch"],
-    message: "Return fail(category, message) from the operation. serve() answers it.",
-  },
-  {
     name: "elysia",
     importNames: ["status"],
     message: "Return fail(category, message) from the operation. serve() answers it.",
@@ -74,15 +69,6 @@ const orderCollectionWishlistTests = ["orders", "collection", "wishlist"].flatMa
 // The react-query hook ban skips these web files. S7's lock still covers them through the overrides above.
 const webOutsideHookBan = [
   "apps/web/src/data/**",
-  // Scraper flow, replaced by the browser extension.
-  "apps/web/src/components/orders/order-item-sync-sheet.tsx",
-  "apps/web/src/components/settings/data-transfer/**",
-  "apps/web/src/components/sync/**",
-  "apps/web/src/hooks/use-data-transfer-import-status-query.ts",
-  "apps/web/src/hooks/use-sync-job-status-query.ts",
-  "apps/web/src/hooks/use-sync-mutations.ts",
-  "apps/web/src/routes/(app)/sync.tsx",
-  "apps/web/src/routes/(app)/sync_.$id.tsx",
   // Replayed tests that stand in for a screen's reads. The replay copies each into
   // revisions from before apps/web/src/data existed, so they call react-query directly.
   "apps/web/src/components/dashboard/order-kanban.test.tsx",
@@ -93,13 +79,6 @@ const dbClientOwners = ["apps/server/src/domain/kernel.ts", "packages/auth/src/s
 const testCode = ["**/*.test.ts", "**/*.test.tsx", "**/test/**"];
 // Tests create and read rows directly.
 const serverTests = ["apps/server/**/*.test.ts", "apps/server/test/**"];
-// scraper code, replaced by the browser extension
-const scraperCode = [
-  "apps/worker/**",
-  "apps/server/src/routers/sync/**",
-  "apps/server/src/routers/data-transfer/**",
-  "apps/server/src/routers/item/resync-service.ts",
-];
 
 const otherTypeAwareRules = [
   "typescript/await-thenable",
@@ -231,7 +210,7 @@ export default defineConfig({
     },
     {
       files: ["**"],
-      excludeFiles: [...serverTests, ...scraperCode],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": [
           "error",
@@ -251,15 +230,10 @@ export default defineConfig({
     },
     {
       files: testCode,
-      excludeFiles: [...serverTests, ...scraperCode],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": ["error", { paths: [dbClientBan], patterns: [dbSourcePath] }],
       },
-    },
-    {
-      files: scraperCode,
-      excludeFiles: testCode,
-      rules: { "no-restricted-imports": ["error", { patterns: testImports }] },
     },
     {
       files: dbClientOwners,
@@ -307,7 +281,7 @@ export default defineConfig({
     },
     {
       files: ["apps/server/src/routers/**"],
-      excludeFiles: [...serverTests, ...scraperCode],
+      excludeFiles: serverTests,
       rules: {
         "no-restricted-imports": [
           "error",

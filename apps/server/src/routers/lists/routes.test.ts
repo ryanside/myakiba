@@ -34,8 +34,9 @@ beforeEach(async () => {
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
   await db.insert(item).values([
-    { id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" },
-    { id: "item-2", externalId: 187, title: "figma Saber" },
+    { id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" },
+    { id: "item-2", ownerId: userId, externalId: 187, title: "figma Saber" },
+    { id: "aki-1", ownerId: "user-2", externalId: 186, title: "Nendoroid Hatsune Miku" },
   ]);
   await db.insert(list).values([
     { id: "list-1", userId, title: "Favorites", position: 0 },
@@ -43,8 +44,8 @@ beforeEach(async () => {
     { id: "list-other", userId: "user-2", title: "Other user's list" },
   ]);
   await db.insert(listMember).values([
-    { id: "member-1", listId: "list-1", itemId: "item-1", position: 0 },
-    { id: "member-2", listId: "list-1", itemId: "item-2", position: 1 },
+    { id: "member-1", listId: "list-1", userId, itemId: "item-1", position: 0 },
+    { id: "member-2", listId: "list-1", userId, itemId: "item-2", position: 1 },
   ]);
 });
 
@@ -83,10 +84,14 @@ test("removing a present and a missing member removes neither", async () => {
 test("a member whose target the owner cannot see stays a 500", async () => {
   await db
     .insert(collection)
-    .values({ id: "c-other", userId: "user-2", itemId: "item-1", status: "Owned" });
-  await db
-    .insert(listMember)
-    .values({ id: "member-dangling", listId: "list-1", collectionId: "c-other", position: 2 });
+    .values({ id: "c-other", userId: "user-2", itemId: "aki-1", status: "Owned" });
+  await db.insert(listMember).values({
+    id: "member-dangling",
+    listId: "list-1",
+    userId,
+    collectionId: "c-other",
+    position: 2,
+  });
 
   expect(await call("GET", "/list-1/members")).toEqual({
     status: 500,

@@ -1,0 +1,970 @@
+/* One preorder's life on its order page, with the dashboard's totals as a
+   satellite over the app's sidebar. The page and the Edit Order sheet are
+   drawn after order-hero.tsx, order-summary.tsx and order-form.tsx; the
+   satellite after overview-tab.tsx's KPI group. Every rule is scoped. */
+.mk-order-lifecycle {
+  /* The crop is the stage's foot only, so the window's shadow falls on the
+     page at the sides and top instead of ending in a straight line */
+  & .ss-stage {
+    overflow: clip;
+    overflow-clip-margin: 64px;
+    clip-path: inset(-64px -64px 0 -64px);
+  }
+
+  /* Inset a gutter from the top and right, off the foot. Its left edge sits
+     half a satellite in, so the totals straddle it over the sidebar */
+  .mk-order-lifecycle-window {
+    position: absolute;
+    top: 24px;
+    left: 184px;
+    width: 752px;
+    height: 560px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  .mk-order-lifecycle-body {
+    position: relative;
+    display: grid;
+    grid-template-columns: 176px minmax(0, 1fr);
+    height: 100%;
+    overflow: hidden;
+    background: var(--card);
+    color: var(--foreground);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* The app's sidebar: chrome under the satellite, quiet bars only */
+  .mk-order-lifecycle-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    padding: 20px 22px;
+    border-right: 1px solid var(--border);
+    background: color-mix(in oklab, var(--muted) 45%, var(--card));
+  }
+
+  .mk-order-lifecycle-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .mk-order-lifecycle-page {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    min-width: 0;
+    padding: 30px 28px 0;
+  }
+
+  .mk-order-lifecycle-heading {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 22px;
+  }
+
+  /* The order's header: thumbnail, title and status, the shop, Edit */
+  .mk-order-lifecycle-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .mk-order-lifecycle-hero-thumb {
+    flex: none;
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
+    object-fit: cover;
+    object-position: top;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+
+  .mk-order-lifecycle-hero-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding-top: 6px;
+  }
+
+  .mk-order-lifecycle-hero-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mk-order-lifecycle-title {
+    overflow: hidden;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 30px;
+    letter-spacing: -0.02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mk-order-lifecycle-hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 20px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-actions {
+    display: flex;
+    flex: none;
+    gap: 8px;
+    padding-top: 6px;
+  }
+
+  /* The app's outline button: a pill with a hairline */
+  .mk-order-lifecycle-button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 14px 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+  }
+
+  .mk-order-lifecycle-button--icon {
+    width: 32px;
+    padding: 0;
+  }
+
+  .mk-order-lifecycle-button[data-hover],
+  .mk-order-lifecycle-button[data-open] {
+    background: var(--muted);
+  }
+
+  .mk-order-lifecycle-button[data-pressed] {
+    background: color-mix(in oklab, var(--foreground) 8%, var(--muted));
+  }
+
+  /* A status: its color dot and its name */
+  .mk-order-lifecycle-status {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--foreground);
+  }
+
+  .mk-order-lifecycle-status-label {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    line-height: 20px;
+  }
+
+  .mk-order-lifecycle-status-label .ss-roll__mid,
+  .mk-order-lifecycle-status-label .ss-roll__char {
+    vertical-align: top;
+  }
+
+  .mk-order-lifecycle-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--mk-ordered);
+    transition: background-color 0.2s ease;
+  }
+
+  .mk-order-lifecycle-dot[data-status="Paid"] {
+    background: var(--mk-paid);
+  }
+
+  .mk-order-lifecycle-dot[data-status="Shipped"] {
+    background: var(--mk-shipped);
+  }
+
+  .mk-order-lifecycle-dot[data-status="Owned"] {
+    background: var(--mk-owned);
+  }
+
+  /* Progress: the app's horizontal Timeline. A step is reached when its
+     ring fills; the line to it fills first, from the step before */
+  .mk-order-lifecycle-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 16px;
+  }
+
+  .mk-order-lifecycle-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 30px;
+  }
+
+  .mk-order-lifecycle-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    border: 2px solid color-mix(in oklab, var(--primary) 20%, transparent);
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 15%, transparent);
+    transition:
+      border-color 0.2s ease 0.5s,
+      background-color 0.2s ease 0.5s,
+      box-shadow 0.35s ease 0.5s;
+  }
+
+  .mk-order-lifecycle-step[data-done] .mk-order-lifecycle-indicator {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+
+  .mk-order-lifecycle-step[data-active] .mk-order-lifecycle-indicator {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 15%, transparent);
+  }
+
+  /* The ring leaving the step before goes at once, as the line sets off */
+  .mk-order-lifecycle-step[data-done]:not([data-active]) .mk-order-lifecycle-indicator {
+    transition:
+      border-color 0.2s ease 0.5s,
+      background-color 0.2s ease 0.5s,
+      box-shadow 0.25s ease;
+  }
+
+  .mk-order-lifecycle-sep {
+    position: absolute;
+    top: 7px;
+    left: 20px;
+    right: 4px;
+    height: 2px;
+    overflow: hidden;
+    border-radius: 1px;
+    background: color-mix(in oklab, var(--primary) 10%, transparent);
+  }
+
+  .mk-order-lifecycle-sep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--primary);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.55s cubic-bezier(0.45, 0, 0.1, 1);
+  }
+
+  .mk-order-lifecycle-sep[data-done]::after {
+    transform: none;
+  }
+
+  .mk-order-lifecycle-step-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--muted-foreground);
+    transition: color 0.3s ease 0.5s;
+  }
+
+  .mk-order-lifecycle-step[data-done] .mk-order-lifecycle-step-title {
+    color: var(--foreground);
+  }
+
+  .mk-order-lifecycle-step-date {
+    height: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-step-date .ss-roll__mid,
+  .mk-order-lifecycle-step-date .ss-roll__char {
+    vertical-align: top;
+  }
+
+  /* The order's item beside its cost breakdown */
+  .mk-order-lifecycle-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: 44px;
+  }
+
+  .mk-order-lifecycle-item {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    height: 56px;
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  }
+
+  .mk-order-lifecycle-item-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  .mk-order-lifecycle-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .mk-order-lifecycle-item-text .ss-bar {
+    margin-top: 4px;
+  }
+
+  /* The title's second line, as ItemTitleCell draws it: the MFC number, then the category */
+  .mk-order-lifecycle-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+
+    & .ss-bar {
+      flex: none;
+      margin-top: 0;
+    }
+  }
+
+  .mk-order-lifecycle-category {
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--category-prepainted);
+  }
+
+  .mk-order-lifecycle-item-status {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 96px;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+
+  .mk-order-lifecycle-status--item {
+    font-size: 13px;
+  }
+
+  .mk-order-lifecycle-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .mk-order-lifecycle-line,
+  .mk-order-lifecycle-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mk-order-lifecycle-line > span:first-child {
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-total {
+    padding-top: 10px;
+    font-weight: 500;
+  }
+
+  .mk-order-lifecycle-total-value {
+    font-size: 18px;
+    line-height: 28px;
+    letter-spacing: -0.02em;
+  }
+
+  /* The sheet: the page dims behind it, and it slides in from the right */
+  .mk-order-lifecycle-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: rgb(0 0 0 / 0.1);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .mk-order-lifecycle-scrim[data-open] {
+    opacity: 1;
+  }
+
+  .mk-order-lifecycle-sheet {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 337px;
+    border-left: 1px solid var(--border);
+    background: var(--background);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+    transform: translateX(calc(100% + 24px));
+    will-change: transform;
+    transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .mk-order-lifecycle-sheet[data-open] {
+    transform: none;
+    transition-duration: 0.42s;
+  }
+
+  .mk-order-lifecycle-sheet-head {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 16px 10px;
+  }
+
+  .mk-order-lifecycle-sheet-title {
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  .mk-order-lifecycle-sheet-desc {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-form {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 0 16px;
+  }
+
+  .mk-order-lifecycle-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 18px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+
+    & svg {
+      transform: rotate(90deg);
+    }
+  }
+
+  .mk-order-lifecycle-fade {
+    mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  }
+
+  .mk-order-lifecycle-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mk-order-lifecycle-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .mk-order-lifecycle-label {
+    display: flex;
+    align-items: center;
+    height: 15px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 15px;
+  }
+
+  /* Inputs, selects and date pickers share the app's pill */
+  .mk-order-lifecycle-input {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 30px;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background-color 0.15s ease;
+  }
+
+  .mk-order-lifecycle-input[data-pressed] {
+    background: var(--muted);
+  }
+
+  .mk-order-lifecycle-select {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    color: var(--muted-foreground);
+
+    & .mk-order-lifecycle-status {
+      font-size: 13px;
+      font-weight: 400;
+    }
+  }
+
+  .mk-order-lifecycle-date {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--foreground);
+
+    & svg {
+      flex: none;
+      color: var(--muted-foreground);
+    }
+  }
+
+  .mk-order-lifecycle-date[data-empty] {
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-sheet-foot {
+    display: flex;
+    gap: 8px;
+    padding: 20px 16px 14px;
+  }
+
+  .mk-order-lifecycle-primary {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--primary);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary-foreground);
+    transition: background-color 0.15s ease;
+  }
+
+  .mk-order-lifecycle-primary[data-hover] {
+    background: color-mix(in oklab, var(--primary) 85%, var(--background));
+  }
+
+  .mk-order-lifecycle-primary[data-pressed] {
+    background: color-mix(in oklab, var(--primary) 75%, var(--background));
+  }
+
+  /* The status list over the trigger */
+  .mk-order-lifecycle-list {
+    --ss-popover-bg: var(--popover);
+    --ss-popover-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 12px;
+    color: var(--popover-foreground);
+  }
+
+  .mk-order-lifecycle-menu .ss-menu__item {
+    position: relative;
+    height: 30px;
+    padding: 0 32px 0 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: inherit;
+  }
+
+  .mk-order-lifecycle-menu .ss-menu__item[data-hover] {
+    background: color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
+
+  .mk-order-lifecycle-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mk-order-lifecycle-tick {
+    position: absolute;
+    right: 8px;
+    display: flex;
+  }
+
+  /* The date picker's calendar, opened above its field where there is room */
+  .mk-order-lifecycle-calendar {
+    position: absolute;
+    z-index: 25;
+    box-sizing: border-box;
+    width: 220px;
+    height: 228px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--popover);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    color: var(--popover-foreground);
+    opacity: 0;
+    transform: scale(0.96);
+    transform-origin: bottom left;
+    pointer-events: none;
+    will-change: transform;
+    transition:
+      opacity 0.24s ease,
+      transform 0.24s cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  .mk-order-lifecycle-calendar[data-show] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.18s ease,
+      transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .mk-order-lifecycle-cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
+  }
+
+  .mk-order-lifecycle-cal-nav {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-cal-caption {
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 500;
+
+    & > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    & svg {
+      color: var(--muted-foreground);
+    }
+  }
+
+  .mk-order-lifecycle-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 28px);
+    grid-auto-rows: 28px;
+    margin-top: 4px;
+  }
+
+  .mk-order-lifecycle-cal-wd,
+  .mk-order-lifecycle-cal-day {
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mk-order-lifecycle-cal-wd {
+    font-size: 11px;
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-cal-day {
+    border-radius: 9px;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .mk-order-lifecycle-cal-day[data-out] {
+    color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+  }
+
+  .mk-order-lifecycle-cal-day[data-today] {
+    background: var(--muted);
+  }
+
+  .mk-order-lifecycle-cal-day[data-hover] {
+    background: color-mix(in oklab, var(--foreground) 10%, var(--muted));
+  }
+
+  .mk-order-lifecycle-cal-day[data-picked] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* The dashboard's totals, straddling the window's left edge over its
+     sidebar: the KPI group in its two-column form */
+  .mk-order-lifecycle-satellite {
+    position: absolute;
+    top: 196px;
+    left: 24px;
+    z-index: 30;
+    box-sizing: border-box;
+    width: 320px;
+    padding: 18px 20px;
+    border: 1px solid var(--tile-edge);
+    border-radius: 16px;
+    background: var(--popover);
+    box-shadow: var(--ss-shadow-satellite);
+  }
+
+  .mk-order-lifecycle-totals {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
+
+  .mk-order-lifecycle-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* The app's eyebrow: Orbitron, small, lowercase */
+  .mk-order-lifecycle-kpi-label {
+    font-family: var(--font-orbitron);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    text-transform: lowercase;
+    color: var(--muted-foreground);
+  }
+
+  /* The value's line held by padding: a rolling figure is one em tall */
+  .mk-order-lifecycle-kpi-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 0 5px;
+  }
+
+  .mk-order-lifecycle-kpi-value {
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+
+  .mk-order-lifecycle-kpi-sub {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  .mk-order-lifecycle-rest {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+
+  /* Compact: a phone column. The page, a gutter in from the top, left and
+     bottom and off the right; the totals in front of its foot */
+  & .ss-stage[data-layout="compact"] {
+    .mk-order-lifecycle-panel {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 374px;
+      height: 368px;
+      box-shadow: var(--ss-shadow-hero);
+    }
+
+    .mk-order-lifecycle-body {
+      display: block;
+    }
+
+    .mk-order-lifecycle-page {
+      gap: 18px;
+      padding: 16px 56px 0 16px;
+    }
+
+    .mk-order-lifecycle-hero {
+      gap: 12px;
+    }
+
+    .mk-order-lifecycle-hero-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 11px;
+    }
+
+    .mk-order-lifecycle-hero-text {
+      gap: 4px;
+      padding-top: 2px;
+    }
+
+    .mk-order-lifecycle-title {
+      font-size: 15px;
+      line-height: 20px;
+      letter-spacing: -0.01em;
+    }
+
+    .mk-order-lifecycle-hero-meta {
+      gap: 12px;
+
+      & .mk-order-lifecycle-status {
+        font-size: 13px;
+      }
+    }
+
+    .mk-order-lifecycle-actions {
+      padding-top: 0;
+    }
+
+    .mk-order-lifecycle-button {
+      height: 30px;
+      padding: 0 12px 0 10px;
+      font-size: 13px;
+    }
+
+    .mk-order-lifecycle-heading {
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    .mk-order-lifecycle-steps {
+      margin-top: 12px;
+    }
+
+    .mk-order-lifecycle-step {
+      padding-top: 26px;
+    }
+
+    .mk-order-lifecycle-sep {
+      left: 19px;
+      right: 3px;
+    }
+
+    .mk-order-lifecycle-step-title {
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    .mk-order-lifecycle-step-date {
+      font-size: 11px;
+    }
+
+    .mk-order-lifecycle-lower {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mk-order-lifecycle-item {
+      grid-template-columns: 36px minmax(0, 1fr) auto;
+      gap: 12px;
+      height: 46px;
+      margin-top: 4px;
+      border-bottom: 0;
+    }
+
+    .mk-order-lifecycle-item-thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+
+    .mk-order-lifecycle-sheet {
+      width: 100%;
+      border-left: 0;
+    }
+
+    .mk-order-lifecycle-sheet-head {
+      padding: 12px 56px 8px 16px;
+    }
+
+    .mk-order-lifecycle-close {
+      top: 8px;
+      right: 50px;
+    }
+
+    .mk-order-lifecycle-form {
+      gap: 9px;
+      padding: 4px 56px 0 16px;
+    }
+
+    .mk-order-lifecycle-sheet-foot {
+      padding: 16px 56px 12px 16px;
+    }
+
+    .mk-order-lifecycle-satellite {
+      top: 292px;
+      left: 40px;
+      width: 294px;
+      padding: 12px 16px;
+      border-radius: 14px;
+    }
+
+    .mk-order-lifecycle-totals {
+      gap: 10px 16px;
+    }
+
+    .mk-order-lifecycle-kpi-label {
+      font-size: 11px;
+      line-height: 14px;
+    }
+
+    .mk-order-lifecycle-kpi-value {
+      font-size: 20px;
+    }
+
+    .mk-order-lifecycle-kpi-sub {
+      font-size: 12px;
+    }
+  }
+}

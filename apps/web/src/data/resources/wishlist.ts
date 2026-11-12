@@ -1,13 +1,16 @@
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { WISHLIST_PAGE_SIZE } from "@myakiba/contracts/wishlist/schema";
 import type { WishlistReleaseStatus } from "@myakiba/contracts/wishlist/schema";
-import { checkResponse } from "@/lib/api-response";
 import { app } from "@/lib/treaty-client";
 import type { getItem } from "@/queries/item";
+import type { InferOk, Result } from "better-result";
+import { call } from "../api";
+import type { ApiFailure } from "../api";
 import { defineCommand, defineResource, infiniteRead } from "../client";
+import { positionOrderCommand } from "../position-order";
 import { items } from "./item";
 
-type ItemQueryData = Awaited<ReturnType<typeof getItem>>;
+type ItemQueryData = InferOk<Awaited<ReturnType<typeof getItem>>>;
 
 type ItemsInput = { readonly releaseStatus: WishlistReleaseStatus; readonly today: string };
 
@@ -34,12 +37,15 @@ export type WishlistPage = NonNullable<Awaited<ReturnType<typeof app.api.wishlis
 
 export const setWishlistMembership = defineCommand({
   invalidates: ["wishlist"],
-  failureTitle: ({ wishlisted }: Membership) =>
-    wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
+  failureToast: ({ wishlisted }: Membership) => ({
+    title: wishlisted ? "Failed to add to Wishlist" : "Failed to remove from Wishlist",
+  }),
   persist: async ({ itemId, wishlisted }: Membership) => {
     const item = app.api.wishlist({ itemId });
-    if (wishlisted) await checkResponse(item.put(), "Failed to add to Wishlist");
-    else await checkResponse(item.delete(), "Failed to remove from Wishlist");
+    const written: Result<unknown, ApiFailure> = wishlisted
+      ? await call(item.put(), { fallback: "Failed to add to Wishlist" })
+      : await call(item.delete(), { fallback: "Failed to remove from Wishlist" });
+    return written.map((): void => undefined);
   },
   saved: async (queryClient, { itemExternalId, wishlisted }) => {
     if (itemExternalId === null) return;
@@ -55,9 +61,16 @@ export const setWishlistMembership = defineCommand({
   },
 });
 
-export async function moveWishlistItems(intent: PositionOrderInput): Promise<void> {
-  await checkResponse(
-    app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }),
-    "Failed to save Wishlist order",
-  );
-}
+export const moveWishlistItemsCommand = positionOrderCommand({
+  family: "wishlist",
+  queryKey: wishlist.items.key({ releaseStatus: "all" }),
+  additionalInvalidations: [
+    { queryKey: wishlist.items.partialKey({ releaseStatus: "upcoming" }) },
+    { queryKey: wishlist.items.partialKey({ releaseStatus: "available" }) },
+  ],
+  persist: (intent: PositionOrderInput) =>
+    call(app.api.wishlist.order.patch({ ...intent, movedIds: [...intent.movedIds] }), {
+      fallback: "Failed to save Wishlist order",
+    }),
+  failureTitle: "Failed to save Wishlist order",
+});

@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
+import { panicOnInvalidEnv } from "./panic-on-invalid-env";
 
 export const env = createEnv({
   clientPrefix: "VITE_",
@@ -8,6 +9,11 @@ export const env = createEnv({
     VITE_TURNSTILE_SITE_KEY: z.string().min(1),
     VITE_BUILD_ID: z.string().optional().default("dev"),
   },
+  shared: {
+    // Vite sets DEV: true in the dev server and false in a build.
+    DEV: z.boolean().optional().default(false),
+  },
   runtimeEnv: import.meta.env,
   emptyStringAsUndefined: true,
+  onValidationError: panicOnInvalidEnv,
 });

@@ -23,16 +23,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon, DragDropVerticalIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import {
-  Tick02Icon,
-  ArrowLeft03Icon,
-  ArrowRight03Icon,
   MoveLeftIcon,
   MoveRightIcon,
-  DragDropVerticalIcon,
-  PinOffIcon,
-} from "@hugeicons/core-free-icons";
-import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
+  PinLeftIcon,
+  PinRightIcon,
+  SortAscendingIcon,
+  SortDescendingIcon,
+  UnsortedIcon,
+} from "@/lib/icons";
 
 const SORT_ICONS = { asc: SortAscendingIcon, desc: SortDescendingIcon } as const;
 
@@ -83,7 +83,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
   );
 
   const headerButtonClassName = cn(
-    "text-secondary-foreground/80 hover:bg-secondary data-open:bg-secondary hover:text-foreground data-open:text-foreground -ms-2 px-2 font-normal h-6 rounded-lg",
+    "text-secondary-foreground/80 hover:bg-secondary data-open:bg-secondary hover:text-foreground data-open:text-foreground -ms-2 gap-1.5 px-2 text-sm font-normal rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
     className,
   );
 
@@ -187,7 +187,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           onClick={() => column.pin(isPinned === "left" ? false : "left")}
         >
           <HugeiconsIcon
-            icon={ArrowLeft03Icon}
+            icon={PinLeftIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
@@ -206,7 +206,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
           onClick={() => column.pin(isPinned === "right" ? false : "right")}
         >
           <HugeiconsIcon
-            icon={ArrowRight03Icon}
+            icon={PinRightIcon}
             strokeWidth={2}
             className="size-3.5!"
             aria-hidden="true"
@@ -335,6 +335,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
             render={
               <Button
                 variant="ghost"
+                size="xs"
                 className={headerButtonClassName}
                 disabled={isLoading || recordCount === 0}
               >
@@ -374,6 +375,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
       <div className="flex h-full items-center">
         <Button
           variant="ghost"
+          size="xs"
           className={headerButtonClassName}
           disabled={isLoading || recordCount === 0}
           onClick={handleSort}

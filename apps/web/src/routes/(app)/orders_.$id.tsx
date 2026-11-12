@@ -14,7 +14,8 @@ import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
-import { shownMessageOf } from "@/lib/api-response";
+import type { Saving } from "@/data/client";
+import { shownMessageOf } from "@/data/api";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   component: RouteComponent,
@@ -58,9 +59,10 @@ function RouteComponent(): ReactNode {
   const { data: order, isPending, isError, error: orderError } = useRead(orders.detail, id);
 
   const handleDeleteOrder = useCallback(
-    async (orderId: string): Promise<void> => {
-      await handleDeleteOrders(new Set([orderId]));
-      await navigate({ to: "/orders" });
+    async (orderId: string): Saving => {
+      const deleted = await handleDeleteOrders(new Set([orderId]));
+      if (deleted.isOk()) await navigate({ to: "/orders" });
+      return deleted;
     },
     [handleDeleteOrders, navigate],
   );

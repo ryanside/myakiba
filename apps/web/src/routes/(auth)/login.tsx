@@ -3,20 +3,13 @@ import { AuthLayout } from "@/components/auth/auth-layout";
 import { VerifyEmailView } from "@/components/auth/verify-email-view";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import * as z from "zod";
+import { resolvePostAuthRedirect } from "@/lib/auth-redirect-url";
 
 const loginSearchSchema = z.object({
   view: z.literal("verify-email").optional(),
   email: z.email().optional(),
   redirect: z.string().optional(),
 });
-
-function resolvePostAuthRedirect(redirectTo: string | undefined): string {
-  if (!redirectTo?.startsWith("/") || redirectTo.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  return redirectTo;
-}
 
 export const Route = createFileRoute("/(auth)/login")({
   component: RouteComponent,
@@ -49,7 +42,7 @@ function RouteComponent() {
   if (view === "verify-email") {
     return (
       <AuthLayout>
-        <VerifyEmailView email={email} />
+        <VerifyEmailView email={email} redirectTo={redirectTo} />
       </AuthLayout>
     );
   }

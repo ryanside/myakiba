@@ -11,12 +11,11 @@ import { Separator } from "@/components/ui/separator";
 import { MaskInput } from "@/components/ui/mask-input";
 import { useForm } from "@tanstack/react-form";
 import { useMemo, useRef, useState } from "react";
-import {
-  formatCurrencyFromMinorUnits,
-  minorUnitsToMajorString,
-  parseMoneyToMinorUnits,
-} from "@myakiba/utils/currency";
-import { tryCatch } from "@myakiba/utils/result";
+import { formatCurrencyFromMinorUnits, minorUnitsToMajorString } from "@myakiba/utils/currency";
+import { FieldError } from "@/components/ui/field";
+import { acceptedMoneyToMinorUnits, moneyInput } from "@/lib/money-input";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
 import { cn } from "@/lib/utils";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 
@@ -32,7 +31,7 @@ interface PopoverMultiInputCellProps {
   readonly totalAmount: number;
   readonly currency: string;
   readonly locale: string;
-  readonly onSubmit: (newValues: Record<string, number>) => Promise<void>;
+  readonly onSubmit: (newValues: Record<string, number>) => Saving;
   readonly disabled?: boolean;
   readonly title?: string;
   readonly description?: string;
@@ -72,8 +71,8 @@ export function PopoverMultiInputCell({
 
   const handleSubmit = async (newValues: Record<string, number>): Promise<void> => {
     setPending(newValues);
-    const { error } = await tryCatch(onSubmit(newValues));
-    if (error) {
+    const saved = await onSubmit(newValues);
+    if (saved.isErr()) {
       setPending(null);
     }
   };
@@ -131,7 +130,7 @@ function PopoverMultiInputCellContent({
     onSubmit: async ({ value }) => {
       close();
       const converted = Object.fromEntries(
-        Object.entries(value).map(([key, amount]) => [key, parseMoneyToMinorUnits(amount)]),
+        Object.entries(value).map(([key, amount]) => [key, acceptedMoneyToMinorUnits(amount)]),
       );
       await onSubmit(converted);
     },
@@ -139,13 +138,7 @@ function PopoverMultiInputCellContent({
 
   return (
     <PopoverContent className="w-72 p-0" align="start">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <PopoverHeader className="px-3 pt-3 pb-2">
           <PopoverTitle className="text-xs">{title}</PopoverTitle>
           {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
@@ -153,9 +146,9 @@ function PopoverMultiInputCellContent({
 
         <div className="flex flex-col gap-2 px-3 pb-3">
           {inputs.map((input, index) => (
-            <form.Field key={input.name} name={input.name}>
+            <form.Field key={input.name} name={input.name} validators={{ onChange: moneyInput }}>
               {(field) => (
-                <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
+                <div className="grid grid-cols-[5.5rem_1fr] items-center gap-x-2 gap-y-1">
                   <Label htmlFor={input.name} className="truncate text-xs text-muted-foreground">
                     {input.title}
                   </Label>
@@ -167,8 +160,13 @@ function PopoverMultiInputCellContent({
                     currency={currency}
                     locale={locale}
                     value={field.state.value}
+                    invalid={!field.state.meta.isValid}
                     onValueChange={(_, unmasked) => field.handleChange(unmasked)}
                     className="h-7 text-xs"
+                  />
+                  <FieldError
+                    className="col-start-2 text-[11px]"
+                    errors={field.state.meta.errors}
                   />
                 </div>
               )}

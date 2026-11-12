@@ -1,0 +1,271 @@
+/* Expenses: the Collection scope's cumulative spend chart, scrubbed. The
+   window is pinned with one 40px inset left, right and top and runs off the
+   bottom through the chart's brush. The page is the ground: no plate. */
+.mk-expenses-scrub .ss-stage {
+  overflow: hidden;
+  background: transparent;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-win {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  width: 880px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+/* For the phone column: one 44px gutter above, left and below, bled off the
+   right, so what shows of the window stays at least square */
+.mk-expenses-scrub .ss-stage[data-layout="compact"] .mk-expenses-scrub-win {
+  top: 44px;
+  left: 44px;
+  width: 400px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Taller than the stage leaves room for, so the window runs off the bottom */
+  min-height: 520px;
+  padding: 18px 28px 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.mk-expenses-scrub .ss-stage[data-layout="compact"] .mk-expenses-scrub-body {
+  min-height: 0;
+  height: 274px;
+  padding: 18px 18px 0;
+}
+
+/* The Expense Scope tabs, as the app's TabsList draws them: quiet context */
+.mk-expenses-scrub .mk-expenses-scrub-tabs {
+  display: inline-flex;
+  height: 32px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-tab[data-active] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.1),
+    0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.dark .mk-expenses-scrub .mk-expenses-scrub-tab[data-active],
+.mk-expenses-scrub .ss-stage[data-theme="dark"] .mk-expenses-scrub-tab[data-active] {
+  background: var(--input);
+}
+
+/* The chart section's header: the readout, and the chart select */
+.mk-expenses-scrub .mk-expenses-scrub-head {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.mk-expenses-scrub .ss-stage[data-layout="compact"] .mk-expenses-scrub-head {
+  margin-top: 0;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-month {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-amount {
+  color: var(--foreground);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 36px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mk-expenses-scrub .ss-stage[data-layout="compact"] .mk-expenses-scrub-amount {
+  font-size: 28px;
+  line-height: 34px;
+}
+
+/* The app's SelectTrigger: a 32px pill, 176 wide, with its disclosure chevron */
+.mk-expenses-scrub .mk-expenses-scrub-select {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 176px;
+  height: 32px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--input);
+  border-radius: 999px;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-select svg {
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.dark .mk-expenses-scrub .mk-expenses-scrub-select,
+.mk-expenses-scrub .ss-stage[data-theme="dark"] .mk-expenses-scrub-select {
+  background: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+/* The chart: a y-axis column beside the plot, the months and brush under it */
+.mk-expenses-scrub .mk-expenses-scrub-chart {
+  display: grid;
+  grid-template-columns: 40px auto;
+  column-gap: 8px;
+  margin-top: 18px;
+}
+
+.mk-expenses-scrub .ss-stage[data-layout="compact"] .mk-expenses-scrub-chart {
+  grid-template-columns: 34px auto;
+  column-gap: 6px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-yaxis {
+  position: relative;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-yaxis span {
+  position: absolute;
+  right: 0;
+  translate: 0 -50%;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-plot {
+  position: relative;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-plot svg,
+.mk-expenses-scrub .mk-expenses-scrub-brush svg {
+  display: block;
+  overflow: visible;
+}
+
+/* The app's CartesianGrid: dashed 3 3, border at half strength */
+.mk-expenses-scrub .mk-expenses-scrub-grid {
+  stroke: color-mix(in oklab, var(--border) 50%, transparent);
+  stroke-dasharray: 3 3;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* The month under the pointer: the app's dashed tooltip cursor and its
+   ringed active dot */
+.mk-expenses-scrub .mk-expenses-scrub-hover {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-hover[data-on] {
+  opacity: 1;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-hair {
+  stroke: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-dot {
+  fill: var(--background);
+  stroke: var(--chart-1);
+  stroke-width: 2;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-xaxis {
+  position: relative;
+  grid-column: 2;
+  height: 16px;
+  margin-top: 8px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-xaxis span {
+  position: absolute;
+  top: 0;
+  translate: -50% 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* The brush the app adds under a chart of eight or more months: filler,
+   cut by the stage's foot */
+.mk-expenses-scrub .mk-expenses-scrub-brush {
+  position: relative;
+  grid-column: 2;
+  height: 56px;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-brush-area {
+  fill: color-mix(in oklab, var(--chart-1) 10%, transparent);
+  stroke: color-mix(in oklab, var(--chart-1) 55%, transparent);
+  stroke-width: 1;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-grip {
+  position: absolute;
+  top: 16px;
+  width: 6px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-grip[data-side="start"] {
+  left: 4px;
+}
+
+.mk-expenses-scrub .mk-expenses-scrub-grip[data-side="end"] {
+  right: 4px;
+}

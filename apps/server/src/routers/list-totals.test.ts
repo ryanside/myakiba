@@ -42,22 +42,51 @@ beforeAll(async () => {
     { id: "user-2", name: "Aki", email: "a@example.com", username: "aki" },
   ]);
   await db.insert(item).values([
-    { id: "item-1", externalId: 101, title: "Miku", category: "Prepainted", scale: "1/7" },
-    { id: "item-2", externalId: 102, title: "Rin", category: "Prepainted", scale: "1/8" },
-    { id: "item-3", externalId: 103, title: "Len", category: "Prepainted", scale: "1/8" },
+    {
+      id: "item-1",
+      ownerId: userId,
+      externalId: 101,
+      title: "Miku",
+      category: "Prepainted",
+      scale: "1/7",
+    },
+    {
+      id: "item-2",
+      ownerId: userId,
+      externalId: 102,
+      title: "Rin",
+      category: "Prepainted",
+      scale: "1/8",
+    },
+    {
+      id: "item-3",
+      ownerId: userId,
+      externalId: 103,
+      title: "Len",
+      category: "Prepainted",
+      scale: "1/8",
+    },
+    {
+      id: "aki-1",
+      ownerId: "user-2",
+      externalId: 101,
+      title: "Miku",
+      category: "Prepainted",
+      scale: "1/7",
+    },
   ]);
   await db.insert(entry).values([
-    { id: "entry-1", name: "Crypton", category: "Companies" },
-    { id: "entry-2", name: "Good Smile", category: "Companies" },
-    { id: "entry-3", name: "Hatsune Miku", category: "Characters" },
-    { id: "entry-4", name: "Kagamine Rin", category: "Characters" },
+    { id: "entry-1", ownerId: userId, name: "Crypton", category: "Companies" },
+    { id: "entry-2", ownerId: userId, name: "Good Smile", category: "Companies" },
+    { id: "entry-3", ownerId: userId, name: "Hatsune Miku", category: "Characters" },
+    { id: "entry-4", ownerId: userId, name: "Kagamine Rin", category: "Characters" },
   ]);
   await db.insert(entry_to_item).values([
-    { entryId: "entry-1", itemId: "item-1", role: "Manufacturer" },
-    { entryId: "entry-1", itemId: "item-2", role: "Manufacturer" },
-    { entryId: "entry-2", itemId: "item-2", role: "Distributor" },
-    { entryId: "entry-3", itemId: "item-1", role: "" },
-    { entryId: "entry-4", itemId: "item-2", role: "" },
+    { ownerId: userId, entryId: "entry-1", itemId: "item-1", role: "Manufacturer" },
+    { ownerId: userId, entryId: "entry-1", itemId: "item-2", role: "Manufacturer" },
+    { ownerId: userId, entryId: "entry-2", itemId: "item-2", role: "Distributor" },
+    { ownerId: userId, entryId: "entry-3", itemId: "item-1", role: "" },
+    { ownerId: userId, entryId: "entry-4", itemId: "item-2", role: "" },
   ]);
   await db.insert(order).values([
     { id: "order-1", userId, title: "AmiAmi", shop: "AmiAmi", status: "Ordered", shippingFee: 500 },
@@ -80,7 +109,7 @@ beforeAll(async () => {
     { id: "c-4", userId, itemId: "item-2", status: "Owned", price: 4000, shop: "AmiAmi" },
     { id: "c-5", userId, itemId: "item-3", status: "Owned", price: 5000, shop: "HLJ" },
     { id: "c-6", userId, itemId: "item-1", status: "Owned", price: 6000, shop: "AmiAmi" },
-    { id: "c-other", userId: "user-2", itemId: "item-1", orderId: "order-4", price: 9000 },
+    { id: "c-other", userId: "user-2", itemId: "aki-1", orderId: "order-4", price: 9000 },
   ]);
 });
 

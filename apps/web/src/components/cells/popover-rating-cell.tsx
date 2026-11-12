@@ -4,13 +4,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Rating } from "../ui/rating";
 import { useState } from "react";
 import { usePendingValue } from "@/hooks/use-pending-value";
+import type { Saving } from "@/data/client";
 import { cn } from "@/lib/utils";
 import { CELL_TRIGGER_CLASS_NAME } from "./cell-trigger";
 import { EmptyValue } from "./empty-value";
 
 interface PopoverRatingCellProps {
   value: string;
-  onSubmit: (newValue: string) => Promise<void>;
+  onSubmit: (newValue: string) => Saving;
   disabled?: boolean;
 }
 

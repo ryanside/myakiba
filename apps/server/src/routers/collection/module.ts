@@ -1,8 +1,14 @@
 import { and, arrayContains, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
-import { command, fail, ok, paginate, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { command, paginate, query } from "@/domain/kernel";
+import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
+import { guardedWrite } from "@/lib/owner-guard";
+import { CollectionItemNotFound } from "./errors/collection-item-not-found";
+import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
@@ -29,6 +35,7 @@ export const Collection = {
         input.scale ? inArray(item.scale, input.scale) : undefined,
         input.tags ? arrayContains(collection.tags, input.tags) : undefined,
         input.condition ? inArray(collection.condition, input.condition) : undefined,
+        input.ids ? inArray(collection.id, input.ids) : undefined,
         input.relDateStart ? gte(item_release.date, input.relDateStart) : undefined,
         input.relDateEnd ? lte(item_release.date, input.relDateEnd) : undefined,
         input.relPriceMin === undefined ? undefined : gte(item_release.price, input.relPriceMin),
@@ -54,7 +61,7 @@ export const Collection = {
         itemId: item.id,
         itemExternalId: item.externalId,
         itemTitle: item.title,
-        itemImage: item.image,
+        itemImage: itemImageSql().as("item_image"),
         itemCategory: item.category,
         itemScale: item.scale,
         status: collection.status,
@@ -125,7 +132,7 @@ export const Collection = {
         })),
       };
       scope.log.set({ collection: { resultCount: result.items.length } });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -140,7 +147,7 @@ export const Collection = {
           itemId: item.id,
           itemExternalId: item.externalId,
           itemTitle: item.title,
-          itemImage: item.image,
+          itemImage: itemImageSql().as("item_image"),
           itemCategory: item.category,
           itemScale: item.scale,
           status: collection.status,
@@ -166,9 +173,9 @@ export const Collection = {
         .innerJoin(item, eq(collection.itemId, item.id))
         .leftJoin(item_release, eq(collection.releaseId, item_release.id))
         .where(and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id)));
-      if (!found) return fail("not_found", "Collection item not found");
+      if (!found) return Result.err(new CollectionItemNotFound());
 
-      return ok({
+      return Result.ok({
         collectionItem: {
           ...found,
           createdAt: found.createdAt.toISOString(),
@@ -184,16 +191,35 @@ export const Collection = {
       scope.log.set({ collection: { id: input.id } });
       const selected = and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id));
       const [existing] = await scope.tx
-        .select({ releaseId: collection.releaseId })
+        .select({ itemId: collection.itemId, releaseId: collection.releaseId })
         .from(collection)
         .where(selected);
-      if (!existing) return fail("not_found", "Collection item not found");
+      if (!existing) return Result.err(new CollectionItemNotFound());
+      if (input.update.releaseId !== null) {
+        const [release] = await scope.tx
+          .select({ id: item_release.id })
+          .from(item_release)
+          .innerJoin(item, eq(item.id, item_release.itemId))
+          .where(
+            and(
+              eq(item.ownerId, scope.viewer.userId),
+              eq(item_release.id, input.update.releaseId),
+              eq(item_release.itemId, existing.itemId),
+            ),
+          );
+        if (!release) return Result.err(new ReleaseNotOfItem());
+      }
 
-      const updated = await scope.tx
-        .update(collection)
-        .set({ ...input.update, updatedAt: new Date() })
-        .where(selected)
-        .returning();
+      const written = await guardedWrite(
+        scope.tx
+          .update(collection)
+          .set({ ...input.update, updatedAt: new Date() })
+          .where(selected)
+          .returning(),
+        { collection_release_of_item: () => new ReleaseNotOfItem() },
+      );
+      if (written.isErr()) return written;
+      const updated = written.value;
 
       if (input.update.releaseId !== null && input.update.releaseId !== existing.releaseId) {
         await advanceOrderReleaseDatesForCollectionItems(
@@ -203,7 +229,7 @@ export const Collection = {
       }
 
       const [update] = updated;
-      return ok({ update: update && withTimestampStrings(update) });
+      return Result.ok({ update: update && withTimestampStrings(update) });
     },
   ),
 
@@ -215,9 +241,9 @@ export const Collection = {
         .delete(collection)
         .where(and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id)))
         .returning();
-      if (!deleted) return fail("not_found", "Collection item not found");
+      if (!deleted) return Result.err(new CollectionItemNotFound());
 
-      return ok({ deleted: withTimestampStrings(deleted) });
+      return Result.ok({ deleted: withTimestampStrings(deleted) });
     },
   ),
 
@@ -230,10 +256,10 @@ export const Collection = {
         .where(and(eq(collection.userId, scope.viewer.userId), inArray(collection.id, input.ids)))
         .returning();
       if (deleted.length === 0 || deleted.length < new Set(input.ids).size) {
-        return fail("not_found", "Collection item(s) not found");
+        return Result.err(new CollectionItemsNotFound());
       }
 
-      return ok("Collection item(s) deleted successfully");
+      return Result.ok("Collection item(s) deleted successfully" as const);
     },
   ),
 };

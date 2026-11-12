@@ -10,8 +10,8 @@ import {
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { useEffect } from "react";
-import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
+import { Result } from "better-result";
+import { useEffect, useRef } from "react";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -19,17 +19,21 @@ setDefaultTimeout(20_000);
 type WishlistQuery = { limit: number; offset: number; releaseStatus: string; today: string };
 type ServerItem = { id: string; title: string; releaseDate: string };
 
-const MIKU_BEFORE_SYNC = { id: "w1", title: "Miku (title before sync)", releaseDate: "2026-10-17" };
+const MIKU_BEFORE_REFRESH = {
+  id: "w1",
+  title: "Miku (title before refresh)",
+  releaseDate: "2026-10-17",
+};
 
 const server = {
-  items: [MIKU_BEFORE_SYNC] as ServerItem[],
+  items: [MIKU_BEFORE_REFRESH] as ServerItem[],
   wishlistRequests: [] as WishlistQuery[],
   orderPatches: [] as PositionOrderInput[],
   holdWishlist: false,
   heldWishlist: [] as (() => void)[],
   holdOrderPatch: false,
   heldOrderPatch: [] as (() => void)[],
-  finishSync: () => {},
+  finishRefresh: () => {},
 };
 
 function applyMove({ movedIds, anchorId, placement }: PositionOrderInput) {
@@ -57,20 +61,6 @@ function wishlistPage(query: WishlistQuery) {
   return { items, totalCount: items.length, limit: query.limit, offset: query.offset };
 }
 
-const terminalChunk = {
-  data: {
-    jobId: "job-1",
-    phase: "completed",
-    statusMessage: "Sync completed.",
-    progress: null,
-    recentItems: [],
-    error: null,
-    startedAt: "2026-10-16T00:00:00.000Z",
-    updatedAt: "2026-10-16T00:00:01.000Z",
-    terminalState: "success",
-  },
-};
-
 const fakeApp = {
   api: {
     wishlist: {
@@ -96,27 +86,22 @@ const fakeApp = {
         },
       },
     },
-    sync: {
-      "job-status": {
-        get: async () => ({
-          data: (async function* stream() {
-            await new Promise<void>((resolve) => {
-              server.finishSync = resolve;
-            });
-            yield terminalChunk;
-          })(),
-          error: null,
-        }),
-      },
-    },
   },
 };
 
-const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
+const getErrorMessage = (_error: { readonly status: number }, fallback: string) => fallback;
 await mock.module("@/lib/treaty-client", () => ({
   app: fakeApp,
   getErrorMessage,
   getUserErrorMessage: getErrorMessage,
+}));
+const realRefresh = await import("@/data/item-refresh");
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
+  refreshItemWithExtension: () =>
+    new Promise((resolve) => {
+      server.finishRefresh = () => resolve(Result.ok({ saved: "refreshed" }));
+    }),
 }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
@@ -125,12 +110,13 @@ await mock.module("@tanstack/react-router", () => ({
 }));
 
 const { useMoveWishlistItemsMutation, useWishlistItemsQuery } = await import("./use-wishlist");
-const { useSyncJobStatusQuery } = await import("./use-sync-job-status-query");
+const { refreshItemCommand } = await import("@/data/resources/item");
+const { useResourceMutation } = await import("@/data/client");
 
 afterEach(() => {
   cleanup();
   setSystemTime();
-  server.items = [MIKU_BEFORE_SYNC];
+  server.items = [MIKU_BEFORE_REFRESH];
   server.wishlistRequests.length = 0;
   server.orderPatches.length = 0;
   server.holdWishlist = false;
@@ -160,8 +146,13 @@ function CollectionRow() {
   return <p aria-label="collection row">{data}</p>;
 }
 
-function SyncStatusWidget() {
-  useSyncJobStatusQuery("job-1", "session-1", null);
+/** An Item Refresh in flight from the moment this mounts, until the test finishes it. */
+function ItemRefresh() {
+  const { run } = useResourceMutation(refreshItemCommand);
+  const start = useRef(run);
+  useEffect(() => {
+    void start.current(98_777);
+  }, []);
   return null;
 }
 
@@ -179,19 +170,19 @@ function renderWithClient(ui: React.ReactNode, queryClient = new QueryClient()) 
 
 const fetchesSettled = () => waitFor(() => expect(renderedClient.isFetching()).toBe(0));
 
-describe("wishlist after a sync rewrites item metadata", () => {
-  test("an open wishlist page shows the synced title once the sync finishes", async () => {
+describe("wishlist after an Item Refresh rewrites item metadata", () => {
+  test("an open wishlist page shows the refreshed title once the refresh finishes", async () => {
     renderWithClient(
       <>
-        <SyncStatusWidget />
+        <ItemRefresh />
         <CollectionRow />
         <WishlistTab tab="all" />
       </>,
     );
-    await waitFor(() => expect(shownIn("wishlist all")).toEqual(["Miku (title before sync)"]));
+    await waitFor(() => expect(shownIn("wishlist all")).toEqual(["Miku (title before refresh)"]));
 
-    server.items = [{ ...MIKU_BEFORE_SYNC, title: "Nendoroid Hatsune Miku" }];
-    await act(async () => server.finishSync());
+    server.items = [{ ...MIKU_BEFORE_REFRESH, title: "Nendoroid Hatsune Miku" }];
+    await act(async () => server.finishRefresh());
     await waitFor(() =>
       expect(screen.getByLabelText("collection row").textContent).toBe("Nendoroid Hatsune Miku"),
     );
@@ -212,7 +203,9 @@ describe("wishlist release filters across midnight", () => {
     const queryClient = new QueryClient();
     setSystemTime(new Date(2026, 9, 16, 23, 0));
     const first = renderWithClient(<WishlistTab tab="upcoming" />, queryClient);
-    await waitFor(() => expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before sync)"]));
+    await waitFor(() =>
+      expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before refresh)"]),
+    );
     first.unmount();
 
     setSystemTime(new Date(2026, 9, 18, 9, 0));
@@ -237,7 +230,9 @@ describe("wishlist release filters across midnight", () => {
   test("an Upcoming page left open drops the item at local midnight on its release date", async () => {
     setSystemTime(new Date(2026, 9, 16, 23, 59, 59, 900));
     renderWithClient(<WishlistTab tab="upcoming" />);
-    await waitFor(() => expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before sync)"]));
+    await waitFor(() =>
+      expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before refresh)"]),
+    );
 
     setSystemTime(new Date(2026, 9, 17, 0, 0, 1));
     await waitFor(() => expect(shownIn("wishlist upcoming")).toEqual([]));
@@ -251,7 +246,9 @@ describe("wishlist release filters across midnight", () => {
   test("an Upcoming page left open for days shows the new split when the tab becomes visible", async () => {
     setSystemTime(new Date(2026, 9, 16, 9, 0));
     renderWithClient(<WishlistTab tab="upcoming" />);
-    await waitFor(() => expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before sync)"]));
+    await waitFor(() =>
+      expect(shownIn("wishlist upcoming")).toEqual(["Miku (title before refresh)"]),
+    );
 
     setSystemTime(new Date(2026, 9, 18, 9, 0));
     act(() => {
@@ -271,9 +268,12 @@ describe("wishlist reorder", () => {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ReorderableAll() {
       const mutation = useMoveWishlistItemsMutation();
+      const moveOrder = mutation.move;
       useEffect(() => {
-        move = mutation.move;
-      }, [mutation.move]);
+        move = async (intent) => {
+          await moveOrder(intent);
+        };
+      }, [moveOrder]);
       return (
         <>
           <p role="status">{mutation.isPending ? "saving" : "idle"}</p>
@@ -291,7 +291,7 @@ describe("wishlist reorder", () => {
   }
 
   test("moving an item in the All view shows the new order and saves it", async () => {
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll();
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
@@ -300,7 +300,7 @@ describe("wishlist reorder", () => {
     await waitFor(() =>
       expect(shownIn("wishlist all")).toEqual([
         "Kagamine Len",
-        "Miku (title before sync)",
+        "Miku (title before refresh)",
         "Kagamine Rin",
       ]),
     );
@@ -308,7 +308,7 @@ describe("wishlist reorder", () => {
   });
 
   test("a second move made while the first is saving stays in place when the first save finishes", async () => {
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll();
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
@@ -328,14 +328,14 @@ describe("wishlist reorder", () => {
     });
 
     expect({ afterFirstSave, afterBothSaves: shownIn("wishlist all") }).toEqual({
-      afterFirstSave: ["Kagamine Len", "Kagamine Rin", "Miku (title before sync)"],
-      afterBothSaves: ["Kagamine Len", "Kagamine Rin", "Miku (title before sync)"],
+      afterFirstSave: ["Kagamine Len", "Kagamine Rin", "Miku (title before refresh)"],
+      afterBothSaves: ["Kagamine Len", "Kagamine Rin", "Miku (title before refresh)"],
     });
   });
 
   test("a move that saves across local midnight keeps its order", async () => {
     setSystemTime(new Date(2026, 9, 16, 23, 59, 59, 800));
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll(<WishlistTab tab="upcoming" />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
@@ -363,20 +363,20 @@ describe("wishlist reorder", () => {
     });
 
     expect(afterMidnight).toEqual({
-      shown: ["Kagamine Len", "Miku (title before sync)", "Kagamine Rin"],
+      shown: ["Kagamine Len", "Miku (title before refresh)", "Kagamine Rin"],
       requests: 0,
     });
     await waitFor(() =>
       expect(shownIn("wishlist all")).toEqual([
         "Kagamine Len",
-        "Miku (title before sync)",
+        "Miku (title before refresh)",
         "Kagamine Rin",
       ]),
     );
   });
 
   test("a move stops saving when its save finishes, before the refetch returns", async () => {
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
     const move = renderReorderableAll();
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
@@ -398,9 +398,9 @@ describe("wishlist reorder", () => {
     expect(whileRefetching).toBe("idle");
   });
 
-  test("two saves that finish together after a sync show the saved order", async () => {
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
-    const move = renderReorderableAll(<SyncStatusWidget />);
+  test("two saves that finish together after an Item Refresh show the saved order", async () => {
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll(<ItemRefresh />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
     server.holdOrderPatch = true;
@@ -410,9 +410,11 @@ describe("wishlist reorder", () => {
       savingBoth = Promise.all([move(lenFirst), move(mikuLast)]);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(2));
-    const requestsBeforeSync = server.wishlistRequests.length;
-    await act(async () => server.finishSync());
-    await waitFor(() => expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeSync));
+    const requestsBeforeRefresh = server.wishlistRequests.length;
+    await act(async () => server.finishRefresh());
+    await waitFor(() =>
+      expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeRefresh),
+    );
     const requestsBeforeSaves = server.wishlistRequests.length;
     await act(async () => {
       server.heldOrderPatch[0]?.();
@@ -424,15 +426,15 @@ describe("wishlist reorder", () => {
       expect(shownIn("wishlist all")).toEqual([
         "Kagamine Len",
         "Kagamine Rin",
-        "Miku (title before sync)",
+        "Miku (title before refresh)",
       ]),
     );
     expect(server.wishlistRequests.length - requestsBeforeSaves).toBe(1);
   });
 
-  test("a sync that finishes while a move is saving shows the saved order once the move saves", async () => {
-    server.items = [MIKU_BEFORE_SYNC, KAGAMINE_RIN, KAGAMINE_LEN];
-    const move = renderReorderableAll(<SyncStatusWidget />);
+  test("an Item Refresh that finishes while a move is saving shows the saved order once the move saves", async () => {
+    server.items = [MIKU_BEFORE_REFRESH, KAGAMINE_RIN, KAGAMINE_LEN];
+    const move = renderReorderableAll(<ItemRefresh />);
     await waitFor(() => expect(shownIn("wishlist all")).toHaveLength(3));
 
     server.holdOrderPatch = true;
@@ -441,9 +443,11 @@ describe("wishlist reorder", () => {
       saving = move(lenFirst);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
-    const requestsBeforeSync = server.wishlistRequests.length;
-    await act(async () => server.finishSync());
-    await waitFor(() => expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeSync));
+    const requestsBeforeRefresh = server.wishlistRequests.length;
+    await act(async () => server.finishRefresh());
+    await waitFor(() =>
+      expect(server.wishlistRequests.length).toBeGreaterThan(requestsBeforeRefresh),
+    );
     await act(async () => {
       server.heldOrderPatch[0]?.();
       await saving;
@@ -452,7 +456,7 @@ describe("wishlist reorder", () => {
     await waitFor(() =>
       expect(shownIn("wishlist all")).toEqual([
         "Kagamine Len",
-        "Miku (title before sync)",
+        "Miku (title before refresh)",
         "Kagamine Rin",
       ]),
     );

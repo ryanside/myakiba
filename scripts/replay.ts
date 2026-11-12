@@ -12,12 +12,6 @@ import type {
 import { parseReplays } from "./replay-config";
 import { snapshotWorkingTree } from "./worktree-snapshot";
 
-type TestHarness = {
-  packageDir: string;
-  files: string[];
-  testSource?: { file: string; source: string };
-};
-
 type LintRule = string | [string, ...unknown[]];
 type LintConfig = {
   ignorePatterns: string[];
@@ -244,7 +238,7 @@ async function runKnip(checkout: string) {
   return { exitCode, output: `${stdout}${stderr}` };
 }
 
-async function checkTypes(checkout: string, packageDir: string) {
+async function checkTypes(checkout: string, packageDir: string, extraArgs: string[] = []) {
   const { scripts } = await readPackage(path.join(checkout, packageDir));
   const script: string = scripts?.["check-types"] ?? "";
   const [command, ...args] = script.split(/\s+/).filter(Boolean);
@@ -253,7 +247,7 @@ async function checkTypes(checkout: string, packageDir: string) {
   const bins = [path.join(checkout, packageDir), checkout].map((dir) =>
     path.join(dir, "node_modules", ".bin"),
   );
-  const { exitCode, stdout } = await $`tsc ${args} --pretty false`
+  const { exitCode, stdout } = await $`tsc ${args} ${extraArgs} --pretty false`
     .cwd(path.join(checkout, packageDir))
     .env({ ...process.env, PATH: [...bins, process.env.PATH].join(path.delimiter) })
     .nothrow()
@@ -286,11 +280,15 @@ const difference = (left: string[], right: string[]) => {
   });
 };
 
-for (const testFile of new Set(selected.map((replay) => replay.test))) {
+for (const testFile of new Set(
+  selected.flatMap((replay) => replay.head?.map((head) => head.test) ?? [replay.test]),
+)) {
   const run = await runTest(root, testFile);
-  const required = selected
-    .filter((replay) => replay.test === testFile)
-    .flatMap((replay) => (replay.testAt === undefined ? [] : replay.atHead));
+  const required = selected.flatMap((replay) => {
+    if (replay.head)
+      return replay.head.flatMap((head) => (head.test === testFile ? head.fixed : []));
+    return replay.test === testFile && replay.testAt !== undefined ? replay.atHead : [];
+  });
   const notPassed = [...new Set(required)].filter((name) => !run.passed.includes(name));
   const pass =
     run.exitCode === 0 &&
@@ -353,38 +351,52 @@ for (const [signal, exitCode] of [
 }
 await $`git -C ${root} worktree add --detach --no-checkout ${worktree}`.quiet();
 
-let installedLock = "";
+let installedManifests = "";
+/**
+ * Installs once per set of manifests. The key covers every package.json as well as bun.lock,
+ * because a commit can declare a dependency without touching the lockfile, and reusing the
+ * last revision's node_modules would then leave that dependency unlinked.
+ */
 async function install(revision: string) {
-  const lock = await $`git rev-parse ${`${revision}:bun.lock`}`.cwd(worktree).text();
-  if (lock !== installedLock) {
+  const tree = await $`git ls-tree -r ${revision}`.cwd(worktree).text();
+  const manifests = tree
+    .split("\n")
+    .filter((line) => /\t(?:bun\.lock|(?:.*\/)?package\.json)$/.test(line))
+    .join("\n");
+  if (manifests !== installedManifests) {
     await $`bun install --frozen-lockfile`.cwd(worktree).quiet();
-    installedLock = lock;
+    installedManifests = manifests;
   }
 }
 
-async function harnessOf({ test: testFile, testAt }: TestReplay): Promise<TestHarness> {
+type Harness = { packageDir: string; files: string[]; at?: string };
+
+async function harnessOf(testFile: string, at?: string): Promise<Harness> {
   const packageDir = await packageDirOf(testFile);
-  const files =
-    await $`git ls-files --cached --others --exclude-standard ${testFile} ${`${packageDir}/bunfig.toml`} ${`${packageDir}/test.env`} ${`${packageDir}/test`}`
-      .cwd(root)
-      .text();
-  const testSource =
-    testAt === undefined
-      ? undefined
-      : { file: testFile, source: await $`git show ${`${testAt}:${testFile}`}`.cwd(root).text() };
-  return { packageDir, files: files.split("\n").filter(Boolean), testSource };
+  const paths = [
+    testFile,
+    `${packageDir}/bunfig.toml`,
+    `${packageDir}/test.env`,
+    `${packageDir}/test`,
+  ];
+  const files = at
+    ? await $`git ls-tree -r --name-only ${at} -- ${paths}`.cwd(root).text()
+    : await $`git ls-files --cached --others --exclude-standard ${paths}`.cwd(root).text();
+  return { packageDir, files: files.split("\n").filter(Boolean), at };
 }
 
-async function checkOut(revision: string, harness?: TestHarness) {
+async function checkOut(revision: string, harness?: Harness) {
   await $`git checkout --quiet --detach --force ${revision} && git clean -fdq`.cwd(worktree);
   if (harness === undefined) return;
   await install(revision);
 
-  const { packageDir, files, testSource } = harness;
+  const { packageDir, files, at } = harness;
   for (const file of files)
     await Bun.write(
       path.join(worktree, file),
-      file === testSource?.file ? testSource.source : Bun.file(path.join(root, file)),
+      at
+        ? await $`git show ${`${at}:${file}`}`.cwd(root).arrayBuffer()
+        : Bun.file(path.join(root, file)),
     );
 
   const head = await readPackage(path.join(root, packageDir));
@@ -434,7 +446,7 @@ try {
 
   let worktreeSnapshot: Promise<string> | undefined;
   for (const replay of selected) {
-    const harness = await harnessOf(replay);
+    const harness = await harnessOf(replay.test, replay.testAt);
     const fix =
       replay.fix === "WORKTREE"
         ? await (worktreeSnapshot ??= snapshotWorkingTree(root))
@@ -481,7 +493,11 @@ try {
 
   for (const replay of selectedTypes) {
     const parent = `${replay.fix}^`;
-    await checkOut(parent, { packageDir: replay.package, files: replay.config });
+    await checkOut(parent, {
+      packageDir: replay.package,
+      files: replay.config,
+      at: replay.configAt,
+    });
 
     const run = await checkTypes(worktree, replay.package);
     const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
@@ -514,7 +530,7 @@ try {
     const directives = source.match(directive)?.length ?? 0;
     await Bun.write(file, source.replace(directive, "$1//"));
 
-    const run = await checkTypes(worktree, fixture.package);
+    const run = await checkTypes(worktree, fixture.package, ["--noEmit"]);
     const diagnostics = run.output.split("\n").filter((line) => tsDiagnostic.test(line));
     const expected = (line: string) => fixture.errors.some((error) => line.startsWith(`${error}:`));
     const notReported = fixture.errors.filter(

@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
@@ -24,8 +25,8 @@ function renderControls() {
       selected={false}
       active={false}
       onToggleSelection={() => {}}
-      onUpdate={async () => {}}
-      onDelete={async () => {}}
+      onUpdate={async () => Result.ok()}
+      onDelete={async () => Result.ok()}
     >
       {null}
     </ListControls>,

@@ -2,8 +2,9 @@ import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } fro
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
-import { useEffect } from "react";
-import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
+import { Result } from "better-result";
+import { useEffect, useRef } from "react";
+import type { Saving } from "@/data/client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -20,7 +21,7 @@ const server = {
   lists: [...LISTS],
   listRequests: 0,
   heldOrderPatch: [] as (() => void)[],
-  finishSync: () => {},
+  finishRefresh: () => {},
   members: {} as Record<string, string[]>,
   fetches: [] as string[],
   heldSaves: [] as (() => void)[],
@@ -136,39 +137,22 @@ const fakeApp = {
         },
       },
     }),
-    sync: {
-      "job-status": {
-        get: async () => ({
-          data: (async function* stream() {
-            await new Promise<void>((resolve) => {
-              server.finishSync = resolve;
-            });
-            yield {
-              data: {
-                jobId: "job-1",
-                phase: "completed",
-                statusMessage: "Sync completed.",
-                progress: null,
-                recentItems: [],
-                error: null,
-                startedAt: "2026-10-16T00:00:00.000Z",
-                updatedAt: "2026-10-16T00:00:01.000Z",
-                terminalState: "success",
-              },
-            };
-          })(),
-          error: null,
-        }),
-      },
-    },
   },
 };
 
-const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
+const getErrorMessage = (_error: { readonly status: number }, fallback: string) => fallback;
 await mock.module("@/lib/treaty-client", () => ({
   app: fakeApp,
   getErrorMessage,
   getUserErrorMessage: getErrorMessage,
+}));
+const realRefresh = await import("@/data/item-refresh");
+await mock.module("@/data/item-refresh", () => ({
+  ...realRefresh,
+  refreshItemWithExtension: () =>
+    new Promise((resolve) => {
+      server.finishRefresh = () => resolve(Result.ok({ saved: "refreshed" }));
+    }),
 }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
@@ -190,7 +174,8 @@ const {
 } = await import("./use-lists");
 const { toast } = await import("@/components/ui/toast");
 const toastAdd = spyOn(toast, "add");
-const { useSyncJobStatusQuery } = await import("./use-sync-job-status-query");
+const { refreshItemCommand } = await import("@/data/resources/item");
+const { useResourceMutation } = await import("@/data/client");
 
 const moves = new Map<string, (intent: PositionOrderInput) => Promise<void>>();
 
@@ -212,16 +197,28 @@ afterEach(() => {
   currentActions = undefined;
 });
 
+/** An Item Refresh in flight from the moment this mounts, until the test finishes it. */
+function ItemRefresh() {
+  const { run } = useResourceMutation(refreshItemCommand);
+  const start = useRef(run);
+  useEffect(() => {
+    void start.current(98_777);
+  }, []);
+  return null;
+}
+
 describe("lists reorder", () => {
-  test("a sync that finishes while a move is saving shows the saved order once the move saves", async () => {
+  test("an Item Refresh that finishes while a move is saving shows the saved order once the move saves", async () => {
     let move: (intent: PositionOrderInput) => Promise<void> = async () => {};
     function ListsOverview() {
-      useSyncJobStatusQuery("job-1", "session-1", null);
       const { data } = useListsQuery();
       const mutation = useMoveListsMutation();
+      const moveOrder = mutation.move;
       useEffect(() => {
-        move = mutation.move;
-      }, [mutation.move]);
+        move = async (intent) => {
+          await moveOrder(intent);
+        };
+      }, [moveOrder]);
       const titles = data?.pages.flatMap((page) => page.items.map((list) => list.title)) ?? [];
       return (
         <ul aria-label="lists">
@@ -237,6 +234,7 @@ describe("lists reorder", () => {
       );
     render(
       <QueryClientProvider client={new QueryClient()}>
+        <ItemRefresh />
         <ListsOverview />
       </QueryClientProvider>,
     );
@@ -252,9 +250,9 @@ describe("lists reorder", () => {
       saving = move(shelfFirst);
     });
     await waitFor(() => expect(server.heldOrderPatch).toHaveLength(1));
-    const requestsBeforeSync = server.listRequests;
-    await act(async () => server.finishSync());
-    await waitFor(() => expect(server.listRequests).toBeGreaterThan(requestsBeforeSync));
+    const requestsBeforeRefresh = server.listRequests;
+    await act(async () => server.finishRefresh());
+    await waitFor(() => expect(server.listRequests).toBeGreaterThan(requestsBeforeRefresh));
     await act(async () => {
       server.heldOrderPatch[0]?.();
       await saving;
@@ -267,9 +265,12 @@ describe("lists reorder", () => {
 function Members({ listId }: { listId: string }) {
   const { data } = useListMembersQuery(listId);
   const mutation = useMoveListMembersMutation(listId);
+  const moveOrder = mutation.move;
   useEffect(() => {
-    moves.set(listId, mutation.move);
-  }, [listId, mutation.move]);
+    moves.set(listId, async (intent) => {
+      await moveOrder(intent);
+    });
+  }, [listId, moveOrder]);
   const ids = data?.pages.flatMap((page) => page.items.map((item) => item.id)) ?? [];
   return (
     <ul aria-label={`members of ${listId}`}>
@@ -493,7 +494,7 @@ function useListActions() {
 type ListActions = ReturnType<typeof useListActions>;
 
 type WriteResult = {
-  readonly outcome: "resolved" | "rejected";
+  readonly outcome: "ok" | "error";
   readonly writes: readonly string[];
   readonly toasts: readonly string[];
   readonly refetchedBeforeResolve: readonly string[];
@@ -510,7 +511,7 @@ function ListScreens() {
   return null;
 }
 
-async function writeToLists(write: (actions: ListActions) => Promise<void>): Promise<WriteResult> {
+async function writeToLists(write: (actions: ListActions) => Saving): Promise<WriteResult> {
   const queryClient = new QueryClient();
   render(
     <QueryClientProvider client={queryClient}>
@@ -522,13 +523,12 @@ async function writeToLists(write: (actions: ListActions) => Promise<void>): Pro
   await settled();
   server.fetches.length = 0;
   toastAdd.mockClear();
-  let outcome: WriteResult["outcome"] = "resolved";
+  let outcome: WriteResult["outcome"] = "ok";
   await act(async () => {
     const actions = currentActions;
     if (!actions) throw new Error("the list screens did not render");
-    await write(actions).catch(() => {
-      outcome = "rejected";
-    });
+    const saved = await write(actions);
+    outcome = saved.status;
   });
   const refetchedBeforeResolve = [...server.fetches].toSorted();
   await settled();
@@ -545,24 +545,22 @@ async function writeToLists(write: (actions: ListActions) => Promise<void>): Pro
 
 const LIST_WRITES: readonly {
   readonly name: string;
-  readonly run: (actions: ListActions) => Promise<void>;
+  readonly run: (actions: ListActions) => Saving;
   readonly saved: WriteResult;
   readonly failed: WriteResult;
 }[] = [
   {
     name: "create a List",
-    run: async ({ lists }) => {
-      await lists.createList({ title: "Shelf", description: "" });
-    },
+    run: ({ lists }) => lists.createList({ title: "Shelf", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["create Shelf"],
       toasts: ["success: List created: Open List"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["create Shelf"],
       toasts: ["error: Failed to create list"],
       refetchedBeforeResolve: [],
@@ -571,18 +569,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "create a List from the add dialog",
-    run: async ({ quietLists }) => {
-      await quietLists.createList({ title: "Shelf", description: "" });
-    },
+    run: ({ quietLists }) => quietLists.createList({ title: "Shelf", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["create Shelf"],
       toasts: ["success: List created: Open List"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["create Shelf"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -591,18 +587,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "update a List",
-    run: async ({ lists }) => {
-      await lists.updateList({ listId: "l1", title: "Grails 2", description: "" });
-    },
+    run: ({ lists }) => lists.updateList({ listId: "l1", title: "Grails 2", description: "" }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["update l1"],
       toasts: ["success: List updated"],
       refetchedBeforeResolve: ["l1 detail", "options", "overview"],
       refetched: ["l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["update l1"],
       toasts: ["error: Failed to update list"],
       refetchedBeforeResolve: [],
@@ -611,18 +605,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "delete a List",
-    run: async ({ lists }) => {
-      await lists.deleteList("l1");
-    },
+    run: ({ lists }) => lists.deleteList("l1"),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["delete l1"],
       toasts: ["success: List deleted"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["delete l1"],
       toasts: ["error: Failed to delete List"],
       refetchedBeforeResolve: [],
@@ -631,18 +623,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "delete two Lists",
-    run: async ({ lists }) => {
-      await lists.deleteLists(new Set(["l1", "l2"]));
-    },
+    run: ({ lists }) => lists.deleteLists(new Set(["l1", "l2"])),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["delete l1,l2"],
       toasts: ["success: 2 Lists deleted"],
       refetchedBeforeResolve: ["options", "overview"],
       refetched: ["l1", "l1 detail", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["delete l1,l2"],
       toasts: ["error: Failed to delete Lists"],
       refetchedBeforeResolve: [],
@@ -651,18 +641,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "add an Item to two Lists",
-    run: async ({ add }) => {
-      await add.mutateAsync({ targets: [...TARGETS], listIds: ["l1", "l2"] });
-    },
+    run: ({ add }) => add.run({ targets: [...TARGETS], listIds: ["l1", "l2"] }),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["add to l1,l2"],
       toasts: ["success: 1 Item added to 2 Lists: Open Lists"],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["add to l1,l2"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -671,18 +659,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "remove an Item from a List",
-    run: async ({ removeTarget }) => {
-      await removeTarget.mutateAsync("l1");
-    },
+    run: ({ removeTarget }) => removeTarget.run("l1"),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["remove target from l1"],
       toasts: [],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["remove target from l1"],
       toasts: [],
       refetchedBeforeResolve: [],
@@ -691,18 +677,16 @@ const LIST_WRITES: readonly {
   },
   {
     name: "remove members from a List",
-    run: async ({ removeMembers }) => {
-      await removeMembers.mutateAsync(["m1", "m2"]);
-    },
+    run: ({ removeMembers }) => removeMembers.run(["m1", "m2"]),
     saved: {
-      outcome: "resolved",
+      outcome: "ok",
       writes: ["remove m1,m2 from l1"],
       toasts: ["success: 2 removed from List"],
       refetchedBeforeResolve: ["l1", "options", "overview"],
       refetched: ["l1", "options", "overview"],
     },
     failed: {
-      outcome: "rejected",
+      outcome: "error",
       writes: ["remove m1,m2 from l1"],
       toasts: ["error: Failed to remove from List"],
       refetchedBeforeResolve: [],

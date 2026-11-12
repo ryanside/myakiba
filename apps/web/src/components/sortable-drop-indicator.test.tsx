@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { Result } from "better-result";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -46,8 +47,8 @@ function wishlist(viewMode: MediaViewMode): ReactNode {
       hasNextPage={false}
       isFetchingNextPage={false}
       onLoadMore={async () => ({ isFetchNextPageError: false })}
-      onRemove={async () => {}}
-      onMove={async () => {}}
+      onRemove={async () => Result.ok()}
+      onMove={async () => Result.ok()}
     />
   );
 }
@@ -74,8 +75,8 @@ function listDetail(viewMode: MediaViewMode): ReactNode {
       isFetchingNextPage={false}
       selectedIds={new Set()}
       onLoadMore={async () => ({ isFetchNextPageError: false })}
-      onRemove={async () => {}}
-      onMove={async () => {}}
+      onRemove={async () => Result.ok()}
+      onMove={async () => Result.ok()}
       onClearSelection={() => {}}
       onToggleSelection={() => {}}
     />

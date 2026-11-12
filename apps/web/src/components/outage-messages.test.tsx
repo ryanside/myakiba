@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { Result } from "better-result";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,6 +18,8 @@ await mock.module("@tanstack/react-router", () => ({
   useSearch: () => ({}),
   useParams: () => params,
   useRouter: () => ({}),
+  useLocation: <T,>(options?: { select?: (location: { href: string }) => T }) =>
+    options?.select ? options.select({ href: "/" }) : { href: "/" },
   useNavigate: () => async () => {},
   Link: ({
     children,
@@ -69,7 +72,7 @@ function routePage(route: AnyRoute): ReactElement {
   return <Page />;
 }
 
-const noop = async () => {};
+const noop = async () => Result.ok();
 const trigger = <button type="button">Open</button>;
 type User = ReturnType<typeof userEvent.setup>;
 

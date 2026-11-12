@@ -2,11 +2,10 @@ import { createContext } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon } from "@hugeicons/core-free-icons";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Link } from "@tanstack/react-router";
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import type { ColumnDef } from "@tanstack/react-table";
-import { cn } from "@/lib/utils";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
@@ -28,6 +27,7 @@ import type {
 } from "@myakiba/contracts/shared/types";
 import { Skeleton } from "../ui/skeleton";
 import { ImageThumbnail } from "../ui/image-thumbnail";
+import type { Saving } from "@/data/client";
 import { RowExpandButton } from "@/components/data-table/row-expand-button";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import { OrderActionsCell, OrderItemCountCell } from "./order-row-cells";
@@ -53,10 +53,10 @@ function cascadeFor(field: keyof Order): CascadeOptions {
 }
 
 interface OrdersColumnsParams {
-  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Promise<void>;
-  onDeleteOrders: (orderIds: ReadonlySet<string>) => Promise<void>;
-  onEditItem: (values: CollectionItemFormValues) => Promise<void>;
-  onDeleteItem: (orderId: string, itemId: string) => Promise<void>;
+  onEditOrder: (values: EditedOrder, cascadeOptions: CascadeOptions) => Saving;
+  onDeleteOrders: (orderIds: ReadonlySet<string>) => Saving;
+  onEditItem: (values: CollectionItemFormValues) => Saving;
+  onDeleteItem: (orderId: string, itemId: string) => Saving;
   currency: Currency;
   locale: string;
   dateFormat: DateFormat;
@@ -79,31 +79,23 @@ export function createOrdersColumns({
     {
       id: "select",
       header: ({ table }) => (
-        <Checkbox
+        <SelectionCheckbox
+          label="Select all"
           checked={table.getIsAllPageRowsSelected()}
           indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Select all"
-          className="align-[inherit] mb-0.5 rounded-xs"
+          stopRowClick
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
         />
       ),
       cell: ({ row }) => (
-        <>
-          <div
-            className={cn(
-              "hidden absolute top-0 bottom-0 start-0 w-[2px] bg-primary",
-              row.getIsSelected() && "block",
-            )}
-          />
-          <Checkbox
+        <SelectionCell selected={row.getIsSelected()}>
+          <SelectionCheckbox
+            label="Select row"
             checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Select row"
-            className="align-[inherit] mb-0.5 rounded-xs"
+            stopRowClick
+            onCheckedChange={(value) => row.toggleSelected(value)}
           />
-        </>
+        </SelectionCell>
       ),
       size: 28,
       enableSorting: false,
@@ -404,7 +396,7 @@ export function createOrdersColumns({
             locale={locale}
             disabled={isPending}
             onSubmit={async (newValues) => {
-              await onEditOrder({ ...withoutTimestamps(order), ...newValues }, []);
+              return onEditOrder({ ...withoutTimestamps(order), ...newValues }, []);
             }}
           />
         );

@@ -1,43 +1,46 @@
-import { requireData } from "@/lib/api-response";
-import { app, getErrorMessage } from "@/lib/treaty-client";
+import { Result } from "better-result";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
+import { ApiNotFound } from "@/lib/errors/api-not-found";
+import { app } from "@/lib/treaty-client";
 import type { ItemReleasesResponse } from "@myakiba/contracts/item/schema";
+import type { ItemRefresh } from "@myakiba/contracts/mfc-items/schema";
 
-export async function getItem(externalId: number) {
-  const response = await app.api.item({ id: externalId }).get();
-  if (response.error?.status === 404) return null;
-  return requireData(response, "Failed to get item");
-}
-
-export async function getItemReleases(itemId: string): Promise<ItemReleasesResponse> {
-  return requireData(app.api.item({ id: itemId }).releases.get(), "Failed to get item releases");
-}
-
-export async function getItemRelatedOrders(externalId: number) {
-  return requireData(
-    app.api.item({ id: externalId }).orders.get(),
-    "Failed to get item related orders",
+/** The item's page, or null when it has no row: the screen shows its not-found view for that. */
+export function getItem(externalId: number) {
+  return call(app.api.item({ id: externalId }).get(), {
+    fallback: "Failed to get item",
+    empty: "Failed to get item",
+  }).then(
+    Result.tryRecover((failure) =>
+      ApiNotFound.is(failure) ? Result.ok(null) : Result.err(failure),
+    ),
   );
 }
 
-export async function getItemRelatedCollection(externalId: number) {
-  return requireData(
-    app.api.item({ id: externalId }).collection.get(),
-    "Failed to get item related collection",
-  );
+export function getItemReleases(itemId: string): Promise<Result<ItemReleasesResponse, ApiFailure>> {
+  return call(app.api.item({ id: itemId }).releases.get(), {
+    fallback: "Failed to get item releases",
+    empty: "Failed to get item releases",
+  });
 }
 
-export async function getResyncStatus(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId })["resync-status"].get();
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to check item refresh status"));
-  }
-  return data;
+export function getItemRelatedOrders(externalId: number) {
+  return call(app.api.item({ id: externalId }).orders.get(), {
+    fallback: "Failed to get item related orders",
+    empty: "Failed to get item related orders",
+  });
 }
 
-export async function requestResync(externalId: number) {
-  const { data, error } = await app.api.item({ id: externalId }).resync.post();
-  if (error) {
-    throw new Error(getErrorMessage(error, "Failed to request item refresh"));
-  }
-  return data;
+export function getItemRelatedCollection(externalId: number) {
+  return call(app.api.item({ id: externalId }).collection.get(), {
+    fallback: "Failed to get item related collection",
+    empty: "Failed to get item related collection",
+  });
+}
+
+export function requestRefresh(externalId: number, upload: ItemRefresh) {
+  return call(app.api.item({ id: externalId }).resync.post(upload), {
+    fallback: "Failed to request item refresh",
+  });
 }

@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { Delete02Icon, Edit03Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ListInput } from "@myakiba/contracts/lists/schema";
@@ -5,7 +6,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { getLists } from "@/queries/lists";
 import { ListFormDialog } from "@/components/lists/list-form-dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import type { GridListViewMode } from "@/components/ui/view-toggle";
 import {
   DropdownMenu,
@@ -16,8 +17,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ItemControl, ItemControls, ItemControlsSelection } from "@/components/ui/item-controls";
+import type { Saving } from "@/data/client";
 
-type ListsPage = NonNullable<Awaited<ReturnType<typeof getLists>>>;
+type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
 
 export function ListControls({
@@ -35,8 +37,8 @@ export function ListControls({
   readonly selected: boolean;
   readonly active: boolean;
   readonly onToggleSelection: () => void;
-  readonly onUpdate: (listId: string, input: ListInput) => Promise<void>;
-  readonly onDelete: (listId: string) => Promise<void>;
+  readonly onUpdate: (listId: string, input: ListInput) => Saving;
+  readonly onDelete: (listId: string) => Saving;
   readonly children: ReactNode;
 }): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -104,7 +106,7 @@ export function ListControls({
         submitLabel="Save"
         onSubmit={(input) => onUpdate(list.id, input)}
       />
-      <ConfirmDialog
+      <WriteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Delete List?"

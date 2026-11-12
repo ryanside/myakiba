@@ -1,4 +1,4 @@
-import { requireData } from "@/lib/api-response";
+import type { Result } from "better-result";
 import type {
   ExpenseFilterOptions,
   ExpenseFilters,
@@ -9,52 +9,59 @@ import type {
   ExpensesShippingResponse,
   ShopExpansionResponse,
 } from "@myakiba/contracts/expenses/schema";
+import { call } from "@/data/api";
+import type { ApiFailure } from "@/data/api";
 import { app } from "@/lib/treaty-client";
 
-export async function getExpenseFilterOptions(): Promise<ExpenseFilterOptions> {
-  return requireData(
-    app.api.expenses["filter-options"].get(),
-    "Failed to get expense filter options",
-  );
+export function getExpenseFilterOptions(): Promise<Result<ExpenseFilterOptions, ApiFailure>> {
+  return call(app.api.expenses["filter-options"].get(), {
+    fallback: "Failed to get expense filter options",
+    empty: "Failed to get expense filter options",
+  });
 }
 
-export async function getExpensesCollection(
+export function getExpensesCollection(
   filters: ExpenseFilters = {},
-): Promise<ExpensesCollectionResponse> {
-  return requireData(
-    app.api.expenses.collection.get({ query: filters }),
-    "Failed to get collection expenses",
-  );
+): Promise<Result<ExpensesCollectionResponse, ApiFailure>> {
+  return call(app.api.expenses.collection.get({ query: filters }), {
+    fallback: "Failed to get collection expenses",
+    empty: "Failed to get collection expenses",
+  });
 }
 
-export async function getExpensesOrders(
+export function getExpensesOrders(
   filters: ExpenseFilters = {},
-): Promise<ExpensesOrdersResponse> {
-  return requireData(
-    app.api.expenses.orders.get({ query: filters }),
-    "Failed to get order expenses",
-  );
+): Promise<Result<ExpensesOrdersResponse, ApiFailure>> {
+  return call(app.api.expenses.orders.get({ query: filters }), {
+    fallback: "Failed to get order expenses",
+    empty: "Failed to get order expenses",
+  });
 }
 
-export async function getExpensesShipping(
+export function getExpensesShipping(
   filters: ExpenseFilters = {},
-): Promise<ExpensesShippingResponse> {
-  return requireData(
-    app.api.expenses.shipping.get({ query: filters }),
-    "Failed to get shipping expenses",
-  );
+): Promise<Result<ExpensesShippingResponse, ApiFailure>> {
+  return call(app.api.expenses.shipping.get({ query: filters }), {
+    fallback: "Failed to get shipping expenses",
+    empty: "Failed to get shipping expenses",
+  });
 }
 
-export async function getExpensesShops(filters: ExpenseShopFilters): Promise<ExpenseShopsResponse> {
-  return requireData(app.api.expenses.shops.get({ query: filters }), "Failed to get expense shops");
+export function getExpensesShops(
+  filters: ExpenseShopFilters,
+): Promise<Result<ExpenseShopsResponse, ApiFailure>> {
+  return call(app.api.expenses.shops.get({ query: filters }), {
+    fallback: "Failed to get expense shops",
+    empty: "Failed to get expense shops",
+  });
 }
 
-export async function getShopExpansion(
+export function getShopExpansion(
   shopId: string,
   filters: ExpenseShopFilters,
-): Promise<ShopExpansionResponse> {
-  return requireData(
+): Promise<Result<ShopExpansionResponse, ApiFailure>> {
+  return call(
     app.api.expenses.shops({ shop: encodeURIComponent(shopId) }).expansion.get({ query: filters }),
-    "Failed to get shop expansion",
+    { fallback: "Failed to get shop expansion", empty: "Failed to get shop expansion" },
   );
 }

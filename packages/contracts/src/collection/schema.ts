@@ -1,4 +1,6 @@
 import * as z from "zod";
+import { MAX_ADD_ROWS } from "../add/constants";
+import { itemIdField } from "../add/schema";
 import { CATEGORIES, CONDITIONS, SHIPPING_METHODS } from "../shared/constants";
 import {
   paginationLimitSchema,
@@ -33,6 +35,7 @@ export const collectionSearchSchema = z.object({
   scale: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
   condition: z.array(z.enum(CONDITIONS)).optional(),
+  ids: z.array(itemIdField).max(MAX_ADD_ROWS).optional(),
 });
 
 export type CollectionFilters = z.infer<typeof collectionSearchSchema>;

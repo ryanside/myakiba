@@ -7,6 +7,7 @@ import type {
   CollectionPage,
 } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import { Result } from "better-result";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import { deleteCollectionItems, getCollection, updateCollectionItem } from "@/queries/collection";
 import { moveItem, splitOrders } from "@/queries/orders";
@@ -52,7 +53,7 @@ type OnList = { readonly list: CollectionFilters };
 
 export const updateCollectionItemCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ values }: { readonly values: CollectionItemFormValues } & OnList) =>
     updateCollectionItem(values),
   optimistic: async (queryClient, { values, list }) => {
@@ -92,22 +93,22 @@ export const updateCollectionItemCommand = defineCommand({
       );
     }
 
-    return () => {
+    return Result.ok(() => {
       if (previousList) {
         queryClient.setQueryData<CollectionPage>(listKey, previousList);
       }
       for (const [queryKey, data] of previousItemRelated) {
         queryClient.setQueryData(queryKey, data);
       }
-    };
+    });
   },
   successTitle: () => "Collection updated",
-  failureTitle: () => "Failed to update collection item. Please try again.",
+  failureToast: () => ({ title: "Failed to update collection item. Please try again." }),
 });
 
 export const deleteCollectionItemsCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({ ids }: { readonly ids: readonly string[] } & OnList) =>
     deleteCollectionItems([...ids]),
   optimistic: async (queryClient, { ids, list }) => {
@@ -150,22 +151,22 @@ export const deleteCollectionItemsCommand = defineCommand({
       });
     }
 
-    return () => {
+    return Result.ok(() => {
       if (previousList) {
         queryClient.setQueryData<CollectionPage>(listKey, previousList);
       }
       for (const [queryKey, data] of previousItemRelated) {
         queryClient.setQueryData(queryKey, data);
       }
-    };
+    });
   },
   successTitle: () => "Collection item(s) deleted",
-  failureTitle: () => "Failed to delete collection item(s). Please try again.",
+  failureToast: () => ({ title: "Failed to delete collection item(s). Please try again." }),
 });
 
 export const assignToOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     targetOrderId,
     collectionIds,
@@ -179,12 +180,12 @@ export const assignToOrderCommand = defineCommand({
     collectionIds.size === 1
       ? "Order assigned"
       : `Successfully assigned ${collectionIds.size} items to an order`,
-  failureTitle: () => "Failed to assign items to an order. Please try again.",
+  failureToast: () => ({ title: "Failed to assign items to an order. Please try again." }),
 });
 
 export const assignToNewOrderCommand = defineCommand({
   invalidates: collectionWriteFamilies,
-  refetchAfterFailure: true,
+  refetchBy: "settled",
   persist: ({
     values,
     collectionIds,
@@ -198,5 +199,5 @@ export const assignToNewOrderCommand = defineCommand({
     collectionIds.size === 1
       ? "Order assigned"
       : `Successfully assigned ${collectionIds.size} items to a new order`,
-  failureTitle: () => "Failed to assign items to a new order. Please try again.",
+  failureToast: () => ({ title: "Failed to assign items to a new order. Please try again." }),
 });

@@ -29,18 +29,6 @@ export const ENTRY_CATEGORIES = [
 
 export const DATE_FORMATS = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "YYYY/DD/MM"] as const;
 
-export const SYNC_TYPES = ["csv", "order", "order-item", "collection", "item"] as const;
-
-export const SYNC_SESSION_STATUSES = [
-  "pending",
-  "processing",
-  "completed",
-  "failed",
-  "partial",
-] as const;
-
-export const SYNC_SESSION_ITEM_STATUSES = ["pending", "scraped", "failed"] as const;
-
 export const CATEGORIES = [
   "Prepainted",
   "Action/Dolls",
@@ -79,6 +67,11 @@ export const ITEM_CATEGORY_GROUPS = {
 } as const satisfies Readonly<Record<string, readonly (typeof CATEGORIES)[number][]>>;
 
 export const MFC_ITEM_METADATA_VERSION = 1;
+
+/** MFC item ids fit `item.external_id`, a Postgres integer. */
+export const MAX_MFC_ITEM_ID = 2 ** 31 - 1;
+
+export const CONTENT_LABELS = ["intermediate", "explicit", "controversial"] as const;
 
 export const CURRENCIES = [
   "USD",

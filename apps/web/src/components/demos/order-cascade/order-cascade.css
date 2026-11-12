@@ -1,0 +1,429 @@
+/* Order cascade: the orders table with one order open, its status changed and
+   its items following. Anatomy from orders-columns.tsx, order-item-sub-*.tsx,
+   select-cell.tsx and the reui data grid. */
+
+.mk-order-cascade .ss-stage {
+  overflow: hidden;
+  background: transparent;
+}
+
+/* The window: inset top and left, off the bottom */
+.mk-order-cascade .mk-order-cascade-window {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  width: 912px;
+  height: 520px;
+  box-shadow: var(--ss-shadow-hero);
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-window {
+  /* A square of the table, off the right only: in a column taller than
+     wide, the window keeps a desktop's shape by stopping short of the foot */
+  top: 24px;
+  left: 24px;
+  width: 380px;
+  height: 334px;
+}
+
+.mk-order-cascade .mk-order-cascade-window .ss-window__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-order-cascade .mk-order-cascade-body {
+  flex: 1;
+  padding: 12px 24px 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-body {
+  display: flex;
+  flex-direction: column;
+  /* Past the stage's right edge, so the rules and the items' panel bleed */
+  width: 358px;
+  padding: 12px 0 0 12px;
+  box-sizing: content-box;
+}
+
+/* Order rows: select, expand, Order, Shop, Items, Total, Status, actions */
+.mk-order-cascade .mk-order-cascade-row {
+  display: grid;
+  grid-template-columns: 28px 28px 268px 140px 80px 112px 136px 72px;
+  align-items: center;
+  height: 52px;
+  white-space: nowrap;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-row {
+  grid-template-columns: 24px minmax(0, 1fr) 96px 48px;
+}
+
+/* The phone column shows the open order alone */
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-other {
+  display: none;
+}
+
+/* The header's Status runs over the actions column, as an empty header does */
+.mk-order-cascade .mk-order-cascade-head-last {
+  grid-column: span 2;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-head-last {
+  grid-column: auto;
+}
+
+/* With the select column gone, Order's header starts over the expand column */
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-head-expand {
+  display: none;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-head-order {
+  grid-column: span 2;
+  padding-left: 36px;
+}
+
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
+  > .mk-order-cascade-cell-check,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
+  > .mk-order-cascade-col-shop,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
+  > .mk-order-cascade-col-items,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
+  > .mk-order-cascade-col-total,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
+  > .mk-order-cascade-cell-more {
+  display: none;
+}
+
+.mk-order-cascade .mk-order-cascade-head {
+  height: 36px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  color: var(--muted-foreground);
+}
+
+.mk-order-cascade .mk-order-cascade-cell {
+  min-width: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-order-cascade .mk-order-cascade-num {
+  text-align: right;
+}
+
+.mk-order-cascade .mk-order-cascade-cell-check {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+
+.mk-order-cascade .mk-order-cascade-cell-more {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
+.mk-order-cascade .mk-order-cascade-check {
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--input);
+  border-radius: 4px;
+}
+
+.mk-order-cascade .mk-order-cascade-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+}
+
+.mk-order-cascade .mk-order-cascade-expand svg {
+  transition: rotate 0.2s ease;
+}
+
+.mk-order-cascade .mk-order-cascade-expand[data-open] svg {
+  rotate: 90deg;
+}
+
+.mk-order-cascade .mk-order-cascade-more {
+  display: flex;
+  color: var(--muted-foreground);
+  opacity: 0.8;
+}
+
+/* The order: a stack of its item images, then its title */
+.mk-order-cascade .mk-order-cascade-order {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mk-order-cascade .mk-order-cascade-thumbs {
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--muted);
+}
+
+.mk-order-cascade .mk-order-cascade-thumbs img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: top;
+}
+
+.mk-order-cascade .mk-order-cascade-thumbs[data-count="3"] {
+  grid-template-rows: 1fr 1fr;
+}
+
+.mk-order-cascade .mk-order-cascade-thumbs[data-count="3"] img:first-child {
+  grid-row: span 2;
+}
+
+.mk-order-cascade .mk-order-cascade-order-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+/* The status cell: the app's quiet select trigger, a dot and the status */
+.mk-order-cascade .mk-order-cascade-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 32px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.mk-order-cascade .mk-order-cascade-trigger[data-hover],
+.mk-order-cascade .mk-order-cascade-trigger[data-open] {
+  border-color: var(--input);
+}
+
+.mk-order-cascade .ss-stage[data-theme="dark"] .mk-order-cascade-trigger[data-hover],
+.mk-order-cascade .ss-stage[data-theme="dark"] .mk-order-cascade-trigger[data-open] {
+  background: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+.mk-order-cascade .mk-order-cascade-chevron {
+  display: flex;
+  color: var(--muted-foreground);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.mk-order-cascade .mk-order-cascade-trigger[data-hover] .mk-order-cascade-chevron,
+.mk-order-cascade .mk-order-cascade-trigger[data-open] .mk-order-cascade-chevron {
+  opacity: 1;
+}
+
+.mk-order-cascade .mk-order-cascade-status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mk-order-cascade .mk-order-cascade-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-paid);
+  transition: background-color 0.2s ease;
+}
+
+.mk-order-cascade .mk-order-cascade-dot[data-status="Ordered"] {
+  background: var(--mk-ordered);
+}
+
+.mk-order-cascade .mk-order-cascade-dot[data-status="Shipped"] {
+  background: var(--mk-shipped);
+}
+
+.mk-order-cascade .mk-order-cascade-dot[data-status="Owned"] {
+  background: var(--mk-owned);
+}
+
+/* The open order's items: the subtable on its tinted panel */
+.mk-order-cascade .mk-order-cascade-sub {
+  padding: 16px;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+
+/* The open order's panel runs to the window's foot */
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-sub {
+  flex: 1;
+  padding: 12px;
+  border-bottom: 0;
+}
+
+.mk-order-cascade .mk-order-cascade-sub-card {
+  background: var(--card);
+}
+
+.mk-order-cascade .mk-order-cascade-sub-row {
+  display: grid;
+  /* Price and Status sit under the order's Total and Status */
+  grid-template-columns: 32px minmax(0, 1fr) 95px 136px 56px;
+  align-items: center;
+  padding: 6px 0;
+  white-space: nowrap;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-sub-row {
+  grid-template-columns: minmax(0, 1fr) 84px 48px;
+}
+
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-sub-row
+  > .mk-order-cascade-cell-check,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-sub-row
+  > .mk-order-cascade-col-price,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-sub-row
+  > .mk-order-cascade-cell-more {
+  display: none;
+}
+
+.mk-order-cascade .mk-order-cascade-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mk-order-cascade .mk-order-cascade-item-thumb {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  object-position: top;
+}
+
+.mk-order-cascade .mk-order-cascade-item-title {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+/* Where the pointer rests between beats: empty surface past the status column */
+.mk-order-cascade .mk-order-cascade-rest {
+  position: absolute;
+  top: 262px;
+  left: 560px;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-rest {
+  top: 334px;
+  left: 196px;
+}
+
+/* The status list: the app's select popup, its selected row over the trigger */
+.mk-order-cascade .mk-order-cascade-list {
+  --ss-popover-bg: var(--popover);
+  --ss-popover-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-sizing: border-box;
+  border-radius: 12px;
+  padding: 4px;
+  color: var(--popover-foreground);
+}
+
+.mk-order-cascade .mk-order-cascade-menu .ss-menu__item {
+  height: 30px;
+  padding: 0 32px 0 6px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: inherit;
+}
+
+.mk-order-cascade .mk-order-cascade-menu .ss-menu__item[data-hover] {
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.mk-order-cascade .mk-order-cascade-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-order-cascade .mk-order-cascade-tick {
+  position: absolute;
+  right: 8px;
+  display: flex;
+}
+
+.mk-order-cascade .mk-order-cascade-menu .ss-menu__item {
+  position: relative;
+}
+
+/* The rolling label holds one line box, so a roll never lifts its row */
+.mk-order-cascade .mk-order-cascade-status-label {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  line-height: 20px;
+}
+
+.mk-order-cascade .mk-order-cascade-status-label .ss-roll__mid,
+.mk-order-cascade .mk-order-cascade-status-label .ss-roll__char {
+  vertical-align: top;
+}
+
+/* In the phone column the list is shifted in from the stage edge, so the open
+   trigger's ring and chevron would peek out beside it: the list covers the cell */
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-trigger[data-open] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-trigger[data-open]
+  .mk-order-cascade-chevron {
+  opacity: 0;
+}

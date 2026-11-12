@@ -3,7 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { authClient, callAuth } from "@/lib/auth-client";
+import { authClient, decodeAuth } from "@/lib/auth-client";
 import type { SettingsSectionId } from "./settings-registry";
 
 /** Where Better Auth's redirects and the login page bring the user back to. */
@@ -12,9 +12,12 @@ export const RETURN_TO_ACCOUNT: `/settings?section=${SettingsSectionId}` =
 
 /** Signs out and opens the login page, which brings the user back to Account afterwards. */
 export async function signInAgain(): Promise<void> {
-  const { error } = await callAuth(() => authClient.signOut());
-  if (error) {
-    toast.add({ type: "error", title: error.message || "Couldn't sign out. Try again." });
+  const signedOut = await decodeAuth(() => authClient.signOut());
+  if (signedOut.isErr()) {
+    toast.add({
+      type: "error",
+      title: signedOut.error.message || "Couldn't sign out. Try again.",
+    });
     return;
   }
   window.location.assign(`/login?redirect=${encodeURIComponent(RETURN_TO_ACCOUNT)}`);

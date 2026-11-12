@@ -1,77 +1,67 @@
 import { status } from "elysia";
 import type { ElysiaCustomStatusResponse } from "elysia";
+import * as z from "zod";
 import type { RequestLogger } from "evlog";
 import { SQL, asc, desc, is, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { AnyPgColumn, PgSelect } from "drizzle-orm/pg-core";
+import { Panic, Result, UnhandledException, panic } from "better-result";
+import type { AnyTaggedError, Err } from "better-result";
 import { db } from "@myakiba/db/client";
-import type { ReadTx, Tx } from "@myakiba/db/tx";
+import type { ReadTx } from "@myakiba/db/tx";
 import type { Page, PageRequest } from "@myakiba/contracts/shared/pagination";
+import type { AnyFailure, Category } from "./failure";
 import type { Viewer } from "./viewer";
+
+import {
+  FAILURE_STATUS,
+  isProceed,
+  isFailure,
+  bodies,
+  poolBodies,
+  befores,
+  operationals,
+  reservations,
+  SNAPSHOT,
+  snapshots,
+  proceeding,
+} from "./operations";
+import type {
+  Statement,
+  AnyResult,
+  AnyOp,
+  CommandScope,
+  Op,
+  Prepared,
+  Placeholders,
+} from "./operations";
+
+export { query, command } from "./operations";
+export type { Op } from "./operations";
 
 /**
  * The one way a route reads or writes user data. A domain module exports
  * operations built with `query` or `command`, and a route answers with
  * `serve(ctx, Module.op, input)`.
  *
- * A command runs in one transaction. A body that returns `fail(...)` or throws
- * rolls it back. A query reads from the pool, so its parallel reads run on
- * separate connections and may see different commits; a query whose reads must
- * agree sets `snapshot: true` and reads one snapshot in one transaction. `serve`
- * turns the outcome into the response: the value, the failure's status and
- * message, or a logged 500 with the operation's `failure`.
+ * A body returns a better-result `Result`. Every error a client may see is a
+ * `Failure`, a class that carries its own category and literal message. Any other
+ * Err is internal, and the operation must list its class in `operational`. A
+ * deliberate `panic` is a defect: it answers a logged 500. Any other throw also
+ * answers that 500, and so does an operational error.
+ *
+ * A command runs in one transaction. Any Err or throw rolls it back.
+ * A query reads from the pool, so its parallel reads run on separate connections
+ * and may see different commits; a query whose reads must agree sets
+ * `snapshot: true` and reads one snapshot in one transaction. A command whose slow
+ * work must not hold a connection does it in `before`, which reads from the pool
+ * before the transaction opens. `serve` turns the outcome into the response: the
+ * value, the failure's status and message, or a logged 500 with the operation's
+ * `failure`.
  */
-
-const FAILURE_STATUS = {
-  bad_request: 400,
-  not_found: 404,
-} as const;
-
-type FailureCategory = keyof typeof FAILURE_STATUS;
-
-type Ok<T> = { readonly ok: true; readonly value: T };
-type Failure<C extends FailureCategory = FailureCategory, M extends string = string> = {
-  readonly ok: false;
-  readonly category: C;
-  readonly message: M;
-};
-type Outcome<T, F extends Failure> = Ok<T> | F;
-
-/** Splits what a body returns, so a body that never fails has no failure entry. */
-type ValueOf<R> = R extends Ok<infer T> ? T : never;
-type FailureOf<R> = Extract<R, Failure>;
-
-/** A message keeps its literal type for Eden. Any other body keeps the shape it has. */
-export function ok<const T extends string>(value: T): Ok<T>;
-export function ok<T>(value: T): Ok<T>;
-export function ok<T>(value: T): Ok<T> {
-  return { ok: true, value };
-}
-
-/** An expected failure. The message is the response body. */
-export function fail<const C extends FailureCategory, const M extends string>(
-  category: C,
-  message: M,
-): Failure<C, M> {
-  return { ok: false, category, message };
-}
-
-type ReadScope = {
-  readonly viewer: Viewer;
-  readonly tx: ReadTx;
-  /** The request's wide event. The kernel sets `action`, `user` and `outcome`. */
-  readonly log: RequestLogger;
-};
-
-/** The values a prepared read binds to its `sql.placeholder(name)` slots. */
-type Placeholders = Readonly<Record<string, string | number | boolean | Date | null>>;
-type Statement<T> = { readonly execute: (placeholders?: Placeholders) => Promise<T> };
-type Prepared<T> = { readonly statement: Statement<T> };
-
-/** A query without `snapshot` reads from the pool, so it can also run reads built once by `prepared()`. */
-type PoolScope = ReadScope & {
-  readonly read: <T>(statement: Prepared<T>, placeholders?: Placeholders) => Promise<T>;
-};
+const pool: ReadTx = db;
+const readPrepared = <T>(statement: Prepared<T>, placeholders?: Placeholders) =>
+  statement.statement.execute(placeholders);
 
 /**
  * A pool read whose SQL is built once, at module load. Pass per-call values
@@ -84,147 +74,244 @@ export function prepared<T>(
   return { statement: build(pool).prepare(name) };
 }
 
-type Scope = Omit<ReadScope, "tx"> & { readonly tx: Tx };
-
-type OpConfig<M extends string> = {
-  /** The wide event's `action`, such as "orders.delete_item". */
-  readonly action: string;
-  /** The 500 body when the body throws. */
-  readonly failure: M;
-};
-
-type QueryConfig<M extends string> = OpConfig<M> & {
-  /** Reads every statement from one snapshot, for a body whose reads must agree with each other. */
-  readonly snapshot?: true;
-};
-
-/** Only `serve` and `run` can execute an operation, because its body lives in `bodies`. */
-type Op<I, T, F extends Failure, M extends string> = OpConfig<M> & {
-  /** Type-only: carries the operation's types for `serve`. Never set at runtime. */
-  readonly "~types"?: {
-    readonly input: (input: I) => void;
-    readonly value: T;
-    readonly failure: F;
-  };
-};
-
-type AnyOp = Op<never, unknown, Failure, string>;
-
-const bodies = new WeakMap<
-  AnyOp,
-  (scope: never, input: never) => Promise<Outcome<unknown, Failure>>
->();
-
-const SNAPSHOT = { isolationLevel: "repeatable read", accessMode: "read only" } as const;
-const snapshots = new WeakSet<AnyOp>();
-const poolReads = new WeakSet<AnyOp>();
-const pool: ReadTx = db;
-
-const readPrepared = <T>(statement: Prepared<T>, placeholders?: Placeholders) =>
-  statement.statement.execute(placeholders);
-
 /** Runs `select 1` on the pool, for the readiness check. */
 export async function ping(): Promise<void> {
   await db.execute(sql`select 1`);
 }
 
-/** A read. The body takes the scope and one input object, never positional params. */
-export function query<
-  I,
-  R extends Ok<unknown> | Failure,
-  const M extends string,
-  const S extends true | undefined = undefined,
->(
-  config: QueryConfig<M> & { readonly snapshot?: S },
-  body: (scope: S extends true ? ReadScope : PoolScope, input: I) => Promise<R>,
-): Op<I, ValueOf<R>, FailureOf<R>, M> {
-  const op = { action: config.action, failure: config.failure };
-  bodies.set(op, body);
-  (config.snapshot ? snapshots : poolReads).add(op);
-  return op;
+type FailureResponse<F> = F extends {
+  readonly category: infer C extends Category;
+  readonly message: infer M;
 }
+  ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
+  : never;
 
-/** A write. Everything the body does through `scope.tx` commits together or not at all. */
-export function command<I, R extends Ok<unknown> | Failure, const M extends string>(
-  config: OpConfig<M>,
-  body: (scope: Scope, input: I) => Promise<R>,
-): Op<I, ValueOf<R>, FailureOf<R>, M> {
-  const op = { action: config.action, failure: config.failure };
-  bodies.set(op, body);
-  return op;
-}
+/** Carries an Err out of the transaction callback, so that the transaction rolls back. */
+class Stop {
+  readonly result: Err<unknown, AnyTaggedError>;
 
-type FailureResponse<F extends Failure> =
-  F extends Failure<infer C, infer M>
-    ? ElysiaCustomStatusResponse<(typeof FAILURE_STATUS)[C], M>
-    : never;
-
-class Rollback {
-  readonly failure: Failure;
-
-  constructor(failure: Failure) {
-    this.failure = failure;
+  constructor(result: Err<unknown, AnyTaggedError>) {
+    this.result = result;
   }
+}
+
+/** How an operation ended, before `run` turns it into a Result or a throw. */
+type Settled =
+  | { readonly kind: "answer"; readonly result: Result<unknown, AnyFailure> }
+  /** A deliberate `panic` or `unwrap`. */
+  | { readonly kind: "defect"; readonly panic: Panic }
+  /** An internal Err or a thrown value. */
+  | { readonly kind: "left"; readonly error: AnyTaggedError };
+
+function classify(cause: unknown): Exclude<Settled, { readonly kind: "answer" }> {
+  if (Panic.is(cause)) return { kind: "defect", panic: cause };
+  if (UnhandledException.is(cause)) return { kind: "left", error: cause };
+  return { kind: "left", error: new UnhandledException({ cause }) };
+}
+
+/** Sorts what a body or `before` returned. A returned Panic is a defect. */
+function settle(result: AnyResult): Settled {
+  if (result.isOk()) return { kind: "answer", result: Result.ok(result.value) };
+  if (Panic.is(result.error)) return { kind: "defect", panic: result.error };
+  if (isFailure(result.error)) return { kind: "answer", result: Result.err(result.error) };
+  return { kind: "left", error: result.error };
 }
 
 function bodyOf(op: AnyOp) {
   const body = bodies.get(op);
-  if (!body) throw new Error(`${op.action} was not built by query() or command()`);
+  if (!body) panic(`${op.action} was not built by query() or command(), so it has no body to run`);
   return body;
 }
 
-/** Runs `op` and returns its outcome. Routes call `serve`; tests call this. */
-export async function run<I, T, F extends Failure, M extends string>(
+/** Runs a query that reads the pool, one autocommit statement at a time. */
+async function readPool(op: AnyOp, viewer: Viewer, input: never, log: RequestLogger) {
+  const body = poolBodies.get(op);
+  if (!body) panic(`${op.action} has no pool query body to run`);
+  try {
+    return settle(await body({ viewer, tx: pool, read: readPrepared, log }, input));
+  } catch (error) {
+    return classify(error);
+  }
+}
+
+/** Runs `before`, then `reserve` and `store`, each if declared, then the body in one transaction. */
+async function runInTransaction(
+  op: AnyOp,
+  viewer: Viewer,
+  input: never,
+  log: RequestLogger,
+): Promise<Settled> {
+  let handoff: unknown = input;
+  const before = befores.get(op);
+  if (before) {
+    let first: AnyResult;
+    try {
+      first = await before(
+        {
+          viewer,
+          tx: pool,
+          read: readPrepared,
+          log,
+          proceed: (value) => Result.ok(proceeding(value)),
+        },
+        input,
+      );
+    } catch (error) {
+      return classify(error);
+    }
+    if (!isProceed(first)) return settle(first);
+    handoff = first.value["~proceed"];
+  }
+  const reservation = reservations.get(op);
+  if (reservation) {
+    let stored: AnyResult;
+    try {
+      const reserved = await db.transaction((tx) =>
+        reservation.reserve(tx, viewer, handoff as never),
+      );
+      stored = await reservation.store(reserved as never);
+    } catch (error) {
+      return classify(error);
+    }
+    if (stored.isErr()) return settle(stored);
+    handoff = stored.value;
+  }
+  const body = bodyOf(op);
+  try {
+    const result = await db.transaction(
+      async (tx) => {
+        const scope: CommandScope = { viewer, tx, log };
+        const answered = await body(scope as never, handoff as never);
+        if (answered.isErr()) throw new Stop(answered);
+        return answered;
+      },
+      snapshots.has(op) ? SNAPSHOT : undefined,
+    );
+    return settle(result);
+  } catch (error) {
+    return error instanceof Stop ? settle(error.result) : classify(error);
+  }
+}
+
+async function evaluate(
+  op: AnyOp,
+  viewer: Viewer,
+  input: never,
+  log: RequestLogger,
+): Promise<Settled> {
+  const settled = poolBodies.has(op)
+    ? await readPool(op, viewer, input, log)
+    : await runInTransaction(op, viewer, input, log);
+  if (
+    settled.kind === "left" &&
+    !UnhandledException.is(settled.error) &&
+    !operationals.get(op)?.some((declared) => settled.error instanceof declared)
+  ) {
+    return {
+      kind: "defect",
+      panic: new Panic({
+        message: `${op.action} answered an internal error it does not list in operational; only a public failure may reach serve`,
+        cause: settled.error,
+      }),
+    };
+  }
+  return settled;
+}
+
+function answer(settled: Settled): Result<unknown, AnyFailure> {
+  if (settled.kind === "answer") return settled.result;
+  if (settled.kind === "defect") throw settled.panic;
+  if (UnhandledException.is(settled.error)) throw settled.error.cause;
+  throw settled.error;
+}
+
+/**
+ * Runs `op` and returns its Result. Routes call `serve`; tests call this.
+ *
+ * Expected failures come back as Err. A defect throws its Panic, a throw throws the
+ * value originally thrown, and an operational error throws itself.
+ */
+export async function run<I, T, F extends AnyFailure, M extends string>(
   viewer: Viewer,
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
   log: RequestLogger,
-): Promise<Outcome<T, F>> {
-  const body = bodyOf(op as AnyOp);
-  if (poolReads.has(op as AnyOp)) {
-    const read = body as (scope: PoolScope, input: never) => Promise<Outcome<T, F>>;
-    return read({ viewer, tx: pool, read: readPrepared, log }, input as never);
-  }
-  const inTransaction = body as (scope: Scope, input: never) => Promise<Outcome<T, F>>;
-  try {
-    return await db.transaction(
-      async (tx) => {
-        const outcome = await inTransaction({ viewer, tx, log }, input as never);
-        if (!outcome.ok) throw new Rollback(outcome);
-        return outcome as Ok<T>;
-      },
-      snapshots.has(op as AnyOp) ? SNAPSHOT : undefined,
-    );
-  } catch (error) {
-    if (error instanceof Rollback) return error.failure as F;
-    throw error;
-  }
+): Promise<Result<T, F>> {
+  return answer(await evaluate(op as AnyOp, viewer, input as never, log)) as Result<T, F>;
 }
+
+const loggedCauseSchema = z.object({
+  message: z.string(),
+  code: z.string().optional(),
+  errno: z.string().optional(),
+  detail: z.string().optional(),
+  constraint: z.string().optional(),
+  table: z.string().optional(),
+  cause: z.unknown().optional(),
+});
+
+/** Error properties are often non-enumerable, so JSON logs need explicit cause fields. */
+function errorCauses(error: Error) {
+  const causes: Omit<z.infer<typeof loggedCauseSchema>, "cause" | "errno">[] = [];
+  const seen = new Set<unknown>([error]);
+  let current = error.cause;
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    const parsed = loggedCauseSchema.safeParse(current);
+    if (!parsed.success) {
+      causes.push({ message: String(current) });
+      break;
+    }
+    const { cause, errno, ...fields } = parsed.data;
+    // Bun exposes Postgres SQLSTATE as errno, and its own driver error name as code.
+    causes.push({ ...fields, code: errno ?? fields.code });
+    current = cause;
+  }
+  return causes;
+}
+
+/** Logs an operation failure, including the driver diagnostics in its cause chain. */
+function logOperationError(log: RequestLogger, action: string, error: Error): void {
+  log.error(error, { step: action });
+  const causes = errorCauses(error);
+  if (causes.length > 0) log.set({ errorCauses: causes });
+  log.set({ outcome: "error" });
+}
+
+type Caller = { readonly viewer: Viewer; readonly log: RequestLogger };
 
 /**
  * Runs `op` for the signed-in caller and answers with its value, its failure's
- * status and message, or a 500. Eden sees one entry per failure.
+ * status and message, or a 500. Eden sees one entry per Failure class.
  */
-export async function serve<I, T, F extends Failure, M extends string>(
-  caller: { readonly viewer: Viewer; readonly log: RequestLogger },
+export async function serve<I, T, F extends AnyFailure, M extends string>(
+  caller: Caller,
   op: Op<I, T, F, M>,
   input: NoInfer<I>,
 ): Promise<T | FailureResponse<F> | ElysiaCustomStatusResponse<500, M>> {
-  caller.log.set({ action: op.action, user: { id: caller.viewer.userId } });
+  caller.log.set({
+    action: caller.log.getContext().action ?? op.action,
+    user: { id: caller.viewer.userId },
+  });
   try {
-    const outcome = await run(caller.viewer, op, input, caller.log);
-    if (outcome.ok) {
-      caller.log.set({ outcome: "success" });
-      return outcome.value;
+    const result = await run(caller.viewer, op, input, caller.log);
+    if (result.isOk()) {
+      // An operation may name its own outcome in place of "success".
+      caller.log.set({ outcome: caller.log.getContext().outcome ?? "success" });
+      return result.value;
     }
-    caller.log.set({ outcome: outcome.category });
-    return status(FAILURE_STATUS[outcome.category], outcome.message) as FailureResponse<F>;
+    caller.log.set({ outcome: result.error.category });
+    return status(
+      FAILURE_STATUS[result.error.category],
+      result.error.message,
+    ) as FailureResponse<F>;
   } catch (error) {
-    caller.log.error(error instanceof Error ? error : new Error(String(error)), {
-      step: op.action,
-    });
-    caller.log.set({ outcome: "error" });
-    return status(500, op.failure);
+    logOperationError(
+      caller.log,
+      op.action,
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    return status(500, op.failure) as ElysiaCustomStatusResponse<500, M>;
   }
 }
 
@@ -281,7 +368,7 @@ function named(field: SortColumn, name: string): SQL.Aliased {
 /** Reads a named field of a CTE, which keeps the field's decoder. */
 function fieldOf(source: NamedFields, name: string): SQL.Aliased {
   const field = source[name];
-  if (!field) throw new Error(`${name} is not a named field`);
+  if (!field) panic(`paginateBy read ${name} from a CTE that does not name it`);
   return field;
 }
 
@@ -317,7 +404,7 @@ export async function paginateBy<
 ): Promise<PageOf<TRows, TTotals>> {
   const keys = Object.keys(source.select);
   const reserved = keys.find((key) => RESERVED_NAME.test(key));
-  if (reserved) throw new Error(`paginateBy reserves the field name ${reserved}`);
+  if (reserved) panic(`paginateBy reserves the field name ${reserved}, which the list selected`);
   const totals = [
     ["totalCount", sql<number>`COUNT(*) OVER ()`.mapWith(Number)] as const,
     ...Object.entries(source.totals ?? {}).map(
@@ -419,7 +506,7 @@ function paginateDistinct<TFields extends Fields, TRows extends PgSelect, TTotal
   },
 ): Promise<PageOf<TRows, TTotals>> {
   if (Object.keys(source.totals ?? {}).length > 0) {
-    throw new Error("paginateBy counts a DISTINCT source but cannot total its columns");
+    panic("paginateBy counts a DISTINCT source but cannot total its columns");
   }
   const keys = Object.keys(source.select);
   const selection: NamedFields = Object.fromEntries([

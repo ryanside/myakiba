@@ -76,11 +76,54 @@ jobs:
       - name: Check types
         run: bunx turbo run check-types
 
+      # A service container cannot take MinIO's `server` command, so this step starts it.
+      - name: Start MinIO for pictures:reconcile
+        run: |
+          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=test -e MINIO_ROOT_PASSWORD=test-password \
+            cgr.dev/chainguard/minio@sha256:ad134b2dd572ae0d989d6807c3e45516cc75a34883a8021db2ff04be5d1d496a server /data
+          timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done'
+          docker run --rm --network host -e MC_HOST_s3=http://test:test-password@localhost:9000 \
+            cgr.dev/chainguard/minio-client@sha256:2fc4412391f1ce7372db8dd8bee17b38d76f7bb898bac195915bfe6979aa5784 mb s3/myakiba-test
+
       - name: Test
         run: bun run test
         env:
           TEST_DATABASE_URL: postgres://test:test@localhost:5432/test
           TEST_REDIS_URL: redis://localhost:6379
+          TEST_S3_URL: http://test:test-password@localhost:9000/myakiba-test
+
+  extension-sources:
+    name: Rebuild the extension from its sources zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      # apps/extension/SOURCE_CODE_REVIEW.md tells AMO's reviewers to build with Node 24.
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Zip the extension
+        working-directory: apps/extension
+        run: bun run zip
+
+      - name: Check the manifests ask for what STORE.md lists
+        working-directory: apps/extension
+        run: bun run check-manifest
+
+      - name: Rebuild from the sources zip and compare
+        working-directory: apps/extension
+        run: bun run verify-sources
 
   build-images:
     name: Build ${{ matrix.image }} image
@@ -97,10 +140,6 @@ jobs:
               VITE_SERVER_URL=http://vite-server-url.image-smoke.invalid
               VITE_TURNSTILE_SITE_KEY=vite-turnstile-site-key-image-smoke
             smoke: db-push=myakiba-db-push:ci server=myakiba-server:ci
-          - image: worker
-            dockerfile: apps/worker/Dockerfile
-            build_args: ""
-            smoke: ""
           - image: db-push
             dockerfile: packages/db/Dockerfile
             build_args: ""

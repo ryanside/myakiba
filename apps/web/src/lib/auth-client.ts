@@ -2,6 +2,8 @@ import { createAuthClient } from "better-auth/react";
 import { adminClient, usernameClient, inferAdditionalFields } from "better-auth/client/plugins";
 import type { auth } from "@myakiba/auth/server";
 import { env } from "@myakiba/env/web";
+import { Result } from "better-result";
+import { AuthRequestFailed } from "@/lib/errors/auth-request-failed";
 
 export const authClient = createAuthClient({
   baseURL: env.VITE_SERVER_URL,
@@ -35,28 +37,67 @@ export function classifySession({
   return "signed-out";
 }
 
-/**
- * Better Auth answers a failed request with `{ error }`, but throws when the request never
- * reaches the server. This answers that case with `{ error }` too, with no message.
- */
-export async function callAuth<T extends { error: unknown }>(operation: () => Promise<T>) {
-  try {
-    return await operation();
-  } catch {
-    return { data: null, error: { message: undefined, status: 0, code: undefined } };
-  }
+/** What a Better Auth client call resolves with when it gets an answer. */
+type AuthAnswer<Data> =
+  | { readonly data: Data; readonly error: null }
+  | {
+      readonly data: null;
+      readonly error: {
+        readonly code?: string | undefined;
+        readonly message?: string | undefined;
+        readonly status: number;
+        readonly statusText: string;
+      };
+    };
+
+/** Reads a Better Auth answer without changing the server's refusal text. */
+function decodeAuthAnswer<Answer extends AuthAnswer<unknown>>(
+  answer: Answer,
+): Result<Extract<Answer, { readonly error: null }>["data"], AuthRequestFailed> {
+  if (answer.error === null) return Result.ok(answer.data);
+  const { code, message, status, statusText } = answer.error;
+  return Result.err(
+    new AuthRequestFailed({
+      code: code ?? null,
+      status,
+      statusText,
+      cause: answer.error,
+      message: message ?? "",
+    }),
+  );
 }
 
-export async function endSession<T extends { error: unknown }>(operation: () => Promise<T>) {
-  const result = await callAuth(operation);
-  if (result.error) return result;
+/** Owns the request so a fetch rejection answers AuthRequestFailed too. */
+export async function decodeAuth<Answer extends AuthAnswer<unknown>>(
+  operation: () => PromiseLike<Answer>,
+): Promise<Result<Extract<Answer, { readonly error: null }>["data"], AuthRequestFailed>> {
+  const answered = await Result.tryPromise({
+    try: async () => operation(),
+    catch: (cause) =>
+      new AuthRequestFailed({
+        code: null,
+        status: null,
+        statusText: "",
+        cause,
+        message: "Couldn't connect. Check your connection and try again.",
+      }),
+  });
+  return answered.andThen(decodeAuthAnswer);
+}
+
+/** Signs out or deletes the account, and on success settles the session store as signed out. */
+export async function endSession(
+  operation: () => Promise<AuthAnswer<unknown>>,
+): Promise<Result<void, AuthRequestFailed>> {
+  const ended = await decodeAuth(operation);
+  if (ended.isErr()) return Result.err(ended.error);
   // Sign-in pages reload the page, and signup creates no session until email verification.
   // Until then, stale checks cannot restore this session.
   sessionStore.listen((state) => {
     if (state.data || state.error) settleSignedOut();
   });
   settleSignedOut();
-  return result;
+  return Result.ok();
 }
 
 function settleSignedOut() {

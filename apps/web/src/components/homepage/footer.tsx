@@ -1,65 +1,52 @@
+import { Link } from "@tanstack/react-router";
+import { scrollToTop } from "@/components/homepage/header";
+import { CONTAINER } from "@/components/homepage/kit";
+import { DISCORD_URL, GITHUB_URL } from "@/components/homepage/links";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
-import { Button } from "@/components/ui/button";
-import { DiscordLogo, GitHubLogo } from "@/components/ui/brand-icons";
+import { cn } from "@/lib/utils";
 
-export default function FooterSection() {
+const LINK = "text-sm text-muted-foreground color-motion hover:text-foreground";
+
+export function HomeFooter() {
   return (
-    <footer className="py-10">
-      <div className="mx-auto flex max-w-5xl flex-col items-start gap-6 px-6 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
-        <div className="flex flex-col items-start gap-3 min-[520px]:flex-row min-[520px]:items-center">
-          <MyAkibaLogo size="full" className="hidden sm:block size-20 pt-0.5" />
-          <span className="text-muted-foreground text-sm leading-5 whitespace-nowrap">
-            made by{" "}
+    <footer>
+      <div
+        className={cn(
+          CONTAINER,
+          "flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pt-16 pb-12 md:pt-24",
+        )}
+      >
+        <div className="flex items-center gap-4">
+          <Link
+            to="/"
+            aria-label="myakiba home"
+            onClick={scrollToTop}
+            className="flex h-9 items-center"
+          >
+            <MyAkibaLogo size="full" className="my-0 h-[1.125rem] w-[5.75rem]" />
+          </Link>
+          <p className="text-sm text-muted-foreground">
+            Made by{" "}
             <a
               href="https://github.com/ryanside"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-foreground hover:underline"
+              className="font-medium text-foreground hover:underline"
             >
               @ryanside
             </a>
-          </span>
-          <span className="text-muted-foreground text-sm leading-5 whitespace-nowrap">
-            see{" "}
-            <a href="/changelog" className="text-foreground hover:underline">
-              changelog
-            </a>
-          </span>
+          </p>
         </div>
-
-        <nav className="-ml-1 flex items-center gap-2 min-[900px]:ml-0" aria-label="Social links">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            render={
-              <a
-                href="https://discord.gg/VKHVvhcC2z"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Join myakiba on Discord"
-                title="Discord"
-              />
-            }
-            nativeButton={false}
-          >
-            <DiscordLogo className="size-4 [&_path]:fill-current" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            render={
-              <a
-                href="https://github.com/ryanside/myakiba"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="View myakiba on GitHub"
-                title="GitHub"
-              />
-            }
-            nativeButton={false}
-          >
-            <GitHubLogo className="size-4" />
-          </Button>
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
+          <Link to="/changelog" className={LINK}>
+            Changelog
+          </Link>
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
+            GitHub
+          </a>
+          <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className={LINK}>
+            Discord
+          </a>
         </nav>
       </div>
     </footer>

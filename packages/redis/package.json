@@ -10,16 +10,15 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --isolate",
     "redis:start": "docker compose up -d",
     "redis:stop": "docker compose stop",
     "redis:down": "docker compose down"
   },
   "dependencies": {
-    "@myakiba/contracts": "workspace:*",
     "@myakiba/env": "workspace:*",
-    "ioredis": "catalog:",
-    "zod": "catalog:"
+    "evlog": "catalog:",
+    "ioredis": "catalog:"
   },
   "devDependencies": {
     "@myakiba/config": "workspace:*",

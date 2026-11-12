@@ -1,12 +1,14 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import { Elysia } from "elysia";
+import { Elysia, ElysiaCustomStatusResponse } from "elysia";
 import { createRequestLogger, initLogger } from "evlog";
+import { eq, sql } from "drizzle-orm";
+import * as z from "zod";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 import type { CollectionUpdateType } from "./model";
 
-const { collection, item } = figureSchema;
+const { collection, item, item_release } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -25,7 +27,7 @@ await mock.module("@myakiba/auth/server", () => ({
 const db = await createTestDatabase();
 const { default: collectionRouter } = await import("./index");
 const { Collection } = await import("./module");
-const { run } = await import("@/domain/kernel");
+const { serve } = await import("@/domain/kernel");
 const { Viewer } = await import("@/domain/viewer");
 const app = new Elysia({ prefix: "/api" }).use(collectionRouter);
 
@@ -60,7 +62,9 @@ beforeEach(async () => {
   await db
     .insert(authSchema.user)
     .values({ id: userId, name: "Ryan", email: "r@example.com", username: "ryan" });
-  await db.insert(item).values({ id: "item-1", externalId: 186, title: "Nendoroid Hatsune Miku" });
+  await db
+    .insert(item)
+    .values({ id: "item-1", ownerId: userId, externalId: 186, title: "Nendoroid Hatsune Miku" });
   await db.insert(collection).values({
     id: "c-1",
     userId,
@@ -72,6 +76,18 @@ beforeEach(async () => {
   });
 });
 
+async function addOtherUser() {
+  await db
+    .insert(authSchema.user)
+    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await db.insert(item).values({
+    id: "item-aki",
+    ownerId: "user-2",
+    externalId: 186,
+    title: "Nendoroid Hatsune Miku",
+  });
+}
+
 const call = async (method: string, body?: CollectionUpdateType) => {
   const response = await app.handle(
     new Request("http://localhost/api/collection/c-1", {
@@ -80,7 +96,8 @@ const call = async (method: string, body?: CollectionUpdateType) => {
       body: body && JSON.stringify(body),
     }),
   );
-  return { status: response.status, body: await response.json() };
+  const json = response.headers.get("content-type")?.includes("json");
+  return { status: response.status, body: json ? await response.json() : await response.text() };
 };
 
 test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", async () => {
@@ -97,6 +114,72 @@ test("an edit answers its row with ISO timestamp strings and YYYY-MM-DD dates", 
   });
 });
 
+test("an edit that selects another Item's release answers 404 and leaves the Collection Item as it was", async () => {
+  await db
+    .insert(item)
+    .values({ id: "item-2", ownerId: userId, externalId: 187, title: "Nendoroid Kagamine Rin" });
+  await db.insert(item_release).values([
+    { id: "00000000-0000-0000-0000-000000000001", itemId: "item-1", date: "2026-03-01" },
+    { id: "00000000-0000-0000-0000-000000000002", itemId: "item-2", date: "2026-04-01" },
+  ]);
+  const own = { ...edit, releaseId: "00000000-0000-0000-0000-000000000001" };
+  const foreign = { ...edit, notes: "foreign", releaseId: "00000000-0000-0000-0000-000000000002" };
+  expect(await call("PUT", own)).toMatchObject({ status: 200 });
+  const before = await db.select().from(collection);
+
+  expect(await call("PUT", foreign)).toEqual({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
+
+  expect(await db.select().from(collection)).toEqual(before);
+});
+
+async function deletingRelease(releaseId: string) {
+  const deleted = Promise.withResolvers<null>();
+  const finish = Promise.withResolvers<null>();
+  const deleting = db.transaction(async (tx) => {
+    await tx.delete(item_release).where(eq(item_release.id, releaseId));
+    deleted.resolve(null);
+    await finish.promise;
+  });
+  await deleted.promise;
+  return {
+    commit: async () => {
+      finish.resolve(null);
+      await deleting;
+    },
+  };
+}
+
+async function waitForALockOn(table: string) {
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      sql`SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND query ILIKE ${`update "${table}"%`}`,
+    );
+    if (waiting && waiting.count > 0) return;
+    await Bun.sleep(10);
+  }
+}
+
+test("an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing", async () => {
+  const release = "00000000-0000-0000-0000-000000000003";
+  await db.insert(item_release).values({ id: release, itemId: "item-1", date: "2026-03-01" });
+  const before = await db.select().from(collection);
+  const refresh = await deletingRelease(release);
+
+  const edited = call("PUT", { ...edit, releaseId: release });
+  await waitForALockOn("collection");
+  await refresh.commit();
+
+  expect(await edited).toEqual({
+    status: 404,
+    body: "A chosen release is not a release of its item",
+  });
+  expect(await db.select().from(collection)).toEqual(before);
+});
+
 test("a delete answers its row with ISO timestamp strings", async () => {
   expect(await call("DELETE")).toMatchObject({
     status: 200,
@@ -105,15 +188,18 @@ test("a delete answers its row with ISO timestamp strings", async () => {
 });
 
 test("the edit and delete operations return strings, so Eden types them as strings", async () => {
-  const log = createRequestLogger();
-  const updated = await run(viewer, Collection.update, { id: "c-1", update: edit }, log);
-  const deleted = await run(viewer, Collection.remove, { id: "c-1" }, log);
-  const update = updated.ok ? updated.value.update : undefined;
-  if (!update || !deleted.ok) throw new Error("expected both operations to succeed");
+  const caller = { viewer, log: createRequestLogger() };
+  const updated = await serve(caller, Collection.update, { id: "c-1", update: edit });
+  const deleted = await serve(caller, Collection.remove, { id: "c-1" });
+  if (updated instanceof ElysiaCustomStatusResponse || !updated.update) {
+    throw new Error("expected the edit to succeed");
+  }
+  if (deleted instanceof ElysiaCustomStatusResponse)
+    throw new Error("expected the delete to succeed");
 
   const rows: readonly { readonly createdAt: string; readonly updatedAt: string }[] = [
-    update,
-    deleted.value.deleted,
+    updated.update,
+    deleted.deleted,
   ];
   const timestamps = { createdAt: createdAt.toISOString(), updatedAt: expect.stringMatching(ISO) };
   expect(rows).toMatchObject([timestamps, timestamps]);
@@ -123,12 +209,10 @@ test.each([
   ["an own and another user's item", ["c-1", "c-other"]],
   ["only another user's item", ["c-other"]],
 ])("a bulk delete of %s answers 404 and deletes nothing", async (_, ids) => {
-  await db
-    .insert(authSchema.user)
-    .values({ id: "user-2", name: "Aki", email: "a@example.com", username: "aki" });
+  await addOtherUser();
   await db
     .insert(collection)
-    .values({ id: "c-other", userId: "user-2", itemId: "item-1", status: "Ordered" });
+    .values({ id: "c-other", userId: "user-2", itemId: "item-aki", status: "Ordered" });
   const readItems = () => db.select().from(collection).orderBy(collection.id);
   const before = await readItems();
 
@@ -171,4 +255,36 @@ test("a bulk delete of an empty list answers 404 and deletes nothing", async () 
 
   expect(await bulkDelete([])).toEqual({ status: 404, body: "Collection item(s) not found" });
   expect(await db.select().from(collection)).toEqual(before);
+});
+
+test("a list by ids answers only the viewer's Collection Items among them", async () => {
+  await addOtherUser();
+  await db.insert(collection).values([
+    { id: "c-2", userId, itemId: "item-1", status: "Owned" },
+    { id: "c-3", userId, itemId: "item-1", status: "Owned" },
+    { id: "c-other", userId: "user-2", itemId: "item-aki", status: "Owned" },
+  ]);
+
+  const response = await app.handle(
+    new Request("http://localhost/api/collection?ids=c-1,c-3,c-other,c-missing", {
+      headers: { "x-test-user": userId },
+    }),
+  );
+  const body = z
+    .object({ items: z.array(z.object({ id: z.string() })), totalCount: z.number() })
+    .parse(await response.json());
+
+  expect(response.status).toBe(200);
+  expect(body.items.map((row) => row.id).toSorted()).toEqual(["c-1", "c-3"]);
+  expect(body.totalCount).toBe(2);
+});
+
+test("a list by more than 100 ids answers 422", async () => {
+  const ids = Array.from({ length: 101 }, (_, index) => `c-${index}`).join(",");
+  const response = await app.handle(
+    new Request(`http://localhost/api/collection?ids=${ids}`, {
+      headers: { "x-test-user": userId },
+    }),
+  );
+  expect(response.status).toBe(422);
 });

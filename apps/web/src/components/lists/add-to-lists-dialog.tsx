@@ -1,3 +1,4 @@
+import type { InferOk } from "better-result";
 import { useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -36,7 +37,12 @@ import {
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusButton, formSubmitStatus, useButtonStatus } from "@/components/ui/status-button";
+import {
+  StatusButton,
+  closesOnSuccess,
+  formSubmitStatus,
+  useButtonStatus,
+} from "@/components/ui/status-button";
 import {
   useAddTargetsToListsMutation,
   useListOptionsForTargetsQuery,
@@ -45,10 +51,14 @@ import {
 } from "@/hooks/use-lists";
 import { cn } from "@/lib/utils";
 import type { getListOptionsForTargets } from "@/queries/lists";
-import { shownMessageOf } from "@/lib/api-response";
+import type { Saving } from "@/data/client";
+import { formSubmitHandler } from "@/lib/form-submit";
+import { shownMessageOf } from "@/data/api";
 import { ExternalIcon } from "@/lib/icons";
 
-type ListOptionsForTargets = NonNullable<Awaited<ReturnType<typeof getListOptionsForTargets>>>;
+type ListOptionsForTargets = NonNullable<
+  InferOk<Awaited<ReturnType<typeof getListOptionsForTargets>>>
+>;
 
 function CreateListForm({
   onCreated,
@@ -67,26 +77,29 @@ function CreateListForm({
     validators: { onSubmit: listInputSchema },
     onSubmitInvalid: () => inputRef.current?.focus(),
     onSubmit: async ({ value }) => {
-      const created = await run(() => createList({ title: value.title.trim(), description: "" }));
+      const created = await run(
+        () => createList({ title: value.title.trim(), description: "" }),
+        (result) => result.isOk(),
+      );
+      if (created.isErr()) {
+        setSubmitError(true);
+        return;
+      }
       form.reset();
       setSubmitError(false);
-      onCreated(created.id);
+      onCreated(created.value.id);
     },
   });
 
   return (
     <form
-      onSubmit={async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (disabled) return;
-        setSubmitError(false);
-        try {
+      onSubmit={formSubmitHandler({
+        handleSubmit: async () => {
+          if (disabled) return;
+          setSubmitError(false);
           await form.handleSubmit();
-        } catch {
-          setSubmitError(true);
-        }
-      }}
+        },
+      })}
     >
       <form.Field name="title">
         {(field) => {
@@ -168,6 +181,7 @@ function ListOptionRow({
   const descriptionId = `add-to-list-${list.id}-description`;
   const errorId = `add-to-list-${list.id}-error`;
   const isRemoving = removeMutation.isPending;
+  const removeFailed = removeMutation.last?.isErr() === true;
   const isDisabled = isSubmitting || isRemoving;
   const removalLabel = targetNoun
     ? `${list.memberCount} selected ${list.memberCount === 1 ? targetNoun : `${targetNoun}s`}`
@@ -227,26 +241,21 @@ function ListOptionRow({
               className="h-auto cursor-pointer border-0 p-0 text-sm leading-snug font-normal text-destructive underline-offset-auto transition-none"
               disabled={isDisabled}
               aria-label={`Remove ${removalLabel} from ${list.title}`}
-              aria-describedby={removeMutation.error ? errorId : undefined}
+              aria-describedby={removeFailed ? errorId : undefined}
               onClick={async () => {
                 onRemoveStarted();
-                try {
-                  await removeMutation.mutateAsync(list.id);
-                } catch {
-                  // The inline row error remains available for retry.
-                }
+                // A failed removal shows its inline row error, which stays for a retry.
+                await removeMutation.run(list.id);
               }}
             >
               {isRemoving ? "Removing..." : "Remove"}
             </Button>
           </FieldDescription>
         ) : null}
-        <FieldError id={errorId}>
-          {removeMutation.error ? "Couldn't remove. Try again." : null}
-        </FieldError>
+        <FieldError id={errorId}>{removeFailed ? "Couldn't remove. Try again." : null}</FieldError>
       </FieldContent>
       <span className="sr-only" role="status">
-        {removeMutation.isSuccess ? `Removed from ${list.title}.` : ""}
+        {removeMutation.last?.isOk() ? `Removed from ${list.title}.` : ""}
       </span>
     </Field>
   );
@@ -257,7 +266,7 @@ function AddToListsForm({
   targets,
   targetCount,
   isSaving,
-  addError,
+  addFailed,
   addToLists,
   close,
   onSuccess,
@@ -266,8 +275,8 @@ function AddToListsForm({
   readonly targets: readonly ListTarget[];
   readonly targetCount: number;
   readonly isSaving: boolean;
-  readonly addError: Error | null;
-  readonly addToLists: (listIds: string[]) => Promise<void>;
+  readonly addFailed: boolean;
+  readonly addToLists: (listIds: string[]) => Saving;
   readonly close: () => void;
   readonly onSuccess?: () => void;
 }): React.JSX.Element {
@@ -283,7 +292,9 @@ function AddToListsForm({
   const form = useForm({
     defaultValues: { selectedListIds: [] as string[] },
     onSubmit: async ({ value }) => {
-      await run(() => addToLists(value.selectedListIds));
+      const added = await run(() => addToLists(value.selectedListIds), closesOnSuccess);
+      // A failed add shows its inline error, and the dialog stays open to retry.
+      if (added.isErr()) return;
       close();
       onSuccess?.();
     },
@@ -309,17 +320,7 @@ function AddToListsForm({
         </Empty>
       ) : null}
 
-      <form
-        onSubmit={async (event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          try {
-            await form.handleSubmit();
-          } catch {
-            // The inline error stays visible and the dialog remains open.
-          }
-        }}
-      >
+      <form onSubmit={formSubmitHandler(form)}>
         <form.Field name="selectedListIds" mode="array">
           {(field) => {
             const selectedListIdSet = new Set(field.state.value);
@@ -365,7 +366,7 @@ function AddToListsForm({
           {([selectedListIds, isSubmitting]) => (
             <>
               <FieldError className="mt-4">
-                {addError ? "Couldn't add to Lists. Try again." : null}
+                {addFailed ? "Couldn't add to Lists. Try again." : null}
               </FieldError>
               <DialogFooter className="mt-4">
                 <DialogClose
@@ -459,10 +460,10 @@ export function AddToListsDialog({
               targets={targets}
               targetCount={targets.length}
               isSaving={addMutation.isPending}
-              addError={addMutation.error}
-              addToLists={async (listIds) => {
+              addFailed={addMutation.last?.isErr() === true}
+              addToLists={(listIds) => {
                 addMutation.reset();
-                await addMutation.mutateAsync({ targets: [...targets], listIds });
+                return addMutation.run({ targets: [...targets], listIds });
               }}
               close={closeAfterSuccess}
               onSuccess={onSuccess}

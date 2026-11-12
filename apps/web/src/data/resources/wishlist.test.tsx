@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
+import { Result } from "better-result";
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { getErrorMessage as realGetErrorMessage } from "@/lib/treaty-client";
 
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
@@ -55,7 +55,7 @@ const wishlistEndpoint = Object.assign(
   },
 );
 
-const getErrorMessage: typeof realGetErrorMessage = (_error, fallback) => fallback;
+const getErrorMessage = (_error: { readonly status: number }, fallback: string) => fallback;
 await mock.module("@/lib/treaty-client", () => ({
   app: { api: { wishlist: wishlistEndpoint } },
   getErrorMessage,
@@ -63,6 +63,7 @@ await mock.module("@/lib/treaty-client", () => ({
 }));
 
 const { toast } = await import("@/components/ui/toast");
+const { WriteFailed } = await import("@/lib/errors/write-failed");
 const { useResourceMutation } = await import("../client");
 const { setWishlistMembership } = await import("./wishlist");
 const { useWishlistItemsQuery } = await import("@/hooks/use-wishlist");
@@ -82,11 +83,12 @@ afterEach(() => {
 const membershipInput = { itemId: "it-meiko", itemExternalId: 1006, wishlisted: true };
 const useMembership = () => useResourceMutation(setWishlistMembership);
 type Run = ReturnType<typeof useMembership>["run"];
-type Result = Awaited<ReturnType<Run>>;
-type Outcome = { settled: Result | "pending" };
+type RunResult = Awaited<ReturnType<Run>>;
+type Outcome = { settled: RunResult | "pending" };
 
 function renderWishlistWithToggle(queryClient: QueryClient) {
-  let run: Run = async () => ({ kind: "failed", error: null });
+  let run: Run = async () =>
+    Result.err(new WriteFailed({ cause: new Error("not rendered"), message: "not rendered" }));
   function Page() {
     const items = useWishlistItemsQuery("all");
     const mutation = useMembership();
@@ -153,7 +155,7 @@ describe("adding an Item to the Wishlist", () => {
       toasts: toastAdd.mock.calls.length,
     }).toEqual({
       whileRefetching: { status: "saving", settled: "pending" },
-      settled: { kind: "saved", value: undefined },
+      settled: Result.ok(),
       status: "idle",
       shown: ["Hatsune Miku 1/7", "MEIKO Pop Up Parade"],
       itemPage: { ...itemPage, isWishlisted: true },
@@ -170,20 +172,20 @@ describe("adding an Item to the Wishlist", () => {
     const getsBefore = server.wishlistGets;
 
     server.failWrites = true;
-    let result: Result | undefined;
+    let result: RunResult | undefined;
     await act(async () => {
       result = await run(membershipInput);
     });
 
     expect({
-      kind: result?.kind,
-      message: result?.kind === "failed" ? (result.error as Error).message : null,
+      saved: result?.status,
+      message: result?.isErr() ? result.error.message : null,
       toasts: toastAdd.mock.calls.map(([options]) => options),
       refetches: server.wishlistGets - getsBefore,
       itemPage: queryClient.getQueryData(["item", 1006]),
       status: screen.getByRole("status").textContent,
     }).toEqual({
-      kind: "failed",
+      saved: "error",
       message: "Failed to add to Wishlist",
       toasts: [{ type: "error", title: "Failed to add to Wishlist" }],
       refetches: 0,

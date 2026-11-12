@@ -17,9 +17,12 @@ import type {
   SearchOrdersQuery,
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
+import { itemSummaryColumns } from "@/lib/item-summaries";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
-import { ok, paginateBy, prepared, query } from "@/domain/kernel";
+import { Result } from "better-result";
+import { paginateBy, prepared, query } from "@/domain/kernel";
 import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
+import { itemImageSql } from "@/lib/item-image-url";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
 
@@ -29,7 +32,7 @@ const collectionResultsRead = prepared("search_collection", (pool) =>
       itemId: item.id,
       itemExternalId: item.externalId,
       itemTitle: item.title,
-      itemImage: item.image,
+      itemImage: itemImageSql().as("item_image"),
       itemCategory: item.category,
     })
     .from(collection)
@@ -40,7 +43,14 @@ const collectionResultsRead = prepared("search_collection", (pool) =>
         eq(collection.userId, sql.placeholder("userId")),
       ),
     )
-    .groupBy(item.id, item.externalId, item.title, item.image, item.category)
+    .groupBy(
+      item.id,
+      item.externalId,
+      item.title,
+      item.legacyImageUrl,
+      item.imageKey,
+      item.category,
+    )
     .orderBy(desc(latestOwnedAt), desc(item.id))
     .limit(SEARCH_COLLECTION_RESULT_LIMIT),
 );
@@ -83,7 +93,7 @@ export const Search = {
           orderCount: orderResults.length,
         },
       });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -189,18 +199,26 @@ export const Search = {
         itemId: item.id,
         externalId: sql<number>`${item.externalId}`,
         title: item.title,
-        image: item.image,
+        image: itemImageSql().as("image"),
         category: item.category,
         releaseDate: latestRelease.date,
         releasePrice: latestRelease.price,
         releasePriceCurrency: latestRelease.priceCurrency,
+        ...itemSummaryColumns(scope.tx, scope.viewer.userId),
       };
       const rows = (fields: typeof select) =>
         scope.tx
           .select(fields)
           .from(item)
           .leftJoinLateral(latestRelease, sql`TRUE`)
-          .where(and(eq(item.source, "mfc"), isNotNull(item.externalId), searchFilter))
+          .where(
+            and(
+              eq(item.ownerId, scope.viewer.userId),
+              eq(item.source, "mfc"),
+              isNotNull(item.externalId),
+              searchFilter,
+            ),
+          )
           .$dynamic();
       const page = await paginateBy(
         scope,
@@ -235,11 +253,14 @@ export const Search = {
                 priceCurrency: row.releasePriceCurrency,
               }
             : null,
+          collectionCount: row.collectionCount,
+          onOrderCount: row.onOrderCount,
+          wishlisted: row.wishlisted,
         })),
         totalCount: page.totalCount,
       };
       scope.log.set({ result: { count: result.items.length, totalCount: result.totalCount } });
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -255,14 +276,20 @@ export const Search = {
           category: entry.category,
         })
         .from(entry)
-        .where(and(eq(entry.source, "mfc"), ilike(entry.name, `%${search}%`)))
+        .where(
+          and(
+            eq(entry.ownerId, scope.viewer.userId),
+            eq(entry.source, "mfc"),
+            ilike(entry.name, `%${search}%`),
+          ),
+        )
         .orderBy(asc(entry.name), asc(entry.id))
         .limit(limit)
         .offset(offset);
 
       scope.log.set({ result: { count: entries.length } });
       const result = { entries };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 
@@ -272,7 +299,11 @@ export const Search = {
       const { title, limit = DEFAULT_LIMIT, offset = 0 } = input;
       scope.log.set({ query: { title: input.title, limit: input.limit, offset: input.offset } });
       const orderIdsAndTitles: SearchOrderIdAndTitle[] = await scope.tx
-        .select({ id: order.id, title: order.title })
+        .select({
+          id: order.id,
+          title: order.title,
+          images: sql<string[]>`(${orderPreviewImagesSql})[1:4]`,
+        })
         .from(order)
         .where(
           and(
@@ -285,7 +316,7 @@ export const Search = {
         .offset(offset);
 
       const result = { orderIdsAndTitles };
-      return ok(result);
+      return Result.ok(result);
     },
   ),
 };

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useRead } from "@/data/client";
 import { version } from "@/data/resources/version";
-import { SessionUnavailable } from "@/components/auth/session-unavailable";
+import { SessionUnavailable as SessionUnavailableView } from "@/components/auth/session-unavailable";
 import { RouteError } from "@/components/errors/route-error";
 import { AppSidebar } from "@/components/sidebar/app-sidebar";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
@@ -13,12 +13,12 @@ import { PageBackground } from "@/components/page-background";
 import { preparePageBackground } from "@/lib/page-background";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import UserMenu from "@/components/sidebar/user-menu";
-import SyncWidget from "@/components/sync/sync-widget";
-import SyncStatusWidget from "@/components/sync/sync-status-widget";
+import { ExtensionPromptPopover } from "@/components/extension/extension-prompt-popover";
 import { AppCommand } from "@/components/command/app-command";
-import { Button } from "@/components/ui/button";
+import { ExtensionRequiredDialog } from "@/components/extension/extension-required-dialog";
+import { buttonVariants } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { SessionUnavailableError } from "@/lib/session";
+import { SessionUnavailable } from "@/lib/errors/session-unavailable";
 import { env } from "@myakiba/env/web";
 
 export const Route = createFileRoute("/(app)")({
@@ -26,12 +26,13 @@ export const Route = createFileRoute("/(app)")({
   errorComponent: AppRouteError,
   beforeLoad: async ({ context, location, cause, matches }) => {
     const { session, unavailable } = await context.readSession();
-    if (unavailable) throw new SessionUnavailableError();
+    // TanStack Router reads a failed beforeLoad only from a throw, and AppRouteError shows it.
+    if (unavailable) throw new SessionUnavailable();
     if (!session) {
       throw redirect({
         to: "/login",
         search: {
-          redirect: location.pathname,
+          redirect: location.href,
         },
       });
     }
@@ -62,7 +63,7 @@ function afterNextPaint() {
 }
 
 function AppRouteError(props: ErrorComponentProps) {
-  if (props.error instanceof SessionUnavailableError) return <SessionUnavailable />;
+  if (SessionUnavailable.is(props.error)) return <SessionUnavailableView />;
   return <RouteError {...props} />;
 }
 
@@ -89,7 +90,7 @@ function RouteComponent() {
   }, [versionData]);
 
   return (
-    <div className="[--header-height:calc(--spacing(14))] max-w-full overflow-x-hidden">
+    <div className="[--header-height:calc(--spacing(14))] w-full min-w-0 max-w-full overflow-x-clip">
       <a
         href="#main-content"
         className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -98,32 +99,27 @@ function RouteComponent() {
       </a>
       <OnboardingProvider>
         <SidebarProvider className="flex flex-col" defaultOpen>
-          <div className="flex min-w-0 max-w-full flex-1 overflow-x-hidden">
+          <div className="flex min-w-0 max-w-full flex-1 overflow-x-clip">
             <AppSidebar />
-            <SidebarInset className="page-background-surface">
+            <SidebarInset tabIndex={-1} className="page-background-surface outline-none">
               <PageBackground />
               <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 md:px-8">
                 <div className="flex min-w-0 items-center gap-2">
                   <SidebarTrigger className="-ml-1" />
                   <AppCommand />
-                  <SyncStatusWidget />
+                  <ExtensionPromptPopover />
                 </div>
                 <div className="flex items-center gap-2">
-                  <SyncWidget
-                    side="right"
-                    TriggerWrapper={
-                      <Button variant="default" size="icon" aria-label="Add">
-                        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                      </Button>
-                    }
-                  />
+                  <Link to="/add" className={buttonVariants({ size: "icon" })} aria-label="Add">
+                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                  </Link>
                   <UserMenu session={session} />
                 </div>
               </header>
               <div
                 id="main-content"
                 tabIndex={-1}
-                className="h-full w-full min-w-0 max-w-full overflow-x-hidden px-4 pt-4 pb-12 outline-none md:px-8"
+                className="h-full w-full min-w-0 max-w-full overflow-x-clip px-4 pt-4 pb-12 outline-none md:px-8"
               >
                 <Outlet />
               </div>
@@ -131,6 +127,7 @@ function RouteComponent() {
           </div>
         </SidebarProvider>
       </OnboardingProvider>
+      <ExtensionRequiredDialog />
     </div>
   );
 }

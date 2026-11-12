@@ -115,7 +115,8 @@ function Rating({
             tabIndex={0}
             aria-label={i === 1 ? "1 star" : `${i} stars`}
             aria-pressed={rating === i}
-            className="relative cursor-pointer"
+            // Touching hit areas of 24px, wider than the star, so hovering between stars keeps a star.
+            className="relative cursor-pointer after:absolute after:-inset-0.5"
             onClick={() => onRatingChange?.(i)}
             onMouseEnter={() => setHoveredRating(i)}
             onMouseLeave={() => setHoveredRating(null)}
@@ -141,10 +142,10 @@ function Rating({
       aria-describedby={
         editable ? [ariaDescribedBy, valueId].filter(Boolean).join(" ") : ariaDescribedBy
       }
-      className={cn(ratingVariants({ size }), className)}
+      className={cn(ratingVariants({ size }), editable && "flex-wrap", className)}
       {...props}
     >
-      <div className="flex items-center">{renderStars()}</div>
+      <div className={cn("flex items-center", editable && "gap-1")}>{renderStars()}</div>
       {(showValue || editable) && (
         <span
           id={valueId}
