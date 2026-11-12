@@ -46,4 +46,10 @@ describe("a Firefox build for origins with ports", () => {
     expect(reaches(`${ORIGINS.WXT_MFC_ORIGIN}/item/2336325`)).toBe(true);
     expect(reaches(`${ORIGINS.WXT_MFC_STATIC_ORIGIN}/upload/items/1/2336325.jpg`)).toBe(true);
   });
+
+  test("lists each host permission once", () => {
+    const permissions = manifest.host_permissions ?? [];
+
+    expect(permissions).toEqual([...new Set(permissions)]);
+  });
 });

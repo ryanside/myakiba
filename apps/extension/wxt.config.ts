@@ -18,7 +18,9 @@ export default defineConfig({
   hooks: {
     "build:manifestGenerated": (wxt, manifest) => {
       if (wxt.config.browser !== "firefox") return;
-      manifest.host_permissions = manifest.host_permissions?.map(withoutPort);
+      if (manifest.host_permissions) {
+        manifest.host_permissions = [...new Set(manifest.host_permissions.map(withoutPort))];
+      }
       for (const script of manifest.content_scripts ?? []) {
         script.matches = script.matches?.map(withoutPort);
       }
