@@ -21,18 +21,27 @@ function stop(lines: readonly string[]): never {
   process.exit(1);
 }
 
+async function attempt<T>(work: () => PromiseLike<T>, failed: string): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    console.error(error);
+    return stop([failed, "Fix the cause and run db-push again."]);
+  }
+}
+
 // The pushed schema declares per-owner indexes, so pre-ownership Items get their owners first.
 const database = new SQL({ url: databaseUrl });
 let migration: MigrationReport;
 try {
-  await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
-  migration = await migrateItemOwnership(database);
-} catch (error) {
-  console.error(error);
-  stop([
-    "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
-    "Fix the cause and run db-push again.",
-  ]);
+  await attempt(
+    () => database`CREATE EXTENSION IF NOT EXISTS pg_trgm`,
+    "CREATING THE pg_trgm EXTENSION FAILED. The migration did not run, so the database is as it was.",
+  );
+  migration = await attempt(
+    () => migrateItemOwnership(database),
+    "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
+  );
 } finally {
   await database.close();
 }
@@ -79,7 +88,7 @@ if (exitCode !== 0 || !completed) {
     ...(migration.status === "migrated"
       ? [
           "The Item ownership migration above has committed, so the database is migrated but not pushed.",
-          "The running server's Item writes fail until the new server starts.",
+          "main's Import/Export and sync no longer work, because the retired tables went with that commit, and its Item writes fail until the new server starts.",
         ]
       : []),
     "Fix the cause and run db-push again. It reports already-migrated and finishes the push.",

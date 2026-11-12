@@ -4282,7 +4282,9 @@
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
         "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
         "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy"
-      ]
+      ],
+      "testAt": "8f0ac72728ec820c297288ed733df72f3e81431d",
+      "reason": "A later commit rewords db-push's failure messages, which HEAD's test checks."
     }
   ],
   "lint": [

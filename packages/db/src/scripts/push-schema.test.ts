@@ -380,7 +380,7 @@ test(
       "a table this migration does not re-point references Items, Item Entries or their links",
     );
     expect(failed.output).toContain(
-      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
     );
     expect(failed.output).not.toContain("Dropped retired table");
     expect(await tables(sql)).toEqual(expect.arrayContaining(RETIRED_TABLES));
@@ -400,7 +400,7 @@ test(
     const failed = await dbPush(url);
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
-      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
     );
     expect(failed.output).not.toContain("Dropped retired table");
     expect(await snapshot(sql)).toEqual(before);
@@ -430,6 +430,9 @@ test(
     expect(failed.exitCode).toBe(1);
     expect(failed.output).toContain(
       "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+    );
+    expect(failed.output).toContain(
+      "main's Import/Export and sync no longer work, because the retired tables went with that commit, and its Item writes fail until the new server starts.",
     );
     expect(await isItemOwnershipMigrated(sql)).toBe(true);
     expect(await tables(sql)).not.toEqual(expect.arrayContaining(["sync_session"]));

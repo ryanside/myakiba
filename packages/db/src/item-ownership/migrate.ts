@@ -450,8 +450,10 @@ function describeMisses(misses: readonly OwnershipMiss[]): string {
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
   await tx`SELECT set_config('lock_timeout', ${options.lockTimeout ?? "10s"}, true)`;
-  // The owner keys into "user" need this lock. Taking it first means the run never waits for it
-  // while it holds the Item tables.
+  // The owner keys into "user" need this lock, so the run takes it before the Item tables. Dropping a
+  // retired table that references "user" later waits for ACCESS EXCLUSIVE on it while the run holds
+  // the Item tables. That wait fails closed at lock_timeout and the run retries; the runbook stops
+  // the server before the deploy, so nothing holds "user" then.
   await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
   await tx.unsafe(
     `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
