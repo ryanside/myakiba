@@ -4384,6 +4384,14 @@
       ]
     },
     {
+      "fix": "2a02060f794344ed0dc4797cccc600917d8f4023",
+      "bug": "before could call commitFirst without awaiting it, with a write that waited on a gate the body opened, so the body picked a row that stayed committed after its own rollback.",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "a write before's commitFirst makes > a write still running when before returns is a defect, and commits nothing"
+      ]
+    },
+    {
       "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
       "bug": "A refresh with the same bytes skipped the upload when the Item already showed its key, so an object that went missing stayed missing.",
       "test": "apps/server/src/routers/item/resync.test.ts",
