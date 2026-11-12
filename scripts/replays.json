@@ -4272,6 +4272,25 @@
         "POST /api/mfc-items stores each picture once, by its bytes > two users who save the same bytes share one object, and each Item stores its key",
         "POST /api/mfc-items stores each picture once, by its bytes > different bytes are separate objects, each shown only by its uploader's Item",
         "POST /api/mfc-items holds at most 20,000 Items per account > a full Item Database answers 409, and records and stores nothing"
+      ],
+      "testAt": "85fcaffcc408b6fdd7b454a0f07bfdffd7c7c702",
+      "reason": "The always-store fix renamed two of these tests and reversed one, so the replay takes the test file as this fix left it, with its ledger read in SQL.",
+      "atHead": [
+        "POST /api/mfc-items saves an MFC item page as a new item > the 98777 page creates one item with its label, rating, entries, links and release",
+        "POST /api/mfc-items saves an MFC item page as a new item > two Items whose pages list the same release each get their own release id",
+        "POST /api/mfc-items saves an MFC item page as a new item > uploading it again answers existing and writes nothing",
+        "POST /api/mfc-items saves an MFC item page as a new item > a picture that is not an image is rejected and the item is still created",
+        "POST /api/mfc-items saves a page's text without NUL characters > a NUL in the title, the Title field, a release type and an entry name is dropped",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > the ledger row is committed when the picture is stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > pictures no Item shows still count, so one past the quota is not recorded or stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture that exactly fills the quota is stored",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture the owner already recorded counts once",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > another user's ledger does not count",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > two uploads that each fit alone but not together record and store one picture",
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is stored again, and recorded once",
+        "POST /api/mfc-items stores each picture once, by its bytes > two users who save the same bytes share one object, and each Item stores its key",
+        "POST /api/mfc-items stores each picture once, by its bytes > different bytes are separate objects, each shown only by its uploader's Item",
+        "POST /api/mfc-items holds at most 20,000 Items per account > a full Item Database answers 409, and records and stores nothing"
       ]
     },
     {
@@ -4353,6 +4372,31 @@
         "pictures:reconcile against an S3-compatible store > a legacy image written with a path-style bucket URL still shows its key",
         "pictures:reconcile against an S3-compatible store > a deleted account's Items and ledger rows go with it, and its unshared pictures show as unused",
         "pictures:reconcile against an S3-compatible store > the script prints a report, deletes nothing and refuses --apply"
+      ]
+    },
+    {
+      "fix": "a57a1cafb17f9cf349a9ff64634749901726d8ab",
+      "bug": "commitFirst could be called twice in one run, or passed to the body through scope.proceed, where its write survived the body's rollback.",
+      "test": "apps/server/src/domain/kernel.test.ts",
+      "fixed": [
+        "a write before's commitFirst makes > a second call in one run is a defect, and writes nothing",
+        "a write before's commitFirst makes > a call after before returned, such as from the body, is a defect, and writes nothing"
+      ]
+    },
+    {
+      "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
+      "bug": "A refresh with the same bytes skipped the upload when the Item already showed its key, so an object that went missing stayed missing.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "the posted picture > a refresh with the same bytes stores a picture whose object went missing"
+      ]
+    },
+    {
+      "fix": "f88f0c8c0df3bb22246d3cf64aeca9988b11cace",
+      "bug": "A save skipped the upload when one of the owner's Items already showed the picture's key, so the object was never stored again.",
+      "test": "apps/server/src/routers/mfc-items/routes.test.ts",
+      "fixed": [
+        "POST /api/mfc-items keeps each account's picture ledger within 2 GiB > a picture one of the owner's Items already shows is stored again, and recorded once"
       ]
     }
   ],
