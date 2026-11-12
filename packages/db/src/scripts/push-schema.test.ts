@@ -443,3 +443,22 @@ test(
   },
   PUSH_TIMEOUT * 2,
 );
+
+test(
+  "a push that fails after migrating a database in staging's shape, which has no retired tables, does not say main's Import/Export and sync went with it",
+  async () => {
+    const { sql, url } = await databases.create(
+      await databases.legacyTemplate(async () => {}, [STAGING_DATABASE]),
+    );
+    await sql`CREATE TABLE stray (id integer)`;
+    await sql`INSERT INTO stray VALUES (1)`;
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain(
+      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+    );
+    expect(failed.output).not.toContain("Import/Export");
+  },
+  PUSH_TIMEOUT,
+);

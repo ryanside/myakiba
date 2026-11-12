@@ -3,7 +3,6 @@ import { SQL } from "bun";
 import dotenv from "dotenv";
 import { installOwnerGuards } from "../item-ownership/guards";
 import { migrateItemOwnership } from "../item-ownership/migrate";
-import type { MigrationReport } from "../item-ownership/migrate";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -32,24 +31,19 @@ async function attempt<T>(work: () => PromiseLike<T>, failed: string): Promise<T
 
 // The pushed schema declares per-owner indexes, so pre-ownership Items get their owners first.
 const database = new SQL({ url: databaseUrl });
-let migration: MigrationReport;
-try {
-  await attempt(
-    () => database`CREATE EXTENSION IF NOT EXISTS pg_trgm`,
-    "CREATING THE pg_trgm EXTENSION FAILED. The migration did not run, so the database is as it was.",
-  );
-  migration = await attempt(
-    () => migrateItemOwnership(database),
-    "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
-  );
-} finally {
-  await database.close();
-}
+await attempt(
+  () => database`CREATE EXTENSION IF NOT EXISTS pg_trgm`,
+  "CREATING THE pg_trgm EXTENSION FAILED. The migration did not run, so the database is as it was.",
+);
+const migration = await attempt(
+  () => migrateItemOwnership(database),
+  "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
+);
+await database.close();
 console.log(`Item ownership migration: ${JSON.stringify(migration)}`);
-if (migration.status === "migrated") {
-  for (const { table, rows } of migration.droppedTables) {
-    console.log(`Dropped retired table ${table} (${rows} rows).`);
-  }
+const droppedTables = migration.status === "migrated" ? migration.droppedTables : [];
+for (const { table, rows } of droppedTables) {
+  console.log(`Dropped retired table ${table} (${rows} rows).`);
 }
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
@@ -88,6 +82,10 @@ if (exitCode !== 0 || !completed) {
     ...(migration.status === "migrated"
       ? [
           "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+        ]
+      : []),
+    ...(droppedTables.length > 0
+      ? [
           "main's Import/Export and sync no longer work, because the retired tables went with that commit, and its Item writes fail until the new server starts.",
         ]
       : []),
