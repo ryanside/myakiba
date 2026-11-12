@@ -117,15 +117,13 @@ describe.skipIf(s3Url === null)("storing against an S3-compatible store", () => 
     secretAccessKey: decodeURIComponent(url.password),
   };
   const bucket = url.pathname.slice(1);
-  const images = createItemImages({
-    client: new S3Client({
-      region: "us-east-1",
-      endpoint: url.origin,
-      forcePathStyle: true,
-      credentials,
-    }),
-    name: bucket,
+  const client = new S3Client({
+    region: "us-east-1",
+    endpoint: url.origin,
+    forcePathStyle: true,
+    credentials,
   });
+  const images = createItemImages({ client, name: bucket });
   const objects = new Bun.S3Client({ ...credentials, bucket, endpoint: url.origin });
 
   test("an object already at the key is never overwritten, and a missing one is stored again", async () => {
@@ -140,5 +138,29 @@ describe.skipIf(s3Url === null)("storing against an S3-compatible store", () => 
     await objects.delete(first.key);
     await images.store(first);
     expect(await objects.file(first.key).bytes()).toEqual(SAMPLES.png);
+  });
+
+  test("a put the store refuses for any reason but an existing object still throws", async () => {
+    const read = await images.read(new Blob([SAMPLES.png]));
+    if (read.kind !== "read") throw new Error("expected a read picture");
+    const picture = { ...read, key: `test/${crypto.randomUUID()}.png` };
+    const missingBucket = createItemImages({ client, name: `missing-${crypto.randomUUID()}` });
+    const badCredentials = createItemImages({
+      client: new S3Client({
+        region: "us-east-1",
+        endpoint: url.origin,
+        forcePathStyle: true,
+        credentials: { ...credentials, secretAccessKey: "wrong-secret" },
+      }),
+      name: bucket,
+    });
+
+    await expect(missingBucket.store(picture)).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 404 },
+    });
+    await expect(badCredentials.store(picture)).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 403 },
+    });
+    expect(await objects.exists(picture.key)).toBe(false);
   });
 });
