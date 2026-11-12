@@ -4299,7 +4299,29 @@
       "bug": "A push that failed after migrating a database without the retired tables said main's Import/Export and sync went with them.",
       "test": "packages/db/src/scripts/push-schema.test.ts",
       "fixed": [
-        "a push that fails after migrating a database without the retired tables does not say main's Import/Export and sync went with them"
+        "a push that fails after migrating a database in staging's shape, which has no retired tables, does not say main's Import/Export and sync went with it"
+      ],
+      "testAt": "e676862c449af65642b64100d69a7b7073805d61",
+      "reason": "This fix's test used the staging-shape fixture a later commit deleted, and HEAD's version also expects the Item-writes sentence this fix predates.",
+      "atHead": [
+        "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them"
+      ]
+    },
+    {
+      "fix": "0163d9379913f28f6dffe748b39eda8788c3b974",
+      "bug": "The Item ownership migration compared the reference counts only before it deleted the ownerless rows, so a trigger that deleted a Wishlist Item during the delete committed.",
+      "test": "packages/db/src/item-ownership/migrate.test.ts",
+      "fixed": [
+        "a reference deleted along with the ownerless rows fails the run, which changes nothing"
+      ]
+    },
+    {
+      "fix": "4f5d3e585a256661131a8142e9566ec2e41564d2",
+      "bug": "A push that failed after migrating a database without the retired tables did not say main's Item writes fail until the new server starts, which holds after any migration.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
+        "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them"
       ]
     }
   ],
