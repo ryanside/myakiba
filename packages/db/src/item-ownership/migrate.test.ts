@@ -387,6 +387,21 @@ describe("table locks", () => {
     expect(await migration).toMatchObject({ status: "migrated", attempts: 1 });
   });
 
+  test("drops a retired table that references Orders before it locks the Item tables, so a transaction writing Orders never deadlocks with it", async () => {
+    const { sql } = await databases.create(seeded);
+    await sql`CREATE TABLE sync_session (id text PRIMARY KEY, order_id text REFERENCES "order" (id))`;
+    const migration = crossMigration(
+      sql,
+      `"order" IN ROW EXCLUSIVE MODE`,
+      "collection IN ACCESS SHARE MODE",
+    );
+    expect(await migration).toMatchObject({
+      status: "migrated",
+      attempts: 1,
+      droppedTables: [{ table: "sync_session", rows: 0 }],
+    });
+  });
+
   test("migrates a Collection Item committed while it waits for its lock, even under a repeatable read default", async () => {
     const { sql, name, url } = await databases.create(seeded);
     await sql.unsafe(

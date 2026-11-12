@@ -3,6 +3,7 @@ import { installOwnerGuards } from "./guards";
 
 export const MIGRATION_STEPS = [
   "dropRetiredTables",
+  "lockTables",
   "expand",
   "plan",
   "copyItems",
@@ -195,6 +196,14 @@ const STEPS = {
       await tx.unsafe(`DROP TABLE ${ident(table)}`);
       run.droppedTables.push({ table, rows });
     }
+  },
+
+  async lockTables(tx) {
+    await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
+    await tx.unsafe(
+      `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
+      IN ACCESS EXCLUSIVE MODE`,
+    );
   },
 
   async expand(tx) {
@@ -441,11 +450,6 @@ function describeMisses(misses: readonly OwnershipMiss[]): string {
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {
   await tx`SELECT set_config('lock_timeout', ${options.lockTimeout ?? "10s"}, true)`;
-  await tx`LOCK TABLE "user" IN SHARE ROW EXCLUSIVE MODE`;
-  await tx.unsafe(
-    `LOCK TABLE item, item_release, entry, entry_to_item, collection, wishlist_item, list, list_member
-    IN ACCESS EXCLUSIVE MODE`,
-  );
   const run: Run = {
     startCounts: { collection: 0, wishlist_item: 0, list_member: 0 },
     pairs: 0,
