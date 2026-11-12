@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client, S3ServiceException } from "@aws-sdk/client-s3";
 import { MAX_ITEM_PICTURE_BYTES } from "@myakiba/contracts/mfc-items/schema";
 import { env } from "@myakiba/env/server";
 
@@ -26,7 +26,10 @@ export type PictureOutcome = "stored" | "absent" | "rejected" | "over_quota";
 export type ItemImages = {
   /** Sniffs and hashes the picture. It stores nothing. */
   readonly read: (picture: Blob) => Promise<ReadPicture>;
-  /** Stores a read picture at its key. Throws when S3 does not take it within 5 s. */
+  /**
+   * Stores a read picture at its key, unless an object is already there, which it never
+   * overwrites. Throws when S3 does not answer within 5 s.
+   */
   readonly store: (picture: Extract<ReadPicture, { readonly kind: "read" }>) => Promise<void>;
 };
 
@@ -89,6 +92,10 @@ const FORMATS = [
   readonly matches: (bytes: Uint8Array) => boolean;
 }[];
 
+/** S3 refuses a put with `If-None-Match: *` when an object is already at its key. */
+const isAlreadyStored = (cause: unknown) =>
+  cause instanceof S3ServiceException && cause.$metadata.httpStatusCode === 412;
+
 export function createItemImages(bucket: Bucket): ItemImages {
   return {
     async read(picture) {
@@ -112,8 +119,14 @@ export function createItemImages(bucket: Bucket): ItemImages {
         Body: body,
         ContentType: contentType,
         CacheControl: IMMUTABLE,
+        IfNoneMatch: "*",
       });
-      await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
+      try {
+        await racingAbort(bucket.client.send(put, { abortSignal: timeout }), timeout);
+      } catch (error) {
+        if (isAlreadyStored(error)) return;
+        throw error;
+      }
     },
   };
 }

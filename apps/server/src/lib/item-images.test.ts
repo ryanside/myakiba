@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { S3Client } from "@aws-sdk/client-s3";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { createItemImages } from "./item-images";
 
@@ -99,6 +100,45 @@ test("storing a read picture puts it at its key, public and immutable, with its 
       Body: SAMPLES.png,
       ContentType: "image/png",
       CacheControl: "public, max-age=31536000, immutable",
+      IfNoneMatch: "*",
     },
   ]);
+});
+
+const s3Url = process.env.TEST_S3_URL ? new URL(process.env.TEST_S3_URL) : null;
+if (s3Url === null && process.env.CI) {
+  throw new Error("TEST_S3_URL is required in CI, so pictures are stored against MinIO");
+}
+
+describe.skipIf(s3Url === null)("storing against an S3-compatible store", () => {
+  const url = s3Url ?? new URL("http://unused");
+  const credentials = {
+    accessKeyId: decodeURIComponent(url.username),
+    secretAccessKey: decodeURIComponent(url.password),
+  };
+  const bucket = url.pathname.slice(1);
+  const images = createItemImages({
+    client: new S3Client({
+      region: "us-east-1",
+      endpoint: url.origin,
+      forcePathStyle: true,
+      credentials,
+    }),
+    name: bucket,
+  });
+  const objects = new Bun.S3Client({ ...credentials, bucket, endpoint: url.origin });
+
+  test("an object already at the key is never overwritten, and a missing one is stored again", async () => {
+    const read = await images.read(new Blob([SAMPLES.png]));
+    if (read.kind !== "read") throw new Error("expected a read picture");
+    const first = { ...read, key: `test/${crypto.randomUUID()}.png` };
+
+    await images.store(first);
+    await images.store({ ...first, body: SAMPLES.jpg, contentType: "image/jpeg" });
+    expect(await objects.file(first.key).bytes()).toEqual(SAMPLES.png);
+
+    await objects.delete(first.key);
+    await images.store(first);
+    expect(await objects.file(first.key).bytes()).toEqual(SAMPLES.png);
+  });
 });
