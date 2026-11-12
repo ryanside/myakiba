@@ -4195,7 +4195,9 @@
         "gives every copied release a version 8 UUID, which the contracts' z.uuid() accepts",
         "copies each user's Item Entries once, with every link and its roles and material percentage",
         "migrates a generated seed of 20 users with 9 references each"
-      ]
+      ],
+      "testAt": "882faae5c29b28d4eaf9d7b38d894e6818f15b29",
+      "reason": "HEAD's report test also expects the dropped retired tables, which the migration reports since a later commit."
     },
     {
       "fix": "ae0b9138b68d3fedbdd47d2616201e83ddaa8ee1",
@@ -4237,7 +4239,9 @@
         "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
         "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy"
-      ]
+      ],
+      "testAt": "a18fd383a5359d634e92cf4a6a7d5998b91c1927",
+      "reason": "HEAD's db-push tests expect the migration to report the retired tables it drops, which a later commit moves into it."
     },
     {
       "fix": "f48a80fa08eeac071237bffbef18af99792bd871",
@@ -4246,6 +4250,38 @@
       "fixed": [
         "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
         "a table that depends on a retired table stops db-push after the migration, with nothing dropped, and db-push run again once it is gone finishes the deploy"
+      ],
+      "testAt": "f48a80fa08eeac071237bffbef18af99792bd871",
+      "reason": "A later commit moves the retired-table drop into the migration's transaction, so HEAD's dependent-table test expects everything to roll back instead.",
+      "atHead": [
+        "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
+        "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy"
+      ]
+    },
+    {
+      "fix": "e921735f9a2c49501a5049ba6e99102bd04b0ca7",
+      "bug": "The Item ownership migration did not count references into entry_to_item as tables it does not re-point, so a table referencing Item Entry links with ON DELETE CASCADE lost every row when the migration deleted the ownerless links.",
+      "test": "packages/db/src/item-ownership/migrate.test.ts",
+      "fixed": [
+        "refuses a table it does not re-point that references Item Entry links, and changes nothing"
+      ]
+    },
+    {
+      "fix": "5c74447a2ba0464702f96d5139609cdd46f95406",
+      "bug": "The owner columns became NOT NULL only when push ran after the migration had committed, so an ownerless write in between failed the push and a rerun deleted that user's new Item.",
+      "test": "packages/db/src/item-ownership/migrate.test.ts",
+      "fixed": [
+        "leaves the owner columns NOT NULL, so a write without an owner fails from the moment it commits"
+      ]
+    },
+    {
+      "fix": "8f0ac72728ec820c297288ed733df72f3e81431d",
+      "bug": "db-push dropped the retired tables after the ownership migration committed, so a drop that failed left production migrated but not pushed. The migration now drops them and reports each one's row count.",
+      "test": "packages/db/src/scripts/push-schema.test.ts",
+      "fixed": [
+        "db-push takes a database in main's shape to the owned schema with no prompt: it drops only the retired tables, keeps what every user sees and installs the guards; a second run changes nothing",
+        "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
+        "a table that depends on a retired table stops the migration, which rolls back everything, and db-push run again once it is gone finishes the deploy"
       ]
     }
   ],
