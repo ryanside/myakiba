@@ -4,7 +4,7 @@
  */
 export function firefoxMatches(pattern: string, url: string): boolean {
   const parts = /^(?<scheme>[a-z]+):\/\/(?<host>[^/]+)(?<path>\/.*)$/u.exec(pattern)?.groups;
-  if (!parts?.scheme || !parts.host || !parts.path || parts.host.includes(":")) return false;
+  if (!parts?.scheme || !parts.host || !parts.path || /:\d+$/u.test(parts.host)) return false;
   const target = new URL(url);
   const glob = new RegExp(`^${parts.path.split("*").map(RegExp.escape).join(".*")}$`, "u");
   return (

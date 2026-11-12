@@ -31,12 +31,12 @@ function firefoxTabs(open: readonly Tab[]) {
   );
 }
 
-function leaseIn(open: readonly Tab[]) {
+function leaseIn(open: readonly Tab[], origins: Origins = ORIGINS) {
   const clock = fakeClock();
   const mfcTabs = createMfcTabs({
     tabs: firefoxTabs(open),
     clock,
-    origins: ORIGINS,
+    origins,
     owned: memoryValue<OwnedTab>(null),
     throttle: createThrottle({ clock, random: () => 0.5, state: memoryValue(OPEN_THROTTLE) }),
   });
@@ -61,5 +61,14 @@ describe("an MFC origin with a port, in Firefox", () => {
     const lease = await leaseIn([openTab(8, `${ORIGINS.mfcStatic}/item/2336325`)]);
 
     expect(lease.isOk() && lease.value).not.toEqual({ kind: "borrowed", tabId: 8 });
+  });
+});
+
+describe("an MFC origin on an IPv6 host with a port, in Firefox", () => {
+  test("borrows the MFC tab the user has open", async () => {
+    const origins = { ...ORIGINS, mfc: "http://[::1]:4601" };
+    const lease = await leaseIn([openTab(7, `${origins.mfc}/item/2336325`)], origins);
+
+    expect(lease.isOk() && lease.value).toEqual({ kind: "borrowed", tabId: 7 });
   });
 });
