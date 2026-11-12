@@ -2,6 +2,7 @@ import type { S3Client, SQL } from "bun";
 
 const KEY_SETS = {
   content: /^items\/[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)$/u,
+  /** main's worker stored root-level files under MFC's own name, for an image response only. */
   legacyRoot: /^[^/]+\.(?:jpe?g|png|webp|gif|avif)$/iu,
   legacyMfc: /^items\/mfc\/\d+\/[0-9a-f]{16}\.(?:jpg|png|gif|webp|avif)$/u,
 } as const;
