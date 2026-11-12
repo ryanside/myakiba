@@ -222,15 +222,6 @@ type HandoffOf<B> = B extends Ok<Proceed<infer P>, unknown> ? P : never;
 type AnswerOf<B> = B extends Ok<Proceed<unknown>, unknown> ? never : B;
 
 /**
- * A write. Everything the body does through `scope.tx` commits together or not at all:
- * any Err or throw rolls it back. `before` runs first, for work such as parsing or a network call,
- * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
- * the body with `value`, or a Result that answers without opening a transaction. A row
- * it read can change before the body runs, so the body must re-check inside the
- * transaction anything it writes against. Its effects outside the database, such as a
- * stored file, are never rolled back. An internal error must be listed in `operational`.
- */
-/**
  * A write whose `before` needs a record committed before an effect outside the database, such as
  * a picture's ledger row before the picture is stored. Once `before` proceeds, the kernel runs
  * `reserve` once, in a transaction of its own that commits at once, so the body's rollback never
@@ -256,6 +247,15 @@ export function command<
     input: InferOk<S>,
   ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | S | R>, OperationalOf<O>>>,
 ): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | S | R>>, M>;
+/**
+ * A write. Everything the body does through `scope.tx` commits together or not at all:
+ * any Err or throw rolls it back. `before` runs first, for work such as parsing or a network call,
+ * and reads the pool outside the transaction. It returns `scope.proceed(value)` to run
+ * the body with `value`, or a Result that answers without opening a transaction. A row
+ * it read can change before the body runs, so the body must re-check inside the
+ * transaction anything it writes against. Its effects outside the database, such as a
+ * stored file, are never rolled back. An internal error must be listed in `operational`.
+ */
 export function command<
   I,
   B extends AnyResult,
@@ -273,7 +273,7 @@ export function command<
     input: HandoffOf<B>,
   ) => Promise<R & Checked<AnswerOf<B> | R, InferErr<B | R>, OperationalOf<O>>>,
 ): Op<I, InferOk<AnswerOf<B> | R>, PublicOf<InferErr<B | R>>, M>;
-// Only the overload above takes a `before`: it reads the pool, so it can never be handed a Tx.
+// Only the overloads above take a `before`: it reads the pool, so it can never be handed a Tx.
 export function command<
   I,
   R extends AnyResult,
