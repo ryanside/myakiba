@@ -77,14 +77,13 @@ const CHILD_GUARDS = {
       (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("list_member_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
     END IF;`,
-  // A link without an owner joins an Item and an Item Entry without one, as before the migration.
   entry_to_item: `
     IF ${written(["owner_id", "item_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
+      (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_item_owner", "format('owner %s, Item %s', NEW.owner_id, NEW.item_id)")}
     END IF;
     IF ${written(["owner_id", "entry_id"])} AND NOT EXISTS
-      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id IS NOT DISTINCT FROM NEW.owner_id FOR KEY SHARE) THEN
+      (SELECT 1 FROM public.entry WHERE id = NEW.entry_id AND owner_id = NEW.owner_id FOR KEY SHARE) THEN
       ${raise("entry_to_item_entry_owner", "format('owner %s, Item Entry %s', NEW.owner_id, NEW.entry_id)")}
     END IF;`,
 } as const;

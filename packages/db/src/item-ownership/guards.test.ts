@@ -195,6 +195,22 @@ describe("each guard rejects a write across users and lets the owner's own write
   });
 });
 
+test("an Item Entry link without an owner is rejected, even between an Item and an Item Entry without one", async () => {
+  const { sql } = await migrated();
+  await sql`INSERT INTO item (id, title) VALUES ('item-none', 'No owner')`;
+  await sql`INSERT INTO entry (id, category, name) VALUES ('entry-none', 'Characters', 'No owner')`;
+  expect(
+    await outcome(
+      sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-none', 'item-none')`,
+    ),
+  ).toBe("entry_to_item_item_owner");
+  expect(
+    await outcome(
+      sql`INSERT INTO entry_to_item (entry_id, item_id) VALUES ('entry-u1', 'item-u1')`,
+    ),
+  ).toBe("entry_to_item_item_owner");
+});
+
 test("a delete that cascades through a Selected Item Release passes every guard", async () => {
   const { sql } = await migrated();
   await sql`INSERT INTO collection (id, user_id, item_id, release_id, tags)
