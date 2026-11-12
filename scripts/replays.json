@@ -4616,6 +4616,14 @@
       "bug": "Dropping the ports from a Firefox build's host permissions listed http://127.0.0.1/* twice when MFC and its pictures share a host.",
       "test": "apps/extension/lib/firefox-build.test.ts",
       "fixed": ["a Firefox build for origins with ports > lists each host permission once"]
+    },
+    {
+      "fix": "f58dfa43c5cebdb42a9661722606423bf497f305",
+      "bug": "Dropping the port from a Firefox match pattern skipped a bracketed IPv6 host, so a build for http://[::1]:4601 never reused the MFC tab the user had open.",
+      "test": "apps/extension/lib/mfc-tab.test.ts",
+      "fixed": [
+        "an MFC origin on an IPv6 host with a port, in Firefox > borrows the MFC tab the user has open"
+      ]
     }
   ],
   "lint": [
