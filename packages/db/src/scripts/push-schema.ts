@@ -25,9 +25,41 @@ const RETIRED_TABLES = [
   "sync_session",
 ] as const;
 
+function stop(lines: readonly string[]): never {
+  console.error(["", ...lines, ""].join("\n"));
+  process.exit(1);
+}
+
+const migratedButNotPushed = (report: MigrationReport | undefined) =>
+  report?.status === "migrated"
+    ? [
+        "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+        "The running server's Item writes fail until db-push completes.",
+      ]
+    : [];
+
+const AGAIN = [
+  "Fix the cause and run db-push again. It reports already-migrated and finishes the push.",
+  "To undo the deploy instead, restore the pg_dump taken before it.",
+];
+
 // The pushed schema declares per-owner indexes, so pre-ownership Items get their owners first.
 const database = new SQL({ url: databaseUrl });
-let migration: MigrationReport;
+await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+let migration: MigrationReport | undefined;
+try {
+  migration = await migrateItemOwnership(database);
+  console.log(`Item ownership migration: ${JSON.stringify(migration)}`);
+} catch (error) {
+  console.error(error);
+  stop([
+    "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
+    "Fix the cause and run db-push again.",
+  ]);
+}
+
+// main's running server serves Import/Export and sync from these tables until the new server
+// starts, so they go only once the migration has committed.
 try {
   await database.begin(async (tx) => {
     for (const table of RETIRED_TABLES) {
@@ -42,9 +74,13 @@ try {
       console.log(`Dropped retired table ${table} (${rows} rows).`);
     }
   });
-  await database`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
-  migration = await migrateItemOwnership(database);
-  console.log(`Item ownership migration: ${JSON.stringify(migration)}`);
+} catch (error) {
+  console.error(error);
+  stop([
+    "DROPPING THE RETIRED TABLES FAILED, so none was dropped and drizzle-kit push did not run.",
+    ...migratedButNotPushed(migration),
+    ...AGAIN,
+  ]);
 } finally {
   await database.close();
 }
@@ -80,22 +116,11 @@ const output = `${stdout}\n${stderr}`;
 const completed = SUCCESS_MESSAGES.some((message) => output.includes(message));
 
 if (exitCode !== 0 || !completed) {
-  console.error(
-    [
-      "",
-      "SCHEMA PUSH FAILED. drizzle-kit's output above shows where it stopped. A TTY error means it stopped at a prompt.",
-      ...(migration.status === "migrated"
-        ? [
-            "The Item ownership migration above has committed, so the database is migrated but not pushed.",
-            "The running server's Item writes fail until db-push completes.",
-          ]
-        : []),
-      "Fix the cause and run db-push again. It reports already-migrated and finishes the push.",
-      "To undo the deploy instead, restore the pg_dump taken before it.",
-      "",
-    ].join("\n"),
-  );
-  process.exit(1);
+  stop([
+    "SCHEMA PUSH FAILED. drizzle-kit's output above shows where it stopped. A TTY error means it stopped at a prompt.",
+    ...migratedButNotPushed(migration),
+    ...AGAIN,
+  ]);
 }
 
 // Push does not read triggers, so the owner guards are installed after every push. A database

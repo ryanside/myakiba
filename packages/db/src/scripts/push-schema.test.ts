@@ -367,6 +367,58 @@ test(
 );
 
 test(
+  "a migration that fails changes nothing: the retired tables stay for main's running server, and db-push says the database is as it was",
+  async () => {
+    const { sql, url } = await databases.create(await mainTemplate());
+    // A table the migration does not re-point that references Items makes its verify fail.
+    await sql`CREATE TABLE stray (item_id text REFERENCES item (id))`;
+    const before = await snapshot(sql);
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain(
+      "a table this migration does not re-point references Items or Item Entries",
+    );
+    expect(failed.output).toContain(
+      "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included, and the running server keeps working.",
+    );
+    expect(failed.output).not.toContain("Dropped retired table");
+    expect(await tables(sql)).toEqual(expect.arrayContaining(RETIRED_TABLES));
+    expect(await snapshot(sql)).toEqual(before);
+  },
+  PUSH_TIMEOUT,
+);
+
+test(
+  "a table that depends on a retired table stops db-push after the migration, with nothing dropped, and db-push run again once it is gone finishes the deploy",
+  async () => {
+    const { sql, url } = await databases.create(await mainTemplate());
+    const seen = await whatUsersSee(sql);
+    await sql`CREATE TABLE stray (session_id text REFERENCES sync_session (id))`;
+
+    const failed = await dbPush(url);
+    expect(failed.exitCode).toBe(1);
+    expect(failed.output).toContain('Item ownership migration: {"status":"migrated"');
+    expect(failed.output).toContain(
+      "DROPPING THE RETIRED TABLES FAILED, so none was dropped and drizzle-kit push did not run.",
+    );
+    expect(failed.output).toContain(
+      "The Item ownership migration above has committed, so the database is migrated but not pushed.",
+    );
+    expect(await tables(sql)).toEqual(expect.arrayContaining([...RETIRED_TABLES, "stray"]));
+
+    await sql`DROP TABLE stray`;
+    const rerun = await dbPush(url);
+    expect(rerun.exitCode).toBe(0);
+    expect(rerun.output).toContain('Item ownership migration: {"status":"already-migrated"}');
+    expect(rerun.output).toContain("Dropped retired table sync_session (2 rows).");
+    expect(await whatUsersSee(sql)).toEqual(seen);
+    expect(await ownerColumns(sql)).toEqual(OWNER_COLUMNS_REQUIRED);
+  },
+  PUSH_TIMEOUT * 2,
+);
+
+test(
   "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
   async () => {
     const { sql, url } = await databases.create(await mainTemplate());
