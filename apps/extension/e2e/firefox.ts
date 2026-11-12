@@ -8,9 +8,12 @@ const VERSION = "160.0";
 const RELEASES_URL = `https://archive.mozilla.org/pub/firefox/releases/${VERSION}`;
 const CACHE = path.join(homedir(), ".cache", "myakiba-e2e", `firefox-${VERSION}`);
 const LISTEN_TIMEOUT_MS = 30_000;
+const VERIFIED = ".verified-sha512";
 
+/** `sha512` is the archive's digest from Mozilla's SHA512SUMS for this version, pinned here so a download is checked against a reviewed value, not a list the same host serves in the same run. */
 type Release = {
   readonly file: string;
+  readonly sha512: string;
   readonly executable: string;
   readonly unpack: (archive: string, into: string) => Promise<void>;
 };
@@ -24,6 +27,8 @@ function run(command: readonly string[]): void {
 
 const MAC: Release = {
   file: `mac/en-US/Firefox ${VERSION}.dmg`,
+  sha512:
+    "d760a14787964825a427f400eedd4c16f17359f4e903096cc4862d04bd28ff3cc5a614d606c2c7a4fec1cbab78b74873b2e1e1032e41d203da1da684dceb0fad",
   executable: "Firefox.app/Contents/MacOS/firefox",
   async unpack(archive, into) {
     const mount = await mkdtemp(path.join(tmpdir(), "myakiba-firefox-dmg-"));
@@ -46,8 +51,9 @@ const MAC: Release = {
   },
 };
 
-const linux = (arch: string): Release => ({
+const linux = (arch: string, sha512: string): Release => ({
   file: `linux-${arch}/en-US/firefox-${VERSION}.tar.xz`,
+  sha512,
   executable: "firefox/firefox",
   async unpack(archive, into) {
     run(["tar", "-xJf", archive, "-C", into]);
@@ -56,41 +62,36 @@ const linux = (arch: string): Release => ({
 
 function releaseForThisMachine(): Release {
   if (process.platform === "darwin") return MAC;
-  if (process.platform === "linux" && process.arch === "x64") return linux("x86_64");
-  if (process.platform === "linux" && process.arch === "arm64") return linux("aarch64");
+  if (process.platform === "linux" && process.arch === "x64")
+    return linux(
+      "x86_64",
+      "e9c7ed0d4abc6eb3648c2c5652bd325e690423ef49414ef201eac59c0932ea8ec52260cf652510b2c98971c7e7eb36e6be8101d87cae17c6dd28ed763bac32a6",
+    );
+  if (process.platform === "linux" && process.arch === "arm64")
+    return linux(
+      "aarch64",
+      "06bd97f3bf2c8447f686387c44a46c773bac0330d90fe2e25d9064f45a65df87a0f481d70f9cca852f5e364d677cd3fd5c471c18c078b5d437364cf495674ac7",
+    );
   throw new Error(
     `no Firefox ${VERSION} build this test unpacks for ${process.platform}-${process.arch}`,
   );
 }
 
-async function download(url: string): Promise<Response> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${url} answered ${response.status}`);
-  return response;
-}
-
-/** The pinned release Firefox, downloaded once from Mozilla and checked against the SHA-512 Mozilla publishes for it. */
+/** The pinned release Firefox, downloaded once from Mozilla and checked against its pinned SHA-512. The cache keeps the digest it was installed from, so an install from any other archive is replaced. */
 export async function releaseFirefox(): Promise<string> {
   const release = releaseForThisMachine();
   const installed = path.join(CACHE, path.dirname(release.file));
   const executable = path.join(installed, release.executable);
-  if (await Bun.file(executable).exists()) return executable;
+  const verified = Bun.file(path.join(installed, VERIFIED));
+  if ((await verified.exists()) && (await verified.text()) === release.sha512) return executable;
 
-  const sumsFile = await download(`${RELEASES_URL}/SHA512SUMS`);
-  const sums = await sumsFile.text();
-  const published = sums
-    .split("\n")
-    .find((line) => line.endsWith(`  ${release.file}`))
-    ?.split("  ")[0];
-  if (!published)
-    throw new Error(`Mozilla's SHA512SUMS for Firefox ${VERSION} lists no ${release.file}`);
-  const response = await download(`${RELEASES_URL}/${encodeURI(release.file)}`);
+  const url = `${RELEASES_URL}/${encodeURI(release.file)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${url} answered ${response.status}`);
   const archive = await response.bytes();
   const sha512 = new Bun.CryptoHasher("sha512").update(archive).digest("hex");
-  if (sha512 !== published) {
-    throw new Error(
-      `${release.file} has SHA-512 ${sha512}, not the ${published} Mozilla publishes`,
-    );
+  if (sha512 !== release.sha512) {
+    throw new Error(`${release.file} has SHA-512 ${sha512}, not the pinned ${release.sha512}`);
   }
 
   await mkdir(CACHE, { recursive: true });
@@ -101,6 +102,8 @@ export async function releaseFirefox(): Promise<string> {
     const unpacked = path.join(staging, "unpacked");
     await mkdir(unpacked);
     await release.unpack(saved, unpacked);
+    await Bun.write(path.join(unpacked, VERIFIED), release.sha512);
+    await rm(installed, { recursive: true, force: true });
     await mkdir(path.dirname(installed), { recursive: true });
     await rename(unpacked, installed);
   } finally {
@@ -170,7 +173,23 @@ export async function launchFirefox(executable: string) {
     ],
     { stdout: "ignore", stderr: "ignore" },
   );
-  const socket = await connect(`ws://127.0.0.1:${port}/session`, Date.now() + LISTEN_TIMEOUT_MS);
+  async function quit(): Promise<void> {
+    if (firefox.exitCode === null) firefox.kill();
+    await firefox.exited;
+    await rm(profile, { recursive: true, force: true });
+  }
+  /** Quits Firefox and removes its profile when `work` fails, so a failed launch leaves nothing running. */
+  async function orQuit<T>(work: Promise<T>): Promise<T> {
+    try {
+      return await work;
+    } catch (error) {
+      await quit();
+      throw error;
+    }
+  }
+  const socket = await orQuit(
+    connect(`ws://127.0.0.1:${port}/session`, Date.now() + LISTEN_TIMEOUT_MS),
+  );
 
   let lastId = 0;
   const pending = new Map<number, PromiseWithResolvers<unknown>>();
@@ -202,8 +221,11 @@ export async function launchFirefox(executable: string) {
     return schema.parse(await call.promise);
   }
 
-  await send("session.new", { capabilities: {} }, ignored);
-  await send("session.subscribe", { events: ["browsingContext.contextCreated"] }, ignored);
+  await orQuit(
+    send("session.new", { capabilities: {} }, ignored).then(() =>
+      send("session.subscribe", { events: ["browsingContext.contextCreated"] }, ignored),
+    ),
+  );
 
   return {
     async installExtension(directory: string): Promise<void> {
@@ -291,9 +313,7 @@ export async function launchFirefox(executable: string) {
         // Firefox may close the socket before it answers.
       }
       await Promise.race([firefox.exited, Bun.sleep(5000)]);
-      if (firefox.exitCode === null) firefox.kill();
-      await firefox.exited;
-      await rm(profile, { recursive: true, force: true });
+      await quit();
     },
   };
 }

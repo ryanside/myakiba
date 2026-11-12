@@ -36,6 +36,7 @@ declare const bridge: Bridge;
 
 const mocks = startMocks();
 let firefox: Awaited<ReturnType<typeof launchFirefox>>;
+let closeFirefox = async () => {};
 
 beforeAll(async () => {
   const build = Bun.spawnSync(["bunx", "wxt", "build", "-b", "firefox", "--mode", "e2e"], {
@@ -44,12 +45,16 @@ beforeAll(async () => {
   });
   if (build.exitCode !== 0) throw new Error(`the e2e build failed\n${build.stderr.toString()}`);
   firefox = await launchFirefox(await releaseFirefox());
+  closeFirefox = () => firefox.close();
   await firefox.installExtension(EXTENSION);
 }, SETUP_TIMEOUT_MS);
 
 afterAll(async () => {
-  await firefox.close();
-  await mocks.stop();
+  try {
+    await closeFirefox();
+  } finally {
+    await mocks.stop();
+  }
 });
 
 async function myakibaPage(): Promise<string> {
