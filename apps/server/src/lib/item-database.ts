@@ -337,7 +337,6 @@ export async function refreshItem(
   page: MfcItemPage,
   picture: SavedPicture | null,
 ): Promise<Result<Refreshed, ItemNotFound>> {
-  await lockItemDatabase(tx, viewer);
   const locked = await lockItem(tx, viewer.userId, itemId);
   if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
