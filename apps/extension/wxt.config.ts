@@ -8,6 +8,12 @@ import { assertReleaseOrigins } from "./lib/release-profile";
 export default defineConfig({
   imports: false,
   manifestVersion: 3,
+  // Zod probes eval unless jitless, and the extension CSP refuses eval, so Firefox logs a violation. Zod reads this when it loads.
+  vite: () => ({
+    build: {
+      rollupOptions: { output: { banner: "globalThis.__zod_globalConfig = { jitless: true };" } },
+    },
+  }),
   hooks: {
     "build:manifestGenerated": (wxt, manifest) => {
       if (wxt.config.browser !== "firefox") return;
