@@ -192,7 +192,7 @@ async function itemRows(externalId: number) {
       mfcMetadataVersion: item.mfcMetadataVersion,
       contentLabel: item.contentLabel,
       mfcRatingId: item.mfcRatingId,
-      image: item.image,
+      legacyImageUrl: item.legacyImageUrl,
       imageKey: item.imageKey,
     })
     .from(item)
@@ -306,7 +306,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
         mfcMetadataVersion: 1,
         contentLabel: "explicit",
         mfcRatingId: 3,
-        image: null,
+        legacyImageUrl: null,
         imageKey: `items/${digest}.jpg`,
       },
       links: [
@@ -452,7 +452,7 @@ describe("POST /api/mfc-items saves an MFC item page as a new item", () => {
       body: { saved: "created", picture: "rejected" },
     });
     const rows = await itemRows(98_777);
-    expect(rows.item?.image).toBeNull();
+    expect(rows.item?.legacyImageUrl).toBeNull();
     expect(store.objects.size).toBe(0);
   });
 
@@ -687,7 +687,7 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
       body: { saved: "created", picture: "over_quota" },
     });
     const { item: saved98777 } = await itemRows(98_777);
-    expect(saved98777).toMatchObject({ image: null, imageKey: null });
+    expect(saved98777).toMatchObject({ legacyImageUrl: null, imageKey: null });
     expect(await ledgerOf()).not.toContainEqual(
       expect.objectContaining({ key: keyOf(JPEG, "jpg") }),
     );
@@ -781,7 +781,7 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
 
   const pictureOfItem = async (owner: string) => {
     const [row] = await db
-      .select({ image: item.image, imageKey: item.imageKey })
+      .select({ legacyImageUrl: item.legacyImageUrl, imageKey: item.imageKey })
       .from(item)
       .where(and(eq(item.ownerId, owner), eq(item.externalId, 98_777)));
     return row;
@@ -796,7 +796,7 @@ describe("POST /api/mfc-items stores each picture once, by its bytes", () => {
       headers: { "x-test-user": OTHER },
     });
 
-    const shown = { image: null, imageKey: keyOf(JPEG, "jpg") };
+    const shown = { legacyImageUrl: null, imageKey: keyOf(JPEG, "jpg") };
     expect(await pictureOfItem(userId)).toEqual(shown);
     expect(await pictureOfItem(OTHER)).toEqual(shown);
     expect([...store.objects.keys()]).toEqual([keyOf(JPEG, "jpg")]);

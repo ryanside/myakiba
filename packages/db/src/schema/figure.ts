@@ -50,7 +50,7 @@ export const item = pgTable(
     mfcMetadataVersion: integer("mfc_metadata_version").notNull().default(0),
     contentLabel: text("content_label", { enum: CONTENT_LABELS }),
     mfcRatingId: integer("mfc_rating_id"),
-    image: text("image"),
+    legacyImageUrl: text("image"),
     imageKey: text("image_key"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

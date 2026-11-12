@@ -79,7 +79,7 @@ export async function reservePicture(
   return "reserved";
 }
 
-type ShownPicture = { readonly image: null; readonly imageKey: string } | null;
+type ShownPicture = { readonly legacyImageUrl: null; readonly imageKey: string } | null;
 
 type ToShow = { readonly shown: ShownPicture; readonly outcome: PictureOutcome };
 
@@ -88,7 +88,7 @@ function pictureToShow(picture: SavedPicture | null): ToShow {
   if (picture.kind === "rejected") {
     return { shown: null, outcome: picture.reason === "over_quota" ? "over_quota" : "rejected" };
   }
-  return { shown: { image: null, imageKey: picture.key }, outcome: "stored" };
+  return { shown: { legacyImageUrl: null, imageKey: picture.key }, outcome: "stored" };
 }
 
 function releaseRows(itemId: string, page: MfcItemPage) {
@@ -155,7 +155,7 @@ async function createMfcItemIfAbsent(
       externalId: page.mfcItemId,
       source: "mfc",
       ...itemFields(page),
-      image: null,
+      legacyImageUrl: null,
       imageKey: shown?.imageKey ?? null,
     })
     .onConflictDoNothing({ target: [item.ownerId, item.source, item.externalId] })
@@ -209,7 +209,7 @@ async function lockItem(tx: Tx, ownerId: string, itemId: string) {
       mfcMetadataVersion: item.mfcMetadataVersion,
       contentLabel: item.contentLabel,
       mfcRatingId: item.mfcRatingId,
-      image: item.image,
+      legacyImageUrl: item.legacyImageUrl,
       imageKey: item.imageKey,
     })
     .from(item)
@@ -341,7 +341,7 @@ export async function refreshItem(
   if (!locked) return Result.err(new ItemNotFound());
   const { id, ...fields } = locked;
   const { shown, outcome } = pictureToShow(picture);
-  const { image, imageKey } = shown ?? fields;
+  const { legacyImageUrl, imageKey } = shown ?? fields;
   const existing = await storedReleases(tx, id);
   const rows = releaseRows(id, page);
   const keyed = rows.map((row) => ({ id: row.id, key: releaseKey(row) }));
@@ -351,7 +351,7 @@ export async function refreshItem(
     releaseKeys: sortedKeys(existing),
   };
   const next: Snapshot = {
-    fields: { ...itemFields(page), image, imageKey },
+    fields: { ...itemFields(page), legacyImageUrl, imageKey },
     links: linksInLockOrder(page).map(pageLink),
     releaseKeys: sortedKeys(keyed),
   };
@@ -359,7 +359,7 @@ export async function refreshItem(
 
   await tx
     .update(item)
-    .set({ ...itemFields(page), image, imageKey, updatedAt: new Date() })
+    .set({ ...itemFields(page), legacyImageUrl, imageKey, updatedAt: new Date() })
     .where(eq(item.id, id));
   await tx.delete(entry_to_item).where(eq(entry_to_item.itemId, id));
   await linkEntries(tx, viewer.userId, id, page);

@@ -215,7 +215,7 @@ async function itemRows() {
   const [row] = await db
     .select({
       title: item.title,
-      image: item.image,
+      legacyImageUrl: item.legacyImageUrl,
       imageKey: item.imageKey,
       updatedAt: item.updatedAt,
     })
@@ -293,7 +293,7 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await resync(derivedRescheduledPage)).toMatchObject(refreshed("refreshed"));
 
     const rows = await itemRows();
-    expect(rows.item).toMatchObject({ title: RETITLED, image: imported?.image });
+    expect(rows.item).toMatchObject({ title: RETITLED, legacyImageUrl: imported?.legacyImageUrl });
     expect(rows.links).toHaveLength(7);
     expect(rows.releases).toEqual([{ id: expect.any(String), ...RESCHEDULED_98777 }]);
     expect(await selectedReleases()).toEqual(rows.releases.map((release) => release.id));
@@ -538,7 +538,7 @@ describe("the posted picture", () => {
 
     const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ image: null, imageKey: `items/${digest}.png` });
+    expect(row).toMatchObject({ legacyImageUrl: null, imageKey: `items/${digest}.png` });
     expect(store.objects.get(`items/${digest}.png`)).toMatchObject({
       CacheControl: "public, max-age=31536000, immutable",
     });
@@ -571,13 +571,13 @@ describe("the posted picture", () => {
     await upload(page98777);
     await db
       .update(item)
-      .set({ image: "https://static.myakiba.app/legacy-mfc-name.jpg" })
+      .set({ legacyImageUrl: "https://static.myakiba.app/legacy-mfc-name.jpg" })
       .where(eq(item.ownerId, userId));
 
     expect(await resync(page98777, PNG)).toMatchObject(refreshed("refreshed"));
     const digest = new Bun.CryptoHasher("sha256").update(PNG).digest("hex");
     const { item: row } = await itemRows();
-    expect(row).toMatchObject({ image: null, imageKey: `items/${digest}.png` });
+    expect(row).toMatchObject({ legacyImageUrl: null, imageKey: `items/${digest}.png` });
   });
 
   test("a rejected picture keeps the old image", async () => {
@@ -665,10 +665,10 @@ describe("pages the refresh refuses or rewrites", () => {
     });
 
     const [other] = await db
-      .select({ title: item.title, image: item.image })
+      .select({ title: item.title, legacyImageUrl: item.legacyImageUrl })
       .from(item)
       .where(eq(item.externalId, 12_345));
-    expect(other).toEqual({ title: "Another item", image: null });
+    expect(other).toEqual({ title: "Another item", legacyImageUrl: null });
     expect(store.objects.size).toBe(0);
   });
 

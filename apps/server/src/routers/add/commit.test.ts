@@ -73,7 +73,7 @@ beforeEach(async () => {
       ownerId: userId,
       externalId: 186,
       title: "Nendoroid Hatsune Miku",
-      image: "miku.jpg",
+      legacyImageUrl: "miku.jpg",
     },
     { id: "item-2", ownerId: userId, externalId: 1860, title: "Figma Miku" },
     { id: "item-3", ownerId: userId, externalId: null, source: "custom", title: "Custom Rin" },

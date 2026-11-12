@@ -67,7 +67,13 @@ beforeAll(async () => {
   });
   await db.insert(item).values([
     { id: "keyed", ownerId: OWNER, externalId: 98_777, title: "Keyed Figure", imageKey: KEY },
-    { id: "legacy", ownerId: OWNER, externalId: 98_778, title: "Legacy Figure", image: LEGACY_URL },
+    {
+      id: "legacy",
+      ownerId: OWNER,
+      externalId: 98_778,
+      title: "Legacy Figure",
+      legacyImageUrl: LEGACY_URL,
+    },
   ]);
   await db.insert(item_release).values([
     { id: KEYED_RELEASE, itemId: "keyed", date: "2026-06-15", price: 15_000, priceCurrency: "JPY" },

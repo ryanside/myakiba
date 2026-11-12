@@ -43,7 +43,14 @@ const collectionResultsRead = prepared("search_collection", (pool) =>
         eq(collection.userId, sql.placeholder("userId")),
       ),
     )
-    .groupBy(item.id, item.externalId, item.title, item.image, item.imageKey, item.category)
+    .groupBy(
+      item.id,
+      item.externalId,
+      item.title,
+      item.legacyImageUrl,
+      item.imageKey,
+      item.category,
+    )
     .orderBy(desc(latestOwnedAt), desc(item.id))
     .limit(SEARCH_COLLECTION_RESULT_LIMIT),
 );
