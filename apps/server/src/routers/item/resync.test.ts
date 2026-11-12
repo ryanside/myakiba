@@ -14,7 +14,6 @@ import {
   item,
   item_release,
   order,
-  picture as pictureLedger,
 } from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
@@ -606,14 +605,17 @@ const pngNumber = (n: number) => {
   return new Uint8Array(bytes);
 };
 
+// The ledger is written in SQL, so this file also loads before the table existed.
+async function recordPicture(bytes: number) {
+  await db.execute(
+    sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${userId}, ${`items/${"0".repeat(64)}.jpg`}, ${bytes})`,
+  );
+}
+
 describe("Item Refresh stores pictures only while the owner's ledger is under 2 GiB", () => {
   test("a refresh loop with new bytes stops storing once the ledger reaches the quota", async () => {
     await upload(page98777, JPEG);
-    await db.insert(pictureLedger).values({
-      ownerId: userId,
-      key: `items/${"0".repeat(64)}.jpg`,
-      bytes: QUOTA - JPEG.byteLength - 2 * PNG.byteLength,
-    });
+    await recordPicture(QUOTA - JPEG.byteLength - 2 * PNG.byteLength);
 
     const outcomes = [];
     for (let n = 1; n <= 4; n += 1) {
@@ -623,21 +625,16 @@ describe("Item Refresh stores pictures only while the owner's ledger is under 2 
 
     expect(outcomes).toEqual(["stored", "stored", "over_quota", "over_quota"]);
     expect(store.puts()).toBe(3);
-    const [used] = await db
-      .select({ bytes: sql<number>`sum(${pictureLedger.bytes})`.mapWith(Number) })
-      .from(pictureLedger)
-      .where(eq(pictureLedger.ownerId, userId));
-    expect(used?.bytes).toBe(QUOTA);
+    const [used] = await db.execute<{ bytes: number }>(
+      sql`SELECT sum(bytes)::bigint AS bytes FROM picture WHERE owner_id = ${userId}`,
+    );
+    expect(Number(used?.bytes)).toBe(QUOTA);
   });
 
   test("an over-quota refresh keeps the Item's picture", async () => {
     await upload(page98777, JPEG);
     const { item: imported } = await itemRows();
-    await db.insert(pictureLedger).values({
-      ownerId: userId,
-      key: `items/${"0".repeat(64)}.jpg`,
-      bytes: QUOTA - JPEG.byteLength,
-    });
+    await recordPicture(QUOTA - JPEG.byteLength);
 
     expect(await resync(derivedRetitledPage, PNG)).toEqual({
       status: 200,

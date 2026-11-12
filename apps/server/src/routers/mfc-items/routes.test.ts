@@ -8,13 +8,7 @@ import * as z from "zod";
 import type { PutObjectCommand } from "@aws-sdk/client-s3";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
 import * as authSchema from "@myakiba/db/schema/auth";
-import {
-  entry,
-  entry_to_item,
-  item,
-  item_release,
-  picture as pictureLedger,
-} from "@myakiba/db/schema/figure";
+import { entry, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 
 let drained = Promise.withResolvers<DrainContext>();
@@ -627,24 +621,27 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
 const keyOf = (bytes: Uint8Array, extension: string) =>
   `items/${new Bun.CryptoHasher("sha256").update(bytes).digest("hex")}.${extension}`;
 
-/** Ledger rows for pictures no Item shows, filling the owner's quota to `used` bytes. */
-async function recordPictures(used: number, owner = userId) {
-  const halves = [Math.ceil(used / 2), Math.floor(used / 2)].filter((bytes) => bytes > 0);
-  await db.insert(pictureLedger).values(
-    halves.map((bytes, index) => ({
-      ownerId: owner,
-      key: `items/${String(index).repeat(64)}.jpg`,
-      bytes,
-    })),
+// The ledger is read and written in SQL, so this file also loads before the table existed.
+async function recordPicture(owner: string, key: string, bytes: number) {
+  await db.execute(
+    sql`INSERT INTO picture (owner_id, key, bytes) VALUES (${owner}, ${key}, ${bytes})`,
   );
 }
 
-const ledgerOf = (owner = userId) =>
-  db
-    .select({ key: pictureLedger.key, bytes: pictureLedger.bytes })
-    .from(pictureLedger)
-    .where(eq(pictureLedger.ownerId, owner))
-    .orderBy(asc(pictureLedger.key));
+/** Ledger rows for pictures no Item shows, filling the owner's quota to `used` bytes. */
+async function recordPictures(used: number, owner = userId) {
+  const halves = [Math.ceil(used / 2), Math.floor(used / 2)].filter((bytes) => bytes > 0);
+  for (const [index, bytes] of halves.entries()) {
+    await recordPicture(owner, `items/${String(index).repeat(64)}.jpg`, bytes);
+  }
+}
+
+async function ledgerOf(owner = userId) {
+  const rows = await db.execute<{ key: string; bytes: number }>(
+    sql`SELECT key, bytes FROM picture WHERE owner_id = ${owner} ORDER BY key`,
+  );
+  return [...rows];
+}
 
 describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB", () => {
   test("the ledger is written before the picture is stored, and records what was stored", async () => {
@@ -680,9 +677,7 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
   });
 
   test("a picture the owner already recorded counts once", async () => {
-    await db
-      .insert(pictureLedger)
-      .values({ ownerId: userId, key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength });
+    await recordPicture(userId, keyOf(JPEG, "jpg"), JPEG.byteLength);
     await recordPictures(QUOTA - JPEG.byteLength);
 
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
