@@ -220,6 +220,26 @@ test("a second run changes nothing, and two clean runs write the same rows", asy
   expect(await snapshot(sql)).toEqual(first);
 });
 
+test("leaves the owner columns NOT NULL, so a write without an owner fails from the moment it commits", async () => {
+  const { sql } = await migrated();
+  expect(
+    await rows(
+      sql,
+      `SELECT table_name, is_nullable FROM information_schema.columns
+      WHERE table_schema = 'public' AND column_name = 'owner_id' ORDER BY 1`,
+    ),
+  ).toEqual([
+    { table_name: "entry", is_nullable: "NO" },
+    { table_name: "entry_to_item", is_nullable: "NO" },
+    { table_name: "item", is_nullable: "NO" },
+  ]);
+  await expect(
+    sql`INSERT INTO item (id, title) VALUES ('item-late', 'Late')`,
+  ).rejects.toMatchObject({
+    errno: "23502",
+  });
+});
+
 test("a migrated database missing an owner guard is still migrated, so the migration does not run again", async () => {
   const { sql } = await migrated();
   await sql`DROP TRIGGER wishlist_item_owner_guard ON wishlist_item`;

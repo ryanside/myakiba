@@ -13,6 +13,7 @@ export const MIGRATION_STEPS = [
   "verify",
   "deleteOwnerless",
   "verifyDeleted",
+  "requireOwners",
 ] as const;
 type MigrationStep = (typeof MIGRATION_STEPS)[number];
 
@@ -141,6 +142,8 @@ const COPY_CHECKS = [
       WHERE c.id IS NULL OR to_jsonb(c) - 'id' - 'item_id' <> to_jsonb(o) - 'id' - 'item_id'`,
   },
 ] as const;
+
+const OWNER_TABLES = ["item", "entry", "entry_to_item"] as const;
 
 const OWNERLESS_CHECKS = [
   {
@@ -342,6 +345,13 @@ const STEPS = {
   async verifyDeleted(tx, run) {
     await verifyRun(tx, run, OWNERLESS_CHECKS);
   },
+
+  // In the same transaction, so a write without an owner fails from the moment the run commits.
+  async requireOwners(tx) {
+    for (const table of OWNER_TABLES) {
+      await tx.unsafe(`ALTER TABLE ${ident(table)} ALTER COLUMN owner_id SET NOT NULL`);
+    }
+  },
 } satisfies Record<MigrationStep, (tx: SQL, run: Run) => Promise<void>>;
 
 /**
@@ -387,19 +397,18 @@ export async function migrateItemOwnership(
 }
 
 /**
- * Migrated once the owner columns exist and every Item, Item Entry and link has an owner. The rows
- * decide, not the owner guards, so a missing guard never runs the migration again: db-push installs
- * the guards after every push.
+ * Migrated once every owner column is NOT NULL, which the run sets last. The catalog decides, not
+ * the owner guards, so a missing guard never runs the migration again: db-push installs the guards
+ * after every push.
  */
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
-  const [{ columns }] = await sql<[{ columns: number }]>`
-    SELECT count(*)::int AS columns FROM information_schema.columns
-    WHERE table_schema = 'public' AND (table_name, column_name) IN
-      (('item', 'owner_id'), ('entry', 'owner_id'), ('entry_to_item', 'owner_id'))
+  const [{ required }] = await sql<[{ required: number }]>`
+    SELECT count(*)::int AS required FROM pg_attribute
+    WHERE attrelid IN (to_regclass('public.item'), to_regclass('public.entry'),
+        to_regclass('public.entry_to_item'))
+      AND attname = 'owner_id' AND attnotnull AND NOT attisdropped
   `;
-  if (columns < 3) return false;
-  const ownerless = await missesOf(sql, OWNERLESS_CHECKS);
-  return ownerless.length === 0;
+  return required === OWNER_TABLES.length;
 }
 
 export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {

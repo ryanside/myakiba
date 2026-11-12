@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { SQL } from "bun";
 import { testDatabases } from "../test/database";
-import { OWNERS_REQUIRED, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
+import { PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
 import { migrateItemOwnership } from "./item-ownership/migrate";
 
 const databases = testDatabases();
@@ -99,12 +99,7 @@ test.skipIf(template === undefined)(
 
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [
-        DROP_OLD_KEY,
-        ...OWNERS_REQUIRED,
-        ...REPEATED_ON_EVERY_PUSH,
-        CREATE_INDEX,
-      ].toSorted(),
+      statements: [DROP_OLD_KEY, ...REPEATED_ON_EVERY_PUSH, CREATE_INDEX],
     });
     expect(await commitRecords(sql)).toEqual(before);
     expect(await pushSchema(url)).toMatchObject({
@@ -127,7 +122,7 @@ test.skipIf(template === undefined)(
 
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [DROP_OLD_KEY, ...OWNERS_REQUIRED, ...REPEATED_ON_EVERY_PUSH].toSorted(),
+      statements: [DROP_OLD_KEY, ...REPEATED_ON_EVERY_PUSH],
     });
     expect(await pushSchema(url)).toMatchObject({
       applied: true,

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { snapshot, testDatabases } from "../../test/database";
-import { OWNERS_REQUIRED, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
+import { PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
 import { isItemOwnershipMigrated, migrateItemOwnership, verifyItemOwnership } from "./migrate";
 import { seedSharedItems } from "./seed";
 
@@ -34,7 +34,7 @@ test(
     expect(before.triggers.map((trigger) => trigger.tgname)).toEqual(OWNER_GUARDS);
     expect(await pushSchema(url)).toMatchObject({
       applied: true,
-      statements: [...OWNERS_REQUIRED, ...REPEATED_ON_EVERY_PUSH].toSorted(),
+      statements: REPEATED_ON_EVERY_PUSH,
     });
     const after = await snapshot(sql);
     expect(after.rows).toEqual(before.rows);
