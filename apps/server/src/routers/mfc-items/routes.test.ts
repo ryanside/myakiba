@@ -716,11 +716,12 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
     expect(await ledgerOf()).toHaveLength(3);
   });
 
-  test("a picture one of the owner's Items already shows is not stored again", async () => {
+  test("a picture one of the owner's Items already shows is stored again, and recorded once", async () => {
     await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
     await upload({ mfcItemId: 98_779, page: derivedSharedEntriesPage, picture: JPEG });
 
-    expect(store.puts()).toBe(1);
+    expect(store.puts()).toBe(2);
+    expect(await ledgerOf()).toEqual([{ key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength }]);
     const { item: second } = await itemRows(98_779);
     expect(second).toMatchObject({ imageKey: keyOf(JPEG, "jpg") });
   });

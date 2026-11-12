@@ -7,7 +7,7 @@ import { parseMfcItemPage } from "@myakiba/mfc/parse";
 import type { MfcItemPage, MfcPageUnreadable } from "@myakiba/mfc/parse";
 import { ItemDatabaseFull } from "@/lib/errors/item-database-full";
 import { StoreItemPictureFailed } from "@/lib/errors/store-item-picture-failed";
-import { findMfcItem, itemDatabaseIsFull, reservePicture, showsPicture } from "@/lib/item-database";
+import { findMfcItem, itemDatabaseIsFull, reservePicture } from "@/lib/item-database";
 import { itemImages } from "@/lib/item-images";
 import type { PictureOutcome, SavedPicture } from "@/lib/item-images";
 
@@ -44,10 +44,8 @@ async function savePicture(
     reservePicture(tx, scope.viewer, { key: read.key, bytes: read.body.byteLength }),
   );
   if (reserved === "over_quota") return Result.ok({ kind: "rejected", reason: "over_quota" });
-  // An Item shows a key only after its picture was stored, so a key one already shows is there.
-  if (await showsPicture(scope.tx, scope.viewer, read.key)) {
-    return Result.ok({ kind: "stored", key: read.key });
-  }
+  // Stored every time: the upload is keyed by its content, so it is idempotent, and it puts back
+  // an object that went missing even when an Item already shows its key.
   const stored = await Result.tryPromise({
     try: () => itemImages.store(read),
     catch: (cause) => new StoreItemPictureFailed({ mfcItemId: id, cause }),

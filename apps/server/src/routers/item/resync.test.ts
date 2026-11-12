@@ -557,6 +557,16 @@ describe("the posted picture", () => {
     expect(after).toEqual(before);
   });
 
+  test("a refresh with the same bytes stores a picture whose object went missing", async () => {
+    await upload(page98777, JPEG);
+    const digest = new Bun.CryptoHasher("sha256").update(JPEG).digest("hex");
+    store.objects.delete(`items/${digest}.jpg`);
+
+    expect(await resync(page98777, JPEG)).toMatchObject({ body: { picture: "stored" } });
+
+    expect(store.objects.has(`items/${digest}.jpg`)).toBe(true);
+  });
+
   test("a legacy picture refreshed with new bytes moves to their content's key", async () => {
     await upload(page98777);
     await db

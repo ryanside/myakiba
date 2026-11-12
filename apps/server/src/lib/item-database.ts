@@ -83,16 +83,6 @@ export async function reservePicture(
   return "reserved";
 }
 
-/** Whether one of the viewer's Items shows the picture at `key`, so it is already stored. */
-export async function showsPicture(tx: ReadTx, viewer: Viewer, key: string): Promise<boolean> {
-  const [shown] = await tx
-    .select({ id: item.id })
-    .from(item)
-    .where(and(eq(item.ownerId, viewer.userId), eq(item.imageKey, key)))
-    .limit(1);
-  return shown !== undefined;
-}
-
 type ShownPicture = { readonly image: null; readonly imageKey: string } | null;
 
 type ToShow = { readonly shown: ShownPicture; readonly outcome: PictureOutcome };
