@@ -344,21 +344,11 @@ const STEPS = {
   },
 
   async verify(tx, run) {
-    const misses = [
+    failOn([
       ...(await missesOf(tx, OWNERSHIP_CHECKS)),
       ...(await missesOf(tx, COPY_CHECKS)),
-    ];
-    for (const table of REFERENCE_TABLES) {
-      const now = await count(tx, `SELECT count(*) FROM ${table}`);
-      if (now !== run.startCounts[table]) {
-        misses.push({
-          check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
-          rows: Math.abs(now - run.startCounts[table]),
-        });
-      }
-    }
-    if (misses.length > 0)
-      throw new Error(`Item ownership migration failed: ${describeMisses(misses)}`);
+      ...(await referenceCountMisses(tx, run)),
+    ]);
   },
 
   async deleteOwnerless(tx, run) {
@@ -372,6 +362,7 @@ const STEPS = {
     run.deleted.releases = releases.count;
     run.deleted.items = items.count;
     run.deleted.entries = entries.count;
+    failOn(await referenceCountMisses(tx, run));
   },
 
   async requireOwners(tx) {
@@ -434,8 +425,24 @@ export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
   return required === OWNER_TABLES.length;
 }
 
-function describeMisses(misses: readonly OwnershipMiss[]): string {
-  return misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
+function failOn(misses: readonly OwnershipMiss[]): void {
+  if (misses.length === 0) return;
+  const described = misses.map((miss) => `${miss.check} (${miss.rows})`).join("; ");
+  throw new Error(`Item ownership migration failed: ${described}`);
+}
+
+async function referenceCountMisses(tx: SQL, run: Run): Promise<OwnershipMiss[]> {
+  const misses: OwnershipMiss[] = [];
+  for (const table of REFERENCE_TABLES) {
+    const now = await count(tx, `SELECT count(*) FROM ${table}`);
+    if (now !== run.startCounts[table]) {
+      misses.push({
+        check: `${table} has ${now} rows instead of ${run.startCounts[table]}`,
+        rows: Math.abs(now - run.startCounts[table]),
+      });
+    }
+  }
+  return misses;
 }
 
 async function runSteps(tx: SQL, options: MigrationOptions): Promise<Run> {

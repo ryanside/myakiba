@@ -276,6 +276,21 @@ test("an Item left without an owner after the delete fails the run, which change
   expect(await snapshot(sql)).toEqual(before);
 });
 
+test("a reference deleted along with the ownerless rows fails the run, which changes nothing", async () => {
+  const { sql } = await databases.create(seeded);
+  await sql.unsafe(`
+    CREATE FUNCTION drop_a_wish() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN DELETE FROM wishlist_item WHERE id = 'wish-1'; RETURN NULL; END $$;
+    CREATE TRIGGER drop_a_wish AFTER DELETE ON entry
+      FOR EACH STATEMENT EXECUTE FUNCTION drop_a_wish();
+  `);
+  const before = await snapshot(sql);
+  await expect(migrateItemOwnership(sql)).rejects.toThrow(
+    "wishlist_item has 1 rows instead of 2 (1)",
+  );
+  expect(await snapshot(sql)).toEqual(before);
+});
+
 test.each(MIGRATION_STEPS)(
   "a crash after %s leaves the database as seeded, and the next run equals a clean run",
   async (step) => {
