@@ -2,11 +2,21 @@ import { fileURLToPath } from "node:url";
 import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
 import { env } from "@myakiba/env/extension";
 import { defineConfig } from "wxt";
+import { withoutPort } from "./lib/match-pattern";
 import { assertReleaseOrigins } from "./lib/release-profile";
 
 export default defineConfig({
   imports: false,
   manifestVersion: 3,
+  hooks: {
+    "build:manifestGenerated": (wxt, manifest) => {
+      if (wxt.config.browser !== "firefox") return;
+      manifest.host_permissions = manifest.host_permissions?.map(withoutPort);
+      for (const script of manifest.content_scripts ?? []) {
+        script.matches = script.matches?.map(withoutPort);
+      }
+    },
+  },
   manifest: ({ browser, mode, command }) => {
     assertReleaseOrigins({ mode, command }, env);
     const firefox = browser === "firefox";
