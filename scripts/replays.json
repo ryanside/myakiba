@@ -4624,6 +4624,53 @@
       "fixed": [
         "an MFC origin on an IPv6 host with a port, in Firefox > borrows the MFC tab the user has open"
       ]
+    },
+    {
+      "fix": "7313dadb1a3c1a24130b765768854cc743fc0f14",
+      "bug": "A late picks acknowledgment named only Items, so the extension deleted whatever capture of each Item it held, including a re-pick the user made while the earlier capture uploaded.",
+      "test": "apps/extension/lib/picks.test.ts",
+      "fixed": [
+        "removing picks > a settled capture goes, and a re-pick of its Item made since it was taken stays",
+        "removing picks > a settled capture that a re-pick replaced leaves the re-pick",
+        "removing picks > settles only the context's own captures",
+        "a pick > keeps the captured page, title and picture, stamped with when it was picked",
+        "the byte cap > reads as full once its picks and their index take the whole cap, as Chrome counts them",
+        "a store call stopped partway > counts a replacement page an add wrote without its index at the page's own size",
+        "a store call stopped partway > drops an index entry whose page was never written"
+      ]
+    },
+    {
+      "fix": "7313dadb1a3c1a24130b765768854cc743fc0f14",
+      "bug": "A late picks acknowledgment named only Items, so the extension deleted whatever capture of each Item it held, including a re-pick the user made while the earlier capture uploaded.",
+      "test": "apps/extension/lib/port-host.test.ts",
+      "fixed": [
+        "picks over the port > a late picks-saved deletes only the capture the page took, so a re-pick made since stays",
+        "picks over the port > a late picks-discarded deletes only the capture the page took, so a re-pick made since stays",
+        "picks over the port > take-picks answers one picks event with every pick of the requester's context, and deletes none",
+        "picks over the port > picks-saved deletes those captures of the requester's context only, then answers done",
+        "picks over the port > picks-discarded deletes those captures of the requester's context only, then answers done",
+        "picks over the port > picks-saved may name more picks than a fetch may name Items",
+        "picks over the port > a delete storage refuses keeps the picks and answers interrupted"
+      ]
+    },
+    {
+      "fix": "7313dadb1a3c1a24130b765768854cc743fc0f14",
+      "bug": "The Add page acknowledged a saved or discarded pick by its Item, so the extension deleted a re-pick of that Item the page had not uploaded.",
+      "test": "apps/web/src/data/picks.test.ts",
+      "fixed": [
+        "pulling picks > reports only the capture it uploaded, so a re-pick made during the upload stays in the extension",
+        "a failed pick > Retry reports the capture it uploaded, the one taken last",
+        "a failed pick > Discard names the capture its row holds, so a re-pick the page has not taken stays",
+        "pulling picks > saves each pick, adds its Item to the draft and reports the saved picks",
+        "pulling picks > a second tab does nothing while the first holds the picks lock, and uploads nothing it saved",
+        "pulling picks > a tab hidden while taking picks leaves them, so the tab now showing saves them",
+        "pulling picks > a hidden tab keeps the picks in the extension and saves them when it shows again",
+        "pulling picks > reports a pick saved only after the server answered its save",
+        "pulling picks > keeps a pick whose save failed, shows why and reports only the saved ones",
+        "pulling picks > saves the picks that waited for a verified email on the next pull",
+        "a failed pick > Retry saves it and then reports it saved",
+        "a failed pick > Discard tells the extension to drop it and removes its row"
+      ]
     }
   ],
   "lint": [
