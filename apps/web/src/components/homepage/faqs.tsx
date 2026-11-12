@@ -70,7 +70,7 @@ const FAQ_ITEMS: readonly {
     id: "faq-privacy",
     question: "Who can see my items?",
     answer:
-      "Only you. Your items and the pictures you save with them are private, and nobody else can change them.",
+      "Only you. Nobody else can see or change your items. Item pictures are stored at unlisted links and only load on myakiba.",
   },
   {
     id: EXTENSION_FAQ_ID,
