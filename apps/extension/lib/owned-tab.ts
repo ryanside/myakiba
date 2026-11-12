@@ -41,7 +41,7 @@ export function inContext(tab: Tab, context: TabContext): boolean {
   );
 }
 
-function onOrigin(url: string | undefined, origin: string): boolean {
+export function onOrigin(url: string | undefined, origin: string): boolean {
   return URL.parse(url ?? "")?.origin === origin;
 }
 
