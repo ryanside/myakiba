@@ -4580,7 +4580,42 @@
       "test": "apps/extension/lib/firefox-build.test.ts",
       "fixed": [
         "a Firefox build turns off zod's eval probe in every script before zod loads, so its CSP reports nothing"
+      ],
+      "testAt": "1b95d2f5d232dcc2742e67f3a2e0b6fce5d6c835",
+      "reason": "That test asserted the banner this fix wrote ahead of every script, which broke Item Refresh, so its harness stays at the fix's own build.",
+      "head": [
+        {
+          "test": "apps/extension/lib/built-scripts.test.ts",
+          "fixed": [
+            "a chrome build > turns off zod's eval probe in every script before zod sets up its config",
+            "a firefox build > turns off zod's eval probe in every script before zod sets up its config"
+          ],
+          "reason": "The config now goes inside each script's wrapper, so the head checks it is set before zod's first read of it rather than at the start of the file."
+        }
       ]
+    },
+    {
+      "fix": "f75d6361236286512211363e764365c062f5aa66",
+      "bug": "The zod config banner sat ahead of WXT's `var collector=`, so WXT kept that prefix, executeScript answered with the config object, and every Item Refresh failed as unexpected_page in Chrome and Firefox release builds.",
+      "test": "apps/extension/lib/built-scripts.test.ts",
+      "fixed": [
+        "a chrome build > starts every script with the wrapper WXT writes, so an injected script answers with its wrapper's value",
+        "a chrome build > answers an injected collector run with the collector's answer",
+        "a firefox build > starts every script with the wrapper WXT writes, so an injected script answers with its wrapper's value",
+        "a firefox build > answers an injected collector run with the collector's answer"
+      ]
+    },
+    {
+      "fix": "fa33e575ec83be56d1f8a549685417bce86a7603",
+      "bug": "Firefox finds no tab for a tabs.query pattern with a port, so a build for an MFC origin with a port never reused the MFC tab the user had open.",
+      "test": "apps/extension/lib/mfc-tab.test.ts",
+      "fixed": ["an MFC origin with a port, in Firefox > borrows the MFC tab the user has open"]
+    },
+    {
+      "fix": "8c2afa61f6c18763d7178bae119d53e1d8c05e43",
+      "bug": "Dropping the ports from a Firefox build's host permissions listed http://127.0.0.1/* twice when MFC and its pictures share a host.",
+      "test": "apps/extension/lib/firefox-build.test.ts",
+      "fixed": ["a Firefox build for origins with ports > lists each host permission once"]
     }
   ],
   "lint": [
