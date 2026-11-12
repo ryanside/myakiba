@@ -64,6 +64,9 @@ export const item = pgTable(
 /**
  * Every picture each user stored, by key. A save writes its row before it stores the picture,
  * so the rows bound what an account stores, whether or not an Item still shows the picture.
+ * Every reservation stamps `reserved_at`, even of a key the owner already recorded, so a future
+ * deleter can spare a key a save reserved recently. Deletion will only ever consider
+ * `items/<64 hex>.<ext>` keys.
  */
 export const picture = pgTable(
   "picture",
@@ -74,6 +77,7 @@ export const picture = pgTable(
     key: text("key").notNull(),
     bytes: integer("bytes").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    reservedAt: timestamp("reserved_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("picture_owner_id_key_idx").on(t.ownerId, t.key)],
 );

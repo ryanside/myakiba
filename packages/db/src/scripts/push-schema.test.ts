@@ -369,3 +369,33 @@ test(
   },
   PUSH_TIMEOUT * 3,
 );
+
+test(
+  "push adds reserved_at to a picture ledger that holds rows, with no prompt, stamping each row",
+  async () => {
+    const { sql, url } = await databases.create();
+    const pushed = await dbPush(url);
+    expect(pushed.exitCode).toBe(0);
+    await sql`ALTER TABLE picture DROP COLUMN reserved_at`;
+    await sql`
+      INSERT INTO "user" (id, name, email, email_verified, username)
+      VALUES ('u1', 'User One', 'u1@example.com', true, 'user_one')
+    `;
+    await sql`INSERT INTO picture (owner_id, key, bytes) VALUES ('u1', ${`items/${"a".repeat(64)}.jpg`}, 10)`;
+    const ledger = () => sql`SELECT owner_id, key, bytes, created_at FROM picture`;
+    const before = await ledger();
+
+    expect(await pushSchema(url)).toMatchObject({
+      applied: true,
+      statements: [
+        `ALTER TABLE "picture" ADD COLUMN "reserved_at" timestamp DEFAULT now() NOT NULL`,
+        ...REPEATED_ON_EVERY_PUSH,
+      ].toSorted(),
+    });
+    expect(await ledger()).toEqual(before);
+    const [unstamped] =
+      await sql`SELECT count(*)::int AS rows FROM picture WHERE reserved_at IS NULL`;
+    expect(unstamped).toEqual({ rows: 0 });
+  },
+  PUSH_TIMEOUT * 2,
+);

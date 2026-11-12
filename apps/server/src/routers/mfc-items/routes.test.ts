@@ -712,6 +712,19 @@ describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB",
     });
   });
 
+  test("saving a picture the owner already recorded stamps its reservation again", async () => {
+    const key = keyOf(JPEG, "jpg");
+    await recordPicture(userId, key, JPEG.byteLength);
+    await db.execute(sql`UPDATE picture SET reserved_at = now() - interval '2 days'`);
+
+    await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG });
+
+    const [stamped] = await db.execute<{ recent: boolean }>(
+      sql`SELECT reserved_at > now() - interval '1 hour' AS recent FROM picture WHERE owner_id = ${userId} AND key = ${key}`,
+    );
+    expect(stamped).toEqual({ recent: true });
+  });
+
   test("another user's ledger does not count", async () => {
     await db.insert(authSchema.user).values({
       id: "user-2",

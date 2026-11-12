@@ -53,8 +53,9 @@ export async function itemDatabaseIsFull(tx: ReadTx, viewer: Viewer): Promise<bo
 
 /**
  * Records a picture in the owner's ledger before it is stored, unless it would take the owner's
- * ledger past the quota. A key the owner already recorded counts once. Rows stay when an Item
- * stops showing the picture, so the ledger bounds what an account stores.
+ * ledger past the quota. A key the owner already recorded counts once, and its `reserved_at` is
+ * stamped again. Rows stay when an Item stops showing the picture, so the ledger bounds what an
+ * account stores.
  */
 export async function reservePicture(
   tx: Tx,
@@ -70,9 +71,11 @@ export async function reservePicture(
     .from(ledger)
     .where(eq(ledger.ownerId, viewer.userId));
   if (!recorded) panic(`An aggregate over ${viewer.userId}'s picture ledger returned no row`);
-  if (recorded.held) return "reserved";
-  if (recorded.used + bytes > PICTURE_QUOTA_BYTES) return "over_quota";
-  await tx.insert(ledger).values({ ownerId: viewer.userId, key, bytes }).onConflictDoNothing();
+  if (!recorded.held && recorded.used + bytes > PICTURE_QUOTA_BYTES) return "over_quota";
+  await tx
+    .insert(ledger)
+    .values({ ownerId: viewer.userId, key, bytes })
+    .onConflictDoUpdate({ target: [ledger.ownerId, ledger.key], set: { reservedAt: sql`now()` } });
   return "reserved";
 }
 
