@@ -1,16 +1,17 @@
 import { expect, test } from "bun:test";
 import path from "node:path";
 
-/** The kernel defines `commitFirst`; only the picture reservation calls it, once. */
+/** The kernel defines `commitFirst`, and its type test pins that the body's scope has none. */
 const KERNEL = new Set([
   "apps/server/src/domain/kernel.ts",
   "apps/server/src/domain/operations.ts",
+  "apps/server/src/domain/kernel.type-test.ts",
 ]);
 const RESERVATION = "apps/server/src/lib/mfc-item-ingest.ts";
 
 const PRODUCTION = /^(?:apps|packages)\/.+\.[cm]?[jt]sx?$/u;
-const NOT_PRODUCTION =
-  /(?:\.(?:test|type-test|e2e)\.[cm]?[jt]sx?$|\.d\.[cm]?ts$|(?:^|\/)(?:test|e2e)\/)/u;
+/** What `testImports` in oxlint.config.ts bans production from importing; it may import the rest. */
+const NOT_PRODUCTION = /(?:\.test\.[cm]?[jt]sx?$|(?:^|\/)test\/)/u;
 /** Any mention: a call, a property read by name or by string key, or a destructured binding. */
 const MENTION = /\bcommitFirst\b/gu;
 /** A call by property access, as the reservation makes it. */
@@ -36,7 +37,10 @@ test.each([
 test.each([
   ["apps/server/src/lib/mfc-item-ingest.ts", true],
   ["apps/server/src/domain/kernel.test.ts", false],
-  ["apps/server/src/domain/kernel.type-test.ts", false],
+  ["apps/server/src/domain/kernel.type-test.ts", true],
+  ["apps/web/e2e/sentence/cases.ts", true],
+  ["apps/server/src/lib/picture.e2e.ts", true],
+  ["apps/web/e2e/add-sentence.e2e.test.ts", false],
   ["apps/server/test/database.ts", false],
   ["scripts/commit-first.test.ts", false],
 ])("%s is production: %p", (file, production) => {
