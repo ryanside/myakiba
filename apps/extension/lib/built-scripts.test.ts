@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import path from "node:path";
 import vm from "node:vm";
+import { BUILD_TIMEOUT_MS, buildForTest, testOutput as output } from "../test/test-build";
 import { pictureAnswerCodec, readAnswer } from "./collect";
 
-const ROOT = path.join(import.meta.dir, "..");
 const ORIGINS = {
   WXT_WEB_ORIGIN: "http://localhost:3001",
   WXT_MFC_ORIGIN: "http://127.0.0.1:4601",
@@ -12,9 +12,6 @@ const ORIGINS = {
 const BROWSERS = ["chrome", "firefox"] as const;
 const JITLESS = "globalThis.__zod_globalConfig={jitless:!0}";
 const SCRIPTS = ["background.js", "collector.js", "content-scripts/myakiba.js", "mfc.js"];
-
-const output = (browser: (typeof BROWSERS)[number]) =>
-  path.join(ROOT, `.output/${browser}-mv3-e2e`);
 
 async function builtScripts(browser: (typeof BROWSERS)[number]) {
   const files = await Array.fromAsync(new Bun.Glob("**/*.js").scan(output(browser)));
@@ -26,17 +23,9 @@ async function builtScripts(browser: (typeof BROWSERS)[number]) {
   );
 }
 
-beforeAll(() => {
-  for (const browser of BROWSERS) {
-    const build = Bun.spawnSync(["bunx", "wxt", "build", "-b", browser, "--mode", "e2e"], {
-      cwd: ROOT,
-      env: { ...process.env, ...ORIGINS },
-    });
-    if (build.exitCode !== 0) {
-      throw new Error(`the ${browser} build failed\n${build.stderr.toString()}`);
-    }
-  }
-});
+beforeAll(async () => {
+  for (const browser of BROWSERS) await buildForTest(browser, ORIGINS);
+}, BUILD_TIMEOUT_MS);
 
 describe.each(BROWSERS)("a %s build", (browser) => {
   test("starts every script with the wrapper WXT writes, so an injected script answers with its wrapper's value", async () => {
