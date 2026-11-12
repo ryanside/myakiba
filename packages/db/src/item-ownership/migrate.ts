@@ -1,5 +1,5 @@
 import { SQL } from "bun";
-import { installOwnerGuards, ownerGuardsInstalled } from "./guards";
+import { installOwnerGuards } from "./guards";
 
 export const MIGRATION_STEPS = [
   "expand",
@@ -385,9 +385,20 @@ export async function migrateItemOwnership(
   }
 }
 
-/** The run installs the owner guards last, in its transaction, so they mark a finished run. */
+/**
+ * Migrated once the owner columns exist and every Item, Item Entry and link has an owner. The rows
+ * decide, not the owner guards, so a missing guard never runs the migration again: db-push installs
+ * the guards after every push.
+ */
 export async function isItemOwnershipMigrated(sql: SQL): Promise<boolean> {
-  return ownerGuardsInstalled(sql);
+  const [{ columns }] = await sql<[{ columns: number }]>`
+    SELECT count(*)::int AS columns FROM information_schema.columns
+    WHERE table_schema = 'public' AND (table_name, column_name) IN
+      (('item', 'owner_id'), ('entry', 'owner_id'), ('entry_to_item', 'owner_id'))
+  `;
+  if (columns < 3) return false;
+  const ownerless = await missesOf(sql, OWNERLESS_CHECKS);
+  return ownerless.length === 0;
 }
 
 export async function verifyItemOwnership(sql: SQL): Promise<OwnershipMiss[]> {

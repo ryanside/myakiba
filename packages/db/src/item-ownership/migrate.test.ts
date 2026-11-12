@@ -220,6 +220,14 @@ test("a second run changes nothing, and two clean runs write the same rows", asy
   expect(await snapshot(sql)).toEqual(first);
 });
 
+test("a migrated database missing an owner guard is still migrated, so the migration does not run again", async () => {
+  const { sql } = await migrated();
+  await sql`DROP TRIGGER wishlist_item_owner_guard ON wishlist_item`;
+  const before = await snapshot(sql);
+  expect(await migrateItemOwnership(sql)).toEqual({ status: "already-migrated" });
+  expect(await snapshot(sql)).toEqual(before);
+});
+
 test.each(MIGRATION_STEPS)(
   "a crash after %s leaves the database as seeded, and the next run equals a clean run",
   async (step) => {

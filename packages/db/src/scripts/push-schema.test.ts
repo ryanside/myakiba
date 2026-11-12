@@ -4,6 +4,7 @@ import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
 import { PUSH_TIMEOUT } from "../../test/push";
+import { STAGING_DATABASE } from "../../test/staging-database";
 import { ownerGuardsInstalled } from "../item-ownership/guards";
 import {
   isItemOwnershipMigrated,
@@ -298,6 +299,54 @@ test(
     const second = await dbPush(url);
     expect(second.exitCode).toBe(0);
     expect(second.output).not.toContain("Dropped retired table");
+    expect(second.output).toContain('Item ownership migration: {"status":"already-migrated"}');
+    expect(await snapshot(sql)).toEqual(pushed);
+  },
+  PUSH_TIMEOUT * 3,
+);
+
+test(
+  "db-push takes a database in staging's shape to the owned schema: it deletes the originals no user reaches, keeps what every user sees and replaces the guards; a second run changes nothing",
+  async () => {
+    const fresh = await databases.create();
+    const freshPush = await dbPush(fresh.url);
+    expect(freshPush.exitCode).toBe(0);
+    const pushedFresh = await snapshot(fresh.sql);
+
+    const { sql, url } = await databases.create(
+      await databases.legacyTemplate(async () => {}, [STAGING_DATABASE]),
+    );
+    const seen = await whatUsersSee(sql);
+    expect(seen.references).toHaveLength(13);
+
+    const first = await dbPush(url);
+    expect(first.exitCode).toBe(0);
+    expect(migrationReport(first.output)).toBe(
+      '{"status":"migrated","attempts":1,"pairs":0,"copied":{"items":0,"entries":0,"links":0,"releases":0},"foreignReleasesCleared":0,"otherUsersListTargets":0,"repointed":{"collection":0,"wishlistItem":0,"listMemberItem":0,"listMemberOwner":0},"deleted":{"items":4,"entries":3,"links":4,"releases":3},"milliseconds":0}',
+    );
+    expect(first.output).toContain("Item owner guards installed.");
+    expect(await whatUsersSee(sql)).toEqual(seen);
+    expect(
+      await sql`SELECT id FROM item WHERE id IN ('item-u1-1005', 'item-u3-1006') ORDER BY id`,
+    ).toEqual([{ id: "item-u1-1005" }, { id: "item-u3-1006" }]);
+    expect(await verifyItemOwnership(sql)).toEqual([]);
+    const pushed = await snapshot(sql);
+    expect({
+      columns: pushed.columns,
+      indexes: pushed.indexes,
+      constraints: pushed.constraints,
+      triggers: pushed.triggers,
+      functions: pushed.functions,
+    }).toEqual({
+      columns: pushedFresh.columns,
+      indexes: pushedFresh.indexes,
+      constraints: pushedFresh.constraints,
+      triggers: pushedFresh.triggers,
+      functions: pushedFresh.functions,
+    });
+
+    const second = await dbPush(url);
+    expect(second.exitCode).toBe(0);
     expect(second.output).toContain('Item ownership migration: {"status":"already-migrated"}');
     expect(await snapshot(sql)).toEqual(pushed);
   },
