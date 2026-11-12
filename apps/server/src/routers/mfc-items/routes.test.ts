@@ -93,7 +93,9 @@ function memoryStore() {
   const objects = new Map<string, PutObjectCommand["input"]>();
   let gate: (() => Promise<null>) | null = null;
   let puts = 0;
+  let beforePut: ((key: string) => Promise<void>) | null = null;
   const send = async (command: PutObjectCommand) => {
+    await beforePut?.(command.input.Key ?? "");
     await gate?.();
     puts += 1;
     objects.set(command.input.Key ?? "", command.input);
@@ -121,7 +123,18 @@ function memoryStore() {
     gate = () =>
       failure === "hang" ? new Promise<null>(() => {}) : Promise.reject(new Error("S3 is down"));
   };
-  return { send, objects, puts: () => puts, releasePutsTogether, holdPut, failPuts };
+  return {
+    send,
+    objects,
+    puts: () => puts,
+    /** Runs at the start of every put, before the object is stored. */
+    whenPutting: (observe: (key: string) => Promise<void>) => {
+      beforePut = observe;
+    },
+    releasePutsTogether,
+    holdPut,
+    failPuts,
+  };
 }
 
 let store = memoryStore();
@@ -644,12 +657,30 @@ async function ledgerOf(owner = userId) {
 }
 
 describe("POST /api/mfc-items keeps each account's picture ledger within 2 GiB", () => {
-  test("the ledger is written before the picture is stored, and records what was stored", async () => {
+  test("the ledger row is committed when the picture is stored", async () => {
+    const seenAtPut: Awaited<ReturnType<typeof ledgerOf>>[] = [];
+    // The ledger is read from another connection, so only a committed row is seen.
+    store.whenPutting(async () => {
+      seenAtPut.push(await ledgerOf());
+    });
+
     expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toMatchObject({
       body: { saved: "created", picture: "stored" },
     });
 
+    expect(seenAtPut).toEqual([[{ key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength }]]);
+  });
+
+  test("a picture whose store fails keeps its ledger row, so it still counts", async () => {
+    store.failPuts("error");
+
+    expect(await upload({ mfcItemId: 98_777, page: page98777, picture: JPEG })).toEqual({
+      status: 500,
+      body: "Failed to save item",
+    });
+
     expect(await ledgerOf()).toEqual([{ key: keyOf(JPEG, "jpg"), bytes: JPEG.byteLength }]);
+    expect(await itemRows(98_777)).toMatchObject({ item: undefined });
   });
 
   test("pictures no Item shows still count, so one past the quota is not recorded or stored", async () => {
