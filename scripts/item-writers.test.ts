@@ -207,7 +207,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
     ExportNamedDeclaration(node) {
       if (node.declaration?.type === "VariableDeclaration")
         for (const declarator of node.declaration.declarations)
-          if (declarator.init ? isNamespace(declarator.init) : isNamespace(declarator.id))
+          if ((declarator.init && isNamespace(declarator.init)) || isNamespace(declarator.id))
             write(node.start, "re-export", "*");
       for (const specifier of node.specifiers) {
         const local = nameOf(specifier.local);
@@ -286,10 +286,14 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       }
     },
   });
-  // The first walk learns every binding that holds a table or the namespace, wherever in the file it
-  // is assigned. The second reports, so a write above the assignment that binds its table is found.
+  // Walk until no new binding of a table or the namespace is learned, wherever in the file and through
+  // however many names it is assigned. Both sets only grow, so this ends. The last walk reports, so a
+  // write above the assignment that binds its table is found.
   const { program } = parseSync(file, text);
-  visitor.visit(program);
+  for (let known = -1; known !== tables.size + namespaces.size;) {
+    known = tables.size + namespaces.size;
+    visitor.visit(program);
+  }
   writes.length = 0;
   visitor.visit(program);
   return writes;
@@ -432,6 +436,19 @@ describe("an Item table write", () => {
     [`import * as figure from "@myakiba/db/schema/figure"; const get = () => figure;`],
     [`import * as figure from "@myakiba/db/schema/figure"; const box = { figure };`],
     [`import * as figure from "@myakiba/db/schema/figure"; const [s] = [figure];`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; export let tables = null; tables = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(a.item); } let a; let b; function init() { a = b; } b = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let a; let b; export { a }; function init() { a = b; } b = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(a.item); } let a; let b; let c; a = b; b = c; c = figure;`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; export const tables = figure;`],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
   });
