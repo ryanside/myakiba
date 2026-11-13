@@ -11,14 +11,20 @@ export const OWNER_CHECKS = {
   collection_item_owner: "a Collection Item must point at an Item its user owns",
   collection_release_of_item:
     "a Selected Item Release must be a release of its Collection Item's Item",
+  collection_order_owner: "a Collection Item must point at an Order its user owns",
   wishlist_item_item_owner: "a Wishlist Item must point at an Item its user owns",
   list_member_list_owner: "a List Member's user must be its List's user",
   list_member_item_owner: "a List Member must point at an Item its List's user owns",
+  list_member_collection_owner:
+    "a List Member must point at a Collection Item its List's user owns",
+  list_member_order_owner: "a List Member must point at an Order its List's user owns",
   entry_to_item_item_owner: "an Item Entry link must have its Item's owner",
   entry_to_item_entry_owner: "an Item Entry link must have its Item Entry's owner",
   item_owner_fixed: "an Item's owner never changes",
   entry_owner_fixed: "an Item Entry's owner never changes",
   list_owner_fixed: "a List's user never changes",
+  collection_owner_fixed: "a Collection Item's user never changes",
+  order_owner_fixed: "an Order's user never changes",
   item_release_item_fixed: "an Item Release's Item never changes",
 } as const;
 
@@ -55,6 +61,9 @@ function written(columns: readonly string[]): string {
  */
 const CHILD_GUARDS = {
   collection: `
+    IF TG_OP = 'UPDATE' AND NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+      ${raise("collection_owner_fixed", "format('collection %s: %s to %s', OLD.id, OLD.user_id, NEW.user_id)")}
+    END IF;
     IF ${written(["user_id", "item_id"])} AND NOT EXISTS
       (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("collection_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
@@ -62,6 +71,10 @@ const CHILD_GUARDS = {
     IF NEW.release_id IS NOT NULL AND ${written(["item_id", "release_id"])} AND NOT EXISTS
       (SELECT 1 FROM public.item_release WHERE id = NEW.release_id AND item_id = NEW.item_id FOR KEY SHARE) THEN
       ${raise("collection_release_of_item", "format('Item %s, release %s', NEW.item_id, NEW.release_id)")}
+    END IF;
+    IF NEW.order_id IS NOT NULL AND ${written(["user_id", "order_id"])} AND NOT EXISTS
+      (SELECT 1 FROM public."order" WHERE id = NEW.order_id AND user_id = NEW.user_id FOR KEY SHARE) THEN
+      ${raise("collection_order_owner", "format('user %s, Order %s', NEW.user_id, NEW.order_id)")}
     END IF;`,
   wishlist_item: `
     IF ${written(["user_id", "item_id"])} AND NOT EXISTS
@@ -76,6 +89,14 @@ const CHILD_GUARDS = {
     IF NEW.item_id IS NOT NULL AND ${written(["user_id", "item_id"])} AND NOT EXISTS
       (SELECT 1 FROM public.item WHERE id = NEW.item_id AND owner_id = NEW.user_id FOR KEY SHARE) THEN
       ${raise("list_member_item_owner", "format('user %s, Item %s', NEW.user_id, NEW.item_id)")}
+    END IF;
+    IF NEW.collection_id IS NOT NULL AND ${written(["user_id", "collection_id"])} AND NOT EXISTS
+      (SELECT 1 FROM public.collection WHERE id = NEW.collection_id AND user_id = NEW.user_id FOR KEY SHARE) THEN
+      ${raise("list_member_collection_owner", "format('user %s, Collection Item %s', NEW.user_id, NEW.collection_id)")}
+    END IF;
+    IF NEW.order_id IS NOT NULL AND ${written(["user_id", "order_id"])} AND NOT EXISTS
+      (SELECT 1 FROM public."order" WHERE id = NEW.order_id AND user_id = NEW.user_id FOR KEY SHARE) THEN
+      ${raise("list_member_order_owner", "format('user %s, Order %s', NEW.user_id, NEW.order_id)")}
     END IF;`,
   entry_to_item: `
     IF ${written(["owner_id", "item_id"])} AND NOT EXISTS
@@ -88,11 +109,15 @@ const CHILD_GUARDS = {
     END IF;`,
 } as const;
 
-/** A parent's owner column never changes, so a child guard's check stays true for the row's life. */
+/**
+ * A parent's owner column never changes, so a child guard's check stays true for the row's life.
+ * A Collection Item is a parent too, and its own guard keeps its user.
+ */
 const FIXED_OWNERS = [
   { table: "item", column: "owner_id", check: "item_owner_fixed" },
   { table: "entry", column: "owner_id", check: "entry_owner_fixed" },
   { table: "list", column: "user_id", check: "list_owner_fixed" },
+  { table: "order", column: "user_id", check: "order_owner_fixed" },
   { table: "item_release", column: "item_id", check: "item_release_item_fixed" },
 ] as const satisfies readonly { table: string; column: string; check: OwnerCheck }[];
 
@@ -105,7 +130,7 @@ const GUARDS_SQL = [
     BEGIN${body}
       RETURN NEW;
     END $guard$;
-    CREATE OR REPLACE TRIGGER ${table}_owner_guard BEFORE INSERT OR UPDATE ON public.${table}
+    CREATE OR REPLACE TRIGGER ${table}_owner_guard BEFORE INSERT OR UPDATE ON public."${table}"
       FOR EACH ROW EXECUTE FUNCTION public.${table}_owner_guard();`,
   ),
   ...FIXED_OWNERS.map(
@@ -114,15 +139,15 @@ const GUARDS_SQL = [
     BEGIN
       ${raise(check, `format('${table} %s: %s to %s', OLD.id, OLD.${column}, NEW.${column})`)}
     END $guard$;
-    CREATE OR REPLACE TRIGGER ${table}_owner_guard BEFORE UPDATE ON public.${table}
+    CREATE OR REPLACE TRIGGER ${table}_owner_guard BEFORE UPDATE ON public."${table}"
       FOR EACH ROW WHEN (OLD.${column} IS DISTINCT FROM NEW.${column})
       EXECUTE FUNCTION public.${table}_owner_guard();`,
   ),
 ].join("\n");
 
 /**
- * Creates or replaces the triggers that keep every reference to an Item, Item Entry or List with
- * its owner. drizzle-kit push does not read triggers, so db-push runs this after every push.
+ * Creates or replaces the triggers that keep every reference to an Item, Item Entry, List,
+ * Collection Item or Order with its owner. drizzle-kit push does not read triggers, so db-push runs this after every push.
  * Idempotent, and atomic: one statement batch, which Postgres runs as one transaction. A database
  * without the owner columns has nothing to guard and is left alone.
  */

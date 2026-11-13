@@ -36,3 +36,20 @@ export async function createTestDatabase() {
   });
   return db;
 }
+
+type Database = Awaited<ReturnType<typeof createTestDatabase>>;
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * Writes rows the owner guards would reject, as a database could hold from before a guard
+ * existed: guards fire only on writes, so installing one leaves such a row in place.
+ */
+export async function writeUnguarded(
+  db: Database,
+  write: (tx: Transaction) => PromiseLike<object>,
+) {
+  await db.transaction(async (tx) => {
+    await tx.execute("SET LOCAL session_replication_role = replica");
+    await write(tx);
+  });
+}

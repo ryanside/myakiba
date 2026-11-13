@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
-import { createTestDatabase } from "../../../test/database";
+import { createTestDatabase, writeUnguarded } from "../../../test/database";
 
 const { collection, item, list, listMember } = figureSchema;
 
@@ -85,13 +85,15 @@ test("a member whose target the owner cannot see stays a 500", async () => {
   await db
     .insert(collection)
     .values({ id: "c-other", userId: "user-2", itemId: "aki-1", status: "Owned" });
-  await db.insert(listMember).values({
-    id: "member-dangling",
-    listId: "list-1",
-    userId,
-    collectionId: "c-other",
-    position: 2,
-  });
+  await writeUnguarded(db, (tx) =>
+    tx.insert(listMember).values({
+      id: "member-dangling",
+      listId: "list-1",
+      userId,
+      collectionId: "c-other",
+      position: 2,
+    }),
+  );
 
   expect(await call("GET", "/list-1/members")).toEqual({
     status: 500,

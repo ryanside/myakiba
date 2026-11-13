@@ -9,9 +9,10 @@ const GUARDED_TABLES = [
   "entry",
   "list",
   "item_release",
+  "order",
 ];
 
-/** True while all 8 owner guards fire on the primary. */
+/** True while all 9 owner guards fire on the primary. */
 export async function ownerGuardsInstalled(sql: SQL): Promise<boolean> {
   const rows = await sql<{ guard: string }[]>`
     SELECT c.relname || '.' || t.tgname AS guard FROM pg_trigger t
@@ -32,6 +33,14 @@ const MISMATCHES = {
     WHERE i.owner_id IS DISTINCT FROM l.user_id`,
   "a List Member's user is not its List's user": `SELECT count(*) FROM list_member m
     JOIN list l ON l.id = m.list_id WHERE m.user_id IS DISTINCT FROM l.user_id`,
+  "a Collection Item points at an Order its user does not own": `SELECT count(*) FROM collection c
+    JOIN "order" o ON o.id = c.order_id WHERE o.user_id IS DISTINCT FROM c.user_id`,
+  "a List Member points at a Collection Item its List's user does not own": `SELECT count(*)
+    FROM list_member m JOIN list l ON l.id = m.list_id JOIN collection c ON c.id = m.collection_id
+    WHERE c.user_id IS DISTINCT FROM l.user_id`,
+  "a List Member points at an Order its List's user does not own": `SELECT count(*)
+    FROM list_member m JOIN list l ON l.id = m.list_id JOIN "order" o ON o.id = m.order_id
+    WHERE o.user_id IS DISTINCT FROM l.user_id`,
   "a Selected Item Release is not a release of its Collection Item's Item": `SELECT count(*)
     FROM collection c WHERE c.release_id IS NOT NULL AND NOT EXISTS
       (SELECT 1 FROM item_release r WHERE r.id = c.release_id AND r.item_id = c.item_id)`,

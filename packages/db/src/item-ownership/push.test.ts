@@ -16,6 +16,7 @@ const OWNER_GUARDS = [
   "item_release_owner_guard",
   "list_owner_guard",
   "list_member_owner_guard",
+  "order_owner_guard",
   "wishlist_item_owner_guard",
 ];
 
