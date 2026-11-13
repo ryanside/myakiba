@@ -1,6 +1,6 @@
 # MFC page fixtures
 
-The repo is public, so no fixture carries the capturing user's handle, avatar, session tokens or other users' profiles.
+The repo is public, so no fixture carries the capturing user's handle, avatar, session tokens, or other users' handles or profiles. The footer's "Banner designed by" credit names the MFC user who made the page banner; in every fixture that handle became `fixture_user`.
 
 ## Captured
 
@@ -12,13 +12,13 @@ The repo is public, so no fixture carries the capturing user's handle, avatar, s
 
 The markup the parser reads is byte-identical to the capture.
 
-Three signed-out pages were captured on 2026-11-13 from a browser session with no MFC account. They were edited before commit:
+Three signed-out pages were captured on 2026-11-12 from a browser session with no MFC account. They were edited before commit:
 
 - `item-581731-signed-out.html` has six releases: JPY and CNY prices with MFC's conversion link, a type naming an event and a year (`Magical Mirai 2023 TOKYO`), and a release with no barcode.
 - `item-10756-signed-out.html` has a release with no price, so its barcode link follows the type with no bullet.
 - `not-found-signed-out.html` is MFC's answer to an item id that does not exist. MFC sent it with status 404.
 
-Every `<script>`, `<noscript>`, `<form>`, `<input>`, `<iframe>` and HTML comment was removed, and so was every section that names other users: Comments, Pictures, Community, Related Clubs and Changelog. No `/profile/` link is left. The markup the parser reads is byte-identical to the capture.
+Every `<script>`, `<noscript>`, `<form>`, `<input>`, `<iframe>` and HTML comment was removed, and so was every section that names other users: Comments, Pictures, Community, Related Clubs and Changelog. No `/profile/` link is left. The pages were loaded and written again by cheerio, so entities such as `&laquo;` are decoded, void tags lose their `/>` and a repeated attribute keeps its first value. What the parser reads parses to the same tree as the capture. `item-98777.html` still holds MFC's encoded entities and its repeated `class` attribute.
 
 ## Derived
 
