@@ -66,6 +66,7 @@ const VARIANTS: readonly (readonly [string, string])[] = [
     edit(item98777, BARCODE, " <a>4582292601715</a>"),
   ],
   ["text after the price with no bullet", edit(item98777, BARCODE, " ABC-123")],
+  ["a release type that ends in a period", edit(item98777, "Standard (Japan)", "Limited Ver.")],
   [
     "a second role group",
     edit(

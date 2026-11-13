@@ -585,6 +585,18 @@ describe("parseMfcItemPage release dates", () => {
 });
 
 describe("parseMfcItemPage release prices", () => {
+  test("a price after a type that ends in a period reads", () => {
+    const page = parsedPage(edit(item98777, "Standard (Japan)", "Limited Ver."));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, type: "Limited Ver." }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a price after a type that ends in a digit reads", () => {
+    const page = parsedPage(edit(item98777, "Standard (Japan)", "Edition 2"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, type: "Edition 2" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
   test("an ungrouped price reads whole", () => {
     const page = parsedPage(
       edit(item98777, "13,500 <small>JPY</small>", "13500 <small>JPY</small>"),

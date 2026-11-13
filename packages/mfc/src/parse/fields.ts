@@ -145,7 +145,12 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   const dateLink = outermost(find($, $release, "a.time"));
   if (dateLink.length === 0) return;
   const value = find($, $release, ".data-value").first();
-  const text = value.text();
+  // A space between child nodes keeps a type ending in "." or a digit apart from the price after it.
+  const text = value
+    .contents()
+    .toArray()
+    .map((node) => $(node).text())
+    .join(" ");
   const types: string[] = [];
   for (const em of outermost(find($, $release, "small.light em"))) {
     const part = $(em).text().trim();
