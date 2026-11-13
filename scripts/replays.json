@@ -4793,6 +4793,14 @@
       "fixed": [
         "parseMfcItemPage release prices > a year and capitals in the release type are not its price"
       ]
+    },
+    {
+      "fix": "b938cdc4002e827e6eb2131ee3de937feed2dec8",
+      "bug": "With no bullet, a release's last link that had a digit and at least 8 characters but was not a barcode was dropped with no warning.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a long link with digits and other characters with no bullet warns"
+      ]
     }
   ],
   "lint": [
