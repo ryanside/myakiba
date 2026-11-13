@@ -84,7 +84,10 @@
       "fix": "d3e975ea39d2e6dcf4e28e70fb563b44a1895011",
       "bug": "A List preview found pictures through a List Member's Collection Item or Order without filtering by the viewer, so a member pointing at another user's showed that user's picture.",
       "test": "apps/server/src/routers/lists/routes.test.ts",
-      "fixed": ["a List preview shows no picture of a Collection Item or Order another user owns"]
+      "fixed": [
+        "a List preview shows no picture of a Collection Item or Order another user owns",
+        "a List preview shows no picture of an Item another user owns"
+      ]
     },
     {
       "fix": "1bcd28a6175594d4177cd5b7d86a7e56e0c48db4",
