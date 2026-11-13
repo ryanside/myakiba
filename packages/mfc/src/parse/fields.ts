@@ -145,10 +145,13 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   const dateLink = outermost(find($, $release, "a.time"));
   if (dateLink.length === 0) return;
   const value = find($, $release, ".data-value").first();
-  // A space between child nodes keeps a type ending in "." or a digit apart from the price after it.
+  // The price is in the value's own text, never in its date link or its type, so an event such as
+  // "Magical Mirai 2023 TOKYO" is not read as 2,023 TOK. A space between child nodes keeps the parts
+  // apart.
   const text = value
     .contents()
     .toArray()
+    .filter((node) => !$(node).is("a.time, small.light"))
     .map((node) => $(node).text())
     .join(" ");
   const types: string[] = [];

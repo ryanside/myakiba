@@ -628,6 +628,32 @@ describe("parseMfcItemPage release prices", () => {
     expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
     expect(page.warnings).toEqual(['unreadable release price "1,35,00"']);
   });
+
+  test("a year and capitals in the release type are not its price", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        "<em>Standard (Japan)</em>",
+        "<em>Limited (Japan)</em> <em>&laquo;Magical Mirai 2023 TOKYO&raquo;</em>",
+      ),
+    );
+    expect(page.releases).toEqual([
+      { ...RELEASE_98777, type: "Limited (Japan) «Magical Mirai 2023 TOKYO»" },
+    ]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a currency with MFC's conversion link reads", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        "13,500 <small>JPY</small>",
+        '13,500 <small>JPY (<a href="https://www.google.com/search?q=13%2C500+JPY+IN+USD" target="_blank" title="convert into USD">USD</a>)</small>',
+      ),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
 });
 
 const BARCODE_98777 =
