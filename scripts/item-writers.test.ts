@@ -16,12 +16,12 @@ const DRIZZLE_WRITES = new Set(["insert", "update", "delete"]);
 const TABLE = `"?(?:public"?\\."?)?(${TABLES.join("|")})"?`;
 // PostgreSQL's relation_expr: `t`, `t *`, `ONLY t` or `ONLY (t)`.
 const RELATION = `(?:only\\s*\\(\\s*${TABLE}\\s*\\)|(?:only\\s+)?${TABLE}(?:\\s*\\*)?)`;
-const ALIAS = `(?:\\s+(?:as\\s+)?(?:"[^"]+"|\\w+))?`;
+const ALIAS = `(?:\\s+(?:as\\s+)?(?:"(?:[^"]|"")+"|\\w+))?`;
 // An alias with nothing after it must follow AS or be quoted: "delete from item list" is prose.
-const STATED_ALIAS = `(?:\\s+as\\s+(?:"[^"]+"|\\w+)|\\s+"[^"]+")?`;
+const STATED_ALIAS = `(?:\\s+as\\s+(?:"(?:[^"]|"")+"|\\w+)|\\s+"(?:[^"]|"")+")?`;
 const RAW_WRITES = [
   new RegExp(
-    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+(?:"[^"]+"|\\w+))?\\s*(?:\\(|\\b(?:values|select|default|table|with|overriding)\\b)`,
+    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+(?:"(?:[^"]|"")+"|\\w+))?\\s*(?:\\(|\\b(?:values|select|default|table|with|overriding)\\b)`,
     "giu",
   ),
   new RegExp(`\\b(update)\\s+${RELATION}(?:${ALIAS}\\s+|(?<=\\*)\\s*)set\\b`, "giu"),
@@ -32,7 +32,7 @@ const RAW_WRITES = [
   new RegExp(`\\b(merge)\\s+into\\s+(?:only\\s+)?${TABLE}(?=[\\s(;]|$)`, "giu"),
   new RegExp(`\\b(copy)\\s+${TABLE}(?:\\s*\\([^)]*\\))?\\s+from\\b`, "giu"),
 ];
-const NAME = `(?:only\\s+)?(?:"[^"]+"|[a-z_][\\w$]*)(?:\\.(?:"[^"]+"|[a-z_][\\w$]*))?\\*?`;
+const NAME = `(?:only\\s+)?(?:"(?:[^"]|"")+"|[a-z_][\\w$]*)(?:\\.(?:"(?:[^"]|"")+"|[a-z_][\\w$]*))?\\*?`;
 // A cascade empties every table that references the ones named, so it can reach the Item tables.
 const TRUNCATE = new RegExp(
   `\\btruncate\\s+(?:table\\s+)?(${NAME}(?:\\s*,\\s*${NAME})*)(\\s+(?:(?:restart|continue)\\s+identity\\s+)?cascade\\b)?`,
@@ -414,6 +414,9 @@ describe("an Item table write", () => {
     ["await sql`INSERT INTO item WITH q AS (SELECT 1) SELECT * FROM q`;"],
     ["await sql`INSERT INTO item OVERRIDING USER VALUE VALUES (1)`;"],
     ["await sql`UPDATE item*SET title = 1`;"],
+    ['await sql`UPDATE item AS "tar""get" SET title = 1`;'],
+    ['await sql`INSERT INTO item AS "tar""get" (id) VALUES (1)`;'],
+    ['await sql`DELETE FROM item AS "tar""get" WHERE id = 1`;'],
     [
       `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(t.item); } let t; t = { ...figure };`,
     ],
