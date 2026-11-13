@@ -203,7 +203,9 @@ async function aliceHolds() {
   const [release] = releases;
   if (!sculptor || !release) throw new Error("the fixture page has no Minheru or no release");
   await db.insert(list).values({ id: "list-alice", userId: ALICE, title: "Alice's shelf" });
-  await db.insert(order).values({ id: "order-alice", userId: ALICE, title: "Alice's order" });
+  await db
+    .insert(order)
+    .values({ id: "order-alice", userId: ALICE, title: "Alice's order", status: "Owned" });
   expect(
     await call(
       ALICE,
@@ -423,8 +425,8 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       { status: 404, body: "Collection item(s) not found" },
     ],
     [
-      "a Collection filter by her Item's id",
-      (held) => call(BOB, "GET", `/collection?ids=${held.itemId}`),
+      "a Collection filter by her Collection Item's id",
+      (held) => call(BOB, "GET", `/collection?ids=${held.collectionId}`),
       { status: 200, body: { items: [], totalCount: 0 } },
     ],
     ["her List", (held) => call(BOB, "GET", `/lists/${held.listId}`), LIST_NOT_FOUND],
