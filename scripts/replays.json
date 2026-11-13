@@ -1,6 +1,33 @@
 {
   "test": [
     {
+      "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "bug": "The barcode reader read only text after a bullet, so a barcode link with no bullet before it, as on a release with no price, stored no barcode where the old pattern read it.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a barcode link with no price and no bullet reads",
+        "parseMfcItemPage release barcodes > a barcode link after the price with no bullet reads"
+      ]
+    },
+    {
+      "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "bug": "A barcode link with no bullet before it read as no barcode after the scrub as well as before it.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage keeps every reading of a page > a barcode link with no price and no bullet still reads its barcode",
+        "scrubMfcPage keeps every reading of a page > a barcode link after the price with no bullet still reads its barcode"
+      ]
+    },
+    {
+      "fix": "e057efc4168586f0fd7657f4ea27445d24fec189",
+      "bug": "The price pattern ran over the release value's child texts joined with nothing between them, so a type ending in a period hid the price after it and a type ending in a digit ran into it.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a price after a type that ends in a period reads",
+        "parseMfcItemPage release prices > a price after a type that ends in a digit reads"
+      ]
+    },
+    {
       "fix": "a677c0651b8f4a641785fa7cdd87304303e7b735",
       "bug": "A release's barcode was the last uppercase token of its whole Releases value, so a release with no barcode stored its currency and whitespace after a real barcode stored none.",
       "test": "packages/mfc/src/parse.test.ts",
