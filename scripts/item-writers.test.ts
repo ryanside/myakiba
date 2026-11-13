@@ -164,6 +164,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   };
   const held = (value: Node): string[] => {
     const node = unwrapped(value);
+    if (node.type !== "ObjectExpression" && isNamespace(node)) return ["*"];
     if (node.type === "ObjectExpression")
       return node.properties.flatMap((property) => {
         if (property.type === "Property") return held(property.value);
@@ -193,7 +194,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
     if (table) write(offset, "re-export", table);
     if (namespaces.has(local)) write(offset, "re-export", "*");
   };
-  new Visitor({
+  const visitor = new Visitor({
     ImportDeclaration(node) {
       if (!SCHEMA.test(node.source.value)) return;
       for (const specifier of node.specifiers) {
@@ -206,7 +207,8 @@ function itemWrites(file: string, text: string): ItemWrite[] {
     ExportNamedDeclaration(node) {
       if (node.declaration?.type === "VariableDeclaration")
         for (const declarator of node.declaration.declarations)
-          if (declarator.init && isNamespace(declarator.init)) write(node.start, "re-export", "*");
+          if (declarator.init ? isNamespace(declarator.init) : isNamespace(declarator.id))
+            write(node.start, "re-export", "*");
       for (const specifier of node.specifiers) {
         const local = nameOf(specifier.local);
         if (node.source === null) reExported(specifier.start, local);
@@ -283,7 +285,13 @@ function itemWrites(file: string, text: string): ItemWrite[] {
         if (table && verb) write(expression.start, verb.toLowerCase(), table);
       }
     },
-  }).visit(parseSync(file, text).program);
+  });
+  // The first walk learns every binding that holds a table or the namespace, wherever in the file it
+  // is assigned. The second reports, so a write above the assignment that binds its table is found.
+  const { program } = parseSync(file, text);
+  visitor.visit(program);
+  writes.length = 0;
+  visitor.visit(program);
   return writes;
 }
 
@@ -402,6 +410,28 @@ describe("an Item table write", () => {
     ["await sql`INSERT INTO item WITH q AS (SELECT 1) SELECT * FROM q`;"],
     ["await sql`INSERT INTO item OVERRIDING USER VALUE VALUES (1)`;"],
     ["await sql`UPDATE item*SET title = 1`;"],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(t.item); } let t; t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let t; class R { w(tx) { return tx.delete(t.entry); } } t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; export let tables; tables = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let t; export { t }; t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(t.item); } const t = figure;`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; class W { s = figure; }`],
+    [`import * as figure from "@myakiba/db/schema/figure"; function w(tx, s = figure) {}`],
+    [`import * as figure from "@myakiba/db/schema/figure"; for (const s of [figure]) s;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; function get() { return figure; }`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const get = () => figure;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const box = { figure };`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const [s] = [figure];`],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
   });
