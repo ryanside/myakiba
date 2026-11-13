@@ -145,13 +145,13 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   const dateLink = outermost(find($, $release, "a.time"));
   if (dateLink.length === 0) return;
   const value = find($, $release, ".data-value").first();
-  // The price is in the value's own text, never in its date link or its type, so an event such as
-  // "Magical Mirai 2023 TOKYO" is not read as 2,023 TOK. A space between child nodes keeps the parts
-  // apart.
+  // The price is in the value's own text, never in a link (its date or its barcode) or its type, so an
+  // event such as "Magical Mirai 2023 TOKYO" is not read as 2,023 TOK. MFC's conversion link sits
+  // inside the currency's <small>, which stays. A space between child nodes keeps the parts apart.
   const text = value
     .contents()
     .toArray()
-    .filter((node) => !$(node).is("a.time, small.light"))
+    .filter((node) => !$(node).is("a, small.light"))
     .map((node) => $(node).text())
     .join(" ");
   const types: string[] = [];

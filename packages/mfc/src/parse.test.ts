@@ -716,6 +716,32 @@ describe("parseMfcItemPage release prices", () => {
     expect(page.warnings).toEqual([]);
   });
 
+  test("a year date and a capitals link with no price are not a price", () => {
+    const page = parsedPage(
+      edit(
+        edit(item98777, `13,500 <small>JPY</small>${BARCODE_98777}`, " <a>AMIAMI</a>"),
+        'class="time">11/15/2018<',
+        'class="time">2018<',
+      ),
+    );
+    expect(page.releases).toEqual([
+      { ...RELEASE_98777, date: "2018-01-01", price: 0, barcode: null },
+    ]);
+  });
+
+  test("a barcode link then a capitals link with no price are not a price", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        `13,500 <small>JPY</small>${BARCODE_98777}`,
+        " <a>4582292601715</a> <a>AMIAMI</a>",
+      ),
+    );
+    expect(page.releases.map(({ price, priceCurrency }) => [price, priceCurrency])).toEqual([
+      [0, "JPY"],
+    ]);
+  });
+
   test("a currency with MFC's conversion link reads", () => {
     const page = parsedPage(
       edit(
@@ -776,6 +802,18 @@ describe("parseMfcItemPage release barcodes", () => {
     const page = parsedPage(edit(item98777, BARCODE_98777, " <a>Buy 4582292601715</a>"));
     expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
     expect(page.warnings).toEqual(['unreadable barcode "Buy 4582292601715"']);
+  });
+
+  test("an 8-character link with a digit that is not a barcode warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>4912345x</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "4912345x"']);
+  });
+
+  test("a long link that is not a barcode warns with its text clipped", () => {
+    const link = `${"b".repeat(100)}1`;
+    const page = parsedPage(edit(item98777, BARCODE_98777, ` <a>${link}</a>`));
+    expect(page.warnings).toEqual([`unreadable barcode "${"b".repeat(100)}…"`]);
   });
 
   test("a short link of digits with no bullet is no barcode", () => {
