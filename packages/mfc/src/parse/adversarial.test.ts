@@ -397,7 +397,7 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   [
     "a barcode link with no bullet",
     "too_large:valueLength",
-    () => fill("A", (run) => ({ fields: release(`<a>${run}</a>`) })),
+    () => fill("1", (run) => ({ fields: release(`<a>${run}</a>`) })),
   ],
   [
     "a barcode of dashes in text",

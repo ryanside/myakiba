@@ -168,7 +168,8 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
 
 /**
  * MFC writes a release's barcode after a bullet that follows its price, usually as a link. With no
- * price there may be no bullet, so then the barcode is the value's last link other than its date.
+ * price there may be no bullet, so then the barcode is the value's last link other than its date,
+ * when that link reads like one.
  */
 function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): string | null {
   const after: string[] = [];
@@ -178,13 +179,23 @@ function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields)
       after.push(node.data.slice(node.data.indexOf(BULLET) + 1));
     }
   }
-  if (after.length === 0) after.push(value.children("a").not(".time").last().text());
+  if (after.length === 0) {
+    // With no bullet, only a link that reads like a JAN, EAN, UPC or ISBN is the barcode, so a shop,
+    // region or second date link is not stored as one.
+    const link = value.children("a").not(".time").last().text().trim();
+    return looksLikeBarcode(link) ? link : null;
+  }
   const barcode = after.join("").trim();
   if (barcode === "") return null;
   if (PATTERNS.barcode.test(barcode)) return barcode;
   fields.warnings.push(`unreadable barcode ${clippedQuote(barcode)}`);
   return null;
 }
+
+const looksLikeBarcode = (text: string): boolean =>
+  text.length >= 8 &&
+  PATTERNS.barcode.test(text) &&
+  [...text].some((character) => character >= "0" && character <= "9");
 
 const READERS_BY_LABEL = {
   Category: readCategory,

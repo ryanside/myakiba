@@ -652,6 +652,18 @@ describe("parseMfcItemPage release barcodes", () => {
     expect(page.warnings).toEqual([]);
   });
 
+  test("a shop link with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>AMIAMI</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a short link of digits with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>2019</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
   test("a release with no barcode has none, not its currency", () => {
     const page = parsedPage(edit(item98777, BARCODE_98777, ""));
     expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
