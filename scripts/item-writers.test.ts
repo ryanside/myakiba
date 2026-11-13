@@ -14,14 +14,17 @@ const OWNERSHIP_MIGRATION_FILES = new Set([
 const SCHEMA = /(?:^|\/)schema\/figure(?:\.[cm]?[jt]s)?$/u;
 const DRIZZLE_WRITES = new Set(["insert", "update", "delete"]);
 const TABLE = `"?(?:public"?\\."?)?(${TABLES.join("|")})"?`;
+// PostgreSQL's relation_expr: `t`, `t *`, `ONLY t` or `ONLY (t)`.
+const RELATION = `(?:only\\s*\\(\\s*${TABLE}\\s*\\)|(?:only\\s+)?${TABLE}(?:\\s*\\*)?)`;
+const ALIAS = `(?:\\s+(?:as\\s+)?(?:"[^"]+"|\\w+))?`;
 const RAW_WRITES = [
   new RegExp(
-    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+\\w+)?\\s*(?:\\(|\\b(?:values|select|default)\\b)`,
+    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+(?:"[^"]+"|\\w+))?\\s*(?:\\(|\\b(?:values|select|default)\\b)`,
     "giu",
   ),
-  new RegExp(`\\b(update)\\s+(?:only\\s+)?${TABLE}\\s+(?:(?:as\\s+)?\\w+\\s+)?set\\b`, "giu"),
+  new RegExp(`\\b(update)\\s+${RELATION}${ALIAS}\\s+set\\b`, "giu"),
   new RegExp(
-    `\\b(delete)\\s+from\\s+(?:only\\s+)?${TABLE}(?:\\s*(?:;|$)|(?:\\s+(?:as\\s+)?\\w+)?\\s+(?:where|using|returning)\\b)`,
+    `\\b(delete)\\s+from\\s+${RELATION}(?:\\s*(?:;|$)|${ALIAS}\\s+(?:where|using|returning)\\b)`,
     "giu",
   ),
   new RegExp(`\\b(merge)\\s+into\\s+(?:only\\s+)?${TABLE}(?=[\\s(;]|$)`, "giu"),
@@ -108,8 +111,8 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   const sqlText = (value: string, start: number) => {
     const code = value.replaceAll(SQL_COMMENT, " ");
     for (const pattern of RAW_WRITES) {
-      for (const [, verb = "", table = ""] of code.matchAll(pattern)) {
-        write(start, verb.toLowerCase(), table.toLowerCase());
+      for (const [, verb = "", ...named] of code.matchAll(pattern)) {
+        write(start, verb.toLowerCase(), (named.find(Boolean) ?? "").toLowerCase());
       }
     }
     for (const [, names = "", cascade] of code.matchAll(TRUNCATE)) {
@@ -207,7 +210,10 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       } else copied(node.start, node.init);
     },
     AssignmentExpression(node) {
-      copied(node.start, node.right);
+      if (isNamespace(node.right)) {
+        if (node.left.type === "Identifier") namespaces.add(node.left.name);
+        destructured(node.left);
+      } else copied(node.start, node.right);
     },
     AssignmentPattern(node) {
       copied(node.start, node.right);
@@ -337,8 +343,36 @@ describe("an Item table write", () => {
     [`import("@myakiba/db/schema/figure").then((m) => m.item_release);`],
     [`import("@myakiba/db/schema/figure").then(({ entry }) => tx.select().from(entry));`],
     [`import { item } from "@myakiba/db/schema/figure"; const table = () => item;`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let schema: typeof figure; schema = figure; await tx.insert(schema.item).values({});`,
+    ],
+    [`let schema; schema = await import("@myakiba/db/schema/figure"); tx.delete(schema.entry);`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let tables; tables = { ...figure }; tx.insert(tables.item);`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; let item; ({ item } = figure);`],
+    [`import * as figure from "@myakiba/db/schema/figure"; let t; ({ entry: t } = figure);`],
+    [`let rest; ({ ...rest } = await import("@myakiba/db/schema/figure"));`],
+    ['await sql`UPDATE item AS "target" SET title = 1 WHERE "target".id = 2`;'],
+    ['await sql`UPDATE entry "e" SET name = 1`;'],
+    ["await sql`UPDATE item * SET title = 1`;"],
+    ["await sql`UPDATE ONLY (item_release) SET date = now()`;"],
+    ["await sql`DELETE FROM item * WHERE id = 1`;"],
+    ["await sql`DELETE FROM item*`;"],
+    ['await sql`DELETE FROM entry AS "e" WHERE "e".id = 1`;'],
+    ["await sql`DELETE FROM ONLY ( entry_to_item ) WHERE true`;"],
+    ['await sql`INSERT INTO item AS "i" (id) VALUES (1)`;'],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
+  });
+
+  test.each([
+    ['await sql`UPDATE item AS "target" SET title = 1`;', "update", "item"],
+    ["await sql`UPDATE ONLY (item_release) SET date = now()`;", "update", "item_release"],
+    ["await sql`DELETE FROM entry * WHERE id = 1`;", "delete", "entry"],
+    ["await sql`DELETE FROM ONLY ( entry_to_item ) WHERE true`;", "delete", "entry_to_item"],
+  ])("names the table %s writes", (body, verb, table) => {
+    expect(writes(body)).toEqual([{ line: 1, verb, table }]);
   });
 
   test.each([
@@ -346,6 +380,8 @@ describe("an Item table write", () => {
     [`import { collection } from "@myakiba/db/schema/figure"; tx.update(collection).set({});`],
     [`const item = 1; seen.delete(item);`],
     ["await sql`UPDATE collection c SET item_id = 1`;"],
+    ['await sql`UPDATE collection "c" SET item_id = 1`;'],
+    ["await sql`DELETE FROM collection * WHERE item_id = 1`;"],
     ["await sql`INSERT INTO item_releases_archive (id) VALUES (1)`;"],
     [`toast("Failed to update item. Please try again.");`],
     [`const text = "Delete from item list";`],
