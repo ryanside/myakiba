@@ -1,4 +1,5 @@
 import { isSignInLink } from "./guest";
+import { ogImageToKeep } from "./page";
 import { MFC_PAGE_READS as READS } from "./reads";
 
 const ELEMENT_NODE = 1;
@@ -7,8 +8,10 @@ const SIGN_IN_PATH = "/session/signin/";
 
 const DOCUMENT_SKELETON = new Set(["html", "head", "body"]);
 
-// The HTML parser treats any other name like `span`. A kept element under another name
-// becomes a `span`, so the page parses the same and its name carries nothing out.
+// A kept element under any other name takes this one, so its name carries nothing out. No
+// reader selects on it, so it matches no reader the original name did not.
+const UNKNOWN_ELEMENT = "x-unknown";
+
 const HTML_ELEMENTS = new Set(
   [
     "a abbr address area article aside audio b base bdi bdo blockquote body br button canvas",
@@ -34,13 +37,15 @@ const NON_TEXT_ELEMENTS = new Set(
 );
 
 function tagOf(source: Element): string {
-  return HTML_ELEMENTS.has(source.localName) ? source.localName : "span";
+  return HTML_ELEMENTS.has(source.localName) ? source.localName : UNKNOWN_ELEMENT;
 }
 
 type Scrub = {
   readonly out: Document;
-  readonly firsts: ReadonlyMap<Element, (source: Element) => Element>;
+  readonly firsts: ReadonlyMap<Element, (source: Element) => Element | null>;
   readonly itemObject: Element | null;
+  /** The parent of the `Releases…` field, whose unlabelled sibling fields hold further releases. */
+  releasesParent: Element | null;
 };
 
 /**
@@ -51,8 +56,8 @@ type Scrub = {
  */
 export function scrubMfcPage(doc: Document): string {
   const out = doc.implementation.createHTMLDocument("");
-  const firsts = new Map<Element, (source: Element) => Element>();
-  const keepFirst = (selector: string, copy: (source: Element) => Element) => {
+  const firsts = new Map<Element, (source: Element) => Element | null>();
+  const keepFirst = (selector: string, copy: (source: Element) => Element | null) => {
     const element = doc.querySelector(selector);
     if (element) firsts.set(element, copy);
   };
@@ -63,19 +68,25 @@ export function scrubMfcPage(doc: Document): string {
       href: link.getAttribute("href"),
     }),
   );
-  keepFirst(READS.ogImage, (meta) =>
-    withAttributes(out.createElement("meta"), {
-      property: "og:image",
-      content: meta.getAttribute("content"),
-    }),
-  );
+  const canonicalHref = doc.querySelector(READS.canonicalLink)?.getAttribute("href") ?? null;
+  keepFirst(READS.ogImage, (meta) => {
+    const content = ogImageToKeep(meta.getAttribute("content") ?? "", canonicalHref);
+    return content === null
+      ? null
+      : withAttributes(out.createElement("meta"), { property: "og:image", content });
+  });
   keepFirst(READS.heading, (heading) =>
     withText(
-      withAttributes(out.createElement("h1"), { class: heading.getAttribute("class") }),
+      withAttributes(out.createElement("h1"), { class: READS.headingClass }),
       heading.textContent,
     ),
   );
-  const scrub: Scrub = { out, firsts, itemObject: doc.querySelector(READS.itemObject) };
+  const scrub: Scrub = {
+    out,
+    firsts,
+    itemObject: doc.querySelector(READS.itemObject),
+    releasesParent: null,
+  };
   const root = prune(doc.documentElement, scrub, false) ?? out.createElement("html");
   return `<!DOCTYPE html>\n${root.outerHTML}`;
 }
@@ -86,8 +97,8 @@ function prune(source: Element, scrub: Scrub, inItemObject: boolean): Element | 
   const first = scrub.firsts.get(source);
   if (first) return first(source);
   if (source.classList.contains(READS.userMenuClass)) return scrubUserMenu(source, scrub.out);
+  if (inItemObject && source.matches(READS.itemField)) return copyItemField(source, scrub);
   const inItem = inItemObject || source === scrub.itemObject;
-  if (inItem && source.matches(READS.itemField)) return copyField(source, scrub.out);
   const kept: Node[] = [];
   for (const child of source.childNodes) {
     if (child.nodeType === ELEMENT_NODE) {
@@ -102,16 +113,14 @@ function prune(source: Element, scrub: Scrub, inItemObject: boolean): Element | 
   }
   if (kept.length === 0 && !DOCUMENT_SKELETON.has(name)) return null;
   const copy = withAttributes(scrub.out.createElement(tagOf(source)), {
-    class: source === scrub.itemObject ? source.getAttribute("class") : null,
+    class: source === scrub.itemObject ? READS.itemObjectClass : null,
   });
   copy.append(...kept);
   return copy;
 }
 
 function scrubUserMenu(menu: Element, out: Document): Element {
-  const shell = withAttributes(out.createElement(tagOf(menu)), {
-    class: menu.getAttribute("class"),
-  });
+  const shell = withAttributes(out.createElement(tagOf(menu)), { class: READS.userMenuClass });
   if (isGuestMenu(menu)) {
     shell.append(
       withAttributes(out.createElement("a"), { class: READS.handleClass, href: SIGN_IN_PATH }),
@@ -128,11 +137,49 @@ function isGuestMenu(menu: Element): boolean {
   );
 }
 
+/**
+ * Copies a field a reader reads, or a further release, whole. Of a field no reader reads, it keeps
+ * only the label, so the parser still warns of it, and it drops a field with no label that no
+ * release continues.
+ */
+function copyItemField(field: Element, scrub: Scrub): Element | null {
+  const copy = copyField(field, scrub.out);
+  if (!copy) return null;
+  const labels = [...copy.querySelectorAll(READS.fieldLabel)].filter((label) => {
+    const outer = label.parentElement?.closest(READS.fieldLabel);
+    return !outer || outer === copy;
+  });
+  const label = labels
+    .map((element) => element.textContent)
+    .join("")
+    .trim();
+  const continuesReleases =
+    scrub.releasesParent !== null &&
+    scrub.releasesParent === field.parentElement &&
+    (labels.length === 0 || field.classList.contains(READS.extraReleaseClass));
+  const read = READS.fieldLabels.has(label);
+  if (!read && label.startsWith(READS.releasesLabel)) {
+    scrub.releasesParent = field.parentElement;
+    return copy;
+  }
+  if (continuesReleases || read) return copy;
+  if (!label) return null;
+  const [first] = labels;
+  const shell = withAttributes(scrub.out.createElement(tagOf(field)), { class: "data-field" });
+  shell.append(
+    withText(
+      withAttributes(scrub.out.createElement(first?.localName ?? "div"), { class: "data-label" }),
+      label,
+    ),
+  );
+  return shell;
+}
+
 function copyField(source: Element, out: Document): Element | null {
   const name = source.localName;
   if (NON_TEXT_ELEMENTS.has(name)) return null;
   const copy = withAttributes(out.createElement(tagOf(source)), {
-    class: source.getAttribute("class"),
+    class: readClasses(source),
     href: name === "a" ? readFieldHrefIds(source.getAttribute("href")) : null,
     switch: source.hasAttribute("switch") ? "" : null,
   });
@@ -144,6 +191,11 @@ function copyField(source: Element, out: Document): Element | null {
     }
   }
   return copy;
+}
+
+function readClasses(source: Element): string | null {
+  const read = [...source.classList].filter((name) => READS.fieldClasses.has(name));
+  return read.length > 0 ? read.join(" ") : null;
 }
 
 function readFieldHrefIds(href: string | null): string | null {

@@ -66,13 +66,32 @@ export function readMfcEnvelope(response: {
   const { signedIn } = page;
   if (status === 404) return { kind: "not_found", signedIn };
   if (status !== 200) return { kind: "unexpected", status };
-  const match = CANONICAL_ITEM_URL.exec(page.canonicalHref ?? "");
-  const id = match?.[1] ? mfcItemId(Number(match[1])) : null;
+  const id = canonicalItemId(page.canonicalHref);
   if (id !== null) {
     return { kind: "item", mfcItemId: id, signedIn, ogImage: readOgImage(page.ogImage, id) };
   }
   if (page.notFoundSentence) return { kind: "not_found", signedIn };
   return { kind: "unexpected", status };
+}
+
+function canonicalItemId(href: string | null): MfcItemId | null {
+  const match = CANONICAL_ITEM_URL.exec(href ?? "");
+  return match?.[1] ? mfcItemId(Number(match[1])) : null;
+}
+
+/**
+ * The og:image address with nothing in it that `readMfcEnvelope` does not read: the picture as it
+ * reads it, or a rejected address without its query or fragment, which still reads rejected. Null
+ * when the canonical link names no Item, since nothing reads the picture of such a page.
+ */
+export function ogImageToKeep(raw: string, canonicalHref: string | null): string | null {
+  const id = canonicalItemId(canonicalHref);
+  if (id === null) return null;
+  const read = readOgImage(raw, id);
+  if (read.kind === "picture") return read.picture.url;
+  if (read.kind !== "rejected") return raw;
+  const bare = raw.replace(/[?#].*$/su, "");
+  return readOgImage(bare, id).kind === "rejected" ? bare : "";
 }
 
 type PageMarkers = {

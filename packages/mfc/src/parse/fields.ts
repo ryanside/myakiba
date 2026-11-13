@@ -7,6 +7,7 @@ import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
 import type { MfcRelease } from "../parse";
 import { MFC_PAGE_READS as READS } from "../reads";
+import type { FieldLabel } from "../reads";
 import { clippedQuote, firstPast } from "./limits";
 import type { TooLarge } from "./limits";
 
@@ -176,28 +177,30 @@ function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields)
   return null;
 }
 
-const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map([
-  ["Category", readCategory],
-  ["Title", readMfcTitle],
-  ["Numbering", readNumbering],
-  ["Classification", entriesWithRoles("Classifications")],
-  ["Classifications", entriesWithRoles("Classifications")],
-  ["Origin", plainEntries("Origins")],
-  ["Origins", plainEntries("Origins")],
-  ["Character", plainEntries("Characters")],
-  ["Characters", plainEntries("Characters")],
-  ["Company", entriesWithRoles("Companies")],
-  ["Companies", entriesWithRoles("Companies")],
-  ["Artist", entriesWithRoles("Artists")],
-  ["Artists", entriesWithRoles("Artists")],
-  ["Event", entriesWithRoles("Events")],
-  ["Events", entriesWithRoles("Events")],
-  ["Material", readMaterials],
-  ["Materials", readMaterials],
-  ["Version", readVersion],
-  ["Dimensions", readDimensions],
-  ["Various", readVarious],
-]);
+const READERS_BY_LABEL = {
+  Category: readCategory,
+  Title: readMfcTitle,
+  Numbering: readNumbering,
+  Classification: entriesWithRoles("Classifications"),
+  Classifications: entriesWithRoles("Classifications"),
+  Origin: plainEntries("Origins"),
+  Origins: plainEntries("Origins"),
+  Character: plainEntries("Characters"),
+  Characters: plainEntries("Characters"),
+  Company: entriesWithRoles("Companies"),
+  Companies: entriesWithRoles("Companies"),
+  Artist: entriesWithRoles("Artists"),
+  Artists: entriesWithRoles("Artists"),
+  Event: entriesWithRoles("Events"),
+  Events: entriesWithRoles("Events"),
+  Material: readMaterials,
+  Materials: readMaterials,
+  Version: readVersion,
+  Dimensions: readDimensions,
+  Various: readVarious,
+} satisfies Record<FieldLabel, FieldReader>;
+
+const FIELD_READERS: ReadonlyMap<string, FieldReader> = new Map(Object.entries(READERS_BY_LABEL));
 
 type DataFields = { readonly fields: Element[]; readonly fieldDepth: number };
 
@@ -252,11 +255,11 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, TooLarge> {
   const releases: ReleaseGroup = { parent: null, fields: [] };
   for (const element of found.fields) {
     const field = $(element);
-    const labels = outermost(find($, field, ".data-label"));
+    const labels = outermost(find($, field, READS.fieldLabel));
     if (
       releases.fields.length > 0 &&
       releases.parent === element.parent &&
-      (labels.length === 0 || field.hasClass("item-extra-release"))
+      (labels.length === 0 || field.hasClass(READS.extraReleaseClass))
     ) {
       releases.fields.push(field);
     }
@@ -264,7 +267,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, TooLarge> {
     if (!label) continue;
     const reader = FIELD_READERS.get(label);
     if (reader) reader(field, $, fields);
-    else if (label.startsWith("Releases")) {
+    else if (label.startsWith(READS.releasesLabel)) {
       releases.parent = element.parent;
       releases.fields = [field];
     } else fields.warnings.push(`unread field ${clippedQuote(label)}`);

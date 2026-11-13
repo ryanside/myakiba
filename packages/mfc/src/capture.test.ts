@@ -4,6 +4,7 @@ import { edit, fixture, itemId } from "../test/fixtures";
 import { scrubMfcPage } from "./capture";
 import { readMfcEnvelope } from "./page";
 import { parseMfcItemPage } from "./parse";
+import { MFC_PAGE_READS } from "./reads";
 
 const ID_98777 = itemId(98_777);
 const item98777 = await fixture("item-98777.html");
@@ -159,6 +160,22 @@ const VARIANTS: readonly (readonly [string, string])[] = [
     ),
   ],
   [
+    "an unknown element around an entry name",
+    edit(
+      item98777,
+      '<span switch="Hello,good-bye">Hello, Good-bye</span>',
+      '<x-name switch="">Hello, Good-bye</x-name>',
+    ),
+  ],
+  [
+    "an og:image with a query and a fragment",
+    edit(
+      item98777,
+      OG_IMAGE,
+      'content="https://static.myfigurecollection.net/upload/items/1/98777.jpg?size=2#top"',
+    ),
+  ],
+  [
     "fields that are a section, a definition list and a table row",
     edit(
       item98777,
@@ -265,6 +282,122 @@ describe("scrubMfcPage sends nothing of the user", () => {
   });
 });
 
+const READ_CLASSES = new Set([
+  "user-menu",
+  "handle",
+  "title",
+  "item-object",
+  "data-field",
+  "data-label",
+  "data-value",
+  "item-entries",
+  "item-entry",
+  "light",
+  "item-scale",
+  "time",
+  "item-extra-release",
+]);
+
+function classesOf(html: string): Set<string> {
+  return new Set(
+    [...documentOf(html).querySelectorAll("[class]")].flatMap((element) => [...element.classList]),
+  );
+}
+
+function warningsOf(html: string): readonly string[] {
+  const parsed = parseMfcItemPage(html, ID_98777);
+  return parsed.isOk() ? parsed.value.warnings : [];
+}
+
+describe("scrubMfcPage keeps only what a reader reads", () => {
+  test("an unknown field leaves only its label, so the parser still warns of it", () => {
+    const page = edit(
+      item98777,
+      '<div class="object-wrapper item-object">',
+      `<div class="object-wrapper item-object"><div class="data-field"><div class="data-label">My notes</div><div class="data-value">${MARKER}: private birthday gift</div></div>`,
+    );
+    const scrubbed = scrub(page);
+    expect(scrubbed).not.toContain(MARKER);
+    expect(scrubbed).not.toContain("birthday");
+    expect(warningsOf(scrubbed)).toEqual(['unread field "My notes"']);
+    expect(readings(scrubbed)).toEqual(readings(page));
+  });
+
+  test("every class left is one a reader selects on", () => {
+    for (const [, html] of fixturePages) {
+      const unread = [...classesOf(scrub(html))].filter((name) => !READ_CLASSES.has(name));
+      expect(unread).toEqual([]);
+    }
+  });
+
+  test("keeps every class a field reader selects on", async () => {
+    const source = await Bun.file(new URL("parse/fields.ts", import.meta.url)).text();
+    const readers = source.replaceAll(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    const selected = [
+      ...[...readers.matchAll(/["']([^"'\n]*)["']/g)].flatMap(([, literal = ""]) =>
+        [...literal.matchAll(/\.([\w-]+)/g)].map(([, name = ""]) => name),
+      ),
+      ...[...readers.matchAll(/hasClass\((?:\w+, )?"([\w-]+)"\)/g)].map(([, name = ""]) => name),
+    ];
+    expect(selected).toContain("item-entry");
+    expect(selected.filter((name) => !MFC_PAGE_READS.fieldClasses.has(name))).toEqual([]);
+  });
+
+  test("no class carries the marker out of the menu, the heading, the Item or its fields", () => {
+    const page = (
+      [
+        ['<div class="tbx-menu user-menu">', `<div class="tbx-menu user-menu viewer-${MARKER}">`],
+        [
+          '<h1 itemprop="headline" class="title">',
+          `<h1 itemprop="headline" class="title ${MARKER}" title="${MARKER}" data-user="${MARKER}">`,
+        ],
+        [
+          '<div class="object-wrapper item-object">',
+          `<div class="object-wrapper item-object owner-${MARKER}">`,
+        ],
+        [
+          '<div class="data-label">Various</div>',
+          `<div class="data-label private-${MARKER}">Various</div>`,
+        ],
+        [
+          '<a href="/entry/23761" class="tbx-tooltip item-entry important">',
+          `<a href="/entry/23761" class="tbx-tooltip item-entry ${MARKER}">`,
+        ],
+      ] as const
+    ).reduce((html, [from, to]) => edit(html, from, to), item98777);
+    const scrubbed = scrub(page);
+    expect(scrubbed).not.toContain(MARKER);
+    expect(readings(scrubbed)).toEqual(readings(item98777));
+  });
+
+  test("a public picture leaves without its query or fragment", () => {
+    const page = edit(
+      item98777,
+      OG_IMAGE,
+      `content="https://static.myfigurecollection.net/upload/items/1/98777.jpg?username=${MARKER}&amp;token=private#${MARKER}"`,
+    );
+    const scrubbed = scrub(page);
+    expect(scrubbed).not.toContain(MARKER);
+    expect(scrubbed).toContain(
+      '<meta property="og:image" content="https://static.myfigurecollection.net/upload/items/1/98777.jpg">',
+    );
+    expect(readings(scrubbed)).toEqual(readings(page));
+  });
+
+  test("a rejected picture leaves without its query or fragment and still reads rejected", () => {
+    const page = edit(
+      item98777,
+      OG_IMAGE,
+      `content="https://static.example.com/upload/items/1.jpg?username=${MARKER}#${MARKER}"`,
+    );
+    const scrubbed = scrub(page);
+    expect(scrubbed).not.toContain(MARKER);
+    expect(warningsOf(scrubbed)).toEqual([
+      'picture rejected: "https://static.example.com/upload/items/1.jpg"',
+    ]);
+  });
+});
+
 describe("scrubMfcPage output", () => {
   test("keeps only the title, og:image and canonical link in the head", () => {
     const doc = documentOf(scrub(item98777));
@@ -276,7 +409,7 @@ describe("scrubMfcPage output", () => {
   });
 
   test("leaves a signed-in user menu as an empty shell", () => {
-    expect(scrub(item98777)).toContain('<div class="tbx-menu user-menu"></div>');
+    expect(scrub(item98777)).toContain('<div class="user-menu"></div>');
   });
 
   test("does not change the document it reads", () => {
@@ -300,7 +433,7 @@ describe("scrubMfcPage keeps what readMfcEnvelope reads on other pages", () => {
   test("keeps only the sign-in handle of a guest menu", async () => {
     const html = await fixture("derived-not-found-signed-out.html");
     expect(scrub(html)).toContain(
-      '<div class="tbx-menu user-menu"><a class="handle" href="/session/signin/"></a></div>',
+      '<div class="user-menu"><a class="handle" href="/session/signin/"></a></div>',
     );
   });
 });
