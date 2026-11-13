@@ -427,7 +427,7 @@ type Reissue = {
   readonly target: string;
   readonly check: Check;
   readonly reissue: string;
-  readonly write: (sql: SQL) => Promise<unknown>;
+  readonly write: (sql: SQL) => Promise<object>;
 };
 
 const REISSUES: readonly Reissue[] = [
