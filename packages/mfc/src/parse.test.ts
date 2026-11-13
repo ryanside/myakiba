@@ -757,6 +757,27 @@ describe("parseMfcItemPage release barcodes", () => {
     expect(page.warnings).toEqual([]);
   });
 
+  test.each([
+    ["a long link of capitals", "HOBBYSEARCH"],
+    ["a link of seven digits", "4912345"],
+  ])("%s with no bullet is no barcode", (_name, link) => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, ` <a>${link}</a>`));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("an 8-digit EAN link with no bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>49123456</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: "49123456" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a long link with digits and other characters with no bullet warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>Buy 4582292601715</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "Buy 4582292601715"']);
+  });
+
   test("a short link of digits with no bullet is no barcode", () => {
     const page = parsedPage(edit(item98777, BARCODE_98777, " <a>2019</a>"));
     expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);

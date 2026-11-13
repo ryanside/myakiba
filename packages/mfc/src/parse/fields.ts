@@ -186,7 +186,11 @@ function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields)
     // With no bullet, only a link that reads like a JAN, EAN, UPC or ISBN is the barcode, so a shop,
     // region or second date link is not stored as one.
     const link = value.children("a").not(".time").last().text().trim();
-    return looksLikeBarcode(link) ? link : null;
+    if (looksLikeBarcode(link)) return link;
+    // A long link with a digit that fails the barcode pattern is worth a look, as after a bullet.
+    if (link.length >= 8 && hasDigit(link))
+      fields.warnings.push(`unreadable barcode ${clippedQuote(link)}`);
+    return null;
   }
   const barcode = after.join("").trim();
   if (barcode === "") return null;
@@ -195,10 +199,11 @@ function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields)
   return null;
 }
 
-const looksLikeBarcode = (text: string): boolean =>
-  text.length >= 8 &&
-  PATTERNS.barcode.test(text) &&
+const hasDigit = (text: string): boolean =>
   [...text].some((character) => character >= "0" && character <= "9");
+
+const looksLikeBarcode = (text: string): boolean =>
+  text.length >= 8 && hasDigit(text) && PATTERNS.barcode.test(text);
 
 const READERS_BY_LABEL = {
   Category: readCategory,
