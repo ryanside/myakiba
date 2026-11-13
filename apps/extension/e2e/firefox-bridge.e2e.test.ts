@@ -11,7 +11,7 @@ const SETUP_TIMEOUT_MS = 600_000;
 
 const helloSchema = z.object({ type: z.string() }).nullable();
 const picksSchema = z.array(
-  z.object({ mfcItemId: z.number(), pictureBytes: z.number().nullable() }),
+  z.object({ captureId: z.string(), mfcItemId: z.number(), pictureBytes: z.number().nullable() }),
 );
 const runSchema = z.object({
   reason: z.string(),
@@ -29,7 +29,7 @@ const boxSchema = z.object({ x: z.number(), y: z.number(), height: z.number() })
 type Bridge = {
   hello: (timeoutMs: number) => Promise<z.output<typeof helloSchema>>;
   takePicks: () => Promise<z.output<typeof picksSchema>>;
-  picksSaved: (mfcItemIds: number[]) => Promise<string>;
+  picksSaved: (captureIds: string[]) => Promise<string>;
   fetchItems: (mfcItemIds: number[]) => Promise<z.output<typeof runSchema>>;
 };
 declare const bridge: Bridge;
@@ -100,8 +100,8 @@ describe("the extension in Firefox", () => {
       const saved = await firefox.evaluate(
         page,
         z.string(),
-        (id) => bridge.picksSaved([id]),
-        PUBLIC_ID,
+        (captureIds) => bridge.picksSaved(captureIds),
+        picks.map(({ captureId }) => captureId),
       );
       const left = await firefox.evaluate(page, picksSchema, () => bridge.takePicks());
 

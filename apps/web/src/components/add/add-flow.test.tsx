@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
 import { MONEY_INPUT_HINT } from "@/lib/money-input";
 import type { RowOverrides } from "./add-draft";
-import { fakePick } from "../../../test/fake-extension";
+import { captureIdOf, fakePick } from "../../../test/fake-extension";
 import {
   item,
   loadExtension,
@@ -1443,7 +1443,9 @@ test("a failed retry shows its new reason on the row, and Discard removes the pi
 
   await click(user, "Discard Picked Miku");
   await waitFor(() => expect(screen.queryByText("Picked Miku")).toBeNull());
-  expect(extension.acknowledged).toEqual([{ type: "picks-discarded", mfcItemIds: [98_777] }]);
+  expect(extension.acknowledged).toEqual([
+    { type: "picks-discarded", captureIds: [captureIdOf(98_777)] },
+  ]);
 });
 
 test("picks list after rows, where a saved one lands, and a saving one counts as a row", async () => {

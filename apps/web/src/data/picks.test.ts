@@ -5,7 +5,7 @@ import { Result } from "better-result";
 import { createExtensionBridge } from "@/lib/extension-bridge";
 import type { TakenPick } from "@/lib/extension-bridge";
 import type { PickFailure } from "@/lib/pick-failure";
-import { fakeExtension, fakePick } from "../../test/fake-extension";
+import { fakeExtension, captureIdOf, fakePick } from "../../test/fake-extension";
 import type { FakePick } from "../../test/fake-extension";
 import { createPickIntake } from "./picks";
 
@@ -104,6 +104,7 @@ const picked = (...picks: FakePick[]) => fakeExtension({ picks });
 
 const repick = (pick: FakePick, html: string, title = pick.title): FakePick => ({
   ...pick,
+  captureId: crypto.randomUUID(),
   html,
   title,
 });
@@ -117,7 +118,9 @@ describe("pulling picks", () => {
 
     expect(uploads).toEqual([1, 2]);
     expect(draft).toEqual(["item-1", "item-2"]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1, 2] }]);
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [captureIdOf(1), captureIdOf(2)] },
+    ]);
     expect(extension.picks()).toEqual([]);
     expect(intake.rows()).toEqual([]);
   });
@@ -150,7 +153,7 @@ describe("pulling picks", () => {
 
     expect(takesWhileHeld).toBe(1);
     expect(second.uploads).toEqual([]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
   });
 
   test("a tab hidden while taking picks leaves them, so the tab now showing saves them", async () => {
@@ -174,7 +177,7 @@ describe("pulling picks", () => {
     expect(first.intake.rows()).toEqual([]);
     expect(second.uploads).toEqual([1]);
     expect(second.draft).toEqual(["item-1"]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
   });
 
   test("a hidden tab keeps the picks in the extension and saves them when it shows again", async () => {
@@ -247,7 +250,26 @@ describe("pulling picks", () => {
       acknowledged: [],
     });
     expect(draft).toEqual(["item-1"]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
+  });
+
+  test("reports only the capture it uploaded, so a re-pick made during the upload stays in the extension", async () => {
+    const original = fakePick(1);
+    const extension = picked(original);
+    const holding = deferred<Saved>();
+    const { intake } = tab({ extension, save: () => holding.promise });
+
+    const pulling = intake.pull();
+    await until(() => intake.rows().length === 1);
+    const again = repick(original, "<html>again</html>");
+    extension.setPicks([again]);
+    holding.resolve(Result.ok({ itemId: "item-1" }));
+    await pulling;
+
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [original.captureId] },
+    ]);
+    expect(extension.picks()).toEqual([again]);
   });
 
   test("keeps a pick whose save failed, shows why and reports only the saved ones", async () => {
@@ -264,7 +286,7 @@ describe("pulling picks", () => {
       { mfcItemId: id(1), title: "Item 1", state: "failed", reason: { kind: "busy" } },
     ]);
     expect(draft).toEqual(["item-2"]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [2] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(2)] }]);
     expect(extension.picks().map((pick) => pick.mfcItemId)).toEqual([1]);
   });
 
@@ -309,7 +331,7 @@ describe("pulling picks", () => {
 
     expect(draft).toEqual(["item-1"]);
     expect(intake.rows()).toEqual([]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
   });
 
   test("reads a silent extension as no picks", async () => {
@@ -460,7 +482,29 @@ describe("a failed pick", () => {
     expect(retried.isOk()).toBe(true);
     expect(draft).toEqual(["item-1"]);
     expect(intake.rows()).toEqual([]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
+  });
+
+  test("Retry reports the capture it uploaded, the one taken last", async () => {
+    const original = fakePick(1);
+    const extension = picked(original);
+    let failing = true;
+    const { intake } = tab({
+      extension,
+      save: async (pick) => (failing ? Result.err({ kind: "unsaved" } as const) : savedAs(pick)),
+    });
+    await intake.pull();
+    const again = repick(original, "<html>again</html>");
+    extension.setPicks([again]);
+    await intake.pull();
+
+    failing = false;
+    await intake.retry(id(1));
+
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [again.captureId] },
+    ]);
+    expect(extension.picks()).toEqual([]);
   });
 
   test("Retry that fails again keeps it and answers why", async () => {
@@ -493,9 +537,30 @@ describe("a failed pick", () => {
     const discarded = await intake.discard(id(1));
 
     expect(discarded.isOk()).toBe(true);
-    expect(extension.acknowledged).toEqual([{ type: "picks-discarded", mfcItemIds: [1] }]);
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-discarded", captureIds: [captureIdOf(1)] },
+    ]);
     expect(intake.rows().map((row) => row.mfcItemId)).toEqual([id(2)]);
     expect(extension.picks().map((pick) => pick.mfcItemId)).toEqual([2]);
+  });
+
+  test("Discard names the capture its row holds, so a re-pick the page has not taken stays", async () => {
+    const original = fakePick(1);
+    const extension = picked(original);
+    const { intake } = tab({
+      extension,
+      save: async () => Result.err({ kind: "unsaved" } as const),
+    });
+    await intake.pull();
+    const again = repick(original, "<html>again</html>");
+    extension.setPicks([again]);
+
+    await intake.discard(id(1));
+
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-discarded", captureIds: [original.captureId] },
+    ]);
+    expect(extension.picks()).toEqual([again]);
   });
 
   test("Discard that the extension never answers keeps the row and says the extension stopped", async () => {

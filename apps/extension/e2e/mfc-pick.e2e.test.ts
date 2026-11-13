@@ -331,7 +331,11 @@ describe("picking on a mock MFC Item page", () => {
       expect(mocks.requests.filter((request) => request.origin === MFC)).toEqual([]);
       expect(await storedKeys(worker)).toContain(storedPickKey(GATED_ID));
 
-      const reason = await myakiba.evaluate(() => globalThis.bridge.picksSaved([98_777]));
+      const gatedCaptures = taken.filter((one) => one.mfcItemId === GATED_ID);
+      const reason = await myakiba.evaluate(
+        (captureIds) => globalThis.bridge.picksSaved(captureIds),
+        gatedCaptures.map((one) => one.captureId),
+      );
       expect(reason).toBe("complete");
       const left = await storedKeys(worker);
       expect(left).not.toContain(storedPickKey(GATED_ID));

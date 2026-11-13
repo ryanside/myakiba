@@ -111,7 +111,7 @@ export function createPickIntake(deps: PickIntakeDeps) {
     );
     const [first, ...rest] = settled
       .filter(({ saved }) => saved.isOk())
-      .map(({ pick }) => pick.mfcItemId);
+      .map(({ pick }) => pick.captureId);
     // A report that does not arrive is harmless: the next pull uploads again and the server answers `existing`.
     if (first !== undefined) await deps.bridge.picksSaved([first, ...rest]);
   }
@@ -141,12 +141,13 @@ export function createPickIntake(deps: PickIntakeDeps) {
       const entry = held.get(mfcItemId);
       if (entry === undefined || entry.row.state === "saving") return Result.ok();
       const saved = await save(entry.pick, context);
-      if (saved.isOk()) await deps.bridge.picksSaved([mfcItemId]);
+      if (saved.isOk()) await deps.bridge.picksSaved([entry.pick.captureId]);
       return saved;
     },
     discard: async (mfcItemId: MfcItemId): Promise<Result<void, PickStopped>> => {
-      if (!held.has(mfcItemId)) return Result.ok();
-      const discarded = await deps.bridge.picksDiscarded([mfcItemId]);
+      const entry = held.get(mfcItemId);
+      if (entry === undefined) return Result.ok();
+      const discarded = await deps.bridge.picksDiscarded([entry.pick.captureId]);
       if (discarded.isErr()) return Result.err(STOPPED);
       held.delete(mfcItemId);
       changed();

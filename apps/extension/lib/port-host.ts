@@ -1,6 +1,5 @@
 import { portItemCodec, portRequestSchema } from "@myakiba/mfc/bridge";
 import type { PortEvent, PortPicture, PortRequest, RunEvent } from "@myakiba/mfc/bridge";
-import type { MfcItemId } from "@myakiba/mfc/page";
 import type { Fetcher } from "./fetcher";
 import type { Picks } from "./picks";
 import type { Requester, RunKey } from "./queue";
@@ -51,7 +50,7 @@ function toPort(event: RunEvent<PortPicture>): PortEvent["event"] {
 export function servePort(
   port: BridgePort,
   fetcher: Pick<Fetcher, "submit" | "cancel">,
-  picks: Pick<Picks, "read" | "remove">,
+  picks: Pick<Picks, "read" | "settle">,
   expected: { readonly extensionId: string; readonly webOrigin: string },
 ): void {
   const requester = trustedRequester(port.sender, expected);
@@ -77,9 +76,9 @@ export function servePort(
     answer({ requestId, event: { type: "picks", picks: read.value } });
   };
 
-  /** Deletes the picks the page saved or discarded. A delete that fails keeps them, so the page meets them again. */
-  const forget = async (requestId: string, mfcItemIds: readonly MfcItemId[]): Promise<void> => {
-    const removed = await picks.remove(requester.context, mfcItemIds);
+  /** Deletes the captures the page saved or discarded. A delete that fails keeps them, so the page meets them again. */
+  const forget = async (requestId: string, captureIds: readonly string[]): Promise<void> => {
+    const removed = await picks.settle(requester.context, captureIds);
     if (removed.isErr()) console.warn(`${removed.error._tag}: ${removed.error.message}`);
     answer({
       requestId,
@@ -120,7 +119,7 @@ export function servePort(
         break;
       case "picks-saved":
       case "picks-discarded":
-        await forget(request.requestId, request.mfcItemIds);
+        await forget(request.requestId, request.captureIds);
         break;
     }
   });

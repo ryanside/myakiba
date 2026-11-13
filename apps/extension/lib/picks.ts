@@ -24,6 +24,7 @@ export type PickArea = {
 type PickCapture = z.output<typeof pickCaptureSchema>;
 
 const storedPickSchema = z.strictObject({
+  captureId: z.uuid(),
   mfcItemId: mfcItemIdSchema,
   title: z.string().max(MAX_PICK_TITLE).nullable(),
   pickedAt: z.number().int(),
@@ -44,6 +45,7 @@ const indexSchema = z.object({
     z.strictObject({
       contextKey: z.string(),
       mfcItemId: mfcItemIdSchema,
+      captureId: z.uuid(),
       pickedAt: z.number().int(),
       bytes: z.number().int().nonnegative(),
     }),
@@ -133,7 +135,16 @@ export function createPicks(deps: {
     const kept = index.flatMap((entry) => {
       const key = pickKey(entry.contextKey, entry.mfcItemId);
       const pick = storedPickSchema.safeParse(items[key]).data;
-      return pick ? [{ ...entry, pickedAt: pick.pickedAt, bytes: storedBytes(key, pick) }] : [];
+      return pick
+        ? [
+            {
+              ...entry,
+              captureId: pick.captureId,
+              pickedAt: pick.pickedAt,
+              bytes: storedBytes(key, pick),
+            },
+          ]
+        : [];
     });
     const named = new Set(kept.map((entry) => pickKey(entry.contextKey, entry.mfcItemId)));
     const unnamed = Object.keys(items).filter(
@@ -166,6 +177,22 @@ export function createPicks(deps: {
     return pruned.map(() => kept);
   }
 
+  /** Deletes the context's picks that `doomed` names. A pick it names that is already gone needs nothing. */
+  const removeWhere = (context: TabContext, doomed: (entry: Index[number]) => boolean) =>
+    serialized(async (): Promise<Result<void, PickStorageFailed>> => {
+      const area = areaOf(context);
+      const read = await current(area);
+      if (read.isErr()) return Result.err(read.error);
+      const owner = contextKey(context);
+      const removed = read.value.filter((entry) => entry.contextKey === owner && doomed(entry));
+      if (removed.length === 0) return Result.ok();
+      return save(
+        area,
+        read.value.filter((entry) => !removed.includes(entry)),
+        removed.map((entry) => pickKey(owner, entry.mfcItemId)),
+      );
+    });
+
   return {
     /** Keeps the capture as this context's pick of its Item, in place of any earlier one. */
     add: (context: TabContext, capture: PickCapture) =>
@@ -175,7 +202,8 @@ export function createPicks(deps: {
         if (read.isErr()) return Result.err(read.error);
         const owner = contextKey(context);
         const pickedAt = deps.clock.now();
-        const pick: StoredPick = { ...capture, pickedAt };
+        const captureId = crypto.randomUUID();
+        const pick: StoredPick = { ...capture, captureId, pickedAt };
         const key = pickKey(owner, capture.mfcItemId);
         const bytes = storedBytes(key, pick);
         const others = read.value.filter(
@@ -183,7 +211,7 @@ export function createPicks(deps: {
         );
         const index = [
           ...others,
-          { contextKey: owner, mfcItemId: capture.mfcItemId, pickedAt, bytes },
+          { contextKey: owner, mfcItemId: capture.mfcItemId, captureId, pickedAt, bytes },
         ];
         const total = totalBytes(index);
         if (total > MAX_PICK_STORE_BYTES) {
@@ -192,23 +220,13 @@ export function createPicks(deps: {
         return attempt(area, "write", () => areas[area].set({ [key]: pick, [INDEX_KEY]: index }));
       }),
 
-    /** Deletes this context's picks of these Items. An Item it has no pick of is already gone. */
+    /** Deletes this context's picks of these Items, whichever capture each holds. */
     remove: (context: TabContext, mfcItemIds: readonly MfcItemId[]) =>
-      serialized(async (): Promise<Result<void, PickStorageFailed>> => {
-        const area = areaOf(context);
-        const read = await current(area);
-        if (read.isErr()) return Result.err(read.error);
-        const owner = contextKey(context);
-        const doomed = (entry: Index[number]) =>
-          entry.contextKey === owner && mfcItemIds.includes(entry.mfcItemId);
-        const removed = read.value.filter(doomed);
-        if (removed.length === 0) return Result.ok();
-        return save(
-          area,
-          read.value.filter((entry) => !doomed(entry)),
-          removed.map((entry) => pickKey(owner, entry.mfcItemId)),
-        );
-      }),
+      removeWhere(context, (entry) => mfcItemIds.includes(entry.mfcItemId)),
+
+    /** Deletes this context's picks that are still these captures, so a later capture of the same Item stays. */
+    settle: (context: TabContext, captureIds: readonly string[]) =>
+      removeWhere(context, (entry) => captureIds.includes(entry.captureId)),
 
     /** This context's picks, oldest first. */
     read: (context: TabContext) =>

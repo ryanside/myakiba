@@ -34,6 +34,7 @@ type PageItem = {
   } | null;
 };
 type TakenPick = {
+  readonly captureId: string;
   readonly mfcItemId: number;
   readonly pictureBytes: number | null;
 };
@@ -50,7 +51,7 @@ type Bridge = {
   readonly fetchItems: (ids: readonly number[]) => Promise<PageRun>;
   readonly rogue: (waitMs: number) => Promise<number>;
   readonly takePicks: () => Promise<readonly TakenPick[]>;
-  readonly picksSaved: (ids: readonly number[]) => Promise<string>;
+  readonly picksSaved: (captureIds: readonly string[]) => Promise<string>;
 };
 type WorkerTabs = {
   readonly query: (filter: {

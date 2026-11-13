@@ -3,7 +3,12 @@ import { act, cleanup, renderHook, screen, waitFor } from "@testing-library/reac
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { EMAIL_VERIFICATION_REQUIRED } from "@myakiba/contracts/shared/messages";
-import { delegatingBridge, fakeExtension, fakePick } from "../../../test/fake-extension";
+import {
+  delegatingBridge,
+  fakeExtension,
+  captureIdOf,
+  fakePick,
+} from "../../../test/fake-extension";
 import type { FakePick } from "../../../test/fake-extension";
 import type { AddChoices } from "./add";
 
@@ -395,7 +400,9 @@ describe("pick intake", () => {
     expect(await upload?.page.text()).toBe("<html>98777</html>");
     expect(upload?.picture?.type).toBe("image/jpeg");
     expect(draft).toEqual(["item-98777"]);
-    expect(extension.acknowledged).toEqual([{ type: "picks-saved", mfcItemIds: [98_777] }]);
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-saved", captureIds: [captureIdOf(98_777)] },
+    ]);
     expect(
       queryClient.getQueryState(["item-database-items", { search: "rem" }])?.isInvalidated,
     ).toBe(true);
@@ -506,8 +513,8 @@ describe("pick intake", () => {
     expect(draft).toEqual(["item-1"]);
     expect(result.current.rows).toEqual([]);
     expect(extension.acknowledged).toEqual([
-      { type: "picks-saved", mfcItemIds: [1] },
-      { type: "picks-discarded", mfcItemIds: [2] },
+      { type: "picks-saved", captureIds: [captureIdOf(1)] },
+      { type: "picks-discarded", captureIds: [captureIdOf(2)] },
     ]);
   });
 });

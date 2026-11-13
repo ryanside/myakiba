@@ -86,6 +86,7 @@
           if (event.type !== "picks") return;
           resolve(
             event.picks.map((pick) => ({
+              captureId: pick.captureId,
               mfcItemId: pick.mfcItemId,
               title: pick.title,
               html: pick.html,
@@ -95,9 +96,9 @@
         });
       });
     },
-    picksSaved(mfcItemIds) {
+    picksSaved(captureIds) {
       return new Promise((resolve) => {
-        const requestId = send({ type: "picks-saved", mfcItemIds });
+        const requestId = send({ type: "picks-saved", captureIds });
         runs.set(requestId, (event) => {
           if (event.type === "done") resolve(event.reason);
         });

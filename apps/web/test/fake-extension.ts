@@ -25,6 +25,7 @@ type LooseWireEvent = {
 };
 
 export type FakePick = {
+  readonly captureId: string;
   readonly mfcItemId: number;
   readonly title: string | null;
   readonly pickedAt: number;
@@ -32,10 +33,15 @@ export type FakePick = {
   readonly picture: { readonly bytes: ArrayBuffer; readonly contentType: string } | null;
 };
 
+/** The capture id `fakePick` gives an Item's pick. */
+export const captureIdOf = (mfcItemId: number) =>
+  `00000000-0000-4000-8000-${String(mfcItemId).padStart(12, "0")}`;
+
 export const fakePick = (
   mfcItemId: number,
   title: string | null = `Item ${mfcItemId}`,
 ): FakePick => ({
+  captureId: captureIdOf(mfcItemId),
   mfcItemId,
   title,
   pickedAt: 1_700_000_000_000 + mfcItemId,
@@ -45,7 +51,7 @@ export const fakePick = (
 
 type Acknowledgement = {
   readonly type: "picks-saved" | "picks-discarded";
-  readonly mfcItemIds: readonly number[];
+  readonly captureIds: readonly string[];
 };
 type WireMessage =
   | BridgeRequestMessage
@@ -135,9 +141,9 @@ export function fakeExtension({
       return;
     }
     if (request.type === "picks-saved" || request.type === "picks-discarded") {
-      acknowledged.push({ type: request.type, mfcItemIds: request.mfcItemIds });
-      const answered = new Set<number>(request.mfcItemIds);
-      picks = picks.filter((pick) => !answered.has(pick.mfcItemId));
+      acknowledged.push({ type: request.type, captureIds: request.captureIds });
+      const answered = new Set<string>(request.captureIds);
+      picks = picks.filter((pick) => !answered.has(pick.captureId));
       if (answersPicks) send({ type: "done", reason: "complete" });
       return;
     }
@@ -190,7 +196,7 @@ export function delegatingBridge(current: () => ExtensionBridge): ExtensionBridg
     probe: () => current().probe(),
     fetchItems: (mfcItemIds, options) => current().fetchItems(mfcItemIds, options),
     takePicks: () => current().takePicks(),
-    picksSaved: (mfcItemIds) => current().picksSaved(mfcItemIds),
-    picksDiscarded: (mfcItemIds) => current().picksDiscarded(mfcItemIds),
+    picksSaved: (captureIds) => current().picksSaved(captureIds),
+    picksDiscarded: (captureIds) => current().picksDiscarded(captureIds),
   };
 }
