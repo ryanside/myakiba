@@ -115,6 +115,16 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill(",111", (run) => ({ fields: release(`1${run}`) })),
   ],
   [
+    "price: decimal points with no currency",
+    "parsed",
+    () => fill(".1", (run) => ({ fields: release(`1${run}`) })),
+  ],
+  [
+    "price: a long fraction before a currency",
+    "parsed",
+    () => fill("1", (run) => ({ fields: release(`1.${run} JPY`) })),
+  ],
+  [
     "price: a digit then whitespace with no currency",
     "parsed",
     () => fill(" ", (run) => ({ fields: release(`1${run}x`) })),

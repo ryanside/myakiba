@@ -43,7 +43,7 @@ const PATTERNS = {
   height: /H=([\d,]+)mm/,
   width: /W=([\d,]+)mm/,
   depth: /[DL]=([\d,]+)mm/,
-  price: /(?<![\d,])(\d+(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
+  price: /(?<![\d,.])(\d[\d,]*(?:\.\d+)?)\s+([A-Z]{3})/,
   barcode: /^[A-Z0-9-]+$/,
   entryId: READS.entryHref,
   materialPercentage: /(?<!\d)(\d+(?:\.\d+)?)\s*%/,

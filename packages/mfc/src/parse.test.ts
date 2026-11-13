@@ -592,6 +592,30 @@ describe("parseMfcItemPage release prices", () => {
     expect(page.releases).toEqual([RELEASE_98777]);
     expect(page.warnings).toEqual([]);
   });
+
+  test("a price with one decimal reads whole", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "123.4 <small>USD</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 12_340, priceCurrency: "USD" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a price with three decimals reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "123.456 <small>USD</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0, priceCurrency: "USD" }]);
+    expect(page.warnings).toEqual(['unreadable release price "123.456"']);
+  });
+
+  test("a price with misplaced commas reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "1,35,00 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual(['unreadable release price "1,35,00"']);
+  });
 });
 
 const BARCODE_98777 =
