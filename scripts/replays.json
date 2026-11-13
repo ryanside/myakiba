@@ -4776,6 +4776,15 @@
         "scrubMfcPage output > leaves a signed-in user menu as an empty shell",
         "scrubMfcPage keeps what readMfcEnvelope reads on other pages > keeps only the sign-in handle of a guest menu"
       ]
+    },
+    {
+      "fix": "9696266227418aaa5570f352631795ff920659e5",
+      "bug": "With no bullet before it, a release's last link was read as its barcode whenever it held only capitals, digits and dashes, so a shop, region or year link was stored as a barcode.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a shop link with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a short link of digits with no bullet is no barcode"
+      ]
     }
   ],
   "lint": [
