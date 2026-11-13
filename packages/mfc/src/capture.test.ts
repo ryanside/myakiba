@@ -14,6 +14,9 @@ const FIXTURES = [
   "derived-not-found-signed-in.html",
   "derived-not-found-signed-out.html",
   "derived-challenge.html",
+  "item-581731-signed-out.html",
+  "item-10756-signed-out.html",
+  "not-found-signed-out.html",
 ];
 const fixturePages = await Promise.all(
   FIXTURES.map(async (name) => [name, await fixture(name)] as const),

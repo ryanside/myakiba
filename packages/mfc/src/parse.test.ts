@@ -140,6 +140,79 @@ describe("parseMfcItemPage on pages derived from item-98777.html", () => {
   });
 });
 
+describe("parseMfcItemPage on captured signed-out pages", () => {
+  test("item 581731 reads six releases in two currencies", async () => {
+    const result = parseMfcItemPage(await fixture("item-581731-signed-out.html"), itemId(581_731));
+    expect(result.isOk() && result.value.releases).toEqual([
+      {
+        date: "2024-02-07",
+        type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2023-10-02",
+        type: "Limited (China) «Wonder Festival 2022-2023 [Shanghai]»",
+        price: 35_000,
+        priceCurrency: "CNY",
+        barcode: null,
+      },
+      {
+        date: "2023-09-01",
+        type: "Limited (Japan) «Magical Mirai 2023 TOKYO»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2023-08-11",
+        type: "Limited (Japan) «Magica Mirai 2023 OSAKA»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2018-02-08",
+        type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
+        price: 463_000,
+        priceCurrency: "JPY",
+        barcode: "4580416903530",
+      },
+      {
+        date: "2017-09-01",
+        type: "Limited (Japan) «Magical Mirai 2017»",
+        price: 463_000,
+        priceCurrency: "JPY",
+        barcode: "4580416903530",
+      },
+    ]);
+    expect(result.isOk() && result.value.warnings).toEqual([]);
+  });
+
+  test("item 10756 reads a release with no price and its barcode with no bullet", async () => {
+    const result = parseMfcItemPage(await fixture("item-10756-signed-out.html"), itemId(10_756));
+    expect(result.isOk() && result.value.releases).toEqual([
+      {
+        date: "2000-01-01",
+        type: "Prize (Japan)",
+        price: 0,
+        priceCurrency: "JPY",
+        barcode: "4983164712803",
+      },
+    ]);
+    expect(result.isOk() && result.value.picture).toEqual({
+      access: "public",
+      url: "https://static.myfigurecollection.net/upload/items/1/10756-46a60.jpg",
+    });
+    expect(result.isOk() && result.value.warnings).toEqual([]);
+  });
+
+  test("a missing item is a not_found problem", async () => {
+    expect(problemOf(await fixture("not-found-signed-out.html"))).toEqual({ kind: "not_found" });
+  });
+});
+
 describe("parseMfcItemPage problems", () => {
   test.each(["", "<<<not html", "<html><body><h1 class=title>x</h1></body></html>"])(
     "%p is not an item page",

@@ -12,6 +12,14 @@ The repo is public, so no fixture carries the capturing user's handle, avatar, s
 
 The markup the parser reads is byte-identical to the capture.
 
+Three signed-out pages were captured on 2026-11-13 from a browser session with no MFC account. They were edited before commit:
+
+- `item-581731-signed-out.html` has six releases: JPY and CNY prices with MFC's conversion link, a type naming an event and a year (`Magical Mirai 2023 TOKYO`), and a release with no barcode.
+- `item-10756-signed-out.html` has a release with no price, so its barcode link follows the type with no bullet.
+- `not-found-signed-out.html` is MFC's answer to an item id that does not exist. MFC sent it with status 404.
+
+Every `<script>`, `<noscript>`, `<form>`, `<input>`, `<iframe>` and HTML comment was removed, and so was every section that names other users: Comments, Pictures, Community, Related Clubs and Changelog. No `/profile/` link is left. The markup the parser reads is byte-identical to the capture.
+
 ## Derived
 
 None of these was captured. Each one except the challenge page is `item-98777.html` with the edits listed.
@@ -29,12 +37,10 @@ None of these was captured. Each one except the challenge page is `item-98777.ht
 - `derived-not-found-signed-out.html` is the signed-in 404 with the user menu replaced by MFC's guest menu, as above.
 - `derived-challenge.html` is written by hand after Cloudflare's "Just a moment..." interstitial. It shares no markup with the item page.
 
-## Unverified against real MFC
+## Checked against real MFC
 
-These markers come from the edits above, not from a capture:
+The signed-out captures confirm the markers the derived pages assumed:
 
-- The signed-out page has no element with the `user-menu` class.
-- A missing item answers with the sentence "The page you requested was not found".
+- A signed-out page keeps an element with the `user-menu` class, holding MFC's guest menu: its handle links to `/session/signin/` and reads `Guest`.
+- A missing item answers 404 with the sentence "The page you requested was not found."
 - A public picture's `og:image` is under `https://static.myfigurecollection.net/upload/items/`.
-
-Capture a real page for each before relying on it in production.

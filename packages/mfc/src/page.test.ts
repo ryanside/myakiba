@@ -112,6 +112,29 @@ describe("readMfcEnvelope on pages derived from item-98777.html", () => {
   });
 });
 
+describe("readMfcEnvelope on captured signed-out pages", () => {
+  test("a signed-out item page shows MFC's guest menu and reads signed out", async () => {
+    expect(envelopeOf(await fixture("item-10756-signed-out.html"))).toEqual({
+      kind: "item",
+      mfcItemId: itemId(10_756),
+      signedIn: false,
+      ogImage: {
+        kind: "picture",
+        picture: {
+          access: "public",
+          url: "https://static.myfigurecollection.net/upload/items/1/10756-46a60.jpg",
+        },
+      },
+    });
+  });
+
+  test("a missing item answers 404 with the not-found sentence", async () => {
+    const html = await fixture("not-found-signed-out.html");
+    expect(envelopeOf(html, 404)).toEqual({ kind: "not_found", signedIn: false });
+    expect(envelopeOf(html, 200)).toEqual({ kind: "not_found", signedIn: false });
+  });
+});
+
 describe("readMfcEnvelope on other responses", () => {
   test("a 200 without a canonical item link is unexpected", () => {
     expect(envelopeOf("<html><head></head><body>hello</body></html>")).toEqual({
