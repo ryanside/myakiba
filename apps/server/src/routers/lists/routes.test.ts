@@ -126,3 +126,20 @@ test("a List preview shows no picture of a Collection Item or Order another user
   expect(status).toBe(200);
   expect(body).not.toContain("a".repeat(64));
 });
+
+test("a List preview shows no picture of an Item another user owns", async () => {
+  await db
+    .update(item)
+    .set({ imageKey: `items/${"a".repeat(64)}.jpg` })
+    .where(eq(item.id, "aki-1"));
+  await writeUnguarded(db, (tx) =>
+    tx
+      .insert(listMember)
+      .values({ id: "member-item", listId: "list-2", userId, itemId: "aki-1", position: 0 }),
+  );
+
+  const { status, body } = await call("GET", "/");
+
+  expect(status).toBe(200);
+  expect(body).not.toContain("a".repeat(64));
+});
