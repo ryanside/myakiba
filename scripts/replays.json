@@ -7,7 +7,9 @@
       "fixed": [
         "parseMfcItemPage release barcodes > a barcode link with no price and no bullet reads",
         "parseMfcItemPage release barcodes > a barcode link after the price with no bullet reads"
-      ]
+      ],
+      "testAt": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
     },
     {
       "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
@@ -16,7 +18,9 @@
       "fixed": [
         "scrubMfcPage keeps every reading of a page > a barcode link with no price and no bullet still reads its barcode",
         "scrubMfcPage keeps every reading of a page > a barcode link after the price with no bullet still reads its barcode"
-      ]
+      ],
+      "testAt": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "reason": "Later commits in this PR made this file load captured fixtures that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "e057efc4168586f0fd7657f4ea27445d24fec189",
@@ -38,7 +42,9 @@
         "parseMfcItemPage release barcodes > a barcode written as text after the bullet reads",
         "parseMfcItemPage release barcodes > text after the price with no bullet is no barcode",
         "parseMfcItemPage release barcodes > a barcode link holding other characters reads as none and warns"
-      ]
+      ],
+      "testAt": "a677c0651b8f4a641785fa7cdd87304303e7b735",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
     },
     {
       "fix": "a677c0651b8f4a641785fa7cdd87304303e7b735",
@@ -4784,7 +4790,9 @@
       "fixed": [
         "parseMfcItemPage release barcodes > a shop link with no bullet is no barcode",
         "parseMfcItemPage release barcodes > a short link of digits with no bullet is no barcode"
-      ]
+      ],
+      "testAt": "9696266227418aaa5570f352631795ff920659e5",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
     },
     {
       "fix": "f0677dee2996a74e770e6d8dfa4c9cc0c3552502",
@@ -4800,7 +4808,9 @@
       "test": "packages/mfc/src/parse.test.ts",
       "fixed": [
         "parseMfcItemPage release barcodes > a long link with digits and other characters with no bullet warns"
-      ]
+      ],
+      "testAt": "b938cdc4002e827e6eb2131ee3de937feed2dec8",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
     },
     {
       "fix": "419bf24b697f6225500a2bfb15ae37c6021a42d5",
