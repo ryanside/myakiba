@@ -4671,6 +4671,22 @@
         "a failed pick > Retry saves it and then reports it saved",
         "a failed pick > Discard tells the extension to drop it and removes its row"
       ]
+    },
+    {
+      "fix": "0351a09192da099902ed932bb41faa9b841ed472",
+      "bug": "The MFC page scrub kept more than its readers read: every field of the Item whole, so a field no reader reads left the MFC tab with its value; every class token of the user menu, the heading, the Item and its fields; and the og:image address with its query and fragment. It also renamed an unknown element to span, so an unknown element with a switch attribute inside an entry link read as an Entry name the page never had.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage keeps only what a reader reads > an unknown field leaves only its label, so the parser still warns of it",
+        "scrubMfcPage keeps only what a reader reads > every class left is one a reader selects on",
+        "scrubMfcPage keeps only what a reader reads > keeps every class a field reader selects on",
+        "scrubMfcPage keeps only what a reader reads > no class carries the marker out of the menu, the heading, the Item or its fields",
+        "scrubMfcPage keeps only what a reader reads > a public picture leaves without its query or fragment",
+        "scrubMfcPage keeps only what a reader reads > a rejected picture leaves without its query or fragment and still reads rejected",
+        "scrubMfcPage keeps every reading of a page > an unknown element around an entry name",
+        "scrubMfcPage output > leaves a signed-in user menu as an empty shell",
+        "scrubMfcPage keeps what readMfcEnvelope reads on other pages > keeps only the sign-in handle of a guest menu"
+      ]
     }
   ],
   "lint": [
