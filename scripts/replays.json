@@ -4801,6 +4801,14 @@
       "fixed": [
         "parseMfcItemPage release barcodes > a long link with digits and other characters with no bullet warns"
       ]
+    },
+    {
+      "fix": "419bf24b697f6225500a2bfb15ae37c6021a42d5",
+      "bug": "The release price pattern read the value's links, so a barcode link followed by a capitals link with no price was read as a price.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a barcode link then a capitals link with no price are not a price"
+      ]
     }
   ],
   "lint": [
