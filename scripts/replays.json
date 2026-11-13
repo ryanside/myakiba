@@ -4785,6 +4785,14 @@
         "parseMfcItemPage release barcodes > a shop link with no bullet is no barcode",
         "parseMfcItemPage release barcodes > a short link of digits with no bullet is no barcode"
       ]
+    },
+    {
+      "fix": "f0677dee2996a74e770e6d8dfa4c9cc0c3552502",
+      "bug": "The release price pattern read the whole release value, so an event name in the type such as \"Magical Mirai 2023 TOKYO\" was read as a price of 2,023 TOK, as item 581731's real page stores.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a year and capitals in the release type are not its price"
+      ]
     }
   ],
   "lint": [
