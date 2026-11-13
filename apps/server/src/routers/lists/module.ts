@@ -71,6 +71,7 @@ export const Lists = {
               SELECT ${itemImageSql("item_record")} AS image, item_record.created_at, item_record.id AS sort_key
               FROM item item_record
               WHERE item_record.id = list_member_row.item_id
+                AND item_record.owner_id = ${userId}
                 AND ${itemImageSql("item_record")} IS NOT NULL
 
               UNION ALL
@@ -79,6 +80,7 @@ export const Lists = {
               FROM "collection" collection_member
               INNER JOIN item collection_item ON collection_item.id = collection_member.item_id
               WHERE collection_member.id = list_member_row.collection_id
+                AND collection_member.user_id = ${userId}
                 AND ${itemImageSql("collection_item")} IS NOT NULL
 
               UNION ALL
@@ -87,6 +89,7 @@ export const Lists = {
               FROM "collection" order_collection
               INNER JOIN item order_item ON order_item.id = order_collection.item_id
               WHERE order_collection.order_id = list_member_row.order_id
+                AND order_collection.user_id = ${userId}
                 AND ${itemImageSql("order_item")} IS NOT NULL
             ) candidate
             ORDER BY
