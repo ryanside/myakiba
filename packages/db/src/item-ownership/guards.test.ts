@@ -33,6 +33,19 @@ async function migrated() {
   return database;
 }
 
+/** migrated() with an Order and a Collection Item each for u1 and u2, and a second of each for u1. */
+async function withTargets() {
+  const database = await migrated();
+  await database.sql.unsafe(`
+    INSERT INTO "order" (id, user_id, title) VALUES
+      ('order-u1', 'u1', 'Mine'), ('order-u1-other', 'u1', 'Also mine'), ('order-u2', 'u2', 'Theirs');
+    INSERT INTO collection (id, user_id, item_id, tags) VALUES
+      ('col-u1', 'u1', 'item-u1', '{}'), ('col-u1-other', 'u1', 'item-u1', '{}'),
+      ('col-u2', 'u2', 'item-u2', '{}');
+  `);
+  return database;
+}
+
 type Check = keyof typeof OWNER_CHECKS;
 
 async function outcome(write: Promise<unknown>): Promise<"written" | Check | string> {
@@ -70,7 +83,7 @@ describe("each guard rejects a write across users and lets the owner's own write
       "collection_item_owner",
     );
     expect(await outcome(sql`UPDATE collection SET user_id = 'u2' WHERE id = 'col-x'`)).toBe(
-      "collection_item_owner",
+      "collection_owner_fixed",
     );
     expect(await outcome(sql`UPDATE collection SET notes = 'kept' WHERE id = 'col-x'`)).toBe(
       "written",
@@ -98,6 +111,70 @@ describe("each guard rejects a write across users and lets the owner's own write
       await outcome(
         sql`UPDATE collection SET release_id = ${OTHER_RELEASE_OF_U1} WHERE id = 'col-x'`,
       ),
+    ).toBe("written");
+  });
+
+  test("a Collection Item and its Order", async () => {
+    const { sql } = await withTargets();
+    expect(
+      await outcome(
+        sql`INSERT INTO collection (id, user_id, item_id, order_id, tags)
+          VALUES ('col-x', 'u1', 'item-u1', 'order-u2', '{}')`,
+      ),
+    ).toBe("collection_order_owner");
+    expect(
+      await outcome(
+        sql`INSERT INTO collection (id, user_id, item_id, order_id, tags)
+          VALUES ('col-x', 'u1', 'item-u1', 'order-u1', '{}')`,
+      ),
+    ).toBe("written");
+    expect(await outcome(sql`UPDATE collection SET order_id = 'order-u2' WHERE id = 'col-x'`)).toBe(
+      "collection_order_owner",
+    );
+    expect(
+      await outcome(sql`UPDATE collection SET order_id = 'order-u1-other' WHERE id = 'col-x'`),
+    ).toBe("written");
+    expect(await outcome(sql`DELETE FROM "order" WHERE id = 'order-u1-other'`)).toBe("written");
+    expect(await sql`SELECT order_id FROM collection WHERE id = 'col-x'`).toEqual([
+      { order_id: null },
+    ]);
+  });
+
+  test("a List Member and its Collection Item or Order", async () => {
+    const { sql } = await withTargets();
+    expect(
+      await outcome(
+        sql`INSERT INTO list_member (id, list_id, user_id, collection_id) VALUES ('member-x', 'list-1', 'u1', 'col-u2')`,
+      ),
+    ).toBe("list_member_collection_owner");
+    expect(
+      await outcome(
+        sql`INSERT INTO list_member (id, list_id, user_id, order_id) VALUES ('member-y', 'list-1', 'u1', 'order-u2')`,
+      ),
+    ).toBe("list_member_order_owner");
+    expect(
+      await outcome(
+        sql`INSERT INTO list_member (id, list_id, user_id, collection_id) VALUES ('member-x', 'list-1', 'u1', 'col-u1')`,
+      ),
+    ).toBe("written");
+    expect(
+      await outcome(
+        sql`INSERT INTO list_member (id, list_id, user_id, order_id) VALUES ('member-y', 'list-1', 'u1', 'order-u1')`,
+      ),
+    ).toBe("written");
+    expect(
+      await outcome(sql`UPDATE list_member SET collection_id = 'col-u2' WHERE id = 'member-x'`),
+    ).toBe("list_member_collection_owner");
+    expect(
+      await outcome(sql`UPDATE list_member SET order_id = 'order-u2' WHERE id = 'member-y'`),
+    ).toBe("list_member_order_owner");
+    expect(
+      await outcome(
+        sql`UPDATE list_member SET collection_id = 'col-u1-other' WHERE id = 'member-x'`,
+      ),
+    ).toBe("written");
+    expect(
+      await outcome(sql`UPDATE list_member SET order_id = 'order-u1-other' WHERE id = 'member-y'`),
     ).toBe("written");
   });
 
@@ -173,8 +250,8 @@ describe("each guard rejects a write across users and lets the owner's own write
     ).toBe("entry_to_item_item_owner");
   });
 
-  test("an owner never changes on an Item, an Item Entry, a List or an Item Release", async () => {
-    const { sql } = await migrated();
+  test("an owner never changes on an Item, an Item Entry, a List, an Item Release, a Collection Item or an Order", async () => {
+    const { sql } = await withTargets();
     expect(await outcome(sql`UPDATE item SET owner_id = 'u2' WHERE id = 'item-u1'`)).toBe(
       "item_owner_fixed",
     );
@@ -187,6 +264,17 @@ describe("each guard rejects a write across users and lets the owner's own write
     expect(
       await outcome(sql`UPDATE item_release SET item_id = 'item-u2' WHERE id = ${RELEASE_OF_U1}`),
     ).toBe("item_release_item_fixed");
+    expect(
+      await outcome(
+        sql`UPDATE collection SET user_id = 'u2', item_id = 'item-u2' WHERE id = 'col-u1'`,
+      ),
+    ).toBe("collection_owner_fixed");
+    expect(await outcome(sql`UPDATE "order" SET user_id = 'u2' WHERE id = 'order-u1'`)).toBe(
+      "order_owner_fixed",
+    );
+    expect(await outcome(sql`UPDATE "order" SET title = 'Renamed' WHERE id = 'order-u1'`)).toBe(
+      "written",
+    );
     expect(
       await outcome(sql`UPDATE item SET title = 'Renamed', owner_id = 'u1' WHERE id = 'item-u1'`),
     ).toBe("written");
@@ -282,7 +370,7 @@ test(
     expect(await installOwnerGuards(sql)).toBe("installed");
     expect(await ownerGuardsInstalled(sql)).toBe(true);
     const installed = await guardsOf(sql);
-    expect(installed.triggers).toHaveLength(8);
+    expect(installed.triggers).toHaveLength(9);
     expect(await installOwnerGuards(sql)).toBe("installed");
     expect(await guardsOf(sql)).toEqual(installed);
     expect(await pushSchema(url)).toMatchObject({
@@ -334,6 +422,74 @@ test("a guard locks the Item it checks, so an id deleted and reissued to another
   expect(await write).toBe("collection_item_owner");
   expect(await ownershipMismatches(sql)).toEqual([]);
 });
+
+type Reissue = {
+  readonly target: string;
+  readonly check: Check;
+  readonly reissue: string;
+  readonly write: (sql: SQL) => Promise<object>;
+};
+
+const REISSUES: readonly Reissue[] = [
+  {
+    target: "Order a Collection Item points at",
+    check: "collection_order_owner",
+    reissue: `DELETE FROM "order" WHERE id = 'order-u1';
+      INSERT INTO "order" (id, user_id, title) VALUES ('order-u1', 'u2', 'Reissued')`,
+    write: (sql) => sql`
+      INSERT INTO collection (id, user_id, item_id, order_id, tags)
+      SELECT v.id, 'u1', 'item-u1', v.order_id, '{}'
+      FROM (VALUES ('col-x', 'order-u1', 0), ('col-y', 'order-u1-other', ${REISSUE_LOCK}::int)) v(id, order_id, waits_for)
+      WHERE v.waits_for = 0 OR (SELECT true FROM pg_advisory_xact_lock(v.waits_for))
+    `,
+  },
+  {
+    target: "Collection Item a List Member points at",
+    check: "list_member_collection_owner",
+    reissue: `DELETE FROM collection WHERE id = 'col-u1';
+      INSERT INTO collection (id, user_id, item_id, tags) VALUES ('col-u1', 'u2', 'item-u2', '{}')`,
+    write: (sql) => sql`
+      INSERT INTO list_member (id, list_id, user_id, collection_id)
+      SELECT v.id, 'list-1', 'u1', v.collection_id
+      FROM (VALUES ('col-x', 'col-u1', 0), ('col-y', 'col-u1-other', ${REISSUE_LOCK}::int)) v(id, collection_id, waits_for)
+      WHERE v.waits_for = 0 OR (SELECT true FROM pg_advisory_xact_lock(v.waits_for))
+    `,
+  },
+  {
+    target: "Order a List Member points at",
+    check: "list_member_order_owner",
+    reissue: `DELETE FROM "order" WHERE id = 'order-u1';
+      INSERT INTO "order" (id, user_id, title) VALUES ('order-u1', 'u2', 'Reissued')`,
+    write: (sql) => sql`
+      INSERT INTO list_member (id, list_id, user_id, order_id)
+      SELECT v.id, 'list-1', 'u1', v.order_id
+      FROM (VALUES ('col-x', 'order-u1', 0), ('col-y', 'order-u1-other', ${REISSUE_LOCK}::int)) v(id, order_id, waits_for)
+      WHERE v.waits_for = 0 OR (SELECT true FROM pg_advisory_xact_lock(v.waits_for))
+    `,
+  },
+];
+
+test.each(REISSUES)(
+  "a guard locks the $target, so an id deleted and reissued to another user mid-write cannot pass it",
+  async ({ check, reissue, write }) => {
+    const { sql } = await withTargets();
+    const reissued = Promise.withResolvers<true>();
+    const release = Promise.withResolvers<true>();
+    const reissuing = sql.begin(async (tx) => {
+      await tx`SELECT pg_advisory_xact_lock(${REISSUE_LOCK})`;
+      await tx.unsafe(reissue);
+      reissued.resolve(true);
+      await release.promise;
+    });
+    await reissued.promise;
+    const written = outcome(write(sql));
+    while (!(await waitsForALock(sql, "col-x"))) await Bun.sleep(10);
+    release.resolve(true);
+    await reissuing;
+    expect(await written).toBe(check);
+    expect(await ownershipMismatches(sql)).toEqual([]);
+  },
+);
 
 test("overlapping installs all succeed", async () => {
   const database = await migrated();

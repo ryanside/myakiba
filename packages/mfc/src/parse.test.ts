@@ -140,6 +140,79 @@ describe("parseMfcItemPage on pages derived from item-98777.html", () => {
   });
 });
 
+describe("parseMfcItemPage on captured signed-out pages", () => {
+  test("item 581731 reads six releases in two currencies", async () => {
+    const result = parseMfcItemPage(await fixture("item-581731-signed-out.html"), itemId(581_731));
+    expect(result.isOk() && result.value.releases).toEqual([
+      {
+        date: "2024-02-07",
+        type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2023-10-02",
+        type: "Limited (China) «Wonder Festival 2022-2023 [Shanghai]»",
+        price: 35_000,
+        priceCurrency: "CNY",
+        barcode: null,
+      },
+      {
+        date: "2023-09-01",
+        type: "Limited (Japan) «Magical Mirai 2023 TOKYO»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2023-08-11",
+        type: "Limited (Japan) «Magica Mirai 2023 OSAKA»",
+        price: 563_600,
+        priceCurrency: "JPY",
+        barcode: "4580590174269",
+      },
+      {
+        date: "2018-02-08",
+        type: "Limited + Exclusive (Japan) «Good Smile Online Shop»",
+        price: 463_000,
+        priceCurrency: "JPY",
+        barcode: "4580416903530",
+      },
+      {
+        date: "2017-09-01",
+        type: "Limited (Japan) «Magical Mirai 2017»",
+        price: 463_000,
+        priceCurrency: "JPY",
+        barcode: "4580416903530",
+      },
+    ]);
+    expect(result.isOk() && result.value.warnings).toEqual([]);
+  });
+
+  test("item 10756 reads a release with no price and its barcode with no bullet", async () => {
+    const result = parseMfcItemPage(await fixture("item-10756-signed-out.html"), itemId(10_756));
+    expect(result.isOk() && result.value.releases).toEqual([
+      {
+        date: "2000-01-01",
+        type: "Prize (Japan)",
+        price: 0,
+        priceCurrency: "JPY",
+        barcode: "4983164712803",
+      },
+    ]);
+    expect(result.isOk() && result.value.picture).toEqual({
+      access: "public",
+      url: "https://static.myfigurecollection.net/upload/items/1/10756-46a60.jpg",
+    });
+    expect(result.isOk() && result.value.warnings).toEqual([]);
+  });
+
+  test("a missing item is a not_found problem", async () => {
+    expect(problemOf(await fixture("not-found-signed-out.html"))).toEqual({ kind: "not_found" });
+  });
+});
+
 describe("parseMfcItemPage problems", () => {
   test.each(["", "<<<not html", "<html><body><h1 class=title>x</h1></body></html>"])(
     "%p is not an item page",
@@ -585,12 +658,204 @@ describe("parseMfcItemPage release dates", () => {
 });
 
 describe("parseMfcItemPage release prices", () => {
+  test("a price after a type that ends in a period reads", () => {
+    const page = parsedPage(edit(item98777, "Standard (Japan)", "Limited Ver."));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, type: "Limited Ver." }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a price after a type that ends in a digit reads", () => {
+    const page = parsedPage(edit(item98777, "Standard (Japan)", "Edition 2"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, type: "Edition 2" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
   test("an ungrouped price reads whole", () => {
     const page = parsedPage(
       edit(item98777, "13,500 <small>JPY</small>", "13500 <small>JPY</small>"),
     );
     expect(page.releases).toEqual([RELEASE_98777]);
     expect(page.warnings).toEqual([]);
+  });
+
+  test("a price with one decimal reads whole", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "123.4 <small>USD</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 12_340, priceCurrency: "USD" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a price with three decimals reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "123.456 <small>USD</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0, priceCurrency: "USD" }]);
+    expect(page.warnings).toEqual(['unreadable release price "123.456"']);
+  });
+
+  test("a price with misplaced commas reads as no price and warns", () => {
+    const page = parsedPage(
+      edit(item98777, "13,500 <small>JPY</small>", "1,35,00 <small>JPY</small>"),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual(['unreadable release price "1,35,00"']);
+  });
+
+  test("a year and capitals in the release type are not its price", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        "<em>Standard (Japan)</em>",
+        "<em>Limited (Japan)</em> <em>&laquo;Magical Mirai 2023 TOKYO&raquo;</em>",
+      ),
+    );
+    expect(page.releases).toEqual([
+      { ...RELEASE_98777, type: "Limited (Japan) «Magical Mirai 2023 TOKYO»" },
+    ]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a year date and a capitals link with no price are not a price", () => {
+    const page = parsedPage(
+      edit(
+        edit(item98777, `13,500 <small>JPY</small>${BARCODE_98777}`, " <a>AMIAMI</a>"),
+        'class="time">11/15/2018<',
+        'class="time">2018<',
+      ),
+    );
+    expect(page.releases).toEqual([
+      { ...RELEASE_98777, date: "2018-01-01", price: 0, barcode: null },
+    ]);
+  });
+
+  test("a barcode link then a capitals link with no price are not a price", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        `13,500 <small>JPY</small>${BARCODE_98777}`,
+        " <a>4582292601715</a> <a>AMIAMI</a>",
+      ),
+    );
+    expect(page.releases.map(({ price, priceCurrency }) => [price, priceCurrency])).toEqual([
+      [0, "JPY"],
+    ]);
+  });
+
+  test("a currency with MFC's conversion link reads", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        "13,500 <small>JPY</small>",
+        '13,500 <small>JPY (<a href="https://www.google.com/search?q=13%2C500+JPY+IN+USD" target="_blank" title="convert into USD">USD</a>)</small>',
+      ),
+    );
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+});
+
+const BARCODE_98777 =
+  '  &bull; <a href="#" class="tbx-window" title="Buy (4582292601715)" class="light">4582292601715<meta name="vars" content="commit=loadWindow;window=buyItem;jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>';
+
+describe("parseMfcItemPage release barcodes", () => {
+  test("a barcode link with no price and no bullet reads", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        `13,500 <small>JPY</small>${BARCODE_98777}`,
+        '<a href="#" class="tbx-window" title="Buy (4582292601715)">4582292601715<meta name="vars" content="jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>',
+      ),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link after the price with no bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>4582292601715</a>\n  "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a shop link with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>AMIAMI</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test.each([
+    ["a long link of capitals", "HOBBYSEARCH"],
+    ["a link of seven digits", "4912345"],
+  ])("%s with no bullet is no barcode", (_name, link) => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, ` <a>${link}</a>`));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("an 8-digit EAN link with no bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>49123456</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: "49123456" }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a long link with digits and other characters with no bullet warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>Buy 4582292601715</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "Buy 4582292601715"']);
+  });
+
+  test("an 8-character link with a digit that is not a barcode warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>4912345x</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "4912345x"']);
+  });
+
+  test("a long link that is not a barcode warns with its text clipped", () => {
+    const link = `${"b".repeat(100)}1`;
+    const page = parsedPage(edit(item98777, BARCODE_98777, ` <a>${link}</a>`));
+    expect(page.warnings).toEqual([`unreadable barcode "${"b".repeat(100)}…"`]);
+  });
+
+  test("a short link of digits with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>2019</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a release with no barcode has none, not its currency", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, ""));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("whitespace after the barcode keeps it", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, `${BARCODE_98777}\n  `));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link with no class reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; <a>4582292601715</a>\n  "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode written as text after the bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; 4582292601715 "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("text after the price with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " ABC-123"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link holding other characters reads as none and warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; <a>Buy now</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "Buy now"']);
   });
 });
 

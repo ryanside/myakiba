@@ -1,6 +1,101 @@
 {
   "test": [
     {
+      "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "bug": "The barcode reader read only text after a bullet, so a barcode link with no bullet before it, as on a release with no price, stored no barcode where the old pattern read it.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a barcode link with no price and no bullet reads",
+        "parseMfcItemPage release barcodes > a barcode link after the price with no bullet reads"
+      ],
+      "testAt": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
+    },
+    {
+      "fix": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "bug": "A barcode link with no bullet before it read as no barcode after the scrub as well as before it.",
+      "test": "packages/mfc/src/capture.test.ts",
+      "fixed": [
+        "scrubMfcPage keeps every reading of a page > a barcode link with no price and no bullet still reads its barcode",
+        "scrubMfcPage keeps every reading of a page > a barcode link after the price with no bullet still reads its barcode"
+      ],
+      "testAt": "ad5283a57b0732628d6fe1706d103eab820030d6",
+      "reason": "Later commits in this PR made this file load captured fixtures that do not exist at this fix, so its harness stays at the fix."
+    },
+    {
+      "fix": "e057efc4168586f0fd7657f4ea27445d24fec189",
+      "bug": "The price pattern ran over the release value's child texts joined with nothing between them, so a type ending in a period hid the price after it and a type ending in a digit ran into it.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a price after a type that ends in a period reads",
+        "parseMfcItemPage release prices > a price after a type that ends in a digit reads"
+      ]
+    },
+    {
+      "fix": "a677c0651b8f4a641785fa7cdd87304303e7b735",
+      "bug": "A release's barcode was the last uppercase token of its whole Releases value, so a release with no barcode stored its currency and whitespace after a real barcode stored none.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a release with no barcode has none, not its currency",
+        "parseMfcItemPage release barcodes > whitespace after the barcode keeps it",
+        "parseMfcItemPage release barcodes > a barcode link with no class reads",
+        "parseMfcItemPage release barcodes > a barcode written as text after the bullet reads",
+        "parseMfcItemPage release barcodes > text after the price with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a barcode link holding other characters reads as none and warns"
+      ],
+      "testAt": "a677c0651b8f4a641785fa7cdd87304303e7b735",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
+    },
+    {
+      "fix": "a677c0651b8f4a641785fa7cdd87304303e7b735",
+      "bug": "A release stored with an empty barcode keyed differently from the same release parsed with none, so its Item Refresh would remap or clear the selection.",
+      "test": "apps/server/src/routers/item/resync.test.ts",
+      "fixed": [
+        "POST /api/item/:id/resync refreshes the item from the page the extension fetched > a release stored with an empty barcode refreshes a page with no barcode as unchanged and keeps its selection"
+      ]
+    },
+    {
+      "fix": "7a70baa4be0cc2026b8e5717a50b2659d481bf7d",
+      "bug": "A release price took exactly two fractional digits, so 123.4 USD matched again from its last digit and saved 4 USD, and a malformed price saved nothing without a warning.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a price with one decimal reads whole",
+        "parseMfcItemPage release prices > a price with three decimals reads as no price and warns",
+        "parseMfcItemPage release prices > a price with misplaced commas reads as no price and warns"
+      ]
+    },
+    {
+      "fix": "4b0aded5d2fc1daed6c70d77fffc1bb8aaba0ad0",
+      "bug": "No owner guard checked a Collection Item's Order or a List Member's Collection Item or Order, and a Collection Item's or Order's user could change, so direct SQL could point them at another user's rows.",
+      "test": "packages/db/src/item-ownership/guards.test.ts",
+      "fixed": [
+        "each guard rejects a write across users and lets the owner's own write through > a Collection Item and its Item",
+        "each guard rejects a write across users and lets the owner's own write through > a Collection Item and its Order",
+        "each guard rejects a write across users and lets the owner's own write through > a List Member and its Collection Item or Order",
+        "each guard rejects a write across users and lets the owner's own write through > an owner never changes on an Item, an Item Entry, a List, an Item Release, a Collection Item or an Order",
+        "a guard locks the Order a Collection Item points at, so an id deleted and reissued to another user mid-write cannot pass it",
+        "a guard locks the Collection Item a List Member points at, so an id deleted and reissued to another user mid-write cannot pass it",
+        "a guard locks the Order a List Member points at, so an id deleted and reissued to another user mid-write cannot pass it",
+        "an empty database gets the guards after push, and installing them again or pushing again keeps them",
+        "a guard that fires only on a replica is not installed, and installing enables it again"
+      ]
+    },
+    {
+      "fix": "4b0aded5d2fc1daed6c70d77fffc1bb8aaba0ad0",
+      "bug": "db-push installed no guard on the Order table.",
+      "test": "packages/db/src/item-ownership/push.test.ts",
+      "fixed": ["pushes the owned schema onto a migrated database with no prompt and no lost row"]
+    },
+    {
+      "fix": "d3e975ea39d2e6dcf4e28e70fb563b44a1895011",
+      "bug": "A List preview found pictures through a List Member's Collection Item or Order without filtering by the viewer, so a member pointing at another user's showed that user's picture.",
+      "test": "apps/server/src/routers/lists/routes.test.ts",
+      "fixed": [
+        "a List preview shows no picture of a Collection Item or Order another user owns",
+        "a List preview shows no picture of an Item another user owns"
+      ]
+    },
+    {
       "fix": "1bcd28a6175594d4177cd5b7d86a7e56e0c48db4",
       "bug": "The MFC page scrub dropped any element inside an item field that it did not list, with its text, so struck-out title text, a label element in a field label and fields that were a section, definition list or table row read differently after the scrub.",
       "test": "packages/mfc/src/capture.test.ts",
@@ -4686,6 +4781,43 @@
         "scrubMfcPage keeps every reading of a page > an unknown element around an entry name",
         "scrubMfcPage output > leaves a signed-in user menu as an empty shell",
         "scrubMfcPage keeps what readMfcEnvelope reads on other pages > keeps only the sign-in handle of a guest menu"
+      ]
+    },
+    {
+      "fix": "9696266227418aaa5570f352631795ff920659e5",
+      "bug": "With no bullet before it, a release's last link was read as its barcode whenever it held only capitals, digits and dashes, so a shop, region or year link was stored as a barcode.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a shop link with no bullet is no barcode",
+        "parseMfcItemPage release barcodes > a short link of digits with no bullet is no barcode"
+      ],
+      "testAt": "9696266227418aaa5570f352631795ff920659e5",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
+    },
+    {
+      "fix": "f0677dee2996a74e770e6d8dfa4c9cc0c3552502",
+      "bug": "The release price pattern read the whole release value, so an event name in the type such as \"Magical Mirai 2023 TOKYO\" was read as a price of 2,023 TOK, as item 581731's real page stores.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a year and capitals in the release type are not its price"
+      ]
+    },
+    {
+      "fix": "b938cdc4002e827e6eb2131ee3de937feed2dec8",
+      "bug": "With no bullet, a release's last link that had a digit and at least 8 characters but was not a barcode was dropped with no warning.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release barcodes > a long link with digits and other characters with no bullet warns"
+      ],
+      "testAt": "b938cdc4002e827e6eb2131ee3de937feed2dec8",
+      "reason": "Later fixes in this PR added release barcode and price tests to this file that flip at this fix too, so its harness stays at the fix."
+    },
+    {
+      "fix": "419bf24b697f6225500a2bfb15ae37c6021a42d5",
+      "bug": "The release price pattern read the value's links, so a barcode link followed by a capitals link with no price was read as a price.",
+      "test": "packages/mfc/src/parse.test.ts",
+      "fixed": [
+        "parseMfcItemPage release prices > a barcode link then a capitals link with no price are not a price"
       ]
     }
   ],

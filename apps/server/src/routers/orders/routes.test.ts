@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
-import { createTestDatabase } from "../../../test/database";
+import { createTestDatabase, writeUnguarded } from "../../../test/database";
 
 const { collection, item, order } = figureSchema;
 
@@ -480,9 +480,11 @@ describe("a write with an empty id list answers 404 and changes nothing", () => 
 
 describe("a failure after a write leaves nothing behind", () => {
   test("a merge that finds no order to delete keeps the new order and the moved items out", async () => {
-    await db
-      .insert(collection)
-      .values({ id: "c-stray", userId, itemId: "item-1", orderId: "order-3", status: "Ordered" });
+    await writeUnguarded(db, (tx) =>
+      tx
+        .insert(collection)
+        .values({ id: "c-stray", userId, itemId: "item-1", orderId: "order-3", status: "Ordered" }),
+    );
     const before = await readState();
 
     expect(

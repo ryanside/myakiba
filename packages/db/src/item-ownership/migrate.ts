@@ -26,7 +26,7 @@ export type MigrationReport =
       readonly pairs: number;
       readonly copied: Counts<"items" | "entries" | "links" | "releases">;
       readonly foreignReleasesCleared: number;
-      /** Expected 0. The owner guards do not cover these, so the run counts them and leaves them. */
+      /** Expected 0. The run counts them and leaves them; the owner guards reject them only on a later write. */
       readonly otherUsersListTargets: number;
       readonly repointed: Counts<
         "collection" | "wishlistItem" | "listMemberItem" | "listMemberOwner"

@@ -29,7 +29,7 @@ export type MfcRelease = {
   readonly type: string;
   readonly price: number;
   readonly priceCurrency: string;
-  readonly barcode: string;
+  readonly barcode: string | null;
 };
 
 export type MfcItemPage = {

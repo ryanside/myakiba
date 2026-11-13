@@ -115,6 +115,16 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill(",111", (run) => ({ fields: release(`1${run}`) })),
   ],
   [
+    "price: decimal points with no currency",
+    "parsed",
+    () => fill(".1", (run) => ({ fields: release(`1${run}`) })),
+  ],
+  [
+    "price: a long fraction before a currency",
+    "parsed",
+    () => fill("1", (run) => ({ fields: release(`1.${run} JPY`) })),
+  ],
+  [
     "price: a digit then whitespace with no currency",
     "parsed",
     () => fill(" ", (run) => ({ fields: release(`1${run}x`) })),
@@ -122,12 +132,17 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   [
     "barcode: barcode characters with a failing tail",
     "parsed",
-    () => fill("A", (run) => ({ fields: release(`${run}!`) })),
+    () => fill("A", (run) => ({ fields: release(`1 JPY &bull; ${run}!`) })),
   ],
   [
     "barcode: dashes with a failing tail",
     "parsed",
-    () => fill("-", (run) => ({ fields: release(`${run} `) })),
+    () => fill("-", (run) => ({ fields: release(`1 JPY &bull; ${run}!`) })),
+  ],
+  [
+    "barcode: bullets after the first",
+    "parsed",
+    () => fill("&bull;", (run) => ({ fields: release(`1 JPY ${run}`) })),
   ],
   [
     "material percentage: digits with no percent sign",
@@ -374,11 +389,35 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
         ),
       })),
   ],
-  ["a barcode", "too_large:valueLength", () => fill("A", (run) => ({ fields: release(run) }))],
+  [
+    "a barcode",
+    "too_large:valueLength",
+    () => fill("A", (run) => ({ fields: release(`1 JPY &bull; <a>${run}</a>\n  `) })),
+  ],
+  [
+    "a barcode link with no bullet",
+    "too_large:valueLength",
+    () => fill("1", (run) => ({ fields: release(`<a>${run}</a>`) })),
+  ],
+  [
+    "a long link with a digit and no bullet that is not a barcode",
+    "parsed",
+    () => fill("a", (run) => ({ fields: release(`<a>${run}1</a>`) })),
+  ],
+  [
+    "a barcode of dashes in text",
+    "too_large:valueLength",
+    () => fill("-", (run) => ({ fields: release(`1 JPY &bull; ${run} `) })),
+  ],
   [
     "a Title field",
     "too_large:valueLength",
     () => fill("x", (run) => ({ fields: field("Title", run) })),
+  ],
+  [
+    "an element with one element child past the children limit",
+    "too_large:children",
+    () => padded({ fields: `<div>${"<i></i>".repeat(CHILDREN + 1)}</div>` }),
   ],
   [
     "elements before the page's html element",
@@ -588,6 +627,14 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
 ];
 
 const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
+  [
+    "barcode: as many links with no bullet as the children limit allows",
+    () => padded({ fields: release("<a>x</a>".repeat(CHILDREN - 2)) }),
+  ],
+  [
+    "an element with as many element children as the children limit",
+    () => padded({ fields: `<div>${"<i></i>".repeat(CHILDREN)}</div>` }),
+  ],
   [
     "data values nested to the field depth limit",
     () =>

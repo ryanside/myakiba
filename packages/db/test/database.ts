@@ -55,21 +55,29 @@ export function testDatabases() {
       open.push(database);
       return database;
     },
-    /** Postgres copies a template only while nothing is connected to it, so this closes it. */
+    /**
+     * Postgres copies a template only while nothing is connected to it, so this closes it. It
+     * returns a copy of the database `fill` wrote: autovacuum analyzes a database by the changes
+     * it counted, and a copy starts with none, so the template keeps the catalog statistics `fill`
+     * saw and every database made from it plans a catalog read the same way.
+     */
     async legacyTemplate(
       fill: (sql: SQL) => Promise<void>,
       schema: readonly string[] = LEGACY_SCHEMA,
     ): Promise<string> {
-      const { name, sql } = await createDatabase();
-      templates.push(name);
+      const filled = await createDatabase();
+      templates.push(filled.name);
       try {
-        await sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
-        for (const statement of schema) await sql.unsafe(statement);
-        await fill(sql);
+        await filled.sql`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+        for (const statement of schema) await filled.sql.unsafe(statement);
+        await fill(filled.sql);
       } finally {
-        await sql.close();
+        await filled.sql.close();
       }
-      return name;
+      const copy = await createDatabase(filled.name);
+      templates.push(copy.name);
+      await copy.sql.close();
+      return copy.name;
     },
   };
 }

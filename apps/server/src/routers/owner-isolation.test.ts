@@ -12,12 +12,14 @@ import {
   item,
   item_release,
   list,
+  listMember,
+  order,
+  wishlistItem,
 } from "@myakiba/db/schema/figure";
-import type { addCommitSchema } from "@myakiba/contracts/add/schema";
+
+import type { addOwnershipSchema } from "@myakiba/contracts/add/schema";
 
 import { createTestDatabase } from "../../test/database";
-import type { CollectionUpdateType } from "./collection/model";
-import type { addTargetsToListsSchema } from "./lists/model";
 
 initLogger({ enabled: false });
 
@@ -45,6 +47,8 @@ const { default: addRouter } = await import("./add/index");
 const { default: wishlistRouter } = await import("./wishlist/index");
 const { default: listsRouter } = await import("./lists/index");
 const { default: collectionRouter } = await import("./collection/index");
+const { default: ordersRouter } = await import("./orders/index");
+const { default: analyticsRouter } = await import("./analytics/index");
 const app = new Elysia({ prefix: "/api" })
   .use(itemRouter)
   .use(mfcItemsRouter)
@@ -52,7 +56,9 @@ const app = new Elysia({ prefix: "/api" })
   .use(addRouter)
   .use(wishlistRouter)
   .use(listsRouter)
-  .use(collectionRouter);
+  .use(collectionRouter)
+  .use(ordersRouter)
+  .use(analyticsRouter);
 
 const ALICE = "user-alice";
 const BOB = "user-bob";
@@ -72,11 +78,8 @@ const forgedPage = edit(
   ">Forged Sculptor</span>",
 );
 
-type RequestBody =
-  | FormData
-  | z.input<typeof addCommitSchema>
-  | z.input<typeof addTargetsToListsSchema>
-  | CollectionUpdateType;
+type Json = string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
+type RequestBody = FormData | { readonly [key: string]: Json };
 
 function requestOf(as: string, method: string, url: string, body?: RequestBody): Request {
   const headers = new Headers({ "x-test-user": as });
@@ -130,14 +133,66 @@ const toCollection = {
 function addCommit(
   rows: readonly { itemId: string; releaseId?: string }[],
   listIds: string[] = [],
+  ownership: z.input<typeof addOwnershipSchema> = toCollection,
 ) {
   return {
     commitId: crypto.randomUUID(),
     wishlist: false,
     rows: rows.map((row) => ({ price: null, ...row })),
-    ownership: toCollection,
+    ownership,
     listIds,
   };
+}
+
+const NEW_ORDER = {
+  status: "Ordered",
+  title: "Bob's order",
+  shop: "",
+  orderDate: null,
+  releaseDate: null,
+  paymentDate: null,
+  shippingDate: null,
+  collectionDate: null,
+  shippingMethod: "n/a",
+  shippingFee: 0,
+  taxes: 0,
+  duties: 0,
+  tariffs: 0,
+  miscFees: 0,
+  notes: "",
+};
+
+type CollectionRow = typeof collection.$inferSelect;
+
+/** A valid Collection edit that keeps every field of `row`, with `releaseId` changed. */
+function collectionEdit(row: CollectionRow, releaseId: string | null) {
+  return {
+    status: row.status,
+    count: row.count,
+    score: row.score,
+    price: row.price,
+    shop: row.shop,
+    orderDate: row.orderDate,
+    paymentDate: row.paymentDate,
+    shippingDate: row.shippingDate,
+    collectionDate: row.collectionDate,
+    shippingMethod: row.shippingMethod,
+    tags: row.tags,
+    notes: "",
+    releaseId,
+    releaseDate: null,
+    releasePrice: null,
+    releaseCurrency: null,
+    releaseBarcode: null,
+    releaseType: null,
+    condition: row.condition,
+  };
+}
+
+async function onlyCollectionItemOf(userId: string): Promise<CollectionRow> {
+  const [row] = await db.select().from(collection).where(eq(collection.userId, userId));
+  if (!row) throw new Error(`${userId} has no Collection Item`);
+  return row;
 }
 
 async function aliceHolds() {
@@ -148,21 +203,66 @@ async function aliceHolds() {
   const [release] = releases;
   if (!sculptor || !release) throw new Error("the fixture page has no Minheru or no release");
   await db.insert(list).values({ id: "list-alice", userId: ALICE, title: "Alice's shelf" });
+  await db
+    .insert(order)
+    .values({ id: "order-alice", userId: ALICE, title: "Alice's order", status: "Owned" });
   expect(
-    await call(ALICE, "POST", "/add/commit", addCommit([{ itemId }], ["list-alice"])),
+    await call(
+      ALICE,
+      "POST",
+      "/add/commit",
+      addCommit([{ itemId }], ["list-alice"], {
+        kind: "order",
+        order: { kind: "existing", orderId: "order-alice" },
+      }),
+    ),
   ).toMatchObject({ status: 200 });
-  const [collected] = await db
-    .select({ id: collection.id })
-    .from(collection)
-    .where(eq(collection.userId, ALICE));
-  if (!collected) throw new Error("Alice's commit wrote no Collection Item");
+  expect(
+    await call(ALICE, "PUT", "/lists/targets", {
+      targets: [{ type: "order", id: "order-alice" }],
+      listIds: ["list-alice"],
+    }),
+  ).toMatchObject({ status: 200 });
+  expect(await call(ALICE, "PUT", `/wishlist/${itemId}`)).toMatchObject({ status: 200 });
+  const collected = await onlyCollectionItemOf(ALICE);
+  const [member] = await db
+    .select({ id: listMember.id })
+    .from(listMember)
+    .where(eq(listMember.collectionId, collected.id));
+  const [wished] = await db
+    .select({ id: wishlistItem.id })
+    .from(wishlistItem)
+    .where(eq(wishlistItem.userId, ALICE));
+  if (!member || !wished) throw new Error("Alice's List Member or Wishlist Item was not saved");
   return {
     itemId,
     releaseId: release.id,
     entryId: sculptor.id,
     listId: "list-alice",
     collectionId: collected.id,
+    orderId: "order-alice",
+    memberId: member.id,
+    wishlistItemId: wished.id,
   };
+}
+
+/** Bob's own Item for the same MFC id, a Collection Item of it in his own Order, and his List. */
+async function bobHolds() {
+  const { itemId } = await ingest(BOB);
+  await db.insert(order).values({ id: "order-bob", userId: BOB, title: "Bob's order" });
+  expect(
+    await call(
+      BOB,
+      "POST",
+      "/add/commit",
+      addCommit([{ itemId }], [], {
+        kind: "order",
+        order: { kind: "existing", orderId: "order-bob" },
+      }),
+    ),
+  ).toMatchObject({ status: 200 });
+  const collected = await onlyCollectionItemOf(BOB);
+  return { itemId, collectionId: collected.id, orderId: "order-bob", listId: "list-bob" };
 }
 
 type Held = Awaited<ReturnType<typeof aliceHolds>>;
@@ -186,11 +286,19 @@ async function aliceSees(held: Held) {
     .where(eq(item_release.itemId, held.itemId))
     .orderBy(asc(item_release.id));
   const collected = await db.select().from(collection).where(eq(collection.userId, ALICE));
+  const orders = await db.select().from(order).where(eq(order.userId, ALICE));
+  const members = await db
+    .select()
+    .from(listMember)
+    .where(eq(listMember.userId, ALICE))
+    .orderBy(asc(listMember.id));
+  const lists = await db.select().from(list).where(eq(list.userId, ALICE));
+  const wished = await db.select().from(wishlistItem).where(eq(wishlistItem.userId, ALICE));
   return {
     itemPage: await call(ALICE, "GET", `/item/${MFC_ID}`),
     search: await call(ALICE, "GET", `/search/items?query=${MFC_ID}`),
     members: await call(ALICE, "GET", `/lists/${held.listId}/members`),
-    rows: { itemRow, links, entries, releases, collected },
+    rows: { itemRow, links, entries, releases, collected, orders, members, lists, wished },
   };
 }
 
@@ -204,6 +312,10 @@ beforeEach(async () => {
 });
 
 const NOT_IN_DATABASE = { status: 404, body: "Some items are no longer in the item database" };
+const COLLECTION_ITEM_NOT_FOUND = { status: 404, body: "Collection item not found" };
+const LIST_NOT_FOUND = { status: 404, body: "List not found" };
+const ORDER_NOT_FOUND = { status: 404, body: "Order not found" };
+const ORDER_ITEMS_NOT_FOUND = { status: 404, body: "Order items not found" };
 const NOT_A_RELEASE = { status: 404, body: "A chosen release is not a release of its item" };
 
 describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as they were", () => {
@@ -276,7 +388,295 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       (held) => call(BOB, "GET", `/collection?entries=${held.entryId}`),
       { status: 200, body: { items: [], totalCount: 0 } },
     ],
+    [
+      "the Orders of her MFC id",
+      () => call(BOB, "GET", `/item/${MFC_ID}/orders`),
+      { status: 200, body: { orders: [] } },
+    ],
+    [
+      "the Collection of her MFC id",
+      () => call(BOB, "GET", `/item/${MFC_ID}/collection`),
+      { status: 200, body: { collection: [] } },
+    ],
+    [
+      "her Collection Item",
+      (held) => call(BOB, "GET", `/collection/${held.collectionId}`),
+      COLLECTION_ITEM_NOT_FOUND,
+    ],
+    [
+      "an edit of her Collection Item",
+      async (held) =>
+        call(
+          BOB,
+          "PUT",
+          `/collection/${held.collectionId}`,
+          collectionEdit(await onlyCollectionItemOf(ALICE), null),
+        ),
+      COLLECTION_ITEM_NOT_FOUND,
+    ],
+    [
+      "a delete of her Collection Item",
+      (held) => call(BOB, "DELETE", `/collection/${held.collectionId}`),
+      COLLECTION_ITEM_NOT_FOUND,
+    ],
+    [
+      "a batch delete of her Collection Item",
+      (held) => call(BOB, "DELETE", "/collection", { ids: [held.collectionId] }),
+      { status: 404, body: "Collection item(s) not found" },
+    ],
+    [
+      "a Collection filter by her Collection Item's id",
+      (held) => call(BOB, "GET", `/collection?ids=${held.collectionId}`),
+      { status: 200, body: { items: [], totalCount: 0 } },
+    ],
+    ["her List", (held) => call(BOB, "GET", `/lists/${held.listId}`), LIST_NOT_FOUND],
+    [
+      "an edit of her List",
+      (held) => call(BOB, "PUT", `/lists/${held.listId}`, { title: "Bob's now", description: "" }),
+      LIST_NOT_FOUND,
+    ],
+    [
+      "a delete of her List",
+      (held) => call(BOB, "DELETE", "/lists", { listIds: [held.listId] }),
+      LIST_NOT_FOUND,
+    ],
+    [
+      "a move of her List",
+      (held) =>
+        call(BOB, "PATCH", "/lists/order", {
+          movedIds: [held.listId],
+          anchorId: "list-bob",
+          placement: "after",
+        }),
+      LIST_NOT_FOUND,
+    ],
+    [
+      "the List options for her Collection Item and Order",
+      (held) =>
+        call(BOB, "POST", "/lists/targets/options", {
+          targets: [
+            { type: "collectionItem", id: held.collectionId },
+            { type: "order", id: held.orderId },
+          ],
+        }),
+      { status: 404, body: "Selection not found" },
+    ],
+    [
+      "a removal of her Collection Item from her List",
+      (held) =>
+        call(BOB, "DELETE", "/lists/targets", {
+          listId: held.listId,
+          targets: [{ type: "collectionItem", id: held.collectionId }],
+        }),
+      LIST_NOT_FOUND,
+    ],
+    [
+      "a removal of her List Member",
+      (held) =>
+        call(BOB, "DELETE", `/lists/${held.listId}/members`, { memberIds: [held.memberId] }),
+      { status: 404, body: "Selection not found" },
+    ],
+    [
+      "a move of her List Member",
+      (held) =>
+        call(BOB, "PATCH", `/lists/${held.listId}/members/order`, {
+          movedIds: [held.memberId],
+          anchorId: null,
+          placement: "after",
+        }),
+      { status: 404, body: "List or selection not found" },
+    ],
+    [
+      "a Wishlist removal of her Item",
+      (held) => call(BOB, "DELETE", `/wishlist/${held.itemId}`),
+      { status: 200, body: { removedCount: 0 } },
+    ],
+    [
+      "a move of her Wishlist Item",
+      (held) =>
+        call(BOB, "PATCH", "/wishlist/order", {
+          movedIds: [held.wishlistItemId],
+          anchorId: null,
+          placement: "after",
+        }),
+      { status: 404, body: "Wishlist Item not found" },
+    ],
+    ["her Order", (held) => call(BOB, "GET", `/orders/${held.orderId}`), ORDER_NOT_FOUND],
+    [
+      "her Order's items",
+      (held) => call(BOB, "GET", `/orders/${held.orderId}/items`),
+      { status: 200, body: { items: [], totalCount: 0 } },
+    ],
+    [
+      "her Order's item releases",
+      (held) => call(BOB, "GET", `/orders/${held.orderId}/item-releases`),
+      { status: 200, body: [] },
+    ],
+    [
+      "a merge of her Order",
+      (held) =>
+        call(BOB, "POST", "/orders/merge", {
+          orderIds: [held.orderId],
+          newOrder: NEW_ORDER,
+          cascadeOptions: [],
+        }),
+      ORDER_ITEMS_NOT_FOUND,
+    ],
+    [
+      "a split of her Order Item",
+      (held) =>
+        call(BOB, "POST", "/orders/split", {
+          collectionIds: [held.collectionId],
+          newOrder: NEW_ORDER,
+          cascadeOptions: [],
+        }),
+      ORDER_ITEMS_NOT_FOUND,
+    ],
+    [
+      "an edit of her Order",
+      (held) =>
+        call(BOB, "PUT", `/orders/${held.orderId}`, {
+          order: { title: "Bob's now" },
+          cascadeOptions: [],
+        }),
+      ORDER_NOT_FOUND,
+    ],
+    [
+      "a delete of her Order",
+      (held) => call(BOB, "DELETE", "/orders", { orderIds: [held.orderId] }),
+      { status: 404, body: "One or more orders not found" },
+    ],
+    [
+      "a delete of her Order Item",
+      (held) => call(BOB, "DELETE", "/orders/items", { collectionIds: [held.collectionId] }),
+      { status: 404, body: "One or more order items not found" },
+    ],
+    [
+      "a removal of her Order Item from her Order",
+      (held) => call(BOB, "DELETE", `/orders/${held.orderId}/items/${held.collectionId}`),
+      { status: 404, body: "Order item not found" },
+    ],
+    [
+      "the analytics Items of her Item Entry",
+      (held) => call(BOB, "GET", `/analytics/artists/items?match=${held.entryId}`),
+      { status: 200, body: { items: [], totalCount: 0 } },
+    ],
+    [
+      "the analytics relationships of her Item Entry",
+      (held) =>
+        call(
+          BOB,
+          "GET",
+          `/analytics/artists/relationships?match=${held.entryId}&relatedSection=characters`,
+        ),
+      { status: 200, body: { items: [], totalCount: 0 } },
+    ],
   ];
+
+  type Bobs = Awaited<ReturnType<typeof bobHolds>>;
+  const mixedCases: readonly [
+    string,
+    (held: Held, bobs: Bobs) => ReturnType<typeof call>,
+    object,
+  ][] = [
+    [
+      "an Add commit of his own Item into her List",
+      (held, bobs) =>
+        call(BOB, "POST", "/add/commit", addCommit([{ itemId: bobs.itemId }], [held.listId])),
+      { status: 404, body: "List or selection not found" },
+    ],
+    [
+      "an Add commit of his own Item into her Order",
+      (held, bobs) =>
+        call(
+          BOB,
+          "POST",
+          "/add/commit",
+          addCommit([{ itemId: bobs.itemId }], [], {
+            kind: "order",
+            order: { kind: "existing", orderId: held.orderId },
+          }),
+        ),
+      { status: 404, body: "Order not found" },
+    ],
+    [
+      "a List add of his own Item into her List",
+      (held, bobs) =>
+        call(BOB, "PUT", "/lists/targets", {
+          targets: [{ type: "item", id: bobs.itemId }],
+          listIds: [held.listId],
+        }),
+      { status: 404, body: "List or selection not found" },
+    ],
+    [
+      "a List add of her Collection Item into his List",
+      (held, bobs) =>
+        call(BOB, "PUT", "/lists/targets", {
+          targets: [{ type: "collectionItem", id: held.collectionId }],
+          listIds: [bobs.listId],
+        }),
+      { status: 404, body: "List or selection not found" },
+    ],
+    [
+      "a List add of her Order into his List",
+      (held, bobs) =>
+        call(BOB, "PUT", "/lists/targets", {
+          targets: [{ type: "order", id: held.orderId }],
+          listIds: [bobs.listId],
+        }),
+      { status: 404, body: "List or selection not found" },
+    ],
+    [
+      "a removal of her Collection Item and Order from his List",
+      (held, bobs) =>
+        call(BOB, "DELETE", "/lists/targets", {
+          listId: bobs.listId,
+          targets: [
+            { type: "collectionItem", id: held.collectionId },
+            { type: "order", id: held.orderId },
+          ],
+        }),
+      { status: 200, body: { listId: "list-bob", removedCount: 0 } },
+    ],
+    [
+      "a move of his own Order Item into her Order",
+      (held, bobs) =>
+        call(BOB, "PUT", "/orders/move-items", {
+          targetOrderId: held.orderId,
+          collectionIds: [bobs.collectionId],
+        }),
+      { status: 404, body: "Order not found" },
+    ],
+    [
+      "a move of her Order Item into his Order",
+      (held, bobs) =>
+        call(BOB, "PUT", "/orders/move-items", {
+          targetOrderId: bobs.orderId,
+          collectionIds: [held.collectionId],
+        }),
+      { status: 404, body: "Order items not found" },
+    ],
+    [
+      "a merge of her Order with his own",
+      (held, bobs) =>
+        call(BOB, "POST", "/orders/merge", {
+          orderIds: [bobs.orderId, held.orderId],
+          newOrder: NEW_ORDER,
+          cascadeOptions: [],
+        }),
+      { status: 404, body: "One or more orders not found" },
+    ],
+  ];
+
+  test.each(mixedCases)("%s", async (_, send, answer) => {
+    const held = await aliceHolds();
+    const bobs = await bobHolds();
+    const before = await aliceSees(held);
+
+    expect(await send(held, bobs)).toMatchObject(answer);
+
+    expect(await aliceSees(held)).toEqual(before);
+  });
 
   test.each(cases)("%s", async (_, send, answer) => {
     const held = await aliceHolds();

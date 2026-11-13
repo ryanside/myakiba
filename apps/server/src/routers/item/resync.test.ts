@@ -368,6 +368,24 @@ describe("POST /api/item/:id/resync refreshes the item from the page the extensi
     expect(await itemRows()).toEqual(before);
   });
 
+  test("a release stored with an empty barcode refreshes a page with no barcode as unchanged and keeps its selection", async () => {
+    const noBarcodePage = edit(
+      page98777,
+      '  &bull; <a href="#" class="tbx-window" title="Buy (4582292601715)" class="light">4582292601715<meta name="vars" content="commit=loadWindow;window=buyItem;jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>',
+      "",
+    );
+    const itemId = await upload(noBarcodePage);
+    await db.update(item_release).set({ barcode: "" });
+    await collectEveryRelease(itemId, "2018-11-15");
+    const before = await itemRows();
+    const selected = await selectedReleases();
+
+    expect(await resync(noBarcodePage)).toMatchObject(refreshed("unchanged"));
+
+    expect(await itemRows()).toEqual(before);
+    expect(await selectedReleases()).toEqual(selected);
+  });
+
   test("an Item whose release ids are not derived from its page refreshes that page as unchanged and keeps every selection", async () => {
     const itemId = await upload(derivedTwoReleasesPage);
     await db.update(item_release).set({ id: sql`gen_random_uuid()` });

@@ -14,6 +14,9 @@ const FIXTURES = [
   "derived-not-found-signed-in.html",
   "derived-not-found-signed-out.html",
   "derived-challenge.html",
+  "item-581731-signed-out.html",
+  "item-10756-signed-out.html",
+  "not-found-signed-out.html",
 ];
 const fixturePages = await Promise.all(
   FIXTURES.map(async (name) => [name, await fixture(name)] as const),
@@ -48,7 +51,25 @@ const VARIOUS_FIELD = '<div class="data-field"><div class="data-label">Various</
 const OG_IMAGE =
   'content="https://myfigurecollection.net/?_tb=commit&amp;commit=nsp&amp;objectType=item&amp;objectId=98777&amp;size=1"';
 
+const BARCODE =
+  '  &bull; <a href="#" class="tbx-window" title="Buy (4582292601715)" class="light">4582292601715<meta name="vars" content="commit=loadWindow;window=buyItem;jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>';
+const PRICE = "13,500 <small>JPY</small>";
+
 const VARIANTS: readonly (readonly [string, string])[] = [
+  ["a release with no barcode", edit(item98777, BARCODE, "")],
+  ["a barcode link with no class", edit(item98777, BARCODE, " &bull; <a>4582292601715</a>")],
+  ["a barcode in text after the bullet", edit(item98777, BARCODE, " &bull; 4582292601715 ")],
+  ["whitespace after the barcode", edit(item98777, BARCODE, `${BARCODE}\n  `)],
+  [
+    "a barcode link with no price and no bullet",
+    edit(item98777, `${PRICE}${BARCODE}`, '<a class="tbx-window">4582292601715</a>'),
+  ],
+  [
+    "a barcode link after the price with no bullet",
+    edit(item98777, BARCODE, " <a>4582292601715</a>"),
+  ],
+  ["text after the price with no bullet", edit(item98777, BARCODE, " ABC-123")],
+  ["a release type that ends in a period", edit(item98777, "Standard (Japan)", "Limited Ver.")],
   [
     "a second role group",
     edit(
@@ -188,6 +209,21 @@ const VARIANTS: readonly (readonly [string, string])[] = [
 describe("scrubMfcPage keeps every reading of a page", () => {
   test.each([...fixturePages, ...VARIANTS])("%s", (_name, html) => {
     expect(readings(scrub(html))).toEqual(readings(html));
+  });
+
+  test.each(
+    [
+      "a barcode link with no class",
+      "a barcode in text after the bullet",
+      "whitespace after the barcode",
+      "a barcode link with no price and no bullet",
+      "a barcode link after the price with no bullet",
+    ].map((name) => [name, VARIANTS.find(([variant]) => variant === name)?.[1] ?? ""]),
+  )("%s still reads its barcode", (_name, html) => {
+    const parsed = parseMfcItemPage(scrub(html), ID_98777);
+    expect(parsed.isOk() && parsed.value.releases.map(({ barcode }) => barcode)).toEqual([
+      "4582292601715",
+    ]);
   });
 });
 

@@ -14,20 +14,25 @@ const OWNERSHIP_MIGRATION_FILES = new Set([
 const SCHEMA = /(?:^|\/)schema\/figure(?:\.[cm]?[jt]s)?$/u;
 const DRIZZLE_WRITES = new Set(["insert", "update", "delete"]);
 const TABLE = `"?(?:public"?\\."?)?(${TABLES.join("|")})"?`;
+// PostgreSQL's relation_expr: `t`, `t *`, `ONLY t` or `ONLY (t)`.
+const RELATION = `(?:only\\s*\\(\\s*${TABLE}\\s*\\)|(?:only\\s+)?${TABLE}(?:\\s*\\*)?)`;
+const ALIAS = `(?:\\s+(?:as\\s+)?(?:"(?:[^"]|"")+"|\\w+))?`;
+// An alias with nothing after it must follow AS or be quoted: "delete from item list" is prose.
+const STATED_ALIAS = `(?:\\s+as\\s+(?:"(?:[^"]|"")+"|\\w+)|\\s+"(?:[^"]|"")+")?`;
 const RAW_WRITES = [
   new RegExp(
-    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+\\w+)?\\s*(?:\\(|\\b(?:values|select|default)\\b)`,
+    `\\b(insert)\\s+into\\s+${TABLE}(?:\\s+as\\s+(?:"(?:[^"]|"")+"|\\w+))?\\s*(?:\\(|\\b(?:values|select|default|table|with|overriding)\\b)`,
     "giu",
   ),
-  new RegExp(`\\b(update)\\s+(?:only\\s+)?${TABLE}\\s+(?:(?:as\\s+)?\\w+\\s+)?set\\b`, "giu"),
+  new RegExp(`\\b(update)\\s+${RELATION}(?:${ALIAS}\\s+|(?<=\\*)\\s*)set\\b`, "giu"),
   new RegExp(
-    `\\b(delete)\\s+from\\s+(?:only\\s+)?${TABLE}(?:\\s*(?:;|$)|(?:\\s+(?:as\\s+)?\\w+)?\\s+(?:where|using|returning)\\b)`,
+    `\\b(delete)\\s+from\\s+${RELATION}(?:${STATED_ALIAS}\\s*(?:;|\\)|$)|${ALIAS}\\s+(?:where|using|returning)\\b)`,
     "giu",
   ),
   new RegExp(`\\b(merge)\\s+into\\s+(?:only\\s+)?${TABLE}(?=[\\s(;]|$)`, "giu"),
   new RegExp(`\\b(copy)\\s+${TABLE}(?:\\s*\\([^)]*\\))?\\s+from\\b`, "giu"),
 ];
-const NAME = `(?:only\\s+)?(?:"[^"]+"|[a-z_][\\w$]*)(?:\\.(?:"[^"]+"|[a-z_][\\w$]*))?\\*?`;
+const NAME = `(?:only\\s+)?(?:"(?:[^"]|"")+"|[a-z_][\\w$]*)(?:\\.(?:"(?:[^"]|"")+"|[a-z_][\\w$]*))?\\*?`;
 // A cascade empties every table that references the ones named, so it can reach the Item tables.
 const TRUNCATE = new RegExp(
   `\\btruncate\\s+(?:table\\s+)?(${NAME}(?:\\s*,\\s*${NAME})*)(\\s+(?:(?:restart|continue)\\s+identity\\s+)?cascade\\b)?`,
@@ -68,9 +73,24 @@ function unwrapped(node: Node): Node {
     case "TSNonNullExpression":
     case "TSTypeAssertion":
     case "ParenthesizedExpression":
+    case "ChainExpression":
       return unwrapped(node.expression);
     default:
       return node;
+  }
+}
+
+/** The values an expression can take: either branch, either side, or a sequence's last. */
+function operands(node: Node): Node[] {
+  switch (node.type) {
+    case "ConditionalExpression":
+      return [node.consequent, node.alternate];
+    case "LogicalExpression":
+      return [node.left, node.right];
+    case "SequenceExpression":
+      return node.expressions.slice(-1);
+    default:
+      return [];
   }
 }
 
@@ -108,8 +128,8 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   const sqlText = (value: string, start: number) => {
     const code = value.replaceAll(SQL_COMMENT, " ");
     for (const pattern of RAW_WRITES) {
-      for (const [, verb = "", table = ""] of code.matchAll(pattern)) {
-        write(start, verb.toLowerCase(), table.toLowerCase());
+      for (const [, verb = "", ...named] of code.matchAll(pattern)) {
+        write(start, verb.toLowerCase(), (named.find(Boolean) ?? "").toLowerCase());
       }
     }
     for (const [, names = "", cascade] of code.matchAll(TRUNCATE)) {
@@ -119,6 +139,8 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   };
   const tableOf = (value: Node): string | undefined => {
     const node = unwrapped(value);
+    const operand = operands(node).map(tableOf).find(Boolean);
+    if (operand) return operand;
     if (node.type === "Identifier") return tables.get(node.name);
     if (node.type !== "MemberExpression") return undefined;
     const namespace = unwrapped(node.object);
@@ -130,6 +152,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   // The schema module, a binding of it, or an object spread from either.
   const isNamespace = (value: Node): boolean => {
     const node = unwrapped(value);
+    if (operands(node).some(isNamespace)) return true;
     if (importsSchema(node)) return true;
     if (node.type === "Identifier") return namespaces.has(node.name);
     return (
@@ -141,6 +164,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
   };
   const held = (value: Node): string[] => {
     const node = unwrapped(value);
+    if (node.type !== "ObjectExpression" && isNamespace(node)) return ["*"];
     if (node.type === "ObjectExpression")
       return node.properties.flatMap((property) => {
         if (property.type === "Property") return held(property.value);
@@ -170,7 +194,7 @@ function itemWrites(file: string, text: string): ItemWrite[] {
     if (table) write(offset, "re-export", table);
     if (namespaces.has(local)) write(offset, "re-export", "*");
   };
-  new Visitor({
+  const visitor = new Visitor({
     ImportDeclaration(node) {
       if (!SCHEMA.test(node.source.value)) return;
       for (const specifier of node.specifiers) {
@@ -183,7 +207,8 @@ function itemWrites(file: string, text: string): ItemWrite[] {
     ExportNamedDeclaration(node) {
       if (node.declaration?.type === "VariableDeclaration")
         for (const declarator of node.declaration.declarations)
-          if (declarator.init && isNamespace(declarator.init)) write(node.start, "re-export", "*");
+          if ((declarator.init && isNamespace(declarator.init)) || isNamespace(declarator.id))
+            write(node.start, "re-export", "*");
       for (const specifier of node.specifiers) {
         const local = nameOf(specifier.local);
         if (node.source === null) reExported(specifier.start, local);
@@ -207,7 +232,10 @@ function itemWrites(file: string, text: string): ItemWrite[] {
       } else copied(node.start, node.init);
     },
     AssignmentExpression(node) {
-      copied(node.start, node.right);
+      if (!isNamespace(node.right)) copied(node.start, node.right);
+      else if (node.left.type === "Identifier") namespaces.add(node.left.name);
+      else if (node.left.type === "ObjectPattern") destructured(node.left);
+      else write(node.start, "copy", "*");
     },
     AssignmentPattern(node) {
       copied(node.start, node.right);
@@ -257,7 +285,17 @@ function itemWrites(file: string, text: string): ItemWrite[] {
         if (table && verb) write(expression.start, verb.toLowerCase(), table);
       }
     },
-  }).visit(parseSync(file, text).program);
+  });
+  // Walk until no new binding of a table or the namespace is learned, wherever in the file and through
+  // however many names it is assigned. Both sets only grow, so this ends. The last walk reports, so a
+  // write above the assignment that binds its table is found.
+  const { program } = parseSync(file, text);
+  for (let known = -1; known !== tables.size + namespaces.size;) {
+    known = tables.size + namespaces.size;
+    visitor.visit(program);
+  }
+  writes.length = 0;
+  visitor.visit(program);
   return writes;
 }
 
@@ -337,8 +375,94 @@ describe("an Item table write", () => {
     [`import("@myakiba/db/schema/figure").then((m) => m.item_release);`],
     [`import("@myakiba/db/schema/figure").then(({ entry }) => tx.select().from(entry));`],
     [`import { item } from "@myakiba/db/schema/figure"; const table = () => item;`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let schema: typeof figure; schema = figure; await tx.insert(schema.item).values({});`,
+    ],
+    [`let schema; schema = await import("@myakiba/db/schema/figure"); tx.delete(schema.entry);`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let tables; tables = { ...figure }; tx.insert(tables.item);`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; let item; ({ item } = figure);`],
+    [`import * as figure from "@myakiba/db/schema/figure"; let t; ({ entry: t } = figure);`],
+    [`let rest; ({ ...rest } = await import("@myakiba/db/schema/figure"));`],
+    ['await sql`UPDATE item AS "target" SET title = 1 WHERE "target".id = 2`;'],
+    ['await sql`UPDATE entry "e" SET name = 1`;'],
+    ["await sql`UPDATE item * SET title = 1`;"],
+    ["await sql`UPDATE ONLY (item_release) SET date = now()`;"],
+    ["await sql`DELETE FROM item * WHERE id = 1`;"],
+    ["await sql`DELETE FROM item*`;"],
+    ['await sql`DELETE FROM entry AS "e" WHERE "e".id = 1`;'],
+    ["await sql`DELETE FROM ONLY ( entry_to_item ) WHERE true`;"],
+    ['await sql`INSERT INTO item AS "i" (id) VALUES (1)`;'],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; holder.schema = { ...figure }; tx.insert(holder.schema.item);`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; holder.schema = figure;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; this.tables = { ...figure };`],
+    [`import * as figure from "@myakiba/db/schema/figure"; xs[0] = figure;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; module.exports = { ...figure };`],
+    [`import * as figure from "@myakiba/db/schema/figure"; tx.insert(figure?.item);`],
+    [`import { item } from "@myakiba/db/schema/figure"; tx.insert((0, item));`],
+    [
+      `import { item, collection } from "@myakiba/db/schema/figure"; tx.insert(flag ? item : collection);`,
+    ],
+    [`import { entry } from "@myakiba/db/schema/figure"; tx.delete(table ?? entry);`],
+    [`import { entry } from "@myakiba/db/schema/figure"; tx.delete(enabled && entry);`],
+    ["await sql`DELETE FROM item AS i`;"],
+    ["await sql`WITH gone AS (DELETE FROM item) SELECT 1`;"],
+    ["await sql`INSERT INTO item TABLE backup`;"],
+    ["await sql`INSERT INTO item WITH q AS (SELECT 1) SELECT * FROM q`;"],
+    ["await sql`INSERT INTO item OVERRIDING USER VALUE VALUES (1)`;"],
+    ["await sql`UPDATE item*SET title = 1`;"],
+    ['await sql`UPDATE item AS "tar""get" SET title = 1`;'],
+    ['await sql`INSERT INTO item AS "tar""get" (id) VALUES (1)`;'],
+    ['await sql`DELETE FROM item AS "tar""get" WHERE id = 1`;'],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(t.item); } let t; t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let t; class R { w(tx) { return tx.delete(t.entry); } } t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; export let tables; tables = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let t; export { t }; t = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(t.item); } const t = figure;`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; class W { s = figure; }`],
+    [`import * as figure from "@myakiba/db/schema/figure"; function w(tx, s = figure) {}`],
+    [`import * as figure from "@myakiba/db/schema/figure"; for (const s of [figure]) s;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; function get() { return figure; }`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const get = () => figure;`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const box = { figure };`],
+    [`import * as figure from "@myakiba/db/schema/figure"; const [s] = [figure];`],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; export let tables = null; tables = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(a.item); } let a; let b; function init() { a = b; } b = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; let a; let b; export { a }; function init() { a = b; } b = { ...figure };`,
+    ],
+    [
+      `import * as figure from "@myakiba/db/schema/figure"; function w(tx) { return tx.insert(a.item); } let a; let b; let c; a = b; b = c; c = figure;`,
+    ],
+    [`import * as figure from "@myakiba/db/schema/figure"; export const tables = figure;`],
   ])("is found in %s", (body) => {
     expect(writes(body)).toHaveLength(1);
+  });
+
+  test.each([
+    ['await sql`UPDATE item AS "target" SET title = 1`;', "update", "item"],
+    ["await sql`UPDATE ONLY (item_release) SET date = now()`;", "update", "item_release"],
+    ["await sql`DELETE FROM entry * WHERE id = 1`;", "delete", "entry"],
+    ["await sql`DELETE FROM ONLY ( entry_to_item ) WHERE true`;", "delete", "entry_to_item"],
+  ])("names the table %s writes", (body, verb, table) => {
+    expect(writes(body)).toEqual([{ line: 1, verb, table }]);
   });
 
   test.each([
@@ -346,6 +470,8 @@ describe("an Item table write", () => {
     [`import { collection } from "@myakiba/db/schema/figure"; tx.update(collection).set({});`],
     [`const item = 1; seen.delete(item);`],
     ["await sql`UPDATE collection c SET item_id = 1`;"],
+    ['await sql`UPDATE collection "c" SET item_id = 1`;'],
+    ["await sql`DELETE FROM collection * WHERE item_id = 1`;"],
     ["await sql`INSERT INTO item_releases_archive (id) VALUES (1)`;"],
     [`toast("Failed to update item. Please try again.");`],
     [`const text = "Delete from item list";`],

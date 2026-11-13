@@ -1,7 +1,7 @@
 import { Result } from "better-result";
 import type { Cheerio, CheerioAPI } from "cheerio";
 import { select } from "cheerio-select";
-import { isTag } from "domhandler";
+import { isTag, isText } from "domhandler";
 import type { AnyNode, Element } from "domhandler";
 import type { EntryCategory } from "@myakiba/contracts/shared/types";
 import { parseMoneyInputToMinorUnits } from "@myakiba/utils/currency";
@@ -37,14 +37,15 @@ export type ItemFields = {
 type FieldReader = (field: Cheerio<Element>, $: CheerioAPI, fields: ItemFields) => void;
 
 const INT4_MAX = 2_147_483_647;
+const BULLET = "\u2022";
 
 // A lookbehind lets a repeated run match only from where the run starts, so a long run is scanned once.
 const PATTERNS = {
   height: /H=([\d,]+)mm/,
   width: /W=([\d,]+)mm/,
   depth: /[DL]=([\d,]+)mm/,
-  price: /(?<![\d,])(\d+(?:,\d{3})*(?:\.\d{2})?)\s+(?:<small>)?([A-Z]{3})(?:<\/small>)?/,
-  barcode: /(?<![A-Z0-9-])([A-Z0-9-]+)$/,
+  price: /(?<![\d,.])(\d[\d,]*(?:\.\d+)?)\s+([A-Z]{3})/,
+  barcode: /^[A-Z0-9-]+$/,
   entryId: READS.entryHref,
   materialPercentage: /(?<!\d)(\d+(?:\.\d+)?)\s*%/,
   ratingId: READS.ratingHref,
@@ -143,7 +144,16 @@ const readVarious: FieldReader = (field, $, fields) => {
 function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): void {
   const dateLink = outermost(find($, $release, "a.time"));
   if (dateLink.length === 0) return;
-  const text = find($, $release, ".data-value").first().text();
+  const value = find($, $release, ".data-value").first();
+  // The price is in the value's own text, never in a link (its date or its barcode) or its type, so an
+  // event such as "Magical Mirai 2023 TOKYO" is not read as 2,023 TOK. MFC's conversion link sits
+  // inside the currency's <small>, which stays. A space between child nodes keeps the parts apart.
+  const text = value
+    .contents()
+    .toArray()
+    .filter((node) => !$(node).is("a, small.light"))
+    .map((node) => $(node).text())
+    .join(" ");
   const types: string[] = [];
   for (const em of outermost(find($, $release, "small.light em"))) {
     const part = $(em).text().trim();
@@ -155,9 +165,45 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
     type: types.join(" "),
     price: price?.[1] ? money(price[1], fields) : 0,
     priceCurrency: price?.[2] ?? "JPY",
-    barcode: PATTERNS.barcode.exec(text)?.[1] ?? "",
+    barcode: readBarcode(value, $, fields),
   });
 }
+
+/**
+ * MFC writes a release's barcode after a bullet that follows its price, usually as a link. With no
+ * price there may be no bullet, so then the barcode is the value's last link other than its date,
+ * when that link reads like one.
+ */
+function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): string | null {
+  const after: string[] = [];
+  for (const node of value.contents()) {
+    if (after.length > 0) after.push($(node).text());
+    else if (isText(node) && node.data.includes(BULLET)) {
+      after.push(node.data.slice(node.data.indexOf(BULLET) + 1));
+    }
+  }
+  if (after.length === 0) {
+    // With no bullet, only a link that reads like a JAN, EAN, UPC or ISBN is the barcode, so a shop,
+    // region or second date link is not stored as one.
+    const link = value.children("a").not(".time").last().text().trim();
+    if (looksLikeBarcode(link)) return link;
+    // A long link with a digit that fails the barcode pattern is worth a look, as after a bullet.
+    if (link.length >= 8 && hasDigit(link))
+      fields.warnings.push(`unreadable barcode ${clippedQuote(link)}`);
+    return null;
+  }
+  const barcode = after.join("").trim();
+  if (barcode === "") return null;
+  if (PATTERNS.barcode.test(barcode)) return barcode;
+  fields.warnings.push(`unreadable barcode ${clippedQuote(barcode)}`);
+  return null;
+}
+
+const hasDigit = (text: string): boolean =>
+  [...text].some((character) => character >= "0" && character <= "9");
+
+const looksLikeBarcode = (text: string): boolean =>
+  text.length >= 8 && hasDigit(text) && PATTERNS.barcode.test(text);
 
 const READERS_BY_LABEL = {
   Category: readCategory,
@@ -262,7 +308,7 @@ export function readItemFields($: CheerioAPI): Result<ItemFields, TooLarge> {
     fields.scale,
     ...fields.version,
     ...fields.mentions.map(({ role }) => role),
-    ...fields.releases.flatMap(({ type, barcode }) => [type, barcode]),
+    ...fields.releases.flatMap(({ type, barcode }) => [type, barcode ?? ""]),
   ];
   const tooLarge = firstPast([
     ["entries", fields.mentions.length],

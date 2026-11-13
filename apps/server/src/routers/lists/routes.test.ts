@@ -1,9 +1,10 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
+import { eq } from "drizzle-orm";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
-import { createTestDatabase } from "../../../test/database";
+import { createTestDatabase, writeUnguarded } from "../../../test/database";
 
 const { collection, item, list, listMember } = figureSchema;
 
@@ -85,16 +86,60 @@ test("a member whose target the owner cannot see stays a 500", async () => {
   await db
     .insert(collection)
     .values({ id: "c-other", userId: "user-2", itemId: "aki-1", status: "Owned" });
-  await db.insert(listMember).values({
-    id: "member-dangling",
-    listId: "list-1",
-    userId,
-    collectionId: "c-other",
-    position: 2,
-  });
+  await writeUnguarded(db, (tx) =>
+    tx.insert(listMember).values({
+      id: "member-dangling",
+      listId: "list-1",
+      userId,
+      collectionId: "c-other",
+      position: 2,
+    }),
+  );
 
   expect(await call("GET", "/list-1/members")).toEqual({
     status: 500,
     body: "Failed to load List",
   });
+});
+
+test("a List preview shows no picture of a Collection Item or Order another user owns", async () => {
+  await db
+    .update(item)
+    .set({ imageKey: `items/${"a".repeat(64)}.jpg` })
+    .where(eq(item.id, "aki-1"));
+  await db
+    .insert(figureSchema.order)
+    .values({ id: "order-other", userId: "user-2", title: "Theirs" });
+  await db.insert(collection).values([
+    { id: "c-other", userId: "user-2", itemId: "aki-1", status: "Owned" },
+    { id: "c-other-ordered", userId: "user-2", itemId: "aki-1", orderId: "order-other" },
+  ]);
+  await writeUnguarded(db, (tx) =>
+    tx.insert(listMember).values([
+      { id: "member-collection", listId: "list-2", userId, collectionId: "c-other", position: 0 },
+      { id: "member-order", listId: "list-2", userId, orderId: "order-other", position: 1 },
+    ]),
+  );
+
+  const { status, body } = await call("GET", "/");
+
+  expect(status).toBe(200);
+  expect(body).not.toContain("a".repeat(64));
+});
+
+test("a List preview shows no picture of an Item another user owns", async () => {
+  await db
+    .update(item)
+    .set({ imageKey: `items/${"a".repeat(64)}.jpg` })
+    .where(eq(item.id, "aki-1"));
+  await writeUnguarded(db, (tx) =>
+    tx
+      .insert(listMember)
+      .values({ id: "member-item", listId: "list-2", userId, itemId: "aki-1", position: 0 }),
+  );
+
+  const { status, body } = await call("GET", "/");
+
+  expect(status).toBe(200);
+  expect(body).not.toContain("a".repeat(64));
 });

@@ -30,13 +30,14 @@ type ReleaseContent = {
   readonly barcode: string | null;
 };
 
+// An older parse stored a missing barcode as "", and the page now reads it as null.
 export function releaseKey(release: ReleaseContent): string {
   return JSON.stringify([
     release.date,
     release.type,
     release.price,
     release.priceCurrency,
-    release.barcode,
+    release.barcode || null,
   ]);
 }
 
