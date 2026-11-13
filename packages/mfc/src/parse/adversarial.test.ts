@@ -400,6 +400,11 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill("x", (run) => ({ fields: field("Title", run) })),
   ],
   [
+    "an element with one element child past the children limit",
+    "too_large:children",
+    () => padded({ fields: `<div>${"<i></i>".repeat(CHILDREN + 1)}</div>` }),
+  ],
+  [
     "elements before the page's html element",
     "too_large:children",
     () => fill("<br>", (run) => ({ before: run, fields: "" })),
@@ -607,6 +612,10 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
 ];
 
 const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
+  [
+    "an element with as many element children as the children limit",
+    () => padded({ fields: `<div>${"<i></i>".repeat(CHILDREN)}</div>` }),
+  ],
   [
     "data values nested to the field depth limit",
     () =>
