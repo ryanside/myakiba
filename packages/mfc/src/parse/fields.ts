@@ -161,7 +161,10 @@ function readRelease($release: Cheerio<Element>, $: CheerioAPI, fields: ItemFiel
   });
 }
 
-/** MFC writes a release's barcode after a bullet that follows its price, usually as a link. */
+/**
+ * MFC writes a release's barcode after a bullet that follows its price, usually as a link. With no
+ * price there may be no bullet, so then the barcode is the value's last link other than its date.
+ */
 function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields): string | null {
   const after: string[] = [];
   for (const node of value.contents()) {
@@ -170,6 +173,7 @@ function readBarcode(value: Cheerio<Element>, $: CheerioAPI, fields: ItemFields)
       after.push(node.data.slice(node.data.indexOf(BULLET) + 1));
     }
   }
+  if (after.length === 0) after.push(value.children("a").not(".time").last().text());
   const barcode = after.join("").trim();
   if (barcode === "") return null;
   if (PATTERNS.barcode.test(barcode)) return barcode;

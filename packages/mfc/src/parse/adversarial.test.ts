@@ -395,6 +395,11 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill("A", (run) => ({ fields: release(`1 JPY &bull; <a>${run}</a>\n  `) })),
   ],
   [
+    "a barcode link with no bullet",
+    "too_large:valueLength",
+    () => fill("A", (run) => ({ fields: release(`<a>${run}</a>`) })),
+  ],
+  [
     "a barcode of dashes in text",
     "too_large:valueLength",
     () => fill("-", (run) => ({ fields: release(`1 JPY &bull; ${run} `) })),
@@ -617,6 +622,10 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
 ];
 
 const AT_LIMIT_PAGES: readonly (readonly [string, () => string])[] = [
+  [
+    "barcode: as many links with no bullet as the children limit allows",
+    () => padded({ fields: release("<a>x</a>".repeat(CHILDREN - 2)) }),
+  ],
   [
     "an element with as many element children as the children limit",
     () => padded({ fields: `<div>${"<i></i>".repeat(CHILDREN)}</div>` }),

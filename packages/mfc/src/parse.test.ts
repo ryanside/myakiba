@@ -622,6 +622,24 @@ const BARCODE_98777 =
   '  &bull; <a href="#" class="tbx-window" title="Buy (4582292601715)" class="light">4582292601715<meta name="vars" content="commit=loadWindow;window=buyItem;jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>';
 
 describe("parseMfcItemPage release barcodes", () => {
+  test("a barcode link with no price and no bullet reads", () => {
+    const page = parsedPage(
+      edit(
+        item98777,
+        `13,500 <small>JPY</small>${BARCODE_98777}`,
+        '<a href="#" class="tbx-window" title="Buy (4582292601715)">4582292601715<meta name="vars" content="jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>',
+      ),
+    );
+    expect(page.releases).toEqual([{ ...RELEASE_98777, price: 0 }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link after the price with no bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " <a>4582292601715</a>\n  "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
   test("a release with no barcode has none, not its currency", () => {
     const page = parsedPage(edit(item98777, BARCODE_98777, ""));
     expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
