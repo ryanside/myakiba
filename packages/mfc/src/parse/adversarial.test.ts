@@ -135,6 +135,11 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
     () => fill("A", (run) => ({ fields: release(`1 JPY &bull; ${run}!`) })),
   ],
   [
+    "barcode: dashes with a failing tail",
+    "parsed",
+    () => fill("-", (run) => ({ fields: release(`1 JPY &bull; ${run}!`) })),
+  ],
+  [
     "barcode: bullets after the first",
     "parsed",
     () => fill("&bull;", (run) => ({ fields: release(`1 JPY ${run}`) })),
