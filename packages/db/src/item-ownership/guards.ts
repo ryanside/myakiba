@@ -147,7 +147,8 @@ const GUARDS_SQL = [
 
 /**
  * Creates or replaces the triggers that keep every reference to an Item, Item Entry, List,
- * Collection Item or Order with its owner. drizzle-kit push does not read triggers, so db-push runs this after every push.
+ * Collection Item or Order with its owner. drizzle-kit push does not read triggers, so db-push
+ * runs this after every push.
  * Idempotent, and atomic: one statement batch, which Postgres runs as one transaction. A database
  * without the owner columns has nothing to guard and is left alone.
  */
