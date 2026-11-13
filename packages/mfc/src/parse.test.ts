@@ -594,6 +594,47 @@ describe("parseMfcItemPage release prices", () => {
   });
 });
 
+const BARCODE_98777 =
+  '  &bull; <a href="#" class="tbx-window" title="Buy (4582292601715)" class="light">4582292601715<meta name="vars" content="commit=loadWindow;window=buyItem;jan=4582292601715"/></a><meta itemprop="productID" content="jan:4582292601715"/>';
+
+describe("parseMfcItemPage release barcodes", () => {
+  test("a release with no barcode has none, not its currency", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, ""));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("whitespace after the barcode keeps it", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, `${BARCODE_98777}\n  `));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link with no class reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; <a>4582292601715</a>\n  "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode written as text after the bullet reads", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; 4582292601715 "));
+    expect(page.releases).toEqual([RELEASE_98777]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("text after the price with no bullet is no barcode", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " ABC-123"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual([]);
+  });
+
+  test("a barcode link holding other characters reads as none and warns", () => {
+    const page = parsedPage(edit(item98777, BARCODE_98777, " &bull; <a>Buy now</a>"));
+    expect(page.releases).toEqual([{ ...RELEASE_98777, barcode: null }]);
+    expect(page.warnings).toEqual(['unreadable barcode "Buy now"']);
+  });
+});
+
 describe("parseMfcItemPage values too large to store", () => {
   test("a release price past safe money reads as no price and warns", () => {
     const page = parsedPage(

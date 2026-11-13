@@ -122,12 +122,12 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
   [
     "barcode: barcode characters with a failing tail",
     "parsed",
-    () => fill("A", (run) => ({ fields: release(`${run}!`) })),
+    () => fill("A", (run) => ({ fields: release(`1 JPY &bull; ${run}!`) })),
   ],
   [
-    "barcode: dashes with a failing tail",
+    "barcode: bullets after the first",
     "parsed",
-    () => fill("-", (run) => ({ fields: release(`${run} `) })),
+    () => fill("&bull;", (run) => ({ fields: release(`1 JPY ${run}`) })),
   ],
   [
     "material percentage: digits with no percent sign",
@@ -374,7 +374,16 @@ const ADVERSARIAL_PAGES: readonly Row[] = [
         ),
       })),
   ],
-  ["a barcode", "too_large:valueLength", () => fill("A", (run) => ({ fields: release(run) }))],
+  [
+    "a barcode",
+    "too_large:valueLength",
+    () => fill("A", (run) => ({ fields: release(`1 JPY &bull; <a>${run}</a>\n  `) })),
+  ],
+  [
+    "a barcode of dashes in text",
+    "too_large:valueLength",
+    () => fill("-", (run) => ({ fields: release(`1 JPY &bull; ${run} `) })),
+  ],
   [
     "a Title field",
     "too_large:valueLength",
