@@ -6,8 +6,8 @@ export const vocabulary = rootedRead("vocabulary", {
   key: () => ["vocabulary"] as const,
   load: () =>
     call(app.api.vocabulary.get(), {
-      fallback: "Failed to load your shops",
-      empty: "Failed to load your shops",
+      fallback: "Failed to load your suggestions",
+      empty: "Failed to load your suggestions",
     }),
   staleTime: 1000 * 60 * 5,
   retry: false,

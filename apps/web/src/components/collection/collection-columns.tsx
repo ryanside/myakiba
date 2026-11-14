@@ -13,7 +13,7 @@ import {
 import { ItemTitleCell } from "@/components/cells/item-title-cell";
 import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
-import { InlineShopCell } from "@/components/shop-fields";
+import { InlineShopCell } from "@/components/vocabulary-fields";
 import { EmptyValue } from "@/components/cells/empty-value";
 import {
   DropdownMenu,

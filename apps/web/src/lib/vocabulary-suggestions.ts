@@ -1,8 +1,13 @@
-import type { ShopTerm } from "@myakiba/contracts/vocabulary/schema";
+const RECENT_TERM_COUNT = 6;
 
-const RECENT_SHOP_COUNT = 6;
+/** A shop or tag the user saved, with every use of that exact spelling. */
+type RankedTerm = {
+  readonly value: string;
+  readonly uses: number;
+  readonly lastUsedAt: string;
+};
 
-type ShopGroup = {
+type TermGroup = {
   readonly key: string;
   readonly value: string;
   readonly valueUses: number;
@@ -10,14 +15,14 @@ type ShopGroup = {
   readonly lastUsedAt: string;
 };
 
-export function normalizeShop(shop: string): string {
-  return shop.replaceAll(/\s+/g, "").toLowerCase();
+export function normalizeTerm(term: string): string {
+  return term.replaceAll(/\s+/g, "").toLowerCase();
 }
 
-function groupShops(terms: readonly ShopTerm[]): Map<string, ShopGroup> {
-  const groups = new Map<string, ShopGroup>();
+function groupTerms(terms: readonly RankedTerm[]): Map<string, TermGroup> {
+  const groups = new Map<string, TermGroup>();
   for (const term of terms) {
-    const key = normalizeShop(term.value);
+    const key = normalizeTerm(term.value);
     if (!key) continue;
     const uses = term.uses;
     const group = groups.get(key);
@@ -43,19 +48,19 @@ function groupShops(terms: readonly ShopTerm[]): Map<string, ShopGroup> {
   return groups;
 }
 
-const byRecency = (a: ShopGroup, b: ShopGroup) => b.lastUsedAt.localeCompare(a.lastUsedAt);
+const byRecency = (a: TermGroup, b: TermGroup) => b.lastUsedAt.localeCompare(a.lastUsedAt);
 
-/** The shops to suggest for `query`: recent shops when it is empty, else prefix matches before substring matches. */
-export function rankShops(terms: readonly ShopTerm[], query: string, limit = 8): string[] {
-  const groups = [...groupShops(terms).values()];
-  const typed = normalizeShop(query);
+/** The terms to suggest for `query`: recent terms when it is empty, else prefix matches before substring matches. */
+export function rankTerms(terms: readonly RankedTerm[], query: string, limit = 8): string[] {
+  const groups = [...groupTerms(terms).values()];
+  const typed = normalizeTerm(query);
   if (!typed) {
     return groups
       .toSorted(byRecency)
-      .slice(0, Math.min(limit, RECENT_SHOP_COUNT))
+      .slice(0, Math.min(limit, RECENT_TERM_COUNT))
       .map((group) => group.value);
   }
-  const matchRank = (group: ShopGroup) => (group.key.startsWith(typed) ? 0 : 1);
+  const matchRank = (group: TermGroup) => (group.key.startsWith(typed) ? 0 : 1);
   return groups
     .filter((group) => group.key.includes(typed))
     .toSorted((a, b) => matchRank(a) - matchRank(b) || b.uses - a.uses || byRecency(a, b))

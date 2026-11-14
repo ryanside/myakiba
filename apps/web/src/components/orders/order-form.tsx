@@ -30,7 +30,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/shop-fields";
+import { ShopInput } from "@/components/vocabulary-fields";
 import { Label } from "@/components/ui/label";
 import {
   Select,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { ShopTerm } from "@myakiba/contracts/vocabulary/schema";
-import { normalizeShop, rankShops } from "./shop-suggestions";
+import type { ShopTerm, TagTerm } from "@myakiba/contracts/vocabulary/schema";
+import { normalizeTerm, rankTerms } from "./vocabulary-suggestions";
 
 const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm => ({
   value,
@@ -10,17 +10,17 @@ const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm
   lastUsedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
 });
 
-describe("normalizeShop", () => {
+describe("normalizeTerm", () => {
   test("drops all whitespace and lowercases", () => {
-    expect(normalizeShop("  Ami \t  Ami  ")).toBe("amiami");
+    expect(normalizeTerm("  Ami \t  Ami  ")).toBe("amiami");
   });
 });
 
-describe("rankShops", () => {
+describe("rankTerms", () => {
   test("suggests the six most recent shops for an empty query", () => {
     const terms = Array.from({ length: 8 }, (_, day) => term(`Shop ${day}`, 10 - day, day + 1));
 
-    expect(rankShops(terms, "  ")).toEqual([
+    expect(rankTerms(terms, "  ")).toEqual([
       "Shop 7",
       "Shop 6",
       "Shop 5",
@@ -38,7 +38,7 @@ describe("rankShops", () => {
       term("Amiami Outlet", 5, 2),
     ];
 
-    expect(rankShops(terms, "am")).toEqual([
+    expect(rankTerms(terms, "am")).toEqual([
       "Amiami Outlet",
       "AmiAmi",
       "Amazon",
@@ -47,7 +47,7 @@ describe("rankShops", () => {
   });
 
   test("matches spacing and case loosely", () => {
-    expect(rankShops([term("Ami Ami", 1, 1)], "AMI  a")).toEqual(["Ami Ami"]);
+    expect(rankTerms([term("Ami Ami", 1, 1)], "AMI  a")).toEqual(["Ami Ami"]);
   });
 
   test("shows one spelling per shop, the most used one, ranked by their combined uses", () => {
@@ -58,7 +58,7 @@ describe("rankShops", () => {
       term(" AMIAMI ", 1, 2),
     ];
 
-    expect(rankShops(terms, "a")).toEqual(["AmiAmi", "Mandarake"]);
+    expect(rankTerms(terms, "a")).toEqual(["AmiAmi", "Mandarake"]);
   });
 
   test("shows the spelling with the most uses, owned or not", () => {
@@ -67,13 +67,34 @@ describe("rankShops", () => {
       { ...term("hobby link", 1, 2), uses: 1 },
     ];
 
-    expect(rankShops(terms, "hobby")).toEqual(["HobbyLink"]);
+    expect(rankTerms(terms, "hobby")).toEqual(["HobbyLink"]);
   });
 
   test("stops at the limit", () => {
     const terms = Array.from({ length: 12 }, (_, index) => term(`Shop ${index}`, 1, 1));
 
-    expect(rankShops(terms, "shop")).toHaveLength(8);
-    expect(rankShops(terms, "shop", 3)).toHaveLength(3);
+    expect(rankTerms(terms, "shop")).toHaveLength(8);
+    expect(rankTerms(terms, "shop", 3)).toHaveLength(3);
+  });
+});
+
+describe("rankTerms over tags", () => {
+  const tag = (value: string, uses: number, day: number): TagTerm => ({
+    value,
+    uses,
+    ownedUses: 0,
+    lastUsedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
+  });
+
+  test("shows one tag for every spelling that differs only in case and spaces, in its most-used spelling", () => {
+    const tags = [
+      tag("favorite", 1, 3),
+      tag("Favorite", 3, 1),
+      tag("fav orite", 1, 2),
+      tag("fan art", 4, 1),
+    ];
+
+    expect(rankTerms(tags, "FAV")).toEqual(["Favorite"]);
+    expect(rankTerms(tags, "f")).toEqual(["Favorite", "fan art"]);
   });
 });

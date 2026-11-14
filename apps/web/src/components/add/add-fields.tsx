@@ -1,12 +1,7 @@
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/reui/badge";
-import { Button } from "@/components/ui/button";
+import { TagsInput } from "@/components/vocabulary-fields";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
@@ -21,9 +16,6 @@ import { ORDER_STATUS_COLORS } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus } from "@myakiba/contracts/shared/types";
-
-export const MAX_TAGS = 20;
-const MAX_TAG_LENGTH = 50;
 
 export function LabeledField({
   id,
@@ -174,7 +166,6 @@ export function DateField({
   );
 }
 
-/** Enter adds a trimmed, unique tag, up to 20. */
 export function TagsField({
   id,
   label,
@@ -188,55 +179,16 @@ export function TagsField({
   readonly error?: string | undefined;
   readonly onChange: (tags: string[]) => void;
 }) {
-  const [text, setText] = useState("");
-  const input = useRef<HTMLInputElement>(null);
   return (
     <LabeledField id={id} label={label} error={error}>
-      <div className="grid gap-2">
-        {tags.length > 0 ? (
-          <ul className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <li key={tag}>
-                <Badge variant="outline" className="h-6 gap-0.5 pr-0.5 pl-1.5">
-                  <span className="[overflow-wrap:anywhere] whitespace-normal">{tag}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={`Remove tag ${tag}`}
-                    onClick={() => {
-                      onChange(tags.filter((other) => other !== tag));
-                      // The button is gone next render, and the input may only then be enabled.
-                      requestAnimationFrame(() => input.current?.focus());
-                    }}
-                  >
-                    <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
-                  </Button>
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <Input
-          ref={input}
-          id={id}
-          value={text}
-          aria-invalid={error === undefined ? undefined : true}
-          aria-describedby={error === undefined ? undefined : `${id}-error`}
-          placeholder="Type a tag and press Enter"
-          maxLength={MAX_TAG_LENGTH}
-          disabled={tags.length >= MAX_TAGS}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            const tag = text.trim();
-            if (tag === "") return;
-            if (!tags.includes(tag)) onChange([...tags, tag]);
-            setText("");
-          }}
-        />
-      </div>
+      <TagsInput
+        id={id}
+        values={tags}
+        onValuesChange={onChange}
+        aria-invalid={error === undefined ? undefined : true}
+        aria-describedby={error === undefined ? undefined : `${id}-error`}
+        placeholder="Type a tag and press Enter"
+      />
     </LabeledField>
   );
 }
