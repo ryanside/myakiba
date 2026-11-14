@@ -1,3 +1,4 @@
+import { readCount } from "../add/row-fields";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
@@ -42,7 +43,8 @@ export function InlineCountCell({
           value={edit.draft}
           type="number"
           min="1"
-          onChange={(e) => edit.setDraft(Number.parseInt(e.target.value, 10) || 1)}
+          max="999"
+          onChange={(e) => edit.setDraft(readCount(e.target.value) ?? 1)}
           placeholder="1"
         />
       </div>
