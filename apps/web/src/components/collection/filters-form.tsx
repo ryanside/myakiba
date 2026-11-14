@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
-import { useRootedInfiniteRead } from "@/data/client";
+import type { SearchEntryResult } from "@myakiba/contracts/search/schema";
+import { useRead, useRootedInfiniteRead } from "@/data/client";
 import { searches } from "@/data/resources/search";
 import { DebouncedInput } from "@/components/debounced-input";
 import {
@@ -183,6 +184,20 @@ function FiltersDraft({
   });
 
   const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
+
+  const { data: suggested, isPending: isSuggestedPending } = useRead(
+    searches.suggestedEntries,
+    undefined,
+    { enabled: entriesPopoverOpen },
+  );
+  const suggestedEntries = suggested?.entries ?? [];
+
+  /** The chosen entries after picking or unpicking `entry`, remembering a picked entry's name for its badge. */
+  const toggleEntry = (chosen: readonly string[], entry: SearchEntryResult): string[] => {
+    if (chosen.includes(entry.id)) return chosen.filter((id) => id !== entry.id);
+    rememberEntryName(entry.id, entry.name);
+    return [...chosen, entry.id];
+  };
 
   return (
     <form onSubmit={formSubmitHandler(form)}>
@@ -380,10 +395,36 @@ function FiltersDraft({
                             isCommandInput
                           />
                           <CommandList id={entriesListId}>
-                            {entrySearch.length === 0 && (
-                              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                                Type to search for entries
+                            {entrySearch.length === 0 && isSuggestedPending && (
+                              <div className="flex items-center justify-center gap-2 px-2 py-6 text-sm text-muted-foreground">
+                                <HugeiconsIcon
+                                  icon={Loading03Icon}
+                                  className="size-4 animate-spin"
+                                />
+                                Loading...
                               </div>
+                            )}
+                            {entrySearch.length === 0 &&
+                              !isSuggestedPending &&
+                              suggestedEntries.length === 0 && (
+                                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                                  Type to search for entries
+                                </div>
+                              )}
+                            {entrySearch.length === 0 && suggestedEntries.length > 0 && (
+                              <CommandGroup heading="Most used">
+                                {suggestedEntries.map((entry) => (
+                                  <EntryOption
+                                    key={entry.id}
+                                    entry={entry}
+                                    uses={entry.uses}
+                                    selected={field.state.value.includes(entry.id)}
+                                    onToggle={() =>
+                                      field.handleChange(toggleEntry(field.state.value, entry))
+                                    }
+                                  />
+                                ))}
+                              </CommandGroup>
                             )}
                             {entrySearch.length > 0 && isEntriesError && (
                               <CommandEmpty>
@@ -406,36 +447,16 @@ function FiltersDraft({
                             {entries.length > 0 && (
                               <>
                                 <CommandGroup>
-                                  {entries.map((entry) => {
-                                    const isSelected = field.state.value.includes(entry.id);
-                                    return (
-                                      <CommandItem
-                                        key={entry.id}
-                                        value={entry.id}
-                                        data-checked={isSelected}
-                                        onSelect={() => {
-                                          const current = field.state.value ?? [];
-                                          if (isSelected) {
-                                            field.handleChange(
-                                              current.filter((id) => id !== entry.id),
-                                            );
-                                          } else {
-                                            field.handleChange([...current, entry.id]);
-                                            rememberEntryName(entry.id, entry.name);
-                                          }
-                                        }}
-                                      >
-                                        <span className="flex flex-col">
-                                          <span>{entry.name}</span>
-                                          {entry.category && (
-                                            <span className="text-xs text-muted-foreground">
-                                              {entry.category}
-                                            </span>
-                                          )}
-                                        </span>
-                                      </CommandItem>
-                                    );
-                                  })}
+                                  {entries.map((entry) => (
+                                    <EntryOption
+                                      key={entry.id}
+                                      entry={entry}
+                                      selected={field.state.value.includes(entry.id)}
+                                      onToggle={() =>
+                                        field.handleChange(toggleEntry(field.state.value, entry))
+                                      }
+                                    />
+                                  ))}
                                 </CommandGroup>
                                 {hasMoreEntries && (
                                   <div className="px-2 pb-2">
@@ -700,5 +721,27 @@ function FiltersDraft({
         />
       </DialogFooter>
     </form>
+  );
+}
+
+type EntryOptionProps = {
+  readonly entry: SearchEntryResult;
+  /** How many Collection Items link to the entry, shown beside a suggestion. */
+  readonly uses?: number;
+  readonly selected: boolean;
+  readonly onToggle: () => void;
+};
+
+function EntryOption({ entry, uses, selected, onToggle }: EntryOptionProps): React.JSX.Element {
+  return (
+    <CommandItem value={entry.id} data-checked={selected} onSelect={onToggle}>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span>{entry.name}</span>
+        {entry.category && <span className="text-xs text-muted-foreground">{entry.category}</span>}
+      </span>
+      {uses !== undefined && (
+        <span className="text-xs text-muted-foreground tabular-nums">{uses}</span>
+      )}
+    </CommandItem>
   );
 }

@@ -6,6 +6,7 @@ import type {
   SearchEntriesResponse,
   SearchOrdersQuery,
   SearchOrdersResponse,
+  SuggestedEntriesResponse,
 } from "@myakiba/contracts/search/schema";
 import { Result } from "better-result";
 import { call } from "@/data/api";
@@ -61,6 +62,13 @@ export function searchEntries(
     }),
     { fallback: "Failed to search entries", empty: "Failed to search entries" },
   );
+}
+
+export function getSuggestedEntries(): Promise<Result<SuggestedEntriesResponse, ApiFailure>> {
+  return call(app.api.search.entries.suggested.get(), {
+    fallback: "Failed to load your most used entries",
+    empty: "Failed to load your most used entries",
+  });
 }
 
 export function searchOrders(

@@ -2,6 +2,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import type { ItemDatabaseSearch } from "@myakiba/contracts/search/schema";
 import {
   getItemDatabaseItems,
+  getSuggestedEntries,
   searchCommandResults,
   searchEntries,
   searchOrders,
@@ -30,6 +31,13 @@ export const searches = {
       lastPage.entries.length < ENTRY_SEARCH_PAGE_SIZE
         ? undefined
         : lastOffset + ENTRY_SEARCH_PAGE_SIZE,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  }),
+  /** The viewer's most used Item Entries, which a Collection Item write can reorder. */
+  suggestedEntries: rootedRead("entryUses", {
+    key: () => ["entry-uses"] as const,
+    load: getSuggestedEntries,
     staleTime: 1000 * 60 * 5,
     retry: false,
   }),
