@@ -107,6 +107,7 @@ function openShops(client = new QueryClient()) {
   return client;
 }
 
+const closed = (dialog: HTMLElement) => waitFor(() => expect(dialog.isConnected).toBe(false));
 const merges = () => screen.findByRole("region", { name: "Suggested merges" });
 const yourShops = () => screen.findByRole("region", { name: "Your shops" });
 
@@ -163,6 +164,31 @@ test.each([
   expect(dialog.textContent).toContain(`${changes} from “mandarake” to “Mandarake”.`);
 });
 
+test("marks a space at either end of a shop name or doubled inside it", async () => {
+  saved = [...seed("BOOM SHOP", 2, 0), ...seed("BOOM  SHOP", 1, 0), ...seed(" BOOM SHOP ", 1, 0)];
+  openShops();
+
+  const group = await merges();
+  const marks = (container: HTMLElement) => within(container).queryAllByText("·").length;
+  const spellings = within(group)
+    .getAllByRole("radio")
+    .map((radio) => marks(radio.closest("label") ?? group));
+  expect(spellings).toEqual([0, 2, 2]);
+  expect(marks(await yourShops())).toBe(4);
+  fireEvent.click(within(group).getByRole("button", { name: "Merge into “BOOM SHOP”" }));
+  const merge = await screen.findByRole("dialog", { name: "Merge into “BOOM SHOP”?" });
+  expect(marks(merge)).toBe(4);
+  fireEvent.click(within(merge).getByRole("button", { name: "Cancel" }));
+  await closed(merge);
+  const padded = within(await yourShops())
+    .getAllByRole("button", { name: /^Rename/ })
+    .at(-1);
+  if (padded) fireEvent.click(padded);
+  const rename = await screen.findByRole("dialog", { name: /^Rename/ });
+  expect(marks(within(rename).getByRole("heading"))).toBe(2);
+  expect(marks(within(rename).getByRole("status"))).toBe(2);
+});
+
 const renameDialog = (shop: string) => ({ name: `Rename “${shop}”` });
 
 async function openRename(shop: string) {
@@ -170,8 +196,6 @@ async function openRename(shop: string) {
   const dialog = await screen.findByRole("dialog", renameDialog(shop));
   return { dialog, input: within(dialog).getByLabelText("New name") };
 }
-
-const closed = (dialog: HTMLElement) => waitFor(() => expect(dialog.isConnected).toBe(false));
 
 test("renaming to a shop already in use says it merges before it saves", async () => {
   openShops();
