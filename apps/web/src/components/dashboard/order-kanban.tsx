@@ -660,7 +660,7 @@ function OrderKanbanBoard({
       className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
     >
       <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
-      <KanbanBoard className="min-h-0 min-w-[960px] flex-1 gap-3 sm:grid-cols-4">
+      <KanbanBoard className="min-h-0 flex-1 grid-cols-1 gap-3 sm:min-w-[960px] sm:grid-cols-4">
         {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
             key={columnId}
