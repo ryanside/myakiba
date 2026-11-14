@@ -11,7 +11,7 @@ type ShopGroup = {
 };
 
 export function normalizeShop(shop: string): string {
-  return shop.trim().replaceAll(/\s+/g, " ").toLowerCase();
+  return shop.replaceAll(/\s+/g, "").toLowerCase();
 }
 
 const usesOf = (term: ShopTerm) => term.collectionUses + term.orderUses;

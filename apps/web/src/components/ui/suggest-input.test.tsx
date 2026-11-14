@@ -1,5 +1,5 @@
 import { afterEach, expect, mock, test } from "bun:test";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Result } from "better-result";
 import { useState } from "react";
@@ -122,5 +122,18 @@ test("Escape in a cell first closes the suggestions, then cancels the edit", asy
   await user.keyboard("{Escape}");
 
   expect(screen.queryByRole("combobox", { name: "Shop" })).toBeNull();
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
+test("Enter that confirms IME composition keeps the cell open and saves nothing", async () => {
+  const onSubmit = renderShopCell();
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: /edit Shop$/ }));
+  const field = screen.getByRole("combobox", { name: "Shop" });
+  fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+  fireEvent.keyDown(field, { key: "Enter", keyCode: 229 });
+
+  expect(screen.getByRole("combobox", { name: "Shop" })).toBeDefined();
   expect(onSubmit).not.toHaveBeenCalled();
 });

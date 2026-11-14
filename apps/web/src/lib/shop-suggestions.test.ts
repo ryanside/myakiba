@@ -10,8 +10,8 @@ const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm
 });
 
 describe("normalizeShop", () => {
-  test("trims, collapses inner whitespace and lowercases", () => {
-    expect(normalizeShop("  Ami \t  Ami  ")).toBe("ami ami");
+  test("drops all whitespace and lowercases", () => {
+    expect(normalizeShop("  Ami \t  Ami  ")).toBe("amiami");
   });
 });
 
@@ -76,8 +76,12 @@ describe("canonicalShop", () => {
     expect(canonicalShop(terms, "AMIAMI")).toBe("AmiAmi");
   });
 
+  test("folds a known shop typed with extra spaces", () => {
+    expect(canonicalShop(terms, "  Ami Ami ")).toBe("AmiAmi");
+  });
+
   test("keeps a new shop as typed, trimmed", () => {
-    expect(canonicalShop(terms, "  Ami Ami ")).toBe("Ami Ami");
+    expect(canonicalShop(terms, "  Hobby Search ")).toBe("Hobby Search");
     expect(canonicalShop(terms, "")).toBe("");
   });
 });

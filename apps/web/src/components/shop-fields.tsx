@@ -13,7 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FieldTrigger } from "@/components/ui/field-trigger";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SuggestInput } from "@/components/ui/suggest-input";
 import type { Suggester } from "@/components/ui/suggest-input";
@@ -139,9 +138,9 @@ export function ShopFilterField({ value, onValueChange, uses }: ShopFilterFieldP
       <DropdownMenu>
         <DropdownMenuTrigger render={<FieldTrigger>Select shops</FieldTrigger>} />
         <DropdownMenuContent className="w-(--anchor-width)">
-          <ScrollArea className="max-h-56" aria-busy={isPending}>
+          <div className="max-h-56 overflow-y-auto" aria-busy={isPending}>
             {options}
-          </ScrollArea>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
