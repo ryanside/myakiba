@@ -1,59 +1,80 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
-import { unionAll } from "drizzle-orm/pg-core";
 import { collection, order } from "@myakiba/db/schema/figure";
-import type { VocabularyResponse } from "@myakiba/contracts/vocabulary/schema";
+import type { ShopTerm, VocabularyResponse } from "@myakiba/contracts/vocabulary/schema";
 import { Result } from "better-result";
 import { query } from "@/domain/kernel";
 
 export const VOCABULARY_SHOP_LIMIT = 500;
+
+type ShopUses = { readonly shop: string; readonly uses: number; readonly lastUsedAt: Date };
 
 export const Vocabulary = {
   read: query(
     { action: "vocabulary.read", failure: "Failed to load your shops" },
     async (scope) => {
       const userId = scope.viewer.userId;
-      const uses = scope.tx.$with("shop_uses").as(
-        unionAll(
-          scope.tx
-            .select({
-              shop: collection.shop,
-              collectionUses: sql<number>`1`.as("collection_uses"),
-              orderUses: sql<number>`0`.as("order_uses"),
-              usedAt: sql<Date>`${collection.updatedAt}`.as("used_at"),
-            })
-            .from(collection)
-            .where(and(eq(collection.userId, userId), ne(collection.shop, ""))),
-          scope.tx
-            .select({
-              shop: order.shop,
-              collectionUses: sql<number>`0`.as("collection_uses"),
-              orderUses: sql<number>`1`.as("order_uses"),
-              usedAt: sql<Date>`${order.updatedAt}`.as("used_at"),
-            })
-            .from(order)
-            .where(and(eq(order.userId, userId), ne(order.shop, ""))),
-        ),
+      const collectionUses = sql<number>`COUNT(*)::integer`;
+      const collectionLastUsedAt = sql<Date>`MAX(${collection.updatedAt})`.mapWith(
+        collection.updatedAt,
       );
-      const collectionUses = sql<number>`SUM(${uses.collectionUses})::integer`;
-      const orderUses = sql<number>`SUM(${uses.orderUses})::integer`;
-      const lastUsedAt = sql<Date>`MAX(${uses.usedAt})`.mapWith(collection.updatedAt);
+      const orderUses = sql<number>`COUNT(*)::integer`;
+      const orderLastUsedAt = sql<Date>`MAX(${order.updatedAt})`.mapWith(order.updatedAt);
 
-      const rows = await scope.tx
-        .with(uses)
-        .select({ value: uses.shop, collectionUses, orderUses, lastUsedAt })
-        .from(uses)
-        .groupBy(uses.shop)
-        .orderBy(
-          desc(sql`SUM(${uses.collectionUses} + ${uses.orderUses})`),
-          desc(sql`MAX(${uses.usedAt})`),
-          asc(uses.shop),
-        )
-        .limit(VOCABULARY_SHOP_LIMIT);
+      const [collectionShops, orderShops] = await Promise.all([
+        scope.tx
+          .select({ shop: collection.shop, uses: collectionUses, lastUsedAt: collectionLastUsedAt })
+          .from(collection)
+          .where(and(eq(collection.userId, userId), ne(collection.shop, "")))
+          .groupBy(collection.shop)
+          .orderBy(desc(collectionUses), desc(collectionLastUsedAt), asc(collection.shop))
+          .limit(VOCABULARY_SHOP_LIMIT),
+        scope.tx
+          .select({ shop: order.shop, uses: orderUses, lastUsedAt: orderLastUsedAt })
+          .from(order)
+          .where(and(eq(order.userId, userId), ne(order.shop, "")))
+          .groupBy(order.shop)
+          .orderBy(desc(orderUses), desc(orderLastUsedAt), asc(order.shop))
+          .limit(VOCABULARY_SHOP_LIMIT),
+      ]);
 
-      const vocabulary: VocabularyResponse = {
-        shops: rows.map((row) => ({ ...row, lastUsedAt: row.lastUsedAt.toISOString() })),
-      };
+      const vocabulary: VocabularyResponse = { shops: mergeShopUses(collectionShops, orderShops) };
       return Result.ok(vocabulary);
     },
   ),
 };
+
+type MergedShop = Omit<ShopTerm, "lastUsedAt"> & { readonly lastUsedAt: Date };
+
+/** Each kind of record keeps its own most-used shops, so busy Order shops never crowd out a Collection one. */
+function mergeShopUses(
+  collectionShops: readonly ShopUses[],
+  orderShops: readonly ShopUses[],
+): ShopTerm[] {
+  const merged = new Map<string, MergedShop>();
+  for (const row of collectionShops) {
+    merged.set(row.shop, {
+      value: row.shop,
+      collectionUses: row.uses,
+      orderUses: 0,
+      lastUsedAt: row.lastUsedAt,
+    });
+  }
+  for (const row of orderShops) {
+    const known = merged.get(row.shop);
+    merged.set(row.shop, {
+      value: row.shop,
+      collectionUses: known?.collectionUses ?? 0,
+      orderUses: row.uses,
+      lastUsedAt: known && known.lastUsedAt > row.lastUsedAt ? known.lastUsedAt : row.lastUsedAt,
+    });
+  }
+  const total = (shop: MergedShop) => shop.collectionUses + shop.orderUses;
+  return [...merged.values()]
+    .toSorted(
+      (a, b) =>
+        total(b) - total(a) ||
+        b.lastUsedAt.getTime() - a.lastUsedAt.getTime() ||
+        Number(a.value > b.value) - Number(a.value < b.value),
+    )
+    .map((shop) => ({ ...shop, lastUsedAt: shop.lastUsedAt.toISOString() }));
+}

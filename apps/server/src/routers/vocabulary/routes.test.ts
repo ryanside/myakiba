@@ -125,7 +125,7 @@ describe("GET /api/vocabulary", () => {
     ]);
   });
 
-  test(`returns at most ${VOCABULARY_SHOP_LIMIT} shops, the most used first`, async () => {
+  test(`returns at most ${VOCABULARY_SHOP_LIMIT} Order shops, the most used first`, async () => {
     const shops = Array.from({ length: VOCABULARY_SHOP_LIMIT + 1 }, (_, index) =>
       orderRow(`o-${index}`, `Shop ${String(index).padStart(3, "0")}`, 1),
     );
@@ -137,5 +137,22 @@ describe("GET /api/vocabulary", () => {
     expect(body.shops).toHaveLength(VOCABULARY_SHOP_LIMIT);
     expect(body.shops[0]?.value).toBe("Shop 500");
     expect(body.shops.at(-1)?.value).toBe("Shop 498");
+  });
+
+  test("keeps a Collection shop that busier Order shops would crowd out", async () => {
+    const shops = Array.from({ length: VOCABULARY_SHOP_LIMIT + 1 }, (_, index) =>
+      orderRow(`o-${index}`, `Shop ${String(index).padStart(3, "0")}`, 1),
+    );
+    await db
+      .insert(order)
+      .values([...shops, ...shops.map((row) => ({ ...row, id: `${row.id}-b` }))]);
+    await db.insert(collection).values(collectionRow("c-quiet", "Quiet Shop", 1));
+
+    const { body } = await read();
+
+    expect(body.shops.find((shop) => shop.value === "Quiet Shop")).toMatchObject({
+      collectionUses: 1,
+      orderUses: 0,
+    });
   });
 });
