@@ -180,11 +180,6 @@ function collectionEdit(row: CollectionRow, releaseId: string | null) {
     tags: row.tags,
     notes: "",
     releaseId,
-    releaseDate: null,
-    releasePrice: null,
-    releaseCurrency: null,
-    releaseBarcode: null,
-    releaseType: null,
     condition: row.condition,
   };
 }
@@ -723,11 +718,6 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       tags: own.tags,
       notes: "",
       releaseId: held.releaseId,
-      releaseDate: null,
-      releasePrice: null,
-      releaseCurrency: null,
-      releaseBarcode: null,
-      releaseType: null,
       condition: own.condition,
     });
 

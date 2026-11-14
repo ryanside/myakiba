@@ -49,11 +49,6 @@ const edit: CollectionUpdateType = {
   tags: [],
   notes: "",
   releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
-  releaseType: null,
   condition: "New",
 };
 
