@@ -657,8 +657,7 @@ test("a row's Tags stop at 20, and each is at most 50 characters", async () => {
   openAddPage("/add?to=collection");
   await openDetails(user, "Hatsune Miku");
 
-  const input = () =>
-    screen.getByRole("textbox", { name: "Tags for Hatsune Miku" }) as HTMLInputElement;
+  const input = () => screen.getByLabelText<HTMLInputElement>("Tags for Hatsune Miku");
   expect(input().maxLength).toBe(50);
   expect(input().disabled).toBe(false);
   await user.type(input(), " last {Enter}");
@@ -894,7 +893,7 @@ test("Fill all adds tags to what each row has, and says when it replaces values"
 
   await fill(user, "Tags");
   expect(screen.getByText("Adds to the tags each row already has.")).toBeDefined();
-  await user.type(await screen.findByRole("textbox", { name: "Tags" }), "new{Enter}");
+  await user.type(await screen.findByRole("combobox", { name: "Tags" }), "new{Enter}");
   await click(user, "Fill 2 selected");
 
   await fill(user, "Notes");
@@ -950,7 +949,7 @@ test("Fill all refuses tags that would take a row past 20, and says so", async (
   await rowsLoaded();
 
   await fill(user, "Tags");
-  const field = await screen.findByRole("textbox", { name: "Tags" });
+  const field = await screen.findByRole("combobox", { name: "Tags" });
   await user.type(field, "tag-0{Enter}");
   expect(screen.getByRole<HTMLButtonElement>("button", { name: "Fill 2 selected" }).disabled).toBe(
     false,
@@ -1001,7 +1000,7 @@ test("removing a tag keeps focus in the Tags field", async () => {
   openAddPage("/add?to=collection");
   await rowsLoaded();
   await openDetails(user, "Hatsune Miku");
-  const field = screen.getByRole("textbox", { name: "Tags for Hatsune Miku" });
+  const field = screen.getByRole("combobox", { name: "Tags for Hatsune Miku" });
   await user.click(screen.getByRole("button", { name: "Remove tag old" }));
   // A comparison of booleans, because a failing comparison of elements prints the whole page.
   await waitFor(() => expect(document.activeElement === field).toBe(true));

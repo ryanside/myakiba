@@ -1,5 +1,3 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import {
   Sheet,
@@ -19,7 +17,7 @@ import {
   useButtonStatus,
 } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/vocabulary-fields";
+import { ShopInput, TagsInput } from "@/components/vocabulary-fields";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
@@ -36,8 +34,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import * as z from "zod";
 import { Textarea } from "../ui/textarea";
 import { Rating } from "../ui/rating";
-import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
-import { Badge } from "@/components/reui/badge";
 import { FormSection } from "@/components/ui/form-section";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { acceptedMoneyToMinorUnits } from "@/lib/money-input";
@@ -526,53 +522,15 @@ function CollectionItemFormContent({
             <form.Field
               name="tags"
               children={(field) => (
-                <Field className="gap-1.5">
-                  <FieldTitle>Tags</FieldTitle>
-                  <FieldContent>
-                    <div className="flex flex-wrap gap-2">
-                      {field.state.value?.map((tag, tagIndex) => (
-                        <Badge
-                          key={tagIndex}
-                          variant="outline"
-                          className="flex items-center justify-between pr-0"
-                        >
-                          {tag}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const current = field.state.value || [];
-                              field.handleChange(current.filter((_, idx) => idx !== tagIndex));
-                            }}
-                            className="hover:text-destructive hover:bg-transparent"
-                          >
-                            <HugeiconsIcon icon={Cancel01Icon} />
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        id="tags-input"
-                        type="text"
-                        placeholder="Type a tag and press Enter"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const input = e.currentTarget;
-                            const value = input.value.trim();
-                            if (value) {
-                              const current = field.state.value || [];
-                              field.handleChange([...current, value]);
-                              input.value = "";
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-                  </FieldContent>
-                </Field>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="tags-input">Tags</Label>
+                  <TagsInput
+                    id="tags-input"
+                    values={field.state.value ?? []}
+                    onValuesChange={field.handleChange}
+                    placeholder="Type a tag and press Enter"
+                  />
+                </div>
               )}
             />
 
