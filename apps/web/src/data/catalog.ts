@@ -20,6 +20,7 @@ const catalog = {
   commandSearch: { kind: "persisted", roots: ["app-command"], collectionWrites: true },
   dashboard: { kind: "persisted", roots: ["dashboard"], collectionWrites: true },
   entries: { kind: "persisted", roots: ["entries"], collectionWrites: false },
+  entryUses: { kind: "persisted", roots: ["entry-uses"], collectionWrites: true },
   expenses: { kind: "persisted", roots: ["expenses"], collectionWrites: true },
   item: { kind: "persisted", roots: ["item"], collectionWrites: true },
   itemDatabase: { kind: "persisted", roots: ["item-database-items"], collectionWrites: true },

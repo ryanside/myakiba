@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
-import { itemDatabaseSearchResponseSchema } from "@myakiba/contracts/search/schema";
+import {
+  itemDatabaseSearchResponseSchema,
+  suggestedEntriesResponseSchema,
+} from "@myakiba/contracts/search/schema";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
+import { SUGGESTED_ENTRY_LIMIT } from "./model";
 
 const { collection, entry, entry_to_item, item, item_release, order, wishlistItem } = figureSchema;
 
@@ -204,6 +208,98 @@ describe("each search route answers as before", () => {
         ],
       },
     });
+  });
+
+  test("suggested entries rank the viewer's entries by Collection Items, then name, then id", async () => {
+    await db.insert(entry).values([
+      { id: "entry-b", ownerId: userId, name: "Tied", category: "Companies" },
+      { id: "entry-a", ownerId: userId, name: "Tied", category: "Companies" },
+      { id: "entry-unused", ownerId: userId, name: "Unused", category: "Origins" },
+      { id: "aki-entry-2", ownerId: "user-2", name: "Their Busy Entry", category: "Origins" },
+    ]);
+    await db.insert(entry_to_item).values([
+      { ownerId: userId, entryId: "entry-2", itemId: "item-1", role: "" },
+      { ownerId: userId, entryId: "entry-2", itemId: "item-2", role: "" },
+      { ownerId: userId, entryId: "entry-a", itemId: "item-2", role: "" },
+      { ownerId: userId, entryId: "entry-b", itemId: "item-2", role: "" },
+      { ownerId: userId, entryId: "entry-unused", itemId: "item-custom", role: "" },
+      { ownerId: userId, entryId: "entry-custom", itemId: "item-1", role: "" },
+      { ownerId: "user-2", entryId: "aki-entry", itemId: "aki-1", role: "" },
+      { ownerId: "user-2", entryId: "aki-entry-2", itemId: "aki-2", role: "" },
+    ]);
+    await db.insert(collection).values([
+      { id: "c-2", userId, itemId: "item-1" },
+      { id: "c-3", userId, itemId: "item-2" },
+      { id: "c-other-2", userId: "user-2", itemId: "aki-1" },
+      { id: "c-other-3", userId: "user-2", itemId: "aki-2" },
+      { id: "c-other-4", userId: "user-2", itemId: "aki-2" },
+    ]);
+
+    expect(await call("/entries/suggested")).toEqual({
+      status: 200,
+      body: {
+        entries: [
+          { id: "entry-2", name: "Another Miku", category: "Characters", uses: 3 },
+          { id: "entry-a", name: "Tied", category: "Companies", uses: 1 },
+          { id: "entry-b", name: "Tied", category: "Companies", uses: 1 },
+        ],
+      },
+    });
+  });
+
+  test("suggested entries count only Owned Collection Items, as the Collection page lists", async () => {
+    await db
+      .insert(entry)
+      .values([
+        { id: "entry-preorder", ownerId: userId, name: "Preorder Only", category: "Origins" },
+      ]);
+    await db
+      .insert(entry_to_item)
+      .values([{ ownerId: userId, entryId: "entry-2", itemId: "item-2", role: "" }]);
+    await db.insert(collection).values([
+      { id: "c-owned", userId, itemId: "item-2", status: "Owned" },
+      { id: "c-ordered", userId, itemId: "item-2", status: "Ordered" },
+      { id: "c-paid", userId, itemId: "item-2", status: "Paid" },
+      { id: "c-shipped", userId, itemId: "item-2", status: "Shipped" },
+    ]);
+    await db
+      .insert(entry_to_item)
+      .values([{ ownerId: userId, entryId: "entry-preorder", itemId: "item-3", role: "" }]);
+    await db
+      .insert(collection)
+      .values([{ id: "c-preorder", userId, itemId: "item-3", status: "Ordered" }]);
+
+    expect(await call("/entries/suggested")).toEqual({
+      status: 200,
+      body: { entries: [{ id: "entry-2", name: "Another Miku", category: "Characters", uses: 1 }] },
+    });
+  });
+
+  test("suggested entries are empty when no Collection Item links an entry", async () => {
+    expect(await call("/entries/suggested")).toEqual({ status: 200, body: { entries: [] } });
+  });
+
+  test("suggested entries stop at the cap", async () => {
+    const many = Array.from({ length: SUGGESTED_ENTRY_LIMIT + 5 }, (_, index) => ({
+      id: `entry-many-${String(index).padStart(2, "0")}`,
+      ownerId: userId,
+      name: `Entry ${String(index).padStart(2, "0")}`,
+      category: "Origins",
+    }));
+    await db.insert(entry).values(many);
+    await db
+      .insert(entry_to_item)
+      .values(
+        many.map((row) => ({ ownerId: userId, entryId: row.id, itemId: "item-1", role: "" })),
+      );
+
+    const { status, body } = await call("/entries/suggested");
+
+    expect(status).toBe(200);
+    const { entries } = suggestedEntriesResponseSchema.parse(body);
+    expect(entries.map((found) => found.id)).toEqual(
+      many.slice(0, SUGGESTED_ENTRY_LIMIT).map((row) => row.id),
+    );
   });
 
   test("order search lists the viewer's orders, with or without a title", async () => {

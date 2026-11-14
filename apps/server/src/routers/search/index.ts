@@ -16,6 +16,7 @@ const searchRouter = privateApi("/search")
   .get("/entries", (ctx) => serve(ctx, Search.entries, ctx.query), {
     query: searchEntriesQuerySchema,
   })
+  .get("/entries/suggested", (ctx) => serve(ctx, Search.suggestedEntries, {}))
   .get("/orders", (ctx) => serve(ctx, Search.orders, ctx.query), {
     query: searchOrdersQuerySchema,
   });

@@ -116,6 +116,14 @@ export const searchEntriesResponseSchema = z.object({
   entries: z.array(searchEntryResultSchema),
 });
 
+const suggestedEntrySchema = searchEntryResultSchema.extend({
+  uses: z.number().int().positive(),
+});
+
+export const suggestedEntriesResponseSchema = z.object({
+  entries: z.array(suggestedEntrySchema),
+});
+
 export const searchOrdersQuerySchema = z.object({
   title: z.string().optional(),
   limit: paginationLimitSchema.optional(),
@@ -142,6 +150,7 @@ export type ItemDatabaseSearchResponse = z.infer<typeof itemDatabaseSearchRespon
 export type SearchEntriesQuery = z.infer<typeof searchEntriesQuerySchema>;
 export type SearchEntryResult = z.infer<typeof searchEntryResultSchema>;
 export type SearchEntriesResponse = z.infer<typeof searchEntriesResponseSchema>;
+export type SuggestedEntriesResponse = z.infer<typeof suggestedEntriesResponseSchema>;
 export type SearchOrdersQuery = z.infer<typeof searchOrdersQuerySchema>;
 export type SearchOrderIdAndTitle = z.infer<typeof searchOrderIdAndTitleSchema>;
 export type SearchOrdersResponse = z.infer<typeof searchOrdersResponseSchema>;
