@@ -164,6 +164,17 @@ test.each([
   expect(dialog.textContent).toContain(`${changes} from “mandarake” to “Mandarake”.`);
 });
 
+test("the merge button keeps a long shop's full name in its title", async () => {
+  const long =
+    "Good Smile Company Online Shop Tokyo Akihabara Branch Exclusive Figures and Goods Store";
+  saved = [...seed(long, 2, 0), ...seed(long.toLowerCase(), 1, 0)];
+  openShops();
+
+  const button = within(await merges()).getByRole("button", { name: `Merge into “${long}”` });
+
+  expect(button.getAttribute("title")).toBe(`Merge into “${long}”`);
+});
+
 test("marks a space at either end of a shop name or doubled inside it", async () => {
   saved = [...seed("BOOM SHOP", 2, 0), ...seed("BOOM  SHOP", 1, 0), ...seed(" BOOM SHOP ", 1, 0)];
   openShops();
