@@ -7,6 +7,7 @@ import { CELL_TRIGGER_CLASS_NAME } from "@/components/cells/cell-trigger";
 import { SelectCell } from "@/components/cells/select-cell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { ShopInput } from "@/components/shop-fields";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";
@@ -259,13 +260,13 @@ export function RowField({
     case "shop":
       return (
         <LabeledField id={id} label={openLabel}>
-          <Input
+          <ShopInput
             id={id}
             value={overrides.shop ?? ""}
             placeholder={shared?.shop || "Enter shop name"}
             title={overrides.shop || shared?.shop || undefined}
             maxLength={200}
-            onChange={(event) => onEdit({ shop: event.target.value })}
+            onValueChange={(shop) => onEdit({ shop })}
           />
         </LabeledField>
       );

@@ -15,7 +15,8 @@
     "./analytics/*": "./src/analytics/*.ts",
     "./lists/*": "./src/lists/*.ts",
     "./wishlist/*": "./src/wishlist/*.ts",
-    "./add/*": "./src/add/*.ts"
+    "./add/*": "./src/add/*.ts",
+    "./vocabulary/*": "./src/vocabulary/*.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

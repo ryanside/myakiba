@@ -7,6 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -109,15 +110,17 @@ const { createdAt: _createdAt, updatedAt: _updatedAt, ...savedOrder } = order("o
 
 test("saves a shop edit without timestamps, cascading the shop to its items", async () => {
   render(
-    <OrderPendingContext
-      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
-    >
-      <ColumnCells orders={[order("o1")]} columnId="shop" />
-    </OrderPendingContext>,
+    <QueryClientProvider client={new QueryClient()}>
+      <OrderPendingContext
+        value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+      >
+        <ColumnCells orders={[order("o1")]} columnId="shop" />
+      </OrderPendingContext>
+    </QueryClientProvider>,
   );
 
   fireEvent.focus(screen.getByRole("button", { name: "AmiAmi, edit Shop" }));
-  const editor = screen.getByRole("textbox", { name: "Shop" });
+  const editor = screen.getByRole("combobox", { name: "Shop" });
   fireEvent.change(editor, { target: { value: "HLJ" } });
   fireEvent.keyDown(editor, { key: "Enter" });
 

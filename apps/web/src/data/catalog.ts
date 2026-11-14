@@ -30,6 +30,7 @@ const catalog = {
     collectionWrites: true,
   },
   releases: { kind: "persisted", roots: ["itemReleases"], collectionWrites: false },
+  vocabulary: { kind: "persisted", roots: ["vocabulary"], collectionWrites: true },
   wishlist: { kind: "persisted", roots: [], collectionWrites: false },
   accountType: { kind: "account", roots: ["account-type"] },
   devices: { kind: "account", roots: ["devices"] },

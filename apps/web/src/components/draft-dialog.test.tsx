@@ -58,8 +58,18 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
     );
   }
 
+  const client = new QueryClient();
+  client.setQueryData(["vocabulary"], {
+    shops: ["AmiAmi", "Mandarake"].map((value) => ({
+      value,
+      uses: 2,
+      ownedUses: 1,
+      orderUses: 1,
+      lastUsedAt: "2026-01-01T00:00:00.000Z",
+    })),
+  });
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <Toolbar />
     </QueryClientProvider>,
   );
@@ -74,11 +84,14 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
     waitFor(() => {
       if (screen.queryByRole("dialog")) throw new Error("dialog still open");
     });
-  const typeShop = (dialog: HTMLElement, shop: string) =>
-    user.type(
-      within(dialog).getByPlaceholderText("Press enter after each shop to add"),
-      `${shop}{Enter}`,
-    );
+  const pickShop = async (dialog: HTMLElement, shop: string) => {
+    await user.click(within(dialog).getByRole("button", { name: "Select shops" }));
+    await user.click(await screen.findByRole("menuitemcheckbox", { name: new RegExp(`^${shop}`) }));
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      if (screen.queryByRole("menu")) throw new Error("shop menu still open");
+    });
+  };
   const cancel = async (dialog: HTMLElement) => {
     await user.click(within(dialog).getByText("Cancel"));
     await waitForClose();
@@ -89,13 +102,13 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
   };
   const applyShop = async (shop: string) => {
     const dialog = await openDialog();
-    await typeShop(dialog, shop);
+    await pickShop(dialog, shop);
     await apply(dialog);
   };
   const shopsShownIn = (dialog: HTMLElement) =>
     ["AmiAmi", "Mandarake"].filter((shop) => within(dialog).queryByText(shop) !== null);
 
-  return { user, url, openDialog, typeShop, cancel, apply, applyShop, shopsShownIn };
+  return { user, url, openDialog, pickShop, cancel, apply, applyShop, shopsShownIn };
 }
 
 describe.each(FORMS)("%s filters dialog starts each open from the URL filters", (_name, Form) => {
@@ -126,9 +139,9 @@ describe.each(FORMS)("%s filters dialog starts each open from the URL filters", 
   });
 
   test("closing without Apply discards the draft", async () => {
-    const { url, openDialog, typeShop, cancel, shopsShownIn } = renderToolbar(Form);
+    const { url, openDialog, pickShop, cancel, shopsShownIn } = renderToolbar(Form);
     const draft = await openDialog();
-    await typeShop(draft, "AmiAmi");
+    await pickShop(draft, "AmiAmi");
     expect(shopsShownIn(draft)).toEqual(["AmiAmi"]);
 
     await cancel(draft);
@@ -141,9 +154,9 @@ describe.each(FORMS)("%s filters dialog starts each open from the URL filters", 
   });
 
   test("reopening while the dialog is still closing discards the draft", async () => {
-    const { openDialog, typeShop, shopsShownIn } = renderToolbar(Form);
+    const { openDialog, pickShop, shopsShownIn } = renderToolbar(Form);
     const draft = await openDialog();
-    await typeShop(draft, "AmiAmi");
+    await pickShop(draft, "AmiAmi");
 
     act(() => {
       fireEvent.click(within(draft).getByText("Cancel"));

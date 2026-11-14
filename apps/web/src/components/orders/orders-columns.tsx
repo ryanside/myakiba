@@ -12,6 +12,7 @@ import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
+import { InlineShopCell } from "@/components/shop-fields";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";
@@ -199,9 +200,7 @@ export function createOrdersColumns({
       header: ({ column }) => (
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
-      cell: editOrder("shop", (order, edit) => (
-        <InlineTextCell label="Shop" value={order.shop} {...edit} />
-      )),
+      cell: editOrder("shop", (order, edit) => <InlineShopCell value={order.shop} {...edit} />),
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,

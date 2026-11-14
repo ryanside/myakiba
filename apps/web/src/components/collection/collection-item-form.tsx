@@ -19,6 +19,7 @@ import {
   useButtonStatus,
 } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
+import { ShopInput } from "@/components/shop-fields";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
@@ -290,12 +291,12 @@ function CollectionItemFormContent({
                 children={(field) => (
                   <div className="grid gap-1.5">
                     <Label htmlFor={field.name}>Shop</Label>
-                    <Input
+                    <ShopInput
                       id={field.name}
                       name={field.name}
                       value={field.state.value ?? ""}
                       onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onValueChange={field.handleChange}
                       placeholder="Shop name"
                     />
                   </div>

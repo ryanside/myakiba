@@ -216,15 +216,15 @@ test("trying another destination keeps what was typed, New and Existing Order in
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  await user.type(screen.getByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "AmiAmi");
 
   await destination(user, "Collection");
   await destination(user, "New Order");
-  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
+  expect((screen.getByRole("combobox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
 
   await destination(user, "Existing Order");
   await destination(user, "New Order");
-  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
+  expect((screen.getByRole("combobox", { name: "Shop" }) as HTMLInputElement).value).toBe("AmiAmi");
 });
 
 test("a commit starts the next Order clean, whichever kind was tried before it", async () => {
@@ -232,17 +232,17 @@ test("a commit starts the next Order clean, whichever kind was tried before it",
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  await user.type(screen.getByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "AmiAmi");
   await user.click(screen.getByRole("checkbox", { name: "Select Rem" }));
   await click(user, "Create order with 1");
   await screen.findByText("Created order");
   await user.click(await screen.findByRole("checkbox", { name: "Select Rem" }));
   await waitFor(() =>
-    expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe(""),
+    expect((screen.getByRole("combobox", { name: "Shop" }) as HTMLInputElement).value).toBe(""),
   );
   await destination(user, "Existing Order");
   await destination(user, "New Order");
-  expect((screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement).value).toBe("");
+  expect((screen.getByRole("combobox", { name: "Shop" }) as HTMLInputElement).value).toBe("");
 });
 
 test("Wishlist and Lists work with any destination, and the toast offers View list", async () => {
@@ -503,7 +503,7 @@ test("an Order's Item details leave out what the Order gives, and say so", async
   await openDetails(user, "Hatsune Miku");
 
   const details = within(screen.getByRole("group", { name: "Details for Hatsune Miku" }));
-  expect(details.queryByRole("textbox", { name: /^Shop/u })).toBeNull();
+  expect(details.queryByRole("combobox", { name: /^Shop/u })).toBeNull();
   expect(details.queryByRole("button", { name: /Date/u })).toBeNull();
   expect(details.getByRole("textbox", { name: "Notes for Hatsune Miku" })).toBeDefined();
 });
@@ -677,7 +677,7 @@ test("the Shop and Notes fields hold to their limits, and a blank one sends noth
   const user = userEvent.setup();
   openAddPage("/add?to=collection");
   await openDetails(user, "Hatsune Miku");
-  const shop = screen.getByRole("textbox", { name: "Shop for Hatsune Miku" }) as HTMLInputElement;
+  const shop = screen.getByRole("combobox", { name: "Shop for Hatsune Miku" }) as HTMLInputElement;
   expect(shop.maxLength).toBe(200);
   expect(shop.placeholder).toBe("Enter shop name");
   expect(
@@ -831,7 +831,7 @@ test("Fill all writes one value to every selected row, and the shared value too"
   await rowsLoaded();
 
   await fill(user, "Shop");
-  await user.type(await screen.findByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await user.type(await screen.findByRole("combobox", { name: "Shop" }), "AmiAmi");
   await click(user, "Fill 2 selected");
   await waitFor(() =>
     expect(
@@ -921,7 +921,7 @@ test("Fill selected leaves an unselected row's values alone", async () => {
   });
   await click(user, "Fill 1 selected");
   await fill(user, "Shop");
-  await user.type(await screen.findByRole("textbox", { name: "Shop" }), "AmiAmi");
+  await user.type(await screen.findByRole("combobox", { name: "Shop" }), "AmiAmi");
   await click(user, "Fill 1 selected");
 
   await user.click(screen.getByRole("checkbox", { name: "Select Hatsune Miku" }));
@@ -1561,7 +1561,7 @@ test("New Order's own fields hold to their limits and defaults", async () => {
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
-  const shop = screen.getByRole("textbox", { name: "Shop" }) as HTMLInputElement;
+  const shop = screen.getByRole("combobox", { name: "Shop" }) as HTMLInputElement;
   expect(shop.maxLength).toBe(200);
   expect(shop.placeholder).toBe("Enter shop name");
   expect(screen.getByRole("combobox", { name: "Status" }).textContent).toBe("Ordered");

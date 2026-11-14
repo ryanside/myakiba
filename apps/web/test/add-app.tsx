@@ -131,6 +131,7 @@ export function resetServer() {
 await mock.module("@/lib/treaty-client", () => ({
   app: {
     api: {
+      vocabulary: { get: async () => ok({ shops: [] }) },
       add: {
         items: {
           get: async ({ query }: { readonly query: { readonly ids: readonly string[] } }) => {

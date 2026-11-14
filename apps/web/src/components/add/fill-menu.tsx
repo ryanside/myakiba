@@ -7,6 +7,7 @@ import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { ShopInput } from "@/components/shop-fields";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
@@ -246,12 +247,12 @@ function FillEditor({
     case "shop":
       return (
         <LabeledField id={id} label="Shop">
-          <Input
+          <ShopInput
             id={id}
             value={draft.text}
             maxLength={200}
             placeholder="Enter shop name"
-            onChange={(event) => set({ text: event.target.value })}
+            onValueChange={(text) => set({ text })}
           />
         </LabeledField>
       );

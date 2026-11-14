@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { toast } from "@/components/ui/toast";
 import type { Saving } from "@/data/client";
@@ -27,6 +27,8 @@ interface InlineEdit<Draft> {
   draft: Draft | null;
   setDraft: (draft: Draft) => void;
   handleOpen: () => void;
+  /** Saves `draft` at once, as a picked suggestion does. */
+  commit: (draft: Draft) => Promise<void>;
   /** Enter or leaving the editor saves. Escape closes it without saving. */
   editorHandlers: {
     onBlur: () => Promise<void>;
@@ -45,13 +47,19 @@ function useInlineEdit<Value, Draft extends string | number>({
   disabled = false,
 }: InlineEditOptions<Value, Draft>): InlineEdit<Draft> {
   const [draft, setDraft] = useState<Draft | null>(null);
+  const liveDraft = useRef<Draft | null>(null);
   const [shown, submit] = usePendingValue(value, onSubmit);
   const shownText = format(shown);
 
-  const save = async (): Promise<void> => {
-    if (draft === null) return;
-    setDraft(null);
-    const next = parse(draft);
+  const changeDraft = (next: Draft | null) => {
+    liveDraft.current = next;
+    setDraft(next);
+  };
+
+  const save = async (current: Draft | null = liveDraft.current): Promise<void> => {
+    if (current === null || liveDraft.current === null) return;
+    changeDraft(null);
+    const next = parse(current);
     if (next === null || Object.is(next, shown)) return;
     const validation = validate?.(next) ?? true;
     if (validation !== true) {
@@ -65,17 +73,18 @@ function useInlineEdit<Value, Draft extends string | number>({
     shownText,
     triggerLabel: `${shownText || "Empty"}, edit ${label}`,
     draft,
-    setDraft,
-    handleOpen: () => setDraft(toDraft(shown)),
+    setDraft: changeDraft,
+    handleOpen: () => changeDraft(toDraft(shown)),
+    commit: (current) => runSubmit(() => save(current)),
     editorHandlers: {
       onBlur: async () => {
-        if (!disabled) await runSubmit(save);
+        if (!disabled) await runSubmit(() => save());
       },
       onKeyDown: async (event) => {
         if (event.key === "Enter") {
-          await runSubmit(save);
+          await runSubmit(() => save());
         } else if (event.key === "Escape") {
-          setDraft(null);
+          changeDraft(null);
         }
       },
     },

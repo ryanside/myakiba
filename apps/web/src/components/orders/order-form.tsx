@@ -30,6 +30,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { ShopInput } from "@/components/shop-fields";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -301,13 +302,12 @@ function OrderFormContent(
             children={(field) => (
               <div className="grid gap-1.5">
                 <Label htmlFor={field.name}>Shop</Label>
-                <Input
+                <ShopInput
                   id={field.name}
                   name={field.name}
                   value={field.state.value ?? ""}
                   onBlur={field.handleBlur}
-                  type="text"
-                  onChange={(e) => field.handleChange(e.target.value)}
+                  onValueChange={field.handleChange}
                   placeholder="Enter shop name"
                 />
               </div>
