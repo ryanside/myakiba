@@ -1,6 +1,4 @@
-import { HugeiconsIcon } from "@hugeicons/react";
 import { optionalMinorUnits } from "@/lib/money-input";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
   DialogClose,
   DialogDescription,
@@ -12,12 +10,11 @@ import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { ShopFilterField } from "@/components/shop-fields";
 import { MoneyField } from "@/components/money-field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { FieldTrigger } from "@/components/ui/field-trigger";
-import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -251,49 +248,11 @@ function OrdersFiltersDraft({
           <Field className="gap-2">
             <FieldTitle>Shop</FieldTitle>
             <FieldContent>
-              <div className="flex flex-wrap gap-2">
-                {field.state.value?.map((shop, shopIndex) => (
-                  <Badge
-                    key={shopIndex}
-                    variant="outline"
-                    size="lg"
-                    className="flex items-center justify-between pr-0"
-                  >
-                    {shop}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const current = field.state.value || [];
-                        field.handleChange(current.filter((_, idx) => idx !== shopIndex));
-                      }}
-                      className=" hover:text-red-500 hover:bg-transparent"
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} />
-                    </Button>
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="shop-input"
-                  type="text"
-                  placeholder="Press enter after each shop to add"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const input = e.currentTarget;
-                      const value = input.value.trim();
-                      if (value) {
-                        const current = field.state.value || [];
-                        field.handleChange([...current, value]);
-                        input.value = "";
-                      }
-                    }
-                  }}
-                />
-              </div>
+              <ShopFilterField
+                value={field.state.value ?? []}
+                onValueChange={field.handleChange}
+                uses="orderUses"
+              />
             </FieldContent>
           </Field>
         )}

@@ -7,7 +7,7 @@ import { CELL_TRIGGER_CLASS_NAME } from "@/components/cells/cell-trigger";
 import { SelectCell } from "@/components/cells/select-cell";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/shop-input";
+import { ShopInput } from "@/components/shop-fields";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";

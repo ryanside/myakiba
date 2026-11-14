@@ -12,7 +12,7 @@ import { OrderItemSubDataGrid } from "./order-item-sub-data-grid";
 import { PopoverMultiInputCell } from "../cells/popover-multi-input-cell";
 import { SelectCell } from "../cells/select-cell";
 import { InlineTextCell } from "../cells/inline-text-cell";
-import { InlineShopCell } from "@/components/shop-input";
+import { InlineShopCell } from "@/components/shop-fields";
 import { InlineCurrencyCell } from "../cells/inline-currency-cell";
 import { PopoverDatePickerCell } from "../cells/popover-date-picker-cell";
 import { PopoverReleaseDateCell } from "../cells/popover-release-date-cell";

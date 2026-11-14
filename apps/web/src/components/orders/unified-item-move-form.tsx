@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/shop-input";
+import { ShopInput } from "@/components/shop-fields";
 import { Label } from "@/components/ui/label";
 import {
   Select,

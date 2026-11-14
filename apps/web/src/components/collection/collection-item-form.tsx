@@ -19,7 +19,7 @@ import {
   useButtonStatus,
 } from "../ui/status-button";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/shop-input";
+import { ShopInput } from "@/components/shop-fields";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";

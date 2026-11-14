@@ -16,6 +16,7 @@ import type { ReactElement } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { ShopFilterField } from "@/components/shop-fields";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { FieldTrigger } from "@/components/ui/field-trigger";
@@ -481,50 +482,12 @@ function FiltersDraft({
             children={(field) => (
               <Field className="gap-2">
                 <FieldTitle>Shop</FieldTitle>
-                <FieldDescription>e.g., AmiAmi, Mandarake</FieldDescription>
                 <FieldContent>
-                  <div className="flex flex-wrap gap-2">
-                    {field.state.value?.map((shop, shopIndex) => (
-                      <Badge
-                        key={shopIndex}
-                        variant="outline"
-                        className="flex items-center justify-between pr-0"
-                      >
-                        {shop}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const current = field.state.value || [];
-                            field.handleChange(current.filter((_, idx) => idx !== shopIndex));
-                          }}
-                          className=" hover:text-red-500 hover:bg-transparent"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="shop-input"
-                      type="text"
-                      placeholder="Press enter after each shop to add"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const input = e.currentTarget;
-                          const value = input.value.trim();
-                          if (value) {
-                            const current = field.state.value || [];
-                            field.handleChange([...current, value]);
-                            input.value = "";
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  <ShopFilterField
+                    value={field.state.value ?? []}
+                    onValueChange={field.handleChange}
+                    uses="collectionUses"
+                  />
                 </FieldContent>
               </Field>
             )}
