@@ -53,11 +53,11 @@ export const collectionUpdateSchema = z.object({
   tags: z.array(z.string().max(WRITE_LIMITS.tag)).max(WRITE_LIMITS.tags),
   notes: z.string().max(WRITE_LIMITS.notes),
   releaseId: z.string().max(WRITE_LIMITS.id).nullable(),
-  releaseDate: z.iso.date().nullable(),
-  releasePrice: z.number().int().nullable(),
-  releaseCurrency: z.string().max(WRITE_LIMITS.label).nullable(),
-  releaseBarcode: z.string().max(WRITE_LIMITS.label).nullable(),
-  releaseType: z.string().max(WRITE_LIMITS.label).nullable(),
+  releaseDate: z.iso.date().nullable().optional(),
+  releasePrice: z.number().int().nullable().optional(),
+  releaseCurrency: z.string().max(WRITE_LIMITS.label).nullable().optional(),
+  releaseBarcode: z.string().max(WRITE_LIMITS.label).nullable().optional(),
+  releaseType: z.string().max(WRITE_LIMITS.label).nullable().optional(),
   condition: z.enum(CONDITIONS),
 });
 
