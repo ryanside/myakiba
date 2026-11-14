@@ -200,6 +200,24 @@ test("marks a space at either end of a shop name or doubled inside it", async ()
   expect(marks(within(rename).getByRole("status"))).toBe(2);
 });
 
+test("keeping a spelling with spaces at its ends merges every spelling into its trimmed name", async () => {
+  saved = [...seed("BOOM SHOP", 2, 0), ...seed("BOOM  SHOP", 1, 0), ...seed(" BOOM SHOP ", 1, 0)];
+  openShops();
+
+  const group = await merges();
+  const padded = within(group).getAllByRole("radio").at(-1)?.closest("label");
+  if (padded) fireEvent.click(padded);
+  fireEvent.click(await within(group).findByRole("button", { name: "Merge into “BOOM SHOP”" }));
+  const dialog = await screen.findByRole("dialog", { name: "Merge into “BOOM SHOP”?" });
+  expect(dialog.textContent).toContain("2 Collection Items change from");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Merge" }));
+
+  await waitFor(() => expect(renames).toHaveLength(1));
+  const [request] = renames;
+  expect(request?.to).toBe("BOOM SHOP");
+  expect(request?.from.toSorted()).toEqual([" BOOM SHOP ", "BOOM  SHOP"]);
+});
+
 const renameDialog = (shop: string) => ({ name: `Rename “${shop}”` });
 
 async function openRename(shop: string) {
