@@ -560,8 +560,8 @@ test("every Order field is on screen, with nothing to open first", async () => {
   ]) {
     expect(screen.getByRole("button", { name })).toBeDefined();
   }
+  expect(screen.getByRole("combobox", { name: "Shop" })).toBeDefined();
   for (const name of [
-    "Shop",
     "Shipping Fee",
     "Taxes",
     "Duties",

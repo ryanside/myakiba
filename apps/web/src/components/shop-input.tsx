@@ -26,9 +26,13 @@ type ShopInputProps = Omit<ComponentProps<"input">, "value" | "defaultValue" | "
   onValueChange: (value: string) => void;
 };
 
-/** A Shop field that suggests the user's shops and, on leaving it, saves a known shop's usual spelling. */
-export function ShopInput({ value, onValueChange, onBlur, ...props }: ShopInputProps) {
+/** A Shop field that suggests the user's shops. Leaving it or pressing Enter spells a known shop the usual way. */
+export function ShopInput({ value, onValueChange, onBlur, onKeyDown, ...props }: ShopInputProps) {
   const shops = useShopSuggester();
+  const commit = () => {
+    const canonical = shops.canonical(value);
+    if (canonical !== value) onValueChange(canonical);
+  };
   return (
     <SuggestInput
       {...props}
@@ -36,9 +40,12 @@ export function ShopInput({ value, onValueChange, onBlur, ...props }: ShopInputP
       onValueChange={onValueChange}
       suggestions={shops.suggestions(value)}
       onBlur={(event) => {
-        const canonical = shops.canonical(value);
-        if (canonical !== value) onValueChange(canonical);
+        commit();
         onBlur?.(event);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") commit();
+        onKeyDown?.(event);
       }}
     />
   );

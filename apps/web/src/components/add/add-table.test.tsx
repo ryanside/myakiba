@@ -142,7 +142,7 @@ test("details open inline and depend on the destination", async () => {
   expect(details.getAttribute("aria-expanded")).toBe("true");
   expect(document.querySelector(`[id="${details.getAttribute("aria-controls")}"]`)).not.toBeNull();
   expect(screen.queryByRole("dialog")).toBeNull();
-  expect(screen.getByRole("textbox", { name: "Shop for Miku" })).toBeDefined();
+  expect(screen.getByRole("combobox", { name: "Shop for Miku" })).toBeDefined();
   expect(screen.getByRole("textbox", { name: "Notes for Miku" })).toBeDefined();
   expect(screen.getByRole("textbox", { name: "Tags for Miku" })).toBeDefined();
   expect(screen.getByRole("combobox", { name: "Shipping Method for Miku" })).toBeDefined();
@@ -164,7 +164,7 @@ test("an Order Item's details leave out what the Order gives it", async () => {
   await user.click(await screen.findByRole("button", { name: "Details for Miku" }));
 
   const details = within(screen.getByRole("group", { name: "Details for Miku" }));
-  expect(details.queryByRole("textbox", { name: /^Shop/u })).toBeNull();
+  expect(details.queryByRole("combobox", { name: /^Shop/u })).toBeNull();
   expect(details.queryByRole("combobox", { name: /^Shipping Method/u })).toBeNull();
   expect(details.queryByRole("button", { name: /Date/u })).toBeNull();
   expect(details.getByRole("textbox", { name: "Notes for Miku" })).toBeDefined();

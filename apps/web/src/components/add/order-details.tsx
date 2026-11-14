@@ -12,7 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError } from "@/components/ui/field";
 import { FieldTrigger } from "@/components/ui/field-trigger";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import { Input } from "@/components/ui/input";
+import { ShopInput } from "@/components/shop-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { useRead, useRootedInfiniteRead } from "@/data/client";
@@ -183,13 +183,13 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
           />
         </LabeledField>
         <LabeledField id={`${id}-shop`} label="Shop" className="@4xl:col-span-2">
-          <Input
+          <ShopInput
             id={`${id}-shop`}
             value={fields.shop}
             maxLength={200}
             placeholder="Enter shop name"
             title={fields.shop || undefined}
-            onChange={(event) => set({ shop: event.target.value })}
+            onValueChange={(shop) => set({ shop })}
           />
         </LabeledField>
         <LabeledField id={`${id}-shipping`} label="Shipping Method" className="col-span-2">

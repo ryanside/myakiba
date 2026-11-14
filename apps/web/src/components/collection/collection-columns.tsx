@@ -13,7 +13,7 @@ import {
 import { ItemTitleCell } from "@/components/cells/item-title-cell";
 import { SelectionCell, SelectionCheckbox } from "@/components/cells/selection-cell";
 import { Button } from "@/components/ui/button";
-import { InlineTextCell } from "@/components/cells/inline-text-cell";
+import { InlineShopCell } from "@/components/shop-input";
 import { EmptyValue } from "@/components/cells/empty-value";
 import {
   DropdownMenu,
@@ -351,7 +351,7 @@ export function createCollectionColumns({
         <DataGridColumnHeader title="Shop" visibility={true} column={column} />
       ),
       cell: editItem("shop", (item, edit) => (
-        <InlineTextCell label="Shop" value={item.shop} {...edit} previewClassName="text-sm" />
+        <InlineShopCell value={item.shop} {...edit} previewClassName="text-sm" />
       )),
       enableSorting: true,
       enableHiding: true,
