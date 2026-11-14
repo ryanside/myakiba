@@ -163,6 +163,14 @@ test("a sign-up refused without a message shows the status text", async () => {
   expect(await screen.findByText("Internal Server Error")).toBeTruthy();
 });
 
+test("the sign-up fields tell a password manager what they hold", () => {
+  render(<SignUpForm />);
+
+  expect(screen.getByLabelText("Username").getAttribute("autocomplete")).toBe("username");
+  expect(screen.getByLabelText("Email").getAttribute("autocomplete")).toBe("email");
+  expect(screen.getByLabelText("Password").getAttribute("autocomplete")).toBe("new-password");
+});
+
 test("a taken username says so while signing up", async () => {
   serve(() => Response.json({ available: false }));
   render(<SignUpForm />);

@@ -148,6 +148,7 @@ export default function SignUpForm({ redirectTo = "/dashboard" }: { redirectTo?:
                 id={field.name}
                 className="h-10"
                 name={field.name}
+                autoComplete="username"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -171,6 +172,7 @@ export default function SignUpForm({ redirectTo = "/dashboard" }: { redirectTo?:
                 className="h-10"
                 name={field.name}
                 type="email"
+                autoComplete="email"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}

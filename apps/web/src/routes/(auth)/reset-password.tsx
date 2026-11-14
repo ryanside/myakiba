@@ -119,6 +119,7 @@ function RouteComponent() {
                   id={field.name}
                   name={field.name}
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Enter new password"
                   value={field.state.value}
                   onBlur={field.handleBlur}
@@ -156,6 +157,7 @@ function RouteComponent() {
                   id={field.name}
                   name={field.name}
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Confirm new password"
                   value={field.state.value}
                   onBlur={field.handleBlur}

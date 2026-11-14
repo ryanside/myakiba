@@ -123,6 +123,7 @@ function RouteComponent() {
                   id={field.name}
                   name={field.name}
                   type="email"
+                  autoComplete="email"
                   placeholder="your@email.com"
                   value={field.state.value}
                   onBlur={field.handleBlur}
