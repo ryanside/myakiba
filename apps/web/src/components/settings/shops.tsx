@@ -186,7 +186,7 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
         aria-label={`Spelling to keep for ${mostUsed.value}`}
         value={keep.value}
         onValueChange={(value) => setChosen(String(value))}
-        className="gap-1.5"
+        className="min-w-0 flex-1 gap-1.5"
       >
         {spellings.map((shop) => (
           <Label key={shop.value} className="flex min-w-0 items-center gap-2.5 font-normal">
@@ -202,9 +202,16 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
       </RadioGroup>
       <ConfirmDialog
         renderTrigger={
-          <Button variant="outline" size="sm" className="self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            title={`Merge into “${keep.value}”`}
+            className="max-w-full min-w-0 shrink self-start sm:max-w-1/2 sm:self-auto"
+          >
             <HugeiconsIcon icon={GitMergeIcon} data-icon="inline-start" />
-            Merge into <QuotedShop shop={keep.value} />
+            <span className="truncate">
+              Merge into <QuotedShop shop={keep.value} />
+            </span>
           </Button>
         }
         title={
