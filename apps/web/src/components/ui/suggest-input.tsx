@@ -64,13 +64,13 @@ export function SuggestInput({
       />
       <Autocomplete.Portal>
         <Autocomplete.Positioner align="start" sideOffset={4} className="isolate z-50">
-          <Autocomplete.Popup className="max-h-(--available-height) w-(--anchor-width) min-w-40 popup-motion overflow-y-auto rounded-lg bg-popover p-1 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden">
+          <Autocomplete.Popup className="max-h-(--available-height) w-(--anchor-width) min-w-36 popup-motion overflow-x-hidden overflow-y-auto overscroll-contain rounded-(--radius-outer) bg-popover p-(--inset) [--inset:--spacing(1)] [--radius-outer:var(--radius-lg)] text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden">
             <Autocomplete.List>
               {(suggestion: string) => (
                 <Autocomplete.Item
                   key={suggestion}
                   value={suggestion}
-                  className="flex cursor-default items-center rounded-inner px-2 py-1.5 outline-hidden select-none data-highlighted:bg-muted data-highlighted:inset-ring-1 data-highlighted:inset-ring-ring"
+                  className="flex cursor-default items-center rounded-inner py-1 px-1.5 text-sm outline-hidden select-none data-highlighted:bg-foreground/10"
                 >
                   <span className="min-w-0 truncate">{suggestion}</span>
                 </Autocomplete.Item>
