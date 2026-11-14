@@ -2,7 +2,7 @@ import { GitMergeIcon, Store01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ShopTerm } from "@myakiba/contracts/vocabulary/schema";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
-import { useId, useState } from "react";
+import { Fragment, useId, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -35,12 +35,50 @@ import { SettingsGroup } from "./settings-group";
 import { useSettingAnchor } from "./settings-row";
 import { SETTINGS } from "./settings-registry";
 
-const quoted = (shop: string) => `“${shop}”`;
+/**
+ * A shop name whose every space shows. A space at either end, in a run inside, or other than a plain
+ * space keeps its width and gets a dot over it, so spellings that differ only in spacing look different.
+ */
+function ShopName({ shop }: { readonly shop: string }) {
+  const parts = shop.split(/(\s+)/);
+  return parts.map((part, index) => {
+    const isSpace = index % 2 === 1;
+    const separatesWords = part === " " && parts[index - 1] !== "" && parts[index + 1] !== "";
+    if (!isSpace || separatesWords) return part;
+    return [...part].map((space, offset) => (
+      <span key={`${index}-${offset}`} className="relative whitespace-pre">
+        {space}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 text-center text-muted-foreground select-none"
+        >
+          ·
+        </span>
+      </span>
+    ));
+  });
+}
 
-function listed(shops: readonly string[]): string {
-  const names = shops.map(quoted);
-  if (names.length <= 2) return names.join(" and ");
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+function QuotedShop({ shop }: { readonly shop: string }) {
+  return (
+    <>
+      “<ShopName shop={shop} />”
+    </>
+  );
+}
+
+function separatorBefore(index: number, count: number): string {
+  if (index === 0) return "";
+  return index === count - 1 ? " and " : ", ";
+}
+
+function listed(shops: readonly string[]): ReactNode {
+  return shops.map((shop, index) => (
+    <Fragment key={shop}>
+      {separatorBefore(index, shops.length)}
+      <QuotedShop shop={shop} />
+    </Fragment>
+  ));
 }
 
 export function Shops() {
@@ -153,7 +191,9 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
         {spellings.map((shop) => (
           <Label key={shop.value} className="flex min-w-0 items-center gap-2.5 font-normal">
             <RadioGroupItem value={shop.value} />
-            <span className="min-w-0 truncate text-sm font-medium">{shop.value}</span>
+            <span className="min-w-0 text-sm font-medium whitespace-pre-wrap wrap-break-word">
+              <ShopName shop={shop.value} />
+            </span>
             <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
               {describeUses(usesOf([shop]))}
             </span>
@@ -164,11 +204,19 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
         renderTrigger={
           <Button variant="outline" size="sm" className="self-start sm:self-auto">
             <HugeiconsIcon icon={GitMergeIcon} data-icon="inline-start" />
-            Merge into {quoted(keep.value)}
+            Merge into <QuotedShop shop={keep.value} />
           </Button>
         }
-        title={`Merge into ${quoted(keep.value)}?`}
-        description={`${describeUses(changes)} ${verb} from ${listed(from)} to ${quoted(keep.value)}.`}
+        title={
+          <>
+            Merge into <QuotedShop shop={keep.value} />?
+          </>
+        }
+        description={
+          <>
+            {describeUses(changes)} {verb} from {listed(from)} to <QuotedShop shop={keep.value} />.
+          </>
+        }
         confirmLabel="Merge"
         variant="default"
         icon={GitMergeIcon}
@@ -188,7 +236,9 @@ function ShopRow({
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-sm font-medium">{shop.value}</span>
+        <span className="text-sm font-medium whitespace-pre-wrap wrap-break-word">
+          <ShopName shop={shop.value} />
+        </span>
         <span className="text-[13px] leading-snug text-muted-foreground tabular-nums">
           {describeUses(usesOf([shop]))}
         </span>
@@ -233,7 +283,9 @@ function RenameShopDialog({
       />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rename {quoted(shop.value)}</DialogTitle>
+          <DialogTitle>
+            Rename <QuotedShop shop={shop.value} />
+          </DialogTitle>
           <DialogDescription>
             The new name replaces it on {changes}, saved exactly as you type it.
           </DialogDescription>
@@ -262,9 +314,12 @@ function RenameShopDialog({
               className="text-pretty text-[13px] leading-snug text-muted-foreground empty:hidden"
               role="status"
             >
-              {target
-                ? `${quoted(target.value)} is already one of your shops, so saving merges ${quoted(shop.value)} into it.`
-                : null}
+              {target ? (
+                <>
+                  <QuotedShop shop={target.value} /> is already one of your shops, so saving merges{" "}
+                  <QuotedShop shop={shop.value} /> into it.
+                </>
+              ) : null}
             </p>
           </div>
           <DialogFooter>

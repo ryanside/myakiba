@@ -24,7 +24,7 @@ interface ConfirmDialogProps {
   readonly renderTrigger?: React.ReactElement;
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
-  readonly title: string;
+  readonly title: React.ReactNode;
   readonly description?: React.ReactNode;
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
