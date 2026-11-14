@@ -4819,6 +4819,21 @@
       "fixed": [
         "parseMfcItemPage release prices > a barcode link then a capitals link with no price are not a price"
       ]
+    },
+    {
+      "fix": "92ec0d2b2a17ef25dda152cd2c32f364d30c4f1a",
+      "bug": "The sign-up username and email fields named nothing, so password managers could not fill or save them.",
+      "test": "apps/web/src/components/auth/email-auth.test.tsx",
+      "fixed": ["the sign-up fields tell a password manager what they hold"]
+    },
+    {
+      "fix": "92ec0d2b2a17ef25dda152cd2c32f364d30c4f1a",
+      "bug": "The forgot-password email and both reset-password fields named nothing, so password managers could not fill or save them.",
+      "test": "apps/web/src/components/auth/password-reset.test.tsx",
+      "fixed": [
+        "the reset link request's email field tells a password manager it holds an email",
+        "the reset password fields tell a password manager they hold a new password"
+      ]
     }
   ],
   "lint": [
