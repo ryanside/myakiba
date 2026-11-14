@@ -335,7 +335,7 @@ type CommandSpec<Input, Output, Failure extends Error, F extends WritableFamily>
   ) => Promise<Result<Rollback | null, Failure>>;
   /** A success toast's title, or no toast when it returns undefined. */
   readonly successTitle?: (input: Input, output: Output) => string | undefined;
-  readonly successDescription?: (input: Input) => string;
+  readonly successDescription?: (input: Input, output: Output) => string;
   /** A warning toast for a write that saved without part of what it was sent, or none. */
   readonly warningToast?: (input: Input, output: Output) => FailureToast | undefined;
   /**
@@ -429,7 +429,7 @@ async function runCommand<Input, Output, Failure extends Error>(
       toast.add({
         type: "success",
         title: successTitle,
-        ...(spec.successDescription && { description: spec.successDescription(input) }),
+        ...(spec.successDescription && { description: spec.successDescription(input, output) }),
       });
     const warning = spec.warningToast?.(input, output);
     if (warning !== undefined) toast.add({ type: "warning", ...warning });

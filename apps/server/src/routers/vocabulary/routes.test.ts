@@ -1,8 +1,10 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { asc, eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { vocabularyResponseSchema } from "@myakiba/contracts/vocabulary/schema";
 import { createTestDatabase } from "../../../test/database";
 
@@ -40,6 +42,31 @@ beforeEach(async () => {
     { id: "item-1", ownerId: userId, externalId: 1, title: "Miku" },
     { id: "item-2", ownerId: "user-2", externalId: 1, title: "Miku" },
   ]);
+});
+
+const rename = async (body: Readonly<Record<string, string | readonly string[]>>, as = userId) => {
+  const response = await app.handle(
+    new Request("http://localhost/api/vocabulary/shops/rename", {
+      method: "POST",
+      headers: { "x-test-user": as, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+  const json = response.headers.get("content-type")?.includes("json");
+  return { status: response.status, body: json ? await response.json() : await response.text() };
+};
+
+const shopsOf = async (owner: string) => ({
+  collection: await db
+    .select({ id: collection.id, shop: collection.shop })
+    .from(collection)
+    .where(eq(collection.userId, owner))
+    .orderBy(asc(collection.id)),
+  orders: await db
+    .select({ id: order.id, shop: order.shop })
+    .from(order)
+    .where(eq(order.userId, owner))
+    .orderBy(asc(order.id)),
 });
 
 const read = async () => {
@@ -324,5 +351,188 @@ describe("GET /api/vocabulary scales", () => {
     expect(body.scales).toHaveLength(VOCABULARY_LIMIT);
     expect(body.scales[0]).toEqual({ value: `1/${VOCABULARY_LIMIT}`, ownedUses: 2 });
     expect(body.scales.at(-1)?.value).toBe(`1/${VOCABULARY_LIMIT - 2}`);
+  });
+});
+
+describe("POST /api/vocabulary/shops/rename", () => {
+  beforeEach(async () => {
+    await db
+      .insert(collection)
+      .values([
+        collectionRow("c-1", "AmiAmi", 1),
+        collectionRow("c-2", "amiami", 1),
+        collectionRow("c-3", "Ami Ami", 1),
+        collectionRow("c-4", "Mandarake", 1),
+        collectionRow("c-other", "amiami", 1, "user-2"),
+      ]);
+    await db
+      .insert(order)
+      .values([
+        orderRow("o-1", "amiami", 1),
+        orderRow("o-2", "AmiAmi", 1),
+        orderRow("o-other", "amiami", 1, "user-2"),
+      ]);
+  });
+
+  test("renames a shop on every Collection Item and Order and answers how many changed", async () => {
+    const { status, body } = await rename({ from: ["Mandarake"], to: "Mandarake Nakano" });
+
+    const shops = await shopsOf(userId);
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ collectionItems: 1, orders: 0 });
+    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Mandarake Nakano" });
+  });
+
+  test("renaming to a shop already in use merges the two", async () => {
+    const { body } = await rename({ from: ["amiami"], to: "AmiAmi" });
+
+    expect(body).toEqual({ collectionItems: 1, orders: 1 });
+    expect(await shopsOf(userId)).toEqual({
+      collection: [
+        { id: "c-1", shop: "AmiAmi" },
+        { id: "c-2", shop: "AmiAmi" },
+        { id: "c-3", shop: "Ami Ami" },
+        { id: "c-4", shop: "Mandarake" },
+      ],
+      orders: [
+        { id: "o-1", shop: "AmiAmi" },
+        { id: "o-2", shop: "AmiAmi" },
+      ],
+    });
+  });
+
+  test("leaves another user's identical shop alone", async () => {
+    await rename({ from: ["amiami"], to: "AmiAmi" });
+
+    expect(await shopsOf("user-2")).toEqual({
+      collection: [{ id: "c-other", shop: "amiami" }],
+      orders: [{ id: "o-other", shop: "amiami" }],
+    });
+  });
+
+  test("matches the old name exactly, so a second run changes nothing", async () => {
+    await rename({ from: ["amiami"], to: "AmiAmi" });
+    const before = await shopsOf(userId);
+
+    const { status, body } = await rename({ from: ["amiami"], to: "AmiAmi" });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ collectionItems: 0, orders: 0 });
+    expect(await shopsOf(userId)).toEqual(before);
+  });
+
+  test("merges every spelling it names in one request", async () => {
+    const { status, body } = await rename({
+      from: ["AmiAmi", "amiami", "Ami Ami"],
+      to: "AmiAmi Japan",
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ collectionItems: 3, orders: 2 });
+    expect(await shopsOf(userId)).toEqual({
+      collection: [
+        { id: "c-1", shop: "AmiAmi Japan" },
+        { id: "c-2", shop: "AmiAmi Japan" },
+        { id: "c-3", shop: "AmiAmi Japan" },
+        { id: "c-4", shop: "Mandarake" },
+      ],
+      orders: [
+        { id: "o-1", shop: "AmiAmi Japan" },
+        { id: "o-2", shop: "AmiAmi Japan" },
+      ],
+    });
+  });
+
+  test("moves the renamed shop's uses into the shop it merged with", async () => {
+    await rename({ from: ["Ami Ami", "amiami"], to: "AmiAmi" });
+
+    const { body } = await read();
+
+    expect(body.shops.map(({ value, uses }) => ({ value, uses }))).toEqual([
+      { value: "AmiAmi", uses: 5 },
+      { value: "Mandarake", uses: 1 },
+    ]);
+  });
+
+  test("trims the new name and matches the old name exactly as saved", async () => {
+    const { body: padded } = await rename({ from: ["  Mandarake "], to: " Suruga-ya  " });
+    const { body } = await rename({ from: ["Mandarake"], to: " Suruga-ya  " });
+
+    const shops = await shopsOf(userId);
+
+    expect(padded).toEqual({ collectionItems: 0, orders: 0 });
+    expect(body).toEqual({ collectionItems: 1, orders: 0 });
+    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Suruga-ya" });
+  });
+
+  test("renames a shop saved with stray spaces", async () => {
+    await db.update(collection).set({ shop: "Mandarake " }).where(eq(collection.id, "c-4"));
+
+    const { body } = await rename({ from: ["Mandarake "], to: "Mandarake" });
+
+    const shops = await shopsOf(userId);
+
+    expect(body).toEqual({ collectionItems: 1, orders: 0 });
+    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Mandarake" });
+  });
+
+  test.each([
+    ["the same name", { from: ["AmiAmi"], to: "AmiAmi" }],
+    ["the same name once trimmed", { from: ["AmiAmi"], to: " AmiAmi " }],
+    ["a new name among the old ones", { from: ["amiami", "AmiAmi"], to: "AmiAmi" }],
+    ["a blank new name", { from: ["AmiAmi"], to: "   " }],
+    ["a blank old name", { from: ["amiami", ""], to: "AmiAmi" }],
+    ["an old name over the shop limit", { from: ["a".repeat(201)], to: "AmiAmi" }],
+    ["a new name over the shop limit", { from: ["AmiAmi"], to: "a".repeat(201) }],
+    ["no old names", { from: [], to: "AmiAmi" }],
+    [
+      "more old names than a merge takes",
+      {
+        from: Array.from({ length: WRITE_LIMITS.shops + 1 }, (_, index) => `Shop ${index}`),
+        to: "AmiAmi",
+      },
+    ],
+    ["an old name twice", { from: ["amiami", "amiami"], to: "AmiAmi" }],
+    ["an old name that is not a list", { from: "amiami", to: "AmiAmi" }],
+    ["a missing name", { from: ["AmiAmi"] }],
+    ["an extra field", { from: ["AmiAmi"], to: "Ami", userId: "user-2" }],
+  ])("refuses %s and changes nothing", async (_case, body) => {
+    const before = await shopsOf(userId);
+
+    const { status } = await rename(body);
+
+    expect(status).toBe(422);
+    expect(await shopsOf(userId)).toEqual(before);
+  });
+
+  describe("when the commit fails", () => {
+    beforeEach(async () => {
+      await db.execute(`
+        CREATE FUNCTION refuse_order_shop() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.shop = 'Refused' THEN RAISE EXCEPTION 'refused at commit'; END IF;
+          RETURN NEW;
+        END $$;
+        CREATE CONSTRAINT TRIGGER refuse_order_shop AFTER UPDATE ON "order"
+          DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION refuse_order_shop();
+      `);
+    });
+
+    afterEach(async () => {
+      await db.execute(`
+        DROP TRIGGER IF EXISTS refuse_order_shop ON "order";
+        DROP FUNCTION IF EXISTS refuse_order_shop();
+      `);
+    });
+
+    test("renames none of the spellings on any Collection Item or Order", async () => {
+      const before = await shopsOf(userId);
+
+      const { status } = await rename({ from: ["AmiAmi", "amiami", "Ami Ami"], to: "Refused" });
+
+      expect(status).toBe(500);
+      expect(await shopsOf(userId)).toEqual(before);
+    });
   });
 });

@@ -13,6 +13,7 @@ import { SettingsNav } from "@/components/settings/settings-nav";
 import { SETTINGS_SECTION_IDS, SETTINGS_SECTIONS } from "@/components/settings/settings-registry";
 import type { SettingsSectionId } from "@/components/settings/settings-registry";
 import { SettingsSearchField, SettingsSearchResults } from "@/components/settings/settings-search";
+import { Shops } from "@/components/settings/shops";
 import type { Session } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ const SECTION_CONTENT = {
   preferences: ({ user }) => <Preferences user={user} />,
   appearance: () => <Appearance />,
   layout: () => <Layout />,
+  shops: () => <Shops />,
   profile: ({ user }) => <Profile user={user} />,
   account: ({ user }) => <Account user={user} />,
   about: () => <About />,

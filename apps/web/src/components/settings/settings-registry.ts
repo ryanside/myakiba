@@ -4,12 +4,13 @@ import {
   PaintBoardIcon,
   PreferenceHorizontalIcon,
   SquareLockPasswordIcon,
+  Store01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
 export const SETTINGS_NAV_GROUPS = [
-  { label: "General", sections: ["preferences", "appearance", "layout"] },
+  { label: "General", sections: ["preferences", "appearance", "layout", "shops"] },
   { label: "Account", sections: ["profile", "account"] },
   { label: null, sections: ["about"] },
 ] as const satisfies readonly {
@@ -45,6 +46,12 @@ export const SETTINGS_SECTIONS = {
     label: "Layout",
     description: "How your pages open and how their tables are arranged on this device.",
     icon: LayoutGridIcon,
+  },
+  shops: {
+    label: "Shops",
+    description:
+      "The shops on your Orders and Collection Items, and spellings of one shop to merge.",
+    icon: Store01Icon,
   },
   profile: {
     label: "Profile",
@@ -150,6 +157,18 @@ export const SETTINGS = {
     title: "Order items table",
     description: "Columns you hid, moved, resized or pinned inside an order.",
     keywords: ["reset", "columns", "table layout"],
+  },
+  "shop-merges": {
+    section: "shops",
+    title: "Suggested merges",
+    description: "Shops whose names differ only in case or spacing.",
+    keywords: ["merge", "duplicate", "spelling", "typo", "combine", "store", "seller", "tidy"],
+  },
+  "shop-list": {
+    section: "shops",
+    title: "Your shops",
+    description: "Every shop you have entered, the most used first.",
+    keywords: ["rename", "edit", "typo", "store", "seller", "retailer", "merchant"],
   },
   username: {
     section: "profile",
