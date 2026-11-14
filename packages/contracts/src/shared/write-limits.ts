@@ -8,6 +8,8 @@ export const WRITE_LIMITS = {
   /** The Add page names a new Order after its first Item, so this sits far above Item titles. */
   title: 1000,
   shop: 200,
+  /** The spellings one shop merge renames. */
+  shops: 100,
   notes: 10_000,
   tag: 100,
   tags: 100,
