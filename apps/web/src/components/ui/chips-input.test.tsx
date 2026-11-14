@@ -201,3 +201,14 @@ test("removing a chip inside a dialog puts focus back in the field", async () =>
 
   expect(document.activeElement).toBe(field());
 });
+
+test("a value saved twice shows twice, and removing one keeps the other", async () => {
+  render(<TagsForm initial={["fav", "fav", "b"]} />);
+
+  const removes = screen.getAllByRole("button", { name: "Remove tag fav" });
+  expect(removes).toHaveLength(2);
+  fireEvent.click(removes[0] as HTMLElement);
+
+  expect(saved()).toBe('["fav","b"]');
+  expect(screen.getAllByRole("button", { name: "Remove tag fav" })).toHaveLength(1);
+});

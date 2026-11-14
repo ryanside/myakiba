@@ -56,8 +56,9 @@ export function ChipsInput({
     <div className="grid gap-2">
       {values.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
-          {values.map((value) => (
-            <li key={value}>
+          {values.map((value, index) => (
+            // Older Collection Items can repeat a tag, so each chip is its own entry.
+            <li key={`${index}-${value}`}>
               <Badge variant="outline" className="h-6 gap-0.5 pr-0.5 pl-1.5">
                 <span className="[overflow-wrap:anywhere] whitespace-normal">{value}</span>
                 <Button
@@ -69,7 +70,7 @@ export function ChipsInput({
                   onClick={() => {
                     // Focus moves before the button goes, so a dialog never takes it.
                     input.current?.focus();
-                    onValuesChange(values.filter((other) => other !== value));
+                    onValuesChange(values.filter((_, other) => other !== index));
                   }}
                 >
                   <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
