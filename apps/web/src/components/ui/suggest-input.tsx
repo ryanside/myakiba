@@ -25,7 +25,7 @@ export function SuggestInput({
 }: SuggestInputProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState<string>();
-  const shown = open && suggestions.length > 0;
+  const shown = open && suggestions.some((suggestion) => suggestion !== value.trim());
 
   return (
     <Autocomplete.Root

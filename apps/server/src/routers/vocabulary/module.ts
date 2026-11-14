@@ -1,8 +1,13 @@
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { collection, item, order } from "@myakiba/db/schema/figure";
-import type { ShopTerm, VocabularyResponse } from "@myakiba/contracts/vocabulary/schema";
+import type {
+  RenameShop,
+  ShopUses,
+  ShopTerm,
+  VocabularyResponse,
+} from "@myakiba/contracts/vocabulary/schema";
 import { Result } from "better-result";
-import { query } from "@/domain/kernel";
+import { command, query } from "@/domain/kernel";
 
 export const VOCABULARY_LIMIT = 500;
 
@@ -90,6 +95,29 @@ export const Vocabulary = {
         scales,
       };
       return Result.ok(vocabulary);
+    },
+  ),
+  renameShop: command(
+    { action: "vocabulary.shops.rename", failure: "Failed to rename the shop" },
+    async (scope, { from, to }: RenameShop) => {
+      const userId = scope.viewer.userId;
+      const updatedAt = new Date();
+      const collectionItems = await scope.tx
+        .update(collection)
+        .set({ shop: to, updatedAt })
+        .where(and(eq(collection.userId, userId), inArray(collection.shop, from)))
+        .returning({ id: collection.id });
+      const orders = await scope.tx
+        .update(order)
+        .set({ shop: to, updatedAt })
+        .where(and(eq(order.userId, userId), inArray(order.shop, from)))
+        .returning({ id: order.id });
+      const renamed: ShopUses = {
+        collectionItems: collectionItems.length,
+        orders: orders.length,
+      };
+      scope.log.set(renamed);
+      return Result.ok(renamed);
     },
   ),
 };

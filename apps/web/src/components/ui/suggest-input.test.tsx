@@ -23,7 +23,7 @@ function ShopForm({ onSubmit }: { readonly onSubmit: (shop: string) => void }) {
         aria-label="Shop"
         value={shop}
         onValueChange={setShop}
-        suggestions={SHOPS.filter((name) => name.toLowerCase().includes(shop.toLowerCase()))}
+        suggestions={SHOPS.filter((name) => name.toLowerCase().includes(shop.trim().toLowerCase()))}
       />
       <button type="submit">Save</button>
     </form>
@@ -144,4 +144,28 @@ test("Enter that confirms IME composition never picks a highlighted suggestion",
 
   expect(screen.getByRole<HTMLInputElement>("combobox", { name: "Shop" }).value).toBe("ami");
   expect(onSubmit).not.toHaveBeenCalled();
+});
+
+test("the list stays closed when its only suggestion is what was typed", async () => {
+  render(<ShopForm onSubmit={() => {}} />);
+  const user = userEvent.setup();
+
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "Amazon");
+
+  expect(screen.queryByRole("option")).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Shop" }).getAttribute("aria-expanded")).not.toBe(
+    "true",
+  );
+});
+
+test("the list stays closed when its only suggestion is what was typed with spaces around it", async () => {
+  render(<ShopForm onSubmit={() => {}} />);
+  const user = userEvent.setup();
+
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "Amazon ");
+
+  expect(screen.queryByRole("option")).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Shop" }).getAttribute("aria-expanded")).not.toBe(
+    "true",
+  );
 });
