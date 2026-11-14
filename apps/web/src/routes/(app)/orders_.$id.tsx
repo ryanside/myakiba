@@ -8,7 +8,7 @@ import { OrderItemsActionBar } from "@/components/orders/order-items-action-bar"
 import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRead } from "@/data/client";
+import { preload, preloadPage, useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
@@ -18,6 +18,8 @@ import type { Saving } from "@/data/client";
 import { shownMessageOf } from "@/data/api";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
+  loader: ({ context: { queryClient }, cause, params }) =>
+    preloadPage(cause, () => [preload(queryClient, orders.detail, params.id)]),
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [

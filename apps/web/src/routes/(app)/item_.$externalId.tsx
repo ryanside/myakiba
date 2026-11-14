@@ -6,7 +6,7 @@ import { ItemDetails } from "@/components/item/item-details";
 import { ItemHero } from "@/components/item/item-hero";
 import { ItemNotFound } from "@/components/item/item-not-found";
 import { useCollectionMutations, useCollectionOrderMutations } from "@/hooks/use-collection";
-import { useRead } from "@/data/client";
+import { preload, preloadPage, useRead } from "@/data/client";
 import { items, useRefreshItem } from "@/data/resources/item";
 import { shownMessageOf } from "@/data/api";
 
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
     return { externalId: Number(externalId) };
   },
   stringifyParams: ({ externalId }) => ({ externalId: String(externalId) }),
+  loader: ({ context: { queryClient }, cause, params }) =>
+    preloadPage(cause, () => [preload(queryClient, items.detail, params.externalId)]),
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [

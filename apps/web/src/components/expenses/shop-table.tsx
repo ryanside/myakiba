@@ -1,13 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useRead } from "@/data/client";
-import { expenses } from "@/data/resources/expenses";
+import { expenses, SHOP_PAGE_SIZE, shopTableInput } from "@/data/resources/expenses";
 import { getCoreRowModel, getExpandedRowModel, useReactTable } from "@tanstack/react-table";
 import type { ColumnDef, ExpandedState } from "@tanstack/react-table";
 import type {
   ExpenseFilters,
   ExpenseScope,
-  ExpenseShopFilters,
   ExpenseShopRow,
 } from "@myakiba/contracts/expenses/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
@@ -27,7 +26,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { shownMessageOf } from "@/data/api";
 
-const PAGE_SIZE = 10;
 const ROW_NUMBER_COLUMN_ID = "__rowNumber";
 const EXPAND_COLUMN_ID = "__expand";
 
@@ -55,17 +53,10 @@ export function ShopTable({
   ]);
   const [pagination, setPagination] = useState(() => ({ key: paginationKey, offset: 0 }));
   const offset = pagination.key === paginationKey ? pagination.offset : 0;
+  const { dateStart, dateEnd, shop } = filters;
   const queryFilters = useMemo(
-    (): ExpenseShopFilters => ({
-      scope,
-      dateStart: filters.dateStart,
-      dateEnd: filters.dateEnd,
-      shop: filters.shop,
-      search: search || undefined,
-      limit: PAGE_SIZE,
-      offset,
-    }),
-    [filters.dateStart, filters.dateEnd, filters.shop, offset, scope, search],
+    () => shopTableInput(scope, { dateStart, dateEnd, shop }, search, offset),
+    [dateStart, dateEnd, shop, offset, scope, search],
   );
   const query = useRead(expenses.shops, queryFilters);
   const rows = query.data?.items ?? [];
@@ -87,7 +78,7 @@ export function ShopTable({
   } else if (totalCount > 0) {
     resultCount = (
       <p className="animate-data-in shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-        Showing {pageRange({ totalCount, limit: PAGE_SIZE, offset })}
+        Showing {pageRange({ totalCount, limit: SHOP_PAGE_SIZE, offset })}
       </p>
     );
   }
@@ -119,7 +110,7 @@ export function ShopTable({
               <div className="animate-data-in">
                 <DataTablePagination
                   totalCount={totalCount}
-                  limit={PAGE_SIZE}
+                  limit={SHOP_PAGE_SIZE}
                   offset={offset}
                   onOffsetChange={(nextOffset) =>
                     setPagination({ key: paginationKey, offset: nextOffset })
@@ -183,7 +174,7 @@ function ShopsTable({
     <DataTable
       table={table}
       isLoading={isPending}
-      skeletonRowCount={PAGE_SIZE}
+      skeletonRowCount={SHOP_PAGE_SIZE}
       empty={<DataTableEmpty title="No shops found" />}
       variant="sized"
       className={cn(

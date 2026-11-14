@@ -33,11 +33,13 @@ export const lists = {
   detail: rootedRead("lists", {
     key: detailKey,
     load: getList,
+    staleTime: 30_000,
   }),
   members: rootedInfiniteRead("lists", {
     key: membersKey,
     loadPage: (listId: string, offset) => getListMembers(listId, LIST_PAGE_SIZE, offset),
     nextOffset: offsetAfterLoaded,
+    staleTime: 30_000,
   }),
   targetOptions: rootedRead("lists", {
     key: (targets: readonly ListTarget[]) => ["lists", "target-options", targets] as const,
