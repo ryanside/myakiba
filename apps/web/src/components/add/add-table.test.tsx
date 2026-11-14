@@ -144,7 +144,7 @@ test("details open inline and depend on the destination", async () => {
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByRole("combobox", { name: "Shop for Miku" })).toBeDefined();
   expect(screen.getByRole("textbox", { name: "Notes for Miku" })).toBeDefined();
-  expect(screen.getByRole("textbox", { name: "Tags for Miku" })).toBeDefined();
+  expect(screen.getByRole("combobox", { name: "Tags for Miku" })).toBeDefined();
   expect(screen.getByRole("combobox", { name: "Shipping Method for Miku" })).toBeDefined();
   expect(screen.getByRole("group", { name: "Score for Miku" })).toBeDefined();
   expect(screen.queryByRole("combobox", { name: "Status" })).toBeNull();

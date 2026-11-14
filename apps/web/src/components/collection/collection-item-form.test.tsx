@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import userEvent from "@testing-library/user-event";
 import { Result } from "better-result";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { Button } from "@/components/ui/button";
@@ -88,4 +89,37 @@ test("a price too large to save shows a field error and saves nothing", async ()
   expect(screen.getByLabelText("Price").getAttribute("aria-invalid")).toBe("true");
   expect(screen.getByText("Edit Item")).toBeTruthy();
   expect(writes).toBe(0);
+});
+
+test("a typed tag saves exactly as typed, and a picked tag saves in its saved spelling", async () => {
+  const saves: CollectionItemFormValues[] = [];
+  const client = new QueryClient();
+  client.setQueryData(["vocabulary"], {
+    shops: [],
+    tags: [{ value: "Favorite", uses: 3, ownedUses: 3, lastUsedAt: "2026-01-01T00:00:00.000Z" }],
+    scales: [],
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <CollectionItemForm
+        renderTrigger={<Button>Edit</Button>}
+        itemData={ITEM}
+        callbackFn={async (values) => {
+          saves.push(values);
+          return Result.ok();
+        }}
+        currency="USD"
+      />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Edit" }));
+  const tags = await screen.findByRole("combobox", { name: "Tags" });
+
+  await user.type(tags, "favorite{Enter}fav");
+  await user.click(await screen.findByRole("option", { name: "Favorite" }));
+  await user.click(screen.getByRole("button", { name: "Update" }));
+
+  await waitFor(() => expect(saves).toHaveLength(1));
+  expect(saves[0]?.tags).toEqual(["favorite", "Favorite"]);
 });
