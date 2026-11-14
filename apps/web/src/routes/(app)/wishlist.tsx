@@ -100,12 +100,14 @@ function RouteComponent(): React.JSX.Element {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            <ViewToggle
-              modes={VIEW_PREFERENCES.wishlist.modes}
-              value={viewMode}
-              onValueChange={setViewMode}
-            />
-            <AddLink search={{ to: "wishlist" }} />
+            <div className="ml-auto flex items-center gap-2">
+              <ViewToggle
+                modes={VIEW_PREFERENCES.wishlist.modes}
+                value={viewMode}
+                onValueChange={setViewMode}
+              />
+              <AddLink search={{ to: "wishlist" }} />
+            </div>
           </div>
         }
       />

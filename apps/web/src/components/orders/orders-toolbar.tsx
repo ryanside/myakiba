@@ -6,6 +6,8 @@ import { SearchPill } from "@/components/search-pill";
 import { ToolbarSearchResetButton } from "@/components/toolbar-search-reset-button";
 import OrdersFiltersForm from "@/components/orders/orders-filters-form";
 import { Button } from "@/components/ui/button";
+import { ControlLabel, ControlTooltip } from "@/components/ui/control-tooltip";
+import { TOOLBAR_LABEL_CLASS, TOOLBAR_SEARCH_CLASS } from "@/components/ui/data-toolbar";
 import { SortCombobox } from "@/components/ui/sort-combobox";
 import type { SortableColumn } from "@/components/ui/sort-combobox";
 import { useOrdersFilters } from "@/hooks/use-orders";
@@ -52,7 +54,7 @@ export function OrdersToolbar(): React.JSX.Element {
   };
 
   return (
-    <div className="flex min-w-0 items-center justify-start gap-2">
+    <>
       <SearchPill
         key={searchResetKey}
         value={filters.search ?? ""}
@@ -61,14 +63,16 @@ export function OrdersToolbar(): React.JSX.Element {
         aria-label="Search Orders"
         ref={inputRef}
         onTextChange={onSearchTextChange}
-        className="max-w-64"
+        className={TOOLBAR_SEARCH_CLASS}
       />
       <OrdersFiltersForm
         renderTrigger={
-          <Button variant="outline">
-            <HugeiconsIcon icon={FilterIcon} data-icon="inline-start" />
-            <span className="max-md:sr-only">Filters</span>
-          </Button>
+          <ControlTooltip label="Filters">
+            <Button variant="outline">
+              <HugeiconsIcon icon={FilterIcon} data-icon="inline-start" />
+              <ControlLabel className={TOOLBAR_LABEL_CLASS}>Filters</ControlLabel>
+            </Button>
+          </ControlTooltip>
         }
         currentFilters={{ ...filters }}
         onApplyFilters={(newFilters) => setFilters({ ...filters, ...newFilters, offset: 0 })}
@@ -82,6 +86,6 @@ export function OrdersToolbar(): React.JSX.Element {
       {hasActiveFiltersOrSorting(filters) || hasSearchDraft ? (
         <ToolbarSearchResetButton onReset={resetSearch} />
       ) : null}
-    </div>
+    </>
   );
 }

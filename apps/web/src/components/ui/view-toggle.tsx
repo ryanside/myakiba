@@ -1,3 +1,4 @@
+import { ControlTooltip } from "@/components/ui/control-tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -49,9 +50,11 @@ export function ViewToggle<const TModes extends readonly ViewMode[]>({
       {modes.map((mode) => {
         const option = VIEW_OPTIONS[mode];
         return (
-          <ToggleGroupItem key={mode} value={mode} aria-label={option.label}>
-            <HugeiconsIcon icon={option.icon} strokeWidth={2} />
-          </ToggleGroupItem>
+          <ControlTooltip key={mode} label={option.label}>
+            <ToggleGroupItem value={mode} aria-label={option.label}>
+              <HugeiconsIcon icon={option.icon} strokeWidth={2} />
+            </ToggleGroupItem>
+          </ControlTooltip>
         );
       })}
     </ToggleGroup>

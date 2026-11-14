@@ -13,6 +13,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { ControlLabel, ControlTooltip } from "@/components/ui/control-tooltip";
+import { TOOLBAR_LABEL_CLASS } from "@/components/ui/data-toolbar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface DataGridColumnComboboxProps<TData> {
@@ -39,13 +41,19 @@ export function DataGridColumnCombobox<TData>({
       className="justify-between"
     >
       <HugeiconsIcon icon={DragDropVerticalIcon} data-icon="inline-start" />
-      <span className="hidden md:block">Columns</span>
+      <ControlLabel className={TOOLBAR_LABEL_CLASS}>Columns</ControlLabel>
     </Button>
   );
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger render={trigger ?? defaultTrigger} />
+      {trigger ? (
+        <PopoverTrigger render={trigger} />
+      ) : (
+        <ControlTooltip label="Columns">
+          <PopoverTrigger render={defaultTrigger} />
+        </ControlTooltip>
+      )}
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />

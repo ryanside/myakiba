@@ -10,6 +10,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { ControlLabel, ControlTooltip } from "@/components/ui/control-tooltip";
+import { TOOLBAR_LABEL_CLASS } from "@/components/ui/data-toolbar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SortAscendingIcon, SortDescendingIcon, UnsortedIcon } from "@/lib/icons";
 
@@ -77,6 +79,11 @@ export function SortCombobox({
     ? columns.find((col) => col.id === currentSort.columnId)?.label || currentSort.columnId
     : null;
 
+  const sortTooltip =
+    currentSort && currentColumnName
+      ? `Sorted by ${currentColumnName}, ${currentSort.direction === "asc" ? "ascending" : "descending"}`
+      : "Sort";
+
   const defaultTrigger = (
     <Button
       variant="outline"
@@ -86,13 +93,19 @@ export function SortCombobox({
       className="justify-between"
     >
       {getSortButtonIcon()}
-      <span className="max-md:sr-only">{currentColumnName || "Sort"}</span>
+      <ControlLabel className={TOOLBAR_LABEL_CLASS}>{currentColumnName || "Sort"}</ControlLabel>
     </Button>
   );
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger render={trigger ?? defaultTrigger} />
+      {trigger ? (
+        <PopoverTrigger render={trigger} />
+      ) : (
+        <ControlTooltip label={sortTooltip}>
+          <PopoverTrigger render={defaultTrigger} />
+        </ControlTooltip>
+      )}
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search columns..." />
