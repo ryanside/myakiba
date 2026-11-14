@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import type {
   RenameShop,
@@ -105,12 +105,12 @@ export const Vocabulary = {
       const collectionItems = await scope.tx
         .update(collection)
         .set({ shop: to, updatedAt })
-        .where(and(eq(collection.userId, userId), eq(collection.shop, from)))
+        .where(and(eq(collection.userId, userId), inArray(collection.shop, from)))
         .returning({ id: collection.id });
       const orders = await scope.tx
         .update(order)
         .set({ shop: to, updatedAt })
-        .where(and(eq(order.userId, userId), eq(order.shop, from)))
+        .where(and(eq(order.userId, userId), inArray(order.shop, from)))
         .returning({ id: order.id });
       const renamed: ShopUses = {
         collectionItems: collectionItems.length,

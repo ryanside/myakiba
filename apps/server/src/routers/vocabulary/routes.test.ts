@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { vocabularyResponseSchema } from "@myakiba/contracts/vocabulary/schema";
 import { createTestDatabase } from "../../../test/database";
 
@@ -43,7 +44,7 @@ beforeEach(async () => {
   ]);
 });
 
-const rename = async (body: Readonly<Record<string, string>>, as = userId) => {
+const rename = async (body: Readonly<Record<string, string | readonly string[]>>, as = userId) => {
   const response = await app.handle(
     new Request("http://localhost/api/vocabulary/shops/rename", {
       method: "POST",
@@ -374,7 +375,7 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test("renames a shop on every Collection Item and Order and answers how many changed", async () => {
-    const { status, body } = await rename({ from: "Mandarake", to: "Mandarake Nakano" });
+    const { status, body } = await rename({ from: ["Mandarake"], to: "Mandarake Nakano" });
 
     const shops = await shopsOf(userId);
 
@@ -384,7 +385,7 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test("renaming to a shop already in use merges the two", async () => {
-    const { body } = await rename({ from: "amiami", to: "AmiAmi" });
+    const { body } = await rename({ from: ["amiami"], to: "AmiAmi" });
 
     expect(body).toEqual({ collectionItems: 1, orders: 1 });
     expect(await shopsOf(userId)).toEqual({
@@ -402,7 +403,7 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test("leaves another user's identical shop alone", async () => {
-    await rename({ from: "amiami", to: "AmiAmi" });
+    await rename({ from: ["amiami"], to: "AmiAmi" });
 
     expect(await shopsOf("user-2")).toEqual({
       collection: [{ id: "c-other", shop: "amiami" }],
@@ -411,19 +412,40 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test("matches the old name exactly, so a second run changes nothing", async () => {
-    await rename({ from: "amiami", to: "AmiAmi" });
+    await rename({ from: ["amiami"], to: "AmiAmi" });
     const before = await shopsOf(userId);
 
-    const { status, body } = await rename({ from: "amiami", to: "AmiAmi" });
+    const { status, body } = await rename({ from: ["amiami"], to: "AmiAmi" });
 
     expect(status).toBe(200);
     expect(body).toEqual({ collectionItems: 0, orders: 0 });
     expect(await shopsOf(userId)).toEqual(before);
   });
 
+  test("merges every spelling it names in one request", async () => {
+    const { status, body } = await rename({
+      from: ["AmiAmi", "amiami", "Ami Ami"],
+      to: "AmiAmi Japan",
+    });
+
+    expect(status).toBe(200);
+    expect(body).toEqual({ collectionItems: 3, orders: 2 });
+    expect(await shopsOf(userId)).toEqual({
+      collection: [
+        { id: "c-1", shop: "AmiAmi Japan" },
+        { id: "c-2", shop: "AmiAmi Japan" },
+        { id: "c-3", shop: "AmiAmi Japan" },
+        { id: "c-4", shop: "Mandarake" },
+      ],
+      orders: [
+        { id: "o-1", shop: "AmiAmi Japan" },
+        { id: "o-2", shop: "AmiAmi Japan" },
+      ],
+    });
+  });
+
   test("moves the renamed shop's uses into the shop it merged with", async () => {
-    await rename({ from: "Ami Ami", to: "AmiAmi" });
-    await rename({ from: "amiami", to: "AmiAmi" });
+    await rename({ from: ["Ami Ami", "amiami"], to: "AmiAmi" });
 
     const { body } = await read();
 
@@ -434,8 +456,8 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test("trims the new name and matches the old name exactly as saved", async () => {
-    const { body: padded } = await rename({ from: "  Mandarake ", to: " Suruga-ya  " });
-    const { body } = await rename({ from: "Mandarake", to: " Suruga-ya  " });
+    const { body: padded } = await rename({ from: ["  Mandarake "], to: " Suruga-ya  " });
+    const { body } = await rename({ from: ["Mandarake"], to: " Suruga-ya  " });
 
     const shops = await shopsOf(userId);
 
@@ -447,7 +469,7 @@ describe("POST /api/vocabulary/shops/rename", () => {
   test("renames a shop saved with stray spaces", async () => {
     await db.update(collection).set({ shop: "Mandarake " }).where(eq(collection.id, "c-4"));
 
-    const { body } = await rename({ from: "Mandarake ", to: "Mandarake" });
+    const { body } = await rename({ from: ["Mandarake "], to: "Mandarake" });
 
     const shops = await shopsOf(userId);
 
@@ -456,13 +478,25 @@ describe("POST /api/vocabulary/shops/rename", () => {
   });
 
   test.each([
-    ["the same name", { from: "AmiAmi", to: "AmiAmi" }],
-    ["the same name once trimmed", { from: "AmiAmi", to: " AmiAmi " }],
-    ["a blank new name", { from: "AmiAmi", to: "   " }],
-    ["a blank old name", { from: "", to: "AmiAmi" }],
-    ["a new name over the shop limit", { from: "AmiAmi", to: "a".repeat(201) }],
-    ["a missing name", { from: "AmiAmi" }],
-    ["an extra field", { from: "AmiAmi", to: "Ami", userId: "user-2" }],
+    ["the same name", { from: ["AmiAmi"], to: "AmiAmi" }],
+    ["the same name once trimmed", { from: ["AmiAmi"], to: " AmiAmi " }],
+    ["a new name among the old ones", { from: ["amiami", "AmiAmi"], to: "AmiAmi" }],
+    ["a blank new name", { from: ["AmiAmi"], to: "   " }],
+    ["a blank old name", { from: ["amiami", ""], to: "AmiAmi" }],
+    ["an old name over the shop limit", { from: ["a".repeat(201)], to: "AmiAmi" }],
+    ["a new name over the shop limit", { from: ["AmiAmi"], to: "a".repeat(201) }],
+    ["no old names", { from: [], to: "AmiAmi" }],
+    [
+      "more old names than a merge takes",
+      {
+        from: Array.from({ length: WRITE_LIMITS.shops + 1 }, (_, index) => `Shop ${index}`),
+        to: "AmiAmi",
+      },
+    ],
+    ["an old name twice", { from: ["amiami", "amiami"], to: "AmiAmi" }],
+    ["an old name that is not a list", { from: "amiami", to: "AmiAmi" }],
+    ["a missing name", { from: ["AmiAmi"] }],
+    ["an extra field", { from: ["AmiAmi"], to: "Ami", userId: "user-2" }],
   ])("refuses %s and changes nothing", async (_case, body) => {
     const before = await shopsOf(userId);
 
@@ -492,10 +526,10 @@ describe("POST /api/vocabulary/shops/rename", () => {
       `);
     });
 
-    test("renames neither the Collection Items nor the Orders", async () => {
+    test("renames none of the spellings on any Collection Item or Order", async () => {
       const before = await shopsOf(userId);
 
-      const { status } = await rename({ from: "amiami", to: "Refused" });
+      const { status } = await rename({ from: ["AmiAmi", "amiami", "Ami Ami"], to: "Refused" });
 
       expect(status).toBe(500);
       expect(await shopsOf(userId)).toEqual(before);

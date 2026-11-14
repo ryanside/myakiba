@@ -55,7 +55,7 @@ globalThis.fetch = Object.assign(
       if (failRenames) return new Response(null, { status: 500 });
       const rename: RenameShop = await request.json();
       renames.push(rename);
-      const changed = saved.filter((row) => row.shop === rename.from);
+      const changed = saved.filter((row) => rename.from.includes(row.shop));
       for (const row of changed) row.shop = rename.to;
       return Response.json({
         collectionItems: changed.filter((row) => row.kind === "collection").length,
@@ -121,10 +121,7 @@ test("suggests merging spellings of one shop into its most used spelling", async
 
   expect(await screen.findByText("Saved as “AmiAmi”")).toBeTruthy();
   expect(screen.getByText("1 Collection Item and 1 Order changed.")).toBeTruthy();
-  expect(renames).toEqual([
-    { from: "amiami", to: "AmiAmi" },
-    { from: "Ami Ami", to: "AmiAmi" },
-  ]);
+  expect(renames).toEqual([{ from: ["amiami", "Ami Ami"], to: "AmiAmi" }]);
   await waitFor(() =>
     expect(screen.queryByRole("region", { name: "Suggested merges" })).toBeNull(),
   );
@@ -144,12 +141,7 @@ test("merges into the spelling the user keeps", async () => {
   );
   fireEvent.click(within(dialog).getByRole("button", { name: "Merge" }));
 
-  await waitFor(() =>
-    expect(renames).toEqual([
-      { from: "AmiAmi", to: "amiami" },
-      { from: "Ami Ami", to: "amiami" },
-    ]),
-  );
+  await waitFor(() => expect(renames).toEqual([{ from: ["AmiAmi", "Ami Ami"], to: "amiami" }]));
 });
 
 const renameDialog = (shop: string) => ({ name: `Rename “${shop}”` });
@@ -173,7 +165,7 @@ test("renaming to a shop already in use says it merges before it saves", async (
   );
   fireEvent.click(within(dialog).getByRole("button", { name: "Merge" }));
   await closed(dialog);
-  expect(renames).toEqual([{ from: "Mandarake", to: "AmiAmi" }]);
+  expect(renames).toEqual([{ from: ["Mandarake"], to: "AmiAmi" }]);
 });
 
 test("a new name saves exactly as typed and replaces the shop in the list", async () => {
@@ -185,7 +177,7 @@ test("a new name saves exactly as typed and replaces the shop in the list", asyn
   expect(within(dialog).getByRole("status").textContent).toBe("");
   fireEvent.click(within(dialog).getByRole("button", { name: "Rename" }));
   expect(await within(await yourShops()).findByText("mandarake Nakano")).toBeTruthy();
-  expect(renames).toEqual([{ from: "Mandarake", to: "mandarake Nakano" }]);
+  expect(renames).toEqual([{ from: ["Mandarake"], to: "mandarake Nakano" }]);
 });
 
 test("a rename refreshes every page that shows shops", async () => {
