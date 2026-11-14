@@ -9,7 +9,7 @@ import { OrderPendingContext } from "@/components/orders/order-pending-context";
 import { OrderSummary } from "@/components/orders/order-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { preload, preloadPage, useRead } from "@/data/client";
-import { orders } from "@/data/resources/orders";
+import { orderItemsInput, orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
@@ -19,7 +19,10 @@ import { shownMessageOf } from "@/data/api";
 
 export const Route = createFileRoute("/(app)/orders_/$id")({
   loader: ({ context: { queryClient }, cause, params }) =>
-    preloadPage(cause, () => [preload(queryClient, orders.detail, params.id)]),
+    preloadPage(cause, () => [
+      preload(queryClient, orders.detail, params.id),
+      preload(queryClient, orders.items, orderItemsInput(params.id)),
+    ]),
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [

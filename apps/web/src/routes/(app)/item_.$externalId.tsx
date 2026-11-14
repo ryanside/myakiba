@@ -19,7 +19,11 @@ export const Route = createFileRoute("/(app)/item_/$externalId")({
   },
   stringifyParams: ({ externalId }) => ({ externalId: String(externalId) }),
   loader: ({ context: { queryClient }, cause, params }) =>
-    preloadPage(cause, () => [preload(queryClient, items.detail, params.externalId)]),
+    preloadPage(cause, () => [
+      preload(queryClient, items.detail, params.externalId),
+      preload(queryClient, items.relatedOrders, params.externalId),
+      preload(queryClient, items.relatedCollection, params.externalId),
+    ]),
   component: RouteComponent,
   head: ({ params }) => ({
     meta: [

@@ -32,6 +32,28 @@ import { defineCommand, rootedRead } from "../client";
 
 const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
 
+export const ORDER_ITEM_PAGE_SIZE = 12;
+const FIRST_ORDER_ITEMS_PAGE = { pageIndex: 0, pageSize: ORDER_ITEM_PAGE_SIZE } as const;
+
+export function orderItemsInput(
+  orderId: string,
+  {
+    pageIndex,
+    pageSize,
+  }: { readonly pageIndex: number; readonly pageSize: number } = FIRST_ORDER_ITEMS_PAGE,
+  sort?: { readonly id: string; readonly desc: boolean },
+) {
+  return {
+    orderId,
+    query: {
+      limit: pageSize,
+      offset: pageIndex * pageSize,
+      sort: (sort?.id as OrderItemsQuery["sort"] | undefined) ?? "createdAt",
+      order: sort?.desc === false ? "asc" : "desc",
+    } satisfies OrderItemsQuery,
+  };
+}
+
 export const orders = {
   list: rootedRead("orders", {
     key: (filters: OrderFilters) => ["orders", filters] as const,
