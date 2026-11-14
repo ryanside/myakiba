@@ -10,11 +10,13 @@ import { AuthRouterProvider } from "@/components/auth/auth-router-provider";
 import { createSessionSource } from "@/lib/session";
 import { createQueryClient } from "@/data/client";
 import { loadFont } from "@/lib/load-font";
+import { startScrollFadeFallback } from "@/lib/scroll-fade";
 import { routerOptions } from "./router-options";
 
 // Browsers lay text out in a fallback face until its webfont arrives, then move it. Starting
 // Inter here, before the first route renders, lets the first layout use it.
 void loadFont('1em "Inter Variable"');
+startScrollFadeFallback();
 
 const queryClient = createQueryClient();
 const sessions = createSessionSource();

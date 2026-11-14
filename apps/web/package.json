@@ -13,6 +13,7 @@
     "e2e": "cd e2e && bun test",
     "e2e:build": "vite build --config e2e/sentence/vite.config.ts",
     "e2e:build:focus-rings": "vite build --config e2e/focus-rings/vite.config.ts",
+    "e2e:build:scroll-fade": "vite build --config e2e/scroll-fade/vite.config.ts",
     "store-tiles": "bun scripts/store-tiles.ts"
   },
   "dependencies": {

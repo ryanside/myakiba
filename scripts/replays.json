@@ -4866,6 +4866,16 @@
         "a typed count of -3 saves as 1, inside what a Collection edit takes",
         "a typed count of 1500 saves as 999, inside what a Collection edit takes"
       ]
+    },
+    {
+      "fix": "c5a3c7e1eb6393b0f6e09d4ea3b52a88bd600db9",
+      "bug": "Firefox has no scroll timelines, so shadcn's scroll-fade fallback kept a list's foot faded at the end of its scroll and when it had nothing to scroll.",
+      "test": "apps/web/src/lib/scroll-fade.test.ts",
+      "fixed": [
+        "a list with nothing to scroll has no foot fade",
+        "a list scrolled to its end has no foot fade",
+        "a list that opens later, as a menu does, has no foot fade when it has nothing to scroll"
+      ]
     }
   ],
   "lint": [
