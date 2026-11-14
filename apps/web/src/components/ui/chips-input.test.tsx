@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { ChipsInput } from "./chips-input";
+import { Dialog, DialogContent, DialogTitle } from "./dialog";
 
 afterEach(cleanup);
 
@@ -134,4 +135,58 @@ test("Enter that confirms IME composition adds nothing and picks nothing", async
 
   expect(saved()).toBe("[]");
   expect(field().value).toBe("fav");
+});
+
+test("after Enter adds a value the list stays closed until more is typed", async () => {
+  render(<TagsForm />);
+  const user = userEvent.setup();
+
+  await user.type(field(), "new{Enter}");
+
+  expect(saved()).toBe('["new"]');
+  expect(screen.queryByRole("option")).toBeNull();
+
+  await user.type(field(), "fa");
+  const options = await screen.findAllByRole("option");
+  expect(options.map((option) => option.textContent)).toEqual(["Favorite", "fan art"]);
+});
+
+test("an empty field suggests nothing, so the list never covers what sits below it", async () => {
+  render(<TagsForm />);
+  const user = userEvent.setup();
+
+  await user.click(field());
+
+  expect(screen.queryByRole("option")).toBeNull();
+});
+
+test("removing a chip inside a dialog puts focus back in the field", async () => {
+  function DialogTags() {
+    const [tags, setTags] = useState<readonly string[]>(["a", "b"]);
+    return (
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Edit</DialogTitle>
+          <ChipsInput
+            aria-label="Tags"
+            noun="tag"
+            values={tags}
+            onValuesChange={setTags}
+            suggest={suggest}
+            maxValues={3}
+            maxLength={12}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  render(<DialogTags />);
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: "Remove tag a" }));
+  await new Promise((resolve) => {
+    requestAnimationFrame(resolve);
+  });
+
+  expect(document.activeElement).toBe(field());
 });

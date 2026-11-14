@@ -35,9 +35,13 @@ export function ChipsInput({
 }: ChipsInputProps): React.ReactElement {
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
-  const suggestions = suggest(text).filter(
-    (suggestion) => suggestion.length <= maxLength && !values.includes(suggestion),
-  );
+  // An empty field suggests nothing, so the list never reopens over the buttons below after an add.
+  const suggestions =
+    text.trim() === ""
+      ? []
+      : suggest(text).filter(
+          (suggestion) => suggestion.length <= maxLength && !values.includes(suggestion),
+        );
 
   const add = (value: string) => {
     const trimmed = value.trim();
@@ -62,8 +66,10 @@ export function ChipsInput({
                   aria-label={`Remove ${noun} ${value}`}
                   disabled={disabled}
                   onClick={() => {
+                    // Focus moves before the button goes, so a dialog never takes it. A field
+                    // disabled at the limit is enabled only after the next render.
+                    input.current?.focus();
                     onValuesChange(values.filter((other) => other !== value));
-                    // The button is gone next render, and the input may only then be enabled.
                     requestAnimationFrame(() => input.current?.focus());
                   }}
                 >
