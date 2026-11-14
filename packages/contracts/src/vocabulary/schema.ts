@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { WRITE_LIMITS } from "../shared/write-limits";
 
 const shopTermSchema = z.object({
   value: z.string(),
@@ -35,3 +36,15 @@ export const vocabularyResponseSchema = z.object({
 });
 
 export type VocabularyResponse = z.infer<typeof vocabularyResponseSchema>;
+
+const shopNameSchema = z.string().trim().min(1, "Shop is required").max(WRITE_LIMITS.shop);
+
+/** Renames the viewer's shop `from` to `to` everywhere it is saved. A `to` already in use merges the two. */
+export const renameShopSchema = z
+  .strictObject({ from: shopNameSchema, to: shopNameSchema })
+  .refine(({ from, to }) => from !== to, { error: "The new name matches the old one" });
+
+export type RenameShop = z.infer<typeof renameShopSchema>;
+
+/** How many of the viewer's Collection Items and Orders name a shop, or a rename changed. */
+export type ShopUses = { readonly collectionItems: number; readonly orders: number };
