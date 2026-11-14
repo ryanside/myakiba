@@ -175,7 +175,9 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
   const [mostUsed] = spellings;
   const keep = spellings.find((shop) => shop.value === chosen) ?? mostUsed;
   if (!keep || !mostUsed) return null;
-  const merged = spellings.filter((shop) => shop !== keep);
+  // The server trims the name it saves, so a kept spelling with outer spaces merges into its trimmed self.
+  const target = keep.value.trim();
+  const merged = spellings.filter((shop) => shop.value !== target);
   const from = merged.map((shop) => shop.value);
   const changes = usesOf(merged);
   const verb = changes.collectionItems + changes.orders === 1 ? "changes" : "change";
@@ -205,29 +207,29 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
           <Button
             variant="outline"
             size="sm"
-            title={`Merge into “${keep.value}”`}
+            title={`Merge into “${target}”`}
             className="max-w-full min-w-0 shrink self-start sm:max-w-1/2 sm:self-auto"
           >
             <HugeiconsIcon icon={GitMergeIcon} data-icon="inline-start" />
             <span className="truncate">
-              Merge into <QuotedShop shop={keep.value} />
+              Merge into <QuotedShop shop={target} />
             </span>
           </Button>
         }
         title={
           <>
-            Merge into <QuotedShop shop={keep.value} />?
+            Merge into <QuotedShop shop={target} />?
           </>
         }
         description={
           <>
-            {describeUses(changes)} {verb} from {listed(from)} to <QuotedShop shop={keep.value} />.
+            {describeUses(changes)} {verb} from {listed(from)} to <QuotedShop shop={target} />.
           </>
         }
         confirmLabel="Merge"
         variant="default"
         icon={GitMergeIcon}
-        onConfirm={() => rename.run({ from, to: keep.value })}
+        onConfirm={() => rename.run({ from, to: target })}
       />
     </div>
   );
