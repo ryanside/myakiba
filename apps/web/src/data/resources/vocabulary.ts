@@ -1,6 +1,6 @@
 import type { ShopUses } from "@myakiba/contracts/vocabulary/schema";
 import { Result } from "better-result";
-import { describeUses } from "@/lib/shop-suggestions";
+import { describeUses } from "@/lib/vocabulary-suggestions";
 import { app } from "@/lib/treaty-client";
 import { call } from "../api";
 import { collectionWriteFamilies } from "../catalog";
