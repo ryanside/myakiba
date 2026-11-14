@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { routerOptions } from "@/router-options";
 import type { RouterAppContext } from "@/routes/__root";
 import { signedInSession } from "./session";
 
@@ -116,10 +117,10 @@ export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resol
   const orders = createRoute({ getParentRoute: () => app, path: "/orders" });
   const settings = createRoute({ getParentRoute: () => app, path: "/settings" });
   const router = createRouter({
+    ...routerOptions,
     routeTree: root.addChildren([app.addChildren([dashboard, analytics, orders, settings])]),
     history: createMemoryHistory({ initialEntries: ["/dashboard"] }),
-    context: { readSession: async () => ({ session, unavailable: false }) },
-    defaultPreload: false,
+    context: { queryClient, readSession: async () => ({ session, unavailable: false }) },
     defaultPendingMinMs: 0,
   });
   const ordersImported = Promise.withResolvers<null>();

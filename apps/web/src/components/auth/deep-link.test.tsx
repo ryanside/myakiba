@@ -8,6 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 import type { RouterAppContext } from "@/routes/__root";
 import { answerAuth, refuse, resetAuthAnswers, type } from "../../../test/better-auth";
 import { Toaster } from "@/components/ui/toast";
@@ -55,7 +56,7 @@ async function open(
   const router = createRouter({
     routeTree: root.addChildren([app.addChildren(pages), loginRoute, signupRoute]),
     history: createMemoryHistory({ initialEntries: [path] }),
-    context: { readSession },
+    context: { queryClient: new QueryClient(), readSession },
     defaultPendingMinMs: 0,
   });
   await act(() => router.load());

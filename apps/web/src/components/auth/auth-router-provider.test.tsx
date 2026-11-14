@@ -229,7 +229,7 @@ function Settings() {
 }
 
 function renderApp(router: ReturnType<typeof makeRouter>, sessions: SessionSource) {
-  const queryClient = new QueryClient();
+  const { queryClient } = router.options.context;
   render(<AuthRouterProvider router={router} sessions={sessions} />, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
@@ -274,7 +274,7 @@ function makeRouter(sessions: SessionSource, path = "/dashboard", checkSignedIn 
   return createRouter({
     routeTree: root.addChildren([app.addChildren([dashboard, orders, settings]), login]),
     history: createMemoryHistory({ initialEntries: [path] }),
-    context: { readSession: sessions.read },
+    context: { queryClient: new QueryClient(), readSession: sessions.read },
     defaultPendingMinMs: 0,
   });
 }
