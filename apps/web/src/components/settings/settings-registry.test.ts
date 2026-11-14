@@ -25,3 +25,9 @@ test("results group by section in nav order, and a title match outranks a descri
 test("a blank search finds nothing", () => {
   expect(searchSettings("   ")).toEqual([]);
 });
+
+test("a search for shops, merging or renaming finds the Shops section", () => {
+  expect(searchSettings("shop").map((group) => group.section)).toEqual(["shops"]);
+  expect(resultIds("merge")).toEqual(["shop-merges"]);
+  expect(resultIds("rename store")).toEqual(["shop-list"]);
+});
