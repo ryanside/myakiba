@@ -4834,6 +4834,29 @@
         "the reset link request's email field tells a password manager it holds an email",
         "the reset password fields tell a password manager they hold a new password"
       ]
+    },
+    {
+      "fix": "5055a70e7525b16d1b6e4611ed7981665374ba08",
+      "bug": "A Collection edit answered 200 to a count of 1.5, 0, -3 or 1000 and stored it, rounding 1.5 to 2.",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": [
+        "an edit with count 1.5 answers 422 and leaves the Collection Item as it was",
+        "an edit with count 0 answers 422 and leaves the Collection Item as it was",
+        "an edit with count -3 answers 422 and leaves the Collection Item as it was",
+        "an edit with count 1000 answers 422 and leaves the Collection Item as it was"
+      ]
+    },
+    {
+      "fix": "390204ff0c9912a8e07bd866cfbed33a19e15898",
+      "bug": "A Collection edit answered 200 to release fields it never wrote, because the collection table has no columns for them.",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": [
+        "an edit that sends releaseDate answers 422, since the edit chooses a release only by its id",
+        "an edit that sends releasePrice answers 422, since the edit chooses a release only by its id",
+        "an edit that sends releaseCurrency answers 422, since the edit chooses a release only by its id",
+        "an edit that sends releaseBarcode answers 422, since the edit chooses a release only by its id",
+        "an edit that sends releaseType answers 422, since the edit chooses a release only by its id"
+      ]
     }
   ],
   "lint": [
