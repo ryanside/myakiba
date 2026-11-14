@@ -126,7 +126,11 @@ export function VocabularyFilterField({
   }: VocabularyFilter = VOCABULARY_FILTERS[filter];
   const { data, isPending, isError } = useRead(vocabulary);
   const chosen = new Set(value);
-  const options = data ? terms(data).filter((term) => term.count > 0) : [];
+  const options = data
+    ? terms(data)
+        .filter((term) => term.count > 0)
+        .toSorted((a, b) => b.count - a.count)
+    : [];
   const toggle = (term: string, checked: boolean) =>
     onValueChange(checked ? [...value, term] : value.filter((current) => current !== term));
 

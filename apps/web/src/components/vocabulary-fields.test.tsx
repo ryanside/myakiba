@@ -168,6 +168,18 @@ test("the tag filter lists each spelling on Owned Collection Items with its Owne
   expect(screen.getByLabelText("Chosen").textContent).toBe('["favorite"]');
 });
 
+test("a filter lists its terms by the count it shows, most first", async () => {
+  renderWithVocabulary(<FilterField filter="collectionTags" initial={[]} />, {
+    tags: [tag("limited", 5, 1), tag("Favorite", 3, 2)],
+  });
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: "Select tags" }));
+  const options = await screen.findAllByRole("menuitemcheckbox");
+
+  expect(options.map((option) => option.textContent)).toEqual(["Favorite2", "limited1"]);
+});
+
 test("the scale filter lists Owned counts, names the no-scale value, and picks the stored value", async () => {
   renderWithVocabulary(<FilterField filter="collectionScales" initial={["1/4"]} />, {
     scales: [
