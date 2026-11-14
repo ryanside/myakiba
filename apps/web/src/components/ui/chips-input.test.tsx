@@ -100,7 +100,18 @@ test("stops taking values at the limit and caps their length", async () => {
   await user.type(field(), "c{Enter}");
 
   expect(saved()).toBe('["a","b","c"]');
-  expect(screen.getByLabelText<HTMLInputElement>("Tags").disabled).toBe(true);
+  expect(field().readOnly).toBe(true);
+  await user.type(field(), "d{Enter}");
+  expect(saved()).toBe('["a","b","c"]');
+});
+
+test("at the limit, removing a chip focuses the field at once", async () => {
+  render(<TagsForm initial={["a", "b", "c"]} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove tag b" }));
+
+  expect(document.activeElement).toBe(field());
+  expect(saved()).toBe('["a","c"]');
 });
 
 test("Backspace in an empty field removes the last chip, and not while text remains", async () => {

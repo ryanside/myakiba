@@ -659,14 +659,15 @@ test("a row's Tags stop at 20, and each is at most 50 characters", async () => {
 
   const input = () => screen.getByLabelText<HTMLInputElement>("Tags for Hatsune Miku");
   expect(input().maxLength).toBe(50);
-  expect(input().disabled).toBe(false);
+  expect(input().readOnly).toBe(false);
   await user.type(input(), " last {Enter}");
   expect(screen.getByRole("button", { name: "Remove tag last" })).toBeDefined();
   expect(input().value).toBe("");
-  expect(input().disabled).toBe(true);
+  expect(input().readOnly).toBe(true);
 
   await click(user, "Remove tag tag-0");
-  expect(input().disabled).toBe(false);
+  expect(input().readOnly).toBe(false);
+  expect(document.activeElement).toBe(input());
   await user.type(input(), "last{Enter}");
   expect(screen.getAllByRole("button", { name: "Remove tag last" })).toHaveLength(1);
 });

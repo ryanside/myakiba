@@ -35,9 +35,10 @@ export function ChipsInput({
 }: ChipsInputProps): React.ReactElement {
   const [text, setText] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const full = values.length >= maxValues;
   // An empty field suggests nothing, so the list never reopens over the buttons below after an add.
   const suggestions =
-    text.trim() === ""
+    full || text.trim() === ""
       ? []
       : suggest(text).filter(
           (suggestion) => suggestion.length <= maxLength && !values.includes(suggestion),
@@ -66,11 +67,9 @@ export function ChipsInput({
                   aria-label={`Remove ${noun} ${value}`}
                   disabled={disabled}
                   onClick={() => {
-                    // Focus moves before the button goes, so a dialog never takes it. A field
-                    // disabled at the limit is enabled only after the next render.
+                    // Focus moves before the button goes, so a dialog never takes it.
                     input.current?.focus();
                     onValuesChange(values.filter((other) => other !== value));
-                    requestAnimationFrame(() => input.current?.focus());
                   }}
                 >
                   <HugeiconsIcon icon={Cancel01Icon} aria-hidden="true" />
@@ -88,7 +87,9 @@ export function ChipsInput({
         onPick={add}
         suggestions={suggestions}
         maxLength={maxLength}
-        disabled={disabled || values.length >= maxValues}
+        disabled={disabled}
+        // Read-only, not disabled, at the limit, so removing a chip can still focus the field.
+        readOnly={full}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
