@@ -7,7 +7,7 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
-import { itemIdField } from "@myakiba/contracts/add/schema";
+import { countSchema, itemIdField } from "@myakiba/contracts/add/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
 import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
@@ -41,7 +41,7 @@ export const collectionParamSchema = z.object({
 
 export const collectionUpdateSchema = z.object({
   status: z.enum(COLLECTION_STATUSES),
-  count: z.number(),
+  count: countSchema,
   score: z.string().max(WRITE_LIMITS.label),
   price: z.number().int(),
   shop: z.string().trim().max(WRITE_LIMITS.shop),
