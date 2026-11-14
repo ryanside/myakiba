@@ -298,7 +298,7 @@ export const Search = {
     },
   ),
 
-  /** The viewer's Item Entries ranked by how many of their Collection Items link to each. */
+  /** The viewer's Item Entries ranked by how many of their Owned Collection Items, which the Collection page lists, link to each. */
   suggestedEntries: query(
     { action: "search.entries.suggested", failure: "Failed to load your most used entries" },
     async (scope) => {
@@ -310,7 +310,12 @@ export const Search = {
         .innerJoin(entry_to_item, eq(entry_to_item.entryId, entry.id))
         .innerJoin(collection, eq(collection.itemId, entry_to_item.itemId))
         .where(
-          and(eq(entry.ownerId, userId), eq(entry.source, "mfc"), eq(collection.userId, userId)),
+          and(
+            eq(entry.ownerId, userId),
+            eq(entry.source, "mfc"),
+            eq(collection.userId, userId),
+            eq(collection.status, "Owned"),
+          ),
         )
         .groupBy(entry.id, entry.name, entry.category)
         .orderBy(desc(uses), asc(entry.name), asc(entry.id))

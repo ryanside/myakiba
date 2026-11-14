@@ -247,6 +247,34 @@ describe("each search route answers as before", () => {
     });
   });
 
+  test("suggested entries count only Owned Collection Items, as the Collection page lists", async () => {
+    await db
+      .insert(entry)
+      .values([
+        { id: "entry-preorder", ownerId: userId, name: "Preorder Only", category: "Origins" },
+      ]);
+    await db
+      .insert(entry_to_item)
+      .values([{ ownerId: userId, entryId: "entry-2", itemId: "item-2", role: "" }]);
+    await db.insert(collection).values([
+      { id: "c-owned", userId, itemId: "item-2", status: "Owned" },
+      { id: "c-ordered", userId, itemId: "item-2", status: "Ordered" },
+      { id: "c-paid", userId, itemId: "item-2", status: "Paid" },
+      { id: "c-shipped", userId, itemId: "item-2", status: "Shipped" },
+    ]);
+    await db
+      .insert(entry_to_item)
+      .values([{ ownerId: userId, entryId: "entry-preorder", itemId: "item-3", role: "" }]);
+    await db
+      .insert(collection)
+      .values([{ id: "c-preorder", userId, itemId: "item-3", status: "Ordered" }]);
+
+    expect(await call("/entries/suggested")).toEqual({
+      status: 200,
+      body: { entries: [{ id: "entry-2", name: "Another Miku", category: "Characters", uses: 1 }] },
+    });
+  });
+
   test("suggested entries are empty when no Collection Item links an entry", async () => {
     expect(await call("/entries/suggested")).toEqual({ status: 200, body: { entries: [] } });
   });
