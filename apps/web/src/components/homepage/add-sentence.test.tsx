@@ -28,6 +28,7 @@ Object.defineProperty(document, "fonts", {
 });
 
 const realIntersectionObserver = globalThis.IntersectionObserver;
+let setOnScreen: (isIntersecting: boolean) => void = () => {};
 class OnScreen extends realIntersectionObserver {
   readonly #onChange: IntersectionObserverCallback;
   constructor(onChange: IntersectionObserverCallback) {
@@ -35,8 +36,10 @@ class OnScreen extends realIntersectionObserver {
     this.#onChange = onChange;
   }
   override observe(target: Element) {
-    const entry = { isIntersecting: true, target } as IntersectionObserverEntry;
-    this.#onChange([entry], this);
+    setOnScreen = (isIntersecting) => {
+      this.#onChange([{ isIntersecting, target } as IntersectionObserverEntry], this);
+    };
+    setOnScreen(true);
   }
 }
 
@@ -96,6 +99,22 @@ describe("AddSentence", () => {
 
     wait(1100);
     expect(sentence()).toEqual({ phase: "thrown", pick: "3 figures", flyers: 3, caught: false });
+  });
+
+  test("lands a throw's catch with its flight when the sentence scrolls away mid-throw", async () => {
+    const { sentence, wait } = await renderSentence();
+    wait(1300);
+    expect(sentence().phase).toBe("thrown");
+
+    act(() => setOnScreen(false));
+    wait(590);
+    expect(sentence()).toEqual({ phase: "caught", pick: "an artbook", flyers: 1, caught: true });
+    wait(5000);
+    expect(sentence().phase).toBe("caught");
+
+    act(() => setOnScreen(true));
+    wait(1500);
+    expect(sentence()).toEqual({ phase: "shown", pick: "3 figures", flyers: 0, caught: false });
   });
 
   test("holds the first pick still when motion is reduced", async () => {

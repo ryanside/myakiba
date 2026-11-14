@@ -178,7 +178,7 @@
   }
 }
 
-.mk-add-sentence-place[data-caught] .mk-add-sentence-check {
+.mk-add-sentence-check[data-open] {
   width: 0.74em;
   margin-right: 0.18em;
   opacity: 1;
@@ -186,8 +186,8 @@
     width 260ms var(--ease-out),
     margin-right 260ms var(--ease-out),
     opacity 0s;
+}
 
-  & path {
-    animation: mk-add-sentence-draw 280ms var(--ease-out) 90ms both;
-  }
+.mk-add-sentence-place[data-caught] .mk-add-sentence-check path {
+  animation: mk-add-sentence-draw 280ms var(--ease-out) 90ms both;
 }

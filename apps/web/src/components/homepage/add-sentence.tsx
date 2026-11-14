@@ -135,10 +135,13 @@ export function AddSentence({ className }: { readonly className?: string }) {
       window.clearTimeout(timer);
       timer = undefined;
     };
+    const flying = () => beatRef.current.phase === "thrown" && timer !== undefined;
     const schedule = () => {
+      if (flying()) return;
       stop();
       if (!onScreen || document.hidden) return;
       timer = window.setTimeout(() => {
+        timer = undefined;
         const next = advance(beatRef.current, () => measureFlyers(root));
         beatRef.current = next;
         setBeat(next);
@@ -253,18 +256,7 @@ export function AddSentence({ className }: { readonly className?: string }) {
               )}
             />
             <span className="mk-add-sentence-ring pointer-events-none absolute inset-0 rounded-[inherit]" />
-            <span className="mk-add-sentence-check relative inline-flex items-center overflow-hidden">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  pathLength="1"
-                  d="M5 12.6l4.6 4.6L19.2 7.6"
-                  stroke="currentColor"
-                  strokeWidth="3.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
+            <Check open={caught} />
             <span className={box} style={glide("place")}>
               {PICKS.map((pick, i) => (
                 <PickPlace
@@ -289,6 +281,7 @@ export function AddSentence({ className }: { readonly className?: string }) {
               figure={<PickFigure pick={pick} className="w-max" />}
               place={
                 <span className={PLACE_PILL}>
+                  <Check open />
                   <PickPlace pick={pick} className="w-max" />
                 </span>
               }
@@ -297,6 +290,26 @@ export function AddSentence({ className }: { readonly className?: string }) {
         ))}
       </span>
     </p>
+  );
+}
+
+function Check({ open }: { readonly open: boolean }) {
+  return (
+    <span
+      data-open={open ? "" : undefined}
+      className="mk-add-sentence-check relative inline-flex items-center overflow-hidden"
+    >
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          pathLength="1"
+          d="M5 12.6l4.6 4.6L19.2 7.6"
+          stroke="currentColor"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   );
 }
 
