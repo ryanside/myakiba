@@ -83,7 +83,7 @@ function DataGridColumnHeaderInner<TData, TValue>({
   );
 
   const headerButtonClassName = cn(
-    "text-secondary-foreground/80 hover:bg-secondary data-open:bg-secondary hover:text-foreground data-open:text-foreground -ms-2 gap-1.5 px-2 text-sm font-normal rounded-lg has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+    "text-secondary-foreground/80 hover:bg-secondary data-open:bg-secondary hover:text-foreground data-open:text-foreground -ms-2 gap-1.5 px-2 text-sm font-normal rounded-lg focus-visible:ring-inset has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
     className,
   );
 

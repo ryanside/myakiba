@@ -19,12 +19,13 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-/** Answers every request the app sends until the test ends. Shop fields find no saved shops. */
+/** Answers every request the app sends until the test ends. Shop and tag fields find no saved terms. */
 export function stubFetch(respond: (request: Request) => Response | Promise<Response>): void {
   globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = new Request(input, init);
-      if (new URL(request.url).pathname === "/api/vocabulary") return Response.json({ shops: [] });
+      if (new URL(request.url).pathname === "/api/vocabulary")
+        return Response.json({ shops: [], tags: [], scales: [] });
       return respond(request);
     },
     { preconnect: realFetch.preconnect },

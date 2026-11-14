@@ -10,7 +10,7 @@ import { DraftDialog } from "@/components/draft-dialog";
 import { useForm } from "@tanstack/react-form";
 import { Field, FieldContent, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { ShopFilterField } from "@/components/shop-fields";
+import { VocabularyFilterField } from "@/components/vocabulary-fields";
 import { MoneyField } from "@/components/money-field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
@@ -248,10 +248,10 @@ function OrdersFiltersDraft({
           <Field className="gap-2">
             <FieldTitle>Shop</FieldTitle>
             <FieldContent>
-              <ShopFilterField
+              <VocabularyFilterField
+                filter="orderShops"
                 value={field.state.value ?? []}
                 onValueChange={field.handleChange}
-                uses="orderUses"
               />
             </FieldContent>
           </Field>

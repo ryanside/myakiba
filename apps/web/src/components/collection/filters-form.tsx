@@ -15,8 +15,7 @@ import { useId, useState } from "react";
 import type { ReactElement } from "react";
 import { Field, FieldContent, FieldDescription, FieldTitle } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { ShopFilterField } from "@/components/shop-fields";
+import { VocabularyFilterField } from "@/components/vocabulary-fields";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { FieldTrigger } from "@/components/ui/field-trigger";
@@ -47,7 +46,6 @@ import {
   CURRENCIES,
   CATEGORIES,
 } from "@myakiba/contracts/shared/constants";
-import { NO_SCALE, normalizeScale } from "@myakiba/contracts/shared/scale";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { getCategoryColor } from "@/lib/category-colors";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -483,10 +481,10 @@ function FiltersDraft({
               <Field className="gap-2">
                 <FieldTitle>Shop</FieldTitle>
                 <FieldContent>
-                  <ShopFilterField
+                  <VocabularyFilterField
+                    filter="collectionShops"
                     value={field.state.value ?? []}
                     onValueChange={field.handleChange}
-                    uses="ownedUses"
                   />
                 </FieldContent>
               </Field>
@@ -499,51 +497,12 @@ function FiltersDraft({
             children={(field) => (
               <Field className="gap-2">
                 <FieldTitle>Scale</FieldTitle>
-                <FieldDescription>e.g., 1/8, 1/7, {NO_SCALE} (non-scale)</FieldDescription>
                 <FieldContent>
-                  <div className="flex flex-wrap gap-2">
-                    {field.state.value?.map((scale, scaleIndex) => (
-                      <Badge
-                        key={scaleIndex}
-                        variant="outline"
-                        size="lg"
-                        className="flex items-center justify-between pr-0"
-                      >
-                        {scale}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const current = field.state.value || [];
-                            field.handleChange(current.filter((_, idx) => idx !== scaleIndex));
-                          }}
-                          className=" hover:text-red-500 hover:bg-transparent"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="scale-input"
-                      type="text"
-                      placeholder="Press enter after each scale to add"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const input = e.currentTarget;
-                          const value = input.value.trim();
-                          if (value) {
-                            const current = field.state.value || [];
-                            field.handleChange([...current, normalizeScale(value)]);
-                            input.value = "";
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  <VocabularyFilterField
+                    filter="collectionScales"
+                    value={field.state.value ?? []}
+                    onValueChange={field.handleChange}
+                  />
                 </FieldContent>
               </Field>
             )}
@@ -555,51 +514,12 @@ function FiltersDraft({
             children={(field) => (
               <Field className="gap-2">
                 <FieldTitle>Tags</FieldTitle>
-                <FieldDescription>e.g., favorite, limited-edition</FieldDescription>
                 <FieldContent>
-                  <div className="flex flex-wrap gap-2">
-                    {field.state.value?.map((tag, tagIndex) => (
-                      <Badge
-                        key={tagIndex}
-                        variant="outline"
-                        size="lg"
-                        className="flex items-center justify-between pr-0"
-                      >
-                        {tag}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const current = field.state.value || [];
-                            field.handleChange(current.filter((_, idx) => idx !== tagIndex));
-                          }}
-                          className=" hover:text-red-500 hover:bg-transparent"
-                        >
-                          <HugeiconsIcon icon={Cancel01Icon} />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="tags-input"
-                      type="text"
-                      placeholder="Press enter after each tag to add"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const input = e.currentTarget;
-                          const value = input.value.trim();
-                          if (value) {
-                            const current = field.state.value || [];
-                            field.handleChange([...current, value]);
-                            input.value = "";
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  <VocabularyFilterField
+                    filter="collectionTags"
+                    value={field.state.value ?? []}
+                    onValueChange={field.handleChange}
+                  />
                 </FieldContent>
               </Field>
             )}
