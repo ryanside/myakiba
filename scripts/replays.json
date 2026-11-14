@@ -4857,6 +4857,15 @@
         "an edit that sends releaseBarcode answers 422, since the edit chooses a release only by its id",
         "an edit that sends releaseType answers 422, since the edit chooses a release only by its id"
       ]
+    },
+    {
+      "fix": "675db33899e0985b3bc480261a145cec88d07986",
+      "bug": "The inline count cell saved a typed count of -3 or 1500, which a Collection edit refuses.",
+      "test": "apps/web/src/components/cells/inline-count-cell.test.tsx",
+      "fixed": [
+        "a typed count of -3 saves as 1, inside what a Collection edit takes",
+        "a typed count of 1500 saves as 999, inside what a Collection edit takes"
+      ]
     }
   ],
   "lint": [
