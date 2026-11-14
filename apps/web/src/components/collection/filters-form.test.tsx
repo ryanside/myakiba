@@ -9,11 +9,18 @@ import FiltersForm from "./filters-form";
 
 afterEach(cleanup);
 
-function renderFilters(suggested: SuggestedEntriesResponse) {
+function renderFilters(suggested: SuggestedEntriesResponse, { refetchFailed = false } = {}) {
   const applied: CollectionFilters[] = [];
   const client = new QueryClient();
   client.setQueryData(["vocabulary"], { shops: [], tags: [], scales: [] });
   client.setQueryData(["entry-uses"], suggested);
+  if (refetchFailed) {
+    // A refetch that failed keeps the last counts beside its error.
+    client
+      .getQueryCache()
+      .find({ queryKey: ["entry-uses"] })
+      ?.setState({ status: "error", error: new Error("Failed to load your most used entries") });
+  }
   render(
     <QueryClientProvider client={client}>
       <FiltersForm
@@ -65,6 +72,17 @@ test("an empty entry search offers the most used entries, and picking one filter
 
 test("a user whose Collection uses no entries is asked to type", async () => {
   renderFilters({ entries: [] });
+  await openEntries();
+
+  expect(await screen.findByText("Type to search for entries")).toBeTruthy();
+  expect(screen.queryByRole("group", { name: "Most used" })).toBeNull();
+});
+
+test("counts from before a failed refetch are not offered, since they may no longer match", async () => {
+  renderFilters(
+    { entries: [{ id: "entry-miku", name: "Hatsune Miku", category: "Characters", uses: 2 }] },
+    { refetchFailed: true },
+  );
   await openEntries();
 
   expect(await screen.findByText("Type to search for entries")).toBeTruthy();

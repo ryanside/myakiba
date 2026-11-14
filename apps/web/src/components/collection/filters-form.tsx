@@ -185,12 +185,13 @@ function FiltersDraft({
 
   const entries = entryPages?.pages.flatMap((page) => page.entries) ?? [];
 
-  const { data: suggested, isPending: isSuggestedPending } = useRead(
-    searches.suggestedEntries,
-    undefined,
-    { enabled: entriesPopoverOpen },
-  );
-  const suggestedEntries = suggested?.entries ?? [];
+  const {
+    data: suggested,
+    isPending: isSuggestedPending,
+    isError: isSuggestedError,
+  } = useRead(searches.suggestedEntries, undefined, { enabled: entriesPopoverOpen });
+  // After a failed refetch the cached counts may no longer match the Collection, so offer none.
+  const suggestedEntries = isSuggestedError ? [] : (suggested?.entries ?? []);
 
   /** The chosen entries after picking or unpicking `entry`, remembering a picked entry's name for its badge. */
   const toggleEntry = (chosen: readonly string[], entry: SearchEntryResult): string[] => {
