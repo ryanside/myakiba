@@ -11,6 +11,7 @@ afterEach(cleanup);
 
 const term = (value: string, ownedUses: number, orderUses: number): ShopTerm => ({
   value,
+  uses: ownedUses + orderUses,
   ownedUses,
   orderUses,
   lastUsedAt: "2026-01-01T00:00:00.000Z",

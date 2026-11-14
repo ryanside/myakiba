@@ -62,6 +62,7 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
   client.setQueryData(["vocabulary"], {
     shops: ["AmiAmi", "Mandarake"].map((value) => ({
       value,
+      uses: 2,
       ownedUses: 1,
       orderUses: 1,
       lastUsedAt: "2026-01-01T00:00:00.000Z",

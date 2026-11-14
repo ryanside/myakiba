@@ -6,7 +6,13 @@ import { query } from "@/domain/kernel";
 
 export const VOCABULARY_SHOP_LIMIT = 500;
 
-type ShopUses = { readonly shop: string; readonly uses: number; readonly lastUsedAt: Date };
+type CollectionShop = {
+  readonly shop: string;
+  readonly uses: number;
+  readonly ownedUses: number;
+  readonly lastUsedAt: Date;
+};
+type OrderShop = { readonly shop: string; readonly uses: number; readonly lastUsedAt: Date };
 
 export const Vocabulary = {
   read: query(
@@ -14,7 +20,7 @@ export const Vocabulary = {
     async (scope) => {
       const userId = scope.viewer.userId;
       const ownedUses = sql<number>`(COUNT(*) FILTER (WHERE ${collection.status} = 'Owned'))::integer`;
-      const collectionRows = sql<number>`COUNT(*)`;
+      const collectionUses = sql<number>`COUNT(*)::integer`;
       const collectionLastUsedAt = sql<Date>`MAX(${collection.updatedAt})`.mapWith(
         collection.updatedAt,
       );
@@ -23,11 +29,16 @@ export const Vocabulary = {
 
       const [collectionShops, orderShops] = await Promise.all([
         scope.tx
-          .select({ shop: collection.shop, uses: ownedUses, lastUsedAt: collectionLastUsedAt })
+          .select({
+            shop: collection.shop,
+            uses: collectionUses,
+            ownedUses,
+            lastUsedAt: collectionLastUsedAt,
+          })
           .from(collection)
           .where(and(eq(collection.userId, userId), ne(collection.shop, "")))
           .groupBy(collection.shop)
-          .orderBy(desc(collectionRows), desc(collectionLastUsedAt), asc(collection.shop))
+          .orderBy(desc(collectionUses), desc(collectionLastUsedAt), asc(collection.shop))
           .limit(VOCABULARY_SHOP_LIMIT),
         scope.tx
           .select({ shop: order.shop, uses: orderUses, lastUsedAt: orderLastUsedAt })
@@ -48,14 +59,15 @@ type MergedShop = Omit<ShopTerm, "lastUsedAt"> & { readonly lastUsedAt: Date };
 
 /** Each kind of record keeps its own most-used shops, so busy Order shops never crowd out a Collection one. */
 function mergeShopUses(
-  collectionShops: readonly ShopUses[],
-  orderShops: readonly ShopUses[],
+  collectionShops: readonly CollectionShop[],
+  orderShops: readonly OrderShop[],
 ): ShopTerm[] {
   const merged = new Map<string, MergedShop>();
   for (const row of collectionShops) {
     merged.set(row.shop, {
       value: row.shop,
-      ownedUses: row.uses,
+      uses: row.uses,
+      ownedUses: row.ownedUses,
       orderUses: 0,
       lastUsedAt: row.lastUsedAt,
     });
@@ -64,16 +76,16 @@ function mergeShopUses(
     const known = merged.get(row.shop);
     merged.set(row.shop, {
       value: row.shop,
+      uses: (known?.uses ?? 0) + row.uses,
       ownedUses: known?.ownedUses ?? 0,
       orderUses: row.uses,
       lastUsedAt: known && known.lastUsedAt > row.lastUsedAt ? known.lastUsedAt : row.lastUsedAt,
     });
   }
-  const total = (shop: MergedShop) => shop.ownedUses + shop.orderUses;
   return [...merged.values()]
     .toSorted(
       (a, b) =>
-        total(b) - total(a) ||
+        b.uses - a.uses ||
         b.lastUsedAt.getTime() - a.lastUsedAt.getTime() ||
         Number(a.value > b.value) - Number(a.value < b.value),
     )

@@ -82,11 +82,12 @@ describe("GET /api/vocabulary", () => {
     expect(body.shops).toEqual([
       {
         value: "AmiAmi",
+        uses: 3,
         ownedUses: 2,
         orderUses: 1,
         lastUsedAt: at(5).toISOString(),
       },
-      { value: "amiami", ownedUses: 1, orderUses: 1, lastUsedAt: at(1).toISOString() },
+      { value: "amiami", uses: 2, ownedUses: 1, orderUses: 1, lastUsedAt: at(1).toISOString() },
     ]);
   });
 
@@ -170,6 +171,23 @@ describe("GET /api/vocabulary", () => {
     expect(body.shops.map(({ value, ownedUses }) => ({ value, ownedUses }))).toEqual([
       { value: "AmiAmi", ownedUses: 1 },
       { value: "Plaza Japan", ownedUses: 0 },
+    ]);
+  });
+
+  test("counts every Collection Item toward a shop's uses, owned or not", async () => {
+    await db.insert(collection).values([
+      ...["c-1", "c-2", "c-3"].map((id) => ({
+        ...collectionRow(id, "HobbyLink", 1),
+        status: "Ordered" as const,
+      })),
+      collectionRow("c-4", "hobby link", 2),
+    ]);
+
+    const { body } = await read();
+
+    expect(body.shops.map(({ value, uses, ownedUses }) => ({ value, uses, ownedUses }))).toEqual([
+      { value: "HobbyLink", uses: 3, ownedUses: 0 },
+      { value: "hobby link", uses: 1, ownedUses: 1 },
     ]);
   });
 });

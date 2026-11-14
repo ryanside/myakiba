@@ -4,6 +4,7 @@ import { normalizeShop, rankShops } from "./shop-suggestions";
 
 const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm => ({
   value,
+  uses: uses + orderUses,
   ownedUses: uses,
   orderUses,
   lastUsedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
@@ -58,6 +59,15 @@ describe("rankShops", () => {
     ];
 
     expect(rankShops(terms, "a")).toEqual(["AmiAmi", "Mandarake"]);
+  });
+
+  test("shows the spelling with the most uses, owned or not", () => {
+    const terms = [
+      { ...term("HobbyLink", 0, 1), uses: 3 },
+      { ...term("hobby link", 1, 2), uses: 1 },
+    ];
+
+    expect(rankShops(terms, "hobby")).toEqual(["HobbyLink"]);
   });
 
   test("stops at the limit", () => {
