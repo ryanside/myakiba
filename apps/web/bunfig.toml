@@ -1,4 +1,4 @@
 [test]
 preload = ["./test/happy-dom.ts"]
-# The browser checks in e2e/ run with `bun run e2e`, which needs a Playwright Chromium.
+# The browser checks in e2e/ run with `bun run e2e`, which needs a Playwright Chromium and Firefox.
 pathIgnorePatterns = ["e2e/**"]
