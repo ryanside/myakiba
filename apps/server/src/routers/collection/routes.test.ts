@@ -49,11 +49,6 @@ const edit: CollectionUpdateType = {
   tags: [],
   notes: "",
   releaseId: null,
-  releaseDate: null,
-  releasePrice: null,
-  releaseCurrency: null,
-  releaseBarcode: null,
-  releaseType: null,
   condition: "New",
 };
 
@@ -88,7 +83,16 @@ async function addOtherUser() {
   });
 }
 
-const call = async (method: string, body?: CollectionUpdateType) => {
+/** An edit body as a client may send it, with release details the edit may refuse. */
+type SentEdit = CollectionUpdateType & {
+  readonly releaseDate?: string | null;
+  readonly releasePrice?: number | null;
+  readonly releaseCurrency?: string | null;
+  readonly releaseBarcode?: string | null;
+  readonly releaseType?: string | null;
+};
+
+const call = async (method: string, body?: SentEdit) => {
   const response = await app.handle(
     new Request("http://localhost/api/collection/c-1", {
       method,
@@ -134,6 +138,34 @@ test("an edit that selects another Item's release answers 404 and leaves the Col
 
   expect(await db.select().from(collection)).toEqual(before);
 });
+
+test.each([1.5, 0, -3, 1000])(
+  "an edit with count %p answers 422 and leaves the Collection Item as it was",
+  async (count) => {
+    const before = await db.select().from(collection);
+
+    expect(await call("PUT", { ...edit, count })).toMatchObject({ status: 422 });
+
+    expect(await db.select().from(collection)).toEqual(before);
+  },
+);
+
+test.each([
+  "releaseDate",
+  "releasePrice",
+  "releaseCurrency",
+  "releaseBarcode",
+  "releaseType",
+] as const)(
+  "an edit that sends %s answers 422, since the edit chooses a release only by its id",
+  async (field) => {
+    const before = await db.select().from(collection);
+
+    expect(await call("PUT", { ...edit, [field]: null })).toMatchObject({ status: 422 });
+
+    expect(await db.select().from(collection)).toEqual(before);
+  },
+);
 
 async function deletingRelease(releaseId: string) {
   const deleted = Promise.withResolvers<null>();

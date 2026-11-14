@@ -38,7 +38,7 @@ export const addItemsResponseSchema = z.object({ items: z.array(addItemSchema) }
 const dateOrNull = z.iso.date().nullable();
 const scoreSchema = z.string().regex(/^(?:10(?:\.0)?|\d(?:\.\d)?)$/u, "Score is 0 to 10");
 const shopSchema = z.string().trim().max(WRITE_LIMITS.shop);
-const countSchema = z.number().int().min(1).max(999);
+export const countSchema = z.number().int().min(1).max(999);
 
 const isUnique = (values: readonly string[]) => new Set(values).size === values.length;
 

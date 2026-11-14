@@ -28,7 +28,23 @@ export function deleteCollectionItems(ids: string[]) {
 }
 
 export function updateCollectionItem(values: CollectionItemFormValues) {
-  return call(app.api.collection({ id: values.id }).put(values), {
+  const request = app.api.collection({ id: values.id }).put({
+    status: values.status,
+    count: values.count,
+    score: values.score,
+    price: values.price,
+    shop: values.shop,
+    orderDate: values.orderDate,
+    paymentDate: values.paymentDate,
+    shippingDate: values.shippingDate,
+    collectionDate: values.collectionDate,
+    shippingMethod: values.shippingMethod,
+    tags: values.tags,
+    notes: values.notes,
+    releaseId: values.releaseId,
+    condition: values.condition,
+  });
+  return call(request, {
     fallback: "Failed to update collection item",
   });
 }

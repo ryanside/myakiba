@@ -7,7 +7,7 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
-import { itemIdField } from "@myakiba/contracts/add/schema";
+import { countSchema, itemIdField } from "@myakiba/contracts/add/schema";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
 import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
@@ -39,9 +39,9 @@ export const collectionParamSchema = z.object({
   id: z.string().max(WRITE_LIMITS.id),
 });
 
-export const collectionUpdateSchema = z.object({
+export const collectionUpdateSchema = z.strictObject({
   status: z.enum(COLLECTION_STATUSES),
-  count: z.number(),
+  count: countSchema,
   score: z.string().max(WRITE_LIMITS.label),
   price: z.number().int(),
   shop: z.string().trim().max(WRITE_LIMITS.shop),
@@ -53,11 +53,6 @@ export const collectionUpdateSchema = z.object({
   tags: z.array(z.string().max(WRITE_LIMITS.tag)).max(WRITE_LIMITS.tags),
   notes: z.string().max(WRITE_LIMITS.notes),
   releaseId: z.string().max(WRITE_LIMITS.id).nullable(),
-  releaseDate: z.iso.date().nullable(),
-  releasePrice: z.number().int().nullable(),
-  releaseCurrency: z.string().max(WRITE_LIMITS.label).nullable(),
-  releaseBarcode: z.string().max(WRITE_LIMITS.label).nullable(),
-  releaseType: z.string().max(WRITE_LIMITS.label).nullable(),
   condition: z.enum(CONDITIONS),
 });
 

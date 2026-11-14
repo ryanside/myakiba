@@ -23,6 +23,7 @@ import { ShopInput } from "@/components/shop-fields";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
+import { readCount } from "../add/row-fields";
 import { Label } from "../ui/label";
 import {
   Select,
@@ -146,9 +147,8 @@ function CollectionItemFormContent({
                         onBlur={field.handleBlur}
                         type="number"
                         min="1"
-                        onChange={(e) =>
-                          field.handleChange(Number.parseInt(e.target.value, 10) || 1)
-                        }
+                        max="999"
+                        onChange={(e) => field.handleChange(readCount(e.target.value) ?? 1)}
                         placeholder="1"
                       />
                       {!field.state.meta.isValid && (
