@@ -198,8 +198,8 @@ function Field({ id, label, children }: { id: string; label: string; children: R
 function Page() {
   return (
     <main className="flex w-full flex-col gap-10 px-4 py-10">
-      <div className="max-w-lg">
-        <FormSection title="Basics">
+      <div className="max-h-48 max-w-lg overflow-y-auto px-2">
+        <FormSection title="Basics" className="p-2">
           <div className="grid grid-cols-2 gap-3">
             <Field id="price" label="Price">
               <Input id="price" defaultValue="$170.00" />

@@ -57,7 +57,10 @@ afterAll(async () => {
 
 type Cut = { readonly control: string; readonly clippedBy: string; readonly px: number };
 
-/** How far each ancestor that clips cuts into the focused element's ring, on any side. */
+/**
+ * How far each ancestor that clips cuts into the focused element's ring, on any side. A scroller
+ * counts only where the element's own box is in view, since the rest is out of view by scrolling.
+ */
 function cutsOfFocused(): { control: string; cuts: Cut[] } | null {
   const element = document.activeElement;
   if (!(element instanceof HTMLElement) || element === document.body) return null;
@@ -85,15 +88,16 @@ function cutsOfFocused(): { control: string; cuts: Cut[] } | null {
   for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
     const clip = getComputedStyle(ancestor);
     const edge = ancestor.getBoundingClientRect();
+    const cut = (overflow: string, past: number) => {
+      if (overflow === "visible") return 0;
+      if ((overflow === "auto" || overflow === "scroll") && past > 0.5) return 0;
+      return past + outset;
+    };
     const sides = [
-      clip.overflowX === "visible" ? 0 : edge.left + px(clip.borderLeftWidth) - (box.left - outset),
-      clip.overflowX === "visible"
-        ? 0
-        : box.right + outset - (edge.right - px(clip.borderRightWidth)),
-      clip.overflowY === "visible" ? 0 : edge.top + px(clip.borderTopWidth) - (box.top - outset),
-      clip.overflowY === "visible"
-        ? 0
-        : box.bottom + outset - (edge.bottom - px(clip.borderBottomWidth)),
+      cut(clip.overflowX, edge.left + px(clip.borderLeftWidth) - box.left),
+      cut(clip.overflowX, box.right - (edge.right - px(clip.borderRightWidth))),
+      cut(clip.overflowY, edge.top + px(clip.borderTopWidth) - box.top),
+      cut(clip.overflowY, box.bottom - (edge.bottom - px(clip.borderBottomWidth))),
     ];
     const deepest = Math.max(...sides);
     if (deepest > 0.5) {
