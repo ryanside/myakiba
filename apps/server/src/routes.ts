@@ -13,6 +13,7 @@ import mfcItemsRouter from "./routers/mfc-items";
 import ordersRouter from "./routers/orders";
 import searchRouter from "./routers/search";
 import settingsRouter from "./routers/settings";
+import vocabularyRouter from "./routers/vocabulary";
 import wishlistRouter from "./routers/wishlist";
 
 export const routes = new Elysia()
@@ -31,5 +32,6 @@ export const routes = new Elysia()
       .use(ordersRouter)
       .use(searchRouter)
       .use(settingsRouter)
+      .use(vocabularyRouter)
       .use(wishlistRouter),
   );
