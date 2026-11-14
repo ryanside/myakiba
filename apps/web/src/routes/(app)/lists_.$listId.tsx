@@ -15,6 +15,7 @@ import { MediaViewSkeletons } from "@/components/media-tile";
 import { LIST_HEADING_CLASS_NAME, ListHeading } from "@/components/lists/list-heading";
 import { LoadError, STATE_ICON_CLASS_NAME, STATE_PANEL_CLASS_NAME } from "@/components/page-states";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ControlTooltip } from "@/components/ui/control-tooltip";
 import { WriteConfirmDialog } from "@/components/write-confirm-dialog";
 import {
   DropdownMenu,
@@ -177,13 +178,15 @@ function RouteComponent(): React.JSX.Element {
                     onSubmit={(input) => updateList({ listId, ...input })}
                   />
                   <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button variant="outline" size="icon" aria-label="More List actions">
-                          <HugeiconsIcon icon={MoreHorizontalIcon} />
-                        </Button>
-                      }
-                    />
+                    <ControlTooltip label="More List actions">
+                      <DropdownMenuTrigger
+                        render={
+                          <Button variant="outline" size="icon" aria-label="More List actions">
+                            <HugeiconsIcon icon={MoreHorizontalIcon} />
+                          </Button>
+                        }
+                      />
+                    </ControlTooltip>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                         <HugeiconsIcon icon={Delete02Icon} />

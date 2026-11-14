@@ -3,12 +3,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, useLocation } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { ControlLabel, ControlTooltip } from "@/components/ui/control-tooltip";
+import { TOOLBAR_LABEL_CLASS } from "@/components/ui/data-toolbar";
 import type { AddSearch } from "@/lib/add-search";
 
 /**
  * A way to the Add page. Its `search` presets the destination from where the user came, and the
  * page goes back there once a commit leaves it empty. Without `children` it is a toolbar's Add, which
- * shows only its icon below `sm`, as main's toolbar Add does.
+ * shows only its icon below `sm` and in a narrow `DataToolbar`, with a tooltip to name it.
  */
 export function AddLink({
   search,
@@ -26,7 +28,7 @@ export function AddLink({
   readonly children?: ReactNode;
 }) {
   const returnTo = useLocation({ select: ({ href }) => href });
-  return (
+  const link = (
     <Link
       to="/add"
       search={{ ...search, returnTo }}
@@ -40,7 +42,10 @@ export function AddLink({
           aria-hidden="true"
         />
       ) : null}
-      {children ?? <span className="sr-only sm:not-sr-only">Add</span>}
+      {children ?? (
+        <ControlLabel className={`sr-only sm:not-sr-only ${TOOLBAR_LABEL_CLASS}`}>Add</ControlLabel>
+      )}
     </Link>
   );
+  return children === undefined ? <ControlTooltip label="Add">{link}</ControlTooltip> : link;
 }

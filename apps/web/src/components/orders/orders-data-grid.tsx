@@ -26,6 +26,7 @@ import { AddLink } from "@/components/add/add-link";
 import { OrderPendingContext } from "./order-pending-context";
 import { GridSizeSlider } from "@/components/ui/grid-size-slider";
 import { ViewToggle } from "@/components/ui/view-toggle";
+import { DataToolbar } from "@/components/ui/data-toolbar";
 import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
@@ -246,18 +247,18 @@ export default function OrdersDataGrid() {
 
   return (
     <>
-      <div className="flex w-full flex-wrap items-center gap-2">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <OrdersToolbar />
-          {isTableView ? <DataGridColumnCombobox table={table} /> : null}
-        </div>
-        <ViewToggle
-          modes={VIEW_PREFERENCES.orders.modes}
-          value={viewMode}
-          onValueChange={setViewMode}
-        />
-        <AddLink search={{ to: "order-new" }} className="ml-auto" />
-      </div>
+      <DataToolbar
+        query={<OrdersToolbar />}
+        columns={isTableView ? <DataGridColumnCombobox table={table} /> : null}
+        view={
+          <ViewToggle
+            modes={VIEW_PREFERENCES.orders.modes}
+            value={viewMode}
+            onValueChange={setViewMode}
+          />
+        }
+        add={<AddLink search={{ to: "order-new" }} />}
+      />
       <OrdersActionBar
         selectedOrderIds={selectedOrderIds}
         selectedItems={selectedItems}
