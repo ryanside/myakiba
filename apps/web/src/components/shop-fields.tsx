@@ -17,14 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SuggestInput } from "@/components/ui/suggest-input";
 import { useRead } from "@/data/client";
 import { vocabulary } from "@/data/resources/vocabulary";
-import { rankShops } from "@/lib/shop-suggestions";
+import { rankTerms } from "@/lib/vocabulary-suggestions";
 
 const NO_SUGGESTIONS = () => [];
 
 function useShopSuggestions(): (query: string) => readonly string[] {
   const { data } = useRead(vocabulary);
   return useMemo(
-    () => (data ? (query: string) => rankShops(data.shops, query) : NO_SUGGESTIONS),
+    () => (data ? (query: string) => rankTerms(data.shops, query) : NO_SUGGESTIONS),
     [data],
   );
 }
