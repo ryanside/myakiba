@@ -67,6 +67,8 @@ function renderToolbar(FiltersForm: ComponentType<FiltersFormProps>) {
       orderUses: 1,
       lastUsedAt: "2026-01-01T00:00:00.000Z",
     })),
+    tags: [],
+    scales: [],
   });
   render(
     <QueryClientProvider client={client}>

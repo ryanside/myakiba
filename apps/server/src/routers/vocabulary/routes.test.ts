@@ -24,7 +24,7 @@ await mock.module("@myakiba/auth/server", () => ({
 
 const db = await createTestDatabase();
 const { default: vocabularyRouter } = await import("./index");
-const { VOCABULARY_SHOP_LIMIT } = await import("./module");
+const { VOCABULARY_LIMIT } = await import("./module");
 const app = new Elysia({ prefix: "/api" }).use(vocabularyRouter);
 
 const userId = "user-1";
@@ -55,6 +55,11 @@ const collectionRow = (id: string, shop: string, day: number, owner = userId) =>
   itemId: owner === userId ? "item-1" : "item-2",
   shop,
   updatedAt: at(day),
+});
+
+const tagged = (id: string, tags: string[], day: number, owner = userId) => ({
+  ...collectionRow(id, "", day, owner),
+  tags,
 });
 
 const orderRow = (id: string, shop: string, day: number, owner = userId) => ({
@@ -126,8 +131,8 @@ describe("GET /api/vocabulary", () => {
     ]);
   });
 
-  test(`returns at most ${VOCABULARY_SHOP_LIMIT} Order shops, the most used first`, async () => {
-    const shops = Array.from({ length: VOCABULARY_SHOP_LIMIT + 1 }, (_, index) =>
+  test(`returns at most ${VOCABULARY_LIMIT} Order shops, the most used first`, async () => {
+    const shops = Array.from({ length: VOCABULARY_LIMIT + 1 }, (_, index) =>
       orderRow(`o-${index}`, `Shop ${String(index).padStart(3, "0")}`, 1),
     );
     await db.insert(order).values(shops);
@@ -135,13 +140,13 @@ describe("GET /api/vocabulary", () => {
 
     const { body } = await read();
 
-    expect(body.shops).toHaveLength(VOCABULARY_SHOP_LIMIT);
+    expect(body.shops).toHaveLength(VOCABULARY_LIMIT);
     expect(body.shops[0]?.value).toBe("Shop 500");
     expect(body.shops.at(-1)?.value).toBe("Shop 498");
   });
 
   test("keeps a Collection shop that busier Order shops would crowd out", async () => {
-    const shops = Array.from({ length: VOCABULARY_SHOP_LIMIT + 1 }, (_, index) =>
+    const shops = Array.from({ length: VOCABULARY_LIMIT + 1 }, (_, index) =>
       orderRow(`o-${index}`, `Shop ${String(index).padStart(3, "0")}`, 1),
     );
     await db
@@ -189,5 +194,135 @@ describe("GET /api/vocabulary", () => {
       { value: "HobbyLink", uses: 3, ownedUses: 0 },
       { value: "hobby link", uses: 1, ownedUses: 1 },
     ]);
+  });
+});
+
+describe("GET /api/vocabulary tags", () => {
+  test("counts each exact tag spelling over every Collection Item and over Owned ones", async () => {
+    await db
+      .insert(collection)
+      .values([
+        tagged("c-1", ["Favorite", "limited"], 2),
+        tagged("c-2", ["Favorite"], 5),
+        { ...tagged("c-3", ["favorite"], 1), status: "Ordered" as const },
+        tagged("c-4", ["fav orite"], 3),
+      ]);
+
+    const { body } = await read();
+
+    expect(body.tags).toEqual([
+      { value: "Favorite", uses: 2, ownedUses: 2, lastUsedAt: at(5).toISOString() },
+      { value: "fav orite", uses: 1, ownedUses: 1, lastUsedAt: at(3).toISOString() },
+      { value: "limited", uses: 1, ownedUses: 1, lastUsedAt: at(2).toISOString() },
+      { value: "favorite", uses: 1, ownedUses: 0, lastUsedAt: at(1).toISOString() },
+    ]);
+  });
+
+  test("counts a Collection Item once when it repeats a tag", async () => {
+    await db.insert(collection).values(tagged("c-1", ["Favorite", "Favorite"], 1));
+
+    const { body } = await read();
+
+    expect(body.tags.map(({ value, uses, ownedUses }) => ({ value, uses, ownedUses }))).toEqual([
+      { value: "Favorite", uses: 1, ownedUses: 1 },
+    ]);
+  });
+
+  test("leaves out blank tags and other users' tags", async () => {
+    await db
+      .insert(collection)
+      .values([tagged("c-1", ["", "  "], 1), tagged("c-2", ["Theirs"], 1, "user-2")]);
+
+    const { body } = await read();
+
+    expect(body.tags).toEqual([]);
+  });
+
+  test(`returns at most ${VOCABULARY_LIMIT} tags, the most used first`, async () => {
+    const tags = Array.from(
+      { length: VOCABULARY_LIMIT + 1 },
+      (_, index) => `Tag ${String(index).padStart(3, "0")}`,
+    );
+    await db
+      .insert(collection)
+      .values([tagged("c-1", tags, 1), tagged("c-2", [`Tag ${VOCABULARY_LIMIT}`], 1)]);
+
+    const { body } = await read();
+
+    expect(body.tags).toHaveLength(VOCABULARY_LIMIT);
+    expect(body.tags[0]?.value).toBe(`Tag ${VOCABULARY_LIMIT}`);
+    expect(body.tags.at(-1)?.value).toBe(`Tag ${VOCABULARY_LIMIT - 2}`);
+  });
+});
+
+describe("GET /api/vocabulary scales", () => {
+  const scaled = (id: string, scale: string, owner = userId) => ({
+    id,
+    ownerId: owner,
+    externalId: null,
+    title: id,
+    scale,
+  });
+  const owning = (id: string, itemId: string, owner = userId) => ({
+    id,
+    userId: owner,
+    itemId,
+  });
+
+  test("counts the Owned Collection Items of each scale, leaving out scales only on unowned ones", async () => {
+    await db
+      .insert(item)
+      .values([
+        scaled("seventh-a", "1/7"),
+        scaled("seventh-b", "1/7"),
+        scaled("eighth", "1/8"),
+        scaled("sixth", "1/6"),
+      ]);
+    await db
+      .insert(collection)
+      .values([
+        owning("c-1", "seventh-a"),
+        owning("c-2", "seventh-b"),
+        owning("c-3", "eighth"),
+        { ...owning("c-4", "eighth"), status: "Ordered" as const },
+        { ...owning("c-5", "sixth"), status: "Shipped" as const },
+        owning("c-6", "item-1"),
+      ]);
+
+    const { body } = await read();
+
+    expect(body.scales).toEqual([
+      { value: "1/7", ownedUses: 2 },
+      { value: "1/8", ownedUses: 1 },
+      { value: "n/a", ownedUses: 1 },
+    ]);
+  });
+
+  test("leaves out other users' scales", async () => {
+    await db.insert(item).values(scaled("theirs", "1/4", "user-2"));
+    await db.insert(collection).values(owning("c-1", "theirs", "user-2"));
+
+    const { body } = await read();
+
+    expect(body.scales).toEqual([]);
+  });
+
+  test(`returns at most ${VOCABULARY_LIMIT} scales, the most owned first`, async () => {
+    const items = Array.from({ length: VOCABULARY_LIMIT + 1 }, (_, index) =>
+      scaled(`scale-${index}`, `1/${String(index).padStart(3, "0")}`),
+    );
+    await db.insert(item).values(items);
+    await db
+      .insert(collection)
+      .values([
+        ...items.map((row) => owning(`c-${row.id}`, row.id)),
+        owning("c-extra", `scale-${VOCABULARY_LIMIT}`),
+      ]);
+
+    const { body } = await read();
+
+    expect(body.scales).toHaveLength(VOCABULARY_LIMIT);
+    expect(body.scales[0]).toEqual({ value: `1/${VOCABULARY_LIMIT}`, ownedUses: 2 });
+    expect(body.scales.at(-1)?.value).toBe(`1/${VOCABULARY_LIMIT - 2}`);
   });
 });

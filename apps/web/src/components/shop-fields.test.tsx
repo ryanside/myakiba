@@ -19,7 +19,7 @@ const term = (value: string, ownedUses: number, orderUses: number): ShopTerm => 
 
 function renderWithShops(ui: ReactElement, shops: readonly ShopTerm[]) {
   const client = new QueryClient();
-  client.setQueryData(["vocabulary"], { shops: [...shops] });
+  client.setQueryData(["vocabulary"], { shops: [...shops], tags: [], scales: [] });
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
