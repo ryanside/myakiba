@@ -64,8 +64,3 @@ export function rankShops(terms: readonly ShopTerm[], query: string, limit = 8):
     .slice(0, limit)
     .map((group) => group.value);
 }
-
-/** The known spelling of `typed` when the user already saved that shop, else `typed` trimmed. */
-export function canonicalShop(terms: readonly ShopTerm[], typed: string): string {
-  return groupShops(terms).get(normalizeShop(typed))?.value ?? typed.trim();
-}

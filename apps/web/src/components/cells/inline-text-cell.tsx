@@ -3,7 +3,6 @@ import type { ComponentProps, FocusEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SuggestInput } from "@/components/ui/suggest-input";
-import type { Suggester } from "@/components/ui/suggest-input";
 import { cn } from "@/lib/utils";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import type { Saving } from "@/data/client";
@@ -21,8 +20,8 @@ interface InlineTextCellProps {
   /** The preview and the input are as wide as their text, up to the row's width, not always that wide. */
   fitContent?: boolean;
   disabled?: boolean;
-  /** Offers suggestions while editing, saves its spelling, and saves a picked one at once. */
-  suggester?: Suggester;
+  /** Offers suggestions while editing, and saves a picked one at once. */
+  suggest?: (query: string) => readonly string[];
 }
 
 // A box that hugs its text needs room inside. Its text stays put, as the room goes out to the start.
@@ -33,12 +32,12 @@ const FIT_INPUT = `${FIT} field-sizing-content w-auto min-w-40`;
 type EditorProps = Omit<ComponentProps<"input">, "value" | "onChange"> & {
   readonly value: string;
   readonly onValueChange: (value: string) => void;
-  readonly suggester: Suggester | undefined;
+  readonly suggest: ((query: string) => readonly string[]) | undefined;
   readonly onPick: (value: string) => Promise<void>;
 };
 
-function Editor({ value, onValueChange, suggester, onPick, ...props }: EditorProps) {
-  if (!suggester) {
+function Editor({ value, onValueChange, suggest, onPick, ...props }: EditorProps) {
+  if (!suggest) {
     return (
       <Input {...props} value={value} onChange={(event) => onValueChange(event.target.value)} />
     );
@@ -48,7 +47,7 @@ function Editor({ value, onValueChange, suggester, onPick, ...props }: EditorPro
       {...props}
       value={value}
       onValueChange={onValueChange}
-      suggestions={suggester.suggestions(value)}
+      suggestions={suggest(value)}
       onPick={onPick}
     />
   );
@@ -69,7 +68,7 @@ export function InlineTextCell({
   previewIcon,
   fitContent,
   disabled,
-  suggester,
+  suggest,
 }: InlineTextCellProps): React.ReactElement {
   const edit = useInlineEdit({
     label,
@@ -79,7 +78,7 @@ export function InlineTextCell({
     disabled,
     format: (text) => text,
     toDraft: (text) => text,
-    parse: (draft) => suggester?.canonical(draft) ?? draft,
+    parse: (draft) => draft,
   });
   const preview = useRef<HTMLButtonElement>(null);
   // Enter and Escape remove the focused input, so focus returns to the preview, without editing.
@@ -148,7 +147,7 @@ export function InlineTextCell({
           className={cn(CELL_EDITOR_CLASS_NAME, fitContent && FIT_INPUT)}
           value={edit.draft}
           onValueChange={(next) => edit.setDraft(next)}
-          suggester={suggester}
+          suggest={suggest}
           onPick={async (picked) => {
             returningFocus.current = true;
             await edit.commit(picked);

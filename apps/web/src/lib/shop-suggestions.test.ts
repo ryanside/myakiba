@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ShopTerm } from "@myakiba/contracts/vocabulary/schema";
-import { canonicalShop, normalizeShop, rankShops } from "./shop-suggestions";
+import { normalizeShop, rankShops } from "./shop-suggestions";
 
 const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm => ({
   value,
@@ -65,23 +65,5 @@ describe("rankShops", () => {
 
     expect(rankShops(terms, "shop")).toHaveLength(8);
     expect(rankShops(terms, "shop", 3)).toHaveLength(3);
-  });
-});
-
-describe("canonicalShop", () => {
-  const terms = [term("AmiAmi", 3, 1), term("amiami", 1, 2)];
-
-  test("uses the most-used spelling of a known shop", () => {
-    expect(canonicalShop(terms, "amiami ")).toBe("AmiAmi");
-    expect(canonicalShop(terms, "AMIAMI")).toBe("AmiAmi");
-  });
-
-  test("folds a known shop typed with extra spaces", () => {
-    expect(canonicalShop(terms, "  Ami Ami ")).toBe("AmiAmi");
-  });
-
-  test("keeps a new shop as typed, trimmed", () => {
-    expect(canonicalShop(terms, "  Hobby Search ")).toBe("Hobby Search");
-    expect(canonicalShop(terms, "")).toBe("");
   });
 });

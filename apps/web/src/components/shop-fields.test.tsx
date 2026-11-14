@@ -49,19 +49,19 @@ test("typing part of a saved shop suggests it", async () => {
   expect(options.map((option) => option.textContent)).toEqual(["AmiAmi"]);
 });
 
-test("a saved shop typed another way saves its usual spelling", async () => {
+test("a shop saves as typed, even when a saved shop is spelled another way", async () => {
   const onSave = mock((_shop: string) => {});
   renderWithShops(<ShopForm onSave={onSave} />, SHOPS);
   const user = userEvent.setup();
 
   const save = screen.getByRole("button", { name: "Save" });
-  await user.type(screen.getByRole("combobox", { name: "Shop" }), "amiami");
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "ami ami");
   await user.click(save);
-  expect(onSave).toHaveBeenLastCalledWith("AmiAmi");
+  expect(onSave).toHaveBeenLastCalledWith("ami ami");
 
   await user.clear(screen.getByRole("combobox", { name: "Shop" }));
-  await user.type(screen.getByRole("combobox", { name: "Shop" }), " AMIAMI{Escape}{Enter}");
-  expect(onSave).toHaveBeenLastCalledWith("AmiAmi");
+  await user.type(screen.getByRole("combobox", { name: "Shop" }), "AMIAMI{Escape}{Enter}");
+  expect(onSave).toHaveBeenLastCalledWith("AMIAMI");
 });
 
 function FilterField({ uses }: { readonly uses: "ownedUses" | "orderUses" }) {

@@ -15,22 +15,18 @@ import {
 import { FieldTrigger } from "@/components/ui/field-trigger";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SuggestInput } from "@/components/ui/suggest-input";
-import type { Suggester } from "@/components/ui/suggest-input";
 import { useRead } from "@/data/client";
 import { vocabulary } from "@/data/resources/vocabulary";
-import { canonicalShop, rankShops } from "@/lib/shop-suggestions";
+import { rankShops } from "@/lib/shop-suggestions";
 
-const PLAIN: Suggester = { suggestions: () => [], canonical: (typed) => typed };
+const NO_SUGGESTIONS = () => [];
 
-function useShopSuggester(): Suggester {
+function useShopSuggestions(): (query: string) => readonly string[] {
   const { data } = useRead(vocabulary);
-  return useMemo(() => {
-    if (!data) return PLAIN;
-    return {
-      suggestions: (query) => rankShops(data.shops, query),
-      canonical: (typed) => canonicalShop(data.shops, typed),
-    };
-  }, [data]);
+  return useMemo(
+    () => (data ? (query: string) => rankShops(data.shops, query) : NO_SUGGESTIONS),
+    [data],
+  );
 }
 
 type ShopInputProps = Omit<ComponentProps<"input">, "value" | "defaultValue" | "onChange"> & {
@@ -38,36 +34,24 @@ type ShopInputProps = Omit<ComponentProps<"input">, "value" | "defaultValue" | "
   onValueChange: (value: string) => void;
 };
 
-/** A Shop field that suggests the user's shops. Leaving it or pressing Enter spells a known shop the usual way. */
-export function ShopInput({ value, onValueChange, onBlur, onKeyDown, ...props }: ShopInputProps) {
-  const shops = useShopSuggester();
-  const commit = () => {
-    const canonical = shops.canonical(value);
-    if (canonical !== value) onValueChange(canonical);
-  };
+/** A Shop field that suggests the user's shops and saves what the user typed or picked. */
+export function ShopInput({ value, onValueChange, ...props }: ShopInputProps) {
+  const suggest = useShopSuggestions();
   return (
     <SuggestInput
       {...props}
       value={value}
       onValueChange={onValueChange}
-      suggestions={shops.suggestions(value)}
-      onBlur={(event) => {
-        commit();
-        onBlur?.(event);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") commit();
-        onKeyDown?.(event);
-      }}
+      suggestions={suggest(value)}
     />
   );
 }
 
-type InlineShopCellProps = Omit<ComponentProps<typeof InlineTextCell>, "label" | "suggester">;
+type InlineShopCellProps = Omit<ComponentProps<typeof InlineTextCell>, "label" | "suggest">;
 
 export function InlineShopCell(props: InlineShopCellProps) {
-  const shops = useShopSuggester();
-  return <InlineTextCell label="Shop" suggester={shops} {...props} />;
+  const suggest = useShopSuggestions();
+  return <InlineTextCell label="Shop" suggest={suggest} {...props} />;
 }
 
 type ShopFilterFieldProps = {

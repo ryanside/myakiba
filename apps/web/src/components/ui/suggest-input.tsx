@@ -3,12 +3,6 @@ import { useState } from "react";
 import type { ComponentProps } from "react";
 import { Input } from "@/components/ui/input";
 
-/** What a free-text field suggests while the user types, and the spelling it saves. */
-export type Suggester = {
-  readonly suggestions: (query: string) => readonly string[];
-  readonly canonical: (typed: string) => string;
-};
-
 type SuggestInputProps = Omit<ComponentProps<"input">, "value" | "defaultValue" | "onChange"> & {
   value: string;
   onValueChange: (value: string) => void;

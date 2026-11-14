@@ -5,7 +5,6 @@ import { Result } from "better-result";
 import { useState } from "react";
 import { InlineTextCell } from "@/components/cells/inline-text-cell";
 import { SuggestInput } from "./suggest-input";
-import type { Suggester } from "./suggest-input";
 
 afterEach(cleanup);
 
@@ -69,18 +68,12 @@ test("Escape closes the suggestions and keeps the typed shop", async () => {
   expect(screen.getByRole<HTMLInputElement>("combobox", { name: "Shop" }).value).toBe("man");
 });
 
-const suggester: Suggester = {
-  suggestions: (query) =>
-    SHOPS.filter((name) => name.toLowerCase().startsWith(query.toLowerCase())),
-  canonical: (typed) =>
-    SHOPS.find((name) => name.toLowerCase() === typed.trim().toLowerCase()) ?? typed.trim(),
-};
+const suggest = (query: string) =>
+  SHOPS.filter((name) => name.toLowerCase().startsWith(query.toLowerCase()));
 
 function renderShopCell() {
   const onSubmit = mock(async (_shop: string) => Result.ok());
-  render(
-    <InlineTextCell label="Shop" value="Mandarake" onSubmit={onSubmit} suggester={suggester} />,
-  );
+  render(<InlineTextCell label="Shop" value="Mandarake" onSubmit={onSubmit} suggest={suggest} />);
   return onSubmit;
 }
 
@@ -98,14 +91,14 @@ test("a cell saves a picked suggestion at once", async () => {
   expect(screen.queryByRole("combobox", { name: "Shop" })).toBeNull();
 });
 
-test("a cell saves the known spelling of a typed shop on Enter", async () => {
+test("a cell saves a typed shop as typed on Enter", async () => {
   const onSubmit = renderShopCell();
   const user = userEvent.setup();
 
   await user.click(screen.getByRole("button", { name: /edit Shop$/ }));
   await user.keyboard("amiami{Enter}");
 
-  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("AmiAmi"));
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith("amiami"));
 });
 
 test("Escape in a cell first closes the suggestions, then cancels the edit", async () => {
