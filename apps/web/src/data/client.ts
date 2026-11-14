@@ -53,11 +53,48 @@ async function settle<Value, Failure>(load: () => Promise<Result<Value, Failure>
   return result.value;
 }
 
+const prefetch = Symbol("prefetch");
+
+type Preloadable<Input> = {
+  readonly [prefetch]: (queryClient: QueryClient, input: Input) => Promise<void>;
+};
+
+type InputArg<Input> = undefined extends Input ? [input?: Input] : [input: Input];
+
+/**
+ * Loads a read into the cache entry its screen reads, so a route loader can start a page's data
+ * before the page renders. It never rejects: a failed preload leaves the failure for the
+ * screen's own read to show.
+ */
+export function preload<Input>(
+  queryClient: QueryClient,
+  read: Preloadable<Input>,
+  ...[input]: InputArg<Input>
+): Promise<void> {
+  return read[prefetch](queryClient, input as Input);
+}
+
+/**
+ * What a route loader returns for its page's preloads. A hover waits for them, so the click finds
+ * the data cached, and a click during that wait waits with it. A navigation without a hover starts
+ * them and renders at once, so the page shows its own loading state. A navigation within the page
+ * leaves its reads to the page.
+ */
+export async function preloadPage(
+  cause: "preload" | "enter" | "stay",
+  preloads: () => readonly Promise<void>[],
+): Promise<void> {
+  if (cause === "stay") return;
+  const loading = Promise.all(preloads());
+  if (cause === "preload") await loading;
+}
+
 type PageCursor = { readonly limit: number; readonly offset: number };
 type OffsetPage = { readonly items: readonly unknown[]; readonly totalCount: number };
 
 type InfiniteReadSpec<Input, Identity, Page extends OffsetPage> = {
   readonly pageSize: number;
+  readonly staleTime?: number;
   readonly failure: string;
   /** The part of the input that changes the result. It becomes the key. */
   readonly identify: (input: Input) => Identity;
@@ -81,23 +118,27 @@ function stampInfiniteRead<F extends PersistedFamily, Input, Identity, Page exte
   spec: InfiniteReadSpec<Input, Identity, Page>,
 ) {
   const key = (identity: Identity) => ["resource", family, view, identity] as const;
+  const options = (input: Input) =>
+    infiniteQueryOptions({
+      ...(spec.staleTime !== undefined && { staleTime: spec.staleTime }),
+      queryKey: key(spec.identify(input)),
+      queryFn: ({ pageParam }): Promise<Page> =>
+        settle(() =>
+          call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
+            fallback: spec.failure,
+            empty: spec.failure,
+          }),
+        ),
+      initialPageParam: 0,
+      getNextPageParam: offsetAfterLoaded,
+    });
   return {
     key,
     /** A filter that matches every key whose identity contains these fields. */
     partialKey: (identity: Partial<Identity>) => ["resource", family, view, identity] as const,
-    options: (input: Input) =>
-      infiniteQueryOptions({
-        queryKey: key(spec.identify(input)),
-        queryFn: ({ pageParam }): Promise<Page> =>
-          settle(() =>
-            call(spec.request(input, { limit: spec.pageSize, offset: pageParam }), {
-              fallback: spec.failure,
-              empty: spec.failure,
-            }),
-          ),
-        initialPageParam: 0,
-        getNextPageParam: offsetAfterLoaded,
-      }),
+    options,
+    [prefetch]: (queryClient: QueryClient, input: Input) =>
+      queryClient.prefetchInfiniteQuery(options(input)),
   };
 }
 
@@ -160,21 +201,24 @@ export function rootedRead<F extends Family, Input, Data, Failure>(
   family: F,
   { key, load, keepPrevious, placeholderData, ...cache }: RootedReadSpec<F, Input, Data, Failure>,
 ) {
+  const options = (input: Input) =>
+    queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
+      ...cache,
+      placeholderData: keepPrevious
+        ? (previousData) =>
+            previousData !== undefined && keepPrevious(previousData, input)
+              ? previousData
+              : undefined
+        : placeholderData,
+      queryKey: key(input),
+      queryFn: () => settle(() => load(input)),
+    });
   return {
     family,
     key,
-    options: (input: Input) =>
-      queryOptions<Data, ReadFailure<Failure>, Data, ReturnType<typeof key>>({
-        ...cache,
-        placeholderData: keepPrevious
-          ? (previousData) =>
-              previousData !== undefined && keepPrevious(previousData, input)
-                ? previousData
-                : undefined
-          : placeholderData,
-        queryKey: key(input),
-        queryFn: () => settle(() => load(input)),
-      }),
+    options,
+    [prefetch]: (queryClient: QueryClient, input: Input) =>
+      queryClient.prefetchQuery(options(input)),
   };
 }
 
@@ -221,17 +265,20 @@ export function rootedInfiniteRead<F extends Family, Input, Page, Failure>(
   family: F,
   { key, loadPage, nextOffset, ...cache }: RootedInfiniteReadSpec<F, Input, Page, Failure>,
 ) {
+  const options = (input: Input) =>
+    infiniteQueryOptions({
+      ...cache,
+      queryKey: key(input),
+      queryFn: ({ pageParam }): Promise<Page> => settle(() => loadPage(input, pageParam)),
+      initialPageParam: 0,
+      getNextPageParam: nextOffset,
+    });
   return {
     family,
     key,
-    options: (input: Input) =>
-      infiniteQueryOptions({
-        ...cache,
-        queryKey: key(input),
-        queryFn: ({ pageParam }): Promise<Page> => settle(() => loadPage(input, pageParam)),
-        initialPageParam: 0,
-        getNextPageParam: nextOffset,
-      }),
+    options,
+    [prefetch]: (queryClient: QueryClient, input: Input) =>
+      queryClient.prefetchInfiniteQuery(options(input)),
   };
 }
 
