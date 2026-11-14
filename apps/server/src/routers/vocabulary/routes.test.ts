@@ -433,13 +433,26 @@ describe("POST /api/vocabulary/shops/rename", () => {
     ]);
   });
 
-  test("trims both names before it renames", async () => {
-    const { body } = await rename({ from: "  Mandarake ", to: " Suruga-ya  " });
+  test("trims the new name and matches the old name exactly as saved", async () => {
+    const { body: padded } = await rename({ from: "  Mandarake ", to: " Suruga-ya  " });
+    const { body } = await rename({ from: "Mandarake", to: " Suruga-ya  " });
+
+    const shops = await shopsOf(userId);
+
+    expect(padded).toEqual({ collectionItems: 0, orders: 0 });
+    expect(body).toEqual({ collectionItems: 1, orders: 0 });
+    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Suruga-ya" });
+  });
+
+  test("renames a shop saved with stray spaces", async () => {
+    await db.update(collection).set({ shop: "Mandarake " }).where(eq(collection.id, "c-4"));
+
+    const { body } = await rename({ from: "Mandarake ", to: "Mandarake" });
 
     const shops = await shopsOf(userId);
 
     expect(body).toEqual({ collectionItems: 1, orders: 0 });
-    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Suruga-ya" });
+    expect(shops.collection).toContainEqual({ id: "c-4", shop: "Mandarake" });
   });
 
   test.each([
