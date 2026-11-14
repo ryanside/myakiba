@@ -47,13 +47,16 @@ export function SuggestInput({
         render={<Input className={className} />}
         {...inputProps}
         onKeyDown={(event) => {
-          // An IME's Enter confirms composed text, and Base UI applies it only after composition ends.
-          const composing = event.nativeEvent.isComposing || event.keyCode === 229;
+          // An IME's Enter confirms composed text, so neither the popup nor the field may act on it.
+          if (event.nativeEvent.isComposing || event.keyCode === 229) {
+            event.preventBaseUIHandler();
+            return;
+          }
           // The popup owns Escape, and Enter on a highlighted suggestion, so the field never sees them.
           const ownedByPopup =
             shown &&
             (event.key === "Escape" || (event.key === "Enter" && highlighted !== undefined));
-          if (!composing && !ownedByPopup) onKeyDown?.(event);
+          if (!ownedByPopup) onKeyDown?.(event);
         }}
       />
       <Autocomplete.Portal>

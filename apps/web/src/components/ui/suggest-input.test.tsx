@@ -130,3 +130,18 @@ test("Enter that confirms IME composition keeps the cell open and saves nothing"
   expect(screen.getByRole("combobox", { name: "Shop" })).toBeDefined();
   expect(onSubmit).not.toHaveBeenCalled();
 });
+
+test("Enter that confirms IME composition never picks a highlighted suggestion", async () => {
+  const onSubmit = renderShopCell();
+  const user = userEvent.setup();
+
+  await user.click(screen.getByRole("button", { name: /edit Shop$/ }));
+  await user.keyboard("ami");
+  await screen.findByRole("option", { name: "AmiAmi" });
+  await user.keyboard("{ArrowDown}");
+  const field = screen.getByRole<HTMLInputElement>("combobox", { name: "Shop" });
+  fireEvent.keyDown(field, { key: "Enter", isComposing: true });
+
+  expect(screen.getByRole<HTMLInputElement>("combobox", { name: "Shop" }).value).toBe("ami");
+  expect(onSubmit).not.toHaveBeenCalled();
+});
