@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useMotionPreference } from "@/hooks/use-appearance";
 import { cn } from "@/lib/utils";
+import "./add-sentence.css";
 
 const SENTENCE =
   "flex flex-col items-start gap-y-[0.18em] text-3xl leading-[1.2] font-medium tracking-tight sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-[0.28em] md:text-4xl xl:text-5xl";
@@ -35,15 +36,74 @@ const PICKS: readonly Pick[] = [
   },
 ];
 
-const BEAT_MS = 2800;
+type Flyer = {
+  readonly src: string;
+  readonly left: number;
+  readonly top: number;
+  readonly size: number;
+  readonly dx: number;
+  readonly dy: number;
+  readonly peak: number;
+  readonly delay: number;
+};
 
-const FIRST_MS = 1800;
+type Beat =
+  | { readonly phase: "shown"; readonly turn: number }
+  | {
+      readonly phase: "thrown" | "caught";
+      readonly turn: number;
+      readonly flyers: readonly Flyer[];
+    };
 
-const MOTION = "ease-out motion-reduce:transition-none";
+const HOLD_MS = { shown: 1100, thrown: 590, caught: 1500 } as const;
 
-const SHOWN = "translate-y-0 opacity-100 duration-200";
-const LEAVING = "-translate-y-[0.15em] opacity-0 duration-100 delay-0";
-const WAITING = "translate-y-[0.2em] opacity-0 duration-0 delay-0";
+const FIRST_MS = 1300;
+
+const THROW_STAGGER = [0, 55, 95] as const;
+
+const POP_STAGGER = [0, 45, 80] as const;
+
+const START: Beat = { phase: "shown", turn: 0 };
+
+function advance(beat: Beat, measure: () => readonly Flyer[]): Beat {
+  switch (beat.phase) {
+    case "shown":
+      return { phase: "thrown", turn: beat.turn, flyers: measure() };
+    case "thrown":
+      return { phase: "caught", turn: beat.turn, flyers: beat.flyers };
+    case "caught":
+      return { phase: "shown", turn: beat.turn + 1 };
+  }
+}
+
+function holdOf(beat: Beat): number {
+  return beat.phase === "shown" && beat.turn === 0 ? FIRST_MS : HOLD_MS[beat.phase];
+}
+
+function measureFlyers(root: HTMLElement): readonly Flyer[] {
+  const pill = root.querySelector("[data-destination]");
+  if (!pill) return [];
+  const host = root.getBoundingClientRect();
+  const target = pill.getBoundingClientRect();
+  const fontSize = Number.parseFloat(getComputedStyle(root).fontSize);
+  const x = target.left + target.height * 0.62;
+  const y = target.top + target.height / 2;
+  const images = root.querySelectorAll<HTMLImageElement>("[data-figure][data-current] img");
+  return [...images].map((image, i) => {
+    const rect = image.getBoundingClientRect();
+    const dy = y - (rect.top + rect.height / 2);
+    return {
+      src: image.getAttribute("src") ?? "",
+      left: rect.left - host.left,
+      top: rect.top - host.top,
+      size: rect.width,
+      dx: x - (rect.left + rect.width / 2),
+      dy,
+      peak: Math.min(0, dy) - 1.3 * fontSize,
+      delay: THROW_STAGGER[i] ?? 0,
+    };
+  });
+}
 
 type Widths = { readonly figure: number; readonly place: number };
 
@@ -52,9 +112,16 @@ type Measured = {
   readonly height: number;
 };
 
+type Motion = {
+  readonly current: boolean;
+  readonly entering: boolean;
+  readonly dimmed: boolean;
+};
+
 export function AddSentence({ className }: { readonly className?: string }) {
   const { reduce } = useMotionPreference();
-  const [turn, setTurn] = useState(0);
+  const [beat, setBeat] = useState<Beat>(START);
+  const beatRef = useRef<Beat>(START);
   const rootRef = useRef<HTMLParagraphElement>(null);
   const copiesRef = useRef<HTMLSpanElement>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
@@ -64,7 +131,6 @@ export function AddSentence({ className }: { readonly className?: string }) {
     if (reduce || !root) return;
     let timer: number | undefined;
     let onScreen = false;
-    let first = true;
     const stop = () => {
       window.clearTimeout(timer);
       timer = undefined;
@@ -72,14 +138,12 @@ export function AddSentence({ className }: { readonly className?: string }) {
     const schedule = () => {
       stop();
       if (!onScreen || document.hidden) return;
-      timer = window.setTimeout(
-        () => {
-          first = false;
-          setTurn((value) => value + 1);
-          schedule();
-        },
-        first ? FIRST_MS : BEAT_MS,
-      );
+      timer = window.setTimeout(() => {
+        const next = advance(beatRef.current, () => measureFlyers(root));
+        beatRef.current = next;
+        setBeat(next);
+        schedule();
+      }, holdOf(beatRef.current));
     };
     const observer = new IntersectionObserver(([entry]) => {
       onScreen = entry?.isIntersecting ?? false;
@@ -123,8 +187,11 @@ export function AddSentence({ className }: { readonly className?: string }) {
     return () => observer.disconnect();
   }, []);
 
-  const index = reduce ? 0 : turn % PICKS.length;
-  const glides = !reduce && turn > 0;
+  const shown = reduce ? START : beat;
+  const index = shown.turn % PICKS.length;
+  const glides = shown.turn > 0;
+  const swapping = glides && shown.phase === "shown";
+  const caught = shown.phase === "caught";
   const previous = (index + PICKS.length - 1) % PICKS.length;
   const current = measured?.widths[index];
   const before = measured?.widths[previous];
@@ -136,43 +203,95 @@ export function AddSentence({ className }: { readonly className?: string }) {
     const from = before?.[part] ?? to;
     return { width: to, transitionDelay: glides && to < from ? "60ms" : "0ms" };
   };
-  const box = cn("grid overflow-x-clip", glides && "transition-[width] duration-[240ms]", MOTION);
-  const place = (i: number, enter: string) => {
-    if (i === index) return cn(SHOWN, enter);
-    return glides && i === previous ? LEAVING : WAITING;
+  const box = cn(
+    "relative grid overflow-x-clip",
+    glides && "transition-[width] duration-[240ms]",
+    "ease-out motion-reduce:transition-none",
+  );
+  const motion = (i: number): Motion => {
+    const leaving = swapping && i === previous;
+    return {
+      current: i === index,
+      entering: swapping && i === index,
+      dimmed: (i === index && shown.phase !== "shown") || leaving,
+    };
   };
-  const swap = (i: number, enter: string) =>
+  const cell = (i: number) =>
     cn(
-      "col-start-1 row-start-1 w-max justify-self-start transition-[opacity,translate]",
-      MOTION,
-      place(i, enter),
+      "col-start-1 row-start-1 w-max justify-self-start",
+      i !== index && (swapping && i === previous ? "mk-add-sentence-leave" : "opacity-0"),
     );
 
   return (
-    <p ref={rootRef} aria-hidden className={cn(SENTENCE, "relative", className)} style={style}>
+    <p
+      ref={rootRef}
+      aria-hidden
+      data-phase={shown.phase}
+      className={cn(SENTENCE, "relative", className)}
+      style={style}
+    >
       <Words
         figure={
           <span className={box} style={glide("figure")}>
             {PICKS.map((pick, i) => (
-              <PickFigure key={pick.label} pick={pick} className={swap(i, "delay-[70ms]")} />
+              <PickFigure key={pick.label} pick={pick} className={cell(i)} motion={motion(i)} />
             ))}
           </span>
         }
         place={
-          <span className={box} style={glide("place")}>
-            {PICKS.map((pick, i) => (
-              <PickPlace key={pick.destination} pick={pick} className={swap(i, "delay-[120ms]")} />
-            ))}
+          <span
+            data-destination=""
+            data-caught={caught ? "" : undefined}
+            className={cn(PLACE_PILL, "mk-add-sentence-place relative")}
+          >
+            <span
+              className={cn(
+                "absolute inset-0 rounded-[inherit] bg-emerald-600 ease-out dark:bg-emerald-400",
+                caught
+                  ? "opacity-100 transition-opacity duration-[160ms]"
+                  : "opacity-0 transition-opacity duration-[220ms]",
+              )}
+            />
+            <span className="mk-add-sentence-ring pointer-events-none absolute inset-0 rounded-[inherit]" />
+            <span className="mk-add-sentence-check relative inline-flex items-center overflow-hidden">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  pathLength="1"
+                  d="M5 12.6l4.6 4.6L19.2 7.6"
+                  stroke="currentColor"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className={box} style={glide("place")}>
+              {PICKS.map((pick, i) => (
+                <PickPlace
+                  key={pick.destination}
+                  pick={pick}
+                  className={cell(i)}
+                  entering={swapping && i === index}
+                />
+              ))}
+            </span>
           </span>
         }
       />
+
+      {shown.phase !== "shown" &&
+        shown.flyers.map((flyer, i) => <ThrownFigure key={`${shown.turn}-${i}`} flyer={flyer} />)}
 
       <span ref={copiesRef} className="pointer-events-none invisible absolute inset-x-0 top-0">
         {PICKS.map((pick) => (
           <span key={pick.label} data-copy className={cn(SENTENCE, "absolute inset-x-0 top-0")}>
             <Words
               figure={<PickFigure pick={pick} className="w-max" />}
-              place={<PickPlace pick={pick} className="w-max" />}
+              place={
+                <span className={PLACE_PILL}>
+                  <PickPlace pick={pick} className="w-max" />
+                </span>
+              }
             />
           </span>
         ))}
@@ -190,24 +309,50 @@ function Words({ figure, place }: { readonly figure: ReactNode; readonly place: 
       </span>
       <span className={LINE}>
         <span>to</span>
-        <span className={PLACE_PILL}>{place}</span>
+        {place}
       </span>
     </>
   );
 }
 
-function PickPlace({ pick, className }: { readonly pick: Pick; readonly className: string }) {
+function PickPlace({
+  pick,
+  className,
+  entering = false,
+}: {
+  readonly pick: Pick;
+  readonly className: string;
+  readonly entering?: boolean;
+}) {
   return (
-    <span data-place className={cn(className, "whitespace-nowrap")}>
+    <span
+      data-place
+      className={cn(className, "whitespace-nowrap", entering && "mk-add-sentence-rise")}
+      style={entering ? { animationDelay: "90ms" } : undefined}
+    >
       {pick.destination}
     </span>
   );
 }
 
-function PickFigure({ pick, className }: { readonly pick: Pick; readonly className: string }) {
+const AVATAR =
+  "shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10 select-none dark:outline-white/10";
+
+const STILL: Motion = { current: false, entering: false, dimmed: false };
+
+function PickFigure({
+  pick,
+  className,
+  motion = STILL,
+}: {
+  readonly pick: Pick;
+  readonly className: string;
+  readonly motion?: Motion;
+}) {
   return (
     <span
       data-figure=""
+      data-current={motion.current ? "" : undefined}
       className={cn("flex items-center gap-[0.25em] whitespace-nowrap", className)}
     >
       <span className="flex">
@@ -221,13 +366,50 @@ function PickFigure({ pick, className }: { readonly pick: Pick; readonly classNa
             decoding="async"
             draggable={false}
             className={cn(
-              "size-[1.05em] shrink-0 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/10 select-none dark:outline-white/10",
+              AVATAR,
+              "size-[1.05em] transition-opacity duration-[120ms] ease-out",
               i > 0 && "-ml-[0.42em] ring-[0.06em] ring-background",
+              motion.entering && "mk-add-sentence-pop",
+              motion.dimmed && "opacity-20",
             )}
+            style={{
+              animationDelay: `${POP_STAGGER[i] ?? 0}ms`,
+              transitionDelay: `${THROW_STAGGER[i] ?? 0}ms`,
+            }}
           />
         ))}
       </span>
-      {pick.label}
+      <span
+        className={cn(motion.entering && "mk-add-sentence-rise")}
+        style={{ animationDelay: "40ms" }}
+      >
+        {pick.label}
+      </span>
+    </span>
+  );
+}
+
+function ThrownFigure({ flyer }: { readonly flyer: Flyer }) {
+  const style = {
+    left: flyer.left,
+    top: flyer.top,
+    width: flyer.size,
+    height: flyer.size,
+    "--dx": `${flyer.dx}px`,
+    "--dy": `${flyer.dy}px`,
+    "--peak": `${flyer.peak}px`,
+    "--delay": `${flyer.delay}ms`,
+  } as CSSProperties;
+  return (
+    <span data-flyer="" className="mk-add-sentence-flyer" style={style}>
+      <span className="mk-add-sentence-fly">
+        <img
+          src={flyer.src}
+          alt=""
+          draggable={false}
+          className={cn(AVATAR, "size-full ring-[0.06em] ring-background")}
+        />
+      </span>
     </span>
   );
 }
