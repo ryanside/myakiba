@@ -1,2 +1,3 @@
 export const SEARCH_COLLECTION_RESULT_LIMIT = 5;
 export const SEARCH_ORDER_RESULT_LIMIT = 5;
+export const SUGGESTED_ENTRY_LIMIT = 20;

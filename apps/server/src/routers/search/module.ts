@@ -15,13 +15,18 @@ import type {
   SearchEntryResult,
   SearchOrderIdAndTitle,
   SearchOrdersQuery,
+  SuggestedEntriesResponse,
 } from "@myakiba/contracts/search/schema";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import { itemSummaryColumns } from "@/lib/item-summaries";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result } from "better-result";
 import { paginateBy, prepared, query } from "@/domain/kernel";
-import { SEARCH_COLLECTION_RESULT_LIMIT, SEARCH_ORDER_RESULT_LIMIT } from "./model";
+import {
+  SEARCH_COLLECTION_RESULT_LIMIT,
+  SEARCH_ORDER_RESULT_LIMIT,
+  SUGGESTED_ENTRY_LIMIT,
+} from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const latestOwnedAt = sql<Date>`max(${collection.createdAt})`;
@@ -289,6 +294,30 @@ export const Search = {
 
       scope.log.set({ result: { count: entries.length } });
       const result = { entries };
+      return Result.ok(result);
+    },
+  ),
+
+  /** The viewer's Item Entries ranked by how many of their Collection Items link to each. */
+  suggestedEntries: query(
+    { action: "search.entries.suggested", failure: "Failed to load your most used entries" },
+    async (scope) => {
+      const userId = scope.viewer.userId;
+      const uses = sql<number>`COUNT(*)::integer`;
+      const entries = await scope.tx
+        .select({ id: entry.id, name: entry.name, category: entry.category, uses })
+        .from(entry)
+        .innerJoin(entry_to_item, eq(entry_to_item.entryId, entry.id))
+        .innerJoin(collection, eq(collection.itemId, entry_to_item.itemId))
+        .where(
+          and(eq(entry.ownerId, userId), eq(entry.source, "mfc"), eq(collection.userId, userId)),
+        )
+        .groupBy(entry.id, entry.name, entry.category)
+        .orderBy(desc(uses), asc(entry.name), asc(entry.id))
+        .limit(SUGGESTED_ENTRY_LIMIT);
+
+      scope.log.set({ result: { count: entries.length } });
+      const result: SuggestedEntriesResponse = { entries };
       return Result.ok(result);
     },
   ),
