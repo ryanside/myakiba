@@ -52,6 +52,22 @@ function resetPassword() {
   fireEvent.click(screen.getByRole("button", { name: "Reset Password" }));
 }
 
+test("the reset link request's email field tells a password manager it holds an email", () => {
+  renderPage(ForgotPassword);
+
+  expect(screen.getByLabelText("Email").getAttribute("autocomplete")).toBe("email");
+});
+
+test("the reset password fields tell a password manager they hold a new password", () => {
+  window.location.href = "http://localhost:3001/reset-password?token=reset-token";
+  renderPage(ResetPassword);
+
+  expect(screen.getByLabelText("New Password").getAttribute("autocomplete")).toBe("new-password");
+  expect(screen.getByLabelText("Confirm Password").getAttribute("autocomplete")).toBe(
+    "new-password",
+  );
+});
+
 test("a reset link request says where the link went", async () => {
   answerAuth(() => Response.json({ status: true }));
 
