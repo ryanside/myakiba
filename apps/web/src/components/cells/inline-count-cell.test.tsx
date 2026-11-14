@@ -10,8 +10,8 @@ afterEach(() => {
   consoleError.mockClear();
 });
 
-function editTo(count: number) {
-  act(() => screen.getByRole("button", { name: "1, edit Count" }).click());
+function editTo(count: number, from = 1) {
+  act(() => screen.getByRole("button", { name: `${from}, edit Count` }).click());
   const input = screen.getByRole("spinbutton");
   fireEvent.change(input, { target: { value: String(count) } });
   fireEvent.keyDown(input, { key: "Enter" });
@@ -34,6 +34,29 @@ test("a count that saves reports nothing", async () => {
   await waitFor(() => expect(saved).toEqual([2]));
   expect(consoleError).not.toHaveBeenCalled();
 });
+
+test.each([
+  [-3, 1],
+  [1500, 999],
+] as const)(
+  "a typed count of %p saves as %p, inside what a Collection edit takes",
+  async (typed, kept) => {
+    const saved: number[] = [];
+    render(
+      <InlineCountCell
+        label="Count"
+        value={5}
+        onSubmit={async (count) => {
+          saved.push(count);
+          return Result.ok();
+        }}
+      />,
+    );
+    editTo(typed, 5);
+
+    await waitFor(() => expect(saved).toEqual([kept]));
+  },
+);
 
 test("a count submit that rejects is reported as a defect", async () => {
   const rejection = new TypeError("onSubmit is not a function");
