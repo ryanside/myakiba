@@ -74,7 +74,7 @@ type ShopFilterFieldProps = {
   readonly value: readonly string[];
   readonly onValueChange: (shops: string[]) => void;
   /** Which saved records the filter searches, so it lists only the shops they use, with their counts. */
-  readonly uses: keyof Pick<ShopTerm, "collectionUses" | "orderUses">;
+  readonly uses: keyof Pick<ShopTerm, "ownedUses" | "orderUses">;
 };
 
 /** Picks shops to filter by from the user's own shops. A chosen shop no longer saved stays removable. */

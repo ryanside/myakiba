@@ -9,9 +9,9 @@ import { ShopFilterField, ShopInput } from "./shop-fields";
 
 afterEach(cleanup);
 
-const term = (value: string, collectionUses: number, orderUses: number): ShopTerm => ({
+const term = (value: string, ownedUses: number, orderUses: number): ShopTerm => ({
   value,
-  collectionUses,
+  ownedUses,
   orderUses,
   lastUsedAt: "2026-01-01T00:00:00.000Z",
 });
@@ -64,7 +64,7 @@ test("a saved shop typed another way saves its usual spelling", async () => {
   expect(onSave).toHaveBeenLastCalledWith("AmiAmi");
 });
 
-function FilterField({ uses }: { readonly uses: "collectionUses" | "orderUses" }) {
+function FilterField({ uses }: { readonly uses: "ownedUses" | "orderUses" }) {
   const [shops, setShops] = useState<string[]>(["Gone Shop"]);
   return <ShopFilterField value={shops} onValueChange={setShops} uses={uses} />;
 }

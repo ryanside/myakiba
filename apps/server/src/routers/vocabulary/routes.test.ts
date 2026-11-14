@@ -82,11 +82,11 @@ describe("GET /api/vocabulary", () => {
     expect(body.shops).toEqual([
       {
         value: "AmiAmi",
-        collectionUses: 2,
+        ownedUses: 2,
         orderUses: 1,
         lastUsedAt: at(5).toISOString(),
       },
-      { value: "amiami", collectionUses: 1, orderUses: 1, lastUsedAt: at(1).toISOString() },
+      { value: "amiami", ownedUses: 1, orderUses: 1, lastUsedAt: at(1).toISOString() },
     ]);
   });
 
@@ -151,8 +151,25 @@ describe("GET /api/vocabulary", () => {
     const { body } = await read();
 
     expect(body.shops.find((shop) => shop.value === "Quiet Shop")).toMatchObject({
-      collectionUses: 1,
+      ownedUses: 1,
       orderUses: 0,
     });
+  });
+
+  test("counts only Owned Collection Items, yet still suggests a preordered shop", async () => {
+    await db
+      .insert(collection)
+      .values([
+        collectionRow("c-owned", "AmiAmi", 1),
+        { ...collectionRow("c-preorder", "AmiAmi", 2), status: "Ordered" as const },
+        { ...collectionRow("c-only-preorder", "Plaza Japan", 3), status: "Ordered" as const },
+      ]);
+
+    const { body } = await read();
+
+    expect(body.shops.map(({ value, ownedUses }) => ({ value, ownedUses }))).toEqual([
+      { value: "AmiAmi", ownedUses: 1 },
+      { value: "Plaza Japan", ownedUses: 0 },
+    ]);
   });
 });

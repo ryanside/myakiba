@@ -4,7 +4,7 @@ import { canonicalShop, normalizeShop, rankShops } from "./shop-suggestions";
 
 const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm => ({
   value,
-  collectionUses: uses,
+  ownedUses: uses,
   orderUses,
   lastUsedAt: new Date(Date.UTC(2026, 0, day)).toISOString(),
 });

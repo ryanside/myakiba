@@ -2,7 +2,7 @@ import * as z from "zod";
 
 const shopTermSchema = z.object({
   value: z.string(),
-  collectionUses: z.number().int(),
+  ownedUses: z.number().int(),
   orderUses: z.number().int(),
   lastUsedAt: z.string(),
 });

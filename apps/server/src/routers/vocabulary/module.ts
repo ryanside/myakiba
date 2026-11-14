@@ -13,7 +13,8 @@ export const Vocabulary = {
     { action: "vocabulary.read", failure: "Failed to load your shops" },
     async (scope) => {
       const userId = scope.viewer.userId;
-      const collectionUses = sql<number>`COUNT(*)::integer`;
+      const ownedUses = sql<number>`(COUNT(*) FILTER (WHERE ${collection.status} = 'Owned'))::integer`;
+      const collectionRows = sql<number>`COUNT(*)`;
       const collectionLastUsedAt = sql<Date>`MAX(${collection.updatedAt})`.mapWith(
         collection.updatedAt,
       );
@@ -22,11 +23,11 @@ export const Vocabulary = {
 
       const [collectionShops, orderShops] = await Promise.all([
         scope.tx
-          .select({ shop: collection.shop, uses: collectionUses, lastUsedAt: collectionLastUsedAt })
+          .select({ shop: collection.shop, uses: ownedUses, lastUsedAt: collectionLastUsedAt })
           .from(collection)
           .where(and(eq(collection.userId, userId), ne(collection.shop, "")))
           .groupBy(collection.shop)
-          .orderBy(desc(collectionUses), desc(collectionLastUsedAt), asc(collection.shop))
+          .orderBy(desc(collectionRows), desc(collectionLastUsedAt), asc(collection.shop))
           .limit(VOCABULARY_SHOP_LIMIT),
         scope.tx
           .select({ shop: order.shop, uses: orderUses, lastUsedAt: orderLastUsedAt })
@@ -54,7 +55,7 @@ function mergeShopUses(
   for (const row of collectionShops) {
     merged.set(row.shop, {
       value: row.shop,
-      collectionUses: row.uses,
+      ownedUses: row.uses,
       orderUses: 0,
       lastUsedAt: row.lastUsedAt,
     });
@@ -63,12 +64,12 @@ function mergeShopUses(
     const known = merged.get(row.shop);
     merged.set(row.shop, {
       value: row.shop,
-      collectionUses: known?.collectionUses ?? 0,
+      ownedUses: known?.ownedUses ?? 0,
       orderUses: row.uses,
       lastUsedAt: known && known.lastUsedAt > row.lastUsedAt ? known.lastUsedAt : row.lastUsedAt,
     });
   }
-  const total = (shop: MergedShop) => shop.collectionUses + shop.orderUses;
+  const total = (shop: MergedShop) => shop.ownedUses + shop.orderUses;
   return [...merged.values()]
     .toSorted(
       (a, b) =>

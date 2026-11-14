@@ -14,7 +14,7 @@ export function normalizeShop(shop: string): string {
   return shop.replaceAll(/\s+/g, "").toLowerCase();
 }
 
-const usesOf = (term: ShopTerm) => term.collectionUses + term.orderUses;
+const usesOf = (term: ShopTerm) => term.ownedUses + term.orderUses;
 
 function groupShops(terms: readonly ShopTerm[]): Map<string, ShopGroup> {
   const groups = new Map<string, ShopGroup>();

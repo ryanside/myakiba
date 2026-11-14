@@ -486,7 +486,7 @@ function FiltersDraft({
                   <ShopFilterField
                     value={field.state.value ?? []}
                     onValueChange={field.handleChange}
-                    uses="collectionUses"
+                    uses="ownedUses"
                   />
                 </FieldContent>
               </Field>
