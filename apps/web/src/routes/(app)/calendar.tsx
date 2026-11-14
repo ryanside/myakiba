@@ -1,10 +1,14 @@
 import { useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
-import { calendar } from "@/data/resources/calendar";
+import { preload, preloadPage, useRead } from "@/data/client";
+import { calendar, monthOf } from "@/data/resources/calendar";
 import { calendarSearchSchema } from "@myakiba/contracts/calendar/schema";
-import type { CalendarView } from "@myakiba/contracts/calendar/schema";
+import type {
+  CalendarQuery,
+  CalendarSearch,
+  CalendarView,
+} from "@myakiba/contracts/calendar/schema";
 import { CalendarMonthGrid } from "@/components/calendar/calendar-month-grid";
 import { CalendarReleasePanel } from "@/components/calendar/calendar-release-list";
 import { CalendarToolbar } from "@/components/calendar/calendar-toolbar";
@@ -15,8 +19,22 @@ import { shownMessageOf } from "@/data/api";
 const CALENDAR_MIN_YEAR = 2000;
 const YEAR_FORWARD_RANGE = 10;
 
+function calendarViewOf(search: CalendarSearch, now: Date): CalendarQuery {
+  const current = monthOf(now);
+  return {
+    view: search.view ?? "items",
+    month: search.month ?? current.month,
+    year: search.year ?? current.year,
+  };
+}
+
 export const Route = createFileRoute("/(app)/calendar")({
   validateSearch: calendarSearchSchema,
+  loaderDeps: ({ search: { view, month, year } }) => ({ view, month, year }),
+  loader: ({ context: { queryClient }, cause, deps }) =>
+    preloadPage(cause, () => [
+      preload(queryClient, calendar.view, calendarViewOf(deps, new Date())),
+    ]),
   component: RouteComponent,
   head: () => ({
     meta: [
@@ -32,9 +50,7 @@ function RouteComponent(): ReactNode {
   const { currency, locale } = useUserPreferences();
 
   const now = useMemo(() => new Date(), []);
-  const view: CalendarView = search.view ?? "items";
-  const month = search.month ?? now.getMonth() + 1;
-  const year = search.year ?? now.getFullYear();
+  const { view, month, year } = calendarViewOf(search, now);
   const searchDays = search.days;
   const days = useMemo<readonly number[]>(() => searchDays ?? [], [searchDays]);
 

@@ -8,6 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 import type { RouterAppContext } from "@/routes/__root";
 
 const consentURL = "https://accounts.google.com/o/oauth2/auth?client_id=myakiba";
@@ -54,7 +55,10 @@ test("Google signup opens consent without navigating through the signed-out app"
   const router = createRouter({
     routeTree: root.addChildren([signup, login, app.addChildren([dashboard])]),
     history: createMemoryHistory({ initialEntries: ["/signup"] }),
-    context: { readSession: async () => ({ session: null, unavailable: false }) },
+    context: {
+      queryClient: new QueryClient(),
+      readSession: async () => ({ session: null, unavailable: false }),
+    },
     defaultPendingMinMs: 0,
   });
   render(<RouterProvider router={router} />);

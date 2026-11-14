@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { preload, preloadPage, useRead } from "@/data/client";
 import { analytics as analyticsResource } from "@/data/resources/analytics";
 import { ENTRY_CATEGORIES } from "@myakiba/contracts/shared/constants";
 import { LeaderboardTable } from "@/components/analytics/leaderboard-table";
@@ -20,6 +20,8 @@ const PLACEHOLDER_ENTRIES = ENTRY_CATEGORIES.map((category) => ({
 }));
 
 export const Route = createFileRoute("/(app)/analytics")({
+  loader: ({ context: { queryClient }, cause }) =>
+    preloadPage(cause, () => [preload(queryClient, analyticsResource.overview)]),
   component: RouteComponent,
   head: () => ({
     meta: [

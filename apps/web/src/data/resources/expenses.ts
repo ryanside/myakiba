@@ -1,4 +1,8 @@
-import type { ExpenseFilters, ExpenseShopFilters } from "@myakiba/contracts/expenses/schema";
+import type {
+  ExpenseFilters,
+  ExpenseScope,
+  ExpenseShopFilters,
+} from "@myakiba/contracts/expenses/schema";
 import {
   getExpenseFilterOptions,
   getExpensesCollection,
@@ -10,6 +14,25 @@ import {
 import { rootedRead } from "../client";
 
 const cache = { staleTime: 1000 * 60 * 5, retry: false } as const;
+
+export const SHOP_PAGE_SIZE = 10;
+
+export function shopTableInput(
+  scope: ExpenseScope,
+  { dateStart, dateEnd, shop }: ExpenseFilters,
+  search = "",
+  offset = 0,
+): ExpenseShopFilters {
+  return {
+    scope,
+    dateStart,
+    dateEnd,
+    shop,
+    search: search || undefined,
+    limit: SHOP_PAGE_SIZE,
+    offset,
+  };
+}
 
 export const expenses = {
   filterOptions: rootedRead("expenses", {

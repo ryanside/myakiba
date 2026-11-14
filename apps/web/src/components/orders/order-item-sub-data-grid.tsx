@@ -19,19 +19,17 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table";
 import type { OrderItem } from "@myakiba/contracts/orders/types";
-import type { OrderItemsQuery } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { createOrderItemSubColumns } from "./order-item-sub-columns";
 import { AddLink } from "@/components/add/add-link";
 import { useRead } from "@/data/client";
-import { orders } from "@/data/resources/orders";
+import { ORDER_ITEM_PAGE_SIZE, orderItemsInput, orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { Saving } from "@/data/client";
 import { shownMessageOf } from "@/data/api";
 
-const ORDER_ITEM_PAGE_SIZE = 12;
 const DEFAULT_COLUMN_ORDER = [
   "select",
   "title",
@@ -86,27 +84,14 @@ export function OrderItemSubDataGrid({
     { orderDate: false },
   );
 
-  const offset = pagination.pageIndex * pagination.pageSize;
-  const sortConfig = sorting[0];
-
   const {
     data: itemsData,
     isPending,
     isError,
     error,
-  } = useRead(
-    orders.items,
-    {
-      orderId,
-      query: {
-        limit: pagination.pageSize,
-        offset,
-        sort: (sortConfig?.id as OrderItemsQuery["sort"] | undefined) ?? "createdAt",
-        order: sortConfig?.desc === false ? "asc" : "desc",
-      },
-    },
-    { enabled: !isLoading },
-  );
+  } = useRead(orders.items, orderItemsInput(orderId, pagination, sorting[0]), {
+    enabled: !isLoading,
+  });
 
   const items = itemsData?.items ?? [];
   const totalCount = itemsData?.totalCount ?? 0;

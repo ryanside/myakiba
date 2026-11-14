@@ -45,6 +45,7 @@ export const collection = {
     key: (filters: CollectionFilters) => ["collection", filters] as const,
     load: getCollection,
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
   }),
 };
 

@@ -10,6 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 import type { RouteComponent } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/toast";
 import type { RouterAppContext } from "@/routes/__root";
@@ -80,7 +81,10 @@ function renderAt(path: string, Screen: RouteComponent) {
   const router = createRouter({
     routeTree: root.addChildren([page, ...others]),
     history: createMemoryHistory({ initialEntries: [path] }),
-    context: { readSession: async () => ({ session: null, unavailable: false }) },
+    context: {
+      queryClient: new QueryClient(),
+      readSession: async () => ({ session: null, unavailable: false }),
+    },
     defaultPendingMinMs: 0,
   });
   render(

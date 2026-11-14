@@ -40,10 +40,14 @@ import { cn } from "@/lib/utils";
 import { useSelection } from "@/hooks/use-selection";
 import { useSortableItems } from "@/hooks/use-sortable-items";
 import type { Saving } from "@/data/client";
+import { preload, preloadPage } from "@/data/client";
+import { lists as listsResource } from "@/data/resources/lists";
 
 type ListsPage = NonNullable<InferOk<Awaited<ReturnType<typeof getLists>>>>;
 type ListRecord = ListsPage["items"][number];
 export const Route = createFileRoute("/(app)/lists")({
+  loader: ({ context: { queryClient }, cause }) =>
+    preloadPage(cause, () => [preload(queryClient, listsResource.overview)]),
   component: RouteComponent,
   head: () => ({
     meta: [{ name: "description", content: "your Lists" }, { title: "Lists - myakiba" }],

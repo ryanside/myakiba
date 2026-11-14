@@ -7,9 +7,11 @@ import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useMotionPreference } from "@/hooks/use-appearance";
 import "../index.css";
+import type { QueryClient } from "@tanstack/react-query";
 import type { SessionCheck } from "@/lib/session";
 
 export interface RouterAppContext {
+  queryClient: QueryClient;
   readSession: () => Promise<SessionCheck>;
 }
 

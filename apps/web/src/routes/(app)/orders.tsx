@@ -4,6 +4,8 @@ import { searchSchema } from "@myakiba/contracts/orders/schema";
 import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useOrdersQuery } from "@/hooks/use-orders";
+import { preload, preloadPage } from "@/data/client";
+import { orders } from "@/data/resources/orders";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
 import { OrdersQuickFilters } from "@/components/orders/orders-quick-filters";
@@ -13,6 +15,9 @@ import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 export const Route = createFileRoute("/(app)/orders")({
   component: RouteComponent,
   validateSearch: searchSchema,
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, cause, deps }) =>
+    preloadPage(cause, () => [preload(queryClient, orders.list, deps)]),
   search: {
     middlewares: [
       stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0, sort: "createdAt", order: "desc" }),

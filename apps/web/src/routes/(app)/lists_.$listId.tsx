@@ -44,8 +44,15 @@ import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useSelection } from "@/hooks/use-selection";
 import { useCallback, useMemo, useState } from "react";
 import type { Saving } from "@/data/client";
+import { preload, preloadPage } from "@/data/client";
+import { lists } from "@/data/resources/lists";
 
 export const Route = createFileRoute("/(app)/lists_/$listId")({
+  loader: ({ context: { queryClient }, cause, params: { listId } }) =>
+    preloadPage(cause, () => [
+      preload(queryClient, lists.detail, listId),
+      preload(queryClient, lists.members, listId),
+    ]),
   component: RouteComponent,
   remountDeps: ({ params }) => params.listId,
   head: ({ params }) => ({

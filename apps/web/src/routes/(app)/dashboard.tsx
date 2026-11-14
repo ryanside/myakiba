@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { preload, preloadPage, useRead } from "@/data/client";
+import { calendar, monthOf } from "@/data/resources/calendar";
 import { dashboard } from "@/data/resources/dashboard";
 import * as z from "zod";
 import { MonthlyTab } from "@/components/dashboard/monthly-tab";
@@ -18,10 +19,27 @@ function getCurrentVisibleMonth(): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
+const dashboardSearchSchema = z.object({
+  tab: z.enum(["overview", "monthly"]).optional(),
+});
+
+function activeTabOf(search: z.infer<typeof dashboardSearchSchema>) {
+  return search.tab ?? "overview";
+}
+
 export const Route = createFileRoute("/(app)/dashboard")({
-  validateSearch: z.object({
-    tab: z.enum(["overview", "monthly"]).optional(),
-  }),
+  validateSearch: dashboardSearchSchema,
+  loaderDeps: ({ search }) => ({ tab: activeTabOf(search) }),
+  loader: ({ context: { queryClient }, cause, deps }) =>
+    preloadPage(cause, () => {
+      const month = monthOf(new Date());
+      return [
+        deps.tab === "monthly"
+          ? preload(queryClient, dashboard.monthly, month)
+          : preload(queryClient, dashboard.overview),
+        preload(queryClient, calendar.releases, month),
+      ];
+    }),
   component: RouteComponent,
   head: () => ({
     meta: [
@@ -39,11 +57,11 @@ export const Route = createFileRoute("/(app)/dashboard")({
 function RouteComponent(): ReactElement {
   const navigate = useNavigate({ from: Route.fullPath });
   const { session } = Route.useRouteContext();
-  const { tab } = Route.useSearch();
+  const search = Route.useSearch();
   const { currency: userCurrency, locale: userLocale, dateFormat } = useUserPreferences();
   // eslint-disable-next-line react/hook-use-state -- Keep one kaomoji for this route instance (until 2027-04-16, approved by root, pending operator review)
   const [kaomoji] = useState(randomKaomoji);
-  const activeTab = tab ?? "overview";
+  const activeTab = activeTabOf(search);
   const [visibleMonth, setVisibleMonth] = useState<Date>(getCurrentVisibleMonth);
 
   const monthYearLabel = useMemo(
@@ -51,8 +69,7 @@ function RouteComponent(): ReactElement {
     [userLocale],
   );
 
-  const selectedMonth = visibleMonth.getMonth() + 1;
-  const selectedYear = visibleMonth.getFullYear();
+  const { month: selectedMonth, year: selectedYear } = monthOf(visibleMonth);
 
   function setActiveTab(nextTab: string): void {
     if (nextTab !== "overview" && nextTab !== "monthly") {

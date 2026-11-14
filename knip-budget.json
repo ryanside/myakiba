@@ -164,7 +164,6 @@
     "apps/web/src/queries/calendar.ts CalendarItemsResponse",
     "apps/web/src/queries/calendar.ts CalendarOrdersResponse",
     "apps/web/src/queries/search.ts OrderCommandMatch",
-    "packages/contracts/src/calendar/schema.ts CalendarSearch",
     "packages/contracts/src/collection/types.ts CollectionStats",
     "packages/contracts/src/orders/schema.ts CascadeOption",
     "packages/contracts/src/search/schema.ts CollectionSearchSort",

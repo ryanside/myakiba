@@ -60,7 +60,8 @@ function useWarmDestinations(urls: readonly string[]) {
     const warmDestinations = async () => {
       for (const url of urls) {
         if (cancelled) return;
-        await router.preloadRoute({ to: url });
+        const [routes] = router.getMatchedRoutes(url);
+        await Promise.all(routes.map((route) => router.loadRouteChunk(route))).catch(console.error);
       }
       if (cancelled) return;
       for (const url of urls) downloadPageBackground(url);
@@ -119,7 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <SidebarMenuButton
                         isActive={isActive}
                         className="h-8 gap-2 px-2 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent data-active:bg-transparent data-active:font-medium data-active:text-foreground"
-                        render={<Link to={item.url} preload="intent" />}
+                        render={<Link to={item.url} />}
                       >
                         <span>{item.title}</span>
                         {isActive ? <ActiveDot /> : null}

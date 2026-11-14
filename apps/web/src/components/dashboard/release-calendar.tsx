@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/reui/badge";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { useInvalidateRead, useRead } from "@/data/client";
-import { calendar } from "@/data/resources/calendar";
+import { calendar, monthOf } from "@/data/resources/calendar";
 import { CalendarItemRow } from "@/components/calendar/calendar-item-row";
 import type { ReleaseItem } from "@/queries/dashboard";
 import { parseISO } from "date-fns";
@@ -73,8 +73,9 @@ function ReleaseCalendar({
   const invalidateReleases = useInvalidateRead(calendar.releases);
 
   const isControlled = controlledMonth != null && controlledYear != null;
-  const apiMonth = isControlled ? controlledMonth : internalMonth.getMonth() + 1;
-  const apiYear = isControlled ? controlledYear : internalMonth.getFullYear();
+  const { month: apiMonth, year: apiYear } = isControlled
+    ? { month: controlledMonth, year: controlledYear }
+    : monthOf(internalMonth);
   const displayDate = isControlled ? new Date(controlledYear, controlledMonth - 1) : internalMonth;
 
   const { isPending, isError, data, error } = useRead(calendar.releases, {

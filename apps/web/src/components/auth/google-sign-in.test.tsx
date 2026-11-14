@@ -8,6 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toast";
 import type { RouterAppContext } from "@/routes/__root";
 import { PassingTurnstile } from "../../../test/turnstile";
@@ -79,7 +80,10 @@ async function renderLogin() {
   const router = createRouter({
     routeTree: root.addChildren([login, dashboard]),
     history: createMemoryHistory({ initialEntries: ["/login"] }),
-    context: { readSession: async () => ({ session: null, unavailable: false }) },
+    context: {
+      queryClient: new QueryClient(),
+      readSession: async () => ({ session: null, unavailable: false }),
+    },
     defaultPendingMinMs: 0,
   });
   render(

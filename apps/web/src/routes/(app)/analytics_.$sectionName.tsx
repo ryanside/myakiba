@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useCallback } from "react";
 import { createFileRoute, notFound, stripSearchParams } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
+import { preload, preloadPage, useRead } from "@/data/client";
 import { analytics } from "@/data/resources/analytics";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 import {
@@ -9,6 +9,7 @@ import {
   analyticsSectionSearchSchema,
 } from "@myakiba/contracts/analytics/schema";
 import type {
+  AnalyticsSectionFilters,
   AnalyticsSectionSort,
   AnalyticsSectionSortOrder,
 } from "@myakiba/contracts/analytics/schema";
@@ -28,8 +29,26 @@ import { shownMessageOf } from "@/data/api";
 
 const KPI_LABELS = ["Unique", "Total Items", "Total Spent", "Avg. Spent"] as const;
 
+function sectionInputOf(sectionName: string, search: AnalyticsSectionFilters) {
+  return {
+    sectionName: analyticsSectionSchema.parse(sectionName),
+    filters: {
+      search: search.search ?? "",
+      limit: search.limit ?? DEFAULT_LIMIT,
+      offset: search.offset ?? 0,
+      sort: search.sort,
+      order: search.order,
+    },
+  };
+}
+
 export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
   validateSearch: analyticsSectionSearchSchema,
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, cause, params, deps }) =>
+    preloadPage(cause, () => [
+      preload(queryClient, analytics.section, sectionInputOf(params.sectionName, deps)),
+    ]),
   search: {
     middlewares: [stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0 })],
   },
@@ -55,20 +74,13 @@ export const Route = createFileRoute("/(app)/analytics_/$sectionName")({
 });
 
 function RouteComponent(): ReactNode {
-  const sectionName = analyticsSectionSchema.parse(Route.useParams().sectionName);
   const { currency, locale } = useUserPreferences();
   const { filters, setFilters } = useFilters("/(app)/analytics_/$sectionName");
+  const sectionInput = sectionInputOf(Route.useParams().sectionName, filters);
+  const { sectionName } = sectionInput;
+  const { limit, offset, search, sort, order } = sectionInput.filters;
 
-  const limit = filters.limit ?? DEFAULT_LIMIT;
-  const offset = filters.offset ?? 0;
-  const search = filters.search ?? "";
-  const sort = filters.sort;
-  const order = filters.order;
-
-  const { data, isPending, isError, error, isFetching } = useRead(analytics.section, {
-    sectionName,
-    filters: { search, limit, offset, sort, order },
-  });
+  const { data, isPending, isError, error, isFetching } = useRead(analytics.section, sectionInput);
 
   const handleSearchChange = useCallback(
     (value: string | number) => {
