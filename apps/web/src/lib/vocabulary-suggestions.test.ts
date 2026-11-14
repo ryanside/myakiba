@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ShopTerm, TagTerm } from "@myakiba/contracts/vocabulary/schema";
-import { normalizeTerm, rankTerms } from "./vocabulary-suggestions";
+import {
+  describeUses,
+  normalizeTerm,
+  rankTerms,
+  shopVariantGroups,
+  usesOf,
+} from "./vocabulary-suggestions";
 
 const term = (value: string, uses: number, day: number, orderUses = 0): ShopTerm => ({
   value,
@@ -96,5 +102,47 @@ describe("rankTerms over tags", () => {
 
     expect(rankTerms(tags, "FAV")).toEqual(["Favorite"]);
     expect(rankTerms(tags, "f")).toEqual(["Favorite", "fan art"]);
+  });
+});
+
+describe("shopVariantGroups", () => {
+  test("groups spellings that differ only in case or spacing, the most used first", () => {
+    const terms = [
+      term("amiami", 1, 1),
+      term("Mandarake", 4, 1),
+      term("Suruga-ya", 2, 1),
+      term("AmiAmi", 3, 1),
+      term("mandarake", 1, 1),
+      term("Ami Ami", 0, 1, 1),
+    ];
+
+    expect(shopVariantGroups(terms).map((group) => group.map((shop) => shop.value))).toEqual([
+      ["Mandarake", "mandarake"],
+      ["AmiAmi", "amiami", "Ami Ami"],
+    ]);
+  });
+
+  test("leaves out a shop with one spelling", () => {
+    expect(shopVariantGroups([term("AmiAmi", 3, 1), term("Ami", 1, 1)])).toEqual([]);
+  });
+});
+
+describe("usesOf", () => {
+  test("counts every Collection Item and Order the shops are saved on", () => {
+    expect(usesOf([term("AmiAmi", 3, 1, 1), term("amiami", 1, 1, 2)])).toEqual({
+      collectionItems: 4,
+      orders: 3,
+    });
+  });
+});
+
+describe("describeUses", () => {
+  test.each([
+    [{ collectionItems: 2, orders: 1 }, "2 Collection Items and 1 Order"],
+    [{ collectionItems: 1, orders: 0 }, "1 Collection Item"],
+    [{ collectionItems: 0, orders: 3 }, "3 Orders"],
+    [{ collectionItems: 0, orders: 0 }, "No Collection Items or Orders"],
+  ])("words %o as %s", (uses, words) => {
+    expect(describeUses(uses)).toBe(words);
   });
 });
