@@ -530,7 +530,9 @@ body {
 
 @utility collapse-motion {
   height: var(--collapsible-panel-height, var(--accordion-panel-height));
-  overflow: hidden;
+  /* Clips only the height it animates, so the focus rings of fields that fill its width still show. */
+  overflow-x: visible;
+  overflow-y: clip;
   transition-property: height, opacity;
   transition-duration: var(--motion-collapse);
   transition-timing-function: var(--ease-out);

@@ -74,7 +74,7 @@ export const ROW_CONTENT = "min-h-[37px]";
 // Reads and edits as the Collection grid's Price and Count cells do: plain text, a surface on hover,
 // the grid's editor while typing. It stays an input throughout, so the table's keys and an issue's
 // focus always find it. A touch screen has no hover, so there it always shows its edge.
-const INLINE_CELL = `${CELL_TRIGGER_CLASS_NAME} h-8 cursor-text border-transparent bg-transparent font-medium text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:border-transparent focus-visible:bg-muted focus-visible:font-normal focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent dark:hover:bg-muted/50 dark:focus-visible:bg-muted [@media(hover:none)]:border-input`;
+const INLINE_CELL = `${CELL_TRIGGER_CLASS_NAME} h-8 cursor-text border-transparent bg-transparent font-medium text-ellipsis text-foreground placeholder:text-foreground hover:bg-muted focus-visible:border-transparent focus-visible:bg-muted focus-visible:font-normal focus-visible:ring-1 focus-visible:ring-ring dark:bg-transparent dark:hover:bg-muted/50 dark:focus-visible:bg-muted [@media(hover:none)]:border-input`;
 
 const selectAll = (event: FocusEvent<HTMLInputElement>) => event.currentTarget.select();
 
