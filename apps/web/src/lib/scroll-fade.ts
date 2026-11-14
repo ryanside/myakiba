@@ -35,11 +35,6 @@ function fadeEdges(element: HTMLElement): void {
   }
 }
 
-function fadingList(target: EventTarget | null): HTMLElement | null {
-  const list = target instanceof Element ? target.closest(FADING) : null;
-  return list instanceof HTMLElement ? list : null;
-}
-
 export function startScrollFadeFallback(): () => void {
   if (CSS.supports("animation-timeline: scroll()")) return () => {};
 
@@ -47,8 +42,8 @@ export function startScrollFadeFallback(): () => void {
   // watched too.
   const resized = new ResizeObserver((entries) => {
     for (const { target } of entries) {
-      const list = fadingList(target);
-      if (list) fadeEdges(list);
+      const list = target.closest(FADING);
+      if (list instanceof HTMLElement) fadeEdges(list);
     }
   });
   let frame = 0;

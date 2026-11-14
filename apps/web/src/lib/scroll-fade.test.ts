@@ -4,7 +4,6 @@ import { startScrollFadeFallback } from "@/lib/scroll-fade";
 let stop = () => {};
 const browserCss = Object.getOwnPropertyDescriptor(globalThis, "CSS") ?? { value: CSS };
 
-/** Starts the fallback in a browser whose CSS answers `supported` for scroll timelines. */
 function startIn(supported: boolean) {
   Object.defineProperty(globalThis, "CSS", {
     configurable: true,
