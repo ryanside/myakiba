@@ -12,7 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FieldError } from "@/components/ui/field";
 import { FieldTrigger } from "@/components/ui/field-trigger";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
-import { ShopInput } from "@/components/shop-fields";
+import { ShopInput } from "@/components/vocabulary-fields";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { useRead, useRootedInfiniteRead } from "@/data/client";

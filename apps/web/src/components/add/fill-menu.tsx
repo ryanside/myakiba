@@ -7,7 +7,7 @@ import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import { ShopInput } from "@/components/shop-fields";
+import { ShopInput } from "@/components/vocabulary-fields";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
