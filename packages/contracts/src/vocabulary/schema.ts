@@ -37,11 +37,15 @@ export const vocabularyResponseSchema = z.object({
 
 export type VocabularyResponse = z.infer<typeof vocabularyResponseSchema>;
 
-const shopNameSchema = z.string().trim().min(1, "Shop is required").max(WRITE_LIMITS.shop);
-
-/** Renames the viewer's shop `from` to `to` everywhere it is saved. A `to` already in use merges the two. */
+/**
+ * Renames the viewer's shop `from` to `to` everywhere it is saved. A `to` already in use merges the
+ * two. `from` names a saved shop exactly as stored, so it is not trimmed.
+ */
 export const renameShopSchema = z
-  .strictObject({ from: shopNameSchema, to: shopNameSchema })
+  .strictObject({
+    from: z.string().min(1, "Shop is required").max(WRITE_LIMITS.shop),
+    to: z.string().trim().min(1, "Shop is required").max(WRITE_LIMITS.shop),
+  })
   .refine(({ from, to }) => from !== to, { error: "The new name matches the old one" });
 
 export type RenameShop = z.infer<typeof renameShopSchema>;
