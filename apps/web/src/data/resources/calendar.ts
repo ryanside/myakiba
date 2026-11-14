@@ -5,6 +5,10 @@ import { rootedRead } from "../client";
 
 type Month = { readonly month: number; readonly year: number };
 
+export function monthOf(date: Date): Month {
+  return { month: date.getMonth() + 1, year: date.getFullYear() };
+}
+
 export const calendar = {
   view: rootedRead("calendar", {
     key: ({ view, month, year }: CalendarQuery) => ["calendar", view, month, year] as const,

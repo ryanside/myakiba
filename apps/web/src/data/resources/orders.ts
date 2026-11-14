@@ -37,6 +37,7 @@ export const orders = {
     key: (filters: OrderFilters) => ["orders", filters] as const,
     load: getOrders,
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
   }),
   detail: rootedRead("orders", {
     key: (orderId: string) => ["order", orderId] as const,

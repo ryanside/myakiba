@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import { OnboardingProvider } from "@/components/onboarding/onboarding-dialog";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { routerOptions } from "@/router-options";
 import type { RouterAppContext } from "@/routes/__root";
 import { signedInSession } from "./session";
 
@@ -29,12 +30,29 @@ export const images: HTMLImageElement[] = [];
 export const decodedImages: HTMLImageElement[] = [];
 /** Images whose source contains one of these names never load or decode. */
 export const stalled = new Set<string>();
+/** The path and query of every API request, in order. */
+export const apiRequests: string[] = [];
 
-globalThis.fetch = Object.assign(async () => Response.json(session), {
-  preconnect: realFetch.preconnect,
-});
+type Respond = (request: Request) => Response | Promise<Response>;
+const answerWithSession: Respond = () => Response.json(session);
+let respond = answerWithSession;
+
+export function answerFetch(answer: Respond) {
+  respond = answer;
+}
+
+globalThis.fetch = Object.assign(
+  async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/")) apiRequests.push(url.pathname + url.search);
+    return respond(request);
+  },
+  { preconnect: realFetch.preconnect },
+);
 const { AppSidebar } = await import("@/components/sidebar/app-sidebar");
 const { Route: appRoute } = await import("@/routes/(app)/route");
+const { Route: collectionRoute } = await import("@/routes/(app)/collection");
 
 beforeEach(() => {
   globalThis.requestAnimationFrame = (renderFrame) => {
@@ -64,6 +82,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  apiRequests.length = 0;
+  respond = answerWithSession;
   for (const image of images) image.dispatchEvent(new Event("load"));
   images.length = 0;
   decodedImages.length = 0;
@@ -89,7 +109,10 @@ export function flushFrame() {
   for (const renderFrame of pendingFrames) renderFrame(performance.now());
 }
 
-/** Renders the sidebar under the real app route at /dashboard. Orders' code loads once `ordersCode` settles. */
+/**
+ * Renders the sidebar under the real app route at /dashboard, routed the way the app routes.
+ * Orders' code loads once `ordersCode` settles. Collection is the real page.
+ */
 export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resolve()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const root = createRootRouteWithContext<RouterAppContext>()({ component: Outlet });
@@ -115,11 +138,23 @@ export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resol
   const analytics = createRoute({ getParentRoute: () => app, path: "/analytics" });
   const orders = createRoute({ getParentRoute: () => app, path: "/orders" });
   const settings = createRoute({ getParentRoute: () => app, path: "/settings" });
+  const collection = createRoute({
+    getParentRoute: () => app,
+    path: "/collection",
+    validateSearch: collectionRoute.options.validateSearch,
+    component: collectionRoute.options.component,
+  }).update({
+    // The real loader's types name the app's route tree, not this one.
+    loaderDeps: collectionRoute.options.loaderDeps,
+    loader: collectionRoute.options.loader,
+  } as never);
   const router = createRouter({
-    routeTree: root.addChildren([app.addChildren([dashboard, analytics, orders, settings])]),
+    ...routerOptions,
+    routeTree: root.addChildren([
+      app.addChildren([dashboard, analytics, orders, settings, collection]),
+    ]),
     history: createMemoryHistory({ initialEntries: ["/dashboard"] }),
-    context: { readSession: async () => ({ session, unavailable: false }) },
-    defaultPreload: false,
+    context: { queryClient, readSession: async () => ({ session, unavailable: false }) },
     defaultPendingMinMs: 0,
   });
   const ordersImported = Promise.withResolvers<null>();
@@ -138,6 +173,7 @@ export async function renderSidebar(ordersCode: Promise<unknown> = Promise.resol
   await screen.findByRole("heading", { name: "Dashboard" });
   return {
     router,
+    queryClient,
     ordersImported: ordersImported.promise,
   };
 }

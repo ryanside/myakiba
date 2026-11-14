@@ -8,6 +8,7 @@ import {
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
+import { QueryClient } from "@tanstack/react-query";
 import type { RouterAppContext } from "@/routes/__root";
 import type { Session } from "@/lib/session";
 import { signedInSession } from "../../../test/session";
@@ -74,7 +75,10 @@ function makeRouter(path: string, current: Session = session) {
   return createRouter({
     routeTree: root.addChildren([app.addChildren([dashboard, orders]), login, signup]),
     history: createMemoryHistory({ initialEntries: [path] }),
-    context: { readSession: async () => ({ session: current, unavailable: false }) },
+    context: {
+      queryClient: new QueryClient(),
+      readSession: async () => ({ session: current, unavailable: false }),
+    },
     defaultPendingMinMs: 0,
   });
 }

@@ -64,13 +64,14 @@ const pages = [
 const routeTree = root.addChildren([app.addChildren([start, ...pages])]);
 
 async function openFromStart(href: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClients.push(queryClient);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ["/start"] }),
+    context: { queryClient },
   });
   await router.load();
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  queryClients.push(queryClient);
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />

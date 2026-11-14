@@ -23,6 +23,7 @@ type Membership = {
 export const wishlist = defineResource("wishlist", {
   items: infiniteRead({
     pageSize: WISHLIST_PAGE_SIZE,
+    staleTime: 30_000,
     failure: "Failed to load Wishlist",
     // The server filters by today only for the dated views. Keying All by day would
     // refetch it at midnight and drop a move that is still saving.

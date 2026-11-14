@@ -2,7 +2,7 @@ import { focusManager } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useSyncExternalStore } from "react";
 
-function readToday(): string {
+export function readToday(): string {
   return format(new Date(), "yyyy-MM-dd");
 }
 

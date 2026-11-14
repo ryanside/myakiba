@@ -21,6 +21,7 @@ export const searches = {
     key: (params: ItemDatabaseSearch) => ["item-database-items", params] as const,
     load: getItemDatabaseItems,
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
   }),
   entries: rootedInfiniteRead("entries", {
     key: (entrySearch: string) => ["entries", entrySearch] as const,

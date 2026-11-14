@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
+import { QueryClient } from "@tanstack/react-query";
 import { Result } from "better-result";
-import { defineCommand, rootedRead } from "./client";
+import { defineCommand, preload, preloadPage, rootedRead } from "./client";
 import { orders } from "./resources/orders";
 import { wishlist } from "./resources/wishlist";
 
@@ -86,4 +87,45 @@ test("a write refetches only keys of the families it names, at one time", () => 
     refetchKeys: () => [{ queryKey: ["orders"] }],
     persist,
   });
+});
+
+test("a preload fills the cache entry its screen reads and resolves even when the read fails", async () => {
+  const queryClient = new QueryClient();
+  const read = rootedRead("dashboard", {
+    key: (month: string) => ["dashboard", month] as const,
+    load: async (month: string) =>
+      month === "2026-11"
+        ? Result.ok({ month })
+        : Result.err(new Error("The server didn't answer.")),
+  });
+
+  await preload(queryClient, read, "2026-11");
+  expect(queryClient.getQueryData(read.key("2026-11"))).toEqual({ month: "2026-11" });
+
+  expect(await preload(queryClient, read, "2026-12")).toBeUndefined();
+  expect(queryClient.getQueryState(read.key("2026-12"))?.status).toBe("error");
+});
+
+test("a route waits for its preloads on a hover, starts them on a navigation and leaves a navigation within the page to the page", async () => {
+  let finishLoad = () => {};
+  const load = new Promise<void>((resolve) => {
+    finishLoad = resolve;
+  });
+  const started: string[] = [];
+  const preloads = (cause: string) => () => {
+    started.push(cause);
+    return [load];
+  };
+
+  let hoverSettled = false;
+  const hover = preloadPage("preload", preloads("preload")).then(() => {
+    hoverSettled = true;
+  });
+  await preloadPage("enter", preloads("enter"));
+  await preloadPage("stay", preloads("stay"));
+  expect(started).toEqual(["preload", "enter"]);
+  expect(hoverSettled, "a hover waits for its reads").toBe(false);
+  finishLoad();
+  await hover;
+  expect(hoverSettled).toBe(true);
 });

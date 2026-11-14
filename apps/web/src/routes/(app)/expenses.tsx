@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRead } from "@/data/client";
-import { expenses } from "@/data/resources/expenses";
+import { preload, preloadPage, useRead } from "@/data/client";
+import { expenses, shopTableInput } from "@/data/resources/expenses";
 import * as z from "zod";
 import { EXPENSE_SCOPES, expenseFiltersSchema } from "@myakiba/contracts/expenses/schema";
 import type { ExpenseFilters, ExpenseScope } from "@myakiba/contracts/expenses/schema";
@@ -27,8 +27,22 @@ const TAB_LABELS = {
   shipping: "Shipping",
 } satisfies Record<ExpenseScope, string>;
 
+function expensesViewOf(search: z.infer<typeof expensesSearchSchema>) {
+  return {
+    tab: search.tab ?? "collection",
+    filters: { dateStart: search.dateStart, dateEnd: search.dateEnd, shop: search.shop },
+  };
+}
+
 export const Route = createFileRoute("/(app)/expenses")({
   validateSearch: expensesSearchSchema,
+  loaderDeps: ({ search }) => expensesViewOf(search),
+  loader: ({ context: { queryClient }, cause, deps: { tab, filters } }) =>
+    preloadPage(cause, () => [
+      preload(queryClient, expenses.filterOptions),
+      preload(queryClient, expenses[tab], filters),
+      preload(queryClient, expenses.shops, shopTableInput(tab, filters)),
+    ]),
   component: RouteComponent,
   head: () => ({
     meta: [{ name: "description", content: "your expenses" }, { title: "Expenses - myakiba" }],
@@ -39,12 +53,7 @@ function RouteComponent(): ReactNode {
   const navigate = useNavigate({ from: Route.fullPath });
   const { currency, dateFormat, locale } = useUserPreferences();
   const search = Route.useSearch();
-  const tab: ExpenseScope = search.tab ?? "collection";
-  const filters: ExpenseFilters = {
-    dateStart: search.dateStart,
-    dateEnd: search.dateEnd,
-    shop: search.shop,
-  };
+  const { tab, filters } = expensesViewOf(search);
   const [collectionChart, setCollectionChart] = useState<CollectionChart>("cumulative");
   const [ordersChart, setOrdersChart] = useState<OrdersChart>("cumulative");
   const [shippingChart, setShippingChart] = useState<ShippingChart>("period");

@@ -22,11 +22,12 @@ import {
 import { ViewToggle } from "@/components/ui/view-toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { buttonVariants } from "@/components/ui/button";
-import { useResourceMutation } from "@/data/client";
-import { setWishlistMembership } from "@/data/resources/wishlist";
+import { preload, preloadPage, useResourceMutation } from "@/data/client";
+import { setWishlistMembership, wishlist } from "@/data/resources/wishlist";
 import { useMoveWishlistItemsMutation, useWishlistItemsQuery } from "@/hooks/use-wishlist";
 import { VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
+import { readToday } from "@/hooks/use-today";
 
 const RELEASE_FILTERS = {
   all: { label: "All", emptyTitle: "Your Wishlist is empty" },
@@ -37,6 +38,11 @@ const RELEASE_FILTERS = {
 export const Route = createFileRoute("/(app)/wishlist")({
   validateSearch: wishlistSearchSchema,
   search: { middlewares: [stripSearchParams({ releaseStatus: "all" })] },
+  loaderDeps: ({ search: { releaseStatus } }) => ({ releaseStatus }),
+  loader: ({ context: { queryClient }, cause, deps: { releaseStatus } }) =>
+    preloadPage(cause, () => [
+      preload(queryClient, wishlist.items, { releaseStatus, today: readToday() }),
+    ]),
   component: RouteComponent,
   head: () => ({
     meta: [

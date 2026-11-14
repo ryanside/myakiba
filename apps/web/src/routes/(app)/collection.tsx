@@ -4,6 +4,8 @@ import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { KPICard, KPIGroup } from "@/components/ui/kpi-card";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { useCollectionQuery } from "@/hooks/use-collection";
+import { preload, preloadPage } from "@/data/client";
+import { collection } from "@/data/resources/collection";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { PageHeader } from "@/components/page-header";
 import { CollectionQuickFilters } from "@/components/collection/collection-quick-filters";
@@ -13,6 +15,9 @@ import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
 export const Route = createFileRoute("/(app)/collection")({
   component: RouteComponent,
   validateSearch: collectionSearchSchema,
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, cause, deps }) =>
+    preloadPage(cause, () => [preload(queryClient, collection.list, deps)]),
   search: {
     middlewares: [
       stripSearchParams({ limit: DEFAULT_LIMIT, offset: 0, sort: "createdAt", order: "desc" }),
