@@ -19,6 +19,7 @@ type Saved = { readonly kind: "collection" | "order"; shop: string };
 let saved: Saved[];
 let renames: RenameShop[];
 let failRenames: boolean;
+let failRead: boolean;
 
 const seed = (shop: string, collectionItems: number, orders: number): Saved[] => [
   ...Array.from({ length: collectionItems }, () => ({ kind: "collection" as const, shop })),
@@ -50,7 +51,10 @@ globalThis.fetch = Object.assign(
   async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const { pathname } = new URL(request.url);
-    if (pathname === "/api/vocabulary") return Response.json(vocabularyOf(saved));
+    if (pathname === "/api/vocabulary") {
+      if (failRead) return new Response(null, { status: 500 });
+      return Response.json(vocabularyOf(saved));
+    }
     if (pathname === "/api/vocabulary/shops/rename") {
       if (failRenames) return new Response(null, { status: 500 });
       const rename: RenameShop = await request.json();
@@ -75,6 +79,7 @@ beforeEach(() => {
   saved.push(...seed("Mandarake", 1, 0));
   renames = [];
   failRenames = false;
+  failRead = false;
 });
 afterEach(cleanup);
 afterAll(() => {
@@ -144,6 +149,20 @@ test("merges into the spelling the user keeps", async () => {
   await waitFor(() => expect(renames).toEqual([{ from: ["AmiAmi", "Ami Ami"], to: "amiami" }]));
 });
 
+test.each([
+  ["one Collection Item", seed("mandarake", 1, 0), "1 Collection Item changes"],
+  ["one Order", seed("mandarake", 0, 1), "1 Order changes"],
+  ["two Collection Items", seed("mandarake", 2, 0), "2 Collection Items change"],
+])("a merge of %s says what changes", async (_case, merged, changes) => {
+  saved = [...seed("Mandarake", 3, 0), ...merged];
+  openShops();
+
+  fireEvent.click(within(await merges()).getByRole("button", { name: "Merge into “Mandarake”" }));
+
+  const dialog = await screen.findByRole("dialog", { name: "Merge into “Mandarake”?" });
+  expect(dialog.textContent).toContain(`${changes} from “mandarake” to “Mandarake”.`);
+});
+
 const renameDialog = (shop: string) => ({ name: `Rename “${shop}”` });
 
 async function openRename(shop: string) {
@@ -211,4 +230,15 @@ test("a user with no shops sees that there are none", async () => {
   openShops();
 
   expect(await screen.findByText("No shops yet")).toBeTruthy();
+});
+
+test("a failed read says the shops could not load and tries again", async () => {
+  failRead = true;
+  openShops();
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toBe("Couldn't load your shops");
+  failRead = false;
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await yourShops()).toBeTruthy();
 });

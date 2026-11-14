@@ -44,7 +44,7 @@ function listed(shops: readonly string[]): string {
 }
 
 export function Shops() {
-  const { data, isPending, isError, error } = useRead(vocabulary);
+  const { data, isPending, isError } = useRead(vocabulary);
   const retry = useInvalidateRead(vocabulary);
 
   if (isPending) {
@@ -64,7 +64,7 @@ export function Shops() {
     return (
       <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-pretty text-sm text-destructive" role="alert">
-          {error.message}
+          Couldn&apos;t load your shops
         </p>
         <Button variant="outline" size="sm" onClick={() => retry()}>
           Try again
@@ -139,6 +139,8 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
   if (!keep || !mostUsed) return null;
   const merged = spellings.filter((shop) => shop !== keep);
   const from = merged.map((shop) => shop.value);
+  const changes = usesOf(merged);
+  const verb = changes.collectionItems + changes.orders === 1 ? "changes" : "change";
 
   return (
     <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
@@ -166,7 +168,7 @@ function MergeGroup({ spellings }: { readonly spellings: readonly ShopTerm[] }) 
           </Button>
         }
         title={`Merge into ${quoted(keep.value)}?`}
-        description={`${describeUses(usesOf(merged))} change from ${listed(from)} to ${quoted(keep.value)}.`}
+        description={`${describeUses(changes)} ${verb} from ${listed(from)} to ${quoted(keep.value)}.`}
         confirmLabel="Merge"
         variant="default"
         icon={GitMergeIcon}
