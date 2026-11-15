@@ -11,11 +11,12 @@ import { MAX_TAGS, ShopInput } from "@/components/vocabulary-fields";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
+import { readCount } from "@/lib/count-input";
 import type { AddController } from "./add-controller";
 import type { RowOverrides } from "./add-draft";
 import { AmountInput, EnumSelect, LabeledField, TagsField } from "@/components/form-fields";
 import type { SharedFields } from "./commit-input";
-import { hasOwnValue, readCount } from "./row-fields";
+import { hasOwnValue } from "./row-fields";
 import type { Field, FieldId } from "./row-fields";
 
 type Condition = (typeof CONDITIONS)[number];

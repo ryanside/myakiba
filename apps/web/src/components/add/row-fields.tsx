@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
+import { readCount } from "@/lib/count-input";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
@@ -102,11 +103,6 @@ export function FieldGroup({
 
 const fieldId = (field: FieldId, itemId: string) =>
   field === "price" ? priceFieldId(itemId) : `add-${field}-${itemId}`;
-
-export function readCount(text: string): number | undefined {
-  const count = Number.parseInt(text, 10);
-  return Number.isNaN(count) ? undefined : Math.min(Math.max(count, 1), 999);
-}
 
 /** What a row's Price will save, or null when the typed text cannot be read. */
 export function plannedPrice(

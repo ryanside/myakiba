@@ -21,7 +21,7 @@ import { ShopInput, TagsInput } from "@/components/vocabulary-fields";
 import { useForm } from "@tanstack/react-form";
 import { useRead } from "@/data/client";
 import { items } from "@/data/resources/item";
-import { readCount } from "../add/row-fields";
+import { readCount } from "@/lib/count-input";
 import { Label } from "../ui/label";
 import {
   Select,

@@ -1,4 +1,4 @@
-import { readCount } from "../add/row-fields";
+import { readCount } from "@/lib/count-input";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
