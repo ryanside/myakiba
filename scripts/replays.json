@@ -4876,6 +4876,20 @@
         "a list scrolled to its end has no foot fade",
         "a list that opens later, as a menu does, has no foot fade when it has nothing to scroll"
       ]
+    },
+    {
+      "fix": "2cf92600d0d251942f2fe56922ac2f7360758e6f",
+      "bug": "The Dashboard and the Orders page judged each Order Item's price by its Order's status, while Expenses judged Unpaid Costs by the item's own status and Order Item Spend by the Order's, and narrowed Unpaid Costs by its date range, so the three pages showed different Unpaid Costs and Spend.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Ordered Order holding an Ordered item, a Paid item and a shipping fee > the Dashboard, the Orders page and Expenses show the same Unpaid Costs with no filter",
+        "an Ordered Order holding an Ordered item, a Paid item and a shipping fee > an Expenses date range does not hide an Unpaid Order",
+        "an Ordered Order holding an Ordered item, a Paid item and a shipping fee > an Expenses Shop filter for another Shop leaves no Unpaid Costs",
+        "each item's price follows its own status and each Order's fees follow the Order's > an Ordered item on a Paid Order counts as Unpaid Costs on every page",
+        "each item's price follows its own status and each Order's fees follow the Order's > Expenses counts a Paid item on an Ordered Order as Order Item Spend, and an Ordered item on a Paid Order as neither",
+        "each item's price follows its own status and each Order's fees follow the Order's > Scoped Shop Spend for Orders adds up to Order Spend",
+        "each item's price follows its own status and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way"
+      ]
     }
   ],
   "lint": [
