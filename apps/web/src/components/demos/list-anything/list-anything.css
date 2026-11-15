@@ -75,7 +75,6 @@
     mask-image: none;
   }
 
-  /* Rows: select, expand, Order, Items, Total, Status, Paid, actions */
   & .mk-list-anything-row {
     position: relative;
     display: grid;

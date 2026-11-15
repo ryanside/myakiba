@@ -6,18 +6,6 @@ import { DisclosureIcon, ExpandIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./order-cascade.css";
 
-// In the orders table, an order's Status goes from Ordered to Shipped, and the
-// items in its open subtable follow. Beats: the pointer opens the order's
-// Status select, the list opens over the cell with Ordered under the pointer,
-// it picks Shipped, the order's status rolls in place, then a beat later each
-// item's status rolls top to bottom. The reset is the same select set back
-// to Ordered, so the items are seen following the order both ways.
-//
-// In the app an order edit sends its Status as a cascade, so every item's
-// status really changes. They update together when the items refetch; the
-// stagger here is an illustration of that one update. The edit cascades only
-// Status, so every Paid box stays as it was: the order was paid up front.
-
 type Status = "Ordered" | "Shipped" | "Owned";
 
 type S = {
@@ -137,7 +125,6 @@ function Check() {
   return <span className={cls("check")} />;
 }
 
-/** The Paid column's checkbox, as PaidCheckbox draws it */
 function Paid({ paid }: { readonly paid: boolean }) {
   return (
     <span className={`${cls("cell")} ${cls("col-paid")}`}>
@@ -226,7 +213,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                   <span className={`${cls("cell")} ${cls("num")} ${cls("col-items")}`}>Items</span>
                   <span className={`${cls("cell")} ${cls("num")} ${cls("col-total")}`}>Total</span>
                   <span className={cls("cell")}>Status</span>
-                  <span className={`${cls("cell")} ${cls("col-paid")} ${cls("head-last")}`}>
+                  <span className={`${cls("cell")} ${cls("col-paid")} ${cls("head-over-actions")}`}>
                     Paid
                   </span>
                 </div>

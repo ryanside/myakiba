@@ -17,7 +17,6 @@ type KanbanOrder = {
   readonly total: number;
   readonly image: string | null;
   readonly paid: boolean;
-  /** Null for an order the bottom edge cuts before its Paid row and dates. */
   readonly dates: OrderDates | null;
 };
 

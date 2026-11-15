@@ -7,39 +7,14 @@ import { DisclosureIcon, ExpandIcon, NextIcon, PreviousIcon } from "@/lib/icons"
 import type { DemoProps } from "../demo-props";
 import "./order-lifecycle.css";
 
-// One preorder's whole life on its own page, where paying and shipping are
-// separate. The collector opens Edit, ticks Paid beside the Payment Date,
-// picks that date from the calendar, and presses Update: the stepper stays
-// on Ordered while the Payment line under it turns from Unpaid to Paid with
-// its date, the item's Paid box follows (Edit cascades every field to the
-// items by default), and a beat later the dashboard's totals roll in the
-// satellite. Then the same sheet, sped up, takes Status to Shipped and to
-// Owned on the three-step line, months apart. Plays once, as it scrolls into
-// view, and holds on Owned.
-//
-// The totals follow apps/server/src/routers/dashboard/module.ts,
-// apps/server/src/lib/order-money.ts and overview-tab.tsx. The order is one
-// $189.00 item with $14.50 shipping:
-// - Paid: Unpaid Costs (unpaid item prices, plus unpaid orders' fees) falls
-//   by $203.50, and Total Spent (paid item prices, plus paid orders' fees)
-//   rises by the same $203.50. One fewer order is unpaid.
-// - Shipped: no total changes.
-// - Owned: Total Items (Owned collection items) rises by 1, and Active Orders
-//   (orders not Owned) falls by 1.
-
 type S = {
-  /** The order's saved status, as a step: 1 Ordered, 2 Shipped, 3 Owned */
   readonly step: number;
-  /** The order's saved Paid, which the edit cascades to its item */
   readonly paid: boolean;
-  /** What the dashboard has caught up with */
   readonly counted: "before" | "paid" | "owned";
   readonly sheet: boolean;
   /** The Status field in the sheet */
   readonly formStep: number;
-  /** The Paid box beside the sheet's Payment Date */
   readonly formPaid: boolean;
-  /** How many of DATES the sheet holds, in order */
   readonly formDates: number;
   readonly menu: boolean;
   readonly calendar: boolean;
@@ -64,8 +39,14 @@ const STATUSES: readonly Status[] = STEPS.map((step) => step.status);
 
 const PAYMENT_DATE = "07/14/2026";
 
-/** The sheet's dates as its fields write them, in the order the story fills them */
-const DATES = ["Mar 2, 2026", "Jul 14, 2026", "Aug 30, 2026", "Sep 6, 2026"] as const;
+const DATES = {
+  order: "Mar 2, 2026",
+  payment: "Jul 14, 2026",
+  shipping: "Aug 30, 2026",
+  collection: "Sep 6, 2026",
+} as const;
+type DateField = keyof typeof DATES;
+const DATE_FILL_ORDER: readonly DateField[] = ["order", "payment", "shipping", "collection"];
 
 const statusOf = (step: number): Status => STATUSES.at(step - 1) ?? "Ordered";
 
@@ -109,8 +90,7 @@ const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies
   Point
 >;
 
-/** The date field of each step after Ordered */
-const DATE_FIELD = ["", "f-shipped", "f-owned"];
+const DATE_TARGET_OF_STEP = { 2: "f-shipped", 3: "f-owned" } as const;
 
 async function press(a: Act<S>, target: string, at: Point, ms: number) {
   await a.moveCursor({ at: target, ...at }, { duration: ms });
@@ -118,7 +98,6 @@ async function press(a: Act<S>, target: string, at: Point, ms: number) {
   await a.click();
 }
 
-/** The first update, at a person's pace: Paid ticked, its date from the calendar. */
 async function markPaid(a: Act<S>) {
   a.mark("edit");
   await a.click({ at: "edit", x: 0.78, y: 0.6 });
@@ -153,14 +132,14 @@ async function markPaid(a: Act<S>) {
 }
 
 /** The same sheet, sped up: months pass between one update and the next. */
-async function lapse(a: Act<S>, step: number) {
+async function lapse(a: Act<S>, step: keyof typeof DATE_TARGET_OF_STEP) {
   await press(a, "edit", { x: 0.78, y: 0.6 }, 440);
   await a.set({ sheet: true });
   await a.wait(260);
   await press(a, "f-status", { x: 0.84, y: 0.6 }, 260);
   a.put({ formStep: step });
   await a.wait(90);
-  await press(a, DATE_FIELD.at(step - 1) ?? "f-owned", { x: 0.86, y: 0.6 }, 260);
+  await press(a, DATE_TARGET_OF_STEP[step], { x: 0.86, y: 0.6 }, 260);
   a.put({ formDates: step + 1 });
   await a.wait(90);
   await press(a, "update", { x: 0.78, y: 0.6 }, 300);
@@ -170,7 +149,6 @@ async function lapse(a: Act<S>, step: number) {
 async function script(a: Act<S>) {
   await a.wait(400);
   await markPaid(a);
-  // The Payment line turns while the hand leaves the page; the totals a beat later
   const leave = a.moveCursor("rest", { duration: 700 });
   await a.wait(900);
   await leave;
@@ -213,7 +191,6 @@ function StatusText({
   );
 }
 
-/** PaymentBadge: Unpaid in warning, Paid in success, as ORDER_PAYMENT_DISPLAY paints them */
 function PaymentBadge({ paid }: { readonly paid: boolean }) {
   return (
     <span className="mk-order-lifecycle-badge" data-paid={paid || undefined}>
@@ -222,7 +199,6 @@ function PaymentBadge({ paid }: { readonly paid: boolean }) {
   );
 }
 
-/** PaidCheckbox, ticked for paid */
 function Check({ checked, target }: { readonly checked: boolean; readonly target?: string }) {
   return (
     <span
@@ -272,7 +248,6 @@ function Hero({ s, compact }: { readonly s: S; readonly compact: boolean }) {
   );
 }
 
-/** The Progress stepper, as OrderSummary's Timeline draws it, and its Payment line */
 function Progress({ s, compact }: { readonly s: S; readonly compact: boolean }) {
   const step = s.step;
   return (
@@ -335,7 +310,6 @@ function Costs() {
   );
 }
 
-/** The order's one item: its status and Paid follow the order's, cascaded by the edit */
 function Items({ s }: { readonly s: S }) {
   return (
     <section className="mk-order-lifecycle-items">
@@ -384,7 +358,6 @@ function Field({
   filler,
 }: {
   readonly label?: string;
-  /** A whole label row in place of `label` */
   readonly head?: ReactNode;
   readonly target?: string;
   readonly children?: ReactNode;
@@ -404,18 +377,16 @@ function Field({
   );
 }
 
-/** One of DATES, the nth the story fills */
-function DateValue({ s, nth }: { readonly s: S; readonly nth: number }) {
-  const set = s.formDates >= nth;
+function DateValue({ s, field }: { readonly s: S; readonly field: DateField }) {
+  const set = s.formDates > DATE_FILL_ORDER.indexOf(field);
   return (
     <span className="mk-order-lifecycle-date" data-empty={!set || undefined}>
       <HugeiconsIcon icon={Calendar01Icon} size={16} strokeWidth={1.5} />
-      <Roll variant="fade">{set ? (DATES.at(nth - 1) ?? "") : "Select date"}</Roll>
+      <Roll variant="fade">{set ? DATES[field] : "Select date"}</Roll>
     </span>
   );
 }
 
-/** PaymentDateLabel: the Paid box sits beside the Payment Date's label */
 function PaymentDateLabel({ s }: { readonly s: S }) {
   return (
     <span className="mk-order-lifecycle-label mk-order-lifecycle-label--payment">
@@ -463,22 +434,22 @@ function Sheet({ s, compact }: { readonly s: S; readonly compact: boolean }) {
         {compact ? null : (
           <div className="mk-order-lifecycle-pair">
             <Field label="Order Date">
-              <DateValue s={s} nth={1} />
+              <DateValue s={s} field="order" />
             </Field>
             <Field filler={[44, 58]} />
           </div>
         )}
         <div className="mk-order-lifecycle-pair">
           <Field head={<PaymentDateLabel s={s} />} target="f-payment">
-            <DateValue s={s} nth={2} />
+            <DateValue s={s} field="payment" />
           </Field>
           <Field label="Shipping Date" target="f-shipped">
-            <DateValue s={s} nth={3} />
+            <DateValue s={s} field="shipping" />
           </Field>
         </div>
         <div className="mk-order-lifecycle-pair">
           <Field label="Collection Date" target="f-owned">
-            <DateValue s={s} nth={4} />
+            <DateValue s={s} field="collection" />
           </Field>
           <Field filler={[70, 40]} />
         </div>

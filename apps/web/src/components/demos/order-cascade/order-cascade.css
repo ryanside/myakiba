@@ -50,7 +50,6 @@
   box-sizing: content-box;
 }
 
-/* Order rows: select, expand, Order, Shop, Items, Total, Status, Paid, actions */
 .mk-order-cascade .mk-order-cascade-row {
   display: grid;
   grid-template-columns: 28px 28px 228px 136px 72px 112px 132px 56px 72px;
@@ -68,12 +67,11 @@
   display: none;
 }
 
-/* The header's Paid runs over the actions column, as an empty header does */
-.mk-order-cascade .mk-order-cascade-head-last {
+.mk-order-cascade .mk-order-cascade-head-over-actions {
   grid-column: span 2;
 }
 
-.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-head-last {
+.mk-order-cascade .ss-stage[data-layout="compact"] .mk-order-cascade-head-over-actions {
   grid-column: auto;
 }
 
@@ -315,7 +313,6 @@
 
 .mk-order-cascade .mk-order-cascade-sub-row {
   display: grid;
-  /* Price, Status and Paid sit under the order's Total, Status and Paid */
   grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px 56px;
   align-items: center;
   padding: 6px 0;

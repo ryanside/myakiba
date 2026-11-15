@@ -6,22 +6,6 @@ import { ExpandIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./customs-fees.css";
 
-// A customs bill arrives for an order that has shipped. In the orders table
-// the pointer opens the order's Total, the Fees & Charges popover the app
-// draws there (PopoverMultiInputCell). Duties is double-clicked and 18.40
-// typed over it, then Tariffs and 32.00, then Save. The popover closes and the
-// Total rolls at once, as the cell's pending total does. A beat later the
-// Expenses page's "Spend by cost type" card, shown as a satellite, rolls its
-// Duties and Tariffs lines and its bar's segments widen. Plays once.
-//
-// The math holds. The order's Total is its two items plus its fees. The
-// order is Shipped and its Paid box is ticked, a Paid Order, so its fees
-// count as Spend; the card is the whole Orders scope, and its five lines add
-// up to the Order Spend it splits.
-// Misc has no line because the app leaves out a cost type with nothing spent.
-// The popover has no total of its own: the app updates the Total cell only
-// once the fees are saved.
-
 type Field = "duties" | "tariffs";
 
 type S = {
@@ -239,7 +223,6 @@ function StatusValue({ status }: { readonly status: Status }) {
   );
 }
 
-/** The Paid column's checkbox, as PaidCheckbox draws it */
 function Paid({ paid }: { readonly paid: boolean }) {
   return (
     <span className={`${cls("cell")} ${cls("col-paid")}`}>

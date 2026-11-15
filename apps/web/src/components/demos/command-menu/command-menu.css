@@ -376,7 +376,6 @@
     background: var(--mk-ordered);
   }
 
-  /* PaymentBadge: ThemedBadge's success-light, beside the status */
   & .mk-command-menu-badge {
     display: inline-flex;
     align-items: center;

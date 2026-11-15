@@ -221,7 +221,6 @@ function Checkbox() {
   );
 }
 
-/** The Paid column's checkbox, as PaidCheckbox draws it. */
 function PaidBox({ paid }: { readonly paid: boolean }) {
   return (
     <span

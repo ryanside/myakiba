@@ -64,7 +64,6 @@
     line-height: 22px;
   }
 
-  /* The order's header: thumbnail, title, status and payment, the shop, Edit */
   .mk-order-lifecycle-hero {
     display: flex;
     align-items: flex-start;
@@ -190,7 +189,6 @@
     background: var(--mk-owned);
   }
 
-  /* PaymentBadge: ThemedBadge's warning-light for Unpaid, success-light for Paid */
   .mk-order-lifecycle-badge {
     display: inline-flex;
     flex: none;
@@ -234,7 +232,6 @@
     vertical-align: top;
   }
 
-  /* PaidCheckbox: an empty box, or the primary fill with its tick */
   .mk-order-lifecycle-check {
     display: grid;
     flex: none;
@@ -272,7 +269,6 @@
     }
   }
 
-  /* The Payment line under the stepper, as PaymentLine draws it */
   .mk-order-lifecycle-payment {
     display: flex;
     align-items: center;
