@@ -17,7 +17,7 @@ import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import type { AddController } from "./add-controller";
 import type { DraftRow, RowOverrides } from "./add-draft";
-import { EnumSelect, LabeledField, TagsField } from "./add-fields";
+import { EnumSelect, LabeledField, TagsField } from "@/components/form-fields";
 import { priceFieldId } from "./commit-input";
 import type { AddItem, CommitIssue, DestinationForm } from "./commit-input";
 

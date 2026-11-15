@@ -13,7 +13,7 @@ import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import type { AddController } from "./add-controller";
 import type { RowOverrides } from "./add-draft";
-import { AmountInput, EnumSelect, LabeledField, TagsField } from "./add-fields";
+import { AmountInput, EnumSelect, LabeledField, TagsField } from "@/components/form-fields";
 import type { SharedFields } from "./commit-input";
 import { hasOwnValue, readCount } from "./row-fields";
 import type { Field, FieldId } from "./row-fields";
