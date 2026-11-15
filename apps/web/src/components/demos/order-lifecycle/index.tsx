@@ -319,7 +319,7 @@ function Items({ s }: { readonly s: S }) {
         <span className="mk-order-lifecycle-item-text">
           <Bar w={96} h={7} tone={3} />
           <span className="mk-order-lifecycle-item-meta">
-            <Bar w={44} h={6} tone={2} />
+            <Bar w={12} h={6} tone={2} />
             <span className="mk-order-lifecycle-category">Prepainted</span>
           </span>
         </span>
