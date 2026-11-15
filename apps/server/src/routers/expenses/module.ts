@@ -88,7 +88,7 @@ export const Expenses = {
       const [totals, series, unpaid] = await Promise.all([
         getOrderAggregates(scope.tx, userId, filters),
         getOrderAggregates(scope.tx, userId, filters, { bucket }),
-        getUnpaidCosts(scope.tx, userId, filters),
+        getUnpaidCosts(scope.tx, userId, filters.shop),
       ]);
 
       return Result.ok(

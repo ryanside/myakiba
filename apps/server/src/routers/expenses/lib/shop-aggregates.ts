@@ -16,7 +16,7 @@ import {
   getShippingMethodTotals,
   orderSpendSums,
   orderSpendWhere,
-  orderWhere,
+  paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
 import { orderFees, orderIsPaid } from "@/lib/order-money";
@@ -240,7 +240,7 @@ async function getShippingShopRows(
         orderCount: sql<number>`${count(order.id)}::integer`.as("order_count"),
       })
       .from(order)
-      .where(orderWhere(userId, scopedFilters, "total"))
+      .where(paidOrderWhere(userId, scopedFilters, "total"))
       .groupBy(order.shop),
   );
   const scopedShops = tx.$with("scoped_shops").as(
@@ -374,7 +374,7 @@ async function loadFeeBreakdown(tx: ReadTx, userId: string, filters: ExpenseFilt
       miscFees: sql<number>`COALESCE(${sum(order.miscFees)}, 0)::double precision`,
     })
     .from(order)
-    .where(orderWhere(userId, filters, "total"));
+    .where(paidOrderWhere(userId, filters, "total"));
 
   return row ?? EMPTY_FEE_BREAKDOWN;
 }
@@ -402,7 +402,7 @@ async function loadTopOrders(
     .leftJoin(collection, eq(order.id, collection.orderId))
     .where(
       scope === "shipping"
-        ? orderWhere(userId, filters, "total")
+        ? paidOrderWhere(userId, filters, "total")
         : orderSpendWhere(userId, filters, "total", orderItems),
     )
     .groupBy(

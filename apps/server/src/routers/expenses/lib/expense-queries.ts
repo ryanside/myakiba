@@ -189,19 +189,18 @@ function matchingOrderWhere(
 
   return and(
     eq(order.userId, userId),
-    shopWhere(filters),
+    shopWhere(filters.shop),
     mode === "series" ? isNotNull(dateSql) : undefined,
     filters.dateStart ? gte(dateSql, filters.dateStart) : undefined,
     filters.dateEnd ? lte(dateSql, filters.dateEnd) : undefined,
   );
 }
 
-function shopWhere(filters: ExpenseFilters): ReturnType<typeof inArray> | undefined {
-  return filters.shop && filters.shop.length > 0 ? inArray(order.shop, filters.shop) : undefined;
+function shopWhere(shop: ExpenseFilters["shop"]): ReturnType<typeof inArray> | undefined {
+  return shop && shop.length > 0 ? inArray(order.shop, shop) : undefined;
 }
 
-/** Paid Orders matching the filters, whose fees are Fee Spend. */
-export function orderWhere(
+export function paidOrderWhere(
   userId: string,
   filters: ExpenseFilters,
   mode: "total" | "series",
@@ -209,7 +208,6 @@ export function orderWhere(
   return and(matchingOrderWhere(userId, filters, mode), orderIsPaid);
 }
 
-/** Orders matching the filters with any Order Spend: a Paid Order, or one with a spent Order Item. */
 export function orderSpendWhere(
   userId: string,
   filters: ExpenseFilters,
@@ -222,7 +220,6 @@ export function orderSpendWhere(
   );
 }
 
-/** Order Item Spend per Order matching the filters, whatever the Order's own status. */
 export function createOrderItemSpendByOrder(tx: ReadTx, userId: string, filters: ExpenseFilters) {
   return tx
     .select({
@@ -241,12 +238,10 @@ export function createOrderItemSpendByOrder(tx: ReadTx, userId: string, filters:
     .as("order_items");
 }
 
-/** Sums `fee` over the Paid Orders among the rows, as Fee Spend. */
 function feeSpend(fee: SQL | AnyColumn): SQL<number> {
   return sql<number>`COALESCE(SUM(${fee}) FILTER (WHERE ${orderIsPaid}), 0)::double precision`;
 }
 
-/** Order Spend over Orders left-joined to `orderItems`, so the Orders scope and its Shops agree. */
 export function orderSpendSums(orderItems: ReturnType<typeof createOrderItemSpendByOrder>) {
   const orderItemSpend = sql<number>`COALESCE(${sum(sql`COALESCE(${orderItems.itemSpend}, 0)`)}, 0)::double precision`;
   const fees = feeSpend(orderFees);
@@ -342,13 +337,12 @@ export function getOrderAggregates(
     .where(orderSpendWhere(userId, filters, "total", orderItems));
 }
 
-/** Unpaid Costs are a balance, so a date range does not narrow them; the Shop filter does. */
 export async function getUnpaidCosts(
   tx: ReadTx,
   userId: string,
-  filters: ExpenseFilters,
+  shop: ExpenseFilters["shop"],
 ): Promise<UnpaidCostsRow> {
-  const [row] = await selectUnpaidCosts(tx, and(eq(order.userId, userId), shopWhere(filters)));
+  const [row] = await selectUnpaidCosts(tx, and(eq(order.userId, userId), shopWhere(shop)));
   return row ?? { unpaidOrderCount: 0, unpaidCosts: 0 };
 }
 
@@ -368,7 +362,7 @@ export function getShippingSeries(
       orderCount: count(),
     })
     .from(order)
-    .where(orderWhere(userId, filters, "series"))
+    .where(paidOrderWhere(userId, filters, "series"))
     .groupBy(orderBucket, order.shippingMethod)
     .orderBy(orderBucket, order.shippingMethod);
 }
@@ -387,7 +381,7 @@ export function getShippingMethodTotals(
       freeOrderCount: sql<number>`COUNT(${order.id}) FILTER (WHERE ${order.shippingFee} = 0)::integer`,
     })
     .from(order)
-    .where(orderWhere(userId, filters, "total"))
+    .where(paidOrderWhere(userId, filters, "total"))
     .groupBy(order.shippingMethod)
     .orderBy(order.shippingMethod);
 }
@@ -406,7 +400,7 @@ export function getBundleEfficiencyRows(
       })
       .from(order)
       .leftJoin(collection, eq(order.id, collection.orderId))
-      .where(orderWhere(userId, filters, "total"))
+      .where(paidOrderWhere(userId, filters, "total"))
       .groupBy(order.id, order.shippingMethod, order.shippingFee),
   );
 
