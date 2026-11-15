@@ -52,6 +52,8 @@ function initialDraft(c: AddController, field: FieldId): FillDraft {
     return null;
   };
   return {
+    status: "Owned",
+    paid: true,
     text: text(),
     condition: same((overrides) => overrides.condition) ?? shared.condition,
     shipping: same((overrides) => overrides.shippingMethod) ?? shared.shippingMethod,
@@ -109,7 +111,7 @@ function writeFill(c: AddController, field: FieldId, draft: FillDraft) {
     case "notes":
       c.bulkEdit(ids, { notes: draft.text });
       return;
-    case "shipping":
+    case "shippingMethod":
       c.bulkEdit(ids, { shippingMethod: draft.shipping });
   }
 }
@@ -128,6 +130,7 @@ export function AddFillMenu({
   const count = c.commitRows.length;
   const rows: FillGroup<FieldId> = {
     key: "rows",
+    noun: { one: "row", other: "rows" },
     count,
     fields: fields.map(({ id }) => id),
     seed: (field) => initialDraft(c, field),

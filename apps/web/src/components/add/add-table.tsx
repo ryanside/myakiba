@@ -295,7 +295,7 @@ function DetailsPanel({ row: { id, row, item, release } }: { readonly row: ItemR
               <RowField field={FIELD.shop} {...shared} />
             </div>
             <div className="@4xl:col-span-2">
-              <RowField field={FIELD.shipping} {...shared} />
+              <RowField field={FIELD.shippingMethod} {...shared} />
             </div>
           </>
         ) : null}

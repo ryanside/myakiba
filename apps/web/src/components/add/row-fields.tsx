@@ -30,7 +30,7 @@ export type FieldId =
   | "count"
   | "condition"
   | "shop"
-  | "shipping"
+  | "shippingMethod"
   | RowDate
   | "score"
   | "tags"
@@ -58,7 +58,7 @@ export const FIELD = {
   count: fillable("count", ALWAYS),
   condition: fillable("condition", ALWAYS),
   shop: fillable("shop", COLLECTION_ONLY),
-  shipping: fillable("shipping", COLLECTION_ONLY),
+  shippingMethod: fillable("shippingMethod", COLLECTION_ONLY),
   orderDate: fillable("orderDate", COLLECTION_ONLY),
   paymentDate: fillable("paymentDate", COLLECTION_ONLY),
   shippingDate: fillable("shippingDate", COLLECTION_ONLY),
@@ -153,7 +153,7 @@ export function hasOwnValue(row: DraftRow, field: FieldId): boolean {
       return (overrides.tags ?? []).length > 0;
     case "notes":
       return (overrides.notes ?? "") !== "";
-    case "shipping":
+    case "shippingMethod":
       return overrides.shippingMethod !== undefined;
   }
 }
@@ -339,7 +339,7 @@ export function RowField({
           />
         </LabeledField>
       );
-    case "shipping":
+    case "shippingMethod":
       return (
         <LabeledField id={id} label={openLabel}>
           <EnumSelect

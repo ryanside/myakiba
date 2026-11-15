@@ -823,7 +823,7 @@ async function fill(user: User, field: string) {
     within(screen.getByRole("dialog", { name: "Fill all" })).getByRole("button", { name: field }),
   );
   // The popup holds focus for a moment before the field takes it, and keys typed then are lost.
-  await waitFor(() => expect(document.activeElement?.id.startsWith("add-fill-")).toBe(true));
+  await waitFor(() => expect(document.activeElement?.id.startsWith("fill-")).toBe(true));
 }
 
 test("Fill all writes one value to every selected row, and the shared value too", async () => {
@@ -1040,7 +1040,7 @@ test("Fill all offers an Order only what its Items can hold", async () => {
   await click(user, "Fill all");
 
   await screen.findByText("Write one value to 1 selected row.");
-  const offered = document.querySelectorAll("[data-add-fill-list] button");
+  const offered = document.querySelectorAll("[data-fill-list] button");
   expect([...offered].map(({ textContent }) => textContent)).toEqual([
     "Price",
     "Count",
