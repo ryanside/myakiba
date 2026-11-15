@@ -2,12 +2,13 @@ import * as z from "zod";
 import {
   cascadeOptionsSchema,
   newOrderSchema,
+  orderEditSchema,
   orderItemsQuerySchema,
 } from "@myakiba/contracts/orders/schema";
 import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
-import { orderUpdateSchema, ordersQuerySchema, orderIdParamSchema } from "./model";
+import { ordersQuerySchema, orderIdParamSchema } from "./model";
 import { Orders } from "./module";
 
 const ordersRouter = privateApi("/orders")
@@ -43,8 +44,8 @@ const ordersRouter = privateApi("/orders")
   })
   .put("/:orderId", (ctx) => serve(ctx, Orders.update, { ...ctx.params, ...ctx.body }), {
     params: orderIdParamSchema,
-    body: z.object({
-      order: orderUpdateSchema,
+    body: z.strictObject({
+      order: orderEditSchema,
       cascadeOptions: cascadeOptionsSchema,
     }),
   })

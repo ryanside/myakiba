@@ -77,6 +77,8 @@ export const newOrderSchema = z.strictObject({
   notes: z.string().max(WRITE_LIMITS.notes),
 });
 
+export const orderEditSchema = newOrderSchema.partial();
+
 export const editedOrderSchema = newOrderSchema.extend({
   orderId: z.string().max(WRITE_LIMITS.id),
 });
@@ -87,6 +89,7 @@ export const cascadeOptionsSchema = z.array(cascadeOptionSchema).max(ORDER_CASCA
 export type OrderFilters = z.infer<typeof orderFiltersSchema>;
 export type OrderItemsQuery = z.infer<typeof orderItemsQuerySchema>;
 export type NewOrder = z.infer<typeof newOrderSchema>;
+export type OrderEdit = z.infer<typeof orderEditSchema>;
 export type EditedOrder = z.infer<typeof editedOrderSchema>;
 export type CascadeOption = z.infer<typeof cascadeOptionSchema>;
 export type CascadeOptions = z.infer<typeof cascadeOptionsSchema>;

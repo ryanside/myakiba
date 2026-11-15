@@ -45,8 +45,16 @@ export const OrderItemSelectionContext = createContext<{
   setSelectedOrderIdByCollectionId: Dispatch<SetStateAction<Map<string, string>>>;
 } | null>(null);
 
-function withoutTimestamps({ createdAt: _createdAt, updatedAt: _updatedAt, ...order }: Order) {
-  return order;
+function editedOrder({
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
+  payment: _payment,
+  total: _total,
+  itemCount: _itemCount,
+  images: _images,
+  ...edited
+}: Order): EditedOrder {
+  return edited;
 }
 
 function cascadeFor(field: keyof Order): CascadeOptions {
@@ -74,7 +82,7 @@ export function createOrdersColumns({
   dateFormat,
 }: OrdersColumnsParams): ColumnDef<Order>[] {
   const editOrder = editableCell(withOrderPending, (order, field, value) =>
-    onEditOrder({ ...withoutTimestamps(order), [field]: value }, cascadeFor(field)),
+    onEditOrder({ ...editedOrder(order), [field]: value }, cascadeFor(field)),
   );
 
   return [
@@ -396,7 +404,7 @@ export function createOrdersColumns({
             locale={locale}
             disabled={isPending}
             onSubmit={async (newValues) => {
-              return onEditOrder({ ...withoutTimestamps(order), ...newValues }, []);
+              return onEditOrder({ ...editedOrder(order), ...newValues }, []);
             }}
           />
         );

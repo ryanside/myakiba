@@ -1,6 +1,4 @@
 import * as z from "zod";
-import { createUpdateSchema } from "drizzle-zod";
-import { order } from "@myakiba/db/schema/figure";
 import { ORDER_STATUSES, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import {
   createCommaSeparatedEnumArraySchema,
@@ -22,20 +20,6 @@ export const ordersQuerySchema = searchSchema.extend({
   paid: z.stringbool().optional(),
 });
 
-export const orderUpdateSchema = createUpdateSchema(order)
-  .omit({
-    id: true,
-    userId: true,
-    createdAt: true,
-    updatedAt: true,
-  })
-  .extend({
-    title: z.string().max(WRITE_LIMITS.title).optional(),
-    shop: z.string().trim().max(WRITE_LIMITS.shop).optional(),
-    notes: z.string().max(WRITE_LIMITS.notes).optional(),
-  });
-
 export const orderIdParamSchema = z.object({ orderId: z.string().max(WRITE_LIMITS.id) });
 
 export type OrdersQuery = z.infer<typeof ordersQuerySchema>;
-export type OrderUpdateType = z.infer<typeof orderUpdateSchema>;

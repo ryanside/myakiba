@@ -3,7 +3,12 @@ import type { SQL } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
-import type { CascadeOptions, NewOrder, OrderItemsQuery } from "@myakiba/contracts/orders/schema";
+import type {
+  CascadeOptions,
+  NewOrder,
+  OrderEdit,
+  OrderItemsQuery,
+} from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result, panic } from "better-result";
@@ -13,7 +18,7 @@ import { OrderItemsNotFound } from "./errors/order-items-not-found";
 import { OrderNotFound } from "./errors/order-not-found";
 import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
-import type { OrderUpdateType, OrdersQuery } from "./model";
+import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 import { orderPayment, orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
 
@@ -493,7 +498,7 @@ export const Orders = {
       scope,
       input: {
         readonly orderId: string;
-        readonly order: OrderUpdateType;
+        readonly order: OrderEdit;
         readonly cascadeOptions: CascadeOptions;
       },
     ) => {
@@ -508,10 +513,7 @@ export const Orders = {
 
       if (input.cascadeOptions.length > 0) {
         const cascadeProperties = Object.fromEntries(
-          input.cascadeOptions.map((option) => [
-            option,
-            input.order[option as keyof typeof input.order],
-          ]),
+          input.cascadeOptions.map((option) => [option, input.order[option]]),
         );
 
         await scope.tx
