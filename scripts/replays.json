@@ -5019,6 +5019,15 @@
         "saves a shop edit with only the fields a user edits, cascading the shop to its items",
         "saves a fee edit without cascading"
       ]
+    },
+    {
+      "fix": "c63a42f18fceedbf6f0b1e3aa3e6d1f1d42b86b2",
+      "bug": "The Expenses Order Items count linked to Paid Orders, a list that left out an Unpaid Order holding a paid item, and the Orders list had no way to keep only the Orders with Order Spend.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "the Orders page lists the Orders behind Order Spend > Order Spend of at least 1 leaves out an Order with nothing paid",
+        "the Orders page lists the Orders behind Order Spend > an Order Spend range keeps only the Orders inside it"
+      ]
     }
   ],
   "lint": [
