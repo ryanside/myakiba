@@ -7,10 +7,13 @@ import {
   assignToOrderCommand,
   collection as collectionResource,
   deleteCollectionItemsCommand,
+  fillCollectionItemsCommand,
   updateCollectionItemCommand,
 } from "@/data/resources/collection";
 import { useFilters } from "@/hooks/use-filters";
+import { holdRowsPendingThroughFill } from "@/hooks/hold-rows-pending-through-fill";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
@@ -152,12 +155,15 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
 
   const updateMutation = useResourceMutation(updateCollectionItemCommand);
   const deleteMutation = useResourceMutation(deleteCollectionItemsCommand);
+  const fillMutation = useResourceMutation(fillCollectionItemsCommand);
   const updateMutationRef = useRef(updateMutation);
   const deleteMutationRef = useRef(deleteMutation);
+  const fillMutationRef = useRef(fillMutation);
   useLayoutEffect(() => {
     updateMutationRef.current = updateMutation;
     deleteMutationRef.current = deleteMutation;
-  }, [deleteMutation, updateMutation]);
+    fillMutationRef.current = fillMutation;
+  }, [deleteMutation, fillMutation, updateMutation]);
 
   const isCollectionPending = useCallback(
     (collectionId: string): boolean => pendingCollectionIds.has(collectionId),
@@ -212,10 +218,23 @@ export function useCollectionMutations(options?: { readonly filters?: Collection
     return saved;
   }, []);
 
+  const handleFillCollectionItems = useCallback(
+    (collectionIds: ReadonlySet<string>, fill: ItemFill): Saving =>
+      holdRowsPendingThroughFill(
+        "Filling collection items...",
+        collectionIds,
+        setPendingCollectionIdList,
+        () => fillMutationRef.current.run({ ids: [...collectionIds], fill }),
+      ),
+    [],
+  );
+
   return {
     handleEditCollectionItem,
     handleDeleteCollectionItems,
+    handleFillCollectionItems,
     isCollectionPending,
     isDeletingCollectionItems: deleteMutation.isPending,
+    isFillingCollectionItems: fillMutation.isPending,
   } as const;
 }
