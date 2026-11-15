@@ -8,12 +8,15 @@ import {
   deleteOrdersCommand,
   editOrderCommand,
   editOrderItemCommand,
+  fillOrdersCommand,
   mergeOrdersCommand,
   moveOrderItemsCommand,
   orders as ordersResource,
   splitOrdersCommand,
 } from "@/data/resources/orders";
+import { fillCollectionItemsCommand } from "@/data/resources/collection";
 import { useFilters } from "@/hooks/use-filters";
+import { holdRowsPendingThroughFill } from "@/hooks/hold-rows-pending-through-fill";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
 import type {
   EditedOrder,
@@ -22,6 +25,8 @@ import type {
   OrderFilters,
 } from "@myakiba/contracts/orders/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 
 const NO_FILTERS: OrderFilters = {};
 
@@ -70,7 +75,9 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   const [pendingCollectionItemIdList, setPendingCollectionItemIdList] = useState<readonly string[]>(
     [],
   );
+  const [fillingOrderIdList, setFillingOrderIdList] = useState<readonly string[]>([]);
   const pendingOrderIds = useMemo(() => new Set(pendingOrderIdList), [pendingOrderIdList]);
+  const fillingOrderIds = useMemo(() => new Set(fillingOrderIdList), [fillingOrderIdList]);
   const pendingCollectionItemIds = useMemo(
     () => new Set(pendingCollectionItemIdList),
     [pendingCollectionItemIdList],
@@ -85,10 +92,14 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
   const deleteItemMutation = useResourceMutation(deleteOrderItemCommand);
   const deleteItemsMutation = useResourceMutation(deleteOrderItemsCommand);
   const moveItemMutation = useResourceMutation(moveOrderItemsCommand);
+  const fillOrdersMutation = useResourceMutation(fillOrdersCommand);
+  const fillItemsMutation = useResourceMutation(fillCollectionItemsCommand);
   const editOrderMutationRef = useRef(editOrderMutation);
   const deleteOrdersMutationRef = useRef(deleteOrdersMutation);
   const editItemMutationRef = useRef(editItemMutation);
   const deleteItemMutationRef = useRef(deleteItemMutation);
+  const fillOrdersMutationRef = useRef(fillOrdersMutation);
+  const fillItemsMutationRef = useRef(fillItemsMutation);
 
   useLayoutEffect(() => {
     listRef.current = list;
@@ -96,15 +107,27 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     deleteOrdersMutationRef.current = deleteOrdersMutation;
     editItemMutationRef.current = editItemMutation;
     deleteItemMutationRef.current = deleteItemMutation;
-  }, [list, editOrderMutation, deleteOrdersMutation, editItemMutation, deleteItemMutation]);
+    fillOrdersMutationRef.current = fillOrdersMutation;
+    fillItemsMutationRef.current = fillItemsMutation;
+  }, [
+    list,
+    editOrderMutation,
+    deleteOrdersMutation,
+    editItemMutation,
+    deleteItemMutation,
+    fillOrdersMutation,
+    fillItemsMutation,
+  ]);
 
   const isOrderPending = useCallback(
-    (orderId: string): boolean => pendingOrderIds.has(orderId),
-    [pendingOrderIds],
+    (orderId: string): boolean => pendingOrderIds.has(orderId) || fillingOrderIds.has(orderId),
+    [pendingOrderIds, fillingOrderIds],
   );
   const isCollectionItemPending = useCallback(
-    (collectionId: string): boolean => pendingCollectionItemIds.has(collectionId),
-    [pendingCollectionItemIds],
+    (collectionId: string, orderId: string | null): boolean =>
+      pendingCollectionItemIds.has(collectionId) ||
+      (orderId !== null && fillingOrderIds.has(orderId)),
+    [pendingCollectionItemIds, fillingOrderIds],
   );
 
   const handleMerge = useCallback(
@@ -307,6 +330,25 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     [filtersActive, moveItemMutation],
   );
 
+  const handleFillOrders = useCallback(
+    (orderIds: ReadonlySet<string>, fill: OrderFill): Saving =>
+      holdRowsPendingThroughFill("Filling orders...", orderIds, setFillingOrderIdList, () =>
+        fillOrdersMutationRef.current.run({ orderIds: [...orderIds], fill }),
+      ),
+    [],
+  );
+
+  const handleFillItems = useCallback(
+    (collectionIds: ReadonlySet<string>, fill: ItemFill): Saving =>
+      holdRowsPendingThroughFill(
+        "Filling items...",
+        collectionIds,
+        setPendingCollectionItemIdList,
+        () => fillItemsMutationRef.current.run({ ids: [...collectionIds], fill }),
+      ),
+    [],
+  );
+
   return {
     handleEditOrder,
     handleDeleteOrders,
@@ -316,6 +358,8 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     handleDeleteItem,
     handleDeleteItems,
     handleMoveItem,
+    handleFillOrders,
+    handleFillItems,
     isOrderPending,
     isCollectionItemPending,
     isMerging: mergeOrdersMutation.isPending,
@@ -323,5 +367,7 @@ export function useOrdersMutations(options?: { readonly filters?: OrderFilters }
     isDeletingOrders: deleteOrdersMutation.isPending,
     isDeletingItems: deleteItemsMutation.isPending,
     isMovingItems: moveItemMutation.isPending,
+    isFillingOrders: fillOrdersMutation.isPending,
+    isFillingItems: fillItemsMutation.isPending,
   } as const;
 }

@@ -7,6 +7,7 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
 import { shownMessageOf } from "../api";
@@ -17,6 +18,7 @@ import {
   deleteOrderItems,
   deleteOrders,
   editOrder,
+  fillOrders,
   getOrder,
   getOrderItemReleases,
   getOrderItems,
@@ -27,9 +29,10 @@ import {
 } from "@/queries/orders";
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
+import { FILL_FIELD } from "@/lib/fill-fields";
 import { paymentOf } from "@/lib/orders";
 import { collectionWriteFamilies } from "../catalog";
-import { defineCommand, rootedRead } from "../client";
+import { defineCommand, messageAs, rootedRead } from "../client";
 
 const orderItemsOf = (orderId: string) => ["orderItems", orderId] as const;
 
@@ -201,6 +204,21 @@ export const deleteOrdersCommand = defineCommand({
   successTitle: ({ orderIds }) =>
     orderIds.size === 1 ? "Order deleted" : `Successfully deleted ${orderIds.size} orders`,
   failureToast: () => ({ title: "Failed to delete order(s). Please try again." }),
+});
+
+export const fillOrdersCommand = defineCommand({
+  invalidates: collectionWriteFamilies,
+  refetchBy: "settled",
+  persist: ({
+    orderIds,
+    fill,
+  }: {
+    readonly orderIds: readonly string[];
+    readonly fill: OrderFill;
+  }) => fillOrders(orderIds, fill),
+  successTitle: ({ orderIds, fill }) =>
+    `Filled ${FILL_FIELD[fill.field].label} on ${orderIds.length === 1 ? "1 order and its items" : `${orderIds.length} orders and their items`}`,
+  failureToast: messageAs("title", () => "Failed to fill orders"),
 });
 
 export const mergeOrdersCommand = defineCommand({

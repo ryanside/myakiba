@@ -4,7 +4,7 @@ import { withRowPending } from "@/components/data-table/row-pending";
 
 interface OrdersPendingState {
   isOrderPending: (id: string) => boolean;
-  isCollectionItemPending: (id: string) => boolean;
+  isCollectionItemPending: (id: string, orderId: string | null) => boolean;
 }
 
 export const OrderPendingContext = createContext<OrdersPendingState | null>(null);
@@ -20,10 +20,13 @@ export function useOrderPending() {
 }
 
 const useIsOrderPending = () => useOrderPending().isOrderPending;
-const useIsOrderItemPending = () => useOrderPending().isCollectionItemPending;
+const useIsOrderItemPending = () => {
+  const { isCollectionItemPending } = useOrderPending();
+  return (item: OrderItem) => isCollectionItemPending(item.id, item.orderId);
+};
 
 export const withOrderPending = withRowPending(useIsOrderPending, (order: Order) => order.orderId);
 export const withOrderItemPending = withRowPending(
   useIsOrderItemPending,
-  (item: OrderItem) => item.id,
+  (item: OrderItem) => item,
 );

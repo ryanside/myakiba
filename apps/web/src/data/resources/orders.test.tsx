@@ -2,6 +2,8 @@ import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } fro
 import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useSyncExternalStore } from "react";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { EditedOrder, OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { Saving } from "@/data/client";
 import { ApiServerError } from "@/lib/errors/api-server-error";
@@ -11,11 +13,21 @@ configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
 
 type ServerOrder = { readonly orderId: string; readonly title: string; readonly total: number };
-type Write = { readonly name: string; finish: () => void; fail: () => void };
+type Write = {
+  readonly name: string;
+  readonly args: readonly unknown[];
+  finish: () => void;
+  fail: () => void;
+};
 
 const ALPHA = { orderId: "od-alpha", title: "Alpha", total: 1000 };
 const BRAVO = { orderId: "od-bravo", title: "Bravo", total: 500 };
 const CHARLIE = { orderId: "od-charlie", title: "Charlie", total: 200 };
+
+const LOADED_ITEMS = [
+  { id: "co-alpha-1", orderId: ALPHA.orderId, title: "Alpha Miku" },
+  { id: "co-bravo-1", orderId: BRAVO.orderId, title: "Bravo Rin" },
+];
 
 const server = {
   orders: [ALPHA, BRAVO, CHARLIE] as ServerOrder[],
@@ -52,6 +64,7 @@ const held =
     new Promise((resolve) => {
       server.writes.push({
         name,
+        args,
         finish: () => {
           apply(...args);
           resolve(Result.ok(null));
@@ -100,9 +113,13 @@ await mock.module("@/queries/orders", () => ({
   deleteOrderItem: held("delete item", () => {}),
   deleteOrderItems: held("delete items", () => {}),
   moveItem: held("move items", () => {}),
+  fillOrders: held("fill orders", () => {}),
 }));
 await mock.module("@/queries/collection", () => ({
+  getCollection: async () => Result.ok({ items: [], totalCount: 0 }),
   updateCollectionItem: held("edit item", () => {}),
+  deleteCollectionItems: held("delete collection items", () => {}),
+  fillCollectionItems: held("fill items", () => {}),
 }));
 
 const url = { filters: {} as OrderFilters, listeners: new Set<() => void>() };
@@ -157,6 +174,11 @@ function renderOrdersPage(initialFilters: OrderFilters) {
             </li>
           ))}
         </ul>
+        <p aria-label="pending items">
+          {LOADED_ITEMS.filter((item) => mutations.isCollectionItemPending(item.id, item.orderId))
+            .map((item) => item.title)
+            .join(",")}
+        </p>
       </>
     );
   }
@@ -318,6 +340,99 @@ describe("an Order write on the orders page", () => {
       "error: Failed to update order. Please try again.",
       "success: Order deleted",
     ]);
+  });
+});
+
+describe("a fill on the orders page", () => {
+  const FILL_SHOP: OrderFill = { field: "shop", value: "Mandarake" };
+  const pendingItems = () => screen.getByLabelText("pending items").textContent;
+  const wait = (ms: number) =>
+    act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        }),
+    );
+
+  test("an Order fill sends the ids in one request and keeps the Orders and their items pending through the refetch", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+    const readsBeforeWrite = server.listReads;
+
+    const filling = orders.act((actions) =>
+      actions.handleFillOrders(new Set([ALPHA.orderId, "od-unloaded"]), FILL_SHOP),
+    );
+    await waitFor(() =>
+      expect({ orders: shown().orders, items: pendingItems() }).toEqual({
+        orders: ["Alpha 1000 saving", "Bravo 500", "Charlie 200"],
+        items: "Alpha Miku",
+      }),
+    );
+
+    const releaseReads = holdListReads();
+    await answer(0, "finish");
+    await wait(50);
+    expect({ orders: shown().orders, items: pendingItems() }).toEqual({
+      orders: ["Alpha 1000 saving", "Bravo 500", "Charlie 200"],
+      items: "Alpha Miku",
+    });
+
+    await releaseReads();
+    expect(await filling).toBe("ok");
+    expect({
+      sent: server.writes.map(({ name, args }) => [name, ...args]),
+      refetched: server.listReads > readsBeforeWrite,
+      orders: shown().orders,
+      items: pendingItems(),
+      toasts: toastTitles(),
+    }).toEqual({
+      sent: [["fill orders", [ALPHA.orderId, "od-unloaded"], FILL_SHOP]],
+      refetched: true,
+      orders: ["Alpha 1000", "Bravo 500", "Charlie 200"],
+      items: "",
+      toasts: ["loading: Filling orders...", "success: Filled Shop on 2 orders and their items"],
+    });
+  });
+
+  test("a failed Order fill shows the server's sentence and clears the pending marks", async () => {
+    const orders = renderOrdersPage({ shop: ["AmiAmi"] });
+    await loaded();
+
+    const filling = orders.act((actions) =>
+      actions.handleFillOrders(new Set([BRAVO.orderId]), { field: "paid", value: false }),
+    );
+    await waitFor(() => expect(pendingItems()).toBe("Bravo Rin"));
+    await answer(0, "fail");
+    expect(await filling).toBe("error");
+    expect({ orders: shown().orders, items: pendingItems(), toasts: toastTitles() }).toEqual({
+      orders: ["Alpha 1000", "Bravo 500", "Charlie 200"],
+      items: "",
+      toasts: ["loading: Filling orders...", "error: fill orders rejected by server"],
+    });
+  });
+
+  test("an Order Item fill marks only its items pending and leaves their Orders alone", async () => {
+    const orders = renderOrdersPage({});
+    await loaded();
+    const fill: ItemFill = { field: "status", value: "Shipped" };
+
+    const filling = orders.act((actions) =>
+      actions.handleFillItems(new Set(["co-bravo-1", "co-unloaded"]), fill),
+    );
+    await waitFor(() => expect(pendingItems()).toBe("Bravo Rin"));
+    expect(shown().orders).toEqual(["Alpha 1000", "Bravo 500", "Charlie 200"]);
+
+    await answer(0, "finish");
+    expect(await filling).toBe("ok");
+    expect({
+      sent: server.writes.map(({ name, args }) => [name, ...args]),
+      items: pendingItems(),
+      toasts: toastTitles(),
+    }).toEqual({
+      sent: [["fill items", ["co-bravo-1", "co-unloaded"], fill]],
+      items: "",
+      toasts: ["loading: Filling items...", "success: Filled Status on 2 items"],
+    });
   });
 });
 
