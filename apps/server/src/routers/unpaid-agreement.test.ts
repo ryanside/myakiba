@@ -178,7 +178,7 @@ async function seedPaidApartFromStatus() {
 
 type Dashboard = { readonly unpaidCosts: number };
 type OrdersList = {
-  readonly items: readonly { readonly total: number | string }[];
+  readonly items: readonly { readonly title: string; readonly total: number | string }[];
   readonly totalSpent: number;
   readonly unpaidCosts: number;
 };
@@ -332,5 +332,37 @@ describe("Paid is apart from the Acquisition Status", () => {
       paidOrderCount: 1,
       unpaidOrderCount: 1,
     });
+  });
+});
+
+describe("the Orders page lists the Orders behind Unpaid Costs", () => {
+  test("Unpaid Costs of at least 1 keeps a Paid Order that holds an unpaid item, which the Paid filter leaves out", async () => {
+    const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
+    const owing = await get<OrdersList>(twoOrders, "/orders?limit=10&unpaidCostsMin=1");
+    const unpaidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=false");
+
+    expect({
+      owing: owing.items.map((row) => row.title).toSorted(),
+      owingUnpaidCosts: owing.unpaidCosts,
+      unpaidOrders: unpaidOrders.items.map((row) => row.title),
+      unpaidOrdersUnpaidCosts: unpaidOrders.unpaidCosts,
+    }).toEqual({
+      owing: ["AmiAmi", "HLJ"],
+      owingUnpaidCosts: everyOrder.unpaidCosts,
+      unpaidOrders: ["AmiAmi"],
+      unpaidOrdersUnpaidCosts: 1500,
+    });
+  });
+
+  test("Unpaid Costs of at least 1 leaves out an Order with nothing unpaid", async () => {
+    const owing = await get<OrdersList>(paidApart, "/orders?limit=10&unpaidCostsMin=1");
+
+    expect(owing.items.map((row) => row.title)).toEqual(["Pay on delivery"]);
+  });
+
+  test("an Unpaid Costs range keeps only the Orders inside it", async () => {
+    const small = await get<OrdersList>(twoOrders, "/orders?limit=10&unpaidCostsMax=2000");
+
+    expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
   });
 });
