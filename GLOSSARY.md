@@ -55,8 +55,12 @@ A Collection Item attached to an Order. Order Item is another name for that Coll
 _Avoid_: Item, line item
 
 **Acquisition Status**:
-An Order and each Collection Item have their own Acquisition Status. Ordered means unpaid, Paid means paid but not shipped, Shipped means sent but not received, and Owned means received.
+An Order and each Collection Item have their own Acquisition Status, which says where the package is. Ordered means not yet sent, Shipped means sent but not received, and Owned means received. It says nothing about money; Paid does.
 _Avoid_: Ownership status, Collected status
+
+**Paid**:
+A yes or no on an Order and on each Collection Item, apart from its Acquisition Status, so a Shipped Order can be unpaid and an Ordered one paid up front. An Order's Paid covers its Order Fees, and each Order Item's Paid covers its own price. An Order is Partly paid when some of those are paid and some are not; an Order with no Order Items follows its own Paid. A Payment Date does not make anything Paid, and marking something Paid does not set a Payment Date.
+_Avoid_: Paid status
 
 **Collection Date**:
 The date a collector received an Order or Collection Item. Collection Date and Acquisition Status are separate; the final status is called Owned, not Collected.
@@ -78,20 +82,20 @@ _Avoid_: Misc, Other fees
 The saved price of each attached Order Item, added once regardless of its copy count, plus all Order Fees.
 
 **Active Order**:
-An Order with a status of Ordered, Paid, or Shipped. An Owned Order is no longer active.
+An Order with a status of Ordered or Shipped. An Owned Order is no longer active.
 
 **Paid Order**:
-An Order with a status of Paid, Shipped, or Owned. A Payment Date by itself does not make an Order a Paid Order.
+An Order whose own Paid is yes. A Payment Date by itself does not make an Order a Paid Order, and its Order Items can still be unpaid.
 
 **Unpaid Order**:
-An Order with an Acquisition Status of Ordered. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Acquisition Status, so a Paid Order Item on an Unpaid Order is Spend.
+An Order whose own Paid is no, whatever its Acquisition Status. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Paid, so a paid Order Item on an Unpaid Order is Spend.
 
 **Order Release Date**:
 The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
 _Avoid_: Item Release, Selected Item Release
 
 **Cascade to Items**:
-A choice to copy an Order's Acquisition Status, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. Details not selected stay separate on the Order and its Order Items.
+A choice to copy an Order's Acquisition Status, Paid, Shop, Order Date, Payment Date, Shipping Date, Collection Date, or Shipping Method to its Order Items. Details not selected stay separate on the Order and its Order Items.
 _Avoid_: Cascade when the copied details and affected Order Items are unclear
 
 **Shop**:
@@ -141,7 +145,7 @@ _Avoid_: Collection Item Spend
 Order Item Spend plus Fee Spend for Paid Orders. An Order's Spend and Unpaid Costs together make its Order Total.
 
 **Order Item Spend**:
-The part of Order Spend that comes from Order Item prices: the saved price of each Order Item whose own Acquisition Status is not Ordered, added once regardless of its copy count, whatever its Order's status.
+The part of Order Spend that comes from Order Item prices: the saved price of each paid Order Item, added once regardless of its copy count, whatever its Order's Paid.
 
 **Fee Spend**:
 The part of Order Spend that comes from Order Fees.
@@ -150,7 +154,7 @@ The part of Order Spend that comes from Order Fees.
 The part of Fee Spend that comes from Shipping Fees on Paid Orders. Paid Orders with free shipping still count when myakiba calculates the number of Orders and any average based on that number.
 
 **Unpaid Costs**:
-The Order Fees on Unpaid Orders, plus the saved price of every Order Item whose own Acquisition Status is Ordered, on any Order. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
+The Order Fees on Unpaid Orders, plus the saved price of every unpaid Order Item, on any Order. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
 _Avoid_: Unpaid commitments, Unpaid
 
 **Scoped Shop Spend**:
@@ -198,15 +202,15 @@ Saving a Pick: myakiba reads the picked page and adds its Item to your Item Data
 _Avoid_: Sync Items, Add to collection when only Items are being added to the Item Database
 
 **Add to collection**:
-On the Add Page, creating one Owned Collection Item per selected row. Items not yet owned go through Create order or Add to order.
+On the Add Page, creating one Owned, paid Collection Item per selected row. Items not yet owned go through Create order or Add to order.
 _Avoid_: Sync Collection
 
 **Create order**:
-On the Add Page, creating an Order whose Order Items copy its status, Shop, dates and Shipping Method.
+On the Add Page, creating an Order whose Order Items copy its status, Paid, Shop, dates and Shipping Method.
 _Avoid_: Sync Order, Add to order when creating a new Order
 
 **Add to order**:
-On the Add Page, adding Order Items to an existing Order; they copy its status, Shop, dates and Shipping Method.
+On the Add Page, adding Order Items to an existing Order; they copy its status, Paid, Shop, dates and Shipping Method.
 _Avoid_: Sync Order Items
 
 **Item Refresh**:
