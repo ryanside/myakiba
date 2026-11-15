@@ -14,9 +14,12 @@ import {
   collectionWhere,
   createOrderItemSpendByOrder,
   getShippingMethodTotals,
+  orderSpendSums,
+  orderSpendWhere,
   orderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
+import { orderFees, orderIsPaid } from "@/lib/order-money";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -141,24 +144,19 @@ async function getOrdersShopRows(
     shop: filters.shop,
   };
   const orderItems = createOrderItemSpendByOrder(tx, userId, scopedFilters);
+  const sums = orderSpendSums(orderItems);
   const grouped = tx.$with("shop_agg").as(
     tx
       .select({
         shop: order.shop,
-        spend: sql<number>`COALESCE(${sum(
-          sql`COALESCE(${orderItems.itemSpend}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
-        )}, 0)::double precision`.as("spend"),
-        orderCount: sql<number>`${count(order.id)}::integer`.as("order_count"),
-        orderItemCount: sql<number>`COALESCE(${sum(
-          sql`COALESCE(${orderItems.itemCount}, 0)`,
-        )}, 0)::integer`.as("order_item_count"),
-        fees: sql<number>`COALESCE(${sum(
-          sql`COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
-        )}, 0)::double precision`.as("fees"),
+        spend: sums.orderSpend.as("spend"),
+        orderCount: sums.paidOrderCount.as("order_count"),
+        orderItemCount: sums.orderItemCount.as("order_item_count"),
+        fees: sums.fees.as("fees"),
       })
       .from(order)
       .leftJoin(orderItems, eq(order.id, orderItems.orderId))
-      .where(orderWhere(userId, scopedFilters, "total"))
+      .where(orderSpendWhere(userId, scopedFilters, "total", orderItems))
       .groupBy(order.shop),
   );
   const scopedShops = tx.$with("scoped_shops").as(
@@ -388,6 +386,7 @@ async function loadTopOrders(
   scope: "orders" | "shipping",
 ) {
   const orderItems = createOrderItemSpendByOrder(tx, userId, filters);
+  const orderFeeSpend = sql<number>`(CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END)::double precision`;
   const rows = await tx
     .select({
       orderId: order.id,
@@ -396,16 +395,16 @@ async function loadTopOrders(
       expenseDate: sql<string | null>`${realizedOrderDateSql()}`,
       images: orderPreviewImagesSql,
       itemSpend: sql<number>`COALESCE(${orderItems.itemSpend}, 0)::double precision`,
-      shipping: order.shippingFee,
-      taxes: order.taxes,
-      duties: order.duties,
-      tariffs: order.tariffs,
-      miscFees: order.miscFees,
+      feeSpend: orderFeeSpend,
     })
     .from(order)
     .leftJoin(orderItems, eq(order.id, orderItems.orderId))
     .leftJoin(collection, eq(order.id, collection.orderId))
-    .where(orderWhere(userId, filters, "total"))
+    .where(
+      scope === "shipping"
+        ? orderWhere(userId, filters, "total")
+        : orderSpendWhere(userId, filters, "total", orderItems),
+    )
     .groupBy(
       order.id,
       order.title,
@@ -426,7 +425,7 @@ async function loadTopOrders(
       desc(
         scope === "shipping"
           ? order.shippingFee
-          : sql`COALESCE(${orderItems.itemSpend}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+          : sql`COALESCE(${orderItems.itemSpend}, 0) + ${orderFeeSpend}`,
       ),
       asc(sql`LOWER(${order.title})`),
       asc(order.title),
@@ -434,13 +433,9 @@ async function loadTopOrders(
     )
     .limit(5);
 
-  return rows.map(({ itemSpend, shipping, taxes, duties, tariffs, miscFees, ...row }) => {
-    const feeSpend = shipping + taxes + duties + tariffs + miscFees;
-    return {
-      ...row,
-      images: row.images.slice(0, 4),
-      feeSpend,
-      totalSpend: itemSpend + feeSpend,
-    };
-  });
+  return rows.map(({ itemSpend, ...row }) => ({
+    ...row,
+    images: row.images.slice(0, 4),
+    totalSpend: itemSpend + row.feeSpend,
+  }));
 }

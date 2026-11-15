@@ -118,7 +118,7 @@ export const expensesOrdersResponseSchema = z.object({
     paidOrderCount: z.number(),
     orderItemCount: z.number(),
     unpaidOrderCount: z.number(),
-    unpaidCommitments: z.number(),
+    unpaidCosts: z.number(),
   }),
   breakdown: z.array(costBreakdownEntrySchema),
   spendingByPeriod: z.array(orderSpendPointSchema),

@@ -95,11 +95,7 @@ export default function OrdersTab({
       chartNode = exhaustive;
     }
   }
-  const unpaidValue = formatCurrencyFromMinorUnits(
-    data?.kpis.unpaidCommitments ?? 0,
-    currency,
-    locale,
-  );
+  const unpaidValue = formatCurrencyFromMinorUnits(data?.kpis.unpaidCosts ?? 0, currency, locale);
   const paidOrdersSearch = {
     status: ["Paid", "Shipped", "Owned"],
     shop: filters.shop,
@@ -109,8 +105,6 @@ export default function OrdersTab({
   const unpaidOrdersSearch = {
     status: ["Ordered"],
     shop: filters.shop,
-    expenseDateStart: filters.dateStart,
-    expenseDateEnd: filters.dateEnd,
   } satisfies OrderFilters;
 
   return (
@@ -147,7 +141,7 @@ export default function OrdersTab({
             ),
           },
           {
-            title: "Unpaid",
+            title: "Unpaid Costs",
             value: (
               <Link to="/orders" search={unpaidOrdersSearch} className="hover:underline">
                 {unpaidValue}
