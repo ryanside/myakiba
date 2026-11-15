@@ -354,7 +354,7 @@ function OrderCard({
 
         <div className="-mx-1.5 flex flex-col">
           <div
-            className="flex items-center justify-between gap-2 px-1.5 py-1"
+            className="flex cursor-default items-center justify-between gap-2 px-1.5 py-1"
             onPointerDown={(e) => e.stopPropagation()}
           >
             <span className="shrink-0 text-xs font-medium text-muted-foreground">Paid</span>
