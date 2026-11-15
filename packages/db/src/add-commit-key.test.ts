@@ -3,6 +3,7 @@ import type { SQL } from "bun";
 import { testDatabases } from "../test/database";
 import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../test/push";
 import { migrateItemOwnership } from "./item-ownership/migrate";
+import { migratePaid } from "./paid/migrate";
 
 const databases = testDatabases();
 
@@ -46,6 +47,7 @@ async function productionTemplateWithReversedKeyRead(): Promise<string | undefin
           ADD CONSTRAINT add_commit_user_id_commit_id_pk PRIMARY KEY (user_id, commit_id)
       `;
       await migrateItemOwnership(sql);
+      await migratePaid(sql);
       await sql`CREATE SCHEMA unrelated`;
       await sql`CREATE TABLE unrelated.pair (a int, b int, PRIMARY KEY (a, b))`;
       await sql`

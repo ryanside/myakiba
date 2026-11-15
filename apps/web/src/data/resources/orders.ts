@@ -27,6 +27,7 @@ import {
 } from "@/queries/orders";
 import { Result } from "better-result";
 import { MoveTargetGone } from "@/lib/errors/move-target-gone";
+import { paymentOf } from "@/lib/orders";
 import { collectionWriteFamilies } from "../catalog";
 import { defineCommand, rootedRead } from "../client";
 
@@ -92,7 +93,10 @@ export const editOrderCommand = defineCommand({
     cascadeOptions,
   }: { readonly values: EditedOrder; readonly cascadeOptions: CascadeOptions } & OnList) =>
     editOrder(values, cascadeOptions),
-  optimistic: async (queryClient, { values, list }) => {
+  optimistic: async (queryClient, { values, cascadeOptions, list }) => {
+    const cascadedPayment = cascadeOptions.includes("paid")
+      ? { payment: paymentOf(values.paid) }
+      : {};
     // Always patch the order detail cache; it is keyed by id, so it is safe to update
     // regardless of any list-page filter state.
     const orderDetailKey = orders.detail.key(values.orderId);
@@ -108,7 +112,12 @@ export const editOrderCommand = defineCommand({
       : undefined;
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
       old
-        ? { ...old, ...values, ...(detailNewTotal !== undefined && { total: detailNewTotal }) }
+        ? {
+            ...old,
+            ...values,
+            ...cascadedPayment,
+            ...(detailNewTotal !== undefined && { total: detailNewTotal }),
+          }
         : old,
     );
 
@@ -134,7 +143,12 @@ export const editOrderCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === values.orderId
-                  ? { ...order, ...values, ...(newTotal !== undefined && { total: newTotal }) }
+                  ? {
+                      ...order,
+                      ...values,
+                      ...cascadedPayment,
+                      ...(newTotal !== undefined && { total: newTotal }),
+                    }
                   : order,
               ),
             }

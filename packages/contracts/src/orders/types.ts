@@ -1,6 +1,6 @@
 import type { CollectionItem } from "../collection/types";
 import type { Page } from "../shared/pagination";
-import type { OrderStatus, ShippingMethod } from "../shared/types";
+import type { OrderPayment, OrderStatus, ShippingMethod } from "../shared/types";
 
 export type Order = {
   orderId: string;
@@ -13,6 +13,8 @@ export type Order = {
   shippingDate: string | null;
   collectionDate: string | null;
   status: OrderStatus;
+  paid: boolean;
+  payment: OrderPayment;
   total: number;
   shippingFee: number;
   taxes: number;

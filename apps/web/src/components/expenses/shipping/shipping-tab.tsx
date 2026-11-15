@@ -119,7 +119,7 @@ export default function ShippingTab({
     }
   }
   const paidOrdersSearch = {
-    status: ["Paid", "Shipped", "Owned"],
+    paid: true,
     shop: filters.shop,
     expenseDateStart: filters.dateStart,
     expenseDateEnd: filters.dateEnd,

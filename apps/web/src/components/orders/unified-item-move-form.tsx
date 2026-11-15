@@ -54,6 +54,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { PaymentDateLabel } from "@/components/orders/payment";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
 import { shownMessageOf } from "@/data/api";
@@ -176,6 +177,7 @@ function UnifiedItemMoveFormContent({
   const newOrderForm = useForm({
     defaultValues: {
       status: "Ordered" as OrderStatus,
+      paid: false,
       title: "New Order",
       shop: "",
       orderDate: "",
@@ -201,6 +203,7 @@ function UnifiedItemMoveFormContent({
         shippingDate: value.shippingDate || null,
         collectionDate: value.collectionDate || null,
         status: value.status,
+        paid: value.paid,
         shippingMethod: value.shippingMethod,
         shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
         taxes: acceptedMoneyToMinorUnits(value.taxes),
@@ -553,7 +556,17 @@ function UnifiedItemMoveFormContent({
                       name="paymentDate"
                       children={(field) => (
                         <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Payment Date</Label>
+                          <newOrderForm.Field
+                            name="paid"
+                            children={(paidField) => (
+                              <PaymentDateLabel
+                                dateId={field.name}
+                                paidId={paidField.name}
+                                paid={paidField.state.value}
+                                onPaidChange={paidField.handleChange}
+                              />
+                            )}
+                          />
                           <DatePicker
                             id={field.name}
                             name={field.name}

@@ -105,7 +105,8 @@ beforeEach(async () => {
       id: "order-existing",
       userId,
       title: "Spring preorders",
-      status: "Paid",
+      status: "Ordered",
+      paid: true,
       shop: "AmiAmi",
       orderDate: "2026-02-01",
       paymentDate: "2026-02-02",
@@ -144,6 +145,7 @@ const newOrder = (overrides: Partial<NewOrderFields> = {}): Ownership => ({
     kind: "new",
     fields: {
       status: "Shipped",
+      paid: true,
       title: "Summer haul",
       shop: "HLJ",
       orderDate: "2026-04-01",
@@ -277,7 +279,7 @@ test("a Collection commit answers each row with its new Collection Item", async 
   expect(rows.map((row) => row.itemId)).toEqual(["item-1", "item-3"]);
 });
 
-test("a Collection commit writes Owned rows with its Collection Date", async () => {
+test("a Collection commit writes Owned, paid rows with its Collection Date", async () => {
   const sent = await commit(
     request({
       rows: bare("item-1", "item-2"),
@@ -287,14 +289,17 @@ test("a Collection commit writes Owned rows with its Collection Date", async () 
 
   expect(sent.status).toBe(200);
   const rows = await ownedRows();
-  expect(rows.map(({ status, collectionDate }) => ({ status, collectionDate }))).toEqual([
-    { status: "Owned", collectionDate: "2026-05-05" },
-    { status: "Owned", collectionDate: "2026-05-05" },
+  expect(
+    rows.map(({ status, paid, collectionDate }) => ({ status, paid, collectionDate })),
+  ).toEqual([
+    { status: "Owned", paid: true, collectionDate: "2026-05-05" },
+    { status: "Owned", paid: true, collectionDate: "2026-05-05" },
   ]);
 });
 
 test.each([
   ["a status", { status: "Owned" }],
+  ["a paid flag", { paid: false }],
   ["a shared Order Date", { orderDate: "2026-05-05" }],
   ["a shared Payment Date", { paymentDate: "2026-05-05" }],
   ["a shared Shipping Date", { shippingDate: "2026-05-05" }],
@@ -587,7 +592,7 @@ test("a commit id reused with another release answers 409", async () => {
   expect(await ownedRows()).toHaveLength(1);
 });
 
-test("a new Order's items take its status, shop, dates and shipping and advance its release date", async () => {
+test("a new Order's items take its status, Paid, shop, dates and shipping and advance its release date", async () => {
   const sent = await commit(
     request({
       rows: [
@@ -601,10 +606,16 @@ test("a new Order's items take its status, shop, dates and shipping and advance 
   const [created] = await db.select().from(order).where(eq(order.title, "Summer haul"));
   expect(sent.status).toBe(200);
   expect(answerOf(sent).orderId).toBe(created?.id ?? "no order");
-  expect(created).toMatchObject({ status: "Shipped", shop: "HLJ", releaseDate: "2026-06-01" });
+  expect(created).toMatchObject({
+    status: "Shipped",
+    paid: true,
+    shop: "HLJ",
+    releaseDate: "2026-06-01",
+  });
   const terms = {
     orderId: created?.id,
     status: "Shipped",
+    paid: true,
     shop: "HLJ",
     orderDate: "2026-04-01",
     paymentDate: "2026-04-02",
@@ -631,7 +642,8 @@ test("an existing Order's new items inherit its terms and advance its release da
   expect(await ownedRows()).toMatchObject([
     {
       orderId: "order-existing",
-      status: "Paid",
+      status: "Ordered",
+      paid: true,
       shop: "AmiAmi",
       orderDate: "2026-02-01",
       paymentDate: "2026-02-02",

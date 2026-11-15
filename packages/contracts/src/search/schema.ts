@@ -23,6 +23,7 @@ export const orderSearchSortSchema = z.enum([
   "miscFees",
   "itemCount",
   "status",
+  "paid",
   "createdAt",
 ]);
 

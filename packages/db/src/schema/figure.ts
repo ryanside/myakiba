@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
   check,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./auth";
@@ -188,6 +189,7 @@ export const collection = pgTable(
     })
       .notNull()
       .default("Owned"),
+    paid: boolean("paid").notNull().default(false),
     count: integer("count").default(1).notNull(),
     releaseId: uuid("release_id").references(() => item_release.id, {
       onDelete: "set null",
@@ -259,6 +261,7 @@ export const order = pgTable(
     })
       .default("Ordered")
       .notNull(),
+    paid: boolean("paid").notNull().default(false),
     shippingFee: bigint("shipping_fee", { mode: "number" }).default(0).notNull(),
     taxes: bigint("taxes", { mode: "number" }).default(0).notNull(),
     duties: bigint("duties", { mode: "number" }).default(0).notNull(),

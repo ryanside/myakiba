@@ -11,6 +11,7 @@ export type CollectionItem = {
   itemCategory: Category | null;
   itemScale: string | null;
   status: CollectionStatus;
+  paid: boolean;
   count: number;
   score: string;
   price: number;

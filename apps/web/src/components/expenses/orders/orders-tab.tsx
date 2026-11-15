@@ -97,13 +97,17 @@ export default function OrdersTab({
   }
   const unpaidValue = formatCurrencyFromMinorUnits(data?.kpis.unpaidCosts ?? 0, currency, locale);
   const paidOrdersSearch = {
-    status: ["Paid", "Shipped", "Owned"],
+    paid: true,
     shop: filters.shop,
     expenseDateStart: filters.dateStart,
     expenseDateEnd: filters.dateEnd,
   } satisfies OrderFilters;
   const unpaidOrdersSearch = {
-    status: ["Ordered"],
+    paid: false,
+    shop: filters.shop,
+  } satisfies OrderFilters;
+  const ordersWithUnpaidCostsSearch = {
+    unpaidCostsMin: 1,
     shop: filters.shop,
   } satisfies OrderFilters;
 
@@ -143,7 +147,7 @@ export default function OrdersTab({
           {
             title: "Unpaid Costs",
             value: (
-              <Link to="/orders" search={unpaidOrdersSearch} className="hover:underline">
+              <Link to="/orders" search={ordersWithUnpaidCostsSearch} className="hover:underline">
                 {unpaidValue}
               </Link>
             ),

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { toast } from "@/components/ui/toast";
 import { useResourceMutation } from "../client";
-import { updateKanbanOrderStatusCommand } from "./dashboard";
+import { updateKanbanOrderPaidCommand, updateKanbanOrderStatusCommand } from "./dashboard";
 
 const realFetch = globalThis.fetch;
 
@@ -13,7 +13,7 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-function answerWith(respond: () => Promise<Response>) {
+function answerWith(respond: (...request: Parameters<typeof fetch>) => Promise<Response>) {
   globalThis.fetch = Object.assign(respond, { preconnect: realFetch.preconnect });
 }
 
@@ -26,7 +26,7 @@ async function moveCardAndReadToast() {
     ),
   });
 
-  await act(() => result.current.run({ orderId: "od-alpha", status: "Paid" }));
+  await act(() => result.current.run({ orderId: "od-alpha", status: "Shipped" }));
   const toasts = added.mock.calls.map(([options]) => options);
   added.mockRestore();
   return toasts;
@@ -71,5 +71,47 @@ describe("a failed kanban status write", () => {
     answerWith(async () => new Response("\u200B\u200B", { status: 400 }));
 
     expect(await moveCardAndReadToast()).toEqual([RETRY_ADVICE]);
+  });
+});
+
+describe("a kanban Paid write", () => {
+  async function markPaid(paid: boolean) {
+    const added = spyOn(toast, "add");
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const { result } = renderHook(() => useResourceMutation(updateKanbanOrderPaidCommand), {
+      wrapper: ({ children }: { readonly children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+    await act(() => result.current.run({ orderId: "od-alpha", paid }));
+    const toasts = added.mock.calls.map(([options]) => options);
+    added.mockRestore();
+    return toasts;
+  }
+
+  test("sets the Order's Paid and cascades it to every Order Item", async () => {
+    const sent: { url: string; method: string; body: unknown }[] = [];
+    answerWith(async (...args: Parameters<typeof fetch>) => {
+      const request = new Request(...args);
+      sent.push({ url: request.url, method: request.method, body: await request.json() });
+      return Response.json("Order updated successfully");
+    });
+
+    expect(await markPaid(true)).toEqual([]);
+    expect(sent).toEqual([
+      {
+        url: expect.stringMatching(/\/api\/orders\/od-alpha$/),
+        method: "PUT",
+        body: { order: { paid: true }, cascadeOptions: ["paid"] },
+      },
+    ]);
+  });
+
+  test("shows retry advice when the server answers 500", async () => {
+    answerWith(async () => Response.json({ message: "lane forced failure" }, { status: 500 }));
+
+    expect(await markPaid(false)).toEqual([
+      { type: "error", title: "Failed to update Paid. Please try again." },
+    ]);
   });
 });

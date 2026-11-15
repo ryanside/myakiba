@@ -8,6 +8,7 @@ import { ROW_LINK_CLASS_NAME } from "@/components/media-tile";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { ThemedBadge } from "@/components/reui/badge";
 import { getStatusVariant } from "@/lib/orders";
+import { PaymentBadge } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
 import type { CalendarOrder } from "@/queries/calendar";
 
@@ -47,6 +48,7 @@ export function CalendarOrderRow({ order, currency, locale }: CalendarOrderRowPr
         <ThemedBadge variant={getStatusVariant(order.status)} size="sm">
           {order.status}
         </ThemedBadge>
+        <PaymentBadge payment={order.payment} size="sm" />
         <span className="text-sm font-medium tabular-nums">
           {formatCurrencyFromMinorUnits(order.total, currency, locale)}
         </span>

@@ -31,6 +31,8 @@ function order(orderId: string): Order {
     shippingDate: null,
     collectionDate: null,
     status: "Ordered",
+    paid: false,
+    payment: "unpaid",
     shippingFee: 0,
     taxes: 0,
     duties: 0,

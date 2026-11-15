@@ -19,6 +19,7 @@ const ITEM: CollectionItemFormValues = {
   itemTitle: "Hatsune Miku 1/7",
   itemImage: null,
   status: "Owned",
+  paid: true,
   count: 1,
   score: "0",
   price: 1000,

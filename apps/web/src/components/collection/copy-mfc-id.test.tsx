@@ -26,6 +26,7 @@ const ITEM: CollectionItem = {
   itemCategory: null,
   itemScale: null,
   status: "Owned",
+  paid: true,
   count: 1,
   score: "0",
   price: 1000,

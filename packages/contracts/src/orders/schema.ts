@@ -30,8 +30,11 @@ export const orderFiltersSchema = z.object({
   colDateStart: z.iso.date().optional(),
   colDateEnd: z.iso.date().optional(),
   status: z.array(z.enum(ORDER_STATUSES)).optional(),
+  paid: z.boolean().optional(),
   totalMin: z.coerce.number().int().optional(),
   totalMax: z.coerce.number().int().optional(),
+  unpaidCostsMin: z.coerce.number().int().optional(),
+  unpaidCostsMax: z.coerce.number().int().optional(),
   shippingFeeMin: z.coerce.number().int().optional(),
   shippingFeeMax: z.coerce.number().int().optional(),
   taxesMin: z.coerce.number().int().optional(),
@@ -50,13 +53,14 @@ export const orderItemsQuerySchema = z.object({
   limit: paginationLimitSchema.default(6),
   offset: paginationOffsetSchema.default(0),
   sort: z
-    .enum(["title", "orderDate", "releaseDate", "count", "price", "status", "createdAt"])
+    .enum(["title", "orderDate", "releaseDate", "count", "price", "status", "paid", "createdAt"])
     .default("createdAt"),
   order: sortDirectionSchema.default("desc"),
 });
 
 export const newOrderSchema = z.strictObject({
   status: z.enum(ORDER_STATUSES),
+  paid: z.boolean(),
   title: z.string().max(WRITE_LIMITS.title),
   shop: z.string().trim().max(WRITE_LIMITS.shop),
   orderDate: z.iso.date().nullable(),

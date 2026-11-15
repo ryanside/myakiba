@@ -52,6 +52,7 @@ import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { PaymentDateLabel } from "@/components/orders/payment";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -163,6 +164,7 @@ function OrderFormContent(
         }
       : {
           status: "Ordered" as const,
+          paid: false,
           title: (() => {
             if (type === "merge") return "New Merged Order";
             if (type === "split") return "New Split Order";
@@ -193,6 +195,7 @@ function OrderFormContent(
           shippingDate: value.shippingDate || null,
           collectionDate: value.collectionDate || null,
           status: value.status,
+          paid: value.paid,
           shippingMethod: value.shippingMethod || "n/a",
           shippingFee: acceptedMoneyToMinorUnits(value.shippingFee),
           taxes: acceptedMoneyToMinorUnits(value.taxes),
@@ -372,7 +375,17 @@ function OrderFormContent(
             name="paymentDate"
             children={(field) => (
               <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Payment Date</Label>
+                <form.Field
+                  name="paid"
+                  children={(paidField) => (
+                    <PaymentDateLabel
+                      dateId={field.name}
+                      paidId={paidField.name}
+                      paid={paidField.state.value}
+                      onPaidChange={paidField.handleChange}
+                    />
+                  )}
+                />
                 <DatePicker
                   id={field.name}
                   name={field.name}

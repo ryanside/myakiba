@@ -26,7 +26,8 @@ import {
 } from "@/components/reui/timeline";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
-import { getStatusVariant } from "@/lib/orders";
+import { getStatusVariant, paymentOf } from "@/lib/orders";
+import { PaymentLine } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
 import type { ItemCollectionEntry, ItemDetail, ItemRelatedOrder } from "@/components/item/types";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
@@ -97,9 +98,8 @@ export function CollectionItemCard({
   const release = item?.releases.find((r) => r.id === collectionItem?.releaseId);
   const timelineSteps = [
     { step: 1, title: "Ordered", date: collectionItem?.orderDate },
-    { step: 2, title: "Paid", date: collectionItem?.paymentDate },
-    { step: 3, title: "Shipped", date: collectionItem?.shippingDate },
-    { step: 4, title: "Collected", date: collectionItem?.collectionDate },
+    { step: 2, title: "Shipped", date: collectionItem?.shippingDate },
+    { step: 3, title: "Owned", date: collectionItem?.collectionDate },
   ] as const;
   const activeStep = timelineSteps.findLast(({ date }) => date)?.step ?? 0;
   const hasScore =
@@ -297,6 +297,18 @@ export function CollectionItemCard({
             </TimelineItem>
           ))}
         </Timeline>
+      )}
+
+      {collectionItem ? (
+        <div className="animate-data-in">
+          <PaymentLine
+            payment={paymentOf(collectionItem.paid)}
+            paymentDate={collectionItem.paymentDate}
+            dateFormat={dateFormat}
+          />
+        </div>
+      ) : (
+        <Skeleton className="h-5 w-32" />
       )}
 
       {hasExtras && (

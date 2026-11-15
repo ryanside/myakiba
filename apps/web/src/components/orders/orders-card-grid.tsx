@@ -12,6 +12,7 @@ import {
 } from "@/components/media-tile";
 import { ThemedBadge } from "@/components/reui/badge";
 import { getStatusVariant } from "@/lib/orders";
+import { PaymentBadge } from "@/components/orders/payment";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
 import type { Order } from "@myakiba/contracts/orders/types";
@@ -149,12 +150,15 @@ export function OrdersCardGrid({
 
             <MediaCardBody>
               <span className="flex min-w-0 items-center justify-between gap-2">
-                <ThemedBadge
-                  variant={getStatusVariant(order.status)}
-                  size={isCompact ? "xs" : "sm"}
-                >
-                  {order.status}
-                </ThemedBadge>
+                <span className="flex min-w-0 items-center gap-1">
+                  <ThemedBadge
+                    variant={getStatusVariant(order.status)}
+                    size={isCompact ? "xs" : "sm"}
+                  >
+                    {order.status}
+                  </ThemedBadge>
+                  <PaymentBadge payment={order.payment} size={isCompact ? "xs" : "sm"} />
+                </span>
                 <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
                   {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
                 </span>

@@ -6,7 +6,7 @@ import { QuickFilterChips } from "./quick-filter-chips";
 
 afterEach(cleanup);
 
-const OPTIONS = ["Ordered", "Paid", "Shipped"] as const;
+const OPTIONS = ["Ordered", "Shipped", "Owned"] as const;
 type Option = (typeof OPTIONS)[number];
 
 function Owner({ initial, isAll }: { readonly initial: Option[]; readonly isAll?: boolean }) {
@@ -30,25 +30,25 @@ describe("QuickFilterChips", () => {
   test("All is pressed while nothing is selected", () => {
     render(<Owner initial={[]} />);
     expect(chip("All").getAttribute("aria-pressed")).toBe("true");
-    expect(chip("Paid").getAttribute("aria-pressed")).toBe("false");
+    expect(chip("Shipped").getAttribute("aria-pressed")).toBe("false");
   });
 
   test("pressing an option from All selects only that option", async () => {
     render(<Owner initial={[]} />);
-    await userEvent.click(chip("Paid"));
-    expect(screen.getByRole("status").textContent).toBe("Paid");
+    await userEvent.click(chip("Shipped"));
+    expect(screen.getByRole("status").textContent).toBe("Shipped");
     expect(chip("All").getAttribute("aria-pressed")).toBe("false");
   });
 
   test("options keep the order they were pressed in", async () => {
     render(<Owner initial={[]} />);
-    await userEvent.click(chip("Shipped"));
+    await userEvent.click(chip("Owned"));
     await userEvent.click(chip("Ordered"));
-    expect(screen.getByRole("status").textContent).toBe("Shipped,Ordered");
+    expect(screen.getByRole("status").textContent).toBe("Owned,Ordered");
   });
 
   test("pressing All clears the selection", async () => {
-    render(<Owner initial={["Paid", "Shipped"]} />);
+    render(<Owner initial={["Shipped", "Owned"]} />);
     await userEvent.click(chip("All"));
     expect(screen.getByRole("status").textContent).toBe("none");
     expect(chip("All").getAttribute("aria-pressed")).toBe("true");

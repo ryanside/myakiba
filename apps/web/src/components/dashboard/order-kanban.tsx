@@ -27,6 +27,7 @@ import { useResourceMutation } from "@/data/client";
 import type { Saving } from "@/data/client";
 import {
   updateKanbanOrderDateCommand,
+  updateKanbanOrderPaidCommand,
   updateKanbanOrderStatusCommand,
 } from "@/data/resources/dashboard";
 import type { OrderDateField } from "@/queries/orders";
@@ -35,7 +36,8 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { TILE_HOVER_CLASS_NAME, TILE_SURFACE_CLASS_NAME } from "@/components/media-tile";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { ORDER_STATUS_COLORS, paymentOf } from "@/lib/orders";
+import { PaidCheckbox } from "@/components/orders/payment";
 import { getCurrencyLocale } from "@/lib/locale";
 import { Skeleton } from "../ui/skeleton";
 import Loader from "../loader";
@@ -50,7 +52,6 @@ interface OrdersKanbanProps {
 
 interface OrderColumns {
   Ordered: DashboardKanbanOrder[];
-  Paid: DashboardKanbanOrder[];
   Shipped: DashboardKanbanOrder[];
   Owned: DashboardKanbanOrder[];
 }
@@ -75,6 +76,18 @@ interface DateMutationVariables {
   readonly previousDate: string | null;
 }
 
+type PaymentFields = Pick<DashboardKanbanOrder, "paid" | "payment">;
+
+interface PaidMutationVariables {
+  readonly orderId: string;
+  readonly paid: boolean;
+}
+
+interface PendingPaidMutations {
+  readonly mutations: PaidMutationVariables[];
+  persisted: PaymentFields;
+}
+
 interface PendingStatusMutations {
   readonly mutations: StatusMutationVariables[];
   persistedStatus: OrderStatus;
@@ -91,7 +104,6 @@ type KanbanColumnMetadata = Record<OrderStatus, { readonly title: string; readon
 
 const COLUMNS = {
   Ordered: { title: "Ordered", color: ORDER_STATUS_COLORS.Ordered },
-  Paid: { title: "Paid", color: ORDER_STATUS_COLORS.Paid },
   Shipped: { title: "Shipped", color: ORDER_STATUS_COLORS.Shipped },
   Owned: { title: "Owned", color: ORDER_STATUS_COLORS.Owned },
 } satisfies KanbanColumnMetadata;
@@ -99,7 +111,7 @@ const COLUMNS = {
 const DATE_FIELDS: readonly { readonly field: OrderDateField; readonly label: string }[] = [
   { field: "releaseDate", label: "Release" },
   { field: "orderDate", label: "Ordered" },
-  { field: "paymentDate", label: "Paid" },
+  { field: "paymentDate", label: "Payment" },
   { field: "shippingDate", label: "Shipped" },
   { field: "collectionDate", label: "Collected" },
 ];
@@ -226,11 +238,10 @@ function moveOrderToStatus(
   };
 }
 
-function updateOrderDateInColumns(
+function updateOrderInColumns(
   columns: OrderColumns,
   orderId: string,
-  field: OrderDateField,
-  date: string | null,
+  update: (order: DashboardKanbanOrder) => DashboardKanbanOrder,
 ): OrderColumns {
   for (const columnId of ORDER_STATUSES) {
     const orders = columns[columnId];
@@ -239,11 +250,24 @@ function updateOrderDateInColumns(
     if (order === undefined) continue;
 
     const nextOrders = [...orders];
-    nextOrders[index] = withDateUpdate(order, field, date);
+    nextOrders[index] = update(order);
     return { ...columns, [columnId]: nextOrders };
   }
 
   return columns;
+}
+
+function paymentAfterPaidCascade(paid: boolean): PaymentFields {
+  return { paid, payment: paymentOf(paid) };
+}
+
+function updateOrderDateInColumns(
+  columns: OrderColumns,
+  orderId: string,
+  field: OrderDateField,
+  date: string | null,
+): OrderColumns {
+  return updateOrderInColumns(columns, orderId, (order) => withDateUpdate(order, field, date));
 }
 
 async function drainMutationQueue<T>(
@@ -272,6 +296,7 @@ interface OrderCardProps extends Omit<
   dateFormat: DateFormat;
   asHandle?: boolean;
   onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+  onPaidChange: (orderId: string, paid: boolean) => void;
 }
 
 function OrderCard({
@@ -280,6 +305,7 @@ function OrderCard({
   dateFormat,
   asHandle,
   onDateChange,
+  onPaidChange,
   ...props
 }: OrderCardProps) {
   const locale = getCurrencyLocale(currency);
@@ -327,6 +353,17 @@ function OrderCard({
         </div>
 
         <div className="-mx-1.5 flex flex-col">
+          <div
+            className="flex items-center justify-between gap-2 px-1.5 py-1"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">Paid</span>
+            <PaidCheckbox
+              label={`${order.title} paid`}
+              payment={order.payment}
+              onPaidChange={(paid) => onPaidChange(order.orderId, paid)}
+            />
+          </div>
           {DATE_FIELDS.map(({ field, label }) => {
             const dateValue = order[field] ?? null;
             const triggerButton = (
@@ -397,6 +434,7 @@ interface OrderColumnProps {
   readonly dateFormat: DateFormat;
   readonly isOverlay?: boolean;
   readonly onDateChange: (orderId: string, field: OrderDateField, date: string | null) => void;
+  readonly onPaidChange: (orderId: string, paid: boolean) => void;
 }
 
 function ColumnBody({
@@ -406,7 +444,11 @@ function ColumnBody({
   dateFormat,
   asHandle,
   onDateChange,
-}: Pick<OrderColumnProps, "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange"> & {
+  onPaidChange,
+}: Pick<
+  OrderColumnProps,
+  "orders" | "isLoading" | "currency" | "dateFormat" | "onDateChange" | "onPaidChange"
+> & {
   readonly asHandle: boolean;
 }) {
   if (isLoading) return <Loader className="justify-start pt-4" />;
@@ -425,6 +467,7 @@ function ColumnBody({
       dateFormat={dateFormat}
       asHandle={asHandle}
       onDateChange={onDateChange}
+      onPaidChange={onPaidChange}
     />
   ));
 }
@@ -437,6 +480,7 @@ function OrderColumn({
   dateFormat,
   isOverlay,
   onDateChange,
+  onPaidChange,
 }: OrderColumnProps) {
   const col = COLUMNS[columnId];
 
@@ -462,6 +506,7 @@ function OrderColumn({
             dateFormat={dateFormat}
             asHandle={!isOverlay}
             onDateChange={onDateChange}
+            onPaidChange={onPaidChange}
           />
         </KanbanColumnContent>
       </Frame>
@@ -492,12 +537,14 @@ function OrderKanbanBoard({
   const [columns, setColumns] = React.useReducer(columnsReducer, snapshot.columns);
   const pendingStatusMutationsRef = React.useRef(new Map<string, PendingStatusMutations>());
   const pendingDateMutationsRef = React.useRef(new Map<string, PendingDateMutations>());
+  const pendingPaidMutationsRef = React.useRef(new Map<string, PendingPaidMutations>());
   const snapshotRef = React.useRef(snapshot);
   const heldOrderIdRef = React.useRef<string | null>(null);
   const reconcileWithSnapshot = React.useCallback((): void => {
     const localOrderIds = new Set([
       ...pendingStatusMutationsRef.current.keys(),
       ...pendingDateMutationsRef.current.keys(),
+      ...pendingPaidMutationsRef.current.keys(),
     ]);
     if (heldOrderIdRef.current !== null) localOrderIds.add(heldOrderIdRef.current);
     setColumns((current) =>
@@ -519,6 +566,7 @@ function OrderKanbanBoard({
 
   const statusWrite = useResourceMutation(updateKanbanOrderStatusCommand);
   const dateWrite = useResourceMutation(updateKanbanOrderDateCommand);
+  const paidWrite = useResourceMutation(updateKanbanOrderPaidCommand);
 
   const enqueueStatusMutation = React.useCallback(
     (variables: StatusMutationVariables) => {
@@ -611,6 +659,59 @@ function OrderKanbanBoard({
     [dateWrite],
   );
 
+  const enqueuePaidMutation = React.useCallback(
+    (variables: PaidMutationVariables, previous: PaymentFields) => {
+      const existingQueue = pendingPaidMutationsRef.current.get(variables.orderId);
+      if (existingQueue) {
+        existingQueue.mutations.push(variables);
+        return;
+      }
+
+      const queue: PendingPaidMutations = { mutations: [variables], persisted: previous };
+      pendingPaidMutationsRef.current.set(variables.orderId, queue);
+
+      void drainMutationQueue(
+        queue.mutations,
+        (pendingVariables) => paidWrite.run(pendingVariables),
+        (persistedVariables, succeeded) => {
+          if (!succeeded) return;
+
+          queue.persisted = paymentAfterPaidCascade(persistedVariables.paid);
+        },
+        async () => {
+          setColumns((current) =>
+            updateOrderInColumns(current, variables.orderId, (order) => ({
+              ...order,
+              ...queue.persisted,
+            })),
+          );
+          pendingPaidMutationsRef.current.delete(variables.orderId);
+          await paidWrite.refetch();
+        },
+      );
+    },
+    [paidWrite],
+  );
+
+  const handlePaidChange = React.useCallback(
+    (orderId: string, paid: boolean) => {
+      const order = Object.values(columns)
+        .flat()
+        .find((candidate) => candidate.orderId === orderId);
+      if (!order) return;
+
+      setColumns((current) =>
+        updateOrderInColumns(current, orderId, (shown) => ({
+          ...shown,
+          ...paymentAfterPaidCascade(paid),
+        })),
+      );
+
+      enqueuePaidMutation({ orderId, paid }, { paid: order.paid, payment: order.payment });
+    },
+    [columns, enqueuePaidMutation],
+  );
+
   const handleDateChange = React.useCallback(
     (orderId: string, field: OrderDateField, date: string | null) => {
       const order = Object.values(columns)
@@ -660,7 +761,7 @@ function OrderKanbanBoard({
       className="flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-hidden"
     >
       <HeldOrderTracker onHeldOrderChange={setHeldOrderId} />
-      <KanbanBoard className="min-h-0 flex-1 grid-cols-1 gap-3 sm:min-w-[960px] sm:grid-cols-4">
+      <KanbanBoard className="min-h-0 flex-1 grid-cols-1 gap-3 sm:min-w-[720px] sm:grid-cols-3">
         {ORDER_STATUSES.map((columnId) => (
           <OrderColumn
             key={columnId}
@@ -670,6 +771,7 @@ function OrderKanbanBoard({
             currency={currency}
             dateFormat={dateFormat}
             onDateChange={handleDateChange}
+            onPaidChange={handlePaidChange}
           />
         ))}
       </KanbanBoard>
@@ -688,7 +790,6 @@ export default function OrderKanban({
   const snapshot = React.useMemo((): OrdersSnapshot => {
     const grouped: OrderColumns = {
       Ordered: [],
-      Paid: [],
       Shipped: [],
       Owned: [],
     };

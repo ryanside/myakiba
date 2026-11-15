@@ -15,7 +15,7 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrderUpdateType, OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
+import { orderPayment, orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
 
 const itemCount = sql<number>`COUNT(${collection.id})`;
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -39,6 +39,7 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.colDateStart ? gte(order.collectionDate, filters.colDateStart) : undefined,
     filters.colDateEnd ? lte(order.collectionDate, filters.colDateEnd) : undefined,
     filters.status ? inArray(order.status, filters.status) : undefined,
+    filters.paid === undefined ? undefined : eq(order.paid, filters.paid),
     filters.shippingFeeMin === undefined
       ? undefined
       : gte(order.shippingFee, filters.shippingFeeMin),
@@ -102,6 +103,8 @@ export const Orders = {
         shippingDate: order.shippingDate,
         collectionDate: order.collectionDate,
         status: order.status,
+        paid: order.paid,
+        payment: orderPayment,
         total: orderTotal,
         shippingFee: order.shippingFee,
         taxes: order.taxes,
@@ -131,6 +134,7 @@ export const Orders = {
             order.shippingDate,
             order.collectionDate,
             order.status,
+            order.paid,
             order.shippingFee,
             order.taxes,
             order.duties,
@@ -144,6 +148,12 @@ export const Orders = {
             and(
               input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
               input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
+              input.unpaidCostsMin === undefined
+                ? undefined
+                : sql`${orderUnpaidCosts} >= ${input.unpaidCostsMin}`,
+              input.unpaidCostsMax === undefined
+                ? undefined
+                : sql`${orderUnpaidCosts} <= ${input.unpaidCostsMax}`,
             ),
           )
           .$dynamic();
@@ -167,6 +177,7 @@ export const Orders = {
           tariffs: order.tariffs,
           miscFees: order.miscFees,
           status: order.status,
+          paid: order.paid,
           itemCount,
           createdAt: order.createdAt,
         },
@@ -208,6 +219,8 @@ export const Orders = {
           collectionDate: order.collectionDate,
           shippingMethod: order.shippingMethod,
           status: order.status,
+          paid: order.paid,
+          payment: orderPayment,
           total: orderTotal,
           shippingFee: order.shippingFee,
           taxes: order.taxes,
@@ -247,6 +260,7 @@ export const Orders = {
         itemExternalId: item.externalId,
         releaseId: collection.releaseId,
         status: collection.status,
+        paid: collection.paid,
         itemTitle: item.title,
         itemImage: itemImageSql().as("item_image"),
         itemCategory: item.category,
@@ -289,6 +303,7 @@ export const Orders = {
           count: collection.count,
           price: collection.price,
           status: collection.status,
+          paid: collection.paid,
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],

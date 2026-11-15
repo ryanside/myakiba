@@ -90,8 +90,16 @@ beforeAll(async () => {
   ]);
   await db.insert(order).values([
     { id: "order-1", userId, title: "AmiAmi", shop: "AmiAmi", status: "Ordered", shippingFee: 500 },
-    { id: "order-2", userId, title: "HLJ", shop: "HLJ", status: "Owned", shippingFee: 700 },
-    { id: "order-3", userId, title: "Mandarake", shop: "Mandarake", status: "Paid" },
+    {
+      id: "order-2",
+      userId,
+      title: "HLJ",
+      shop: "HLJ",
+      status: "Owned",
+      paid: true,
+      shippingFee: 700,
+    },
+    { id: "order-3", userId, title: "Mandarake", shop: "Mandarake", status: "Ordered", paid: true },
     { id: "order-4", userId: "user-2", title: "Other", shop: "AmiAmi", status: "Ordered" },
   ]);
   await db.insert(collection).values([
@@ -103,6 +111,7 @@ beforeAll(async () => {
       itemId: "item-1",
       orderId: "order-2",
       status: "Owned",
+      paid: true,
       price: 3000,
       shop: "HLJ",
     },
