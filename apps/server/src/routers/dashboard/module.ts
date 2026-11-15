@@ -56,7 +56,10 @@ const collectionStatsRead = prepared("collection_stats", (tx) =>
   tx
     .select({
       totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-      totalSpent: sql<number>`COALESCE(${sum(sql`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`)}, 0)`,
+      totalSpent:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
     })
     .from(collection)
     .where(eq(collection.userId, sql.placeholder("userId"))),
@@ -67,7 +70,7 @@ const categoriesOwnedRead = prepared("categories_owned", (tx) =>
     .select({
       name: sql<Category>`${item.category}::text`,
       count: count(),
-      totalValue: sql<number>`COALESCE(${sum(collection.price)}, 0)`,
+      totalValue: sql<number>`COALESCE(${sum(collection.price)}, 0)`.mapWith(Number),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -151,12 +154,27 @@ const ordersSummaryRead = prepared("orders_summary", (tx) =>
       totalActiveOrderCount: sql<number>`COALESCE(${sum(
         sql`CASE WHEN ${order.status} != 'Owned'
               THEN 1 ELSE 0 END`,
-      )}, 0)`,
-      totalShippingAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.shippingFee} ELSE 0 END`)}, 0)`,
-      totalTaxesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.taxes} ELSE 0 END`)}, 0)`,
-      totalDutiesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.duties} ELSE 0 END`)}, 0)`,
-      totalTariffsAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.tariffs} ELSE 0 END`)}, 0)`,
-      totalMiscFeesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.miscFees} ELSE 0 END`)}, 0)`,
+      )}, 0)`.mapWith(Number),
+      totalShippingAllTime:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.shippingFee} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
+      totalTaxesAllTime:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.taxes} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
+      totalDutiesAllTime:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.duties} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
+      totalTariffsAllTime:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.tariffs} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
+      totalMiscFeesAllTime:
+        sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.miscFees} ELSE 0 END`)}, 0)`.mapWith(
+          Number,
+        ),
     })
     .from(order)
     .where(eq(order.userId, sql.placeholder("userId"))),
@@ -169,7 +187,7 @@ const unpaidSummaryRead = prepared("unpaid_summary", (tx) =>
 const monthlyOrdersRead = prepared("monthly_orders", (tx) =>
   tx
     .select({
-      month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`,
+      month: sql<number>`EXTRACT(MONTH FROM ${order.releaseDate})`.mapWith(Number),
       orderCount: count(),
     })
     .from(order)

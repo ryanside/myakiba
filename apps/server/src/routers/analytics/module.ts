@@ -115,7 +115,7 @@ function entryRankings(tx: ReadTx) {
       name: entry.name,
       category: entry.category,
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.as("totalSpent"),
+      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -152,7 +152,7 @@ function shopRankings(tx: ReadTx) {
     .select({
       shop: collection.shop,
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.as("totalSpent"),
+      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .where(
@@ -189,7 +189,7 @@ function scaleRankings(tx: ReadTx) {
     .select({
       scale: sql<string>`${item.scale}`.as("scale"),
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.as("totalSpent"),
+      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -301,7 +301,9 @@ async function getSectionAnalytics(
         id: sql<string | null>`NULL`.as("id"),
         name: collection.shop,
         itemCount: count().as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
+        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+          .mapWith(Number)
+          .as("totalSpent"),
       })
       .from(collection)
       .where(
@@ -330,10 +332,12 @@ async function getSectionAnalytics(
       tx
         .select({
           totalCount: count().as("totalCount"),
-          totalItemCount: sql<number>`COALESCE(SUM(${shopSummary.itemCount}), 0)`.as(
-            "totalItemCount",
-          ),
-          totalSpent: sql<number>`COALESCE(SUM(${shopSummary.totalSpent}), 0)`.as("totalSpent"),
+          totalItemCount: sql<number>`COALESCE(SUM(${shopSummary.itemCount}), 0)`
+            .mapWith(Number)
+            .as("totalItemCount"),
+          totalSpent: sql<number>`COALESCE(SUM(${shopSummary.totalSpent}), 0)`
+            .mapWith(Number)
+            .as("totalSpent"),
         })
         .from(shopSummary),
     ]);
@@ -349,7 +353,9 @@ async function getSectionAnalytics(
         id: sql<string | null>`NULL`.as("id"),
         name: sql<string>`${item.scale}`.as("name"),
         itemCount: count().as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
+        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+          .mapWith(Number)
+          .as("totalSpent"),
       })
       .from(collection)
       .innerJoin(item, eq(collection.itemId, item.id))
@@ -379,10 +385,12 @@ async function getSectionAnalytics(
       tx
         .select({
           totalCount: count().as("totalCount"),
-          totalItemCount: sql<number>`COALESCE(SUM(${scaleSummary.itemCount}), 0)`.as(
-            "totalItemCount",
-          ),
-          totalSpent: sql<number>`COALESCE(SUM(${scaleSummary.totalSpent}), 0)`.as("totalSpent"),
+          totalItemCount: sql<number>`COALESCE(SUM(${scaleSummary.itemCount}), 0)`
+            .mapWith(Number)
+            .as("totalItemCount"),
+          totalSpent: sql<number>`COALESCE(SUM(${scaleSummary.totalSpent}), 0)`
+            .mapWith(Number)
+            .as("totalSpent"),
         })
         .from(scaleSummary),
     ]);
@@ -415,8 +423,10 @@ async function getSectionAnalytics(
       .select({
         id: entry.id,
         name: entry.name,
-        itemCount: sql<number>`COUNT(DISTINCT ${collection.id})`.as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`.as("totalSpent"),
+        itemCount: sql<number>`COUNT(DISTINCT ${collection.id})`.mapWith(Number).as("itemCount"),
+        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+          .mapWith(Number)
+          .as("totalSpent"),
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -441,7 +451,9 @@ async function getSectionAnalytics(
       tx
         .select({
           totalItemCount: count().as("totalItemCount"),
-          totalSpent: sql<number>`COALESCE(SUM(${matchedCollections.price}), 0)`.as("totalSpent"),
+          totalSpent: sql<number>`COALESCE(SUM(${matchedCollections.price}), 0)`
+            .mapWith(Number)
+            .as("totalSpent"),
         })
         .from(matchedCollections),
     ]);
