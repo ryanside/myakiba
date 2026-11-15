@@ -14,7 +14,6 @@ import type { CascadeOptions, EditedOrder } from "@myakiba/contracts/orders/sche
 import type { Order } from "@myakiba/contracts/orders/types";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
-import { ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -72,7 +71,7 @@ export function OrderActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className={ROW_ACTION_CLASS_NAME}
+              className="text-muted-foreground"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit order</span>

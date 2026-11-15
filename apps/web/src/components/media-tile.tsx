@@ -25,9 +25,6 @@ export const ROW_LINK_CLASS_NAME = cn(
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
 );
 
-export const ROW_ACTION_CLASS_NAME =
-  "text-muted-foreground transition-opacity duration-150 ease-out [@media(hover:hover)]:opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 focus-visible:opacity-100";
-
 export const IMAGE_HOVER_CLASS_NAME = "group-hover/item:after:border-(--image-edge-hover)";
 
 export const CARD_IMAGE_CLASS_NAME = "aspect-square w-full rounded-2xl";

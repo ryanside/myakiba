@@ -43,7 +43,7 @@ import { InlineReleaseCell } from "../cells/inline-release-cell";
 import type { CollectionItem, CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency, DateFormat } from "@myakiba/contracts/shared/types";
-import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
+import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "../ui/skeleton";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import type { Saving } from "@/data/client";
@@ -108,7 +108,7 @@ function CollectionActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className={ROW_ACTION_CLASS_NAME}
+              className="text-muted-foreground"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
