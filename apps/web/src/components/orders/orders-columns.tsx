@@ -190,7 +190,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 264,
+      size: 244,
       meta: {
         skeleton: <Skeleton className="h-6 my-1" />,
       },
@@ -205,7 +205,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 152,
+      size: 140,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -560,7 +560,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 136,
+      size: 116,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
@@ -582,7 +582,7 @@ export function createOrdersColumns({
       enableSorting: false,
       enableHiding: true,
       enableResizing: true,
-      size: 72,
+      size: 56,
       meta: {
         skeleton: <Skeleton className="size-4" />,
       },

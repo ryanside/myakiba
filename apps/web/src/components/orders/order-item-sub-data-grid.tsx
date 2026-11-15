@@ -25,6 +25,7 @@ import { AddLink } from "@/components/add/add-link";
 import { useRead } from "@/data/client";
 import { ORDER_ITEM_PAGE_SIZE, orderItemsInput, orders } from "@/data/resources/orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { withNewColumns } from "@/lib/column-order";
 import { TABLE_LAYOUTS } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { Saving } from "@/data/client";
@@ -38,6 +39,7 @@ const DEFAULT_COLUMN_ORDER = [
   "count",
   "price",
   "status",
+  "paid",
   "actions",
 ];
 
@@ -67,9 +69,13 @@ export function OrderItemSubDataGrid({
     pageIndex: 0,
     pageSize: ORDER_ITEM_PAGE_SIZE,
   });
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+  const [savedColumnOrder, setColumnOrder] = useLocalStorage<string[]>(
     TABLE_LAYOUTS.orderItems.order,
     DEFAULT_COLUMN_ORDER,
+  );
+  const columnOrder = useMemo(
+    () => withNewColumns(savedColumnOrder, DEFAULT_COLUMN_ORDER),
+    [savedColumnOrder],
   );
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     TABLE_LAYOUTS.orderItems.sizing,

@@ -31,6 +31,7 @@ import { GalleryLayoutToggle } from "@/components/ui/gallery-layout-toggle";
 import type { GalleryLayout } from "@/components/ui/gallery-layout-toggle";
 import { useOrdersFilters, useOrdersQuery, useOrdersMutations } from "@/hooks/use-orders";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { withNewColumns } from "@/lib/column-order";
 import { TABLE_LAYOUTS, VIEW_PREFERENCES, useViewPreference } from "@/lib/layout-preferences";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
@@ -66,6 +67,7 @@ const DEFAULT_COLUMN_ORDER = [
   "tariffs",
   "miscFees",
   "status",
+  "paid",
   "actions",
 ];
 
@@ -144,9 +146,13 @@ export default function OrdersDataGrid() {
     TABLE_LAYOUTS.orders.visibility,
     DEFAULT_VISIBILITY,
   );
-  const [columnOrder, setColumnOrder] = useLocalStorage<string[]>(
+  const [savedColumnOrder, setColumnOrder] = useLocalStorage<string[]>(
     TABLE_LAYOUTS.orders.order,
     DEFAULT_COLUMN_ORDER,
+  );
+  const columnOrder = useMemo(
+    () => withNewColumns(savedColumnOrder, DEFAULT_COLUMN_ORDER),
+    [savedColumnOrder],
   );
   const [columnSizing, setColumnSizing] = useLocalStorage<ColumnSizingState>(
     TABLE_LAYOUTS.orders.sizing,
