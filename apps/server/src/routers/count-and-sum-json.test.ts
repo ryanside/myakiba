@@ -188,6 +188,46 @@ describe("every count and sum the contracts call a number is a JSON number", () 
     });
   });
 
+  test("the Dashboard month sends its counts, costs and shop totals as numbers", async () => {
+    const monthly = await get<{
+      readonly itemCount: unknown;
+      readonly orderCount: unknown;
+      readonly unpaidOrderCount: unknown;
+      readonly paidAmount: unknown;
+      readonly unpaidAmount: unknown;
+      readonly costBreakdown: unknown;
+      readonly shopBreakdown: unknown;
+    }>(`/dashboard/monthly?month=${month}&year=${year}`);
+
+    expect({
+      itemCount: monthly.itemCount,
+      orderCount: monthly.orderCount,
+      unpaidOrderCount: monthly.unpaidOrderCount,
+      paidAmount: monthly.paidAmount,
+      unpaidAmount: monthly.unpaidAmount,
+      costBreakdown: monthly.costBreakdown,
+      shopBreakdown: monthly.shopBreakdown,
+    }).toEqual({
+      itemCount: 3,
+      orderCount: 2,
+      unpaidOrderCount: 1,
+      paidAmount: 3526,
+      unpaidAmount: 3600,
+      costBreakdown: {
+        items: 6000,
+        shipping: 800,
+        taxes: 300,
+        duties: 20,
+        tariffs: 5,
+        miscFees: 1,
+      },
+      shopBreakdown: [
+        { shopName: "AmiAmi", orderCount: 1, totalAmount: 3600 },
+        { shopName: "HLJ", orderCount: 1, totalAmount: 3526 },
+      ],
+    });
+  });
+
   test("the Orders page sends each Order's item count as a number", async () => {
     const page = await get<{ readonly items: readonly ItemCount[] }>(
       "/orders?sort=title&order=asc",

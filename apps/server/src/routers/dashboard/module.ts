@@ -243,23 +243,23 @@ const monthlySummaryRead = prepared("monthly_summary", (tx) => {
   return tx
     .select({
       orderCount: count(orders.orderId),
-      unpaidOrderCount: sql<number>`COUNT(*) FILTER (WHERE ${orders.isUnpaid})`,
-      itemCount: sql<number>`COALESCE(SUM(${orders.itemCount}), 0)`,
-      items: sql<number>`COALESCE(SUM(${orders.itemTotal}), 0)`,
-      shipping: sql<number>`COALESCE(SUM(${orders.shippingFee}), 0)`,
-      taxes: sql<number>`COALESCE(SUM(${orders.taxes}), 0)`,
-      duties: sql<number>`COALESCE(SUM(${orders.duties}), 0)`,
-      tariffs: sql<number>`COALESCE(SUM(${orders.tariffs}), 0)`,
-      miscFees: sql<number>`COALESCE(SUM(${orders.miscFees}), 0)`,
-      paidAmount: sql<number>`COALESCE(SUM(${orders.spend}), 0)`,
-      unpaidAmount: sql<number>`COALESCE(SUM(${orders.unpaidCosts}), 0)`,
+      unpaidOrderCount: sql<number>`COUNT(*) FILTER (WHERE ${orders.isUnpaid})`.mapWith(Number),
+      itemCount: sql<number>`COALESCE(SUM(${orders.itemCount}), 0)`.mapWith(Number),
+      items: sql<number>`COALESCE(SUM(${orders.itemTotal}), 0)`.mapWith(Number),
+      shipping: sql<number>`COALESCE(SUM(${orders.shippingFee}), 0)`.mapWith(Number),
+      taxes: sql<number>`COALESCE(SUM(${orders.taxes}), 0)`.mapWith(Number),
+      duties: sql<number>`COALESCE(SUM(${orders.duties}), 0)`.mapWith(Number),
+      tariffs: sql<number>`COALESCE(SUM(${orders.tariffs}), 0)`.mapWith(Number),
+      miscFees: sql<number>`COALESCE(SUM(${orders.miscFees}), 0)`.mapWith(Number),
+      paidAmount: sql<number>`COALESCE(SUM(${orders.spend}), 0)`.mapWith(Number),
+      unpaidAmount: sql<number>`COALESCE(SUM(${orders.unpaidCosts}), 0)`.mapWith(Number),
     })
     .from(orders);
 });
 
 const monthlyShopBreakdownRead = prepared("monthly_shop_breakdown", (tx) => {
   const orders = ordersReleasingInMonth(tx);
-  const totalAmount = sql<number>`COALESCE(SUM(${orders.total}), 0)`;
+  const totalAmount = sql<number>`COALESCE(SUM(${orders.total}), 0)`.mapWith(Number);
   return tx
     .select({
       shopName: orders.shop,
@@ -388,12 +388,10 @@ export const Dashboard = {
         totalTariffsAllTime: 0,
         totalMiscFeesAllTime: 0,
       };
-      const unpaidSummary = unpaidSummaryRows[0] ?? {
+      const { unpaidOrderCount, unpaidCosts } = unpaidSummaryRows[0] ?? {
         unpaidOrderCount: 0,
         unpaidCosts: 0,
       };
-      const unpaidOrderCount = Number(unpaidSummary.unpaidOrderCount ?? 0);
-      const unpaidCosts = Number(unpaidSummary.unpaidCosts ?? 0);
 
       return Result.ok({
         collectionStats,
@@ -451,28 +449,16 @@ export const Dashboard = {
         paidAmount: 0,
         unpaidAmount: 0,
       };
-      const shopBreakdown = shopBreakdownRows.map((row) => ({
-        shopName: row.shopName,
-        orderCount: row.orderCount,
-        totalAmount: Number(row.totalAmount),
-      }));
-      const costBreakdown = {
-        items: Number(monthlySummary.items),
-        shipping: Number(monthlySummary.shipping),
-        taxes: Number(monthlySummary.taxes),
-        duties: Number(monthlySummary.duties),
-        tariffs: Number(monthlySummary.tariffs),
-        miscFees: Number(monthlySummary.miscFees),
-      };
+      const { items, shipping, taxes, duties, tariffs, miscFees } = monthlySummary;
 
       return Result.ok({
-        itemCount: Number(monthlySummary.itemCount),
+        itemCount: monthlySummary.itemCount,
         orderCount: monthlySummary.orderCount,
-        unpaidOrderCount: Number(monthlySummary.unpaidOrderCount),
-        paidAmount: Number(monthlySummary.paidAmount),
-        unpaidAmount: Number(monthlySummary.unpaidAmount),
-        shopBreakdown,
-        costBreakdown,
+        unpaidOrderCount: monthlySummary.unpaidOrderCount,
+        paidAmount: monthlySummary.paidAmount,
+        unpaidAmount: monthlySummary.unpaidAmount,
+        shopBreakdown: shopBreakdownRows,
+        costBreakdown: { items, shipping, taxes, duties, tariffs, miscFees },
         orders,
       });
     },
