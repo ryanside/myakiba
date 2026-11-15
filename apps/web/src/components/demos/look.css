@@ -27,7 +27,6 @@
 
   /* Acquisition Status colors, as lib/orders.ts paints them */
   --mk-ordered: var(--info);
-  --mk-paid: var(--warning);
   --mk-shipped: var(--color-violet-500);
   --mk-owned: var(--success);
 

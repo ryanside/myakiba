@@ -64,7 +64,7 @@
     line-height: 22px;
   }
 
-  /* The order's header: thumbnail, title and status, the shop, Edit */
+  /* The order's header: thumbnail, title, status and payment, the shop, Edit */
   .mk-order-lifecycle-hero {
     display: flex;
     align-items: flex-start;
@@ -140,11 +140,6 @@
     transition: background-color 0.15s ease;
   }
 
-  .mk-order-lifecycle-button--icon {
-    width: 32px;
-    padding: 0;
-  }
-
   .mk-order-lifecycle-button[data-hover],
   .mk-order-lifecycle-button[data-open] {
     background: var(--muted);
@@ -187,10 +182,6 @@
     transition: background-color 0.2s ease;
   }
 
-  .mk-order-lifecycle-dot[data-status="Paid"] {
-    background: var(--mk-paid);
-  }
-
   .mk-order-lifecycle-dot[data-status="Shipped"] {
     background: var(--mk-shipped);
   }
@@ -199,11 +190,116 @@
     background: var(--mk-owned);
   }
 
+  /* PaymentBadge: ThemedBadge's warning-light for Unpaid, success-light for Paid */
+  .mk-order-lifecycle-badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    box-sizing: border-box;
+    height: 20px;
+    padding: 2px 5px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--warning) 10%, transparent);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    letter-spacing: normal;
+    color: var(--warning-foreground);
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .mk-order-lifecycle-badge[data-paid] {
+    background: color-mix(in oklab, var(--success) 10%, transparent);
+    color: var(--success-foreground);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-order-lifecycle-badge {
+    background: color-mix(in oklab, var(--warning) 20%, transparent);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-order-lifecycle-badge[data-paid] {
+    background: color-mix(in oklab, var(--success) 20%, transparent);
+  }
+
+  .mk-order-lifecycle-badge-label {
+    display: inline-flex;
+    align-items: center;
+    height: 16px;
+  }
+
+  .mk-order-lifecycle-badge-label .ss-roll__mid,
+  .mk-order-lifecycle-badge-label .ss-roll__char {
+    vertical-align: top;
+  }
+
+  /* PaidCheckbox: an empty box, or the primary fill with its tick */
+  .mk-order-lifecycle-check {
+    display: grid;
+    flex: none;
+    place-items: center;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--input);
+    border-radius: 4px;
+    color: var(--primary-foreground);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+
+    & svg {
+      opacity: 0;
+      scale: 0.9;
+      transition:
+        opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+        scale 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-order-lifecycle-check:not([data-checked]) {
+    background: color-mix(in oklab, var(--input) 30%, transparent);
+  }
+
+  .mk-order-lifecycle-check[data-checked] {
+    border-color: var(--primary);
+    background: var(--primary);
+
+    & svg {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+
+  /* The Payment line under the stepper, as PaymentLine draws it */
+  .mk-order-lifecycle-payment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 20px;
+    margin-top: 16px;
+  }
+
+  .mk-order-lifecycle-payment-label {
+    color: var(--muted-foreground);
+  }
+
+  .mk-order-lifecycle-payment-date {
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .mk-order-lifecycle-payment-date[data-show] {
+    opacity: 1;
+  }
+
   /* Progress: the app's horizontal Timeline. A step is reached when its
      ring fills; the line to it fills first, from the step before */
   .mk-order-lifecycle-steps {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 16px;
   }
 
@@ -309,7 +405,7 @@
 
   .mk-order-lifecycle-item {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-columns: 40px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 14px;
     height: 56px;
@@ -517,6 +613,19 @@
     font-size: 12px;
     font-weight: 500;
     line-height: 15px;
+  }
+
+  .mk-order-lifecycle-label--payment {
+    justify-content: space-between;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .mk-order-lifecycle-paid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 400;
   }
 
   /* Inputs, selects and date pickers share the app's pill */
@@ -864,6 +973,12 @@
       }
     }
 
+    .mk-order-lifecycle-hero-state {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .mk-order-lifecycle-actions {
       padding-top: 0;
     }
@@ -906,7 +1021,7 @@
     }
 
     .mk-order-lifecycle-item {
-      grid-template-columns: 36px minmax(0, 1fr) auto;
+      grid-template-columns: 36px minmax(0, 1fr) auto auto;
       gap: 12px;
       height: 46px;
       margin-top: 4px;
