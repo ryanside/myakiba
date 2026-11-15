@@ -37,6 +37,7 @@ export const orderFiltersSchema = z.object({
   unpaidCostsMax: z.coerce.number().int().optional(),
   orderSpendMin: z.coerce.number().int().optional(),
   orderSpendMax: z.coerce.number().int().optional(),
+  paidItemsMin: z.coerce.number().int().optional(),
   shippingFeeMin: z.coerce.number().int().optional(),
   shippingFeeMax: z.coerce.number().int().optional(),
   taxesMin: z.coerce.number().int().optional(),
