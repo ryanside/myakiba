@@ -52,7 +52,7 @@ import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { useState } from "react";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { PaymentDateLabel } from "@/components/orders/payment";
+import { PaidField } from "@/components/orders/payment";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
@@ -301,22 +301,33 @@ function OrderFormContent(
           />
 
           <form.Field
-            name="shop"
+            name="paid"
             children={(field) => (
-              <div className="grid gap-1.5">
-                <Label htmlFor={field.name}>Shop</Label>
-                <ShopInput
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value ?? ""}
-                  onBlur={field.handleBlur}
-                  onValueChange={field.handleChange}
-                  placeholder="Enter shop name"
-                />
-              </div>
+              <PaidField
+                id={field.name}
+                paid={field.state.value}
+                onPaidChange={field.handleChange}
+              />
             )}
           />
         </div>
+
+        <form.Field
+          name="shop"
+          children={(field) => (
+            <div className="grid gap-1.5">
+              <Label htmlFor={field.name}>Shop</Label>
+              <ShopInput
+                id={field.name}
+                name={field.name}
+                value={field.state.value ?? ""}
+                onBlur={field.handleBlur}
+                onValueChange={field.handleChange}
+                placeholder="Enter shop name"
+              />
+            </div>
+          )}
+        />
       </FormSection>
 
       <FormSection title="Timeline">
@@ -375,17 +386,7 @@ function OrderFormContent(
             name="paymentDate"
             children={(field) => (
               <div className="grid gap-1.5">
-                <form.Field
-                  name="paid"
-                  children={(paidField) => (
-                    <PaymentDateLabel
-                      dateId={field.name}
-                      paidId={paidField.name}
-                      paid={paidField.state.value}
-                      onPaidChange={paidField.handleChange}
-                    />
-                  )}
-                />
+                <Label htmlFor={field.name}>Payment Date</Label>
                 <DatePicker
                   id={field.name}
                   name={field.name}

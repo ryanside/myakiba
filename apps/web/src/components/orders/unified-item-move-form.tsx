@@ -54,7 +54,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency, OrderStatus, ShippingMethod } from "@myakiba/contracts/shared/types";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { PaymentDateLabel } from "@/components/orders/payment";
+import { PaidField } from "@/components/orders/payment";
 import type { Saving } from "@/data/client";
 import { formSubmitHandler } from "@/lib/form-submit";
 import { shownMessageOf } from "@/data/api";
@@ -504,34 +504,44 @@ function UnifiedItemMoveFormContent({
                       )}
                     />
                     <newOrderForm.Field
-                      name="shippingMethod"
-                      validators={{
-                        onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
-                      }}
+                      name="paid"
                       children={(field) => (
-                        <div className="grid gap-1.5">
-                          <Label htmlFor={field.name}>Shipping Method</Label>
-                          <Select
-                            value={field.state.value ?? ""}
-                            onValueChange={(value) =>
-                              field.handleChange(value as typeof field.state.value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select method" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {SHIPPING_METHODS.map((method) => (
-                                <SelectItem key={method} value={method}>
-                                  {method}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <PaidField
+                          id={field.name}
+                          paid={field.state.value}
+                          onPaidChange={field.handleChange}
+                        />
                       )}
                     />
                   </div>
+                  <newOrderForm.Field
+                    name="shippingMethod"
+                    validators={{
+                      onChange: z.enum(SHIPPING_METHODS, "Shipping method is required"),
+                    }}
+                    children={(field) => (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={field.name}>Shipping Method</Label>
+                        <Select
+                          value={field.state.value ?? ""}
+                          onValueChange={(value) =>
+                            field.handleChange(value as typeof field.state.value)
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SHIPPING_METHODS.map((method) => (
+                              <SelectItem key={method} value={method}>
+                                {method}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  />
                 </FormSection>
 
                 <FormSection title="Timeline">
@@ -556,17 +566,7 @@ function UnifiedItemMoveFormContent({
                       name="paymentDate"
                       children={(field) => (
                         <div className="grid gap-1.5">
-                          <newOrderForm.Field
-                            name="paid"
-                            children={(paidField) => (
-                              <PaymentDateLabel
-                                dateId={field.name}
-                                paidId={paidField.name}
-                                paid={paidField.state.value}
-                                onPaidChange={paidField.handleChange}
-                              />
-                            )}
-                          />
+                          <Label htmlFor={field.name}>Payment Date</Label>
                           <DatePicker
                             id={field.name}
                             name={field.name}

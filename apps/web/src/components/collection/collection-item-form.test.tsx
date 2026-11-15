@@ -124,3 +124,31 @@ test("a typed tag saves exactly as typed, and a picked tag saves in its saved sp
   await waitFor(() => expect(saves).toHaveLength(1));
   expect(saves[0]?.tags).toEqual(["favorite", "Favorite"]);
 });
+
+test("Paid is a field of its own, and saves what it shows", async () => {
+  const saves: CollectionItemFormValues[] = [];
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <CollectionItemForm
+        renderTrigger={<Button>Edit</Button>}
+        itemData={ITEM}
+        callbackFn={async (values) => {
+          saves.push(values);
+          return Result.ok();
+        }}
+        currency="USD"
+      />
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "Edit" }));
+  const paid = await screen.findByRole("checkbox", { name: "Paid", checked: true });
+  expect(screen.getByRole("button", { name: "Payment Date" })).toBeTruthy();
+
+  await user.click(paid);
+  expect(screen.getByRole("checkbox", { name: "Paid", checked: false })).toBeDefined();
+  await user.click(screen.getByRole("button", { name: "Update" }));
+
+  await waitFor(() => expect(saves).toHaveLength(1));
+  expect(saves[0]).toMatchObject({ paid: false, paymentDate: null });
+});

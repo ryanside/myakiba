@@ -51,7 +51,9 @@ type CommitBody = {
   readonly ownership: {
     readonly kind: string;
     readonly shared?: Readonly<Record<string, string | number | null>>;
-    readonly order?: { readonly fields?: Readonly<Record<string, string | number | null>> };
+    readonly order?: {
+      readonly fields?: Readonly<Record<string, string | number | boolean | null>>;
+    };
   };
   readonly wishlist: boolean;
   readonly listIds: readonly string[];

@@ -65,27 +65,23 @@ export function PaymentLine({
   );
 }
 
-export function PaymentDateLabel({
-  dateId,
-  paidId,
+export function PaidField({
+  id,
   paid,
   onPaidChange,
 }: {
-  readonly dateId: string;
-  readonly paidId: string;
+  readonly id: string;
   readonly paid: boolean;
   readonly onPaidChange: (paid: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <Label htmlFor={dateId}>Payment Date</Label>
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id={paidId}
-          checked={paid}
-          onCheckedChange={(next) => onPaidChange(next === true)}
-        />
-        <Label htmlFor={paidId} className="cursor-pointer font-normal">
+    <div className="grid gap-1.5">
+      <span aria-hidden="true" className="invisible text-sm leading-none font-medium">
+        Paid
+      </span>
+      <div className="flex h-8 items-center gap-2">
+        <Checkbox id={id} checked={paid} onCheckedChange={(next) => onPaidChange(next === true)} />
+        <Label htmlFor={id} className="cursor-pointer">
           Paid
         </Label>
       </div>
