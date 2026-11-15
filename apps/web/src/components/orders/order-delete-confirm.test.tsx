@@ -44,7 +44,7 @@ const ORDER = {
   status: "Ordered",
   paid: true,
   payment: "paid",
-  total: "0",
+  total: 0,
   shippingFee: 0,
   taxes: 0,
   duties: 0,

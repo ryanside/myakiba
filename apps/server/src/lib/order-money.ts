@@ -12,7 +12,9 @@ export const orderIsPaid = sql`${order.paid}`;
 
 export const orderFees = sql<number>`(${order.shippingFee} + ${order.taxes} + ${order.duties} + ${order.tariffs} + ${order.miscFees})`;
 
-export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${orderFees}`;
+export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${orderFees}`.mapWith(
+  Number,
+);
 export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
 export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderIsUnpaid} THEN ${orderFees} ELSE 0 END`;
 

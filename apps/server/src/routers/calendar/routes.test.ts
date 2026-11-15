@@ -121,7 +121,7 @@ describe("the calendar answers as before", () => {
             releaseDate: "2026-03-15",
             itemCount: "1",
             images: [],
-            total: "4500",
+            total: 4500,
           },
         ],
       },

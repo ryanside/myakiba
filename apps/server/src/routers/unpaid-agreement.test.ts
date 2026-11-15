@@ -178,7 +178,7 @@ async function seedPaidApartFromStatus() {
 
 type Dashboard = { readonly unpaidCosts: number };
 type OrdersList = {
-  readonly items: readonly { readonly title: string; readonly total: number | string }[];
+  readonly items: readonly { readonly title: string; readonly total: number }[];
   readonly totalSpent: number;
   readonly unpaidCosts: number;
 };
@@ -250,7 +250,7 @@ describe("an Unpaid Order holding an unpaid item, a paid item and a shipping fee
 describe("each item's price follows its own Paid and each Order's fees follow the Order's", () => {
   test("Spend and Unpaid Costs on the Orders page add up to its Order Totals", async () => {
     const orders = await get<OrdersList>(twoOrders, "/orders?limit=10");
-    const orderTotals = orders.items.reduce((sum, row) => sum + Number(row.total), 0);
+    const orderTotals = orders.items.reduce((sum, row) => sum + row.total, 0);
 
     expect(orderTotals).toBe(16_000);
     expect(orders.totalSpent + orders.unpaidCosts).toBe(orderTotals);

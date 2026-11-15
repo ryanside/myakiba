@@ -103,12 +103,12 @@ export const editOrderCommand = defineCommand({
     await queryClient.cancelQueries({ queryKey: orderDetailKey });
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
     const detailNewTotal = previousOrderDetail
-      ? Number(previousOrderDetail.total) +
-        (values.shippingFee - Number(previousOrderDetail.shippingFee)) +
-        (values.taxes - Number(previousOrderDetail.taxes)) +
-        (values.duties - Number(previousOrderDetail.duties)) +
-        (values.tariffs - Number(previousOrderDetail.tariffs)) +
-        (values.miscFees - Number(previousOrderDetail.miscFees))
+      ? previousOrderDetail.total +
+        (values.shippingFee - previousOrderDetail.shippingFee) +
+        (values.taxes - previousOrderDetail.taxes) +
+        (values.duties - previousOrderDetail.duties) +
+        (values.tariffs - previousOrderDetail.tariffs) +
+        (values.miscFees - previousOrderDetail.miscFees)
       : undefined;
     queryClient.setQueryData<Order>(orderDetailKey, (old) =>
       old
@@ -129,12 +129,12 @@ export const editOrderCommand = defineCommand({
       const oldOrder = previousList?.items.find((o) => o.orderId === values.orderId);
 
       const newTotal = oldOrder
-        ? Number(oldOrder.total) +
-          (values.shippingFee - Number(oldOrder.shippingFee)) +
-          (values.taxes - Number(oldOrder.taxes)) +
-          (values.duties - Number(oldOrder.duties)) +
-          (values.tariffs - Number(oldOrder.tariffs)) +
-          (values.miscFees - Number(oldOrder.miscFees))
+        ? oldOrder.total +
+          (values.shippingFee - oldOrder.shippingFee) +
+          (values.taxes - oldOrder.taxes) +
+          (values.duties - oldOrder.duties) +
+          (values.tariffs - oldOrder.tariffs) +
+          (values.miscFees - oldOrder.miscFees)
         : undefined;
 
       queryClient.setQueryData<OrdersPage>(listKey, (old) =>
@@ -289,7 +289,7 @@ export const editOrderItemCommand = defineCommand({
     const previousOrderDetail = queryClient.getQueryData<Order>(orderDetailKey);
     if (priceChanged) {
       queryClient.setQueryData<Order>(orderDetailKey, (old) =>
-        old ? { ...old, total: Number(old.total) + priceDelta } : old,
+        old ? { ...old, total: old.total + priceDelta } : old,
       );
     }
 
@@ -305,7 +305,7 @@ export const editOrderItemCommand = defineCommand({
               ...old,
               items: old.items.map((order) =>
                 order.orderId === itemOrderId
-                  ? { ...order, total: Number(order.total) + priceDelta }
+                  ? { ...order, total: order.total + priceDelta }
                   : order,
               ),
             }
