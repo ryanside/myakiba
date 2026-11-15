@@ -132,10 +132,10 @@
   display: none;
 }
 
-/* Order rows: expand, Order, Items, Total, Status */
+/* Order rows: expand, Order, Items, Total, Status, Paid */
 .mk-customs-fees .mk-customs-fees-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 64px 112px 128px;
+  grid-template-columns: 28px minmax(0, 1fr) 56px 96px 100px 48px;
   align-items: center;
   height: 52px;
   border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
@@ -153,7 +153,8 @@
 
 .mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-row > :first-child,
 .mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-items,
-.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-status {
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-status,
+.mk-customs-fees .ss-stage[data-layout="compact"] .mk-customs-fees-col-paid {
   display: none;
 }
 
@@ -246,10 +247,6 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--mk-paid);
-}
-
-.mk-customs-fees .mk-customs-fees-dot[data-status="Ordered"] {
   background: var(--mk-ordered);
 }
 
@@ -259,6 +256,31 @@
 
 .mk-customs-fees .mk-customs-fees-dot[data-status="Owned"] {
   background: var(--mk-owned);
+}
+
+.mk-customs-fees .mk-customs-fees-col-paid {
+  display: flex;
+  align-items: center;
+}
+
+.mk-customs-fees .mk-customs-fees-check {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--input);
+  border-radius: 4px;
+}
+
+.mk-customs-fees .ss-stage[data-theme="dark"] .mk-customs-fees-check:not([data-checked]) {
+  background: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+.mk-customs-fees .mk-customs-fees-check[data-checked] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 /* The Total: a ghost button over the cell, its value right-aligned. Open,

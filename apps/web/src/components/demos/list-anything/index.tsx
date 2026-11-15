@@ -58,13 +58,14 @@ type S = {
   readonly toast: boolean;
 };
 
-type Status = "Ordered" | "Paid" | "Shipped" | "Owned";
+type Status = "Ordered" | "Shipped" | "Owned";
 
 type Order = {
   readonly title: string;
   readonly items: number;
   readonly total: string;
   readonly status: Status;
+  readonly paid: boolean;
   readonly images: readonly string[];
 };
 
@@ -85,7 +86,8 @@ const ADDED: Order = {
   title: "Event exclusives",
   items: 3,
   total: "$286.40",
-  status: "Paid",
+  status: "Ordered",
+  paid: true,
   images: [img(2), img(4), img(6)],
 };
 
@@ -95,6 +97,7 @@ const ORDERS: readonly Order[] = [
     items: 2,
     total: "$323.50",
     status: "Ordered",
+    paid: false,
     images: [img(5), img(7)],
   },
   ADDED,
@@ -103,6 +106,7 @@ const ORDERS: readonly Order[] = [
     items: 1,
     total: "$34.50",
     status: "Owned",
+    paid: true,
     images: [img(3)],
   },
   {
@@ -110,6 +114,7 @@ const ORDERS: readonly Order[] = [
     items: 3,
     total: "$141.30",
     status: "Shipped",
+    paid: false,
     images: [img(4), img(3), img(7)],
   },
   {
@@ -117,6 +122,7 @@ const ORDERS: readonly Order[] = [
     items: 2,
     total: "$318.00",
     status: "Ordered",
+    paid: false,
     images: [img(6), img(5)],
   },
   {
@@ -124,6 +130,7 @@ const ORDERS: readonly Order[] = [
     items: 2,
     total: "$212.00",
     status: "Owned",
+    paid: true,
     images: [img(2), img(6)],
   },
 ];
@@ -258,6 +265,9 @@ function OrderRow({ order, picked }: { readonly order: Order; readonly picked?: 
           {order.status}
         </span>
       </span>
+      <span className={`${cls("cell")} ${cls("col-paid")}`}>
+        <Check on={order.paid} />
+      </span>
       <span className={cls("cell-more")}>
         <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
       </span>
@@ -312,7 +322,8 @@ function OrdersPage({ s, compact }: { readonly s: S; readonly compact: boolean }
           <span className={cls("cell")}>Order</span>
           <span className={`${cls("cell")} ${cls("num")} ${cls("col-items")}`}>Items</span>
           <span className={`${cls("cell")} ${cls("num")} ${cls("col-total")}`}>Total</span>
-          <span className={`${cls("cell")} ${cls("col-status")} ${cls("head-last")}`}>Status</span>
+          <span className={`${cls("cell")} ${cls("col-status")}`}>Status</span>
+          <span className={`${cls("cell")} ${cls("col-paid")} ${cls("head-last")}`}>Paid</span>
         </div>
         {ORDERS.map((order) => (
           <OrderRow key={order.title} order={order} picked={order === ADDED && s.picked} />

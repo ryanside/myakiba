@@ -50,10 +50,10 @@
   box-sizing: content-box;
 }
 
-/* Order rows: select, expand, Order, Shop, Items, Total, Status, actions */
+/* Order rows: select, expand, Order, Shop, Items, Total, Status, Paid, actions */
 .mk-order-cascade .mk-order-cascade-row {
   display: grid;
-  grid-template-columns: 28px 28px 268px 140px 80px 112px 136px 72px;
+  grid-template-columns: 28px 28px 228px 136px 72px 112px 132px 56px 72px;
   align-items: center;
   height: 52px;
   white-space: nowrap;
@@ -68,7 +68,7 @@
   display: none;
 }
 
-/* The header's Status runs over the actions column, as an empty header does */
+/* The header's Paid runs over the actions column, as an empty header does */
 .mk-order-cascade .mk-order-cascade-head-last {
   grid-column: span 2;
 }
@@ -106,6 +106,10 @@
 .mk-order-cascade
   .ss-stage[data-layout="compact"]
   .mk-order-cascade-row
+  > .mk-order-cascade-col-paid,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-row
   > .mk-order-cascade-cell-more {
   display: none;
 }
@@ -140,11 +144,28 @@
 }
 
 .mk-order-cascade .mk-order-cascade-check {
+  display: grid;
+  place-items: center;
   width: 16px;
   height: 16px;
   box-sizing: border-box;
   border: 1px solid var(--input);
   border-radius: 4px;
+}
+
+.mk-order-cascade .ss-stage[data-theme="dark"] .mk-order-cascade-check:not([data-checked]) {
+  background: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+.mk-order-cascade .mk-order-cascade-check[data-checked] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.mk-order-cascade .mk-order-cascade-col-paid {
+  display: flex;
+  align-items: center;
 }
 
 .mk-order-cascade .mk-order-cascade-expand {
@@ -262,12 +283,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--mk-paid);
-  transition: background-color 0.2s ease;
-}
-
-.mk-order-cascade .mk-order-cascade-dot[data-status="Ordered"] {
   background: var(--mk-ordered);
+  transition: background-color 0.2s ease;
 }
 
 .mk-order-cascade .mk-order-cascade-dot[data-status="Shipped"] {
@@ -298,8 +315,8 @@
 
 .mk-order-cascade .mk-order-cascade-sub-row {
   display: grid;
-  /* Price and Status sit under the order's Total and Status */
-  grid-template-columns: 32px minmax(0, 1fr) 95px 136px 56px;
+  /* Price, Status and Paid sit under the order's Total, Status and Paid */
+  grid-template-columns: 32px minmax(0, 1fr) 95px 132px 56px 56px;
   align-items: center;
   padding: 6px 0;
   white-space: nowrap;
@@ -317,6 +334,10 @@
   .ss-stage[data-layout="compact"]
   .mk-order-cascade-sub-row
   > .mk-order-cascade-col-price,
+.mk-order-cascade
+  .ss-stage[data-layout="compact"]
+  .mk-order-cascade-sub-row
+  > .mk-order-cascade-col-paid,
 .mk-order-cascade
   .ss-stage[data-layout="compact"]
   .mk-order-cascade-sub-row

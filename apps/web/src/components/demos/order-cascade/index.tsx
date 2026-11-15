@@ -6,18 +6,19 @@ import { DisclosureIcon, ExpandIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./order-cascade.css";
 
-// In the orders table, an order's Status goes from Paid to Shipped, and the
+// In the orders table, an order's Status goes from Ordered to Shipped, and the
 // items in its open subtable follow. Beats: the pointer opens the order's
-// Status select, the list opens over the cell with Paid under the pointer, it
-// picks Shipped, the order's status rolls in place, then a beat later each
+// Status select, the list opens over the cell with Ordered under the pointer,
+// it picks Shipped, the order's status rolls in place, then a beat later each
 // item's status rolls top to bottom. The reset is the same select set back
-// to Paid, so the items are seen following the order both ways.
+// to Ordered, so the items are seen following the order both ways.
 //
 // In the app an order edit sends its Status as a cascade, so every item's
 // status really changes. They update together when the items refetch; the
-// stagger here is an illustration of that one update.
+// stagger here is an illustration of that one update. The edit cascades only
+// Status, so every Paid box stays as it was: the order was paid up front.
 
-type Status = "Ordered" | "Paid" | "Shipped" | "Owned";
+type Status = "Ordered" | "Shipped" | "Owned";
 
 type S = {
   readonly open: boolean;
@@ -25,7 +26,7 @@ type S = {
   readonly items: readonly Status[];
 };
 
-const STATUSES: readonly Status[] = ["Ordered", "Paid", "Shipped", "Owned"];
+const STATUSES: readonly Status[] = ["Ordered", "Shipped", "Owned"];
 
 const ITEMS = [
   { title: "Sora 1/4 Scale", price: "$289.00", image: "/example-item2.webp" },
@@ -40,6 +41,7 @@ const OTHER_ORDERS = [
     items: 2,
     total: "$318.00",
     status: "Ordered",
+    paid: false,
     images: ["/example-item5.webp", "/example-item6.webp"],
   },
   {
@@ -48,6 +50,7 @@ const OTHER_ORDERS = [
     items: 2,
     total: "$72.40",
     status: "Owned",
+    paid: true,
     images: ["/example-item7.webp", "/example-item1.webp"],
   },
 ] as const;
@@ -60,7 +63,7 @@ const OPEN_ORDER = {
   images: ITEMS.map((item) => item.image),
 };
 
-const initial: S = { open: false, order: "Paid", items: ["Paid", "Paid", "Paid"] };
+const initial: S = { open: false, order: "Ordered", items: ["Ordered", "Ordered", "Ordered"] };
 const poster: S = { open: false, order: "Shipped", items: ["Shipped", "Shipped", "Shipped"] };
 
 const cls = (name: string) => `mk-order-cascade-${name}`;
@@ -103,10 +106,10 @@ async function script(a: Act<S>) {
   await away;
   await a.wait(2600);
   a.mark("reset");
-  await pick(a, "Paid");
+  await pick(a, "Ordered");
   const back = a.moveCursor("rest", { duration: 700 });
   await a.wait(650);
-  await cascade(a, "Paid");
+  await cascade(a, "Ordered");
   await back;
   await a.wait(1300);
 }
@@ -132,6 +135,17 @@ function Thumbs({ images }: { readonly images: readonly string[] }) {
 
 function Check() {
   return <span className={cls("check")} />;
+}
+
+/** The Paid column's checkbox, as PaidCheckbox draws it */
+function Paid({ paid }: { readonly paid: boolean }) {
+  return (
+    <span className={`${cls("cell")} ${cls("col-paid")}`}>
+      <span className={cls("check")} data-checked={paid || undefined}>
+        {paid ? <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} /> : null}
+      </span>
+    </span>
+  );
 }
 
 function Expand({ open }: { readonly open?: boolean }) {
@@ -211,7 +225,10 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                   <span className={`${cls("cell")} ${cls("col-shop")}`}>Shop</span>
                   <span className={`${cls("cell")} ${cls("num")} ${cls("col-items")}`}>Items</span>
                   <span className={`${cls("cell")} ${cls("num")} ${cls("col-total")}`}>Total</span>
-                  <span className={`${cls("cell")} ${cls("head-last")}`}>Status</span>
+                  <span className={cls("cell")}>Status</span>
+                  <span className={`${cls("cell")} ${cls("col-paid")} ${cls("head-last")}`}>
+                    Paid
+                  </span>
                 </div>
 
                 <div className={cls("row")}>
@@ -241,6 +258,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                       </span>
                     </span>
                   </span>
+                  <Paid paid />
                   <span className={cls("cell-more")}>
                     <More />
                   </span>
@@ -269,9 +287,10 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                         </span>
                         <span className={cls("cell")}>
                           <span className={cls("trigger")} data-target={`item-status-${i}`}>
-                            <StatusValue status={s.items[i] ?? "Paid"} />
+                            <StatusValue status={s.items[i] ?? "Ordered"} />
                           </span>
                         </span>
+                        <Paid paid />
                         <span className={cls("cell-more")}>
                           <More />
                         </span>
@@ -301,6 +320,7 @@ export function OrderCascadeDemo({ theme }: DemoProps) {
                         <StatusValue status={order.status} />
                       </span>
                     </span>
+                    <Paid paid={order.paid} />
                     <span className={cls("cell-more")}>
                       <More />
                     </span>

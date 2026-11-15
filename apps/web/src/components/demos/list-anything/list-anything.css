@@ -75,11 +75,11 @@
     mask-image: none;
   }
 
-  /* Rows: select, expand, Order, Items, Total, Status, actions */
+  /* Rows: select, expand, Order, Items, Total, Status, Paid, actions */
   & .mk-list-anything-row {
     position: relative;
     display: grid;
-    grid-template-columns: 28px 28px minmax(0, 1fr) 120px 150px 172px 56px;
+    grid-template-columns: 28px 28px minmax(0, 1fr) 120px 150px 136px 56px 56px;
     align-items: center;
     height: 52px;
     white-space: nowrap;
@@ -102,6 +102,7 @@
   & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-expand,
   & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-col-items,
   & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-col-status,
+  & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-col-paid,
   & .ss-stage[data-layout="compact"] .mk-list-anything-row > .mk-list-anything-cell-more,
   & .ss-stage[data-layout="compact"] .mk-list-anything-head > span:empty {
     display: none;
@@ -276,11 +277,12 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--mk-paid);
+    background: var(--mk-ordered);
   }
 
-  & .mk-list-anything-dot[data-status="Ordered"] {
-    background: var(--mk-ordered);
+  & .mk-list-anything-col-paid {
+    display: flex;
+    align-items: center;
   }
 
   & .mk-list-anything-dot[data-status="Shipped"] {
