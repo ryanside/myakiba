@@ -1,6 +1,6 @@
+import type { ComponentProps } from "react";
 import type { DateFormat, OrderPayment } from "@myakiba/contracts/shared/types";
 import { ThemedBadge } from "@/components/reui/badge";
-import type { BadgeProps } from "@/components/reui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
@@ -12,7 +12,7 @@ export function PaymentBadge({
   className,
 }: {
   readonly payment: OrderPayment;
-  readonly size?: BadgeProps["size"];
+  readonly size?: ComponentProps<typeof ThemedBadge>["size"];
   readonly className?: string;
 }) {
   const { label, variant } = ORDER_PAYMENT_DISPLAY[payment];
