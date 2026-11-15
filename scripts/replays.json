@@ -5028,6 +5028,14 @@
         "the Orders page lists the Orders behind Order Spend > Order Spend of at least 1 leaves out an Order with nothing paid",
         "the Orders page lists the Orders behind Order Spend > an Order Spend range keeps only the Orders inside it"
       ]
+    },
+    {
+      "fix": "a304b7a9c88ceaed2dccda0017e989a177ac9d86",
+      "bug": "The Expenses Order Items count linked to Orders with Order Spend, which left out a Paid Order whose only paid item costs nothing although the count includes that item.",
+      "test": "apps/server/src/routers/order-items-link.test.ts",
+      "fixed": [
+        "the Orders page lists every Order that holds an item the Expenses Order Items count counts"
+      ]
     }
   ],
   "lint": [
