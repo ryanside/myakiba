@@ -84,7 +84,9 @@
       "fix": "4b0aded5d2fc1daed6c70d77fffc1bb8aaba0ad0",
       "bug": "db-push installed no guard on the Order table.",
       "test": "packages/db/src/item-ownership/push.test.ts",
-      "fixed": ["pushes the owned schema onto a migrated database with no prompt and no lost row"]
+      "fixed": ["pushes the owned schema onto a migrated database with no prompt and no lost row"],
+      "testAt": "4b0aded5d2fc1daed6c70d77fffc1bb8aaba0ad0",
+      "reason": "The change that made Paid its own yes/no runs the Paid step in this file, and that step does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "d3e975ea39d2e6dcf4e28e70fb563b44a1895011",
@@ -936,7 +938,9 @@
         "a failed kanban status write > shows retry advice when the server answers 500 with a JSON body",
         "a failed kanban status write > shows retry advice when the server cannot be reached",
         "a failed kanban status write > shows the server's message when the order no longer exists"
-      ]
+      ],
+      "testAt": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
+      "reason": "The change that made Paid its own yes/no imports the kanban Paid command into this file, and that command does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
@@ -945,13 +949,17 @@
       "fixed": [
         "a refetch that cannot reach the server shows a readable message on the order page",
         "a refetch of a deleted order shows the server's message on the order page"
-      ]
+      ],
+      "testAt": "d5c6cc9f14c3868e71144018b64bbaf6d5df8b04",
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "196f8159e485655be27439ed72e3b1c1f3037ff6",
       "bug": "a 4xx with a blank body left the order page's error panel empty",
       "test": "apps/web/src/components/orders/order-detail-error.test.tsx",
-      "fixed": ["a refetch answered with a blank 400 shows a readable message on the order page"]
+      "fixed": ["a refetch answered with a blank 400 shows a readable message on the order page"],
+      "testAt": "196f8159e485655be27439ed72e3b1c1f3037ff6",
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "196f8159e485655be27439ed72e3b1c1f3037ff6",
@@ -959,7 +967,9 @@
       "test": "apps/web/src/data/resources/dashboard.test.tsx",
       "fixed": [
         "a failed kanban status write > shows retry advice when the server answers 400 with a blank body"
-      ]
+      ],
+      "testAt": "196f8159e485655be27439ed72e3b1c1f3037ff6",
+      "reason": "The change that made Paid its own yes/no imports the kanban Paid command into this file, and that command does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "f7607e13b6bfb6ebb85863934b8c13a04804581f",
@@ -967,7 +977,9 @@
       "test": "apps/web/src/data/resources/dashboard.test.tsx",
       "fixed": [
         "a failed kanban status write > shows retry advice when the server answers 400 with only zero-width spaces"
-      ]
+      ],
+      "testAt": "f7607e13b6bfb6ebb85863934b8c13a04804581f",
+      "reason": "The change that made Paid its own yes/no imports the kanban Paid command into this file, and that command does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "3d912c0889b89464ca9cba62fd2a4635d2c8e64a",
@@ -2897,7 +2909,13 @@
       "fixed": [
         "an Owned order without dates shows four completed undated steps",
         "only future undated steps show Pending"
-      ]
+      ],
+      "testAt": "327e62640e5759672721c06b1096aa2c3e55cf39",
+      "atHead": [
+        "an Owned order without dates shows three completed undated steps: Ordered, Shipped, Owned",
+        "only future undated steps show Pending"
+      ],
+      "reason": "The change that made Paid its own yes/no rewrote this file for a three-step stepper with the payment shown apart, which does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "c083f8ad",
@@ -3149,7 +3167,9 @@
         "Collection filters entry search > shows the outage message for a 503 response",
         "Move items order search > shows the outage message for a 503 response",
         "Command menu search > shows the outage message for a 503 response"
-      ]
+      ],
+      "testAt": "8f8b0e1c0a4b20c0e16c59292ff0a66093cf1458",
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "e91c5b7f",
@@ -3458,7 +3478,9 @@
       "fix": "b9876b38",
       "bug": "the Orders row used the same chevron to expand the row and to open the order's page",
       "test": "apps/web/src/components/orders/orders-columns.test.tsx",
-      "fixed": ["draws the row's open-order link with a different icon from its expand button"]
+      "fixed": ["draws the row's open-order link with a different icon from its expand button"],
+      "testAt": "b9876b38b52f80196c15e885fbd29d8dcdee708b",
+      "reason": "The change that made Paid its own yes/no gives this file's fixtures paid and payment fields and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "3cc4dbf2",
@@ -4238,6 +4260,8 @@
         "Bob's Item Refresh renames only his own Item Entries",
         "the item database search shows each user only their own Items"
       ],
+      "testAt": "3e0ff9d929b6a99565898f016333a2f1a2c8c4c6",
+      "reason": "The change that made Paid its own yes/no seeds this file with a paid column and three statuses that do not exist at this fix, so its harness stays at the fix.",
       "test": "apps/server/src/routers/owner-isolation.test.ts"
     },
     {
@@ -4257,6 +4281,8 @@
       "fixed": [
         "an edit that selects a release an Item Refresh deletes meanwhile answers 404 and changes nothing"
       ],
+      "testAt": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "reason": "The change that made Paid its own yes/no seeds this file with a paid column and three statuses that do not exist at this fix, so its harness stays at the fix.",
       "test": "apps/server/src/routers/collection/routes.test.ts"
     },
     {
@@ -4265,6 +4291,8 @@
       "fixed": [
         "a chosen release an Item Refresh deletes meanwhile answers 404 and writes nothing"
       ],
+      "testAt": "0743a636cb4b5637b00cd3118b8f8fba0ab788d1",
+      "reason": "The change that made Paid its own yes/no seeds this file with a paid column and three statuses that do not exist at this fix, so its harness stays at the fix.",
       "test": "apps/server/src/routers/add/commit.test.ts"
     },
     {
@@ -4657,7 +4685,9 @@
       "fixed": [
         "a push that fails after the migration says the database is migrated but not pushed, and db-push run again once the cause is fixed finishes the deploy",
         "a push that fails after migrating a database without the retired tables says main's Item writes fail, and not that its Import/Export and sync went with them"
-      ]
+      ],
+      "testAt": "4f5d3e585a256661131a8142e9566ec2e41564d2",
+      "reason": "The change that made Paid its own yes/no runs the Paid step in this file, and that step does not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "e085bfcd9e9f2886947312abce50f77a7cb7ae63",
@@ -4844,7 +4874,9 @@
         "an edit with count 0 answers 422 and leaves the Collection Item as it was",
         "an edit with count -3 answers 422 and leaves the Collection Item as it was",
         "an edit with count 1000 answers 422 and leaves the Collection Item as it was"
-      ]
+      ],
+      "testAt": "5055a70e7525b16d1b6e4611ed7981665374ba08",
+      "reason": "The change that made Paid its own yes/no seeds this file with a paid column and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "390204ff0c9912a8e07bd866cfbed33a19e15898",
@@ -4856,7 +4888,9 @@
         "an edit that sends releaseCurrency answers 422, since the edit chooses a release only by its id",
         "an edit that sends releaseBarcode answers 422, since the edit chooses a release only by its id",
         "an edit that sends releaseType answers 422, since the edit chooses a release only by its id"
-      ]
+      ],
+      "testAt": "390204ff0c9912a8e07bd866cfbed33a19e15898",
+      "reason": "The change that made Paid its own yes/no seeds this file with a paid column and three statuses that do not exist at this fix, so its harness stays at the fix."
     },
     {
       "fix": "675db33899e0985b3bc480261a145cec88d07986",
@@ -4889,6 +4923,41 @@
         "each item's price follows its own status and each Order's fees follow the Order's > Expenses counts a Paid item on an Ordered Order as Order Item Spend, and an Ordered item on a Paid Order as neither",
         "each item's price follows its own status and each Order's fees follow the Order's > Scoped Shop Spend for Orders adds up to Order Spend",
         "each item's price follows its own status and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way"
+      ],
+      "testAt": "2cf92600d0d251942f2fe56922ac2f7360758e6f",
+      "atHead": [
+        "an Unpaid Order holding an unpaid item, a paid item and a shipping fee > the Dashboard, the Orders page and Expenses show the same Unpaid Costs with no filter",
+        "an Unpaid Order holding an unpaid item, a paid item and a shipping fee > an Expenses date range does not hide an Unpaid Order",
+        "an Unpaid Order holding an unpaid item, a paid item and a shipping fee > an Expenses Shop filter for another Shop leaves no Unpaid Costs",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > an unpaid item on a Paid Order counts as Unpaid Costs on every page",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > Expenses counts a paid item on an Unpaid Order as Order Item Spend, and an unpaid item on a Paid Order as neither",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > Scoped Shop Spend for Orders adds up to Order Spend",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way"
+      ],
+      "reason": "The change that made Paid its own yes/no reseeds this file with a stored paid flag and three statuses, which do not exist at this fix, so its harness stays at the fix."
+    },
+    {
+      "fix": "579506775fecaa045ade24ac0d08e69bd6a3084a",
+      "bug": "db-push had no step for the stored paid flag, so the Paid status stayed a status and push could not fill paid from it.",
+      "test": "packages/db/src/paid/migrate.test.ts",
+      "fixed": [
+        "db-push converts every Order and Collection Item of a database in main's shape to a paid flag and three statuses, with no prompt and no lost row; a second run changes nothing",
+        "db-push converts a database whose Item ownership is already migrated, and push then finds the paid columns as the schema declares them",
+        "a row with a status outside Ordered, Shipped and Owned rolls the step back, and db-push stops before the push"
+      ]
+    },
+    {
+      "fix": "ecb924179e0701d5a5ed60b1a551f5600b81954c",
+      "bug": "One Acquisition Status said both whether money was paid and where the package was, so Unpaid Costs and Spend followed the status: a Shipped Order that was not paid counted as Spend, an Ordered Order paid up front counted as Unpaid Costs, and the stored paid flag on Orders and Order Items changed nothing.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Unpaid Order holding an unpaid item, a paid item and a shipping fee > the Dashboard, the Orders page and Expenses show the same Unpaid Costs with no filter",
+        "an Unpaid Order holding an unpaid item, a paid item and a shipping fee > an Expenses date range does not hide an Unpaid Order",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > an unpaid item on a Paid Order counts as Unpaid Costs on every page",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > Expenses counts a paid item on an Unpaid Order as Order Item Spend, and an unpaid item on a Paid Order as neither",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > Scoped Shop Spend for Orders adds up to Order Spend",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way",
+        "Paid is apart from the Acquisition Status > a Shipped Order that is unpaid counts as Unpaid Costs and not Spend, and an Ordered Order that is paid counts as Spend"
       ]
     }
   ],
