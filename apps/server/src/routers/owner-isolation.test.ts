@@ -422,6 +422,15 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       { status: 404, body: "Collection item(s) not found" },
     ],
     [
+      "a fill of her Collection Item",
+      (held) =>
+        call(BOB, "PUT", "/collection/fill", {
+          ids: [held.collectionId],
+          fill: { field: "notes", value: "Bob's now" },
+        }),
+      { status: 404, body: "Collection item(s) not found" },
+    ],
+    [
       "a Collection filter by her Collection Item's id",
       (held) => call(BOB, "GET", `/collection?ids=${held.collectionId}`),
       { status: 200, body: { items: [], totalCount: 0 } },
@@ -539,6 +548,15 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
       ORDER_NOT_FOUND,
     ],
     [
+      "a fill of her Order",
+      (held) =>
+        call(BOB, "PUT", "/orders/fill", {
+          orderIds: [held.orderId],
+          fill: { field: "status", value: "Owned" },
+        }),
+      { status: 404, body: "One or more orders not found" },
+    ],
+    [
       "a delete of her Order",
       (held) => call(BOB, "DELETE", "/orders", { orderIds: [held.orderId] }),
       { status: 404, body: "One or more orders not found" },
@@ -652,6 +670,24 @@ describe("Bob sends Alice's ids, gets 404 or nothing, and Alice's rows stay as t
           collectionIds: [held.collectionId],
         }),
       { status: 404, body: "Order items not found" },
+    ],
+    [
+      "a fill of her Collection Item with his own",
+      (held, bobs) =>
+        call(BOB, "PUT", "/collection/fill", {
+          ids: [bobs.collectionId, held.collectionId],
+          fill: { field: "tags", value: ["Bob's"] },
+        }),
+      { status: 404, body: "Collection item(s) not found" },
+    ],
+    [
+      "a fill of her Order with his own",
+      (held, bobs) =>
+        call(BOB, "PUT", "/orders/fill", {
+          orderIds: [bobs.orderId, held.orderId],
+          fill: { field: "paid", value: true },
+        }),
+      { status: 404, body: "One or more orders not found" },
     ],
     [
       "a merge of her Order with his own",

@@ -291,6 +291,44 @@ test("a bulk delete of an empty list answers 404 and deletes nothing", async () 
   expect(await db.select().from(collection)).toEqual(before);
 });
 
+const fill = async (ids: string[]) => {
+  const response = await app.handle(
+    new Request("http://localhost/api/collection/fill", {
+      method: "PUT",
+      headers: { "x-test-user": userId, "content-type": "application/json" },
+      body: JSON.stringify({ ids, fill: { field: "notes", value: "Filled" } }),
+    }),
+  );
+  return { status: response.status, body: await response.text() };
+};
+
+test.each([
+  ["an own and another user's item", ["c-1", "c-other"]],
+  ["only another user's item", ["c-other"]],
+  ["an item deleted in another tab", ["c-1", "c-deleted"]],
+  ["an empty list", []],
+])("a fill of %s answers 404 and changes nothing", async (_, ids) => {
+  await addOtherUser();
+  await db
+    .insert(collection)
+    .values({ id: "c-other", userId: "user-2", itemId: "item-aki", status: "Ordered" });
+  const readItems = () => db.select().from(collection).orderBy(collection.id);
+  const before = await readItems();
+
+  expect(await fill(ids)).toEqual({ status: 404, body: "Collection item(s) not found" });
+  expect(await readItems()).toEqual(before);
+});
+
+test("a fill that repeats an own item fills it once", async () => {
+  expect(await fill(["c-1", "c-1"])).toEqual({
+    status: 200,
+    body: "Collection items filled successfully",
+  });
+  expect(await db.select({ notes: collection.notes }).from(collection)).toEqual([
+    { notes: "Filled" },
+  ]);
+});
+
 test("a list by ids answers only the viewer's Collection Items among them", async () => {
   await addOtherUser();
   await db.insert(collection).values([
