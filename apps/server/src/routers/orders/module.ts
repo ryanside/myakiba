@@ -20,7 +20,13 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderPayment, orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
+import {
+  orderPaidItemCount,
+  orderPayment,
+  orderSpend,
+  orderTotal,
+  orderUnpaidCosts,
+} from "@/lib/order-money";
 
 const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
@@ -165,6 +171,9 @@ export const Orders = {
               input.orderSpendMax === undefined
                 ? undefined
                 : sql`${orderSpend} <= ${input.orderSpendMax}`,
+              input.paidItemsMin === undefined
+                ? undefined
+                : sql`${orderPaidItemCount} >= ${input.paidItemsMin}`,
             ),
           )
           .$dynamic();

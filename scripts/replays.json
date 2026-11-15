@@ -5030,6 +5030,14 @@
       ]
     },
     {
+      "fix": "a304b7a9c88ceaed2dccda0017e989a177ac9d86",
+      "bug": "The Expenses Order Items count linked to Orders with Order Spend, which left out a Paid Order whose only paid item costs nothing although the count includes that item.",
+      "test": "apps/server/src/routers/order-items-link.test.ts",
+      "fixed": [
+        "the Orders page lists every Order that holds an item the Expenses Order Items count counts"
+      ]
+    },
+    {
       "fix": "1b939e145a45c66254ffee43e7cc55aa11d8a938",
       "bug": "The contracts type an Order's item count, the Dashboard's Total Spent parts, Active Orders, category totals and order months, and the Analytics spends, item counts and section totals as numbers, but those pages sent them as JSON strings, because Postgres types COUNT as bigint and SUM and EXTRACT as numeric and the driver returns both as strings.",
       "test": "apps/server/src/routers/count-and-sum-json.test.ts",
