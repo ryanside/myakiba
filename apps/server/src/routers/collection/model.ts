@@ -1,13 +1,9 @@
 import * as z from "zod";
-import {
-  CATEGORIES,
-  COLLECTION_STATUSES,
-  CONDITIONS,
-  SHIPPING_METHODS,
-} from "@myakiba/contracts/shared/constants";
+import { CATEGORIES, CONDITIONS, SHIPPING_METHODS } from "@myakiba/contracts/shared/constants";
 import { collectionSearchSortSchema } from "@myakiba/contracts/search/schema";
 import { MAX_ADD_ROWS } from "@myakiba/contracts/add/constants";
-import { countSchema, itemIdField } from "@myakiba/contracts/add/schema";
+import { itemIdField } from "@myakiba/contracts/add/schema";
+import { COLLECTION_FIELD } from "@myakiba/contracts/collection/fields";
 import { collectionSearchSchema } from "@myakiba/contracts/collection/schema";
 import { pageFields } from "@myakiba/contracts/shared/pagination";
 import { idListSchema, WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
@@ -39,23 +35,7 @@ export const collectionParamSchema = z.object({
   id: z.string().max(WRITE_LIMITS.id),
 });
 
-export const collectionUpdateSchema = z.strictObject({
-  status: z.enum(COLLECTION_STATUSES),
-  paid: z.boolean(),
-  count: countSchema,
-  score: z.string().max(WRITE_LIMITS.label),
-  price: z.number().int(),
-  shop: z.string().trim().max(WRITE_LIMITS.shop),
-  orderDate: z.iso.date().nullable(),
-  paymentDate: z.iso.date().nullable(),
-  shippingDate: z.iso.date().nullable(),
-  collectionDate: z.iso.date().nullable(),
-  shippingMethod: z.enum(SHIPPING_METHODS),
-  tags: z.array(z.string().max(WRITE_LIMITS.tag)).max(WRITE_LIMITS.tags),
-  notes: z.string().max(WRITE_LIMITS.notes),
-  releaseId: z.string().max(WRITE_LIMITS.id).nullable(),
-  condition: z.enum(CONDITIONS),
-});
+export const collectionUpdateSchema = z.strictObject(COLLECTION_FIELD);
 
 export type CollectionUpdateType = z.infer<typeof collectionUpdateSchema>;
 

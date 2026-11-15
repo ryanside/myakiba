@@ -4,12 +4,14 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type {
+  CascadeOption,
   CascadeOptions,
   NewOrder,
   OrderEdit,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
+import { foundAll } from "@/lib/found-all";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result, panic } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
@@ -68,9 +70,19 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
   );
 }
 
-/** An empty request finds nothing, so it still answers 404. */
-function foundAll(ids: readonly string[], touched: number): boolean {
-  return touched > 0 && touched === new Set(ids).size;
+/** The Order columns Cascade to Items copies onto an Order's items. */
+type CascadeColumns = Partial<Pick<typeof collection.$inferInsert, CascadeOption>>;
+
+async function cascadeToItems(
+  tx: Tx,
+  userId: string,
+  orderIds: readonly string[],
+  columns: CascadeColumns,
+): Promise<void> {
+  await tx
+    .update(collection)
+    .set(columns)
+    .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)));
 }
 
 /** Detaches the Owned items and deletes the rest. Returns how many rows it touched. */
@@ -530,11 +542,7 @@ export const Orders = {
         const cascadeProperties = Object.fromEntries(
           input.cascadeOptions.map((option) => [option, input.order[option]]),
         );
-
-        await scope.tx
-          .update(collection)
-          .set({ ...cascadeProperties })
-          .where(and(eq(collection.userId, userId), eq(collection.orderId, input.orderId)));
+        await cascadeToItems(scope.tx, userId, [input.orderId], cascadeProperties);
       }
       return Result.ok("Order updated successfully" as const);
     },
