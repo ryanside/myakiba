@@ -3,6 +3,7 @@ import { SQL } from "bun";
 import dotenv from "dotenv";
 import { installOwnerGuards } from "../item-ownership/guards";
 import { migrateItemOwnership } from "../item-ownership/migrate";
+import { migratePaid } from "../paid/migrate";
 
 dotenv.config({
   path: "../../apps/server/.env",
@@ -39,12 +40,18 @@ const migration = await attempt(
   () => migrateItemOwnership(database),
   "ITEM OWNERSHIP MIGRATION FAILED. It rolled back, so the database is as it was, retired tables included.",
 );
-await database.close();
 console.log(`Item ownership migration: ${JSON.stringify(migration)}`);
 const droppedTables = migration.status === "migrated" ? migration.droppedTables : [];
 for (const { table, rows } of droppedTables) {
   console.log(`Dropped retired table ${table} (${rows} rows).`);
 }
+// Push cannot fill the new paid columns from the old statuses, so this runs before it.
+const paidMigration = await attempt(
+  () => migratePaid(database),
+  "PAID MIGRATION FAILED. It rolled back, so Orders and Collection Items keep their statuses and have no paid column. An Item ownership migration reported above has committed.",
+);
+await database.close();
+console.log(`Paid migration: ${JSON.stringify(paidMigration)}`);
 
 const child = Bun.spawn(["bunx", "drizzle-kit", "push", "--verbose"], {
   cwd: process.cwd(),
@@ -82,6 +89,11 @@ if (exitCode !== 0 || !completed) {
     ...(migration.status === "migrated"
       ? [
           "The Item ownership migration above has committed, so the database is migrated but not pushed, and main's Item writes fail until the new server starts.",
+        ]
+      : []),
+    ...(paidMigration.status === "migrated"
+      ? [
+          "The Paid migration above has committed, so main's server shows every Order and Collection Item that had the Paid status as Ordered.",
         ]
       : []),
     ...(droppedTables.length > 0

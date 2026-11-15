@@ -17,15 +17,15 @@ INSERT INTO "order" (id, user_id, title, status, payment_date, shipping_fee) VAL
   ('order-owned', 'u2', 'Arrived', 'Owned', '2026-01-15', 1400);
 `;
 
-const COLLECTION = (itemA: string, itemB: string) => `
+const COLLECTION = (u1Item: string, u2Item: string) => `
 INSERT INTO collection (id, user_id, item_id, order_id, status, payment_date, price, tags) VALUES
-  ('col-paid-order-ordered', 'u1', '${itemA}', 'order-paid', 'Ordered', NULL, 100, '{}'),
-  ('col-paid-order-paid', 'u1', '${itemA}', 'order-paid', 'Paid', '2026-02-01', 200, '{}'),
-  ('col-ordered-order-shipped', 'u1', '${itemB}', 'order-ordered', 'Shipped', NULL, 300, '{}'),
-  ('col-ordered-dated', 'u1', '${itemB}', 'order-ordered-dated', 'Ordered', '2026-03-01', 400, '{}'),
-  ('col-owned-order-owned', 'u2', '${itemA}', 'order-owned', 'Owned', NULL, 500, '{}'),
-  ('col-loose-owned', 'u2', '${itemB}', NULL, 'Owned', NULL, 600, '{}'),
-  ('col-loose-paid', 'u2', '${itemA}', NULL, 'Paid', NULL, 700, '{}');
+  ('col-paid-order-ordered', 'u1', '${u1Item}', 'order-paid', 'Ordered', NULL, 100, '{}'),
+  ('col-paid-order-paid', 'u1', '${u1Item}', 'order-paid', 'Paid', '2026-02-01', 200, '{}'),
+  ('col-ordered-order-shipped', 'u1', '${u1Item}', 'order-ordered', 'Shipped', NULL, 300, '{}'),
+  ('col-ordered-dated', 'u1', '${u1Item}', 'order-ordered-dated', 'Ordered', '2026-03-01', 400, '{}'),
+  ('col-owned-order-owned', 'u2', '${u2Item}', 'order-owned', 'Owned', NULL, 500, '{}'),
+  ('col-loose-owned', 'u2', '${u2Item}', NULL, 'Owned', NULL, 600, '{}'),
+  ('col-loose-paid', 'u2', '${u2Item}', NULL, 'Paid', NULL, 700, '{}');
 `;
 
 const USERS = `

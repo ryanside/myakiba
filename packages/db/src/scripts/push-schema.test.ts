@@ -11,6 +11,7 @@ import {
 } from "../../test/push";
 import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
+import { migratePaid } from "../paid/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
@@ -21,6 +22,7 @@ test(
     const seeded = await databases.legacyTemplate(seedSharedItems);
     const migratedOnly = await databases.create(seeded);
     await migrateItemOwnership(migratedOnly.sql);
+    await migratePaid(migratedOnly.sql);
     const expected = await snapshot(migratedOnly.sql);
 
     const { sql, url } = await databases.create(seeded);
@@ -164,10 +166,15 @@ const RETIRED_TABLES = [
   "sync_session_item",
 ];
 
+const paidModel = (row: string) => `jsonb_build_object(
+  'status', CASE ${row}->>'status' WHEN 'Paid' THEN 'Ordered' ELSE ${row}->>'status' END,
+  'paid', coalesce((${row}->>'paid')::boolean, ${row}->>'status' <> 'Ordered'))`;
+
 // Users reach Items only through their Collection, Wishlist and List Members, so this is what each
-// user sees of the Item Database, without the ids the migration gives each user's copy.
+// user sees of the Item Database, without the ids the migration gives each user's copy. Statuses
+// read as the paid model reads them, so a row before the Paid migration matches itself after it.
 async function whatUsersSee(sql: SQL) {
-  const [view] = await sql<[{ rows: unknown }]>`
+  const [view] = await sql.unsafe<[{ rows: unknown }]>(`
     WITH item_view AS (
       SELECT i.id, jsonb_build_object(
         'item', to_jsonb(i) - '{id,owner_id,content_label,mfc_rating_id,image_key}'::text[],
@@ -186,7 +193,7 @@ async function whatUsersSee(sql: SQL) {
       FROM item i
     ), seen AS (
       SELECT jsonb_build_object(
-        'collection', to_jsonb(c) - '{item_id,release_id}'::text[],
+        'collection', to_jsonb(c) - '{item_id,release_id,status,paid}'::text[] || ${paidModel("to_jsonb(c)")},
         'item', v.item,
         'release', to_jsonb(r) - '{id,item_id}'::text[]
       ) AS row
@@ -204,13 +211,18 @@ async function whatUsersSee(sql: SQL) {
       FROM list_member m JOIN list l ON l.id = m.list_id LEFT JOIN item_view v ON v.id = m.item_id
     )
     SELECT jsonb_agg(row ORDER BY row::text) AS rows FROM seen
-  `;
+  `);
+  const [orders] = await sql.unsafe<[{ rows: unknown }]>(`
+    SELECT jsonb_agg(to_jsonb(o) - '{status,paid}'::text[] || ${paidModel("to_jsonb(o)")} ORDER BY o.id)
+      AS rows
+    FROM "order" o
+  `);
   const { rows } = await snapshot(sql);
   return {
     references: view.rows,
     users: rows.user,
     accounts: rows.account,
-    orders: rows.order,
+    orders: orders.rows,
     lists: rows.list,
   };
 }

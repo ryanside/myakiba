@@ -153,6 +153,7 @@ describe("merge and split accept only the fields a user edits", () => {
     expect(orders.filter((row) => !["order-1", "order-2"].includes(row.id))).toEqual([
       {
         ...newOrder,
+        paid: false,
         id: expect.any(String),
         userId,
         createdAt: expect.any(Date),
