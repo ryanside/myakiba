@@ -1,4 +1,5 @@
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { Result } from "better-result";
@@ -6,22 +7,37 @@ import type { ReactElement } from "react";
 import { FillMenu } from "@/components/fill/fill-menu";
 import type { FillDraft, FillGroup, FillNoun } from "@/components/fill/fill-menu";
 import type { Saving } from "@/data/client";
-import { COLLECTION_FILL_FIELDS, FILL_FIELD } from "@/lib/fill-fields";
+import {
+  COLLECTION_FILL_FIELDS,
+  FILL_FIELD,
+  ORDER_FILL_FIELDS,
+  ORDER_ITEM_FILL_FIELDS,
+} from "@/lib/fill-fields";
 import type { FillFieldId } from "@/lib/fill-fields";
 import { MONEY_INPUT_HINT, parseMoneyInputToMinorUnits } from "@/lib/money-input";
 
 /** Saved rows of one kind that a fill writes to, by id, whether or not this page loaded them. */
-export type SavedRows = {
-  readonly target: "collection";
-  readonly ids: ReadonlySet<string>;
-  readonly onFill: (ids: ReadonlySet<string>, fill: ItemFill) => Saving;
-};
+export type SavedRows =
+  | {
+      readonly target: "collection" | "orderItems";
+      readonly ids: ReadonlySet<string>;
+      readonly onFill: (ids: ReadonlySet<string>, fill: ItemFill) => Saving;
+    }
+  | {
+      readonly target: "orders";
+      readonly ids: ReadonlySet<string>;
+      readonly onFill: (ids: ReadonlySet<string>, fill: OrderFill) => Saving;
+    };
+
+const ITEM = { one: "item", other: "items" } as const;
 
 const TARGET = {
-  collection: { fields: COLLECTION_FILL_FIELDS, noun: { one: "item", other: "items" } },
+  collection: { fields: COLLECTION_FILL_FIELDS, heading: "Items", noun: ITEM },
+  orderItems: { fields: ORDER_ITEM_FILL_FIELDS, heading: "Order Items", noun: ITEM },
+  orders: { fields: ORDER_FILL_FIELDS, heading: "Orders", noun: { one: "order", other: "orders" } },
 } as const satisfies Record<
   SavedRows["target"],
-  { readonly fields: readonly FillFieldId[]; readonly noun: FillNoun }
+  { readonly fields: readonly FillFieldId[]; readonly heading: string; readonly noun: FillNoun }
 >;
 
 const SEED: FillDraft = {
@@ -94,10 +110,19 @@ function clears(fill: ItemFill): boolean {
   }
 }
 
-function groupOf({ target, ids, onFill }: SavedRows): FillGroup<FillFieldId> {
-  const { fields, noun } = TARGET[target];
+const isOrderFill = (fill: ItemFill): fill is OrderFill =>
+  ORDER_FILL_FIELDS.some((field) => field === fill.field);
+
+function groupOf(rows: SavedRows): FillGroup<FillFieldId> {
+  const { target, ids } = rows;
+  const { fields, heading, noun } = TARGET[target];
+  const where =
+    target === "orders"
+      ? "every selected order and every item in those orders"
+      : `every selected ${noun.one}`;
   return {
     key: target,
+    heading,
     noun,
     count: ids.size,
     fields,
@@ -110,12 +135,15 @@ function groupOf({ target, ids, onFill }: SavedRows): FillGroup<FillFieldId> {
       if (field === "tags") return `Adds to the tags each ${noun.one} already has.`;
       const { label } = FILL_FIELD[field];
       const fill = readFill(field, draft);
-      return fill.isOk() && clears(fill.value)
-        ? `Clears ${label} on every selected ${noun.one}.`
-        : `Replaces ${label} on every selected ${noun.one}.`;
+      return `${fill.isOk() && clears(fill.value) ? "Clears" : "Replaces"} ${label} on ${where}.`;
     },
     prepare: (field, draft) =>
-      readFill(field, draft).map((fill) => ({ run: () => onFill(ids, fill) })),
+      readFill(field, draft).andThen((fill) => {
+        if (rows.target !== "orders") return Result.ok({ run: () => rows.onFill(ids, fill) });
+        return isOrderFill(fill)
+          ? Result.ok({ run: () => rows.onFill(ids, fill) })
+          : Result.err(`An order has no ${FILL_FIELD[field].label} to fill.`);
+      }),
     pricePlaceholder: "Enter a price",
   };
 }
