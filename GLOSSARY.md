@@ -84,7 +84,7 @@ An Order with a status of Ordered, Paid, or Shipped. An Owned Order is no longer
 An Order with a status of Paid, Shipped, or Owned. A Payment Date by itself does not make an Order a Paid Order.
 
 **Unpaid Order**:
-An Order with an Acquisition Status of Ordered. Its Order Fees and the prices of Order Items whose own Acquisition Status is also Ordered count as Unpaid Costs, not Spend.
+An Order with an Acquisition Status of Ordered. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Acquisition Status, so a Paid Order Item on an Unpaid Order is Spend.
 
 **Order Release Date**:
 The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
@@ -138,10 +138,10 @@ The saved price of each Owned Collection Item, added once regardless of its copy
 _Avoid_: Collection Item Spend
 
 **Order Spend**:
-Order Item Spend plus Fee Spend for Paid Orders.
+Order Item Spend plus Fee Spend for Paid Orders. An Order's Spend and Unpaid Costs together make its Order Total.
 
 **Order Item Spend**:
-The part of Order Spend that comes from Order Item prices.
+The part of Order Spend that comes from Order Item prices: the saved price of each Order Item whose own Acquisition Status is not Ordered, added once regardless of its copy count, whatever its Order's status.
 
 **Fee Spend**:
 The part of Order Spend that comes from Order Fees.
@@ -150,7 +150,7 @@ The part of Order Spend that comes from Order Fees.
 The part of Fee Spend that comes from Shipping Fees on Paid Orders. Paid Orders with free shipping still count when myakiba calculates the number of Orders and any average based on that number.
 
 **Unpaid Costs**:
-The Order Fees on Unpaid Orders, plus prices from their Order Items whose own Acquisition Status is Ordered. They do not count as Order Spend or Shipping Spend.
+The Order Fees on Unpaid Orders, plus the saved price of every Order Item whose own Acquisition Status is Ordered, on any Order. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
 _Avoid_: Unpaid commitments, Unpaid
 
 **Scoped Shop Spend**:
@@ -170,7 +170,7 @@ Order Spend divided by the number of Paid Orders.
 Collection Spend divided by the number of Owned Collection Items.
 
 **Average Order Item Spend**:
-Order Item Spend divided by the number of Order Items attached to Paid Orders.
+Order Item Spend divided by the number of Order Items it counts.
 
 ### Analytics
 

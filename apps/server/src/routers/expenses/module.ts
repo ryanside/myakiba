@@ -18,7 +18,7 @@ import {
   getOwnedItemSeries,
   getShippingMethodTotals,
   getShippingSeries,
-  getUnpaidOrderAggregates,
+  getUnpaidCosts,
 } from "./lib/expense-queries";
 import { getScopedShopRows, loadScopedShopExpansion } from "./lib/shop-aggregates";
 
@@ -42,7 +42,7 @@ export const Expenses = {
         scope.tx
           .select({ shop: order.shop })
           .from(order)
-          .where(and(eq(order.userId, userId), ne(order.status, "Ordered"), ne(order.shop, "")))
+          .where(and(eq(order.userId, userId), ne(order.shop, "")))
           .groupBy(order.shop),
       ]);
       const shopOptions = [
@@ -88,7 +88,7 @@ export const Expenses = {
       const [totals, series, unpaid] = await Promise.all([
         getOrderAggregates(scope.tx, userId, filters),
         getOrderAggregates(scope.tx, userId, filters, { bucket }),
-        getUnpaidOrderAggregates(scope.tx, userId, filters),
+        getUnpaidCosts(scope.tx, userId, filters.shop),
       ]);
 
       return Result.ok(

@@ -7,26 +7,39 @@ import { orderPreviewImagesSql, orderPreviewItemIdsSql } from "@/lib/order-previ
 import { Result } from "better-result";
 import { prepared, query } from "@/domain/kernel";
 import { itemImageSql } from "@/lib/item-image-url";
+import {
+  itemIsPaid,
+  orderIsPaid,
+  orderIsUnpaid,
+  orderSpend,
+  orderTotal,
+  orderUnpaidCosts,
+  selectUnpaidCosts,
+} from "@/lib/order-money";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
 
 type MonthQuery = { readonly month: number; readonly year: number };
 
-function monthlySources(tx: ReadTx) {
-  const monthlyOrdersBase = tx
+function ordersReleasingInMonth(tx: ReadTx) {
+  return tx
     .select({
       orderId: order.id,
-      title: order.title,
       shop: order.shop,
-      status: order.status,
-      releaseDate: order.releaseDate,
+      isUnpaid: sql<boolean>`${orderIsUnpaid}`.as("is_unpaid"),
+      itemCount: count(collection.id).as("item_count"),
+      itemTotal: sql<number>`COALESCE(${sum(collection.price)}, 0)`.as("item_total"),
       shippingFee: order.shippingFee,
       taxes: order.taxes,
       duties: order.duties,
       tariffs: order.tariffs,
       miscFees: order.miscFees,
+      total: orderTotal.as("total"),
+      spend: orderSpend.as("spend"),
+      unpaidCosts: orderUnpaidCosts.as("unpaid_costs"),
     })
     .from(order)
+    .leftJoin(collection, eq(order.id, collection.orderId))
     .where(
       and(
         eq(order.userId, sql.placeholder("userId")),
@@ -34,63 +47,15 @@ function monthlySources(tx: ReadTx) {
         lte(order.releaseDate, sql.placeholder("endDate")),
       ),
     )
-    .as("monthly_orders_base");
-
-  const monthlyOrderItemStats = tx
-    .select({
-      orderId: collection.orderId,
-      itemCount: count(collection.id).as("itemCount"),
-      itemTotal: sql<number>`COALESCE(${sum(collection.price)}, 0)`.as("itemTotal"),
-    })
-    .from(collection)
-    .innerJoin(order, eq(collection.orderId, order.id))
-    .where(
-      and(
-        eq(order.userId, sql.placeholder("userId")),
-        gte(order.releaseDate, sql.placeholder("startDate")),
-        lte(order.releaseDate, sql.placeholder("endDate")),
-      ),
-    )
-    .groupBy(collection.orderId)
-    .as("monthly_order_item_stats");
-
-  // Reused fee expression so paid/unpaid monthly totals stay consistent everywhere.
-  const monthlyOrderFeesTotal = sql<number>`
-      COALESCE(${monthlyOrdersBase.shippingFee}, 0)
-      + COALESCE(${monthlyOrdersBase.taxes}, 0)
-      + COALESCE(${monthlyOrdersBase.duties}, 0)
-      + COALESCE(${monthlyOrdersBase.tariffs}, 0)
-      + COALESCE(${monthlyOrdersBase.miscFees}, 0)
-    `;
-
-  // Shop totals are computed in SQL now instead of merging separate order/item query results in JS.
-  const monthlyShopTotalAmount = sql<number>`
-      COALESCE(
-        SUM(
-          COALESCE(${monthlyOrderItemStats.itemTotal}, 0)
-          + COALESCE(${monthlyOrdersBase.shippingFee}, 0)
-          + COALESCE(${monthlyOrdersBase.taxes}, 0)
-          + COALESCE(${monthlyOrdersBase.duties}, 0)
-          + COALESCE(${monthlyOrdersBase.tariffs}, 0)
-          + COALESCE(${monthlyOrdersBase.miscFees}, 0)
-        ),
-        0
-      )
-    `;
-
-  return {
-    monthlyOrdersBase,
-    monthlyOrderItemStats,
-    monthlyOrderFeesTotal,
-    monthlyShopTotalAmount,
-  };
+    .groupBy(order.id)
+    .as("monthly_orders");
 }
 
 const collectionStatsRead = prepared("collection_stats", (tx) =>
   tx
     .select({
       totalItems: count(sql`CASE WHEN ${collection.status} = 'Owned' THEN 1 END`),
-      totalSpent: sql<number>`COALESCE(${sum(sql`CASE WHEN ${collection.status} != 'Ordered' THEN ${collection.price} ELSE 0 END`)}, 0)`,
+      totalSpent: sql<number>`COALESCE(${sum(sql`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`)}, 0)`,
     })
     .from(collection)
     .where(eq(collection.userId, sql.placeholder("userId"))),
@@ -124,7 +89,7 @@ const ordersRead = prepared("orders_kanban", (tx) =>
       collectionDate: order.collectionDate,
       itemImages: orderPreviewImagesSql,
       itemIds: orderPreviewItemIdsSql,
-      total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+      total: orderTotal,
     })
     .from(order)
     .leftJoin(collection, and(eq(order.id, collection.orderId)))
@@ -183,38 +148,19 @@ const ordersSummaryRead = prepared("orders_summary", (tx) =>
         sql`CASE WHEN ${order.status} != 'Owned'
               THEN 1 ELSE 0 END`,
       )}, 0)`,
-      totalShippingAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.shippingFee} ELSE 0 END`)}, 0)`,
-      totalTaxesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.taxes} ELSE 0 END`)}, 0)`,
-      totalDutiesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.duties} ELSE 0 END`)}, 0)`,
-      totalTariffsAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.tariffs} ELSE 0 END`)}, 0)`,
-      totalMiscFeesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${order.status} != 'Ordered' THEN ${order.miscFees} ELSE 0 END`)}, 0)`,
+      totalShippingAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.shippingFee} ELSE 0 END`)}, 0)`,
+      totalTaxesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.taxes} ELSE 0 END`)}, 0)`,
+      totalDutiesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.duties} ELSE 0 END`)}, 0)`,
+      totalTariffsAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.tariffs} ELSE 0 END`)}, 0)`,
+      totalMiscFeesAllTime: sql<number>`COALESCE(${sum(sql`CASE WHEN ${orderIsPaid} THEN ${order.miscFees} ELSE 0 END`)}, 0)`,
     })
     .from(order)
     .where(eq(order.userId, sql.placeholder("userId"))),
 );
 
-const unpaidSummaryRead = prepared("unpaid_summary", (tx) => {
-  const unpaidOrderTotalsBase = tx
-    .select({
-      orderId: order.id,
-      perOrderTotal:
-        sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`.as(
-          "perOrderTotal",
-        ),
-    })
-    .from(order)
-    .leftJoin(collection, and(eq(order.id, collection.orderId)))
-    .where(and(eq(order.userId, sql.placeholder("userId")), eq(order.status, "Ordered")))
-    .groupBy(order.id)
-    .as("unpaid_orders_base");
-
-  return tx
-    .select({
-      unpaidOrderCount: count(unpaidOrderTotalsBase.orderId),
-      unpaidCosts: sql<number>`COALESCE(${sum(unpaidOrderTotalsBase.perOrderTotal)}, 0)`,
-    })
-    .from(unpaidOrderTotalsBase);
-});
+const unpaidSummaryRead = prepared("unpaid_summary", (tx) =>
+  selectUnpaidCosts(tx, eq(order.userId, sql.placeholder("userId"))),
+);
 
 const monthlyOrdersRead = prepared("monthly_orders", (tx) =>
   tx
@@ -271,38 +217,36 @@ const releaseCalendarRead = prepared("release_calendar", (tx) =>
 );
 
 const monthlySummaryRead = prepared("monthly_summary", (tx) => {
-  const { monthlyOrdersBase, monthlyOrderItemStats, monthlyOrderFeesTotal } = monthlySources(tx);
+  const orders = ordersReleasingInMonth(tx);
   return tx
     .select({
-      orderCount: count(monthlyOrdersBase.orderId),
-      unpaidOrderCount: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN 1 ELSE 0 END), 0)`,
-      itemCount: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrderItemStats.itemCount}, 0)), 0)`,
-      paidItemTotal: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} != 'Ordered' THEN COALESCE(${monthlyOrderItemStats.itemTotal}, 0) ELSE 0 END), 0)`,
-      unpaidItemTotal: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN COALESCE(${monthlyOrderItemStats.itemTotal}, 0) ELSE 0 END), 0)`,
-      shipping: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.shippingFee}, 0)), 0)`,
-      taxes: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.taxes}, 0)), 0)`,
-      duties: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.duties}, 0)), 0)`,
-      tariffs: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.tariffs}, 0)), 0)`,
-      miscFees: sql<number>`COALESCE(SUM(COALESCE(${monthlyOrdersBase.miscFees}, 0)), 0)`,
-      paidFees: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} != 'Ordered' THEN ${monthlyOrderFeesTotal} ELSE 0 END), 0)`,
-      unpaidFees: sql<number>`COALESCE(SUM(CASE WHEN ${monthlyOrdersBase.status} = 'Ordered' THEN ${monthlyOrderFeesTotal} ELSE 0 END), 0)`,
+      orderCount: count(orders.orderId),
+      unpaidOrderCount: sql<number>`COUNT(*) FILTER (WHERE ${orders.isUnpaid})`,
+      itemCount: sql<number>`COALESCE(SUM(${orders.itemCount}), 0)`,
+      items: sql<number>`COALESCE(SUM(${orders.itemTotal}), 0)`,
+      shipping: sql<number>`COALESCE(SUM(${orders.shippingFee}), 0)`,
+      taxes: sql<number>`COALESCE(SUM(${orders.taxes}), 0)`,
+      duties: sql<number>`COALESCE(SUM(${orders.duties}), 0)`,
+      tariffs: sql<number>`COALESCE(SUM(${orders.tariffs}), 0)`,
+      miscFees: sql<number>`COALESCE(SUM(${orders.miscFees}), 0)`,
+      paidAmount: sql<number>`COALESCE(SUM(${orders.spend}), 0)`,
+      unpaidAmount: sql<number>`COALESCE(SUM(${orders.unpaidCosts}), 0)`,
     })
-    .from(monthlyOrdersBase)
-    .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId));
+    .from(orders);
 });
 
 const monthlyShopBreakdownRead = prepared("monthly_shop_breakdown", (tx) => {
-  const { monthlyOrdersBase, monthlyOrderItemStats, monthlyShopTotalAmount } = monthlySources(tx);
+  const orders = ordersReleasingInMonth(tx);
+  const totalAmount = sql<number>`COALESCE(SUM(${orders.total}), 0)`;
   return tx
     .select({
-      shopName: monthlyOrdersBase.shop,
-      orderCount: count(monthlyOrdersBase.orderId),
-      totalAmount: monthlyShopTotalAmount,
+      shopName: orders.shop,
+      orderCount: count(orders.orderId),
+      totalAmount,
     })
-    .from(monthlyOrdersBase)
-    .leftJoin(monthlyOrderItemStats, eq(monthlyOrdersBase.orderId, monthlyOrderItemStats.orderId))
-    .groupBy(monthlyOrdersBase.shop)
-    .orderBy(desc(monthlyShopTotalAmount), asc(monthlyOrdersBase.shop));
+    .from(orders)
+    .groupBy(orders.shop)
+    .orderBy(desc(totalAmount), asc(orders.shop));
 });
 
 const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
@@ -319,7 +263,7 @@ const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
       collectionDate: order.collectionDate,
       itemImages: orderPreviewImagesSql,
       itemIds: orderPreviewItemIdsSql,
-      total: sql<number>`COALESCE(${sum(collection.price)}, 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+      total: orderTotal,
     })
     .from(order)
     .leftJoin(collection, and(eq(order.id, collection.orderId)))
@@ -473,15 +417,14 @@ export const Dashboard = {
         itemCount: 0,
         orderCount: 0,
         unpaidOrderCount: 0,
-        paidItemTotal: 0,
-        unpaidItemTotal: 0,
+        items: 0,
         shipping: 0,
         taxes: 0,
         duties: 0,
         tariffs: 0,
         miscFees: 0,
-        paidFees: 0,
-        unpaidFees: 0,
+        paidAmount: 0,
+        unpaidAmount: 0,
       };
       const shopBreakdown = shopBreakdownRows.map((row) => ({
         shopName: row.shopName,
@@ -489,7 +432,7 @@ export const Dashboard = {
         totalAmount: Number(row.totalAmount),
       }));
       const costBreakdown = {
-        items: Number(monthlySummary.paidItemTotal) + Number(monthlySummary.unpaidItemTotal),
+        items: Number(monthlySummary.items),
         shipping: Number(monthlySummary.shipping),
         taxes: Number(monthlySummary.taxes),
         duties: Number(monthlySummary.duties),
@@ -501,8 +444,8 @@ export const Dashboard = {
         itemCount: Number(monthlySummary.itemCount),
         orderCount: monthlySummary.orderCount,
         unpaidOrderCount: Number(monthlySummary.unpaidOrderCount),
-        paidAmount: Number(monthlySummary.paidItemTotal) + Number(monthlySummary.paidFees),
-        unpaidAmount: Number(monthlySummary.unpaidItemTotal) + Number(monthlySummary.unpaidFees),
+        paidAmount: Number(monthlySummary.paidAmount),
+        unpaidAmount: Number(monthlySummary.unpaidAmount),
         shopBreakdown,
         costBreakdown,
         orders,

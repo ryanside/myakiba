@@ -17,7 +17,7 @@ import type {
   OrderTotalRow,
   ShippingMethodTotalRow,
   ShippingSeriesRow,
-  UnpaidOrderTotalRow,
+  UnpaidCostsRow,
 } from "./expense-queries";
 
 type ShippingValues = Record<ShippingMethod, number>;
@@ -147,7 +147,7 @@ export function projectOrdersDashboard({
   bucket: ExpenseBucket;
   total: OrderTotalRow;
   series: readonly OrderSeriesRow[];
-  unpaid: UnpaidOrderTotalRow;
+  unpaid: UnpaidCostsRow;
 }): ExpensesOrdersResponse {
   const totalFees =
     total.shippingSpend +
@@ -216,13 +216,6 @@ export function projectOrdersDashboard({
         cumulativeOrderCount > 0 ? Math.round(cumulativeFees / cumulativeOrderCount) : 0,
     });
   }
-  const unpaidCommitments =
-    unpaid.items +
-    unpaid.shipping +
-    unpaid.taxes +
-    unpaid.duties +
-    unpaid.tariffs +
-    unpaid.miscFees;
   const breakdownValues = [
     { key: "orderItems", label: "Order Items", value: total.orderItemSpend },
     { key: "shipping", label: "Shipping", value: total.shippingSpend },
@@ -247,8 +240,8 @@ export function projectOrdersDashboard({
     kpis: {
       paidOrderCount: total.paidOrderCount,
       orderItemCount: total.orderItemCount,
-      unpaidOrderCount: unpaid.orderCount,
-      unpaidCommitments,
+      unpaidOrderCount: unpaid.unpaidOrderCount,
+      unpaidCosts: unpaid.unpaidCosts,
     },
     breakdown: breakdownValues
       .filter((entry) => entry.value > 0)

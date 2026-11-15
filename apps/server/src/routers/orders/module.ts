@@ -15,8 +15,8 @@ import { SomeOrderItemsNotFound } from "./errors/some-order-items-not-found";
 import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrderUpdateType, OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { orderSpend, orderTotal, orderUnpaidCosts } from "@/lib/order-money";
 
-const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`;
 const itemCount = sql<number>`COUNT(${collection.id})`;
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
 
@@ -172,9 +172,9 @@ export const Orders = {
         },
         tiebreak: [order.createdAt, order.id],
         totals: {
-          totalSpent: { sum: orderTotal, where: ne(order.status, "Ordered") },
+          totalSpent: { sum: orderSpend },
           activeOrders: { count: ne(order.status, "Owned") },
-          unpaidCosts: { sum: orderTotal, where: eq(order.status, "Ordered") },
+          unpaidCosts: { sum: orderUnpaidCosts },
         },
       });
 
