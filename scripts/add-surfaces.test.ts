@@ -105,10 +105,12 @@ describe("an Add surface of its own", () => {
   });
 });
 
-test("nothing in the Add page's components writes a surface of its own", async () => {
+test("nothing in the Add page's or Fill all's components writes a surface of its own", async () => {
   const root = path.resolve(import.meta.dir, "..");
   const hits: string[] = [];
-  for await (const file of new Glob("apps/web/src/components/add/**/*.{ts,tsx}").scan(root)) {
+  for await (const file of new Glob("apps/web/src/components/{add,fill}/**/*.{ts,tsx}").scan(
+    root,
+  )) {
     if (/\.test\.tsx?$/u.test(file)) continue;
     hits.push(...ownSurfaces(file, await Bun.file(path.join(root, file)).text()));
   }

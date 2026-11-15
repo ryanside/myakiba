@@ -1,4 +1,4 @@
-type FillEditor =
+type FillEditorKind =
   | "amount"
   | "count"
   | "condition"
@@ -23,4 +23,6 @@ export const FILL_FIELD = {
   score: { label: "Score", editor: "score" },
   tags: { label: "Tags", editor: "tags" },
   notes: { label: "Notes", editor: "notes" },
-} as const satisfies Record<string, { readonly label: string; readonly editor: FillEditor }>;
+} as const satisfies Record<string, { readonly label: string; readonly editor: FillEditorKind }>;
+
+export type FillFieldId = keyof typeof FILL_FIELD;

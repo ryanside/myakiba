@@ -29,7 +29,7 @@ import type { AddItem } from "./commit-input";
 import { onTableKeys, revealFocus } from "./add-table-keys";
 import { useColumnsFade } from "./destination-motion";
 import { EmptyState } from "./empty-state";
-import { FillMenu } from "./fill-menu";
+import { AddFillMenu } from "./fill-menu";
 import { PickStatus } from "./pick-status";
 import { SearchRow } from "./search-row";
 import {
@@ -371,7 +371,7 @@ function ActionsHeader() {
       <span className="sr-only">Actions</span>
       {fieldsHidden ? null : (
         <div className="flex justify-end">
-          <FillMenu fields={fields} c={c} onFilled={c.handleAnnounce} />
+          <AddFillMenu fields={fields} c={c} onFilled={c.handleAnnounce} />
         </div>
       )}
     </>
