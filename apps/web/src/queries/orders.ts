@@ -115,10 +115,10 @@ export function splitOrders(
   );
 }
 
-export function editOrder(values: EditedOrder, cascadeOptions: CascadeOptions) {
+export function editOrder({ orderId, ...edited }: EditedOrder, cascadeOptions: CascadeOptions) {
   return call(
-    app.api.orders({ orderId: values.orderId }).put({
-      order: values,
+    app.api.orders({ orderId }).put({
+      order: edited,
       cascadeOptions,
     }),
     { fallback: "Failed to edit order" },
