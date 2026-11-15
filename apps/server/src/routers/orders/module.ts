@@ -4,13 +4,15 @@ import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-re
 import { collection, item, item_release, order } from "@myakiba/db/schema/figure";
 import type { Tx } from "@myakiba/db/tx";
 import type {
-  CascadeOption,
   CascadeOptions,
   NewOrder,
   OrderEdit,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
+import type { FillOrdersBody } from "@myakiba/contracts/orders/fill";
 import type { Order } from "@myakiba/contracts/orders/types";
+import { fillColumns } from "@/lib/fill-columns";
+import type { CascadeColumns } from "@/lib/fill-columns";
 import { foundAll } from "@/lib/found-all";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result, panic } from "better-result";
@@ -69,9 +71,6 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.miscFeesMax === undefined ? undefined : lte(order.miscFees, filters.miscFeesMax),
   );
 }
-
-/** The Order columns Cascade to Items copies onto an Order's items. */
-type CascadeColumns = Partial<Pick<typeof collection.$inferInsert, CascadeOption>>;
 
 async function cascadeToItems(
   tx: Tx,
@@ -545,6 +544,43 @@ export const Orders = {
         await cascadeToItems(scope.tx, userId, [input.orderId], cascadeProperties);
       }
       return Result.ok("Order updated successfully" as const);
+    },
+  ),
+
+  /**
+   * Writes one field to every listed Order and cascades it to their items, or writes nothing.
+   * It locks the Orders, then their items, each in id order, the order Collection.fill locks
+   * items in, so overlapping fills wait instead of deadlocking.
+   */
+  fill: command(
+    { action: "orders.fill", failure: "Failed to fill orders" },
+    async (scope, input: FillOrdersBody) => {
+      const userId = scope.viewer.userId;
+      scope.log.set({ orders: { fill: input.fill.field, orderCount: input.orderIds.length } });
+      const selected = and(eq(order.userId, userId), inArray(order.id, input.orderIds));
+      const lockedOrders = await scope.tx
+        .select({ id: order.id })
+        .from(order)
+        .where(selected)
+        .orderBy(asc(order.id))
+        .for("no key update");
+      if (!foundAll(input.orderIds, lockedOrders.length)) {
+        return Result.err(new SomeOrdersNotFound());
+      }
+      await scope.tx
+        .select({ id: collection.id })
+        .from(collection)
+        .where(and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds)))
+        .orderBy(asc(collection.id))
+        .for("no key update");
+
+      const columns = fillColumns(input.fill);
+      await scope.tx
+        .update(order)
+        .set({ ...columns, updatedAt: new Date() })
+        .where(selected);
+      await cascadeToItems(scope.tx, userId, input.orderIds, columns);
+      return Result.ok("Orders filled successfully" as const);
     },
   ),
 

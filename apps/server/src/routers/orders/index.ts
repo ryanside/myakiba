@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { fillOrdersBodySchema } from "@myakiba/contracts/orders/fill";
 import {
   cascadeOptionsSchema,
   newOrderSchema,
@@ -42,6 +43,7 @@ const ordersRouter = privateApi("/orders")
       orderIds: idListSchema.optional(),
     }),
   })
+  .put("/fill", (ctx) => serve(ctx, Orders.fill, ctx.body), { body: fillOrdersBodySchema })
   .put("/:orderId", (ctx) => serve(ctx, Orders.update, { ...ctx.params, ...ctx.body }), {
     params: orderIdParamSchema,
     body: z.strictObject({
