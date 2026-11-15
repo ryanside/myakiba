@@ -245,16 +245,12 @@ export function AddSentence({ className }: { readonly className?: string }) {
           <span
             data-destination=""
             data-caught={caught ? "" : undefined}
-            className={cn(PLACE_PILL, "mk-add-sentence-place relative")}
+            className={cn(
+              PLACE_PILL,
+              "mk-add-sentence-place relative transition-colors ease-out",
+              caught ? "bg-emerald-600 duration-[160ms] dark:bg-emerald-400" : "duration-[220ms]",
+            )}
           >
-            <span
-              className={cn(
-                "absolute inset-0 rounded-[inherit] bg-emerald-600 ease-out dark:bg-emerald-400",
-                caught
-                  ? "opacity-100 transition-opacity duration-[160ms]"
-                  : "opacity-0 transition-opacity duration-[220ms]",
-              )}
-            />
             <span className="mk-add-sentence-ring pointer-events-none absolute inset-0 rounded-[inherit]" />
             <Check open={caught} />
             <span className={box} style={glide("place")}>
