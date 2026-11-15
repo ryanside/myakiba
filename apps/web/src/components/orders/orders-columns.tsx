@@ -190,7 +190,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 244,
+      size: 240,
       meta: {
         skeleton: <Skeleton className="h-6 my-1" />,
       },
@@ -404,7 +404,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 128,
+      size: 112,
       meta: {
         ...NUMERIC_COLUMN_META,
         headerTitle: "Total",
@@ -560,7 +560,7 @@ export function createOrdersColumns({
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
-      size: 116,
+      size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
       },
