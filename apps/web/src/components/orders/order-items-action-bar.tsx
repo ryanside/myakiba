@@ -1,7 +1,9 @@
-import { Cancel01Icon, Delete01Icon, MoveIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Delete01Icon, MoveIcon, PaintBucketIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import type { Currency } from "@myakiba/contracts/shared/types";
+import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import {
   ActionBar,
@@ -21,10 +23,12 @@ export function OrderItemsActionBar({
   isSplitting,
   isDeletingItems,
   isDeletingOrders,
+  isFillingItems,
   onClearSelection,
   onMoveItem,
   onMoveToNew,
   onDeleteItems,
+  onFillItems,
 }: {
   readonly selectedItems: {
     readonly collectionIds: ReadonlySet<string>;
@@ -35,6 +39,7 @@ export function OrderItemsActionBar({
   readonly isSplitting: boolean;
   readonly isDeletingItems: boolean;
   readonly isDeletingOrders: boolean;
+  readonly isFillingItems: boolean;
   readonly onClearSelection: () => void;
   readonly onMoveItem: (
     targetOrderId: string,
@@ -47,6 +52,7 @@ export function OrderItemsActionBar({
     collectionIds: ReadonlySet<string>,
   ) => Saving;
   readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Saving;
+  readonly onFillItems: (collectionIds: ReadonlySet<string>, fill: ItemFill) => Saving;
 }): React.JSX.Element {
   const selectedItemCount = selectedItems.collectionIds.size;
 
@@ -80,6 +86,20 @@ export function OrderItemsActionBar({
           onMoveToNew={onMoveToNew}
           clearSelections={onClearSelection}
           currency={currency}
+        />
+        <SavedFillMenu
+          rows={[{ target: "orderItems", ids: selectedItems.collectionIds, onFill: onFillItems }]}
+          currency={currency}
+          trigger={
+            <ActionBarItem
+              disabled={selectedItemCount === 0 || isFillingItems}
+              onSelect={(event) => event.preventDefault()}
+              variant="default"
+            >
+              <HugeiconsIcon icon={PaintBucketIcon} />
+              <span>Fill</span>
+            </ActionBarItem>
+          }
         />
         <WriteConfirmDialog
           renderTrigger={

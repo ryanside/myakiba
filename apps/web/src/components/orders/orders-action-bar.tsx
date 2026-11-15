@@ -4,9 +4,13 @@ import {
   FolderAddIcon,
   GitMergeIcon,
   MoveIcon,
+  PaintBucketIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import { OrderForm } from "@/components/orders/order-form";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
@@ -35,11 +39,15 @@ export function OrdersActionBar({
   onDeleteOrders,
   onMoveItem,
   onDeleteItems,
+  onFillOrders,
+  onFillItems,
   isMerging,
   isSplitting,
   isDeletingOrders,
   isDeletingItems,
   isMovingItems,
+  isFillingOrders,
+  isFillingItems,
 }: {
   readonly selectedOrderIds: ReadonlySet<string>;
   readonly selectedItems: {
@@ -65,13 +73,18 @@ export function OrdersActionBar({
     orderIds?: ReadonlySet<string>,
   ) => Saving;
   readonly onDeleteItems: (collectionIds: ReadonlySet<string>) => Saving;
+  readonly onFillOrders: (orderIds: ReadonlySet<string>, fill: OrderFill) => Saving;
+  readonly onFillItems: (collectionIds: ReadonlySet<string>, fill: ItemFill) => Saving;
   readonly isMerging: boolean;
   readonly isSplitting: boolean;
   readonly isDeletingOrders: boolean;
   readonly isDeletingItems: boolean;
   readonly isMovingItems: boolean;
+  readonly isFillingOrders: boolean;
+  readonly isFillingItems: boolean;
 }): React.JSX.Element {
   const { currency } = useUserPreferences();
+  const isFilling = isFillingOrders || isFillingItems;
   const selectedItemCount = selectedItems.collectionIds.size;
   const selectionParts: string[] = [];
   if (selectedOrderIds.size > 0) {
@@ -131,6 +144,23 @@ export function OrdersActionBar({
           onMoveToNew={onSplit}
           clearSelections={onClearSelection}
           currency={currency}
+        />
+        <SavedFillMenu
+          rows={[
+            { target: "orders", ids: selectedOrderIds, onFill: onFillOrders },
+            { target: "orderItems", ids: selectedItems.collectionIds, onFill: onFillItems },
+          ]}
+          currency={currency}
+          trigger={
+            <ActionBarItem
+              disabled={(selectedOrderIds.size === 0 && selectedItemCount === 0) || isFilling}
+              onSelect={(event) => event.preventDefault()}
+              variant="default"
+            >
+              <HugeiconsIcon icon={PaintBucketIcon} />
+              <span>Fill</span>
+            </ActionBarItem>
+          }
         />
         <AddToListsDialog
           targets={listTargets}
