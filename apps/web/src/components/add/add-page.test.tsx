@@ -551,6 +551,7 @@ test("every Order field is on screen, with nothing to open first", async () => {
   for (const name of ["Status", "Shipping Method"]) {
     expect(screen.getByRole("combobox", { name })).toBeDefined();
   }
+  expect(screen.getByRole("checkbox", { name: "Paid", checked: false })).toBeDefined();
   for (const name of [
     "Order Date",
     "Release Date",

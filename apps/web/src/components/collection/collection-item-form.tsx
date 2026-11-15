@@ -48,7 +48,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
-import { PaymentDateLabel } from "@/components/orders/payment";
+import { PaidField } from "@/components/orders/payment";
 import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
@@ -230,37 +230,48 @@ function CollectionItemFormContent({
                 />
 
                 <form.Field
-                  name="condition"
-                  validators={{ onChange: z.enum(CONDITIONS, "Condition is required") }}
+                  name="paid"
                   children={(field) => (
-                    <div className="grid gap-1.5">
-                      <Label htmlFor={field.name}>Condition</Label>
-                      <Select
-                        value={field.state.value ?? ""}
-                        onValueChange={(value) =>
-                          field.handleChange(value as typeof field.state.value)
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select condition" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONDITIONS.map((condition) => (
-                            <SelectItem key={condition} value={condition}>
-                              {condition}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {!field.state.meta.isValid && (
-                        <p role="alert" className="text-xs text-destructive">
-                          {field.state.meta.errors.join(", ")}
-                        </p>
-                      )}
-                    </div>
+                    <PaidField
+                      id={field.name}
+                      paid={field.state.value}
+                      onPaidChange={field.handleChange}
+                    />
                   )}
                 />
               </div>
+
+              <form.Field
+                name="condition"
+                validators={{ onChange: z.enum(CONDITIONS, "Condition is required") }}
+                children={(field) => (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={field.name}>Condition</Label>
+                    <Select
+                      value={field.state.value ?? ""}
+                      onValueChange={(value) =>
+                        field.handleChange(value as typeof field.state.value)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CONDITIONS.map((condition) => (
+                          <SelectItem key={condition} value={condition}>
+                            {condition}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!field.state.meta.isValid && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {field.state.meta.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
             </FormSection>
 
             <FormSection title="Details">
@@ -436,17 +447,7 @@ function CollectionItemFormContent({
                   name="paymentDate"
                   children={(field) => (
                     <div className="grid gap-1.5">
-                      <form.Field
-                        name="paid"
-                        children={(paidField) => (
-                          <PaymentDateLabel
-                            dateId={field.name}
-                            paidId={paidField.name}
-                            paid={paidField.state.value}
-                            onPaidChange={paidField.handleChange}
-                          />
-                        )}
-                      />
+                      <Label htmlFor={field.name}>Payment Date</Label>
                       <DatePicker
                         id={field.name}
                         name={field.name}

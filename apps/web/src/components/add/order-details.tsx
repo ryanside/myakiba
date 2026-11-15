@@ -22,7 +22,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
-import { PaymentDateLabel } from "@/components/orders/payment";
+import { PaidField } from "@/components/orders/payment";
 import type { AddController } from "./add-controller";
 import { AmountInput, DateField, EnumSelect, LabeledField, OrderStatusSelect } from "./add-fields";
 import { orderFieldId } from "./commit-input";
@@ -183,7 +183,8 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             onChange={(status) => set({ status })}
           />
         </LabeledField>
-        <LabeledField id={`${id}-shop`} label="Shop" className="@4xl:col-span-2">
+        <PaidField id={`${id}-paid`} paid={fields.paid} onPaidChange={(paid) => set({ paid })} />
+        <LabeledField id={`${id}-shop`} label="Shop" className="col-span-2 @4xl:col-span-1">
           <ShopInput
             id={`${id}-shop`}
             value={fields.shop}
@@ -221,20 +222,12 @@ function NewOrderDetails({ controller: c }: { readonly controller: AddController
             onChange={(releaseDate) => set({ releaseDate })}
           />
         </LabeledField>
-        <div className="grid gap-1.5">
-          <PaymentDateLabel
-            dateId={`${id}-payment-date`}
-            paidId={`${id}-paid`}
-            paid={fields.paid}
-            onPaidChange={(paid) => set({ paid })}
-          />
-          <DatePicker
-            id={`${id}-payment-date`}
-            value={fields.paymentDate}
-            placeholder="Select date"
-            onChange={(paymentDate) => set({ paymentDate })}
-          />
-        </div>
+        <DateField
+          id={`${id}-payment-date`}
+          label="Payment Date"
+          value={fields.paymentDate}
+          onChange={(paymentDate) => set({ paymentDate })}
+        />
         <DateField
           id={`${id}-shipping-date`}
           label="Shipping Date"

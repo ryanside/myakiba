@@ -395,13 +395,14 @@ test("New Order's fees and title reach the commit", async () => {
   expect(fields.title).toBe("Hatsune Miku");
 });
 
-test("a New Order's status, Shipping Method and dates all reach the commit", async () => {
+test("a New Order's status, Paid, Shipping Method and dates all reach the commit", async () => {
   draft(ITEM_ID);
   const user = userEvent.setup();
   openAddPage("/add?to=order-new");
   await rowsLoaded();
 
   await chooseOption(user, "Status", "Shipped");
+  await user.click(screen.getByRole("checkbox", { name: "Paid", checked: false }));
   await chooseOption(user, "Shipping Method", "SAL");
   for (const label of [
     "Order Date",
@@ -419,6 +420,7 @@ test("a New Order's status, Shipping Method and dates all reach the commit", asy
 
   const fields = server.commits[0]?.ownership.order?.fields ?? {};
   expect(fields.status).toBe("Shipped");
+  expect(fields.paid).toBe(true);
   expect(fields.shippingMethod).toBe("SAL");
   for (const field of [
     "orderDate",
