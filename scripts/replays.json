@@ -4958,7 +4958,9 @@
         "each item's price follows its own Paid and each Order's fees follow the Order's > Scoped Shop Spend for Orders adds up to Order Spend",
         "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way",
         "Paid is apart from the Acquisition Status > a Shipped Order that is unpaid counts as Unpaid Costs and not Spend, and an Ordered Order that is paid counts as Spend"
-      ]
+      ],
+      "testAt": "ecb924179e0701d5a5ed60b1a551f5600b81954c",
+      "reason": "A later test of the Orders list's Unpaid Costs filter also passes at this fix: the fix adds the Paid filter that test compares against, and the Unpaid Costs filter does not exist yet, so the list returns both Orders, which both owe money. The harness stays at the fix."
     },
     {
       "fix": "c2a294c312bef8571c3a593f2f7798d76c5cd885",
