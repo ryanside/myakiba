@@ -102,6 +102,12 @@ export default function OrdersTab({
     expenseDateStart: filters.dateStart,
     expenseDateEnd: filters.dateEnd,
   } satisfies OrderFilters;
+  const ordersWithOrderSpendSearch = {
+    orderSpendMin: 1,
+    shop: filters.shop,
+    expenseDateStart: filters.dateStart,
+    expenseDateEnd: filters.dateEnd,
+  } satisfies OrderFilters;
   const unpaidOrdersSearch = {
     paid: false,
     shop: filters.shop,
@@ -131,7 +137,7 @@ export default function OrdersTab({
           {
             title: "Order Items",
             value: (
-              <Link to="/orders" search={paidOrdersSearch} className="hover:underline">
+              <Link to="/orders" search={ordersWithOrderSpendSearch} className="hover:underline">
                 {data?.kpis.orderItemCount ?? 0}
               </Link>
             ),

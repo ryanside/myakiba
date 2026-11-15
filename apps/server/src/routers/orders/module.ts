@@ -159,6 +159,12 @@ export const Orders = {
               input.unpaidCostsMax === undefined
                 ? undefined
                 : sql`${orderUnpaidCosts} <= ${input.unpaidCostsMax}`,
+              input.orderSpendMin === undefined
+                ? undefined
+                : sql`${orderSpend} >= ${input.orderSpendMin}`,
+              input.orderSpendMax === undefined
+                ? undefined
+                : sql`${orderSpend} <= ${input.orderSpendMax}`,
             ),
           )
           .$dynamic();

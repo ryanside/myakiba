@@ -43,6 +43,8 @@ export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, Api
     totalMax: filters.totalMax,
     unpaidCostsMin: filters.unpaidCostsMin,
     unpaidCostsMax: filters.unpaidCostsMax,
+    orderSpendMin: filters.orderSpendMin,
+    orderSpendMax: filters.orderSpendMax,
     shippingFeeMin: filters.shippingFeeMin,
     shippingFeeMax: filters.shippingFeeMax,
     taxesMin: filters.taxesMin,
