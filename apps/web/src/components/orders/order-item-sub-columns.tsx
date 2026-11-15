@@ -40,7 +40,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_STATUS_COLORS, paymentOf } from "@/lib/orders";
 import { PaidCheckbox } from "./payment";
-import { CategoryLabel, ROW_ACTION_CLASS_NAME } from "@/components/media-tile";
+import { CategoryLabel } from "@/components/media-tile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NUMERIC_COLUMN_META } from "@/components/reui/data-grid/data-grid";
 import type { Saving } from "@/data/client";
@@ -82,7 +82,7 @@ function OrderItemActionsCell({
               variant="ghost"
               size="icon-sm"
               disabled={isPending}
-              className={ROW_ACTION_CLASS_NAME}
+              className="text-muted-foreground"
             >
               <HugeiconsIcon icon={Edit03Icon} />
               <span className="sr-only">Edit item</span>
