@@ -57,12 +57,12 @@ export function OverviewTab({
   };
 
   const totalSpent =
-    Number(collectionStats.totalSpent) +
-    Number(ordersSummary.totalShippingAllTime) +
-    Number(ordersSummary.totalTaxesAllTime) +
-    Number(ordersSummary.totalDutiesAllTime) +
-    Number(ordersSummary.totalTariffsAllTime) +
-    Number(ordersSummary.totalMiscFeesAllTime);
+    collectionStats.totalSpent +
+    ordersSummary.totalShippingAllTime +
+    ordersSummary.totalTaxesAllTime +
+    ordersSummary.totalDutiesAllTime +
+    ordersSummary.totalTariffsAllTime +
+    ordersSummary.totalMiscFeesAllTime;
 
   return (
     <>

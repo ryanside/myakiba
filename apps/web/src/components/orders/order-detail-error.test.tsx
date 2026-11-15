@@ -55,7 +55,7 @@ const ORDER = {
   images: [],
   createdAt: "2026-10-01T00:00:00.000Z",
   updatedAt: "2026-10-01T00:00:00.000Z",
-  itemCount: "0",
+  itemCount: 0,
 };
 
 const EMPTY_PAGE = { items: [], totalCount: 0, limit: 24, offset: 0 };

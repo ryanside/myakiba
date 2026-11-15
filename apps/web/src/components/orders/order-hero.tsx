@@ -135,7 +135,7 @@ function LoadedOrderHero({
                 <span className="animate-data-in inline-block">{order.shippingMethod}</span>
               )}
               <span className="animate-data-in inline-block">
-                {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
+                {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
               </span>
               {order.releaseDate ? (
                 <span className="animate-data-in inline-block">

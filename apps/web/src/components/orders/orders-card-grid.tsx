@@ -160,7 +160,7 @@ export function OrdersCardGrid({
                   <PaymentBadge payment={order.payment} size={isCompact ? "xs" : "sm"} />
                 </span>
                 <span className="shrink-0 text-xs leading-4 text-muted-foreground tabular-nums">
-                  {order.itemCount} {Number(order.itemCount) === 1 ? "item" : "items"}
+                  {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
                 </span>
               </span>
               <MediaCardTitle as="h3" title={order.title} destination={destination} />
