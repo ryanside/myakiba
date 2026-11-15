@@ -13,6 +13,7 @@ import { MaskInput } from "@/components/ui/mask-input";
 import { Rating } from "@/components/ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import { readCount } from "@/lib/count-input";
+import { FILL_FIELD } from "@/lib/fill-fields";
 import { getCurrencyLocale } from "@/lib/locale";
 import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
@@ -46,19 +47,25 @@ const COLLECTION_ONLY = ["collection"] as const;
 const OWNED = ["collection", "order"] as const;
 const ALWAYS = ["collection", "order", null] as const;
 
+const fillable = <Id extends FieldId>(id: Id, kinds: Field["kinds"]) => ({
+  id,
+  label: FILL_FIELD[id].label,
+  kinds,
+});
+
 export const FIELD = {
-  price: { id: "price", label: "Price", kinds: ALWAYS },
-  count: { id: "count", label: "Count", kinds: ALWAYS },
-  condition: { id: "condition", label: "Condition", kinds: ALWAYS },
-  shop: { id: "shop", label: "Shop", kinds: COLLECTION_ONLY },
-  shipping: { id: "shipping", label: "Shipping Method", kinds: COLLECTION_ONLY },
-  orderDate: { id: "orderDate", label: "Order Date", kinds: COLLECTION_ONLY },
-  paymentDate: { id: "paymentDate", label: "Payment Date", kinds: COLLECTION_ONLY },
-  shippingDate: { id: "shippingDate", label: "Shipping Date", kinds: COLLECTION_ONLY },
-  collectionDate: { id: "collectionDate", label: "Collection Date", kinds: COLLECTION_ONLY },
-  score: { id: "score", label: "Score", kinds: OWNED },
-  tags: { id: "tags", label: "Tags", kinds: OWNED },
-  notes: { id: "notes", label: "Notes", kinds: OWNED },
+  price: fillable("price", ALWAYS),
+  count: fillable("count", ALWAYS),
+  condition: fillable("condition", ALWAYS),
+  shop: fillable("shop", COLLECTION_ONLY),
+  shipping: fillable("shipping", COLLECTION_ONLY),
+  orderDate: fillable("orderDate", COLLECTION_ONLY),
+  paymentDate: fillable("paymentDate", COLLECTION_ONLY),
+  shippingDate: fillable("shippingDate", COLLECTION_ONLY),
+  collectionDate: fillable("collectionDate", COLLECTION_ONLY),
+  score: fillable("score", OWNED),
+  tags: fillable("tags", OWNED),
+  notes: fillable("notes", OWNED),
 } satisfies Record<FieldId, Field>;
 
 /** Every field a destination allows, in the order Fill all lists them. */
