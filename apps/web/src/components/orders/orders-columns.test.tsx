@@ -108,9 +108,17 @@ test("refuses to render without a pending provider", () => {
   );
 });
 
-const { createdAt: _createdAt, updatedAt: _updatedAt, ...savedOrder } = order("o1");
+const {
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
+  payment: _payment,
+  total: _total,
+  itemCount: _itemCount,
+  images: _images,
+  ...savedOrder
+} = order("o1");
 
-test("saves a shop edit without timestamps, cascading the shop to its items", async () => {
+test("saves a shop edit with only the fields a user edits, cascading the shop to its items", async () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <OrderPendingContext
