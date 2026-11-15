@@ -50,3 +50,20 @@ export async function pushSchema(url: string) {
     output,
   };
 }
+
+/** Runs db-push as a deploy does, with no TTY. */
+export async function dbPush(url: string) {
+  const child = Bun.spawn(["bun", "src/scripts/push-schema.ts"], {
+    cwd: path.join(import.meta.dir, ".."),
+    env: { ...process.env, DATABASE_URL: url },
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  return { exitCode, output: `${stdout}\n${stderr}` };
+}

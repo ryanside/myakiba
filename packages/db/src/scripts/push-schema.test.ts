@@ -1,30 +1,19 @@
 import { expect, test } from "bun:test";
-import path from "node:path";
 import type { SQL } from "bun";
 import { snapshot, testDatabases } from "../../test/database";
 import { MAIN_SCHEMA } from "../../test/main-schema";
-import { PICTURE_LEDGER, PUSH_TIMEOUT, REPEATED_ON_EVERY_PUSH, pushSchema } from "../../test/push";
+import {
+  PICTURE_LEDGER,
+  PUSH_TIMEOUT,
+  REPEATED_ON_EVERY_PUSH,
+  dbPush,
+  pushSchema,
+} from "../../test/push";
 import { ownerGuardsInstalled, ownershipMismatches } from "../../test/ownership";
 import { isItemOwnershipMigrated, migrateItemOwnership } from "../item-ownership/migrate";
 import { seedSharedItems } from "../item-ownership/seed";
 
 const databases = testDatabases();
-
-async function dbPush(url: string) {
-  const child = Bun.spawn(["bun", "src/scripts/push-schema.ts"], {
-    cwd: path.join(import.meta.dir, "../.."),
-    env: { ...process.env, DATABASE_URL: url },
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
-  return { exitCode, output: `${stdout}\n${stderr}` };
-}
 
 test(
   "db-push migrates a legacy database, pushes with no prompt and no lost row, and installs the guards; a second run changes nothing",
