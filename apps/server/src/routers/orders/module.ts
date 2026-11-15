@@ -28,7 +28,7 @@ import {
   orderUnpaidCosts,
 } from "@/lib/order-money";
 
-const itemCount = sql<number>`COUNT(${collection.id})`;
+const itemCount = sql<number>`COUNT(${collection.id})`.mapWith(Number);
 const realizedOrderDate = sql`COALESCE(${order.paymentDate}, ${order.collectionDate}, ${order.shippingDate}, ${order.orderDate}, ${order.releaseDate})`;
 
 function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {

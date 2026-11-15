@@ -77,7 +77,7 @@ export function OrdersBarChart({ data, isLoading }: OrdersBarChartProps): React.
   const navigate = useNavigate();
 
   const chartData = useMemo(() => {
-    const monthMap = new Map(data.map((item) => [Number(item.month), Number(item.orderCount)]));
+    const monthMap = new Map(data.map((item) => [item.month, item.orderCount]));
     return MONTH_NAMES.map((monthName, index) => ({
       month: monthName,
       desktop: monthMap.get(index + 1) || 0,

@@ -5036,6 +5036,21 @@
       "fixed": [
         "the Orders page lists every Order that holds an item the Expenses Order Items count counts"
       ]
+    },
+    {
+      "fix": "1b939e145a45c66254ffee43e7cc55aa11d8a938",
+      "bug": "The contracts type an Order's item count, the Dashboard's Total Spent parts, Active Orders, category totals and order months, and the Analytics spends, item counts and section totals as numbers, but those pages sent them as JSON strings, because Postgres types COUNT as bigint and SUM and EXTRACT as numeric and the driver returns both as strings.",
+      "test": "apps/server/src/routers/count-and-sum-json.test.ts",
+      "fixed": [
+        "every count and sum the contracts call a number is a JSON number > the Dashboard sends its Total Spent parts, Active Orders and categories as numbers",
+        "every count and sum the contracts call a number is a JSON number > the Orders page sends each Order's item count as a number",
+        "every count and sum the contracts call a number is a JSON number > the Order page sends its item count as a number",
+        "every count and sum the contracts call a number is a JSON number > the Calendar sends each Order's item count as a number",
+        "every count and sum the contracts call a number is a JSON number > Analytics sends each leaderboard's spend as a number",
+        "every count and sum the contracts call a number is a JSON number > the Analytics characters page sends its totals and each row's count and spend as numbers",
+        "every count and sum the contracts call a number is a JSON number > the Analytics shops page sends its totals and each row's count and spend as numbers",
+        "every count and sum the contracts call a number is a JSON number > the Analytics scales page sends its totals and each row's count and spend as numbers"
+      ]
     }
   ],
   "lint": [

@@ -70,7 +70,7 @@ export const Calendar = {
           paid: order.paid,
           payment: orderPayment,
           releaseDate: order.releaseDate,
-          itemCount: sql<number>`COUNT(${collection.id})`,
+          itemCount: sql<number>`COUNT(${collection.id})`.mapWith(Number),
           images: orderPreviewImagesSql,
           total: orderTotal,
         })

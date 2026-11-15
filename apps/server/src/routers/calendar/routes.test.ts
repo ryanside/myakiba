@@ -119,7 +119,7 @@ describe("the calendar answers as before", () => {
             paid: false,
             payment: "unpaid",
             releaseDate: "2026-03-15",
-            itemCount: "1",
+            itemCount: 1,
             images: [],
             total: 4500,
           },
