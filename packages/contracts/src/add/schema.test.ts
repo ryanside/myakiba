@@ -32,6 +32,7 @@ const shared = {
 const newOrder = {
   title: "Order · Rem + 1 more",
   status: "Ordered",
+  paid: false,
   shop: "AmiAmi",
   orderDate: "2026-10-01",
   releaseDate: null,
