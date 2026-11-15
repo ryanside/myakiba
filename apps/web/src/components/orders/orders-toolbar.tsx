@@ -31,6 +31,7 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
   { id: "miscFees", label: "Misc Fees" },
   { id: "itemCount", label: "Items" },
   { id: "status", label: "Status" },
+  { id: "paid", label: "Paid" },
   { id: "createdAt", label: "Created At" },
 ];
 

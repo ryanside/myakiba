@@ -337,7 +337,7 @@ export function createOrderItemSubColumns({
           onPaidChange={(paid) => onSubmit(paid)}
         />
       )),
-      enableSorting: false,
+      enableSorting: true,
       enableHiding: true,
       enableResizing: true,
       size: 72,

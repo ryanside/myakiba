@@ -148,6 +148,12 @@ export const Orders = {
             and(
               input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
               input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
+              input.unpaidCostsMin === undefined
+                ? undefined
+                : sql`${orderUnpaidCosts} >= ${input.unpaidCostsMin}`,
+              input.unpaidCostsMax === undefined
+                ? undefined
+                : sql`${orderUnpaidCosts} <= ${input.unpaidCostsMax}`,
             ),
           )
           .$dynamic();
@@ -171,6 +177,7 @@ export const Orders = {
           tariffs: order.tariffs,
           miscFees: order.miscFees,
           status: order.status,
+          paid: order.paid,
           itemCount,
           createdAt: order.createdAt,
         },
@@ -296,6 +303,7 @@ export const Orders = {
           count: collection.count,
           price: collection.price,
           status: collection.status,
+          paid: collection.paid,
           createdAt: collection.createdAt,
         },
         tiebreak: [collection.createdAt, collection.id],

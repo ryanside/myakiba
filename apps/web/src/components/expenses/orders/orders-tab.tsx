@@ -106,6 +106,10 @@ export default function OrdersTab({
     paid: false,
     shop: filters.shop,
   } satisfies OrderFilters;
+  const ordersWithUnpaidCostsSearch = {
+    unpaidCostsMin: 1,
+    shop: filters.shop,
+  } satisfies OrderFilters;
 
   return (
     <div className="flex flex-col gap-4">
@@ -143,7 +147,7 @@ export default function OrdersTab({
           {
             title: "Unpaid Costs",
             value: (
-              <Link to="/orders" search={unpaidOrdersSearch} className="hover:underline">
+              <Link to="/orders" search={ordersWithUnpaidCostsSearch} className="hover:underline">
                 {unpaidValue}
               </Link>
             ),

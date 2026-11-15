@@ -105,6 +105,14 @@ function OrdersFiltersDraft({
         currentFilters?.totalMax === undefined
           ? ""
           : minorUnitsToMajorString(currentFilters.totalMax),
+      unpaidCostsMin:
+        currentFilters?.unpaidCostsMin === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.unpaidCostsMin),
+      unpaidCostsMax:
+        currentFilters?.unpaidCostsMax === undefined
+          ? ""
+          : minorUnitsToMajorString(currentFilters.unpaidCostsMax),
       shippingFeeMin:
         currentFilters?.shippingFeeMin === undefined
           ? ""
@@ -164,6 +172,8 @@ function OrdersFiltersDraft({
         paid: PAID_CHOICES[value.paid],
         totalMin: optionalMinorUnits(value.totalMin),
         totalMax: optionalMinorUnits(value.totalMax),
+        unpaidCostsMin: optionalMinorUnits(value.unpaidCostsMin),
+        unpaidCostsMax: optionalMinorUnits(value.unpaidCostsMax),
         shippingFeeMin: optionalMinorUnits(value.shippingFeeMin),
         shippingFeeMax: optionalMinorUnits(value.shippingFeeMax),
         taxesMin: optionalMinorUnits(value.taxesMin),
@@ -449,6 +459,14 @@ function OrdersFiltersDraft({
         <div className="grid grid-cols-2 gap-2">
           <MoneyField form={form} name="totalMin" currency={currency} placeholder="Min" />
           <MoneyField form={form} name="totalMax" currency={currency} placeholder="Max" />
+        </div>
+      </Field>
+
+      <Field>
+        <FieldTitle>Unpaid Costs Range</FieldTitle>
+        <div className="grid grid-cols-2 gap-2">
+          <MoneyField form={form} name="unpaidCostsMin" currency={currency} placeholder="Min" />
+          <MoneyField form={form} name="unpaidCostsMax" currency={currency} placeholder="Max" />
         </div>
       </Field>
 
