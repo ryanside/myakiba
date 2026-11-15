@@ -4972,6 +4972,18 @@
       ]
     },
     {
+      "fix": "755f4c1e033dc5e0c39d3b8bb6d75ddbe95dfdf9",
+      "bug": "The contract types an Order Total as a number, but the Orders page, the Order page, both Dashboard kanbans and the Calendar sent it as a JSON string, because Postgres types a sum of bigints as numeric and the driver returns numeric as a string.",
+      "test": "apps/server/src/routers/order-total-json.test.ts",
+      "fixed": [
+        "an Order's money is a JSON number on every page that shows it > the Orders page sends each Order Total and its Spend and Unpaid Costs as numbers",
+        "an Order's money is a JSON number on every page that shows it > the Order page sends its Order Total as a number",
+        "an Order's money is a JSON number on every page that shows it > the Dashboard sends each kanban Order Total as a number",
+        "an Order's money is a JSON number on every page that shows it > the Dashboard month sends each kanban Order Total as a number",
+        "an Order's money is a JSON number on every page that shows it > the Calendar sends each Order Total as a number"
+      ]
+    },
+    {
       "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
       "bug": "PUT /api/orders/:orderId parsed its order with a non-strict drizzle-zod update schema, so it dropped id, userId, timestamps, read-only Order fields and unknown keys in silence, on the order and at the top level, and made any new order column writable.",
       "test": "apps/server/src/routers/orders/update.test.ts",

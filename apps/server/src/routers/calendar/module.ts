@@ -6,7 +6,7 @@ import { Result } from "better-result";
 import { query } from "@/domain/kernel";
 import type { CalendarQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { orderPayment } from "@/lib/order-money";
+import { orderPayment, orderTotal } from "@/lib/order-money";
 
 export const Calendar = {
   items: query(
@@ -72,7 +72,7 @@ export const Calendar = {
           releaseDate: order.releaseDate,
           itemCount: sql<number>`COUNT(${collection.id})`,
           images: orderPreviewImagesSql,
-          total: sql<number>`COALESCE(SUM(${collection.price}), 0) + COALESCE(${order.shippingFee}, 0) + COALESCE(${order.taxes}, 0) + COALESCE(${order.duties}, 0) + COALESCE(${order.tariffs}, 0) + COALESCE(${order.miscFees}, 0)`,
+          total: orderTotal,
         })
         .from(order)
         .leftJoin(collection, eq(order.id, collection.orderId))
