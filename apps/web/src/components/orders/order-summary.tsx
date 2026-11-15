@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import type { Order } from "@myakiba/contracts/orders/types";
-import type { DateFormat, Currency } from "@myakiba/contracts/shared/types";
+import type { DateFormat, Currency, OrderStatus } from "@myakiba/contracts/shared/types";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyValue } from "@/components/cells/empty-value";
 import { cn } from "@/lib/utils";
+import { PaymentLine } from "./payment";
 import {
   Timeline,
   TimelineItem,
@@ -16,12 +17,11 @@ import {
   TimelineDate,
 } from "@/components/reui/timeline";
 
-const STATUS_TO_STEP = new Map<string, number>([
-  ["ordered", 1],
-  ["paid", 2],
-  ["shipped", 3],
-  ["owned", 4],
-]);
+const STATUS_TO_STEP = {
+  Ordered: 1,
+  Shipped: 2,
+  Owned: 3,
+} satisfies Record<OrderStatus, number>;
 
 function StepDate({
   date,
@@ -79,7 +79,7 @@ export function OrderSummary({
   readonly locale: string;
   readonly dateFormat: DateFormat;
 }): ReactNode {
-  const activeStep = order ? (STATUS_TO_STEP.get(order.status.toLowerCase()) ?? 0) : 0;
+  const activeStep = order ? STATUS_TO_STEP[order.status] : 0;
 
   const shippingFee = order?.shippingFee ?? 0;
   const taxes = order?.taxes ?? 0;
@@ -91,9 +91,8 @@ export function OrderSummary({
 
   const timelineSteps = [
     { step: 1, title: "Ordered", date: order?.orderDate },
-    { step: 2, title: "Paid", date: order?.paymentDate },
-    { step: 3, title: "Shipped", date: order?.shippingDate },
-    { step: 4, title: "Owned", date: order?.collectionDate },
+    { step: 2, title: "Shipped", date: order?.shippingDate },
+    { step: 3, title: "Owned", date: order?.collectionDate },
   ] as const;
 
   const costRows = [
@@ -140,6 +139,17 @@ export function OrderSummary({
             </TimelineItem>
           ))}
         </Timeline>
+        {isLoading || !order ? (
+          <Skeleton className="h-5 w-32" />
+        ) : (
+          <div className="animate-data-in">
+            <PaymentLine
+              payment={order.payment}
+              paymentDate={order.paymentDate}
+              dateFormat={dateFormat}
+            />
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">

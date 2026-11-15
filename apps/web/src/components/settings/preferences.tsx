@@ -124,7 +124,7 @@ const PREVIEW_TOTAL_MINOR_UNITS = 18_450;
 const PREVIEW_DATES = [
   { label: "Release", daysFromToday: 52 },
   { label: "Ordered", daysFromToday: -36 },
-  { label: "Paid", daysFromToday: -9 },
+  { label: "Payment", daysFromToday: -9 },
 ] as const;
 
 /** An example order, as it reads with the formats not yet saved. */

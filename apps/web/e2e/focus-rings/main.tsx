@@ -51,7 +51,7 @@ Object.defineProperty(window, "fetch", {
 });
 
 const saved = async () => Result.ok();
-const STATUSES = ["Owned", "Ordered", "Paid", "Shipped"] as const;
+const STATUSES = ["Owned", "Ordered", "Shipped"] as const;
 const NO_RELEASE = {
   releaseDate: null,
   releaseType: null,

@@ -38,6 +38,7 @@ export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, Api
     colDateStart: filters.colDateStart,
     colDateEnd: filters.colDateEnd,
     status: filters.status,
+    paid: filters.paid,
     totalMin: filters.totalMin,
     totalMax: filters.totalMax,
     shippingFeeMin: filters.shippingFeeMin,
@@ -187,6 +188,13 @@ export function updateOrderStatus(orderId: string, status: OrderStatus) {
     }),
     { fallback: "Failed to update order status. Please try again." },
   );
+}
+
+/** Cascades to every Order Item, so the Order and its items end paid or unpaid together. */
+export function updateOrderPaid(orderId: string, paid: boolean) {
+  return call(app.api.orders({ orderId }).put({ order: { paid }, cascadeOptions: ["paid"] }), {
+    fallback: "Failed to update Paid. Please try again.",
+  });
 }
 
 export type OrderDateField =

@@ -21,6 +21,7 @@ import {
 import { OrderForm } from "@/components/orders/order-form";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { PaymentBadge } from "@/components/orders/payment";
 import { cn } from "@/lib/utils";
 import type { EditedOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import { ImageThumbnail } from "@/components/ui/image-thumbnail";
@@ -124,6 +125,7 @@ function LoadedOrderHero({
                 />
                 {order.status}
               </span>
+              <PaymentBadge payment={order.payment} className="ml-2 align-middle" />
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {order.shop ? (

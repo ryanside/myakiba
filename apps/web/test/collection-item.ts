@@ -11,6 +11,7 @@ export function collectionItem(overrides: Partial<CollectionItem> = {}): Collect
     itemCategory: null,
     itemScale: null,
     status: "Owned",
+    paid: true,
     count: 1,
     score: "0",
     price: 0,

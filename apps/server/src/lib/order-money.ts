@@ -2,18 +2,25 @@ import { eq, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { collection, order } from "@myakiba/db/schema/figure";
 import type { ReadTx } from "@myakiba/db/tx";
+import type { OrderPayment } from "@myakiba/contracts/shared/types";
 
-const itemIsUnpaid = sql`${collection.status} = 'Ordered'`;
-export const itemIsPaid = sql`${collection.status} <> 'Ordered'`;
+const itemIsUnpaid = sql`NOT ${collection.paid}`;
+export const itemIsPaid = sql`${collection.paid}`;
 
-export const orderIsUnpaid = sql`${order.status} = 'Ordered'`;
-export const orderIsPaid = sql`${order.status} <> 'Ordered'`;
+export const orderIsUnpaid = sql`NOT ${order.paid}`;
+export const orderIsPaid = sql`${order.paid}`;
 
 export const orderFees = sql<number>`(${order.shippingFee} + ${order.taxes} + ${order.duties} + ${order.tariffs} + ${order.miscFees})`;
 
 export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${orderFees}`;
 export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
 export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderIsUnpaid} THEN ${orderFees} ELSE 0 END`;
+
+/** Over an Order joined to its Order Items: its fee line follows the Order's paid, each item's line its own. */
+export const orderPayment = sql<OrderPayment>`CASE
+  WHEN ${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE THEN 'paid'
+  WHEN NOT ${order.paid} AND BOOL_OR(${collection.paid}) IS NOT TRUE THEN 'unpaid'
+  ELSE 'partly' END`;
 
 export function selectUnpaidCosts(tx: ReadTx, where: SQL | undefined) {
   const byOrder = tx

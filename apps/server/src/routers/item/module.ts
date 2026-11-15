@@ -205,6 +205,7 @@ export const Items = {
           itemId: collection.itemId,
           orderId: collection.orderId,
           status: collection.status,
+          paid: collection.paid,
           count: collection.count,
           releaseId: collection.releaseId,
           score: collection.score,

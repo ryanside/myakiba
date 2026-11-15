@@ -1,9 +1,8 @@
 import type { BadgeVariant } from "@/components/reui/badge";
-import type { OrderStatus } from "@myakiba/contracts/shared/types";
+import type { OrderPayment, OrderStatus } from "@myakiba/contracts/shared/types";
 
 const STATUS_VARIANT_MAP = {
   Ordered: "info",
-  Paid: "warning",
   Shipped: "default",
   Owned: "success",
 } satisfies Readonly<Record<OrderStatus, BadgeVariant>>;
@@ -14,7 +13,19 @@ export function getStatusVariant(status: OrderStatus): BadgeVariant {
 
 export const ORDER_STATUS_COLORS = {
   Ordered: "bg-info",
-  Paid: "bg-warning",
   Shipped: "bg-violet-500",
   Owned: "bg-success",
 } satisfies Readonly<Record<OrderStatus, string>>;
+
+export const ORDER_PAYMENT_DISPLAY = {
+  paid: { label: "Paid", variant: "success-light" },
+  partly: { label: "Partly paid", variant: "info-light" },
+  unpaid: { label: "Unpaid", variant: "warning-light" },
+} as const satisfies Readonly<
+  Record<OrderPayment, { readonly label: string; readonly variant: BadgeVariant }>
+>;
+
+/** A Collection Item has one money line, so it is paid or unpaid, never partly. */
+export function paymentOf(paid: boolean): OrderPayment {
+  return paid ? "paid" : "unpaid";
+}

@@ -20,6 +20,7 @@ import type { CollectionItemFormValues } from "@myakiba/contracts/collection/typ
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { PaidCheckbox } from "./payment";
 import type {
   Currency,
   ShippingMethod,
@@ -562,6 +563,28 @@ export function createOrdersColumns({
       size: 136,
       meta: {
         skeleton: <Skeleton className="h-6" />,
+      },
+    },
+    {
+      accessorKey: "paid",
+      id: "paid",
+      header: ({ column }) => (
+        <DataGridColumnHeader title="Paid" visibility={true} column={column} />
+      ),
+      cell: editOrder("paid", (order, { disabled, onSubmit }) => (
+        <PaidCheckbox
+          label={`${order.title} paid`}
+          payment={order.payment}
+          disabled={disabled}
+          onPaidChange={(paid) => onSubmit(paid)}
+        />
+      )),
+      enableSorting: false,
+      enableHiding: true,
+      enableResizing: true,
+      size: 72,
+      meta: {
+        skeleton: <Skeleton className="size-4" />,
       },
     },
     {

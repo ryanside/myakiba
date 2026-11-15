@@ -28,6 +28,7 @@ export type OrderFields = {
   /** Null keeps the title `defaultOrderTitle` writes from the selected rows. */
   readonly title: string | null;
   readonly status: OrderStatus;
+  readonly paid: boolean;
   readonly shop: string;
   readonly orderDate: string | null;
   readonly releaseDate: string | null;
@@ -109,6 +110,7 @@ export const DEFAULT_SHARED: SharedFields = {
 export const DEFAULT_ORDER_FIELDS: OrderFields = {
   title: null,
   status: "Ordered",
+  paid: false,
   shop: "",
   orderDate: null,
   releaseDate: null,

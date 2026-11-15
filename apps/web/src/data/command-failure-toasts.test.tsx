@@ -173,7 +173,7 @@ test("a defect in a Kanban status write shows retry advice and the safe text, ne
   });
 
   expect(
-    await lastToastAfter(() => result.current.run({ orderId: "od-alpha", status: "Paid" })),
+    await lastToastAfter(() => result.current.run({ orderId: "od-alpha", status: "Shipped" })),
   ).toEqual({
     type: "error",
     title: "Failed to update order status. Please try again.",

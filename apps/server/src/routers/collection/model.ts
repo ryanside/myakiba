@@ -41,6 +41,7 @@ export const collectionParamSchema = z.object({
 
 export const collectionUpdateSchema = z.strictObject({
   status: z.enum(COLLECTION_STATUSES),
+  paid: z.boolean(),
   count: countSchema,
   score: z.string().max(WRITE_LIMITS.label),
   price: z.number().int(),

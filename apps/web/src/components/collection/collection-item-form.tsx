@@ -48,6 +48,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { PaymentDateLabel } from "@/components/orders/payment";
 import { formatReleasePrice } from "@/lib/locale";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Saving } from "@/data/client";
@@ -207,8 +208,8 @@ function CollectionItemFormContent({
                                   <Tooltip>
                                     <TooltipTrigger render={label} />
                                     <TooltipContent side="right">
-                                      Assign this item to an order before changing it to Ordered,
-                                      Paid, or Shipped.
+                                      Assign this item to an order before changing it to Ordered or
+                                      Shipped.
                                     </TooltipContent>
                                   </Tooltip>
                                 ) : (
@@ -435,7 +436,17 @@ function CollectionItemFormContent({
                   name="paymentDate"
                   children={(field) => (
                     <div className="grid gap-1.5">
-                      <Label htmlFor={field.name}>Payment Date</Label>
+                      <form.Field
+                        name="paid"
+                        children={(paidField) => (
+                          <PaymentDateLabel
+                            dateId={field.name}
+                            paidId={paidField.name}
+                            paid={paidField.state.value}
+                            onPaidChange={paidField.handleChange}
+                          />
+                        )}
+                      />
                       <DatePicker
                         id={field.name}
                         name={field.name}

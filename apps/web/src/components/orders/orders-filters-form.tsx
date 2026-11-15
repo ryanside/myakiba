@@ -27,6 +27,27 @@ import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import type { Currency } from "@myakiba/contracts/shared/types";
 import { formSubmitHandler } from "@/lib/form-submit";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const PAID_CHOICES = { any: undefined, paid: true, unpaid: false } as const;
+type PaidChoice = keyof typeof PAID_CHOICES;
+const PAID_CHOICE_KEYS = ["any", "paid", "unpaid"] as const satisfies readonly PaidChoice[];
+const PAID_CHOICE_LABELS = {
+  any: "Paid or unpaid",
+  paid: "Paid",
+  unpaid: "Unpaid",
+} satisfies Record<PaidChoice, string>;
+
+function paidChoiceOf(paid: boolean | undefined): PaidChoice {
+  if (paid === undefined) return "any";
+  return paid ? "paid" : "unpaid";
+}
 
 interface OrdersFiltersFormProps {
   renderTrigger: React.ReactElement;
@@ -75,6 +96,7 @@ function OrdersFiltersDraft({
       colDateStart: currentFilters?.colDateStart ?? "",
       colDateEnd: currentFilters?.colDateEnd ?? "",
       status: currentFilters?.status ?? [],
+      paid: paidChoiceOf(currentFilters?.paid),
       totalMin:
         currentFilters?.totalMin === undefined
           ? ""
@@ -139,6 +161,7 @@ function OrdersFiltersDraft({
         colDateStart: value.colDateStart || undefined,
         colDateEnd: value.colDateEnd || undefined,
         status: value.status && value.status.length > 0 ? value.status : undefined,
+        paid: PAID_CHOICES[value.paid],
         totalMin: optionalMinorUnits(value.totalMin),
         totalMax: optionalMinorUnits(value.totalMax),
         shippingFeeMin: optionalMinorUnits(value.shippingFeeMin),
@@ -198,6 +221,30 @@ function OrdersFiltersDraft({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+          </Field>
+        )}
+      />
+
+      <form.Field
+        name="paid"
+        children={(field) => (
+          <Field>
+            <FieldTitle>Paid</FieldTitle>
+            <Select
+              value={field.state.value}
+              onValueChange={(value) => field.handleChange(value as PaidChoice)}
+            >
+              <SelectTrigger className="w-full" aria-label="Paid">
+                <SelectValue>{PAID_CHOICE_LABELS[field.state.value]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {PAID_CHOICE_KEYS.map((choice) => (
+                  <SelectItem key={choice} value={choice}>
+                    {PAID_CHOICE_LABELS[choice]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
         )}
       />

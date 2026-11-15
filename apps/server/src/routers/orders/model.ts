@@ -19,6 +19,7 @@ export const ordersQuerySchema = searchSchema.extend({
   shop: commaSeparatedStringArraySchema,
   shipMethod: commaSeparatedShipMethodArray,
   status: commaSeparatedStatusArray,
+  paid: z.stringbool().optional(),
 });
 
 export const orderUpdateSchema = createUpdateSchema(order)

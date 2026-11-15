@@ -17,7 +17,7 @@ import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
-  readonly change: Readonly<Record<string, string | null>>;
+  readonly change: Readonly<Record<string, string | boolean | null>>;
   readonly settle: () => void;
   readonly fail: () => void;
 };
@@ -64,6 +64,7 @@ await mock.module("@/queries/orders", () => ({
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
   updateOrderDate: (orderId: string, field: string, date: string | null) =>
     sendWrite(orderId, { [field]: date }),
+  updateOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realDashboard = await import("@/queries/dashboard");
 await mock.module("@/queries/dashboard", () => ({
@@ -109,6 +110,8 @@ const order = (
   paymentDate: null,
   shippingDate: null,
   collectionDate: null,
+  paid: false,
+  payment: "unpaid",
   ...fields,
 });
 
@@ -209,7 +212,6 @@ const handleOf = (orderId: string) => {
 
 const board = () => ({
   Ordered: cardsIn("Ordered"),
-  Paid: cardsIn("Paid"),
   Shipped: cardsIn("Shipped"),
   Owned: cardsIn("Owned"),
 });
@@ -237,6 +239,24 @@ function watchColumnsOf(orderId: string) {
   };
 }
 
+// The server cascades a Paid write to every Order Item, so the whole Order ends paid or unpaid.
+function withChange(
+  candidate: DashboardKanbanOrder,
+  change: Write["change"],
+): DashboardKanbanOrder {
+  const changed = { ...candidate, ...change } as DashboardKanbanOrder;
+  if (!("paid" in change)) return changed;
+  return { ...changed, payment: change.paid ? "paid" : "unpaid" };
+}
+
+const paidBox = (orderId: string) =>
+  within(card(orderId)).getByRole("checkbox", { name: `${orderId} preorder paid` });
+const shownPaid = (orderId: string) => paidBox(orderId).getAttribute("aria-checked");
+
+async function clickPaid(orderId: string) {
+  await userEvent.setup().click(paidBox(orderId));
+}
+
 const sentWrites = () => writes.map(({ orderId, change }) => ({ orderId, change }));
 
 const shownTitle = (orderId: string) => within(card(orderId)).getByRole("link").textContent;
@@ -248,7 +268,7 @@ async function settle(write: Write | undefined, outcome: "settle" | "fail" = "se
   if (!write) throw new Error("no write in flight");
   if (outcome === "settle") {
     server = server.map((candidate) =>
-      candidate.orderId === write.orderId ? { ...candidate, ...write.change } : candidate,
+      candidate.orderId === write.orderId ? withChange(candidate, write.change) : candidate,
     );
   }
   await act(async () => write[outcome]());
@@ -257,54 +277,62 @@ async function settle(write: Write | undefined, outcome: "settle" | "fail" = "se
 
 async function pickPaymentDate(orderId: string, dayLabel: RegExp) {
   const user = userEvent.setup();
-  await user.click(within(card(orderId)).getByText("Paid"));
+  await user.click(within(card(orderId)).getByText("Payment"));
   await user.click(screen.getByRole("button", { name: dayLabel }));
 }
 
 describe("a dashboard kanban card keeps the user's change while its write is in flight", () => {
   test("a moved card stays in its new column when a refetch lands mid-write, then follows the server", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
-    expect(sentWrites()).toEqual([{ orderId: "miku", change: { status: "Paid" } }]);
+    expect(sentWrites()).toEqual([{ orderId: "miku", change: { status: "Shipped" } }]);
 
-    await refetchLands([order("miku", "Ordered"), order("rin", "Shipped")]);
+    await refetchLands([order("miku", "Ordered"), order("rin", "Owned")]);
     const midWrite = board();
     await settle(writes[0]);
     const afterWrite = board();
-    await refetchLands([order("miku", "Shipped"), order("rin", "Shipped")]);
+    await refetchLands([order("miku", "Owned"), order("rin", "Owned")]);
     const afterServerMove = board();
 
     expect({ midWrite, afterWrite, afterServerMove }).toEqual({
-      midWrite: { Ordered: [], Paid: ["miku"], Shipped: ["rin"], Owned: [] },
-      afterWrite: { Ordered: [], Paid: ["miku"], Shipped: ["rin"], Owned: [] },
-      afterServerMove: { Ordered: [], Paid: [], Shipped: ["miku", "rin"], Owned: [] },
+      midWrite: { Ordered: [], Shipped: ["miku"], Owned: ["rin"] },
+      afterWrite: { Ordered: [], Shipped: ["miku"], Owned: ["rin"] },
+      afterServerMove: { Ordered: [], Shipped: [], Owned: ["miku", "rin"] },
     });
   });
 
   test("a moved card keeps its slot when the refetch also brings a new card into its column", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 20 });
     const dropped = board();
-    await refetchLands([order("miku", "Ordered"), order("rin", "Paid"), order("len", "Paid")]);
+    await refetchLands([
+      order("miku", "Ordered"),
+      order("rin", "Shipped"),
+      order("len", "Shipped"),
+    ]);
 
     expect({ dropped, midWrite: board() }).toEqual({
-      dropped: { Ordered: [], Paid: ["miku", "rin"], Shipped: [], Owned: [] },
-      midWrite: { Ordered: [], Paid: ["miku", "rin", "len"], Shipped: [], Owned: [] },
+      dropped: { Ordered: [], Shipped: ["miku", "rin"], Owned: [] },
+      midWrite: { Ordered: [], Shipped: ["miku", "rin", "len"], Owned: [] },
     });
   });
 
   test("a moved card stays below the card it was dropped under when the refetch brings a new card above both", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
     const dropped = board();
-    await refetchLands([order("miku", "Ordered"), order("len", "Paid"), order("rin", "Paid")]);
+    await refetchLands([
+      order("miku", "Ordered"),
+      order("len", "Shipped"),
+      order("rin", "Shipped"),
+    ]);
 
     expect({ dropped, midWrite: board() }).toEqual({
-      dropped: { Ordered: [], Paid: ["rin", "miku"], Shipped: [], Owned: [] },
-      midWrite: { Ordered: [], Paid: ["len", "rin", "miku"], Shipped: [], Owned: [] },
+      dropped: { Ordered: [], Shipped: ["rin", "miku"], Owned: [] },
+      midWrite: { Ordered: [], Shipped: ["len", "rin", "miku"], Owned: [] },
     });
   });
 
@@ -312,18 +340,18 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     const { refetchLands } = await renderBoard([
       order("miku", "Ordered"),
       order("luka", "Ordered"),
-      order("rin", "Paid"),
+      order("rin", "Shipped"),
     ]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
     await refetchLands([
       order("miku", "Ordered"),
       order("luka", "Ordered"),
-      order("rin", "Paid"),
-      order("len", "Shipped"),
+      order("rin", "Shipped"),
+      order("len", "Owned"),
     ]);
     await drag(handleOf("miku"), { x: 400, y: 110 }, { x: 100, y: 150 });
-    server = [...server, order("kaito", "Shipped")];
+    server = [...server, order("kaito", "Owned")];
     const releaseFetches = holdFetches();
     await settle(writes[0], "fail");
     await settle(writes[1], "fail");
@@ -332,24 +360,23 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
 
     expect({ sent: sentWrites(), afterFailures, afterRefetch: board() }).toEqual({
       sent: [
-        { orderId: "miku", change: { status: "Paid" } },
+        { orderId: "miku", change: { status: "Shipped" } },
         { orderId: "miku", change: { status: "Ordered" } },
       ],
-      afterFailures: { Ordered: ["miku", "luka"], Paid: ["rin"], Shipped: ["len"], Owned: [] },
+      afterFailures: { Ordered: ["miku", "luka"], Shipped: ["rin"], Owned: ["len"] },
       afterRefetch: {
         Ordered: ["miku", "luka"],
-        Paid: ["rin"],
-        Shipped: ["len", "kaito"],
-        Owned: [],
+        Shipped: ["rin"],
+        Owned: ["len", "kaito"],
       },
     });
   });
 
   test("a card the server moved again during its status write shows in the server's column once the write settles", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
-    const movedByAnotherClient = [order("miku", "Shipped"), order("rin", "Paid")];
+    const movedByAnotherClient = [order("miku", "Owned"), order("rin", "Shipped")];
     await refetchLands(movedByAnotherClient);
     const midWrite = board();
     const releaseFetches = holdFetches();
@@ -358,13 +385,13 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     await releaseFetches();
 
     expect({ midWrite, afterWrite: board() }).toEqual({
-      midWrite: { Ordered: [], Paid: ["rin", "miku"], Shipped: [], Owned: [] },
-      afterWrite: { Ordered: [], Paid: ["rin"], Shipped: ["miku"], Owned: [] },
+      midWrite: { Ordered: [], Shipped: ["rin", "miku"], Owned: [] },
+      afterWrite: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] },
     });
   });
 
   test("a card held over another column never jumps back to its old column when an equal refetch lands, and its drop sends the write", async () => {
-    const orders = [order("miku", "Ordered"), order("rin", "Paid")];
+    const orders = [order("miku", "Ordered"), order("rin", "Shipped")];
     const { refetchLands } = await renderBoard(orders);
 
     const drop = await startDrag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
@@ -375,18 +402,18 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
 
     expect({ shownInWhileHeld, sent: sentWrites(), dropped: board() }).toEqual({
       shownInWhileHeld: [],
-      sent: [{ orderId: "miku", change: { status: "Paid" } }],
-      dropped: { Ordered: [], Paid: ["rin", "miku"], Shipped: [], Owned: [] },
+      sent: [{ orderId: "miku", change: { status: "Shipped" } }],
+      dropped: { Ordered: [], Shipped: ["rin", "miku"], Owned: [] },
     });
   });
 
   test("a card dropped back in its own column shows a server change made while it was held", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     const drop = await startDrag(handleOf("miku"), { x: 100, y: 10 }, { x: 100, y: 70 });
     await refetchLands([
       order("miku", "Ordered", { title: "miku deluxe preorder" }),
-      order("rin", "Paid"),
+      order("rin", "Shipped"),
     ]);
     await drop();
 
@@ -397,12 +424,12 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
   });
 
   test("a drag cancelled with Escape shows a server change made while the card was held", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
     await startDrag(handleOf("miku"), { x: 100, y: 10 }, { x: 100, y: 70 });
     await refetchLands([
       order("miku", "Ordered", { title: "miku deluxe preorder" }),
-      order("rin", "Paid"),
+      order("rin", "Shipped"),
     ]);
     fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
     await frame();
@@ -414,7 +441,7 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
   });
 
   test("a card flicked and released in one instant still shows server changes afterwards", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
     const pointer = { isPrimary: true, button: 0, pointerId: 1, bubbles: true };
 
     const handle = handleOf("miku");
@@ -435,45 +462,45 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     await frame();
     await refetchLands([
       order("miku", "Ordered", { title: "miku deluxe preorder" }),
-      order("rin", "Paid"),
+      order("rin", "Shipped"),
     ]);
 
     expect(shownTitle("miku")).toBe("miku deluxe preorder");
   });
 
   test("a card moved to Owned leaves the board when a mid-write refetch no longer lists it and stays gone after its write settles", async () => {
-    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Paid")]);
+    const { refetchLands } = await renderBoard([order("miku", "Ordered"), order("rin", "Shipped")]);
 
-    await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 1000, y: 150 });
+    await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 700, y: 150 });
     expect(sentWrites()).toEqual([{ orderId: "miku", change: { status: "Owned" } }]);
 
-    await refetchLands([order("rin", "Paid")]);
+    await refetchLands([order("rin", "Shipped")]);
     const midWrite = board();
     await settle(writes[0]);
 
     expect({ midWrite, afterWrite: board() }).toEqual({
-      midWrite: { Ordered: [], Paid: ["rin"], Shipped: [], Owned: [] },
-      afterWrite: { Ordered: [], Paid: ["rin"], Shipped: [], Owned: [] },
+      midWrite: { Ordered: [], Shipped: ["rin"], Owned: [] },
+      afterWrite: { Ordered: [], Shipped: ["rin"], Owned: [] },
     });
   });
 
   test("an edited date stays on the card when a refetch lands mid-write", async () => {
     const { refetchLands } = await renderBoard([
-      order("miku", "Paid", { paymentDate: "2026-03-10" }),
-      order("rin", "Paid"),
+      order("miku", "Shipped", { paymentDate: "2026-03-10" }),
+      order("rin", "Shipped"),
     ]);
 
     await pickPaymentDate("miku", /March 20th, 2026/);
     expect(sentWrites()).toEqual([{ orderId: "miku", change: { paymentDate: "2026-03-20" } }]);
 
     await refetchLands([
-      order("miku", "Paid", { paymentDate: "2026-03-10" }),
-      order("rin", "Shipped"),
+      order("miku", "Shipped", { paymentDate: "2026-03-10" }),
+      order("rin", "Owned"),
     ]);
-    const midWrite = shownDate("miku", "Paid");
+    const midWrite = shownDate("miku", "Payment");
     await settle(writes[0]);
 
-    expect({ midWrite, afterWrite: shownDate("miku", "Paid") }).toEqual({
+    expect({ midWrite, afterWrite: shownDate("miku", "Payment") }).toEqual({
       midWrite: "03/20/2026",
       afterWrite: "03/20/2026",
     });
@@ -481,21 +508,21 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
 
   test("a card the server moved during its date write shows in the server's column once the write settles", async () => {
     const { refetchLands } = await renderBoard([
-      order("miku", "Paid", { paymentDate: "2026-03-10" }),
-      order("rin", "Paid"),
+      order("miku", "Shipped", { paymentDate: "2026-03-10" }),
+      order("rin", "Shipped"),
     ]);
 
     await pickPaymentDate("miku", /March 20th, 2026/);
     await refetchLands([
-      order("miku", "Shipped", { paymentDate: "2026-03-20" }),
-      order("rin", "Paid"),
+      order("miku", "Owned", { paymentDate: "2026-03-20" }),
+      order("rin", "Shipped"),
     ]);
     const midWrite = board();
     await settle(writes[0]);
 
-    expect({ midWrite, afterWrite: board(), shownDate: shownDate("miku", "Paid") }).toEqual({
-      midWrite: { Ordered: [], Paid: ["miku", "rin"], Shipped: [], Owned: [] },
-      afterWrite: { Ordered: [], Paid: ["rin"], Shipped: ["miku"], Owned: [] },
+    expect({ midWrite, afterWrite: board(), shownDate: shownDate("miku", "Payment") }).toEqual({
+      midWrite: { Ordered: [], Shipped: ["miku", "rin"], Owned: [] },
+      afterWrite: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] },
       shownDate: "03/20/2026",
     });
   });
@@ -504,8 +531,8 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     const { showMonth } = await renderBoard(
       [
         order("miku", "Ordered", { releaseDate: "2026-03-05" }),
-        order("rin", "Paid", { releaseDate: "2026-03-07" }),
-        order("len", "Paid", { releaseDate: "2026-04-02" }),
+        order("rin", "Shipped", { releaseDate: "2026-03-07" }),
+        order("len", "Shipped", { releaseDate: "2026-04-02" }),
       ],
       3,
     );
@@ -515,8 +542,8 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     await showMonth(4);
 
     expect({ march, aprilMidWrite: board() }).toEqual({
-      march: { Ordered: ["miku"], Paid: ["rin"], Shipped: [], Owned: [] },
-      aprilMidWrite: { Ordered: [], Paid: ["len"], Shipped: [], Owned: [] },
+      march: { Ordered: ["miku"], Shipped: ["rin"], Owned: [] },
+      aprilMidWrite: { Ordered: [], Shipped: ["len"], Owned: [] },
     });
   });
 
@@ -524,7 +551,7 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     const { showMonth } = await renderBoard(
       [
         order("miku", "Ordered", { releaseDate: "2026-03-05" }),
-        order("rin", "Paid", { releaseDate: "2026-04-02" }),
+        order("rin", "Shipped", { releaseDate: "2026-04-02" }),
       ],
       3,
     );
@@ -539,23 +566,65 @@ describe("a dashboard kanban card keeps the user's change while its write is in 
     await settle(writes[1]);
 
     expect({ backInMarch, inFlight, sent: sentWrites(), afterWrites: board() }).toEqual({
-      backInMarch: { Ordered: ["miku"], Paid: [], Shipped: [], Owned: [] },
-      inFlight: [{ orderId: "miku", change: { status: "Paid" } }],
+      backInMarch: { Ordered: ["miku"], Shipped: [], Owned: [] },
+      inFlight: [{ orderId: "miku", change: { status: "Shipped" } }],
       sent: [
-        { orderId: "miku", change: { status: "Paid" } },
         { orderId: "miku", change: { status: "Shipped" } },
+        { orderId: "miku", change: { status: "Owned" } },
       ],
-      afterWrites: { Ordered: [], Paid: [], Shipped: ["miku"], Owned: [] },
+      afterWrites: { Ordered: [], Shipped: [], Owned: ["miku"] },
+    });
+  });
+});
+
+describe("a dashboard kanban card's Paid checkbox", () => {
+  test("shows the payment state: checked when paid, mixed when partly paid, unchecked when unpaid", async () => {
+    await renderBoard([
+      order("miku", "Ordered", { paid: true, payment: "paid" }),
+      order("rin", "Shipped", { paid: true, payment: "partly" }),
+      order("len", "Shipped"),
+    ]);
+
+    expect(["miku", "rin", "len"].map(shownPaid)).toEqual(["true", "mixed", "false"]);
+  });
+
+  test("a click on a partly paid card pays it at once and keeps it paid while a refetch lands mid-write", async () => {
+    const partly = order("rin", "Shipped", { paid: true, payment: "partly" });
+    const { refetchLands } = await renderBoard([partly]);
+
+    await clickPaid("rin");
+    const clicked = shownPaid("rin");
+    await refetchLands([partly]);
+    const midWrite = shownPaid("rin");
+    await settle(writes[0]);
+
+    expect({ sent: sentWrites(), clicked, midWrite, afterWrite: shownPaid("rin") }).toEqual({
+      sent: [{ orderId: "rin", change: { paid: true } }],
+      clicked: "true",
+      midWrite: "true",
+      afterWrite: "true",
+    });
+  });
+
+  test("a click on a paid card unpays it and leaves its status and column alone", async () => {
+    await renderBoard([order("miku", "Shipped", { paid: true, payment: "paid" })]);
+
+    await clickPaid("miku");
+    await settle(writes[0]);
+
+    expect({ sent: sentWrites(), paid: shownPaid("miku"), board: board() }).toEqual({
+      sent: [{ orderId: "miku", change: { paid: false } }],
+      paid: "false",
+      board: { Ordered: [], Shipped: ["miku"], Owned: [] },
     });
   });
 });
 
 describe("reconciling the board with a fetch", () => {
   const miku = order("miku", "Ordered");
-  const rin = order("rin", "Paid");
+  const rin = order("rin", "Shipped");
   const columnsOf = (orders: readonly DashboardKanbanOrder[]) => ({
     Ordered: orders.filter((candidate) => candidate.status === "Ordered"),
-    Paid: orders.filter((candidate) => candidate.status === "Paid"),
     Shipped: orders.filter((candidate) => candidate.status === "Shipped"),
     Owned: orders.filter((candidate) => candidate.status === "Owned"),
   });
@@ -572,16 +641,16 @@ describe("reconciling the board with a fetch", () => {
 
   test("returns new columns for a real change and keeps the columns it did not touch", () => {
     const current = columnsOf([miku, rin]);
-    const rinShipped = { ...rin, status: "Shipped" as const };
+    const rinOwned = { ...rin, status: "Owned" as const };
 
-    const next = reconcileOrderColumns(current, columnsOf([miku, rinShipped]), new Set());
+    const next = reconcileOrderColumns(current, columnsOf([miku, rinOwned]), new Set());
 
     expect({
       newBoard: next !== current,
       orderedKept: next.Ordered === current.Ordered,
-      paid: next.Paid,
       shipped: next.Shipped,
-    }).toEqual({ newBoard: true, orderedKept: true, paid: [], shipped: [rinShipped] });
+      owned: next.Owned,
+    }).toEqual({ newBoard: true, orderedKept: true, shipped: [], owned: [rinOwned] });
   });
 });
 
@@ -602,7 +671,7 @@ describe("the board's scrolling", () => {
     );
 
   test("no part of the board scrolls vertically while its lanes load or after their cards arrive", async () => {
-    server = [order("miku", "Ordered"), order("rin", "Ordered"), order("len", "Paid")];
+    server = [order("miku", "Ordered"), order("rin", "Ordered"), order("len", "Shipped")];
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Number.POSITIVE_INFINITY } },
     });

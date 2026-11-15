@@ -10,7 +10,7 @@ import { Result } from "better-result";
 
 type Write = {
   readonly orderId: string;
-  readonly change: Readonly<Record<string, string | null>>;
+  readonly change: Readonly<Record<string, string | boolean | null>>;
   readonly settle: () => void;
   readonly fail: () => void;
 };
@@ -54,6 +54,7 @@ await mock.module("@/queries/orders", () => ({
   updateOrderStatus: (orderId: string, status: string) => sendWrite(orderId, { status }),
   updateOrderDate: (orderId: string, field: string, date: string | null) =>
     sendWrite(orderId, { [field]: date }),
+  updateOrderPaid: (orderId: string, paid: boolean) => sendWrite(orderId, { paid }),
 }));
 const realRouter = await import("@tanstack/react-router");
 await mock.module("@tanstack/react-router", () => ({
@@ -107,6 +108,8 @@ const order = (
   paymentDate: null,
   shippingDate: null,
   collectionDate: null,
+  paid: false,
+  payment: "unpaid",
   ...fields,
 });
 
@@ -158,7 +161,6 @@ const handleOf = (orderId: string) => {
 
 const board = () => ({
   Ordered: cardsIn("Ordered"),
-  Paid: cardsIn("Paid"),
   Shipped: cardsIn("Shipped"),
   Owned: cardsIn("Owned"),
 });
@@ -166,13 +168,31 @@ const board = () => ({
 const shownDate = (orderId: string, label: string) =>
   within(card(orderId)).getByText(label).nextElementSibling?.textContent;
 
+// The server cascades a Paid write to every Order Item, so the whole Order ends paid or unpaid.
+function withChange(
+  candidate: DashboardKanbanOrder,
+  change: Write["change"],
+): DashboardKanbanOrder {
+  const changed = { ...candidate, ...change } as DashboardKanbanOrder;
+  if (!("paid" in change)) return changed;
+  return { ...changed, payment: change.paid ? "paid" : "unpaid" };
+}
+
+const paidBox = (orderId: string) =>
+  within(card(orderId)).getByRole("checkbox", { name: `${orderId} preorder paid` });
+const shownPaid = (orderId: string) => paidBox(orderId).getAttribute("aria-checked");
+
+async function clickPaid(orderId: string) {
+  await userEvent.setup().click(paidBox(orderId));
+}
+
 const sentWrites = () => writes.map(({ orderId, change }) => ({ orderId, change }));
 
 async function settle(write: Write | undefined, outcome: "settle" | "fail" = "settle") {
   if (!write) throw new Error("no write in flight");
   if (outcome === "settle") {
     server = server.map((candidate) =>
-      candidate.orderId === write.orderId ? { ...candidate, ...write.change } : candidate,
+      candidate.orderId === write.orderId ? withChange(candidate, write.change) : candidate,
     );
   }
   await act(async () => write[outcome]());
@@ -181,13 +201,17 @@ async function settle(write: Write | undefined, outcome: "settle" | "fail" = "se
 
 async function pickPaymentDate(orderId: string, dayLabel: RegExp) {
   const user = userEvent.setup();
-  await user.click(within(card(orderId)).getByText("Paid"));
+  await user.click(within(card(orderId)).getByText("Payment"));
   await user.click(screen.getByRole("button", { name: dayLabel }));
 }
 
 describe("a failed dashboard kanban write rolls back only its own change", () => {
   test("a failed status write returns its card and keeps another card's move that is still in flight", async () => {
-    await renderBoard([order("miku", "Ordered"), order("luka", "Ordered"), order("rin", "Paid")]);
+    await renderBoard([
+      order("miku", "Ordered"),
+      order("luka", "Ordered"),
+      order("rin", "Shipped"),
+    ]);
 
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 400, y: 150 });
     await drag(handleOf("luka"), { x: 100, y: 10 }, { x: 700, y: 50 });
@@ -199,45 +223,76 @@ describe("a failed dashboard kanban write rolls back only its own change", () =>
 
     expect({ sent: sentWrites(), afterFailure, afterRefetch: board() }).toEqual({
       sent: [
-        { orderId: "miku", change: { status: "Paid" } },
-        { orderId: "luka", change: { status: "Shipped" } },
+        { orderId: "miku", change: { status: "Shipped" } },
+        { orderId: "luka", change: { status: "Owned" } },
       ],
-      afterFailure: { Ordered: ["miku"], Paid: ["rin"], Shipped: ["luka"], Owned: [] },
-      afterRefetch: { Ordered: ["miku"], Paid: ["rin"], Shipped: ["luka"], Owned: [] },
+      afterFailure: { Ordered: ["miku"], Shipped: ["rin"], Owned: ["luka"] },
+      afterRefetch: { Ordered: ["miku"], Shipped: ["rin"], Owned: ["luka"] },
     });
   });
 
   test("a failed date write restores its date and keeps another card's move that is still in flight", async () => {
     await renderBoard([
       order("miku", "Ordered"),
-      order("rin", "Paid", { paymentDate: "2026-03-10" }),
+      order("rin", "Shipped", { paymentDate: "2026-03-10" }),
     ]);
 
     await pickPaymentDate("rin", /March 20th, 2026/);
     await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 700, y: 50 });
     const releaseFetches = holdFetches();
     await settle(writes[0], "fail");
-    const afterFailure = { board: board(), paid: shownDate("rin", "Paid") };
+    const afterFailure = { board: board(), paid: shownDate("rin", "Payment") };
     await settle(writes[1]);
     await releaseFetches();
 
     expect({
       sent: sentWrites(),
       afterFailure,
-      afterRefetch: { board: board(), paid: shownDate("rin", "Paid") },
+      afterRefetch: { board: board(), paid: shownDate("rin", "Payment") },
     }).toEqual({
       sent: [
         { orderId: "rin", change: { paymentDate: "2026-03-20" } },
-        { orderId: "miku", change: { status: "Shipped" } },
+        { orderId: "miku", change: { status: "Owned" } },
       ],
       afterFailure: {
-        board: { Ordered: [], Paid: ["rin"], Shipped: ["miku"], Owned: [] },
+        board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] },
         paid: "03/10/2026",
       },
       afterRefetch: {
-        board: { Ordered: [], Paid: ["rin"], Shipped: ["miku"], Owned: [] },
+        board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] },
         paid: "03/10/2026",
       },
+    });
+  });
+
+  test("a failed Paid write restores the card's payment state and keeps another card's move that is still in flight", async () => {
+    await renderBoard([
+      order("miku", "Ordered"),
+      order("rin", "Shipped", { paid: true, payment: "partly" }),
+    ]);
+
+    await clickPaid("rin");
+    const clicked = shownPaid("rin");
+    await drag(handleOf("miku"), { x: 100, y: 10 }, { x: 700, y: 50 });
+    const releaseFetches = holdFetches();
+    await settle(writes[0], "fail");
+    const afterFailure = { board: board(), paid: shownPaid("rin") };
+    await settle(writes[1]);
+    await releaseFetches();
+
+    expect({
+      sent: sentWrites(),
+      clicked,
+      afterFailure,
+      afterRefetch: { board: board(), paid: shownPaid("rin") },
+    }).toEqual({
+      sent: [
+        { orderId: "rin", change: { paid: true } },
+        { orderId: "miku", change: { status: "Owned" } },
+      ],
+      clicked: "true",
+      afterFailure: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "mixed" },
+      afterRefetch: { board: { Ordered: [], Shipped: ["rin"], Owned: ["miku"] }, paid: "mixed" },
     });
   });
 });

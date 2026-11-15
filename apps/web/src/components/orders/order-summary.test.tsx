@@ -16,6 +16,8 @@ const order: Order = {
   shippingDate: null,
   collectionDate: null,
   status: "Owned",
+  paid: true,
+  payment: "paid",
   total: 0,
   shippingFee: 0,
   taxes: 0,
@@ -41,19 +43,34 @@ function summary(fields: Partial<Order> = {}) {
   );
 }
 
-test("an Owned order without dates shows four completed undated steps", () => {
+test("an Owned order without dates shows three completed undated steps: Ordered, Shipped, Owned", () => {
   summary();
   expect(screen.queryByText("Pending")).toBeNull();
-  expect(screen.getAllByText("—")).toHaveLength(4);
+  expect(screen.getAllByText("—")).toHaveLength(3);
+  expect(["Ordered", "Shipped", "Owned"].map((step) => screen.getAllByText(step).length)).toEqual([
+    1, 1, 1,
+  ]);
 });
 
 test("only future undated steps show Pending", () => {
-  summary({ status: "Paid" });
+  summary({ status: "Ordered", paid: false, payment: "unpaid" });
   expect(screen.getAllByText("Pending")).toHaveLength(2);
-  expect(screen.getAllByText("—")).toHaveLength(2);
+  expect(screen.getAllByText("—")).toHaveLength(1);
 });
 
 test("a recorded timeline date stays visible", () => {
   summary({ orderDate: "2026-01-02" });
   expect(screen.getByText("01/02/2026")).not.toBeNull();
+});
+
+test("payment shows apart from the steps, with the Payment Date when there is one", () => {
+  summary({ status: "Shipped", paid: true, payment: "partly", paymentDate: "2026-02-03" });
+  expect(screen.getByText("Partly paid")).not.toBeNull();
+  expect(screen.getByText("02/03/2026")).not.toBeNull();
+  expect(screen.getAllByText("Pending")).toHaveLength(1);
+});
+
+test("an unpaid order says so with no date", () => {
+  summary({ status: "Ordered", paid: false, payment: "unpaid" });
+  expect(screen.getByText("Unpaid")).not.toBeNull();
 });

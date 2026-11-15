@@ -18,6 +18,7 @@ function orderItem(id: string): OrderItem {
     itemImage: null,
     itemCategory: null,
     status: "Ordered",
+    paid: false,
     count: 1,
     score: "0",
     price: 0,
