@@ -366,3 +366,35 @@ describe("the Orders page lists the Orders behind Unpaid Costs", () => {
     expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
   });
 });
+
+describe("the Orders page lists the Orders behind Order Spend", () => {
+  test("Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid filter leaves out", async () => {
+    const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
+    const spent = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMin=1");
+    const paidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=true");
+
+    expect({
+      spent: spent.items.map((row) => row.title).toSorted(),
+      spentTotalSpent: spent.totalSpent,
+      paidOrders: paidOrders.items.map((row) => row.title),
+      paidOrdersTotalSpent: paidOrders.totalSpent,
+    }).toEqual({
+      spent: ["AmiAmi", "HLJ"],
+      spentTotalSpent: everyOrder.totalSpent,
+      paidOrders: ["HLJ"],
+      paidOrdersTotalSpent: 8500,
+    });
+  });
+
+  test("Order Spend of at least 1 leaves out an Order with nothing paid", async () => {
+    const spent = await get<OrdersList>(paidApart, "/orders?limit=10&orderSpendMin=1");
+
+    expect(spent.items.map((row) => row.title)).toEqual(["Paid up front"]);
+  });
+
+  test("an Order Spend range keeps only the Orders inside it", async () => {
+    const small = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMax=3000");
+
+    expect(small.items.map((row) => row.title)).toEqual(["AmiAmi"]);
+  });
+});
