@@ -4959,6 +4959,15 @@
         "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way",
         "Paid is apart from the Acquisition Status > a Shipped Order that is unpaid counts as Unpaid Costs and not Spend, and an Ordered Order that is paid counts as Spend"
       ]
+    },
+    {
+      "fix": "c2a294c312bef8571c3a593f2f7798d76c5cd885",
+      "bug": "The Expenses Unpaid Costs figure linked to Unpaid Orders, a list that left out a Paid Order holding an unpaid item, and the Orders list had no way to keep only the Orders with Unpaid Costs.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "the Orders page lists the Orders behind Unpaid Costs > Unpaid Costs of at least 1 leaves out an Order with nothing unpaid",
+        "the Orders page lists the Orders behind Unpaid Costs > an Unpaid Costs range keeps only the Orders inside it"
+      ]
     }
   ],
   "lint": [
