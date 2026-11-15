@@ -69,6 +69,10 @@ The date a collector received an Order or Collection Item. Collection Date and A
 The number of Collection Items, not the number of copies saved inside them. Collection, Order, Calendar, Analytics, and Expense counts all work this way.
 _Avoid_: Item count, count when the unit is unclear
 
+**Fill all**:
+Writing one value to one field of every selected row at once: the Add Page's rows, or saved Collection Items on the Collection page, including selected ones on pages not shown. Tags are added to each row's own tags; every other field is replaced, and a blank Shop or Notes or an empty date clears it. A fill of saved Collection Items changes all of them or none.
+_Avoid_: Bulk edit, batch update
+
 ### Orders
 
 **Order**:
