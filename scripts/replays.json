@@ -4968,6 +4968,43 @@
         "the Orders page lists the Orders behind Unpaid Costs > Unpaid Costs of at least 1 leaves out an Order with nothing unpaid",
         "the Orders page lists the Orders behind Unpaid Costs > an Unpaid Costs range keeps only the Orders inside it"
       ]
+    },
+    {
+      "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
+      "bug": "PUT /api/orders/:orderId parsed its order with a non-strict drizzle-zod update schema, so it dropped id, userId, timestamps, read-only Order fields and unknown keys in silence, on the order and at the top level, and made any new order column writable.",
+      "test": "apps/server/src/routers/orders/update.test.ts",
+      "fixed": [
+        "an Order edit accepts only the fields a user edits > order.id answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.userId answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.createdAt answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.updatedAt answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.unknownField answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.orderId answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.payment answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.total answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.itemCount answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > order.images answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > a top-level id answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > a top-level userId answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > a top-level createdAt answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > a top-level updatedAt answers 422 and writes nothing",
+        "an Order edit accepts only the fields a user edits > a top-level unknownField answers 422 and writes nothing"
+      ]
+    },
+    {
+      "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
+      "bug": "The Order edit sent orderId inside the order body as well as in the path.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": ["an Order edit names the Order in the path and sends only the fields a user edits"]
+    },
+    {
+      "fix": "85ff4a5110430de64cd59d9cfa61691821d2727b",
+      "bug": "An Orders table cell edit sent the row's payment, total, itemCount and images with the fields a user edits.",
+      "test": "apps/web/src/components/orders/orders-columns.test.tsx",
+      "fixed": [
+        "saves a shop edit with only the fields a user edits, cascading the shop to its items",
+        "saves a fee edit without cascading"
+      ]
     }
   ],
   "lint": [
