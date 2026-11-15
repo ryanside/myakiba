@@ -10,6 +10,7 @@ import {
   MoreHorizontalIcon,
   PackageIcon,
   Search01Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -18,7 +19,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { ExpandIcon, UnsortedIcon } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
-type Status = "Ordered" | "Paid" | "Shipped" | "Owned";
+type Status = "Ordered" | "Shipped" | "Owned";
 
 /** A release day in the month `monthsFromNow` away, or a fixed date, or none. */
 type Release =
@@ -34,6 +35,7 @@ type OrderRow = {
   readonly items: number;
   readonly total: number;
   readonly status: Status;
+  readonly paid: boolean;
 };
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -45,7 +47,7 @@ const KPIS = [
   { title: "Unpaid Costs", value: usd.format(2556.7) },
 ] as const satisfies readonly { readonly title: string; readonly value: string }[];
 
-const QUICK_FILTERS = ["All", "Ordered", "Paid", "Shipped", "Owned"] as const;
+const QUICK_FILTERS = ["All", "Ordered", "Shipped", "Owned", "Paid", "Unpaid"] as const;
 
 const VIEWS = [
   LeftToRightListDashIcon,
@@ -62,7 +64,8 @@ const ORDERS = [
     release: { monthsFromNow: 0, day: 21 },
     items: 1,
     total: 29.33,
-    status: "Paid",
+    status: "Ordered",
+    paid: true,
   },
   {
     title: "BOOTH doujin haul",
@@ -72,6 +75,7 @@ const ORDERS = [
     items: 3,
     total: 62.88,
     status: "Owned",
+    paid: true,
   },
   {
     title: "Hatsune Miku - 1/7 - Shaohua Ver. (Myethos)",
@@ -81,6 +85,7 @@ const ORDERS = [
     items: 1,
     total: 189.99,
     status: "Ordered",
+    paid: false,
   },
   {
     title: "Vocaloid CDs",
@@ -90,6 +95,7 @@ const ORDERS = [
     items: 2,
     total: 40.61,
     status: "Ordered",
+    paid: false,
   },
   {
     title: "Ultimate Madoka 1/8",
@@ -99,6 +105,7 @@ const ORDERS = [
     items: 1,
     total: 159.86,
     status: "Owned",
+    paid: true,
   },
   {
     title: "Prize figure lot",
@@ -108,6 +115,7 @@ const ORDERS = [
     items: 1,
     total: 81.21,
     status: "Shipped",
+    paid: true,
   },
   {
     title: "Miku V3 1/4 B-style",
@@ -117,6 +125,7 @@ const ORDERS = [
     items: 1,
     total: 180,
     status: "Ordered",
+    paid: false,
   },
   {
     title: "Otaku Republic birthday set",
@@ -126,6 +135,7 @@ const ORDERS = [
     items: 4,
     total: 122.66,
     status: "Owned",
+    paid: true,
   },
   {
     title: "Saya 1/7 (Wing)",
@@ -134,7 +144,8 @@ const ORDERS = [
     release: { monthsFromNow: 0, day: 1 },
     items: 1,
     total: 142.8,
-    status: "Paid",
+    status: "Ordered",
+    paid: true,
   },
   {
     title: "Soejima art book (used)",
@@ -144,6 +155,7 @@ const ORDERS = [
     items: 1,
     total: 51.88,
     status: "Owned",
+    paid: true,
   },
   {
     title: "Animate acrylic stands",
@@ -153,6 +165,7 @@ const ORDERS = [
     items: 2,
     total: 42.72,
     status: "Owned",
+    paid: true,
   },
   {
     title: "Makise Kurisu 1/7",
@@ -162,28 +175,30 @@ const ORDERS = [
     items: 1,
     total: 249.1,
     status: "Owned",
+    paid: true,
   },
 ] as const satisfies readonly OrderRow[];
 
 const STATUS_DOT = {
   Ordered: "bg-info",
-  Paid: "bg-warning",
   Shipped: "bg-violet-500",
   Owned: "bg-success",
 } as const satisfies Record<Status, string>;
 
 /** The labelled columns and the width the app's grid gives each, before the table stretches them. */
-const SORTABLE_COLUMNS = [
-  { label: "Order", width: "w-[264px]", numeric: false },
-  { label: "Shop", width: "w-[152px]", numeric: false },
-  { label: "Release", width: "w-[95px]", numeric: false },
-  { label: "Items", width: "w-[88px]", numeric: true },
-  { label: "Total", width: "w-[128px]", numeric: true },
-  { label: "Status", width: "w-[136px]", numeric: false },
+const LABELLED_COLUMNS = [
+  { label: "Order", width: "w-[240px]", numeric: false, sortable: true },
+  { label: "Shop", width: "w-[140px]", numeric: false, sortable: true },
+  { label: "Release", width: "w-[95px]", numeric: false, sortable: true },
+  { label: "Items", width: "w-[88px]", numeric: true, sortable: true },
+  { label: "Total", width: "w-[112px]", numeric: true, sortable: true },
+  { label: "Status", width: "w-[136px]", numeric: false, sortable: true },
+  { label: "Paid", width: "w-[56px]", numeric: false, sortable: false },
 ] as const satisfies readonly {
   readonly label: string;
   readonly width: string;
   readonly numeric: boolean;
+  readonly sortable: boolean;
 }[];
 
 export const images: readonly string[] = ORDERS.flatMap((order) =>
@@ -203,6 +218,21 @@ const CELL_BUTTON =
 function Checkbox() {
   return (
     <span className="mb-0.5 flex size-4 shrink-0 rounded-xs border border-input dark:bg-input/30" />
+  );
+}
+
+function PaidBox({ paid }: { readonly paid: boolean }) {
+  return (
+    <span
+      className={cn(
+        "flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
+        paid
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-input dark:bg-input/30",
+      )}
+    >
+      {paid ? <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" /> : null}
+    </span>
   );
 }
 
@@ -284,7 +314,7 @@ function ToolbarButton({
 const HEADER_CELL =
   "h-8 border-b border-border/70 px-2 text-left align-middle font-normal text-secondary-foreground/80";
 
-function SortableHeader({ column }: { readonly column: (typeof SORTABLE_COLUMNS)[number] }) {
+function LabelledHeader({ column }: { readonly column: (typeof LABELLED_COLUMNS)[number] }) {
   return (
     <th
       aria-label={column.label}
@@ -298,7 +328,9 @@ function SortableHeader({ column }: { readonly column: (typeof SORTABLE_COLUMNS)
           )}
         >
           {column.label}
-          <HugeiconsIcon icon={UnsortedIcon} strokeWidth={2} className="mt-px size-3.25" />
+          {column.sortable ? (
+            <HugeiconsIcon icon={UnsortedIcon} strokeWidth={2} className="mt-px size-3.25" />
+          ) : null}
         </span>
       </div>
     </th>
@@ -386,6 +418,9 @@ function OrderTableRow({ order, now }: { readonly order: OrderRow; readonly now:
         </div>
       </Cell>
       <Cell>
+        <PaidBox paid={order.paid} />
+      </Cell>
+      <Cell>
         <div className="flex justify-end">
           <span className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }))}>
             <HugeiconsIcon icon={MoreHorizontalIcon} />
@@ -423,15 +458,15 @@ export function Screen({ now }: { readonly now: Date }) {
       </div>
       <Toolbar />
       <div className="w-full min-w-0 overflow-hidden">
-        <table className="w-[987px] min-w-full table-fixed border-separate border-spacing-0 text-sm text-foreground">
+        <table className="w-[991px] min-w-full table-fixed border-separate border-spacing-0 text-sm text-foreground">
           <thead>
             <tr>
               <th className={cn(HEADER_CELL, "w-[28px] pe-0")}>
                 <Checkbox />
               </th>
               <th aria-label="Expand" className={cn(HEADER_CELL, "w-[24px]")} />
-              {SORTABLE_COLUMNS.map((column) => (
-                <SortableHeader key={column.label} column={column} />
+              {LABELLED_COLUMNS.map((column) => (
+                <LabelledHeader key={column.label} column={column} />
               ))}
               <th aria-label="Actions" className={cn(HEADER_CELL, "w-[72px]")} />
             </tr>

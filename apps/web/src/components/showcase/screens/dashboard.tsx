@@ -5,7 +5,6 @@ import { CollectionBreakdown, OrdersBarChart, ReleaseCalendar } from "./dashboar
 export const images: readonly string[] = [
   "/example-item1.webp",
   "/example-item2.webp",
-  "/example-item3.webp",
   "/example-item4.webp",
   "/example-item7.webp",
 ];

@@ -373,7 +373,25 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--mk-paid);
+    background: var(--mk-ordered);
+  }
+
+  & .mk-command-menu-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    margin-left: 2px;
+    padding: 2px 5px;
+    box-sizing: border-box;
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklab, var(--success) 10%, transparent);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--success-foreground);
+  }
+
+  & .ss-stage[data-theme="dark"] .mk-command-menu-badge {
+    background: color-mix(in oklab, var(--success) 20%, transparent);
   }
 
   & .mk-command-menu-meta {
@@ -430,7 +448,7 @@
   & .mk-command-menu-timeline {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   /* The rail behind the step marks */

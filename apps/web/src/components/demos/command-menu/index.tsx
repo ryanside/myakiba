@@ -310,8 +310,7 @@ const COSTS = [
 ] as const;
 
 const STEPS = [
-  { key: "ordered", state: "done", w: 46 },
-  { key: "paid", state: "current", w: 30 },
+  { key: "ordered", state: "current", w: 46 },
   { key: "shipped", state: "todo", w: 50 },
   { key: "owned", state: "todo", w: 42 },
 ] as const;
@@ -330,7 +329,8 @@ function OrderPage({ compact }: { readonly compact: boolean }) {
             <span className={cls("hero-title")}>{ORDER.title}</span>
             <span className={cls("status")}>
               <span className={cls("dot")} />
-              Paid
+              Ordered
+              <span className={cls("badge")}>Paid</span>
             </span>
           </div>
           <div className={cls("meta")}>

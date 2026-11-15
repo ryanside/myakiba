@@ -1,44 +1,20 @@
 import type { ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Calendar01Icon,
-  Cancel01Icon,
-  Edit03Icon,
-  MoreHorizontalIcon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons";
+import { Calendar01Icon, Cancel01Icon, Edit03Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Bar, Count, Menu, Popover, Roll, Stage, Window } from "@/components/stageshow/kit";
 import type { Act, Layout, Point, Rect } from "@/components/stageshow/kit";
 import { DisclosureIcon, ExpandIcon, NextIcon, PreviousIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./order-lifecycle.css";
 
-// One preorder's whole life on its own page. The collector opens Edit, sets
-// Status to Paid and picks the Payment Date from the calendar, and presses
-// Update: the Progress stepper fills to Paid with its date, the item follows
-// (Edit cascades every field to the items by default), and a beat later the
-// dashboard's totals roll in the satellite. Then the same sheet, sped up,
-// takes it to Shipped and to Owned, months apart. Plays once, as it scrolls
-// into view, and holds on Owned.
-//
-// The totals follow apps/server/src/routers/dashboard/module.ts and
-// overview-tab.tsx. The order is one $189.00 item with $14.50 shipping:
-// - Paid: Unpaid Costs (Ordered orders, items plus fees) falls by $203.50,
-//   and Total Spent (non-Ordered item prices, plus non-Ordered orders' fees)
-//   rises by the same $203.50. One fewer order is unpaid.
-// - Shipped: no total changes.
-// - Owned: Total Items (Owned collection items) rises by 1, and Active Orders
-//   (orders not Owned) falls by 1.
-
 type S = {
-  /** The order's saved status, as a step: 1 Ordered, 2 Paid, 3 Shipped, 4 Owned */
   readonly step: number;
-  /** The step the dashboard has caught up with */
-  readonly counted: number;
+  readonly paid: boolean;
+  readonly counted: "before" | "paid" | "owned";
   readonly sheet: boolean;
   /** The Status field in the sheet */
   readonly formStep: number;
-  /** How many of the four dates the sheet holds */
+  readonly formPaid: boolean;
   readonly formDates: number;
   readonly menu: boolean;
   readonly calendar: boolean;
@@ -46,24 +22,31 @@ type S = {
   readonly picked: boolean;
 };
 
-type Status = "Ordered" | "Paid" | "Shipped" | "Owned";
+type Status = "Ordered" | "Shipped" | "Owned";
 
 type Step = {
   readonly status: Status;
   /** As the stepper writes it (the user's MM/DD/YYYY) */
   readonly date: string;
-  /** As the date field writes it */
-  readonly long: string;
-  readonly field: string;
 };
 
 const STEPS: readonly Step[] = [
-  { status: "Ordered", date: "03/02/2026", long: "Mar 2, 2026", field: "Order Date" },
-  { status: "Paid", date: "07/14/2026", long: "Jul 14, 2026", field: "Payment Date" },
-  { status: "Shipped", date: "08/30/2026", long: "Aug 30, 2026", field: "Shipping Date" },
-  { status: "Owned", date: "09/06/2026", long: "Sep 6, 2026", field: "Collection Date" },
+  { status: "Ordered", date: "03/02/2026" },
+  { status: "Shipped", date: "08/30/2026" },
+  { status: "Owned", date: "09/06/2026" },
 ];
-const STATUSES: readonly Status[] = ["Ordered", "Paid", "Shipped", "Owned"];
+const STATUSES: readonly Status[] = STEPS.map((step) => step.status);
+
+const PAYMENT_DATE = "07/14/2026";
+
+const DATES = {
+  order: "Mar 2, 2026",
+  payment: "Jul 14, 2026",
+  shipping: "Aug 30, 2026",
+  collection: "Sep 6, 2026",
+} as const;
+type DateField = keyof typeof DATES;
+const DATE_FILL_ORDER: readonly DateField[] = ["order", "payment", "shipping", "collection"];
 
 const statusOf = (step: number): Status => STATUSES.at(step - 1) ?? "Ordered";
 
@@ -81,15 +64,25 @@ const cents = (n: number) => usd.format(n / 100);
 
 const initial: S = {
   step: 1,
-  counted: 1,
+  paid: false,
+  counted: "before",
   sheet: false,
   formStep: 1,
+  formPaid: false,
   formDates: 1,
   menu: false,
   calendar: false,
   picked: false,
 };
-const poster: S = { ...initial, step: 4, counted: 4, formStep: 4, formDates: 4 };
+const poster: S = {
+  ...initial,
+  step: 3,
+  paid: true,
+  counted: "owned",
+  formStep: 3,
+  formPaid: true,
+  formDates: 4,
+};
 
 // Where the cursor waits: empty page between the stepper and the costs
 const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies Record<
@@ -97,8 +90,7 @@ const REST = { wide: { x: 560, y: 352 }, compact: { x: 236, y: 246 } } satisfies
   Point
 >;
 
-/** The sheet's fields, row by row: the date fields of the steps after Ordered */
-const DATE_FIELD = ["", "f-paid", "f-shipped", "f-owned"];
+const DATE_TARGET_OF_STEP = { 2: "f-shipped", 3: "f-owned" } as const;
 
 async function press(a: Act<S>, target: string, at: Point, ms: number) {
   await a.moveCursor({ at: target, ...at }, { duration: ms });
@@ -106,25 +98,19 @@ async function press(a: Act<S>, target: string, at: Point, ms: number) {
   await a.click();
 }
 
-/** The first update, at a person's pace: status from its list, date from the calendar. */
 async function markPaid(a: Act<S>) {
   a.mark("edit");
   await a.click({ at: "edit", x: 0.78, y: 0.6 });
   await a.set({ sheet: true });
   await a.wait(380);
 
-  a.mark("status");
-  await a.click({ at: "f-status", x: 0.84, y: 0.6 });
-  await a.set({ menu: true });
-  await a.wait(340);
-  await a.moveCursor({ at: "opt-Paid", x: 0.8, y: 0.6 }, { duration: 340 });
-  await a.wait(100);
-  await a.click();
-  await a.set({ menu: false, formStep: 2 });
-  await a.wait(220);
+  a.mark("tick");
+  await a.click({ at: "f-paid", x: 0.5, y: 0.5 });
+  await a.set({ formPaid: true });
+  await a.wait(440);
 
   a.mark("date");
-  await a.click({ at: "f-paid", x: 0.86, y: 0.6 });
+  await a.click({ at: "f-payment", x: 0.86, y: 0.6 });
   if (a.layout === "wide") {
     await a.set({ calendar: true });
     await a.wait(400);
@@ -142,19 +128,19 @@ async function markPaid(a: Act<S>) {
 
   a.mark("update");
   await a.click({ at: "update", x: 0.78, y: 0.6 });
-  await a.set({ sheet: false, step: 2 });
+  await a.set({ sheet: false, paid: true });
 }
 
 /** The same sheet, sped up: months pass between one update and the next. */
-async function lapse(a: Act<S>, step: number) {
+async function lapse(a: Act<S>, step: keyof typeof DATE_TARGET_OF_STEP) {
   await press(a, "edit", { x: 0.78, y: 0.6 }, 440);
   await a.set({ sheet: true });
   await a.wait(260);
   await press(a, "f-status", { x: 0.84, y: 0.6 }, 260);
   a.put({ formStep: step });
   await a.wait(90);
-  await press(a, DATE_FIELD.at(step - 1) ?? "f-owned", { x: 0.86, y: 0.6 }, 260);
-  a.put({ formDates: step });
+  await press(a, DATE_TARGET_OF_STEP[step], { x: 0.86, y: 0.6 }, 260);
+  a.put({ formDates: step + 1 });
   await a.wait(90);
   await press(a, "update", { x: 0.78, y: 0.6 }, 300);
   await a.set({ sheet: false, step });
@@ -163,25 +149,24 @@ async function lapse(a: Act<S>, step: number) {
 async function script(a: Act<S>) {
   await a.wait(400);
   await markPaid(a);
-  // The stepper fills while the hand leaves the page; the totals a beat later
   const leave = a.moveCursor("rest", { duration: 700 });
   await a.wait(900);
   await leave;
   a.mark("paid");
-  await a.set({ counted: 2 });
+  await a.set({ counted: "paid" });
   await a.wait(1000);
 
   a.mark("shipped");
-  await lapse(a, 3);
+  await lapse(a, 2);
   await a.wait(350);
 
   a.mark("owned");
-  await lapse(a, 4);
+  await lapse(a, 3);
   const back = a.moveCursor("rest", { duration: 600 });
   await a.wait(800);
   await back;
   a.mark("counted");
-  await a.set({ counted: 4 });
+  await a.set({ counted: "owned" });
   await a.wait(2400);
 }
 
@@ -206,6 +191,26 @@ function StatusText({
   );
 }
 
+function PaymentBadge({ paid }: { readonly paid: boolean }) {
+  return (
+    <span className="mk-order-lifecycle-badge" data-paid={paid || undefined}>
+      <Roll className="mk-order-lifecycle-badge-label">{paid ? "Paid" : "Unpaid"}</Roll>
+    </span>
+  );
+}
+
+function Check({ checked, target }: { readonly checked: boolean; readonly target?: string }) {
+  return (
+    <span
+      className="mk-order-lifecycle-check"
+      data-checked={checked || undefined}
+      data-target={target}
+    >
+      <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} />
+    </span>
+  );
+}
+
 function Hero({ s, compact }: { readonly s: S; readonly compact: boolean }) {
   return (
     <div className="mk-order-lifecycle-hero">
@@ -214,10 +219,18 @@ function Hero({ s, compact }: { readonly s: S; readonly compact: boolean }) {
         <div className="mk-order-lifecycle-hero-title">
           <span className="mk-order-lifecycle-title">{ORDER.title}</span>
           {compact ? null : <StatusText status={statusOf(s.step)} />}
+          {compact ? null : <PaymentBadge paid={s.paid} />}
         </div>
         <div className="mk-order-lifecycle-hero-meta">
-          {compact ? <StatusText status={statusOf(s.step)} /> : <span>{ORDER.shop}</span>}
-          <Bar w={compact ? 44 : 38} h={6} tone={2} />
+          {compact ? (
+            <span className="mk-order-lifecycle-hero-state">
+              <StatusText status={statusOf(s.step)} />
+              <PaymentBadge paid={s.paid} />
+            </span>
+          ) : (
+            <span>{ORDER.shop}</span>
+          )}
+          {compact ? null : <Bar w={38} h={6} tone={2} />}
           {compact ? null : <Bar w={64} h={6} tone={2} />}
         </div>
       </div>
@@ -230,18 +243,13 @@ function Hero({ s, compact }: { readonly s: S; readonly compact: boolean }) {
           <HugeiconsIcon icon={Edit03Icon} size={16} strokeWidth={1.5} />
           Edit
         </span>
-        {compact ? null : (
-          <span className="mk-order-lifecycle-button mk-order-lifecycle-button--icon">
-            <HugeiconsIcon icon={MoreHorizontalIcon} size={16} strokeWidth={1.5} />
-          </span>
-        )}
       </div>
     </div>
   );
 }
 
-/** The Progress stepper, as OrderSummary's Timeline draws it */
-function Progress({ step }: { readonly step: number }) {
+function Progress({ s, compact }: { readonly s: S; readonly compact: boolean }) {
+  const step = s.step;
   return (
     <section className="mk-order-lifecycle-progress">
       <div className="mk-order-lifecycle-heading">Progress</div>
@@ -267,6 +275,15 @@ function Progress({ step }: { readonly step: number }) {
           );
         })}
       </div>
+      {compact ? null : (
+        <div className="mk-order-lifecycle-payment">
+          <span className="mk-order-lifecycle-payment-label">Payment</span>
+          <PaymentBadge paid={s.paid} />
+          <span className="mk-order-lifecycle-payment-date" data-show={s.paid || undefined}>
+            {PAYMENT_DATE}
+          </span>
+        </div>
+      )}
     </section>
   );
 }
@@ -293,7 +310,6 @@ function Costs() {
   );
 }
 
-/** The order's one item: its status follows the order's, cascaded by the edit */
 function Items({ s }: { readonly s: S }) {
   return (
     <section className="mk-order-lifecycle-items">
@@ -303,13 +319,14 @@ function Items({ s }: { readonly s: S }) {
         <span className="mk-order-lifecycle-item-text">
           <Bar w={96} h={7} tone={3} />
           <span className="mk-order-lifecycle-item-meta">
-            <Bar w={44} h={6} tone={2} />
+            <Bar w={12} h={6} tone={2} />
             <span className="mk-order-lifecycle-category">Prepainted</span>
           </span>
         </span>
         <span className="mk-order-lifecycle-item-status">
           <StatusText status={statusOf(s.step)} className="mk-order-lifecycle-status--item" />
         </span>
+        <Check checked={s.paid} />
       </div>
     </section>
   );
@@ -335,22 +352,22 @@ function Sidebar() {
 
 function Field({
   label,
+  head,
   target,
   children,
   filler,
 }: {
   readonly label?: string;
+  readonly head?: ReactNode;
   readonly target?: string;
   readonly children?: ReactNode;
   readonly filler?: readonly [number, number];
 }) {
   return (
     <div className="mk-order-lifecycle-field">
-      {label ? (
-        <span className="mk-order-lifecycle-label">{label}</span>
-      ) : (
+      {head ?? (
         <span className="mk-order-lifecycle-label">
-          <Bar w={filler?.[0] ?? 48} h={6} tone={3} />
+          {label ?? <Bar w={filler?.[0] ?? 48} h={6} tone={3} />}
         </span>
       )}
       <span className="mk-order-lifecycle-input" data-target={target}>
@@ -360,13 +377,24 @@ function Field({
   );
 }
 
-function DateValue({ s, step }: { readonly s: S; readonly step: number }) {
-  const st = STEPS.at(step - 1);
-  const set = s.formDates >= step;
+function DateValue({ s, field }: { readonly s: S; readonly field: DateField }) {
+  const set = s.formDates > DATE_FILL_ORDER.indexOf(field);
   return (
     <span className="mk-order-lifecycle-date" data-empty={!set || undefined}>
       <HugeiconsIcon icon={Calendar01Icon} size={16} strokeWidth={1.5} />
-      <Roll variant="fade">{set && st ? st.long : "Select date"}</Roll>
+      <Roll variant="fade">{set ? DATES[field] : "Select date"}</Roll>
+    </span>
+  );
+}
+
+function PaymentDateLabel({ s }: { readonly s: S }) {
+  return (
+    <span className="mk-order-lifecycle-label mk-order-lifecycle-label--payment">
+      <span>Payment Date</span>
+      <span className="mk-order-lifecycle-paid">
+        <Check checked={s.formPaid} target="f-paid" />
+        <span>Paid</span>
+      </span>
     </span>
   );
 }
@@ -406,22 +434,22 @@ function Sheet({ s, compact }: { readonly s: S; readonly compact: boolean }) {
         {compact ? null : (
           <div className="mk-order-lifecycle-pair">
             <Field label="Order Date">
-              <DateValue s={s} step={1} />
+              <DateValue s={s} field="order" />
             </Field>
             <Field filler={[44, 58]} />
           </div>
         )}
         <div className="mk-order-lifecycle-pair">
-          <Field label="Payment Date" target="f-paid">
-            <DateValue s={s} step={2} />
+          <Field head={<PaymentDateLabel s={s} />} target="f-payment">
+            <DateValue s={s} field="payment" />
           </Field>
           <Field label="Shipping Date" target="f-shipped">
-            <DateValue s={s} step={3} />
+            <DateValue s={s} field="shipping" />
           </Field>
         </div>
         <div className="mk-order-lifecycle-pair">
           <Field label="Collection Date" target="f-owned">
-            <DateValue s={s} step={4} />
+            <DateValue s={s} field="collection" />
           </Field>
           <Field filler={[70, 40]} />
         </div>
@@ -553,9 +581,9 @@ function Kpi({ label, children }: { readonly label: string; readonly children: R
   );
 }
 
-function Totals({ counted }: { readonly counted: number }) {
-  const paid = counted >= 2;
-  const owned = counted >= 4;
+function Totals({ counted }: { readonly counted: S["counted"] }) {
+  const paid = counted !== "before";
+  const owned = counted === "owned";
   return (
     <div className="mk-order-lifecycle-totals">
       <Kpi label="Total Items">
@@ -614,7 +642,7 @@ export function OrderLifecycleDemo({ theme }: DemoProps) {
         const page = (
           <div className="mk-order-lifecycle-page">
             <Hero s={s} compact={compact} />
-            <Progress step={s.step} />
+            <Progress s={s} compact={compact} />
             <div className="mk-order-lifecycle-lower">
               <Items s={s} />
               {compact ? null : <Costs />}
@@ -643,7 +671,7 @@ export function OrderLifecycleDemo({ theme }: DemoProps) {
             )}
 
             <StatusMenu s={s} trigger={rect("f-status")} />
-            {compact ? null : <Calendar s={s} field={rect("f-paid")} />}
+            {compact ? null : <Calendar s={s} field={rect("f-payment")} />}
 
             <div className="mk-order-lifecycle-satellite">
               <Totals counted={s.counted} />

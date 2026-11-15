@@ -1,25 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Bar, Count, Popover, Stage, Window } from "@/components/stageshow/kit";
 import type { Act, Layout, Rect } from "@/components/stageshow/kit";
 import { ExpandIcon } from "@/lib/icons";
 import type { DemoProps } from "../demo-props";
 import "./customs-fees.css";
-
-// A customs bill arrives for an order that has shipped. In the orders table
-// the pointer opens the order's Total, the Fees & Charges popover the app
-// draws there (PopoverMultiInputCell). Duties is double-clicked and 18.40
-// typed over it, then Tariffs and 32.00, then Save. The popover closes and the
-// Total rolls at once, as the cell's pending total does. A beat later the
-// Expenses page's "Spend by cost type" card, shown as a satellite, rolls its
-// Duties and Tariffs lines and its bar's segments widen. Plays once.
-//
-// The math holds. The order's Total is its two items plus its fees. The
-// order is Shipped, a Paid Order, so its fees count as Spend; the card is the
-// whole Orders scope, and its five lines add up to the Order Spend it splits.
-// Misc has no line because the app leaves out a cost type with nothing spent.
-// The popover has no total of its own: the app updates the Total cell only
-// once the fees are saved.
 
 type Field = "duties" | "tariffs";
 
@@ -66,13 +51,14 @@ const BEFORE = [
   { key: "tariffs", label: "Tariffs", cents: 2750, color: "var(--chart-5)" },
 ] as const;
 
-type Status = "Ordered" | "Paid" | "Shipped" | "Owned";
+type Status = "Ordered" | "Shipped" | "Owned";
 
 const ROWS: readonly {
   readonly title: string;
   readonly items: number;
   readonly total: number;
   readonly status: Status;
+  readonly paid: boolean;
   readonly images: readonly string[];
 }[] = [
   {
@@ -80,6 +66,7 @@ const ROWS: readonly {
     items: 2,
     total: 31_800,
     status: "Ordered",
+    paid: false,
     images: ["/example-item5.webp", "/example-item7.webp"],
   },
   {
@@ -87,13 +74,15 @@ const ROWS: readonly {
     items: 2,
     total: 7240,
     status: "Owned",
+    paid: true,
     images: ["/example-item1.webp", "/example-item3.webp"],
   },
   {
     title: "Summer plush haul",
     items: 3,
     total: 9620,
-    status: "Paid",
+    status: "Ordered",
+    paid: true,
     images: ["/example-item3.webp", "/example-item2.webp", "/example-item5.webp"],
   },
 ];
@@ -104,6 +93,7 @@ const BELOW: readonly (typeof ROWS)[number][] = [
     items: 1,
     total: 6400,
     status: "Ordered",
+    paid: false,
     images: ["/example-item2.webp"],
   },
 ];
@@ -233,6 +223,16 @@ function StatusValue({ status }: { readonly status: Status }) {
   );
 }
 
+function Paid({ paid }: { readonly paid: boolean }) {
+  return (
+    <span className={`${cls("cell")} ${cls("col-paid")}`}>
+      <span className={cls("check")} data-checked={paid || undefined}>
+        {paid ? <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} /> : null}
+      </span>
+    </span>
+  );
+}
+
 function Expand() {
   return (
     <span className={cls("expand")}>
@@ -279,6 +279,7 @@ function OrderRow({
           <StatusValue status={row.status} />
         )}
       </span>
+      <Paid paid={row.paid} />
     </div>
   );
 }
@@ -459,6 +460,7 @@ export function CustomsFeesDemo({ theme }: DemoProps) {
                     </span>
                     <span className={`${cls("cell")} ${cls("num")}`}>Total</span>
                     <span className={`${cls("cell")} ${cls("col-status")}`}>Status</span>
+                    <span className={`${cls("cell")} ${cls("col-paid")}`}>Paid</span>
                   </div>
                   {ROWS.map((row, i) => (
                     <OrderRow
@@ -492,6 +494,7 @@ export function CustomsFeesDemo({ theme }: DemoProps) {
                     <span className={`${cls("cell")} ${cls("col-status")}`}>
                       <StatusValue status="Shipped" />
                     </span>
+                    <Paid paid />
                   </div>
                   {compact
                     ? null
