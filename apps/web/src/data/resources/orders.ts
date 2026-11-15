@@ -94,8 +94,9 @@ export const editOrderCommand = defineCommand({
   }: { readonly values: EditedOrder; readonly cascadeOptions: CascadeOptions } & OnList) =>
     editOrder(values, cascadeOptions),
   optimistic: async (queryClient, { values, cascadeOptions, list }) => {
-    // Paid cascaded to every item settles the payment state; otherwise the refetch brings it.
-    const payment = cascadeOptions.includes("paid") ? { payment: paymentOf(values.paid) } : {};
+    const cascadedPayment = cascadeOptions.includes("paid")
+      ? { payment: paymentOf(values.paid) }
+      : {};
     // Always patch the order detail cache; it is keyed by id, so it is safe to update
     // regardless of any list-page filter state.
     const orderDetailKey = orders.detail.key(values.orderId);
@@ -114,7 +115,7 @@ export const editOrderCommand = defineCommand({
         ? {
             ...old,
             ...values,
-            ...payment,
+            ...cascadedPayment,
             ...(detailNewTotal !== undefined && { total: detailNewTotal }),
           }
         : old,
@@ -145,7 +146,7 @@ export const editOrderCommand = defineCommand({
                   ? {
                       ...order,
                       ...values,
-                      ...payment,
+                      ...cascadedPayment,
                       ...(newTotal !== undefined && { total: newTotal }),
                     }
                   : order,

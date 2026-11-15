@@ -16,7 +16,6 @@ export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${
 export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
 export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderIsUnpaid} THEN ${orderFees} ELSE 0 END`;
 
-/** Over an Order joined to its Order Items: its fee line follows the Order's paid, each item's line its own. */
 export const orderPayment = sql<OrderPayment>`CASE
   WHEN ${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE THEN 'paid'
   WHEN NOT ${order.paid} AND BOOL_OR(${collection.paid}) IS NOT TRUE THEN 'unpaid'

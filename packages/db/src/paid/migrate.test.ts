@@ -6,8 +6,6 @@ import { PUSH_TIMEOUT, dbPush } from "../../test/push";
 
 const databases = testDatabases();
 
-// Every status the old model knew, on Orders and on Collection Items, including Order Items that
-// differ from their Order and an Ordered Order that has a Payment Date.
 const ORDERS = `
 INSERT INTO "order" (id, user_id, title, status, payment_date, shipping_fee) VALUES
   ('order-ordered', 'u1', 'Preorder', 'Ordered', NULL, 1000),
@@ -60,9 +58,7 @@ const paidState = async (sql: SQL) => ({
   collection: [...(await sql`SELECT id, status, paid FROM collection ORDER BY id`)],
 });
 
-// The ownership migration gives each user their own Item ids, so a Collection Item's Item and
-// release are left out.
-const everythingElse = async (sql: SQL) => ({
+const columnsBothMigrationsKeep = async (sql: SQL) => ({
   orders: [
     ...(await sql`SELECT to_jsonb(o) - '{status,paid}'::text[] AS row FROM "order" o ORDER BY id`),
   ],
@@ -86,7 +82,6 @@ async function freshlyPushedCatalog() {
   return snapshot(fresh.sql);
 }
 
-/** A database at this branch's base: owned schema pushed, and no paid column yet. */
 async function baseSchemaDatabase() {
   const database = await databases.create();
   const pushed = await dbPush(database.url);
@@ -119,7 +114,7 @@ test(
       await sql.unsafe(COLLECTION("item-a", "item-b"));
     }, MAIN_SCHEMA);
     const { sql, url } = await databases.create(template);
-    const before = await everythingElse(sql);
+    const before = await columnsBothMigrationsKeep(sql);
 
     const first = await dbPush(url);
     expect(first.exitCode).toBe(0);
@@ -130,7 +125,7 @@ test(
       orders: CONVERTED_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
-    expect(await everythingElse(sql)).toEqual(before);
+    expect(await columnsBothMigrationsKeep(sql)).toEqual(before);
     const pushed = await snapshot(sql);
     expect(pushed.columns).toEqual(freshCatalog.columns);
 
@@ -149,7 +144,7 @@ test(
 
     const { sql, url } = await baseSchemaDatabase();
     await sql.unsafe(COLLECTION("item-a", "item-b"));
-    const before = await everythingElse(sql);
+    const before = await columnsBothMigrationsKeep(sql);
 
     const first = await dbPush(url);
     expect(first.exitCode).toBe(0);
@@ -160,7 +155,7 @@ test(
       orders: CONVERTED_ORDERS,
       collection: CONVERTED_COLLECTION,
     });
-    expect(await everythingElse(sql)).toEqual(before);
+    expect(await columnsBothMigrationsKeep(sql)).toEqual(before);
     const pushed = await snapshot(sql);
     expect(pushed.columns).toEqual(freshCatalog.columns);
 

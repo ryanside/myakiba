@@ -171,8 +171,7 @@ const paidModel = (row: string) => `jsonb_build_object(
   'paid', coalesce((${row}->>'paid')::boolean, ${row}->>'status' <> 'Ordered'))`;
 
 // Users reach Items only through their Collection, Wishlist and List Members, so this is what each
-// user sees of the Item Database, without the ids the migration gives each user's copy. Statuses
-// read as the paid model reads them, so a row before the Paid migration matches itself after it.
+// user sees of the Item Database, without the ids the migration gives each user's copy.
 async function whatUsersSee(sql: SQL) {
   const [view] = await sql.unsafe<[{ rows: unknown }]>(`
     WITH item_view AS (

@@ -190,7 +190,6 @@ export function updateOrderStatus(orderId: string, status: OrderStatus) {
   );
 }
 
-/** Cascades to every Order Item, so the Order and its items end paid or unpaid together. */
 export function updateOrderPaid(orderId: string, paid: boolean) {
   return call(app.api.orders({ orderId }).put({ order: { paid }, cascadeOptions: ["paid"] }), {
     fallback: "Failed to update Paid. Please try again.",

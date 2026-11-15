@@ -257,8 +257,7 @@ function updateOrderInColumns(
   return columns;
 }
 
-// The write cascades Paid to every Order Item, so the whole Order ends paid or unpaid.
-function paidPayment(paid: boolean): PaymentFields {
+function paymentAfterPaidCascade(paid: boolean): PaymentFields {
   return { paid, payment: paymentOf(paid) };
 }
 
@@ -677,7 +676,7 @@ function OrderKanbanBoard({
         (persistedVariables, succeeded) => {
           if (!succeeded) return;
 
-          queue.persisted = paidPayment(persistedVariables.paid);
+          queue.persisted = paymentAfterPaidCascade(persistedVariables.paid);
         },
         async () => {
           setColumns((current) =>
@@ -702,7 +701,10 @@ function OrderKanbanBoard({
       if (!order) return;
 
       setColumns((current) =>
-        updateOrderInColumns(current, orderId, (shown) => ({ ...shown, ...paidPayment(paid) })),
+        updateOrderInColumns(current, orderId, (shown) => ({
+          ...shown,
+          ...paymentAfterPaidCascade(paid),
+        })),
       );
 
       enqueuePaidMutation({ orderId, paid }, { paid: order.paid, payment: order.payment });

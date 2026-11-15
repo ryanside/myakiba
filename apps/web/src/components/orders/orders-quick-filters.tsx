@@ -16,6 +16,13 @@ function paidChipOf(paid: boolean | undefined): PaidChip | undefined {
   return paid ? "Paid" : "Unpaid";
 }
 
+function newlyPressedPaidChip(
+  pressed: readonly PaidChip[],
+  current: PaidChip | undefined,
+): PaidChip | undefined {
+  return pressed.find((chip) => chip !== current) ?? pressed[0];
+}
+
 export function OrdersQuickFilters(): React.ReactElement {
   const { filters, setFilters } = useOrdersFilters();
   const statuses = filters.status ?? [];
@@ -27,9 +34,7 @@ export function OrdersQuickFilters(): React.ReactElement {
       selected={current ? [...statuses, current] : statuses}
       onChange={(chips) => {
         const nextStatuses = chips.filter(isStatus);
-        const paidChips = chips.filter(isPaidChip);
-        // Paid and Unpaid exclude each other, so the chip just pressed wins.
-        const paidChip = paidChips.find((chip) => chip !== current) ?? paidChips[0];
+        const paidChip = newlyPressedPaidChip(chips.filter(isPaidChip), current);
         setFilters({
           status: nextStatuses.length > 0 ? nextStatuses : undefined,
           paid: paidChip === undefined ? undefined : PAID_CHIPS[paidChip],

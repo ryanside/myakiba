@@ -1,5 +1,3 @@
-// A column order saved before a column existed does not name it, and the table would put it last,
-// after the row actions. This gives each such column the place the default order has it.
 export function withNewColumns(stored: readonly string[], defaults: readonly string[]): string[] {
   const order = [...stored];
   defaults.forEach((id, index) => {

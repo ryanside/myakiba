@@ -239,8 +239,7 @@ function watchColumnsOf(orderId: string) {
   };
 }
 
-// The server cascades a Paid write to every Order Item, so the whole Order ends paid or unpaid.
-function withChange(
+function afterServerWrite(
   candidate: DashboardKanbanOrder,
   change: Write["change"],
 ): DashboardKanbanOrder {
@@ -268,7 +267,7 @@ async function settle(write: Write | undefined, outcome: "settle" | "fail" = "se
   if (!write) throw new Error("no write in flight");
   if (outcome === "settle") {
     server = server.map((candidate) =>
-      candidate.orderId === write.orderId ? withChange(candidate, write.change) : candidate,
+      candidate.orderId === write.orderId ? afterServerWrite(candidate, write.change) : candidate,
     );
   }
   await act(async () => write[outcome]());

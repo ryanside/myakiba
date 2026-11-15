@@ -51,7 +51,6 @@ export async function pushSchema(url: string) {
   };
 }
 
-/** Runs db-push as a deploy does, with no TTY. */
 export async function dbPush(url: string) {
   const child = Bun.spawn(["bun", "src/scripts/push-schema.ts"], {
     cwd: path.join(import.meta.dir, ".."),

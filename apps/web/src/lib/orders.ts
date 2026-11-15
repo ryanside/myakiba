@@ -25,7 +25,6 @@ export const ORDER_PAYMENT_DISPLAY = {
   Record<OrderPayment, { readonly label: string; readonly variant: BadgeVariant }>
 >;
 
-/** A Collection Item has one money line, so it is paid or unpaid, never partly. */
 export function paymentOf(paid: boolean): OrderPayment {
   return paid ? "paid" : "unpaid";
 }

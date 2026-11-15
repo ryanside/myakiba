@@ -23,7 +23,6 @@ export function PaymentBadge({
   );
 }
 
-/** Checked when paid, indeterminate when partly paid. A click on paid unpays, otherwise it pays. */
 export function PaidCheckbox({
   payment,
   label,
@@ -46,7 +45,6 @@ export function PaidCheckbox({
   );
 }
 
-/** Payment, shown apart from the fulfillment steps, with the Payment Date when there is one. */
 export function PaymentLine({
   payment,
   paymentDate,
@@ -67,7 +65,6 @@ export function PaymentLine({
   );
 }
 
-/** A form's Payment Date label with the Paid yes/no beside it. Neither one sets the other. */
 export function PaymentDateLabel({
   dateId,
   paidId,

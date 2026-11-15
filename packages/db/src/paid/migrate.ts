@@ -13,11 +13,6 @@ export type PaidMigrationReport =
   | { readonly status: "fresh-database" | "already-migrated" }
   | ({ readonly status: "migrated" } & { readonly [table in Table]: TableReport });
 
-/**
- * Moves payment out of the Acquisition Status: every row that was past Ordered becomes paid, and
- * the Paid status becomes Ordered. One transaction, so a row with a status it does not know
- * leaves the database as it was.
- */
 export async function migratePaid(sql: SQL): Promise<PaidMigrationReport> {
   const [state] = await sql<[{ hasOrder: boolean; hasPaid: boolean }]>`
     SELECT to_regclass('public.order') IS NOT NULL AS "hasOrder",

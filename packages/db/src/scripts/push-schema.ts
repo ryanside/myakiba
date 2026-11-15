@@ -45,7 +45,6 @@ const droppedTables = migration.status === "migrated" ? migration.droppedTables 
 for (const { table, rows } of droppedTables) {
   console.log(`Dropped retired table ${table} (${rows} rows).`);
 }
-// Push cannot fill the new paid columns from the old statuses, so this runs before it.
 const paidMigration = await attempt(
   () => migratePaid(database),
   "PAID MIGRATION FAILED. It rolled back, so Orders and Collection Items keep their statuses and have no paid column. An Item ownership migration reported above has committed.",
