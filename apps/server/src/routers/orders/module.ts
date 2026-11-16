@@ -9,7 +9,11 @@ import type {
   OrderEdit,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
+import type { FillOrdersBody } from "@myakiba/contracts/orders/fill";
 import type { Order } from "@myakiba/contracts/orders/types";
+import { fillColumns } from "@/lib/fill-columns";
+import type { CascadeColumns } from "@/lib/fill-columns";
+import { foundAll } from "@/lib/found-all";
 import { orderPreviewImagesSql } from "@/lib/order-preview";
 import { Result, panic } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
@@ -68,9 +72,16 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
   );
 }
 
-/** An empty request finds nothing, so it still answers 404. */
-function foundAll(ids: readonly string[], touched: number): boolean {
-  return touched > 0 && touched === new Set(ids).size;
+async function cascadeToItems(
+  tx: Tx,
+  userId: string,
+  orderIds: readonly string[],
+  columns: CascadeColumns,
+): Promise<void> {
+  await tx
+    .update(collection)
+    .set(columns)
+    .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)));
 }
 
 /** Detaches the Owned items and deletes the rest. Returns how many rows it touched. */
@@ -530,13 +541,46 @@ export const Orders = {
         const cascadeProperties = Object.fromEntries(
           input.cascadeOptions.map((option) => [option, input.order[option]]),
         );
-
-        await scope.tx
-          .update(collection)
-          .set({ ...cascadeProperties })
-          .where(and(eq(collection.userId, userId), eq(collection.orderId, input.orderId)));
+        await cascadeToItems(scope.tx, userId, [input.orderId], cascadeProperties);
       }
       return Result.ok("Order updated successfully" as const);
+    },
+  ),
+
+  /**
+   * Writes one field to every listed Order and cascades it to their items, or writes nothing.
+   * It locks the Orders, then their items, each in id order, the order Collection.fill locks
+   * items in, so overlapping fills wait instead of deadlocking.
+   */
+  fill: command(
+    { action: "orders.fill", failure: "Failed to fill orders" },
+    async (scope, input: FillOrdersBody) => {
+      const userId = scope.viewer.userId;
+      scope.log.set({ orders: { fill: input.fill.field, orderCount: input.orderIds.length } });
+      const selected = and(eq(order.userId, userId), inArray(order.id, input.orderIds));
+      const lockedOrders = await scope.tx
+        .select({ id: order.id })
+        .from(order)
+        .where(selected)
+        .orderBy(asc(order.id))
+        .for("no key update");
+      if (!foundAll(input.orderIds, lockedOrders.length)) {
+        return Result.err(new SomeOrdersNotFound());
+      }
+      await scope.tx
+        .select({ id: collection.id })
+        .from(collection)
+        .where(and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds)))
+        .orderBy(asc(collection.id))
+        .for("no key update");
+
+      const columns = fillColumns(input.fill);
+      await scope.tx
+        .update(order)
+        .set({ ...columns, updatedAt: new Date() })
+        .where(selected);
+      await cascadeToItems(scope.tx, userId, input.orderIds, columns);
+      return Result.ok("Orders filled successfully" as const);
     },
   ),
 

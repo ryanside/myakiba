@@ -1,3 +1,4 @@
+import { fillItemsBodySchema } from "@myakiba/contracts/collection/fill";
 import { privateApi } from "@/boundary/private-api";
 import { serve } from "@/domain/kernel";
 import {
@@ -11,6 +12,7 @@ import { Collection } from "./module";
 const collectionRouter = privateApi("/collection")
   .get("/", (ctx) => serve(ctx, Collection.list, ctx.query), { query: collectionQuerySchema })
   .get("/:id", (ctx) => serve(ctx, Collection.get, ctx.params), { params: collectionParamSchema })
+  .put("/fill", (ctx) => serve(ctx, Collection.fill, ctx.body), { body: fillItemsBodySchema })
   .put("/:id", (ctx) => serve(ctx, Collection.update, { id: ctx.params.id, update: ctx.body }), {
     body: collectionUpdateSchema,
     params: collectionParamSchema,

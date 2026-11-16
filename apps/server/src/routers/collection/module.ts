@@ -1,11 +1,16 @@
-import { and, arrayContains, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, arrayContains, asc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
+import type { FillItemsBody } from "@myakiba/contracts/collection/fill";
+import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { Result } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
 import { ReleaseNotOfItem } from "@/lib/errors/release-not-of-item";
+import { fillColumns } from "@/lib/fill-columns";
+import { foundAll } from "@/lib/found-all";
 import { guardedWrite } from "@/lib/owner-guard";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
+import { CollectionItemTagsFull } from "./errors/collection-item-tags-full";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
@@ -232,6 +237,42 @@ export const Collection = {
 
       const [update] = updated;
       return Result.ok({ update: update && withTimestampStrings(update) });
+    },
+  ),
+
+  /**
+   * Writes one field to every listed Collection Item, or to none. It locks the rows in id order,
+   * as Orders.fill locks its Order Items after their Orders, so overlapping fills wait instead of
+   * deadlocking.
+   */
+  fill: command(
+    { action: "collection.fill", failure: "Failed to fill collection items" },
+    async (scope, input: FillItemsBody) => {
+      scope.log.set({ collection: { fill: input.fill.field, itemCount: input.ids.length } });
+      const selected = and(
+        eq(collection.userId, scope.viewer.userId),
+        inArray(collection.id, input.ids),
+      );
+      const columns = fillColumns(input.fill);
+      const locked = await scope.tx
+        .select({
+          tagCount:
+            columns.tags === undefined ? sql<number>`0` : sql<number>`cardinality(${columns.tags})`,
+        })
+        .from(collection)
+        .where(selected)
+        .orderBy(asc(collection.id))
+        .for("no key update");
+      if (!foundAll(input.ids, locked.length)) return Result.err(new CollectionItemsNotFound());
+      if (locked.some(({ tagCount }) => tagCount > WRITE_LIMITS.tags)) {
+        return Result.err(new CollectionItemTagsFull());
+      }
+
+      await scope.tx
+        .update(collection)
+        .set({ ...columns, updatedAt: new Date() })
+        .where(selected);
+      return Result.ok("Collection items filled successfully" as const);
     },
   ),
 
