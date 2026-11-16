@@ -13,7 +13,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { formatReleasePrice } from "@/lib/locale";
 import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
-import { LabeledField } from "./add-fields";
+import { LabeledField } from "@/components/form-fields";
 import type { AddItem } from "./commit-input";
 
 type Release = NonNullable<AddItem["latestRelease"]>;

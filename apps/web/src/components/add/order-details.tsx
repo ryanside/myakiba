@@ -24,7 +24,13 @@ import { parseMoneyInputToMinorUnits } from "@/lib/money-input";
 import { cn } from "@/lib/utils";
 import { PaidField } from "@/components/orders/payment";
 import type { AddController } from "./add-controller";
-import { AmountInput, DateField, EnumSelect, LabeledField, OrderStatusSelect } from "./add-fields";
+import {
+  AmountInput,
+  DateField,
+  EnumSelect,
+  LabeledField,
+  OrderStatusSelect,
+} from "@/components/form-fields";
 import { orderFieldId } from "./commit-input";
 import type { OrderFields } from "./commit-input";
 import { FieldGroup, THUMBNAIL } from "./row-fields";
