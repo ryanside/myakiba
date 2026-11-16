@@ -1,6 +1,14 @@
-import { Cancel01Icon, Delete01Icon, FolderAddIcon, MoveIcon } from "@hugeicons/core-free-icons";
+import {
+  Cancel01Icon,
+  Delete01Icon,
+  FolderAddIcon,
+  MoveIcon,
+  PaintBucketIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
+import { SavedFillMenu } from "@/components/fill/saved-fill-menu";
 import { AddToListsDialog } from "@/components/lists/add-to-lists-dialog";
 import UnifiedItemMoveForm from "@/components/orders/unified-item-move-form";
 import {
@@ -21,9 +29,11 @@ export function CollectionActionBar({
   onDeleteCollectionItems,
   onAddCollectionItemsToOrder,
   onAddCollectionItemsToNewOrder,
+  onFillCollectionItems,
   isDeletingCollectionItems,
   isAddingCollectionItemsToOrder,
   isCreatingCollectionOrder,
+  isFillingCollectionItems,
 }: {
   readonly selectedItems: {
     readonly collectionIds: ReadonlySet<string>;
@@ -41,9 +51,11 @@ export function CollectionActionBar({
     cascadeOptions: CascadeOptions,
     collectionIds: ReadonlySet<string>,
   ) => Saving;
+  readonly onFillCollectionItems: (collectionIds: ReadonlySet<string>, fill: ItemFill) => Saving;
   readonly isDeletingCollectionItems: boolean;
   readonly isAddingCollectionItemsToOrder: boolean;
   readonly isCreatingCollectionOrder: boolean;
+  readonly isFillingCollectionItems: boolean;
 }): React.JSX.Element {
   const { currency } = useUserPreferences();
   const selectedCount = selectedItems.collectionIds.size;
@@ -87,6 +99,26 @@ export function CollectionActionBar({
           clearSelections={onClearSelection}
           currency={currency}
           intent="add"
+        />
+        <SavedFillMenu
+          rows={[
+            {
+              target: "collection",
+              ids: selectedItems.collectionIds,
+              onFill: onFillCollectionItems,
+            },
+          ]}
+          currency={currency}
+          trigger={
+            <ActionBarItem
+              disabled={selectedCount === 0 || isFillingCollectionItems}
+              onSelect={(event) => event.preventDefault()}
+              variant="default"
+            >
+              <HugeiconsIcon icon={PaintBucketIcon} />
+              <span>Fill</span>
+            </ActionBarItem>
+          }
         />
         <AddToListsDialog
           targets={listTargets}

@@ -1,5 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import type { Query } from "@tanstack/react-query";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type {
   CollectionItem,
@@ -8,11 +9,17 @@ import type {
 } from "@myakiba/contracts/collection/types";
 import type { CascadeOptions, NewOrder } from "@myakiba/contracts/orders/schema";
 import { Result } from "better-result";
+import { FILL_FIELD } from "@/lib/fill-fields";
 import { hasActiveFiltersOrSorting } from "@/lib/filters";
-import { deleteCollectionItems, getCollection, updateCollectionItem } from "@/queries/collection";
+import {
+  deleteCollectionItems,
+  fillCollectionItems,
+  getCollection,
+  updateCollectionItem,
+} from "@/queries/collection";
 import { moveItem, splitOrders } from "@/queries/orders";
 import { collectionWriteFamilies } from "../catalog";
-import { defineCommand, rootedRead } from "../client";
+import { defineCommand, messageAs, rootedRead } from "../client";
 
 // Shape of the cache backing the item detail route at `["item", externalId, "itemRelatedCollection"]`.
 // The route returns a subset of CollectionItem fields under `collection`.
@@ -163,6 +170,16 @@ export const deleteCollectionItemsCommand = defineCommand({
   },
   successTitle: () => "Collection item(s) deleted",
   failureToast: () => ({ title: "Failed to delete collection item(s). Please try again." }),
+});
+
+export const fillCollectionItemsCommand = defineCommand({
+  invalidates: collectionWriteFamilies,
+  refetchBy: "settled",
+  persist: ({ ids, fill }: { readonly ids: readonly string[]; readonly fill: ItemFill }) =>
+    fillCollectionItems(ids, fill),
+  successTitle: ({ ids, fill }) =>
+    `Filled ${FILL_FIELD[fill.field].label} on ${ids.length === 1 ? "1 item" : `${ids.length} items`}`,
+  failureToast: messageAs("title", () => "Failed to fill collection items"),
 });
 
 export const assignToOrderCommand = defineCommand({

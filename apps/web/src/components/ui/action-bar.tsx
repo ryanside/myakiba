@@ -190,11 +190,11 @@ function ActionBar(props: ActionBarProps) {
     const ownerDocument = rootRef.current?.ownerDocument ?? document;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        propsRef.current.onEscapeKeyDown?.(event);
-        if (!event.defaultPrevented) {
-          propsRef.current.onOpenChange?.(false);
-        }
+      if (event.key !== "Escape") return;
+      if (rootRef.current?.querySelector('[aria-expanded="true"]')) return;
+      propsRef.current.onEscapeKeyDown?.(event);
+      if (!event.defaultPrevented) {
+        propsRef.current.onOpenChange?.(false);
       }
     }
 

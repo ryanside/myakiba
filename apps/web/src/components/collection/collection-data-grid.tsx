@@ -78,8 +78,10 @@ export const CollectionDataGrid = () => {
   const {
     handleEditCollectionItem,
     handleDeleteCollectionItems,
+    handleFillCollectionItems,
     isCollectionPending,
     isDeletingCollectionItems,
+    isFillingCollectionItems,
   } = useCollectionMutations({ filters });
   const {
     handleAddCollectionItemsToOrder,
@@ -271,9 +273,11 @@ export const CollectionDataGrid = () => {
         onDeleteCollectionItems={handleDeleteCollectionItems}
         onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
         onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
+        onFillCollectionItems={handleFillCollectionItems}
         isDeletingCollectionItems={isDeletingCollectionItems}
         isAddingCollectionItemsToOrder={isMovingCollectionItems}
         isCreatingCollectionOrder={isSplittingCollectionItems}
+        isFillingCollectionItems={isFillingCollectionItems}
       />
       {viewMode === "grid" || viewMode === "gallery" ? (
         <div className="flex w-full items-center justify-center gap-3">

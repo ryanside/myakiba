@@ -1,5 +1,6 @@
 import { call } from "@/data/api";
 import { app } from "@/lib/treaty-client";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import { DEFAULT_LIMIT } from "@myakiba/contracts/shared/constants";
@@ -47,5 +48,11 @@ export function updateCollectionItem(values: CollectionItemFormValues) {
   });
   return call(request, {
     fallback: "Failed to update collection item",
+  });
+}
+
+export function fillCollectionItems(ids: readonly string[], fill: ItemFill) {
+  return call(app.api.collection.fill.put({ ids: [...ids], fill }), {
+    fallback: "Failed to fill collection items",
   });
 }

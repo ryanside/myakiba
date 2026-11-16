@@ -11,6 +11,7 @@ import {
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEffect, useSyncExternalStore } from "react";
+import type { ItemFill } from "@myakiba/contracts/collection/fill";
 import type { CollectionFilters } from "@myakiba/contracts/collection/schema";
 import type { CollectionItemFormValues } from "@myakiba/contracts/collection/types";
 import type { Saving } from "@/data/client";
@@ -21,7 +22,12 @@ configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
 
 type ServerItem = { readonly id: string; readonly itemTitle: string; readonly price: number };
-type Write = { readonly name: string; finish: () => void; fail: () => void };
+type Write = {
+  readonly name: string;
+  readonly args: readonly unknown[];
+  finish: () => void;
+  fail: () => void;
+};
 
 const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000 };
 const RIN = { id: "co-rin", itemTitle: "Rin", price: 500 };
@@ -61,6 +67,7 @@ const held =
     new Promise((resolve) => {
       server.writes.push({
         name,
+        args,
         finish: () => {
           apply(...args);
           resolve(Result.ok(null));
@@ -93,6 +100,12 @@ await mock.module("@/queries/collection", () => ({
   updateCollectionItem: held("edit", (values: CollectionItemFormValues) => {
     server.items = server.items.map((item) =>
       item.id === values.id ? { ...item, price: values.price } : item,
+    );
+  }),
+  fillCollectionItems: held("fill", (ids: string[], fill: ItemFill) => {
+    if (fill.field !== "price") return;
+    server.items = server.items.map((item) =>
+      ids.includes(item.id) ? { ...item, price: fill.value } : item,
     );
   }),
 }));
@@ -154,6 +167,12 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
             <li key={item.id}>{`${item.itemTitle} ${item.price}`}</li>
           ))}
         </ul>
+        <p aria-label="pending">
+          {items
+            .filter((item) => mutations.isCollectionPending(item.id))
+            .map((item) => item.itemTitle)
+            .join(",")}
+        </p>
       </>
     );
   }
@@ -282,11 +301,72 @@ describe("a Collection Item write on the collection page", () => {
   });
 });
 
+describe("a fill on the collection page", () => {
+  const FILL_PRICE: ItemFill = { field: "price", value: 1500 };
+  const pending = () => screen.getByLabelText("pending").textContent;
+
+  test("sends every selected id in one request and keeps the items pending through the refetch", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+
+    const filling = collection.act((actions) =>
+      actions.handleFillCollectionItems(new Set([MIKU.id, "co-unloaded"]), FILL_PRICE),
+    );
+    await waitFor(() => expect(pending()).toBe("Miku"));
+    expect(shown().items).toEqual(["Miku 1000", "Rin 500", "Len 200"]);
+
+    const releaseReads = holdListReads();
+    await answer(0, "finish");
+    await act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        }),
+    );
+    expect(pending()).toBe("Miku");
+
+    await releaseReads();
+    expect(await filling).toBe("ok");
+    expect({
+      sent: server.writes.map(({ name, args }) => [name, ...args]),
+      items: shown().items,
+      pending: pending(),
+      toasts: toastTitles(),
+    }).toEqual({
+      sent: [["fill", [MIKU.id, "co-unloaded"], FILL_PRICE]],
+      items: ["Miku 1500", "Rin 500", "Len 200"],
+      pending: "",
+      toasts: ["loading: Filling collection items...", "success: Filled Price on 2 items"],
+    });
+  });
+
+  test("marks the items pending under a filter too, and a failure shows the server's sentence", async () => {
+    const collection = renderCollectionPage({ shop: ["AmiAmi"] });
+    await loaded();
+
+    const filling = collection.act((actions) =>
+      actions.handleFillCollectionItems(new Set([RIN.id]), FILL_PRICE),
+    );
+    await waitFor(() => expect(pending()).toBe("Rin"));
+    await answer(0, "fail");
+    expect(await filling).toBe("error");
+    expect({ items: shown().items, pending: pending(), toasts: toastTitles() }).toEqual({
+      items: ["Miku 1000", "Rin 500", "Len 200"],
+      pending: "",
+      toasts: ["loading: Filling collection items...", "error: fill rejected by server"],
+    });
+  });
+});
+
 type CollectionHandlers = ReturnType<typeof useCollectionMutations> &
   ReturnType<typeof useCollectionOrderMutations>;
 const HANDLERS: readonly (readonly [string, (h: CollectionHandlers) => Saving])[] = [
   ["handleEditCollectionItem", (h) => h.handleEditCollectionItem(mikuAt(1500))],
   ["handleDeleteCollectionItems", (h) => h.handleDeleteCollectionItems(new Set([MIKU.id]))],
+  [
+    "handleFillCollectionItems",
+    (h) => h.handleFillCollectionItems(new Set([MIKU.id]), { field: "paid", value: true }),
+  ],
   [
     "handleAddCollectionItemsToOrder",
     (h) => h.handleAddCollectionItemsToOrder("od-target", new Set([MIKU.id])),
