@@ -11,6 +11,7 @@ import type {
   OrderFilters,
   OrderItemsQuery,
 } from "@myakiba/contracts/orders/schema";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 import type { Order, OrderItem, OrdersPage } from "@myakiba/contracts/orders/types";
 import type { Page } from "@myakiba/contracts/shared/pagination";
 import type { OrderStatus } from "@myakiba/contracts/shared/types";
@@ -135,6 +136,12 @@ export function deleteOrders(orderIds: Set<string>) {
     }),
     { fallback: "Failed to delete orders" },
   );
+}
+
+export function fillOrders(orderIds: readonly string[], fill: OrderFill) {
+  return call(app.api.orders.fill.put({ orderIds: [...orderIds], fill }), {
+    fallback: "Failed to fill orders",
+  });
 }
 
 export function deleteOrderItem(orderId: string, collectionId: string) {

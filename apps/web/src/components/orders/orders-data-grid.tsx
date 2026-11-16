@@ -91,6 +91,8 @@ export default function OrdersDataGrid() {
     handleDeleteItem,
     handleDeleteItems,
     handleMoveItem,
+    handleFillOrders,
+    handleFillItems,
     isOrderPending,
     isCollectionItemPending,
     isMerging,
@@ -98,6 +100,8 @@ export default function OrdersDataGrid() {
     isDeletingOrders,
     isDeletingItems,
     isMovingItems,
+    isFillingOrders,
+    isFillingItems,
   } = useOrdersMutations({ filters });
   const { currency, locale, dateFormat } = useUserPreferences();
 
@@ -278,11 +282,15 @@ export default function OrdersDataGrid() {
         onDeleteOrders={handleDeleteOrders}
         onMoveItem={handleMoveItem}
         onDeleteItems={handleDeleteItems}
+        onFillOrders={handleFillOrders}
+        onFillItems={handleFillItems}
         isMerging={isMerging}
         isSplitting={isSplitting}
         isDeletingOrders={isDeletingOrders}
         isDeletingItems={isDeletingItems}
         isMovingItems={isMovingItems}
+        isFillingOrders={isFillingOrders}
+        isFillingItems={isFillingItems}
       />
       {viewMode === "grid" || viewMode === "gallery" ? (
         <div className="flex w-full items-center justify-center gap-3">

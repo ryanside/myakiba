@@ -48,12 +48,14 @@ function RouteComponent(): ReactNode {
     handleDeleteItems,
     handleMoveItem,
     handleSplit,
+    handleFillItems,
     isOrderPending,
     isCollectionItemPending,
     isDeletingOrders,
     isDeletingItems,
     isMovingItems,
     isSplitting,
+    isFillingItems,
   } = useOrdersMutations();
 
   const pendingContextValue = useMemo(
@@ -171,10 +173,12 @@ function RouteComponent(): ReactNode {
         isSplitting={isSplitting}
         isDeletingItems={isDeletingItems}
         isDeletingOrders={isDeletingOrders}
+        isFillingItems={isFillingItems}
         onClearSelection={() => setSelectedOrderIdByCollectionId(new Map())}
         onMoveItem={handleMoveItem}
         onMoveToNew={handleSplit}
         onDeleteItems={handleDeleteItems}
+        onFillItems={handleFillItems}
       />
     </div>
   );

@@ -70,7 +70,7 @@ The number of Collection Items, not the number of copies saved inside them. Coll
 _Avoid_: Item count, count when the unit is unclear
 
 **Fill all**:
-Writing one value to one field of every selected row at once: the Add Page's rows, or saved Collection Items on the Collection page, including selected ones on pages not shown. Tags are added to each row's own tags; every other field is replaced, and a blank Shop or Notes or an empty date clears it. A fill of saved Collection Items changes all of them or none.
+Writing one value to one field of every selected row at once: the Add Page's rows, saved Collection Items on the Collection page, or Orders and Order Items on the Orders page and an Order's page, including selected ones on pages not shown. Tags are added to each row's own tags; every other field is replaced, and a blank Shop or Notes or an empty date clears it. An Order fills only its Cascade to Items fields and always cascades: the value is written to the Orders and to every item in them. A fill of saved rows changes all of them or none.
 _Avoid_: Bulk edit, batch update
 
 ### Orders

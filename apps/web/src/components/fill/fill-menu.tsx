@@ -5,7 +5,7 @@ import {
 } from "@myakiba/contracts/shared/constants";
 import type { CollectionStatus, Currency } from "@myakiba/contracts/shared/types";
 import type { Result } from "better-result";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { AmountInput, EnumSelect, LabeledField, TagsField } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,8 @@ const selectedRows = (count: number, noun: FillNoun) =>
 /** Selected rows of one kind, and how a fill of them starts, reads and writes. */
 export type FillGroup<Field extends FillFieldId> = {
   readonly key: string;
+  /** Titles the group's fields when another group also has a selection. */
+  readonly heading: string;
   readonly noun: FillNoun;
   readonly count: number;
   readonly fields: readonly Field[];
@@ -302,6 +304,7 @@ export function FillMenu<Field extends FillFieldId>({
   );
   const group = groups.find(({ key }) => key === chosen?.group);
   const filled = groups.filter(({ count }) => count > 0);
+  const listed = filled.length === 0 ? groups : filled;
   const change = (next: boolean) => {
     setOpen(next);
     if (!next) setChosen(null);
@@ -349,10 +352,10 @@ export function FillMenu<Field extends FillFieldId>({
                 ? "Select items to fill."
                 : `Write one value to ${filled.map(({ count, noun }) => selectedRows(count, noun)).join(" and ")}.`}
             </p>
-            {groups.flatMap(({ key, count: selected, fields }) =>
-              fields.map((field) => (
+            {listed.map(({ key, heading, count: selected, fields }) => {
+              const buttons = fields.map((field) => (
                 <Button
-                  key={`${key}:${field}`}
+                  key={field}
                   type="button"
                   variant="ghost"
                   className="justify-start font-normal"
@@ -372,8 +375,26 @@ export function FillMenu<Field extends FillFieldId>({
                 >
                   {FILL_FIELD[field].label}
                 </Button>
-              )),
-            )}
+              ));
+              return filled.length < 2 ? (
+                <Fragment key={key}>{buttons}</Fragment>
+              ) : (
+                <div
+                  key={key}
+                  role="group"
+                  aria-labelledby={`fill-group-${key}`}
+                  className="grid gap-0.5"
+                >
+                  <p
+                    id={`fill-group-${key}`}
+                    className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground"
+                  >
+                    {heading}
+                  </p>
+                  {buttons}
+                </div>
+              );
+            })}
           </div>
         )}
       </PopoverContent>

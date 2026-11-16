@@ -130,6 +130,7 @@ export function AddFillMenu({
   const count = c.commitRows.length;
   const rows: FillGroup<FieldId> = {
     key: "rows",
+    heading: "Rows",
     noun: { one: "row", other: "rows" },
     count,
     fields: fields.map(({ id }) => id),

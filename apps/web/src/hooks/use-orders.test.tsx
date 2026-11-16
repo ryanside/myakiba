@@ -54,8 +54,14 @@ await mock.module("@/queries/orders", () => ({
   deleteOrderItem: write("delete item"),
   deleteOrderItems: write("delete items"),
   moveItem: write("move items"),
+  fillOrders: write("fill orders"),
 }));
-await mock.module("@/queries/collection", () => ({ updateCollectionItem: write("edit item") }));
+await mock.module("@/queries/collection", () => ({
+  getCollection: async () => Result.ok({ items: [], totalCount: 0 }),
+  updateCollectionItem: write("edit item"),
+  deleteCollectionItems: write("delete collection items"),
+  fillCollectionItems: write("fill items"),
+}));
 
 const { useOrdersMutations } = await import("./use-orders");
 
@@ -87,6 +93,8 @@ const HANDLERS: readonly (readonly [string, (h: Handlers) => Saving])[] = [
   ["handleEditOrder", (h) => h.handleEditOrder({ orderId: "a" } as never, cascade)],
   ["handleEditItem", (h) => h.handleEditItem({ id: "a" } as never)],
   ["handleDeleteItem", (h) => h.handleDeleteItem("order", "a")],
+  ["handleFillOrders", (h) => h.handleFillOrders(ids, { field: "paid", value: true })],
+  ["handleFillItems", (h) => h.handleFillItems(ids, { field: "count", value: 2 })],
 ];
 
 const LISTS: readonly (readonly [string, OrderFilters])[] = [

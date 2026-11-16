@@ -1,4 +1,6 @@
 import type { ItemFill } from "@myakiba/contracts/collection/fill";
+import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
+import type { OrderFill } from "@myakiba/contracts/orders/fill";
 
 type FillEditorKind =
   | "status"
@@ -50,4 +52,11 @@ type CollectionFillField = Exclude<FillFieldId, "status">;
 /** The Collection page lists only Owned items, so a status fill would make them vanish. */
 export const COLLECTION_FILL_FIELDS: readonly CollectionFillField[] = FILL_FIELDS.filter(
   (field): field is CollectionFillField => field !== "status",
+);
+
+export const ORDER_ITEM_FILL_FIELDS: readonly FillFieldId[] = ["status", ...COLLECTION_FILL_FIELDS];
+
+/** An Order fills only the fields it cascades to its items. */
+export const ORDER_FILL_FIELDS: readonly OrderFill["field"][] = ORDER_ITEM_FILL_FIELDS.filter(
+  (field): field is OrderFill["field"] => ORDER_CASCADE_OPTIONS.some((option) => option === field),
 );
