@@ -30,8 +30,9 @@ Preconditions:
 - **Or close onboarding.** Click `role=dialog >> role=button[name='Close']` on any step. From source: it writes `has_seen_onboarding` the same way.
 - **Redirect while signed in.** `preview_navigate` to `<url>/login`. The URL ends at `/dashboard`.
 - **Sign out.** Click `role=button[name='Account menu']`, then `role=menuitem[name='Sign Out']`, then `preview_wait_for` with `urlIncludes: "/login"`. The toast reads `Signed out successfully`, the URL is `/login?redirect=<the page you left>`, and `/api/auth/get-session` answers `null`.
-- **Redirect while signed out.** `preview_navigate` to `<url>/collection`. The URL becomes `/login?redirect=%2Fcollection`. Signing in there lands on `/collection`.
-- **Unverified email.** `$H seed-user <run> unverified@example.com`, then `$H psql <run> "update \"user\" set email_verified = false where email = 'unverified@example.com'"`, then submit those credentials. The toast reads `Please verify your email address. Check your inbox for a verification email.` and the URL stays on `/login`.
+- **Redirect while signed out.** `preview_navigate` to `<url>/collection`. The URL becomes `/login?redirect=%2Fcollection`.
+- **Unverified email.** `$H seed-user <run> unverified@example.com`, then `$H psql <run> "update \"user\" set email_verified = false where email = 'unverified@example.com'"`, then submit those credentials on the login page. The toast reads `Please verify your email address. Check your inbox for a verification email.` and the URL stays on `/login?redirect=%2Fcollection`.
+- **Sign in after the redirect.** Type `verify@example.com` and `verify-password-1` with `clear: true` and click `Sign in`. The URL becomes `/collection`.
 - **Proof.** Save the post-login `preview_snapshot`, the get-session JSON and the sign-in log lines to `evidence/sign-in/`.
 
 ## Gotchas

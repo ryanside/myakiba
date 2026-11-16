@@ -36,7 +36,17 @@ wait_for() {
 build_id() {
   local sha
   sha=$(git -C "$repo" rev-parse --short HEAD)
-  if [ -n "$(git -C "$repo" status --porcelain)" ]; then echo "$sha-dirty"; else echo "$sha"; fi
+  if [ -z "$(git -C "$repo" status --porcelain)" ]; then
+    echo "$sha"
+    return
+  fi
+  # The hash covers every uncommitted change, so doctor sees an edit made after a build from a dirty checkout.
+  echo "$sha-dirty-$({
+    cd "$repo"
+    git status --porcelain
+    git diff --binary HEAD
+    git ls-files -z --others --exclude-standard | xargs -0 cat
+  } 2>/dev/null | git hash-object --stdin | cut -c1-8)"
 }
 
 free_port() {
@@ -57,16 +67,8 @@ up() {
   prefix=verify-$run
   url=http://localhost:$port
   [ "$port" = 80 ] && url=http://localhost
-  cat >"$dir/state.env" <<EOF
-run=$run
-prefix=$prefix
-label=verify-myakiba.run=$run
-port=$port
-url=$url
-s3_url=http://localhost:$s3_port
-build=$build
-repo=$repo
-EOF
+  printf '%s=%q\n' run "$run" prefix "$prefix" label "verify-myakiba.run=$run" port "$port" url "$url" \
+    s3_url "http://localhost:$s3_port" build "$build" repo "$repo" >"$dir/state.env"
   # shellcheck disable=SC1091
   . "$dir/state.env"
   echo "run $run: building images for build $build (logs in $dir/build-*.log)"
@@ -180,6 +182,8 @@ seed_items() {
     insert into item_release (item_id, date, type, price, price_currency)
       select id, current_date + 20, 'Standard', 2500000, 'JPY' from item
       where id like 'verifyitem_' and not exists (select 1 from item_release r where r.item_id = item.id);"
+  [ "$(psql_run "select count(*) from item i join \"user\" u on u.id = i.owner_id where i.id like 'verifyitem_' and u.email = '$email'")" = 3 ] ||
+    die "the seeded items belong to another account in this run. seed-items serves one account per run."
   psql_run "select external_id || '  ' || title from item where id like 'verifyitem_' order by external_id"
 }
 

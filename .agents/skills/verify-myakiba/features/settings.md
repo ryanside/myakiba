@@ -20,7 +20,7 @@ A user picks a display currency and a date format, and money and dates across th
 
 Preconditions:
 
-- Signed in per `sign-in.md`. For `settings-applied`, one Order exists per `orders.md`. For `settings-shops`, one Collection Item has a shop, per **Fill** in `collection.md`.
+- Signed in per `sign-in.md`. For `settings-applied`, one Order exists per `orders.md`. For `settings-shops`, one Collection Item has a shop: follow `collection.md` through **Fill** and stop before **Delete**.
 
 - **Open preferences.** `preview_navigate` to `<url>/settings?section=preferences`. The title is `Preferences Settings - myakiba`. The `Display currency` button reads `USD — United States Dollar`, `MM/DD/YYYY` has `aria-pressed="true"`, and `role=button[name='Save formats']` is disabled.
 - **Change currency.** Click `role=button[name='Display currency']`, type `JPY` into `input[placeholder='Search currencies...']`, then click `role=option[name=/JPY/]`. The button reads `JPY — Japanese Yen`.
@@ -36,6 +36,7 @@ Preconditions:
 - Saving goes through Better Auth's `update-user`, not a settings router. Look for that path in the logs.
 - The display currency relabels stored amounts and does not convert them. `$100.00` reads `¥100` after the switch. Release prices keep the currency they were listed in.
 - A new user starts with `USD` and `MM/DD/YYYY`.
+- The other feature files quote `$` amounts. Drive them before this file, or read `¥` where they say `$`.
 - The Shops section reads `No shops yet` until an Order or a Collection Item has a shop.
 - The other sections were read, not driven. `Account` has `Change password`, Google `Connect`, the device list and `Delete Account`. `Profile` has a `Username` textbox and `Save changes`. `Layout` sets each page's default view on this device.
 - From source: session data is cached in a cookie for up to 5 minutes, so another tab may show the old formats until it refetches the session.
