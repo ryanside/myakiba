@@ -63,7 +63,12 @@ export function SelectCell<Value extends string>({
           disabled={disabled}
           items={coloredItems}
         >
-          <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
+          <SelectTrigger
+            id={id}
+            size="sm"
+            className={QUIET_SELECT_TRIGGER_CLASS_NAME}
+            aria-label={label}
+          >
             <SelectValue>
               {(item: ColoredOption<Value>) => (
                 <span className="flex items-center gap-2">
@@ -99,7 +104,12 @@ export function SelectCell<Value extends string>({
         }}
         disabled={disabled}
       >
-        <SelectTrigger id={id} className={QUIET_SELECT_TRIGGER_CLASS_NAME} aria-label={label}>
+        <SelectTrigger
+          id={id}
+          size="sm"
+          className={QUIET_SELECT_TRIGGER_CLASS_NAME}
+          aria-label={label}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

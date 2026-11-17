@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DisclosureIcon } from "@/lib/icons";
 
+const fieldTriggerClassName = "bg-input/50 hover:bg-input/80 aria-expanded:bg-input/80";
+
 function FieldTrigger({ className, children, ...props }: ComponentProps<typeof Button>) {
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       type="button"
-      className={cn("press-none w-full justify-between", className)}
+      className={cn(fieldTriggerClassName, "press-none w-full justify-between", className)}
       {...props}
     >
       {children}
@@ -18,4 +20,4 @@ function FieldTrigger({ className, children, ...props }: ComponentProps<typeof B
   );
 }
 
-export { FieldTrigger };
+export { FieldTrigger, fieldTriggerClassName };

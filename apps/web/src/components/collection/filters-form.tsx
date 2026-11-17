@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { VocabularyFilterField } from "@/components/vocabulary-fields";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
-import { FieldTrigger } from "@/components/ui/field-trigger";
+import { cn } from "@/lib/utils";
+import { FieldTrigger, fieldTriggerClassName } from "@/components/ui/field-trigger";
 import { Badge } from "@/components/reui/badge";
 import {
   DropdownMenu,
@@ -202,13 +203,13 @@ function FiltersDraft({
 
   return (
     <form onSubmit={formSubmitHandler(form)}>
-      <DialogHeader className="pb-4 px-4">
+      <DialogHeader className="px-6 pb-4">
         <DialogTitle>Filters</DialogTitle>
         <DialogDescription>Apply filters to narrow down your collection</DialogDescription>
       </DialogHeader>
 
-      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
-        <div className="grid gap-4 px-4">
+      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full scroll-fade-b">
+        <div className="grid gap-4 px-6">
           {/* Shipping Method */}
           <form.Field
             name="shipMethod"
@@ -370,11 +371,14 @@ function FiltersDraft({
                       <PopoverTrigger
                         render={
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             role="combobox"
                             aria-controls={entriesListId}
                             aria-expanded={entriesPopoverOpen}
-                            className="press-none w-full justify-between"
+                            className={cn(
+                              fieldTriggerClassName,
+                              "press-none w-full justify-between",
+                            )}
                           >
                             Select entries...
                             <HugeiconsIcon
@@ -708,7 +712,7 @@ function FiltersDraft({
         </div>
       </ScrollArea>
 
-      <DialogFooter className="px-4! mx-0">
+      <DialogFooter className="px-6">
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([, isSubmitting]) => (

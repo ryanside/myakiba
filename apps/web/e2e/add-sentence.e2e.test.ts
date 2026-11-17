@@ -243,7 +243,7 @@ async function sizeTo(page: Page, viewport: number, by: "viewport" | "frame") {
 
 function expectOneLine(layout: Layout, context: string) {
   const { row, parts } = layout;
-  expect({ context, height: row.height }).toEqual({ context, height: 32 });
+  expect({ context, height: row.height }).toEqual({ context, height: 36 });
   expect({ context, overflow: layout.overflow, page: layout.pageOverflow }).toEqual({
     context,
     overflow: false,

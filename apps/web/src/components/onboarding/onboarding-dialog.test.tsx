@@ -206,13 +206,13 @@ test("every onboarding footer button is the standard button height", async () =>
   await openDashboard(false);
   const welcomeFooter = ["Close", "Continue"].map((name) => screen.getByRole("button", { name }));
   for (const button of welcomeFooter) {
-    expect(classTokens(button), `${button.textContent} on the welcome step`).toContain("h-8");
+    expect(classTokens(button), `${button.textContent} on the welcome step`).toContain("h-9");
   }
 
   await continueToAddItems();
   for (const name of ["Close", "Back", "Get started"]) {
     expect(classTokens(screen.getByRole("button", { name })), `${name} on the last step`).toContain(
-      "h-8",
+      "h-9",
     );
   }
 });

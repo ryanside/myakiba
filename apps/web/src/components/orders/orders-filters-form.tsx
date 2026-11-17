@@ -537,16 +537,16 @@ function OrdersFiltersDraft({
 
   return (
     <form onSubmit={handleSubmit}>
-      <DialogHeader className="pb-4 px-4">
+      <DialogHeader className="px-6 pb-4">
         <DialogTitle>Filters</DialogTitle>
         <DialogDescription>Apply filters to narrow down your orders</DialogDescription>
       </DialogHeader>
 
-      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full">
-        <div className="grid gap-4 px-4">{formFieldsContent}</div>
+      <ScrollArea className="overflow-auto max-h-[60vh] pb-4 w-full scroll-fade-b">
+        <div className="grid gap-4 px-6">{formFieldsContent}</div>
       </ScrollArea>
 
-      <DialogFooter className="px-4! mx-0">
+      <DialogFooter className="px-6">
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([, isSubmitting]) => (

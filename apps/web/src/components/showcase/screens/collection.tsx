@@ -195,7 +195,7 @@ const CELL_BUTTON = cn(
 
 function Checkbox(): ReactNode {
   return (
-    <span className="relative mb-0.5 flex size-4 shrink-0 items-center justify-center rounded-xs border border-input dark:bg-input/30" />
+    <span className="relative mb-0.5 flex size-4 shrink-0 items-center justify-center rounded-xs border border-transparent bg-input/90" />
   );
 }
 

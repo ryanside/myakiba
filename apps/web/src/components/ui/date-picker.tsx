@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@myakiba/utils/date-only";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { fieldTriggerClassName } from "@/components/ui/field-trigger";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface DatePickerProps {
@@ -48,10 +49,11 @@ export function DatePicker({
           <Button
             id={id}
             name={name}
-            variant="outline"
+            variant="ghost"
             data-empty={!dateValue}
             onBlur={onBlur}
             className={cn(
+              fieldTriggerClassName,
               "data-[empty=true]:text-muted-foreground press-none w-full min-w-0 justify-start overflow-hidden text-left font-normal",
               className,
             )}

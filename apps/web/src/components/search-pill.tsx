@@ -19,7 +19,7 @@ export function SearchPill({
       <DebouncedInput
         {...props}
         ref={ref}
-        className="h-8 rounded-full border-transparent bg-muted ps-9 pe-3.5 shadow-none dark:bg-muted"
+        className="h-9 rounded-full border-transparent bg-muted ps-9 pe-3.5 shadow-none dark:bg-muted"
       />
     </div>
   );

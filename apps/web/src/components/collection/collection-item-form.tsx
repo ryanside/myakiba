@@ -118,7 +118,7 @@ function CollectionItemFormContent({
           <SheetTitle>Edit Item</SheetTitle>
           <SheetDescription>{itemData.itemTitle}</SheetDescription>
         </SheetHeader>
-        <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">
+        <div className="overflow-y-auto max-h-[70vh] px-4 scroll-fade-b">
           <div className="flex flex-col gap-3 p-2">
             <FormSection title="Basics">
               <div className="grid grid-cols-2 gap-3">

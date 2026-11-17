@@ -217,7 +217,7 @@ const CELL_BUTTON =
 
 function Checkbox() {
   return (
-    <span className="mb-0.5 flex size-4 shrink-0 rounded-xs border border-input dark:bg-input/30" />
+    <span className="mb-0.5 flex size-4 shrink-0 rounded-xs border border-transparent bg-input/90" />
   );
 }
 
@@ -228,7 +228,7 @@ function PaidBox({ paid }: { readonly paid: boolean }) {
         "flex size-4 shrink-0 items-center justify-center rounded-[4px] border",
         paid
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-input dark:bg-input/30",
+          : "border-transparent bg-input/90",
       )}
     >
       {paid ? <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" /> : null}

@@ -72,7 +72,7 @@ export function SettingsSearchField({ query }: { readonly query: string }) {
 
   return (
     <div role="search" className="flex flex-col">
-      <InputGroup className="h-8 rounded-full border-transparent bg-muted dark:bg-muted">
+      <InputGroup className="h-9 rounded-full border-transparent bg-muted dark:bg-muted">
         <InputGroupAddon>
           <HugeiconsIcon icon={Search01Icon} aria-hidden="true" />
         </InputGroupAddon>

@@ -54,7 +54,7 @@ export function ListsPicker({
   const held = namedTargets(wishlist.checked ? "Wishlist" : null, chosen);
   const heldName = held === null ? "Wishlist and Lists" : `Also on ${held}`;
   const rowClass =
-    "flex cursor-pointer items-center gap-2.5 rounded-inner px-2 py-1 text-sm hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50";
+    "flex cursor-pointer items-center gap-2.5 rounded-inner px-3 py-2 text-sm font-medium hover:bg-muted has-disabled:cursor-not-allowed has-disabled:opacity-50";
   let tip = `Lists: ${titlesOf(chosen)}`;
   if (folded) tip = heldName;
   else if (chosen.length === 0) tip = name;
@@ -131,7 +131,7 @@ export function ListsPicker({
         />
         <PopoverContent
           aria-label={folded ? "Wishlist and Lists" : "Lists"}
-          className="w-72 max-w-[calc(100vw-2rem)] gap-0 rounded-(--radius-outer) p-(--inset) [--inset:--spacing(1)] [--radius-outer:var(--radius-lg)]"
+          className="w-72 max-w-[calc(100vw-2rem)] gap-0 rounded-(--radius-outer) p-(--inset) [--inset:--spacing(1.5)] [--radius-outer:var(--radius-3xl)]"
           align="end"
         >
           {folded ? (

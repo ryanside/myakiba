@@ -4,6 +4,8 @@ import { MoneyField } from "@/components/money-field";
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { fieldTriggerClassName } from "@/components/ui/field-trigger";
 import {
   StatusButton,
   closesOnSuccess,
@@ -224,7 +226,7 @@ function UnifiedItemMoveFormContent({
 
   return (
     <DialogContent className="sm:max-w-lg! px-0">
-      <DialogHeader className="px-4">
+      <DialogHeader className="px-6">
         <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogDescription>
           {actionLabel} the selected {selectedCount} item{selectedCount === 1 ? "" : "s"} to an
@@ -233,7 +235,7 @@ function UnifiedItemMoveFormContent({
       </DialogHeader>
 
       <div className="grid gap-4">
-        <div className="grid gap-2 px-4">
+        <div className="grid gap-2 px-6">
           <Label>Destination</Label>
           <RadioGroup
             value={moveMode}
@@ -257,7 +259,7 @@ function UnifiedItemMoveFormContent({
         {moveMode === "existing" ? (
           <form onSubmit={formSubmitHandler(existingOrderForm)}>
             <ScrollArea className="gap-4 py-4 mb-4 w-full overflow-auto">
-              <div className="px-4">
+              <div className="px-6">
                 <existingOrderForm.Field
                   name="targetOrderId"
                   validators={{
@@ -270,11 +272,14 @@ function UnifiedItemMoveFormContent({
                         <PopoverTrigger
                           render={
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               role="combobox"
                               aria-controls={targetOrderListId}
                               aria-expanded={popoverOpen}
-                              className="press-none w-full justify-between"
+                              className={cn(
+                                fieldTriggerClassName,
+                                "press-none w-full justify-between",
+                              )}
                               type="button"
                             >
                               {field.state.value
@@ -384,7 +389,7 @@ function UnifiedItemMoveFormContent({
                 />
               </div>
             </ScrollArea>
-            <DialogFooter className="px-4! mx-0">
+            <DialogFooter className="px-6">
               <existingOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (
@@ -414,7 +419,7 @@ function UnifiedItemMoveFormContent({
         ) : (
           <form onSubmit={formSubmitHandler(newOrderForm)}>
             <div className="overflow-y-auto w-full max-h-[60vh] py-2 scroll-fade-b">
-              <div className="flex flex-col gap-3 px-4">
+              <div className="flex flex-col gap-3 px-6">
                 <FormSection title="Basics">
                   <div className="grid grid-cols-2 gap-3">
                     <newOrderForm.Field
@@ -694,7 +699,7 @@ function UnifiedItemMoveFormContent({
                 </FormSection>
               </div>
             </div>
-            <DialogFooter className="px-4! mx-0">
+            <DialogFooter className="px-6">
               <newOrderForm.Subscribe
                 selector={(state) => [state.isSubmitting]}
                 children={([isSubmitting]) => (

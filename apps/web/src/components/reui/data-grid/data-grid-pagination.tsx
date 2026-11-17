@@ -49,7 +49,7 @@ function DataGridPagination(props: DataGridPaginationProps): React.JSX.Element {
 
   const mergedProps: DataGridPaginationProps = { ...defaultProps, ...props };
 
-  const btnBaseClasses = "size-7 p-0 text-sm";
+  const btnBaseClasses = "size-8 p-0 text-sm";
   const btnArrowClasses = `${btnBaseClasses} rtl:transform rtl:rotate-180`;
   const pageIndex = table.getState().pagination.pageIndex;
   const pageSize = table.getState().pagination.pageSize;

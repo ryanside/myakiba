@@ -76,7 +76,7 @@ export function InlineReleaseCell({
         }}
         disabled={disabled}
       >
-        <SelectTrigger className={QUIET_SELECT_TRIGGER_CLASS_NAME}>
+        <SelectTrigger size="sm" className={QUIET_SELECT_TRIGGER_CLASS_NAME}>
           <SelectValue placeholder="Select release">
             {displayReleaseId && displayData.date && (
               <span className="text-sm tabular-nums">

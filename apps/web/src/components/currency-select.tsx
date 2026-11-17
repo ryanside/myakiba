@@ -1,6 +1,8 @@
 import { useId, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
+import { fieldTriggerClassName } from "@/components/ui/field-trigger";
+import { cn } from "@/lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -41,13 +43,13 @@ export function CurrencySelect({
         render={
           <Button
             id={id}
-            variant="outline"
+            variant="ghost"
             aria-controls={listId}
             aria-expanded={open}
             aria-invalid={invalid || undefined}
             disabled={disabled}
             onBlur={onBlur}
-            className="press-none justify-between"
+            className={cn(fieldTriggerClassName, "press-none justify-between")}
           >
             <span className="min-w-0 truncate text-left">
               <span className="font-medium">{value}</span>

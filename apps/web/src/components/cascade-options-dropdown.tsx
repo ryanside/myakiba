@@ -1,5 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
+import { fieldTriggerClassName } from "@/components/ui/field-trigger";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,8 +34,8 @@ export function CascadeOptionsDropdown({
       <DropdownMenuTrigger
         render={
           <Button
-            variant="outline"
-            className="max-w-66 truncate justify-between hover:bg-background active:bg-background data-open:bg-background"
+            variant="ghost"
+            className={cn(fieldTriggerClassName, "max-w-66 truncate justify-between")}
           >
             {cascadeDisplayText}
             <HugeiconsIcon icon={DisclosureIcon} data-icon="inline-end" className="z-10" />

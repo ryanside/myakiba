@@ -89,7 +89,7 @@ export function DataTablePagination({
     totalPages: lastPage,
     currentPage: Math.min(currentPage, lastPage),
   });
-  const buttonClasses = "size-7 p-0 text-sm";
+  const buttonClasses = "size-8 p-0 text-sm";
   const arrowButtonClasses = `${buttonClasses} rtl:transform rtl:rotate-180`;
 
   return (
@@ -114,7 +114,7 @@ export function DataTablePagination({
             <PaginationItem key={page}>
               <span
                 aria-hidden
-                className="flex size-7 items-center justify-center text-sm text-muted-foreground"
+                className="flex size-8 items-center justify-center text-sm text-muted-foreground"
               >
                 ...
               </span>

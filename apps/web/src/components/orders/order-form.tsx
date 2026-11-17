@@ -554,7 +554,7 @@ function OrderFormContent(
               {orderData ? orderData.title : "Edit the selected order."}
             </SheetDescription>
           </SheetHeader>
-          <div className="overflow-y-auto max-h-[70vh] px-2 scroll-fade-b">{formFields}</div>
+          <div className="overflow-y-auto max-h-[70vh] px-4 scroll-fade-b">{formFields}</div>
           <SheetFooter className="flex flex-row w-full">
             <form.Subscribe
               selector={(state) => [state.isSubmitting]}

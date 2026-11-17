@@ -145,7 +145,7 @@ function ChartPanel({ now }: { readonly now: Date }) {
       className="h-[340px]"
       panelClassName="flex min-h-0 flex-1 flex-col gap-1"
       action={
-        <span className="flex h-8 w-44 items-center justify-between gap-1.5 rounded-full border border-input bg-transparent py-2 pr-2.5 pl-3 text-sm whitespace-nowrap dark:bg-input/30">
+        <span className="flex h-9 w-44 items-center justify-between gap-1.5 rounded-full border border-transparent bg-input/50 py-2 pr-2.5 pl-3 text-sm whitespace-nowrap">
           <span className="flex flex-1 items-center gap-1.5 text-left">Cumulative</span>
           <HugeiconsIcon
             icon={DisclosureIcon}

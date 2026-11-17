@@ -159,7 +159,7 @@ function RouteComponent(): ReactNode {
                   value={search}
                   onChange={handleSearchChange}
                   placeholder={`Search ${sectionName}...`}
-                  className="pl-8 h-8 text-sm"
+                  className="pl-8 h-9 text-sm"
                 />
               </div>
             </div>

@@ -12,7 +12,7 @@ test("a popover has its own surface, so what is behind it does not show through"
     </Popover>,
   );
   const { classList } = screen.getByText("Inside");
-  for (const surface of ["bg-popover", "rounded-lg", "shadow-md", "ring-1"]) {
+  for (const surface of ["bg-popover", "rounded-3xl", "shadow-lg", "ring-1"]) {
     expect(classList.contains(surface)).toBe(true);
   }
 });

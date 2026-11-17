@@ -11,7 +11,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground hover:bg-primary/85 aria-expanded:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
         outline:
-          "border-border bg-card text-foreground hover:bg-muted aria-expanded:bg-muted dark:border-input dark:bg-transparent dark:hover:bg-muted",
+          "border-border bg-card text-foreground hover:bg-muted aria-expanded:bg-muted dark:bg-transparent dark:hover:bg-muted",
         secondary:
           "bg-muted text-foreground hover:bg-[color-mix(in_oklab,var(--color-foreground)_8%,var(--color-muted))] aria-expanded:bg-[color-mix(in_oklab,var(--color-foreground)_8%,var(--color-muted))]",
         ghost:
@@ -22,13 +22,13 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "h-8 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+          "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xs: "h-6 gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 px-3 text-[0.8125rem] has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "h-8 gap-1 px-3 text-[0.8125rem] has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-10 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5",
-        icon: "size-8",
+        icon: "size-9",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-7",
+        "icon-sm": "size-8",
         "icon-lg": "size-10",
       },
     },
