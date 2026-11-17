@@ -22,7 +22,6 @@ dist/
 /.next/
 .vercel
 .cursor/
-.agents/
 /plans/
 /docs/
 skills-lock.json
