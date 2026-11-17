@@ -61,6 +61,8 @@ its information already filled in. Choose where your picks go: your collection, 
 order, your wishlist, or your lists. Set the price, count, and condition for each item, then add
 them all at once.
 
+https://github.com/user-attachments/assets/7b902fd9-fafe-4764-aecc-a6eb026b95cf
+
 ![Add](apps/web/public/add-light.webp)
 
 ### Dashboard
