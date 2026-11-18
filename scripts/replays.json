@@ -5051,6 +5051,26 @@
         "every count and sum the contracts call a number is a JSON number > the Analytics shops page sends its totals and each row's count and spend as numbers",
         "every count and sum the contracts call a number is a JSON number > the Analytics scales page sends its totals and each row's count and spend as numbers"
       ]
+    },
+    {
+      "fix": "ffe35d1290d6e05827218619b708f8ed3397412b",
+      "bug": "A Collection Item outside an Order could be edited or filled to Ordered or Shipped, which hid it from the Collection page and every Order while it still counted as on order.",
+      "test": "apps/server/src/routers/collection/routes.test.ts",
+      "fixed": [
+        "an edit to Ordered of a Collection Item outside an Order answers 409 and leaves it as it was",
+        "an edit to Shipped of a Collection Item outside an Order answers 409 and leaves it as it was",
+        "an edit to Shipped of an Order Item its Order drops meanwhile answers 409 and leaves it Owned"
+      ]
+    },
+    {
+      "fix": "ffe35d1290d6e05827218619b708f8ed3397412b",
+      "bug": "A Collection Item outside an Order could be edited or filled to Ordered or Shipped, which hid it from the Collection page and every Order while it still counted as on order.",
+      "test": "apps/server/src/routers/collection/fill.test.ts",
+      "fixed": [
+        "only an Order Item can be Ordered or Shipped > an Ordered fill that lists a Collection Item outside an Order answers 409 and changes no row",
+        "only an Order Item can be Ordered or Shipped > a Shipped fill that lists a Collection Item outside an Order answers 409 and changes no row",
+        "only an Order Item can be Ordered or Shipped > a Shipped fill of an Order Item its Order drops meanwhile answers 409 and leaves it Owned"
+      ]
     }
   ],
   "lint": [
