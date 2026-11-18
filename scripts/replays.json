@@ -5071,6 +5071,16 @@
         "only an Order Item can be Ordered or Shipped > a Shipped fill that lists a Collection Item outside an Order answers 409 and changes no row",
         "only an Order Item can be Ordered or Shipped > a Shipped fill of an Order Item its Order drops meanwhile answers 409 and leaves it Owned"
       ]
+    },
+    {
+      "fix": "f12a284026f76aebeba82fcd8719ec4b87e48303",
+      "bug": "Deleting or merging Orders set order_id to null on an item that turned Ordered or Shipped, or joined one of those Orders, while the delete or merge ran, which left it Ordered or Shipped outside any Order.",
+      "test": "apps/server/src/routers/orders/loose-items.test.ts",
+      "fixed": [
+        "deleting an Order never leaves an Ordered or Shipped Collection Item outside an Order > an Owned Order Item shipped meanwhile is deleted with its Order",
+        "deleting an Order never leaves an Ordered or Shipped Collection Item outside an Order > an Ordered item added to the Order meanwhile is deleted with it",
+        "merging Orders moves an Ordered item added to one of them meanwhile"
+      ]
     }
   ],
   "lint": [
