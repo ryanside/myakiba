@@ -317,6 +317,18 @@ test("a saving pick shows its MFC title and spinner, with nothing to click", asy
   expect(screen.queryByRole("button", { name: /Retry/u })).toBeNull();
 });
 
+test("a pick being discarded shows its MFC title and spinner, with nothing to click", async () => {
+  renderPick({
+    mfcItemId: 98_777 as PickRow["mfcItemId"],
+    title: "Picked Miku",
+    state: "discarding",
+    reason: { kind: "unsaved" },
+  });
+  await screen.findByText("Discarding…");
+  expect(screen.getByText("Picked Miku")).toBeDefined();
+  expect(screen.queryByRole("button")).toBeNull();
+});
+
 test("a rejected pick shows the server's reason, Retry, Discard and a link to MFC", async () => {
   const user = userEvent.setup();
   const calls = renderPick(failed({ kind: "rejected", message: "The page is broken" }));

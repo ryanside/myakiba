@@ -6,13 +6,23 @@ import type { PickFailure } from "@/lib/pick-failure";
 
 const PICKS_LOCK = "myakiba-picks";
 
-/** A pick on its way into the Item Database. A saved pick leaves the rows and becomes a draft row. */
+/**
+ * A pick on its way into the Item Database. A saved pick leaves the rows and becomes a draft row.
+ * A discarded pick leaves once the extension drops it, and comes back failed as it was if the
+ * extension does not answer.
+ */
 export type PickRow =
   | { readonly mfcItemId: MfcItemId; readonly title: string | null; readonly state: "saving" }
   | {
       readonly mfcItemId: MfcItemId;
       readonly title: string | null;
       readonly state: "failed";
+      readonly reason: PickFailure;
+    }
+  | {
+      readonly mfcItemId: MfcItemId;
+      readonly title: string | null;
+      readonly state: "discarding";
       readonly reason: PickFailure;
     };
 
@@ -139,16 +149,20 @@ export function createPickIntake(deps: PickIntakeDeps) {
       context: PickContext,
     ): Promise<Result<void, PickFailure>> => {
       const entry = held.get(mfcItemId);
-      if (entry === undefined || entry.row.state === "saving") return Result.ok();
+      if (entry === undefined || entry.row.state !== "failed") return Result.ok();
       const saved = await save(entry.pick, context);
       if (saved.isOk()) await deps.bridge.picksSaved([entry.pick.captureId]);
       return saved;
     },
     discard: async (mfcItemId: MfcItemId): Promise<Result<void, PickStopped>> => {
       const entry = held.get(mfcItemId);
-      if (entry === undefined) return Result.ok();
+      if (entry === undefined || entry.row.state !== "failed") return Result.ok();
+      show(entry.pick, { ...entry.row, state: "discarding" });
       const discarded = await deps.bridge.picksDiscarded([entry.pick.captureId]);
-      if (discarded.isErr()) return Result.err(STOPPED);
+      if (discarded.isErr()) {
+        fail(entry.pick, entry.row.reason);
+        return Result.err(STOPPED);
+      }
       held.delete(mfcItemId);
       changed();
       return Result.ok();
