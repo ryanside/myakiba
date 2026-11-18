@@ -35,7 +35,9 @@ export function PickStatus({
         {copy ? (
           <span className="text-xs text-pretty text-muted-foreground">{copy.text}</span>
         ) : (
-          <span className="text-xs text-muted-foreground">Saving…</span>
+          <span className="text-xs text-muted-foreground">
+            {pick.state === "discarding" ? "Discarding…" : "Saving…"}
+          </span>
         )}
       </div>
       {copy ? (
