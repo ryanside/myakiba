@@ -97,21 +97,40 @@ export const Vocabulary = {
       return Result.ok(vocabulary);
     },
   ),
+  /**
+   * Renames the shop on every Order and Collection Item that has it. It locks the Orders, then
+   * the items, each in id order, as an Order fill, delete and merge do, so a rename waits for
+   * them instead of deadlocking.
+   */
   renameShop: command(
     { action: "vocabulary.shops.rename", failure: "Failed to rename the shop" },
     async (scope, { from, to }: RenameShop) => {
       const userId = scope.viewer.userId;
       const updatedAt = new Date();
-      const collectionItems = await scope.tx
-        .update(collection)
-        .set({ shop: to, updatedAt })
-        .where(and(eq(collection.userId, userId), inArray(collection.shop, from)))
-        .returning({ id: collection.id });
+      const renamedOrders = and(eq(order.userId, userId), inArray(order.shop, from));
+      const renamedItems = and(eq(collection.userId, userId), inArray(collection.shop, from));
+      await scope.tx
+        .select({ id: order.id })
+        .from(order)
+        .where(renamedOrders)
+        .orderBy(asc(order.id))
+        .for("no key update");
+      await scope.tx
+        .select({ id: collection.id })
+        .from(collection)
+        .where(renamedItems)
+        .orderBy(asc(collection.id))
+        .for("no key update");
       const orders = await scope.tx
         .update(order)
         .set({ shop: to, updatedAt })
-        .where(and(eq(order.userId, userId), inArray(order.shop, from)))
+        .where(renamedOrders)
         .returning({ id: order.id });
+      const collectionItems = await scope.tx
+        .update(collection)
+        .set({ shop: to, updatedAt })
+        .where(renamedItems)
+        .returning({ id: collection.id });
       const renamed: ShopUses = {
         collectionItems: collectionItems.length,
         orders: orders.length,

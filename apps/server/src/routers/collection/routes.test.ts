@@ -8,7 +8,7 @@ import * as figureSchema from "@myakiba/db/schema/figure";
 import { createTestDatabase } from "../../../test/database";
 import type { CollectionUpdateType } from "./model";
 
-const { collection, item, item_release } = figureSchema;
+const { collection, item, item_release, order } = figureSchema;
 
 initLogger({ enabled: false });
 
@@ -186,11 +186,11 @@ async function deletingRelease(releaseId: string) {
   };
 }
 
-async function waitForALockOn(table: string) {
+async function waitForALockWait() {
   for (;;) {
     const [waiting] = await db.execute<{ count: number }>(
       sql`SELECT count(*)::int AS count FROM pg_stat_activity
-        WHERE wait_event_type = 'Lock' AND query ILIKE ${`update "${table}"%`}`,
+        WHERE wait_event_type = 'Lock' AND datname = current_database()`,
     );
     if (waiting && waiting.count > 0) return;
     await Bun.sleep(10);
@@ -204,7 +204,7 @@ test("an edit that selects a release an Item Refresh deletes meanwhile answers 4
   const refresh = await deletingRelease(release);
 
   const edited = call("PUT", { ...edit, releaseId: release });
-  await waitForALockOn("collection");
+  await waitForALockWait();
   await refresh.commit();
 
   expect(await edited).toEqual({
@@ -212,6 +212,59 @@ test("an edit that selects a release an Item Refresh deletes meanwhile answers 4
     body: "A chosen release is not a release of its item",
   });
   expect(await db.select().from(collection)).toEqual(before);
+});
+
+const NEEDS_ORDER = { status: 409, body: "Only an Order Item can be Ordered or Shipped" };
+
+async function addToOrder() {
+  await db.insert(order).values({ id: "order-1", userId, title: "AmiAmi preorder" });
+  await db.update(collection).set({ orderId: "order-1" }).where(eq(collection.id, "c-1"));
+}
+
+test.each([
+  ["an Owned edit of a Collection Item outside an Order", "Owned", false],
+  ["an Ordered edit of an Order Item", "Ordered", true],
+  ["a Shipped edit of an Order Item", "Shipped", true],
+] as const)("%s saves it", async (_, status, inOrder) => {
+  if (inOrder) await addToOrder();
+
+  expect(await call("PUT", { ...edit, status })).toMatchObject({
+    status: 200,
+    body: { update: { status } },
+  });
+});
+
+test.each(["Ordered", "Shipped"] as const)(
+  "an edit to %s of a Collection Item outside an Order answers 409 and leaves it as it was",
+  async (status) => {
+    const before = await db.select().from(collection);
+
+    expect(await call("PUT", { ...edit, status })).toEqual(NEEDS_ORDER);
+
+    expect(await db.select().from(collection)).toEqual(before);
+  },
+);
+
+test("an edit to Shipped of an Order Item its Order drops meanwhile answers 409 and leaves it Owned", async () => {
+  await addToOrder();
+  const detached = Promise.withResolvers<null>();
+  const commit = Promise.withResolvers<null>();
+  const detaching = db.transaction(async (tx) => {
+    await tx.update(collection).set({ orderId: null }).where(eq(collection.id, "c-1"));
+    detached.resolve(null);
+    await commit.promise;
+  });
+  await detached.promise;
+
+  const edited = call("PUT", { ...edit, status: "Shipped" });
+  await waitForALockWait();
+  commit.resolve(null);
+  await detaching;
+
+  expect(await edited).toEqual(NEEDS_ORDER);
+  expect(await db.select().from(collection)).toMatchObject([
+    { id: "c-1", orderId: null, status: "Owned" },
+  ]);
 });
 
 test("a delete answers its row with ISO timestamp strings", async () => {

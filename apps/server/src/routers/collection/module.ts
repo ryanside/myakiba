@@ -2,6 +2,7 @@ import { and, arrayContains, asc, eq, gte, ilike, inArray, lte, sql } from "driz
 import { advanceOrderReleaseDatesForCollectionItems } from "@myakiba/db/order-release-date";
 import { collection, entry_to_item, item, item_release } from "@myakiba/db/schema/figure";
 import type { FillItemsBody } from "@myakiba/contracts/collection/fill";
+import type { CollectionStatus } from "@myakiba/contracts/shared/types";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { Result } from "better-result";
 import { command, paginate, query } from "@/domain/kernel";
@@ -12,12 +13,17 @@ import { guardedWrite } from "@/lib/owner-guard";
 import { CollectionItemNotFound } from "./errors/collection-item-not-found";
 import { CollectionItemTagsFull } from "./errors/collection-item-tags-full";
 import { CollectionItemsNotFound } from "./errors/collection-items-not-found";
+import { StatusNeedsOrder } from "./errors/status-needs-order";
 import type { CollectionQuery, CollectionUpdateType } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const withTimestampStrings = <T extends { readonly createdAt: Date; readonly updatedAt: Date }>(
   row: T,
 ) => ({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
+
+/** A Collection Item outside an Order has arrived, so only an Order Item is Ordered or Shipped. */
+const statusFitsOrder = (status: CollectionStatus, orderId: string | null) =>
+  status === "Owned" || orderId !== null;
 
 export const Collection = {
   list: query(
@@ -198,10 +204,18 @@ export const Collection = {
       scope.log.set({ collection: { id: input.id } });
       const selected = and(eq(collection.userId, scope.viewer.userId), eq(collection.id, input.id));
       const [existing] = await scope.tx
-        .select({ itemId: collection.itemId, releaseId: collection.releaseId })
+        .select({
+          itemId: collection.itemId,
+          orderId: collection.orderId,
+          releaseId: collection.releaseId,
+        })
         .from(collection)
-        .where(selected);
+        .where(selected)
+        .for("no key update");
       if (!existing) return Result.err(new CollectionItemNotFound());
+      if (!statusFitsOrder(input.update.status, existing.orderId)) {
+        return Result.err(new StatusNeedsOrder());
+      }
       if (input.update.releaseId !== null) {
         const [release] = await scope.tx
           .select({ id: item_release.id })
@@ -256,6 +270,7 @@ export const Collection = {
       const columns = fillColumns(input.fill);
       const locked = await scope.tx
         .select({
+          orderId: collection.orderId,
           tagCount:
             columns.tags === undefined ? sql<number>`0` : sql<number>`cardinality(${columns.tags})`,
         })
@@ -266,6 +281,10 @@ export const Collection = {
       if (!foundAll(input.ids, locked.length)) return Result.err(new CollectionItemsNotFound());
       if (locked.some(({ tagCount }) => tagCount > WRITE_LIMITS.tags)) {
         return Result.err(new CollectionItemTagsFull());
+      }
+      const { status } = columns;
+      if (status !== undefined && locked.some(({ orderId }) => !statusFitsOrder(status, orderId))) {
+        return Result.err(new StatusNeedsOrder());
       }
 
       await scope.tx

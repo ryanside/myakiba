@@ -116,6 +116,7 @@ void (true satisfies Equal<
     update:
       | S<404, "A chosen release is not a release of its item">
       | S<404, "Collection item not found">
+      | S<409, "Only an Order Item can be Ordered or Shipped">
       | S<500, "Failed to update collection item">;
     remove: S<404, "Collection item not found"> | S<500, "Failed to delete collection item">;
     removeMany:

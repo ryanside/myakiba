@@ -84,6 +84,20 @@ async function cascadeToItems(
     .where(and(eq(collection.userId, userId), inArray(collection.orderId, orderIds)));
 }
 
+/**
+ * Locks Orders about to be deleted, in id order. Deleting an Order sets its items' order_id to
+ * null, so an item that joined it after its items were read would stay Ordered or Shipped outside
+ * any Order.
+ */
+async function lockOrdersToDelete(tx: Tx, userId: string, orderIds: readonly string[]) {
+  await tx
+    .select({ id: order.id })
+    .from(order)
+    .where(and(eq(order.userId, userId), inArray(order.id, orderIds)))
+    .orderBy(asc(order.id))
+    .for("update");
+}
+
 /** Detaches the Owned items and deletes the rest. Returns how many rows it touched. */
 async function removeItems(
   tx: Tx,
@@ -377,6 +391,7 @@ export const Orders = {
     ) => {
       const userId = scope.viewer.userId;
       scope.log.set({ merge: { orderCount: input.orderIds.length } });
+      await lockOrdersToDelete(scope.tx, userId, input.orderIds);
       const [inserted] = await scope.tx
         .insert(order)
         .values({ userId, ...input.newOrder })
@@ -584,20 +599,25 @@ export const Orders = {
     },
   ),
 
+  /**
+   * Deletes the Orders and their not-Owned items, and detaches the Owned ones. It locks the
+   * Orders, then their items, each in id order, so no item turns Ordered or Shipped between the
+   * delete of the not-Owned items and the detach.
+   */
   remove: command(
     { action: "orders.delete_many", failure: "Failed to delete orders" },
     async (scope, input: { readonly orderIds: string[] }) => {
       const userId = scope.viewer.userId;
       scope.log.set({ delete: { orderCount: input.orderIds.length } });
+      await lockOrdersToDelete(scope.tx, userId, input.orderIds);
+      const items = and(eq(collection.userId, userId), inArray(collection.orderId, input.orderIds));
       await scope.tx
-        .delete(collection)
-        .where(
-          and(
-            eq(collection.userId, userId),
-            inArray(collection.orderId, input.orderIds),
-            ne(collection.status, "Owned"),
-          ),
-        );
+        .select({ id: collection.id })
+        .from(collection)
+        .where(items)
+        .orderBy(asc(collection.id))
+        .for("no key update");
+      await scope.tx.delete(collection).where(and(items, ne(collection.status, "Owned")));
       const deleted = await scope.tx
         .delete(order)
         .where(and(eq(order.userId, userId), inArray(order.id, input.orderIds)))
