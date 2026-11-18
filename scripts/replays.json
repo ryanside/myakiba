@@ -5081,6 +5081,15 @@
         "deleting an Order never leaves an Ordered or Shipped Collection Item outside an Order > an Ordered item added to the Order meanwhile is deleted with it",
         "merging Orders moves an Ordered item added to one of them meanwhile"
       ]
+    },
+    {
+      "fix": "a7068815d1d8fbadf82fd79537a48b24e1325ca2",
+      "bug": "A shop rename locked Collection Items before Orders, the reverse of an Order delete or merge, so a rename and a delete or merge of an Order from that shop at once deadlocked and one of them answered 500.",
+      "test": "apps/server/src/routers/orders/shop-rename.test.ts",
+      "fixed": [
+        "a shop rename and a delete of an Order from that shop at once both finish",
+        "a shop rename and a merge of an Order from that shop at once both finish"
+      ]
     }
   ],
   "lint": [
