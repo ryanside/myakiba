@@ -67,16 +67,26 @@ function tab({
   extension,
   locks = fakeLocks(),
   save = async (pick: TakenPick) => savedAs(pick),
+  discardSent = Promise.resolve(),
 }: {
   readonly extension: ReturnType<typeof fakeExtension>;
   readonly locks?: ReturnType<typeof fakeLocks> | undefined;
   readonly save?: (pick: TakenPick) => Promise<Saved>;
+  /** Holds each discard on its way to the extension until it resolves. */
+  readonly discardSent?: Promise<unknown>;
 }) {
   const shown = { visible: true, verified: true };
   const uploads: number[] = [];
   const draft: string[] = [];
+  const bridge = createExtensionBridge(extension.window, { picksAnswerMs: 50 });
   const intake = createPickIntake({
-    bridge: createExtensionBridge(extension.window, { picksAnswerMs: 50 }),
+    bridge: {
+      ...bridge,
+      picksDiscarded: async (captureIds) => {
+        await discardSent;
+        return bridge.picksDiscarded(captureIds);
+      },
+    },
     locks,
     visible: () => shown.visible,
   });
@@ -576,5 +586,121 @@ describe("a failed pick", () => {
 
     expect(discarded.isErr() && discarded.error).toEqual({ kind: "stopped" });
     expect(intake.rows()).toHaveLength(1);
+  });
+  test("Retry while Discard waits for the extension saves nothing, and the pick goes once the extension drops it", async () => {
+    const extension = picked(fakePick(1));
+    const sending = deferred<true>();
+    let failing = true;
+    const { intake, uploads, draft } = tab({
+      extension,
+      save: async (pick) => (failing ? Result.err({ kind: "unsaved" } as const) : savedAs(pick)),
+      discardSent: sending.promise,
+    });
+    await intake.pull();
+
+    failing = false;
+    const discarding = intake.discard(id(1));
+    await intake.retry(id(1));
+    sending.resolve(true);
+    const discarded = await discarding;
+
+    expect(discarded.isOk()).toBe(true);
+    expect(uploads).toEqual([1]);
+    expect(draft).toEqual([]);
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-discarded", captureIds: [captureIdOf(1)] },
+    ]);
+    expect(intake.rows()).toEqual([]);
+  });
+
+  test("a second Discard while the first waits tells the extension nothing more", async () => {
+    const extension = picked(fakePick(1));
+    const sending = deferred<true>();
+    const { intake } = tab({
+      extension,
+      save: async () => Result.err({ kind: "unsaved" } as const),
+      discardSent: sending.promise,
+    });
+    await intake.pull();
+
+    const discarding = intake.discard(id(1));
+    const again = intake.discard(id(1));
+    sending.resolve(true);
+    await Promise.all([discarding, again]);
+
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-discarded", captureIds: [captureIdOf(1)] },
+    ]);
+    expect(intake.rows()).toEqual([]);
+  });
+
+  test("a pull while Discard waits for the extension does not save the pick", async () => {
+    const extension = picked(fakePick(1));
+    const sending = deferred<true>();
+    const { intake, shown, uploads, draft } = tab({ extension, discardSent: sending.promise });
+    shown.verified = false;
+    await intake.pull();
+
+    const discarding = intake.discard(id(1));
+    shown.verified = true;
+    await intake.pull();
+    sending.resolve(true);
+    await discarding;
+
+    expect(uploads).toEqual([]);
+    expect(draft).toEqual([]);
+    expect(extension.acknowledged).toEqual([
+      { type: "picks-discarded", captureIds: [captureIdOf(1)] },
+    ]);
+    expect(intake.rows()).toEqual([]);
+  });
+
+  test("Discard that the extension never answers brings the pick back as it failed, and Retry saves it", async () => {
+    const extension = picked(fakePick(1));
+    const sending = deferred<true>();
+    let failing = true;
+    const { intake, draft } = tab({
+      extension,
+      save: async (pick) => (failing ? Result.err({ kind: "busy" } as const) : savedAs(pick)),
+      discardSent: sending.promise,
+    });
+    await intake.pull();
+
+    const discarding = intake.discard(id(1));
+    extension.setInstalled(false);
+    sending.resolve(true);
+    const discarded = await discarding;
+    const afterDiscard = intake.rows();
+    extension.setInstalled(true);
+    failing = false;
+    await intake.retry(id(1));
+
+    expect(discarded.isErr() && discarded.error).toEqual({ kind: "stopped" });
+    expect(afterDiscard).toEqual([
+      { mfcItemId: id(1), title: "Item 1", state: "failed", reason: { kind: "busy" } },
+    ]);
+    expect(draft).toEqual(["item-1"]);
+  });
+
+  test("Discard while Retry saves does nothing, and the saved pick lands as a draft row", async () => {
+    const extension = picked(fakePick(1));
+    const holding = deferred<Saved>();
+    let failing = true;
+    const { intake, draft } = tab({
+      extension,
+      save: async () => (failing ? Result.err({ kind: "unsaved" } as const) : holding.promise),
+    });
+    await intake.pull();
+
+    failing = false;
+    const retrying = intake.retry(id(1));
+    await intake.discard(id(1));
+    const whileSaving = intake.rows();
+    holding.resolve(Result.ok({ itemId: "item-1" }));
+    await retrying;
+
+    expect(whileSaving).toEqual([{ mfcItemId: id(1), title: "Item 1", state: "saving" }]);
+    expect(draft).toEqual(["item-1"]);
+    expect(extension.acknowledged).toEqual([{ type: "picks-saved", captureIds: [captureIdOf(1)] }]);
   });
 });

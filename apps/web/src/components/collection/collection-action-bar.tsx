@@ -151,11 +151,7 @@ export function CollectionActionBar({
           }
           title={`Delete ${selectedCount} ${selectedCount === 1 ? "item" : "items"}?`}
           description={`This will permanently remove ${selectedCount === 1 ? "this item" : `${selectedCount} items`} from your collection.`}
-          onConfirm={async () => {
-            const saved = await onDeleteCollectionItems(selectedItems.collectionIds);
-            if (saved.isOk()) onClearSelection();
-            return saved;
-          }}
+          onConfirm={() => onDeleteCollectionItems(selectedItems.collectionIds)}
         />
       </ActionBarGroup>
       <ActionBarSeparator />

@@ -114,11 +114,7 @@ export function OrderItemsActionBar({
           }
           title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
           description='Items with "Owned" status will not be deleted. You can delete owned items in the collection tab.'
-          onConfirm={async () => {
-            const saved = await onDeleteItems(selectedItems.collectionIds);
-            if (saved.isOk()) onClearSelection();
-            return saved;
-          }}
+          onConfirm={() => onDeleteItems(selectedItems.collectionIds)}
         />
       </ActionBarGroup>
       <ActionBarSeparator />

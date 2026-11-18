@@ -740,6 +740,22 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
+      "fix": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
+      "bug": "A Collection Item deleted, an Order Item removed or an Order deleted from its row menu stayed in the page's selection, so the action bar counted it and the next bulk action sent its id.",
+      "test": "apps/web/src/components/removed-rows-leave-selection.test.tsx",
+      "fixed": [
+        "the Collection page > drops a row deleted from its row menu and keeps the other selected row",
+        "the Orders page > drops an Order Item removed from its row menu and keeps the other selected item",
+        "the Orders page > drops a deleted Order and its selected items and keeps another Order's"
+      ]
+    },
+    {
+      "fix": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
+      "bug": "An Order Item removed from its row menu on an Order's page stayed in the page's selection, so the action bar counted it and the next bulk action sent its id.",
+      "test": "apps/web/src/components/order-page-removed-items.test.tsx",
+      "fixed": ["an Order Item removed from its row menu leaves the Order page's selection"]
+    },
+    {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
       "bug": "a failed order write restored the old list's rows into the list the filter or sort had changed to",
       "test": "apps/web/src/data/resources/orders.test.tsx",
@@ -4796,6 +4812,23 @@
         "a failed pick > Retry saves it and then reports it saved",
         "a failed pick > Discard tells the extension to drop it and removes its row"
       ]
+    },
+    {
+      "fix": "1831c5f9a3b158d4e551da876e75ef5b0737d40e",
+      "bug": "A failed pick stayed failed while its Discard waited for the extension, so a Retry or a pull in that wait saved the pick the user had discarded, and a second Discard told the extension again. A Discard during a Retry's save hid the row and answered Ok, and the Item landed as a draft row anyway.",
+      "test": "apps/web/src/data/picks.test.ts",
+      "fixed": [
+        "a failed pick > Retry while Discard waits for the extension saves nothing, and the pick goes once the extension drops it",
+        "a failed pick > a second Discard while the first waits tells the extension nothing more",
+        "a failed pick > a pull while Discard waits for the extension does not save the pick",
+        "a failed pick > Discard while Retry saves does nothing, and the saved pick lands as a draft row"
+      ]
+    },
+    {
+      "fix": "1831c5f9a3b158d4e551da876e75ef5b0737d40e",
+      "bug": "A pick whose discard waited for the extension read as saving.",
+      "test": "apps/web/src/components/add/add-table.test.tsx",
+      "fixed": ["a pick being discarded shows its MFC title and spinner, with nothing to click"]
     },
     {
       "fix": "0351a09192da099902ed932bb41faa9b841ed472",
