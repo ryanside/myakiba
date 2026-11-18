@@ -296,18 +296,14 @@ function RouteComponent(): React.JSX.Element {
   // List detail shares this key and may store "gallery", which the index shows as its grid.
   const [storedViewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.lists);
   const viewMode: GridListViewMode = storedViewMode === "list" ? "list" : "grid";
-  const { selectedIds, setSelection } = useSelection();
+  const { selectedIds, setSelection, deselect } = useSelection();
   const handleDeleteList = useCallback(
     async (listId: string): Saving => {
       const deleted = await deleteList(listId);
-      if (deleted.isErr()) return deleted;
-      setSelection((current) => {
-        const { [listId]: _removed, ...next } = current;
-        return next;
-      });
+      if (deleted.isOk()) deselect([listId]);
       return deleted;
     },
-    [deleteList, setSelection],
+    [deleteList, deselect],
   );
 
   return (

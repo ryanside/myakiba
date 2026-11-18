@@ -87,20 +87,16 @@ function RouteComponent(): React.JSX.Element {
   const handleLoadMore = membersQuery.fetchNextPage;
   const handleMove = moveMutation.move;
   const [viewMode, setViewMode] = useViewPreference(VIEW_PREFERENCES.lists);
-  const { selectedIds, setSelection } = useSelection();
+  const { selectedIds, setSelection, deselect } = useSelection();
   const removeMembers = removeMembersMutation.run;
   const selectedMemberIds = useMemo(() => [...selectedIds], [selectedIds]);
   const handleRemove = useCallback(
     async (memberId: string): Saving => {
       const removed = await removeMembers([memberId]);
-      if (removed.isErr()) return removed;
-      setSelection((current) => {
-        const { [memberId]: _removed, ...next } = current;
-        return next;
-      });
+      if (removed.isOk()) deselect([memberId]);
       return removed;
     },
-    [removeMembers, setSelection],
+    [removeMembers, deselect],
   );
 
   return (

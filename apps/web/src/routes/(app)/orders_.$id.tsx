@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { preload, preloadPage, useRead } from "@/data/client";
 import { orderItemsInput, orders } from "@/data/resources/orders";
 import { useOrdersMutations } from "@/hooks/use-orders";
+import { withoutOrderItems } from "@/hooks/use-selection";
 import { useUserPreferences } from "@/hooks/use-user-preferences";
 import { ORDER_LOAD_FAILED } from "@/queries/orders";
 import { formatTimestampForDisplay } from "@/lib/date-display";
@@ -73,6 +74,30 @@ function RouteComponent(): ReactNode {
     },
     [handleDeleteOrders, navigate],
   );
+  const deleteItems = useCallback(
+    async (collectionIds: ReadonlySet<string>): Saving => {
+      const deleted = await handleDeleteItems(collectionIds);
+      if (deleted.isOk()) {
+        setSelectedOrderIdByCollectionId((current) =>
+          withoutOrderItems(current, (collectionId) => collectionIds.has(collectionId)),
+        );
+      }
+      return deleted;
+    },
+    [handleDeleteItems],
+  );
+  const deleteItem = useCallback(
+    async (orderId: string, itemId: string): Saving => {
+      const deleted = await handleDeleteItem(orderId, itemId);
+      if (deleted.isOk()) {
+        setSelectedOrderIdByCollectionId((current) =>
+          withoutOrderItems(current, (collectionId) => collectionId === itemId),
+        );
+      }
+      return deleted;
+    },
+    [handleDeleteItem],
+  );
 
   const selectedItems = {
     collectionIds: new Set(selectedOrderIdByCollectionId.keys()),
@@ -122,7 +147,7 @@ function RouteComponent(): ReactNode {
           selectedOrderIdByCollectionId={selectedOrderIdByCollectionId}
           setSelectedOrderIdByCollectionId={setSelectedOrderIdByCollectionId}
           onEditItem={handleEditItem}
-          onDeleteItem={handleDeleteItem}
+          onDeleteItem={deleteItem}
         />
       </OrderPendingContext>
 
@@ -177,7 +202,7 @@ function RouteComponent(): ReactNode {
         onClearSelection={() => setSelectedOrderIdByCollectionId(new Map())}
         onMoveItem={handleMoveItem}
         onMoveToNew={handleSplit}
-        onDeleteItems={handleDeleteItems}
+        onDeleteItems={deleteItems}
         onFillItems={handleFillItems}
       />
     </div>

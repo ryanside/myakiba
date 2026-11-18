@@ -740,6 +740,22 @@
       "reason": "Keep the recorded UI and client harness and fixtures; later tests use updated APIs and expectations that do not apply to this historical flip."
     },
     {
+      "fix": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
+      "bug": "A Collection Item deleted, an Order Item removed or an Order deleted from its row menu stayed in the page's selection, so the action bar counted it and the next bulk action sent its id.",
+      "test": "apps/web/src/components/removed-rows-leave-selection.test.tsx",
+      "fixed": [
+        "the Collection page > drops a row deleted from its row menu and keeps the other selected row",
+        "the Orders page > drops an Order Item removed from its row menu and keeps the other selected item",
+        "the Orders page > drops a deleted Order and its selected items and keeps another Order's"
+      ]
+    },
+    {
+      "fix": "5119fd1b1b7e2959ac2e822edc5dddd16a912832",
+      "bug": "An Order Item removed from its row menu on an Order's page stayed in the page's selection, so the action bar counted it and the next bulk action sent its id.",
+      "test": "apps/web/src/components/order-page-removed-items.test.tsx",
+      "fixed": ["an Order Item removed from its row menu leaves the Order page's selection"]
+    },
+    {
       "fix": "52f1b8fa30b31e10ac0a20c8b190e223439e04a1",
       "bug": "a failed order write restored the old list's rows into the list the filter or sort had changed to",
       "test": "apps/web/src/data/resources/orders.test.tsx",

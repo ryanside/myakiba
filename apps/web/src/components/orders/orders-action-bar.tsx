@@ -195,11 +195,7 @@ export function OrdersActionBar({
           }
           title={`Delete ${selectedOrderIds.size} ${selectedOrderIds.size === 1 ? "order" : "orders"}?`}
           description={OWNED_ITEMS_DELETE_HINT}
-          onConfirm={async () => {
-            const saved = await onDeleteOrders(selectedOrderIds);
-            if (saved.isOk()) onClearSelection();
-            return saved;
-          }}
+          onConfirm={() => onDeleteOrders(selectedOrderIds)}
         />
         <WriteConfirmDialog
           renderTrigger={
@@ -214,11 +210,7 @@ export function OrdersActionBar({
           }
           title={`Delete ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}?`}
           description={OWNED_ITEMS_DELETE_HINT}
-          onConfirm={async () => {
-            const saved = await onDeleteItems(selectedItems.collectionIds);
-            if (saved.isOk()) onClearSelection();
-            return saved;
-          }}
+          onConfirm={() => onDeleteItems(selectedItems.collectionIds)}
         />
       </ActionBarGroup>
       <ActionBarSeparator />
