@@ -47,7 +47,7 @@ _Avoid_: Category Group
 All the Collection Items a user owns. An Owned Order Item is also in the Collection because it is still a Collection Item.
 
 **Collection Item**:
-One user's purchase or ownership details for an Item. A Collection Item can exist before the user owns it, and several Collection Items can point to the same Item.
+One user's purchase or ownership details for an Item. A Collection Item can exist before the user owns it, and several Collection Items can point to the same Item. Outside an Order it is always Owned, so only an Order Item can be Ordered or Shipped.
 _Avoid_: Collection row, Item, owned item
 
 **Order Item**:
