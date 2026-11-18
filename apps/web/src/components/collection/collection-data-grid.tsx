@@ -1,5 +1,6 @@
 import { useSelection } from "@/hooks/use-selection";
 import type { CollectionItem } from "@myakiba/contracts/collection/types";
+import type { Saving } from "@/data/client";
 import type {
   ColumnPinningState,
   ColumnSizingState,
@@ -117,7 +118,17 @@ export const CollectionDataGrid = () => {
     selection: collectionSelection,
     setSelection: setCollectionSelection,
     selectedIds: selectedCollectionIds,
+    deselect: deselectCollectionItems,
   } = useSelection();
+
+  const deleteCollectionItems = useCallback(
+    async (collectionIds: ReadonlySet<string>): Saving => {
+      const deleted = await handleDeleteCollectionItems(collectionIds);
+      if (deleted.isOk()) deselectCollectionItems(collectionIds);
+      return deleted;
+    },
+    [handleDeleteCollectionItems, deselectCollectionItems],
+  );
 
   const selectedItems = useMemo(
     () => ({
@@ -156,7 +167,7 @@ export const CollectionDataGrid = () => {
     () =>
       createCollectionColumns({
         onEditCollectionItem: handleEditCollectionItem,
-        onDeleteCollectionItems: handleDeleteCollectionItems,
+        onDeleteCollectionItems: deleteCollectionItems,
         onAddCollectionItemsToOrder: handleAddCollectionItemsToOrder,
         onAddCollectionItemsToNewOrder: handleAddCollectionItemsToNewOrder,
         currency,
@@ -168,7 +179,7 @@ export const CollectionDataGrid = () => {
       locale,
       dateFormat,
       handleEditCollectionItem,
-      handleDeleteCollectionItems,
+      deleteCollectionItems,
       handleAddCollectionItemsToOrder,
       handleAddCollectionItemsToNewOrder,
     ],
@@ -270,7 +281,7 @@ export const CollectionDataGrid = () => {
       <CollectionActionBar
         selectedItems={selectedItems}
         onClearSelection={() => setCollectionSelection({})}
-        onDeleteCollectionItems={handleDeleteCollectionItems}
+        onDeleteCollectionItems={deleteCollectionItems}
         onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
         onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
         onFillCollectionItems={handleFillCollectionItems}
@@ -320,7 +331,7 @@ export const CollectionDataGrid = () => {
                     rowSelection={collectionSelection}
                     onRowSelectionChange={setCollectionSelection}
                     onEditCollectionItem={handleEditCollectionItem}
-                    onDeleteCollectionItems={handleDeleteCollectionItems}
+                    onDeleteCollectionItems={deleteCollectionItems}
                     onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
                     onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
                     currency={currency}
@@ -336,7 +347,7 @@ export const CollectionDataGrid = () => {
                   rowSelection={collectionSelection}
                   onRowSelectionChange={setCollectionSelection}
                   onEditCollectionItem={handleEditCollectionItem}
-                  onDeleteCollectionItems={handleDeleteCollectionItems}
+                  onDeleteCollectionItems={deleteCollectionItems}
                   onAddCollectionItemsToOrder={handleAddCollectionItemsToOrder}
                   onAddCollectionItemsToNewOrder={handleAddCollectionItemsToNewOrder}
                   currency={currency}

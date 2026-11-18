@@ -15,7 +15,8 @@ import type {
 } from "@tanstack/react-table";
 import type { OrderFilters } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
-import { useSelection } from "@/hooks/use-selection";
+import { useSelection, withoutOrderItems } from "@/hooks/use-selection";
+import type { Saving } from "@/data/client";
 import { DataGridColumnCombobox } from "../ui/data-grid-column-combobox";
 import { OrdersToolbar } from "./orders-toolbar";
 import { OrdersActionBar } from "./orders-action-bar";
@@ -130,9 +131,48 @@ export default function OrdersDataGrid() {
     selection: orderSelection,
     setSelection: setOrderSelection,
     selectedIds: selectedOrderIds,
+    deselect: deselectOrders,
   } = useSelection();
   const [selectedOrderIdByCollectionId, setSelectedOrderIdByCollectionId] = useState(
     new Map<string, string>(),
+  );
+
+  const deleteOrders = useCallback(
+    async (orderIds: ReadonlySet<string>): Saving => {
+      const deleted = await handleDeleteOrders(orderIds);
+      if (deleted.isOk()) {
+        deselectOrders(orderIds);
+        setSelectedOrderIdByCollectionId((current) =>
+          withoutOrderItems(current, (_collectionId, orderId) => orderIds.has(orderId)),
+        );
+      }
+      return deleted;
+    },
+    [handleDeleteOrders, deselectOrders],
+  );
+  const deleteItems = useCallback(
+    async (collectionIds: ReadonlySet<string>): Saving => {
+      const deleted = await handleDeleteItems(collectionIds);
+      if (deleted.isOk()) {
+        setSelectedOrderIdByCollectionId((current) =>
+          withoutOrderItems(current, (collectionId) => collectionIds.has(collectionId)),
+        );
+      }
+      return deleted;
+    },
+    [handleDeleteItems],
+  );
+  const deleteItem = useCallback(
+    async (orderId: string, itemId: string): Saving => {
+      const deleted = await handleDeleteItem(orderId, itemId);
+      if (deleted.isOk()) {
+        setSelectedOrderIdByCollectionId((current) =>
+          withoutOrderItems(current, (collectionId) => collectionId === itemId),
+        );
+      }
+      return deleted;
+    },
+    [handleDeleteItem],
   );
   const selectedItems = useMemo(
     () => ({
@@ -176,22 +216,14 @@ export default function OrdersDataGrid() {
     () =>
       createOrdersColumns({
         onEditOrder: handleEditOrder,
-        onDeleteOrders: handleDeleteOrders,
+        onDeleteOrders: deleteOrders,
         onEditItem: handleEditItem,
-        onDeleteItem: handleDeleteItem,
+        onDeleteItem: deleteItem,
         currency,
         locale,
         dateFormat,
       }),
-    [
-      handleEditItem,
-      handleDeleteItem,
-      handleEditOrder,
-      handleDeleteOrders,
-      currency,
-      locale,
-      dateFormat,
-    ],
+    [handleEditItem, deleteItem, handleEditOrder, deleteOrders, currency, locale, dateFormat],
   );
 
   const handlePaginationChange = useCallback(
@@ -279,9 +311,9 @@ export default function OrdersDataGrid() {
         }}
         onMerge={handleMerge}
         onSplit={handleSplit}
-        onDeleteOrders={handleDeleteOrders}
+        onDeleteOrders={deleteOrders}
         onMoveItem={handleMoveItem}
-        onDeleteItems={handleDeleteItems}
+        onDeleteItems={deleteItems}
         onFillOrders={handleFillOrders}
         onFillItems={handleFillItems}
         isMerging={isMerging}
@@ -335,7 +367,7 @@ export default function OrdersDataGrid() {
                         rowSelection={orderSelection}
                         onRowSelectionChange={setOrderSelection}
                         onEditOrder={handleEditOrder}
-                        onDeleteOrders={handleDeleteOrders}
+                        onDeleteOrders={deleteOrders}
                         currency={currency}
                         isLoading={isPending}
                       />
@@ -348,7 +380,7 @@ export default function OrdersDataGrid() {
                       rowSelection={orderSelection}
                       onRowSelectionChange={setOrderSelection}
                       onEditOrder={handleEditOrder}
-                      onDeleteOrders={handleDeleteOrders}
+                      onDeleteOrders={deleteOrders}
                       currency={currency}
                       locale={locale}
                       isLoading={isPending}
