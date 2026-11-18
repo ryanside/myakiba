@@ -30,6 +30,7 @@ const app = new Elysia({ prefix: "/api" }).use(collectionRouter);
 const userId = "user-1";
 const createdAt = new Date("2026-01-05T10:20:30.456Z");
 const FILLED = { status: 200, body: "Collection items filled successfully" };
+const NEEDS_ORDER = { status: 409, body: "Only an Order Item can be Ordered or Shipped" };
 
 beforeEach(async () => {
   await db.execute('TRUNCATE "user", item CASCADE');
@@ -96,7 +97,7 @@ const tagsOf = async (id: string) => {
 };
 
 const FILLS = [
-  [{ field: "status", value: "Shipped" }, "Shipped"],
+  [{ field: "status", value: "Owned" }, "Owned"],
   [{ field: "paid", value: true }, true],
   [{ field: "price", value: 4200 }, 4200],
   [{ field: "price", value: 0 }, 0],
@@ -150,6 +151,46 @@ test("a paid fill leaves status alone, and a status fill leaves paid alone", asy
 
   expect(await fill({ ids: ["c-2"], fill: { field: "paid", value: false } })).toEqual(FILLED);
   expect(await rowOf("c-2")).toMatchObject({ status: "Owned", paid: false });
+});
+
+describe("only an Order Item can be Ordered or Shipped", () => {
+  test.each([
+    ["an Owned fill of Collection Items outside an Order", ["c-1", "c-3"], "Owned"],
+    ["an Ordered fill of an Order Item", ["c-2"], "Ordered"],
+    ["a Shipped fill of an Order Item", ["c-2"], "Shipped"],
+  ] as const)("%s writes it", async (_, ids, status) => {
+    expect(await fill({ ids, fill: { field: "status", value: status } })).toEqual(FILLED);
+
+    for (const id of ids) expect(await rowOf(id)).toMatchObject({ status });
+  });
+
+  test.each([
+    ["an Ordered", "Ordered"],
+    ["a Shipped", "Shipped"],
+  ] as const)(
+    "%s fill that lists a Collection Item outside an Order answers 409 and changes no row",
+    async (_, status) => {
+      const before = await readItems();
+
+      expect(await fill({ ids: ["c-2", "c-1"], fill: { field: "status", value: status } })).toEqual(
+        NEEDS_ORDER,
+      );
+
+      expect(await readItems()).toEqual(before);
+    },
+  );
+
+  test("a Shipped fill of an Order Item its Order drops meanwhile answers 409 and leaves it Owned", async () => {
+    await db.update(collection).set({ status: "Owned" }).where(eq(collection.id, "c-2"));
+    const detach = await detaching("c-2");
+
+    const filled = fill({ ids: ["c-2"], fill: { field: "status", value: "Shipped" } });
+    await waitForLockWaits(1);
+    await detach();
+
+    expect(await filled).toEqual(NEEDS_ORDER);
+    expect(await rowOf("c-2")).toMatchObject({ orderId: null, status: "Owned" });
+  });
 });
 
 test("a tags fill adds each new tag once, in the order sent, after the row's own", async () => {
@@ -231,6 +272,21 @@ async function holdingALockOn(id: string) {
   await locked.promise;
   return async () => {
     release.resolve(null);
+    await holding;
+  };
+}
+
+async function detaching(id: string) {
+  const detached = Promise.withResolvers<null>();
+  const commit = Promise.withResolvers<null>();
+  const holding = db.transaction(async (tx) => {
+    await tx.update(collection).set({ orderId: null }).where(eq(collection.id, id));
+    detached.resolve(null);
+    await commit.promise;
+  });
+  await detached.promise;
+  return async () => {
+    commit.resolve(null);
     await holding;
   };
 }
