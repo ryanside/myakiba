@@ -124,7 +124,7 @@ The store listing and the Privacy tab carry what this text leaves out.
 
 ### AMO: Notes to Reviewer
 
-AMO's field takes 3,000 characters. This text, source code paragraph included, is about 2,850 before the password.
+AMO's field takes 3,000 characters. This text, source code paragraph included, is about 2,870 before the password.
 
 ```text
 What it does
