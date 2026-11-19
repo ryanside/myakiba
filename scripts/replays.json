@@ -5136,7 +5136,20 @@
         "in production mode > a GET for a deep link with Accept: */* gets the web app",
         "in production mode > a GET for a deep link with no Accept gets the web app",
         "in production mode > a HEAD for a deep link with Accept: */* gets the web app",
-        "in production mode > a HEAD for a deep link with no Accept gets the web app"
+        "in production mode > a HEAD for a deep link with no Accept gets the web app",
+        "in test mode > a GET for a deep link with Accept: TEXT/HTML ; q=0.9 gets the web app",
+        "in production mode > a GET for a deep link with Accept: TEXT/HTML ; q=0.9 gets the web app"
+      ]
+    },
+    {
+      "fix": "5c95ec2961e906781d3e49c672e262ea7ca74d1b",
+      "bug": "The web app's fallback for deep links ignored an Accept range's q=0, so a request that refused HTML, such as text/html;q=0, application/json, still got the web app.",
+      "test": "apps/server/src/html-headers.test.ts",
+      "fixed": [
+        "in test mode > /privacy with Accept: application/json, */*;q=0 does not get the web app",
+        "in test mode > /privacy with Accept: text/html;q=0, application/json does not get the web app",
+        "in production mode > /privacy with Accept: application/json, */*;q=0 does not get the web app",
+        "in production mode > /privacy with Accept: text/html;q=0, application/json does not get the web app"
       ]
     }
   ],
