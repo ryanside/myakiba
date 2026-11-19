@@ -5123,6 +5123,21 @@
         "a shop rename and a delete of an Order from that shop at once both finish",
         "a shop rename and a merge of an Order from that shop at once both finish"
       ]
+    },
+    {
+      "fix": "faec711a1df445f17b95add2b01ddb940fe151c1",
+      "bug": "The web app's fallback for deep links answered 404 to a request whose Accept was */* or missing, so link checkers such as the Chrome Web Store's privacy policy check could not reach /privacy or any page but /.",
+      "test": "apps/server/src/html-headers.test.ts",
+      "fixed": [
+        "in test mode > a GET for a deep link with Accept: */* gets the web app",
+        "in test mode > a GET for a deep link with no Accept gets the web app",
+        "in test mode > a HEAD for a deep link with Accept: */* gets the web app",
+        "in test mode > a HEAD for a deep link with no Accept gets the web app",
+        "in production mode > a GET for a deep link with Accept: */* gets the web app",
+        "in production mode > a GET for a deep link with no Accept gets the web app",
+        "in production mode > a HEAD for a deep link with Accept: */* gets the web app",
+        "in production mode > a HEAD for a deep link with no Accept gets the web app"
+      ]
     }
   ],
   "lint": [
