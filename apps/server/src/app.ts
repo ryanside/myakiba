@@ -98,10 +98,12 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
  */
 function acceptsHtml(accept: string | null): boolean {
   if (accept === null || accept.trim() === "") return true;
-  return accept
-    .split(",")
-    .map((range) => range.split(";")[0]?.trim().toLowerCase())
-    .some((type) => type === "text/html" || type === "text/*" || type === "*/*");
+  return accept.split(",").some((range) => {
+    const [type = "", ...params] = range.split(";").map((part) => part.trim().toLowerCase());
+    // `q=0` refuses the type.
+    if (params.some((param) => /^q=0(\.0{0,3})?$/u.test(param))) return false;
+    return type === "text/html" || type === "text/*" || type === "*/*";
+  });
 }
 
 /** The whole server: the API, the auth handler and the web app's files. `index.ts` starts it. */

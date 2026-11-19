@@ -98,6 +98,8 @@ describe.each(Object.entries(apps))("in %s mode", (_mode, app) => {
 
   test.each([
     ["/privacy", "application/json"],
+    ["/privacy", "application/json, */*;q=0"],
+    ["/privacy", "text/html;q=0, application/json"],
     ["/api/nothing-here", "*/*"],
     ["/missing.js", "*/*"],
   ])("%s with Accept: %s does not get the web app", async (pathname, accept) => {
