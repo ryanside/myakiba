@@ -88,6 +88,12 @@ describe.each(Object.entries(apps))("in %s mode", (_mode, app) => {
     ["GET", "no Accept", {}],
     ["HEAD", "Accept: */*", { accept: "*/*" }],
     ["HEAD", "no Accept", {}],
+    [
+      "GET",
+      "a browser's Accept",
+      { accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+    ],
+    ["GET", "Accept: TEXT/HTML ; q=0.9", { accept: "TEXT/HTML ; q=0.9" }],
   ])("a %s for a deep link with %s gets the web app", async (method, _label, headers) => {
     const response = await app.handle(new Request("http://localhost/privacy", { method, headers }));
 
