@@ -50,7 +50,7 @@ function PrivacyPolicy() {
           <h1 className="text-balance text-3xl font-medium tracking-tight sm:text-4xl">
             Privacy policy
           </h1>
-          <p className="text-muted-foreground">Last updated November 11, 2026.</p>
+          <p className="text-muted-foreground">Last updated November 18, 2026.</p>
           <p>
             This policy covers the myakiba browser extension for Chrome and Firefox. It says what
             the extension reads, where that data goes, and what myakiba keeps.
@@ -66,8 +66,8 @@ function PrivacyPolicy() {
           <p>
             When you refresh an item&apos;s details, the myakiba page at myakiba.app asks the
             extension for that item. The extension opens an MFC tab or reuses one you already have
-            open, reads the item&apos;s page with your own MFC sign-in, and passes the page and the
-            item&apos;s main picture back to the myakiba page.
+            open, reads the item&apos;s page there as MFC shows it to you, and passes the page and
+            the item&apos;s main picture back to the myakiba page.
           </p>
         </Section>
 
@@ -75,7 +75,10 @@ function PrivacyPolicy() {
           <ul>
             <li>The MFC item page you click Pick for myakiba on, when you click it.</li>
             <li>The MFC item pages that myakiba asks for, and no other MFC pages.</li>
-            <li>The main picture of each of those items, from myfigurecollection.net.</li>
+            <li>
+              The main picture of each of those items, from myfigurecollection.net or
+              static.myfigurecollection.net.
+            </li>
             <li>
               The address, title and loading state of MFC tabs, so it can reuse an open MFC tab and
               know when a page has loaded.
