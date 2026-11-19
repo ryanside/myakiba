@@ -30,6 +30,9 @@ test.each([
   "/api/auth/reference",
   "/api/auth/open-api/generate-schema",
 ])("production answers 404 for the API docs at %s", async (path) => {
-  const response = await app.handle(new Request(`http://localhost${path}`));
+  // A docs client asks for JSON. A request that takes HTML gets the web app, which serves no docs either.
+  const response = await app.handle(
+    new Request(`http://localhost${path}`, { headers: { accept: "application/json" } }),
+  );
   expect(response.status).toBe(404);
 });
