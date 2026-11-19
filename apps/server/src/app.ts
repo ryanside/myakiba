@@ -92,6 +92,18 @@ const serveIndexHtml = async (distDir: string): Promise<Response> => {
   });
 };
 
+/**
+ * Whether a request takes HTML: it names no type, or names `text/html`, `text/*` or `*\/*`. Link checkers and crawlers
+ * often send `*\/*` or no Accept at all, while a script asking for JSON names only that.
+ */
+function acceptsHtml(accept: string | null): boolean {
+  if (accept === null || accept.trim() === "") return true;
+  return accept
+    .split(",")
+    .map((range) => range.split(";")[0]?.trim().toLowerCase())
+    .some((type) => type === "text/html" || type === "text/*" || type === "*/*");
+}
+
 /** The whole server: the API, the auth handler and the web app's files. `index.ts` starts it. */
 export function createApp({ drain, authDocs }: AppOptions) {
   const serverDistPath = resolveServerDistPath();
@@ -142,14 +154,12 @@ export function createApp({ drain, authDocs }: AppOptions) {
           ignorePatterns: [HTML_FILE],
         }),
       )
-      // SPA fallback (TanStack Router) for deep links, but only for real HTML navigations.
+      // SPA fallback (TanStack Router) for deep links, for any request that takes HTML.
       .get("/*", ({ request, status }) => {
         const pathname: string = new URL(request.url).pathname;
         if (pathname.startsWith("/api")) return status(404, "Not Found");
         if (pathname.includes(".")) return status(404, "Not Found");
-        if (!(request.headers.get("accept") ?? "").includes("text/html")) {
-          return status(404, "Not Found");
-        }
+        if (!acceptsHtml(request.headers.get("accept"))) return status(404, "Not Found");
 
         return serveIndexHtml(serverDistPath);
       })

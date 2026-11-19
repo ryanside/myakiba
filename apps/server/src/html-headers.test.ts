@@ -82,6 +82,33 @@ describe.each(Object.entries(apps))("in %s mode", (_mode, app) => {
     },
   );
 
+  // Link checkers, such as the Chrome Web Store's privacy policy check, ask for any type or name none.
+  test.each([
+    ["GET", "Accept: */*", { accept: "*/*" }],
+    ["GET", "no Accept", {}],
+    ["HEAD", "Accept: */*", { accept: "*/*" }],
+    ["HEAD", "no Accept", {}],
+  ])("a %s for a deep link with %s gets the web app", async (method, _label, headers) => {
+    const response = await app.handle(new Request("http://localhost/privacy", { method, headers }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+  });
+
+  test.each([
+    ["/privacy", "application/json"],
+    ["/api/nothing-here", "*/*"],
+    ["/missing.js", "*/*"],
+  ])("%s with Accept: %s does not get the web app", async (pathname, accept) => {
+    const response = await app.handle(
+      new Request(`http://localhost${pathname}`, { headers: { accept } }),
+    );
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.headers.get("content-type")?.startsWith("text/html")).not.toBe(true);
+  });
+
   test.each(
     htmlFiles.flatMap((file) => {
       const url = `/${file.split(path.sep).join("/")}`;
