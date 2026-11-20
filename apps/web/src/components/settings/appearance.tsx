@@ -86,7 +86,7 @@ function ThemeChoices() {
                   />
                 ))}
               </MediaImage>
-              <span className="flex items-center gap-2 pt-2.5">
+              <span className="flex items-center gap-2 px-1.5 pt-2.5 pb-1.5">
                 <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-input color-motion dark:bg-input/30 group-data-checked/item:border-primary group-data-checked/item:bg-primary dark:group-data-checked/item:bg-primary">
                   <span className="size-1.5 scale-(--tick-from) rounded-full bg-primary-foreground opacity-0 transition-[opacity,scale] duration-100 ease-out group-data-checked/item:scale-100 group-data-checked/item:opacity-100 group-data-checked/item:duration-150" />
                 </span>

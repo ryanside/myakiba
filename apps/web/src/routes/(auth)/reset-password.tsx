@@ -191,7 +191,7 @@ function RouteComponent() {
             to="/login"
             text="Back to Login"
             font="sans"
-            className="inline-flex py-0 mb-0 align-baseline"
+            className="mx-0 inline-flex py-0 mb-0 align-baseline"
           />
         </div>
       </div>

@@ -203,7 +203,7 @@ function SortableHeader({
     <button
       type="button"
       onClick={column.getToggleSortingHandler()}
-      className="-my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm text-left press-text hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="-mx-1.5 -my-1.5 inline-flex min-h-10 items-center gap-1.5 rounded-sm px-1.5 text-left press-text hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label={`Sort by ${title}, ${nextDirection}`}
     >
       <span>{title}</span>

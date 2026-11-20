@@ -22,7 +22,7 @@ type BackLinkProps = {
 );
 
 export const ARROW_LINK_CLASS_NAME =
-  "group/link cursor-pointer relative flex items-center gap-1.5 w-fit py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground press-text outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
+  "group/link cursor-pointer relative flex items-center gap-1.5 w-fit -mx-1.5 px-1.5 py-2.5 -mb-1 rounded-md text-xs font-medium text-muted-foreground press-text outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
 
 export const ARROW_ICON_CLASS_NAME =
   "size-3.5 shrink-0 transition-[translate] duration-(--motion-hover) ease-out";
