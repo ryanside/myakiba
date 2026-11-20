@@ -104,7 +104,7 @@ test("with no extension it links to the store listing", async () => {
       .getByRole("link", { name: "Install from the Chrome Web Store (opens in a new tab)" })
       .getAttribute("href"),
   ).toBe(LISTING_URLS.chromeWebStore);
-  expect(screen.getByText("Reload this page after you install it.")).toBeDefined();
+  expect(screen.getByRole("button", { name: "Reload page" })).toBeDefined();
 });
 
 test("an extension that is too old asks for an update", async () => {
@@ -113,7 +113,7 @@ test("an extension that is too old asks for an update", async () => {
 
   expect(await screen.findByText("Update needed")).toBeDefined();
   expect(screen.getByRole("link", { name: "How to update it (opens in a new tab)" })).toBeDefined();
-  expect(screen.getByText("Reload this page after you update it.")).toBeDefined();
+  expect(screen.getByRole("button", { name: "Reload page" })).toBeDefined();
 });
 
 test("an update keeps reading as update needed until the page reloads", async () => {

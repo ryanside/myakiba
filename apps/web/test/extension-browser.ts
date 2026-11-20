@@ -11,6 +11,7 @@ export const SUPPORTED_BROWSERS = [
     name: "Chrome",
     store: "chromeWebStore",
     storeName: "the Chrome Web Store",
+    browsers: "Chrome, Edge or another Chromium browser",
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
   },
@@ -18,6 +19,7 @@ export const SUPPORTED_BROWSERS = [
     name: "Firefox",
     store: "firefoxAddons",
     storeName: "Firefox Add-ons",
+    browsers: "Firefox",
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0",
   },
 ] as const;

@@ -23,19 +23,18 @@ const {
   resetEntryPoints,
 } = await import("../../../test/extension-entry-points");
 const { default: FAQsSection } = await import("@/components/homepage/faqs");
+const { HowItWorks } = await import("@/components/homepage/how-it-works");
 
 afterEach(resetEntryPoints);
 
-const UNDER_REVIEW = "The myakiba browser extension is under review";
-const PICK_UNSUPPORTED = "Picking needs desktop Chrome or Firefox";
+const FAQ_UNDER_REVIEW = "The myakiba browser extension is under review";
+const PICK_UNSUPPORTED = "Picking items needs the myakiba extension";
+const inReviewAt = (storeName: string) => `The myakiba extension is in review at ${storeName}`;
 const EXTENSION_STEP_TITLE = "Install the myakiba extension.";
 
 function expectPickReviewNotice(text: string | null | undefined, storeName: string) {
-  expect(text).toContain(UNDER_REVIEW);
-  expect(text).toContain(`It is in review at ${storeName} now`);
-  expect(text).toContain("it will be released shortly");
-  expect(text).toContain("Until it is listed, new items can't be picked.");
-  expect(text).toContain("Items already in the Item Database can still be added.");
+  expect(text).toContain(inReviewAt(storeName));
+  expect(text).toContain("Picking items works once it's approved.");
   expect(text).not.toMatch(/import|discord|sideload|unpacked/iu);
 }
 
@@ -79,7 +78,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
           await waitFor(() =>
             expect(installLink(browser)?.getAttribute("href")).toBe(LISTING_URLS[browser.store]),
           );
-          expect(screen.queryByText(UNDER_REVIEW)).toBeNull();
+          expect(screen.queryByText(/in review/u)).toBeNull();
         });
 
         test("shows the review notice while the extension is missing and this store has no listing", async () => {
@@ -89,8 +88,27 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
 
           const container = await surface.open();
 
-          await screen.findByText(UNDER_REVIEW);
+          await screen.findByText(inReviewAt(browser.storeName));
           expectPickReviewNotice(container.textContent, browser.storeName);
+          expect(installLink(browser)).toBeNull();
+        });
+
+        test("names the browser whose store lists the extension while this store reviews it", async () => {
+          const other = SUPPORTED_BROWSERS.find(({ store }) => store !== browser.store);
+          if (other === undefined) throw new Error("two supported browsers");
+          browseWith(browser.userAgent);
+          listIn(other.store);
+          loadExtension({ installed: false });
+
+          const container = await surface.open();
+
+          await screen.findByText(inReviewAt(browser.storeName));
+          expect(container.textContent).toContain(`Pick items in ${other.browsers} until then.`);
+          expect(
+            screen
+              .getByRole("link", { name: `View on ${other.storeName} (opens in a new tab)` })
+              .getAttribute("href"),
+          ).toBe(LISTING_URLS[other.store]);
           expect(installLink(browser)).toBeNull();
         });
 
@@ -104,7 +122,7 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
             setTimeout(resolve, 100);
           });
 
-          expect(screen.queryByText(UNDER_REVIEW)).toBeNull();
+          expect(screen.queryByText(/in review/u)).toBeNull();
           expect(installLink(browser)).toBeNull();
         });
       },
@@ -149,7 +167,7 @@ test("the FAQ says the extension is under review while no store lists it", async
   const answer = await faqAnswer();
 
   expect(answer.textContent).toBe(
-    `${UNDER_REVIEW}. It will be in the Chrome Web Store and Firefox Add-ons soon.`,
+    `${FAQ_UNDER_REVIEW}. It will be in the Chrome Web Store and Firefox Add-ons soon.`,
   );
   expect(screen.queryByRole("link", { name: /Chrome Web Store|Firefox Add-ons/u })).toBeNull();
 });
@@ -178,6 +196,66 @@ test("the FAQ links both stores once both list the extension", async () => {
     LISTING_URLS.firefoxAddons,
   );
   expect(answer.textContent).not.toContain("under review");
+});
+
+// How it works plays a demo that waits on the page's fonts, which happy-dom does not have.
+Object.defineProperty(document, "fonts", {
+  configurable: true,
+  value: { status: "loaded", ready: Promise.resolve() },
+});
+
+function installStep() {
+  render(<HowItWorks />);
+  const lead = screen.getByText("Install the myakiba extension", { exact: false });
+  return lead.closest("li");
+}
+
+const INSTALL_LINK = { name: "Install the myakiba extension (opens in a new tab)" } as const;
+
+test("How it works says the extension waits on store review while no store lists it", () => {
+  listIn();
+  browseWith(SUPPORTED_BROWSERS[0].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain(
+    "in Chrome or Firefox on a computer, once it passes store review.",
+  );
+  expect(screen.queryByRole("link", INSTALL_LINK)).toBeNull();
+});
+
+test("How it works names the browsers a store lists and links a visitor to their listing", () => {
+  listIn("chromeWebStore");
+  browseWith(SUPPORTED_BROWSERS[0].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain("in Chrome on a computer. Firefox is in review.");
+  expect(screen.getByRole("link", INSTALL_LINK).getAttribute("href")).toBe(
+    LISTING_URLS.chromeWebStore,
+  );
+});
+
+test("How it works links no listing for a visitor whose store still reviews the extension", () => {
+  listIn("chromeWebStore");
+  browseWith(SUPPORTED_BROWSERS[1].userAgent);
+
+  installStep();
+
+  expect(screen.queryByRole("link", INSTALL_LINK)).toBeNull();
+});
+
+test("How it works names both browsers once both stores list the extension", () => {
+  listIn("chromeWebStore", "firefoxAddons");
+  browseWith(SUPPORTED_BROWSERS[1].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain("in Chrome or Firefox on a computer.");
+  expect(step?.textContent).not.toContain("review");
+  expect(screen.getByRole("link", INSTALL_LINK).getAttribute("href")).toBe(
+    LISTING_URLS.firefoxAddons,
+  );
 });
 
 test("the update link opens an FAQ answer that says how to update, even while every store reviews", async () => {

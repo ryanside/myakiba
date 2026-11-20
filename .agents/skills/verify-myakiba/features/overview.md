@@ -31,7 +31,7 @@ Preconditions:
 - **Analytics.** `preview_navigate` to `<url>/analytics`. The title is `Analytics - myakiba`. Sections `artists`, `characters`, `origins` and `companies` each show `Top by Count` and `Top by Spend`, and link to `/analytics/<section>`. Seeded Items have no entries, so each reads `No data`.
 - **Item Database.** `preview_navigate` to `<url>/items`. The title is `Item Database - myakiba`, the page reads `3 Items`, and each seeded title links to its Item page. The search box is `Search the Item Database`.
 - **Item page.** `preview_navigate` to `<url>/item/900002`. The title is `Item 900002 - myakiba`. The page shows `Releases` with the seeded date, `Standard` and `¥25,000`, the category and scale, and under `Your Collection` either the Collection Item or the links `Add to collection` and `Add to an order`.
-- **Item Refresh is gated.** Click `role=button[name='Refresh item details']`. The dialog `The myakiba browser extension is under review` opens, and nothing is fetched.
+- **Item Refresh is gated.** Click `role=button[name='Refresh item details']`. The dialog `Install the myakiba extension first` opens with the link `Install from the Chrome Web Store`, and nothing is fetched.
 - **Command palette.** Click `header >> role=button[name='Search']`. The dialog `Global Command Palette` opens. Type the title of an Item in the Collection into `role=dialog[name='Global Command Palette'] >> role=combobox`, wait for its option, and click it. The URL becomes that Item's page.
 - **Proof.** Save a snapshot of each page, the `innerText` that holds the totals, and the SQL that explains them to `evidence/overview/`.
 

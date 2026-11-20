@@ -7,6 +7,7 @@ export type ExtensionListings = { readonly [Store in ExtensionStore]: string | n
 
 /** Releasing the extension in a store means setting its listing URL here. */
 export const EXTENSION_LISTINGS: ExtensionListings = {
-  chromeWebStore: null,
+  chromeWebStore:
+    "https://chromewebstore.google.com/detail/myakiba/cipiinpifbjbpjnhghkeonigecihoebm",
   firefoxAddons: null,
 };

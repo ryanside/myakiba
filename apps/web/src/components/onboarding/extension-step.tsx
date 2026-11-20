@@ -11,6 +11,7 @@ import {
   ExtensionLink,
   ExtensionNotice,
   UPDATE_LINK,
+  installLink,
   pickExtensionCopy,
 } from "@/components/extension/extension-notice";
 import type { ExtensionNoticeCopy } from "@/components/extension/extension-notice";
@@ -34,11 +35,11 @@ export function ExtensionStep() {
   if (status.kind !== "absent") {
     return <InstallStatus status={status} link={status.kind === "outdated" ? UPDATE_LINK : null} />;
   }
-  const copy = pickExtensionCopy(extensionAvailability());
-  return copy.link ? (
-    <InstallStatus status={status} link={copy.link} />
+  const availability = extensionAvailability();
+  return availability.kind === "listed" ? (
+    <InstallStatus status={status} link={installLink(availability)} />
   ) : (
-    <ExtensionNotice copy={copy} />
+    <ExtensionNotice copy={pickExtensionCopy(availability)} />
   );
 }
 
@@ -68,9 +69,6 @@ function InstallStatus({
           <Button variant="outline" onClick={() => window.location.reload()}>
             Reload page
           </Button>
-          <span className="text-xs text-muted-foreground">
-            Reload this page after you {status.kind === "absent" ? "install" : "update"} it.
-          </span>
         </div>
       ) : null}
     </div>

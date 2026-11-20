@@ -30,7 +30,6 @@ const { dismissMissingExtension, useExtensionGate } = await import("@/lib/extens
 const { ItemRefreshButton } = await import("@/components/item/item-refresh-button");
 
 const [CHROME] = SUPPORTED_BROWSERS;
-const UNDER_REVIEW = "The myakiba browser extension is under review";
 
 beforeEach(() => {
   browseWith(CHROME.userAgent);
@@ -131,7 +130,7 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       const dialog = await screen.findByRole("dialog", {
         name: "Install the myakiba extension first",
       });
-      expect(dialog.textContent).toContain(`Install it from ${browser.storeName}`);
+      expect(dialog.textContent).toContain("Reload this page after you install it.");
       expect(
         screen
           .getByRole("link", { name: `Install from ${browser.storeName} (opens in a new tab)` })
@@ -140,23 +139,41 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       expect(calls()).toBe(0);
     });
 
-    test("a missing extension is under review while this browser's store has no listing", async () => {
-      listIn(
-        ...SUPPORTED_BROWSERS.filter(({ store }) => store !== browser.store).map(
-          ({ store }) => store,
-        ),
-      );
+    test("a missing extension is under review while no store lists it", async () => {
+      listIn();
       loadExtension({ installed: false });
       const user = userEvent.setup();
       const { calls } = renderRefreshButton();
 
       await click("Refresh item details")(user);
 
-      const dialog = await screen.findByRole("dialog", { name: UNDER_REVIEW });
-      expect(dialog.textContent).toContain(`It is in review at ${browser.storeName} now`);
-      expect(dialog.textContent).toContain("it will be released shortly");
-      expect(dialog.textContent).toContain("so both are unavailable until it passes review");
+      const dialog = await screen.findByRole("dialog", {
+        name: `The myakiba extension is in review at ${browser.storeName}`,
+      });
+      expect(dialog.textContent).toContain("Refreshing item details works once it's approved.");
       expect(screen.queryByRole("link")).toBeNull();
+      expect(calls()).toBe(0);
+    });
+
+    test("a missing extension under review here names the browser whose store lists it", async () => {
+      const other = SUPPORTED_BROWSERS.find(({ store }) => store !== browser.store);
+      if (other === undefined) throw new Error("two supported browsers");
+      listIn(other.store);
+      loadExtension({ installed: false });
+      const user = userEvent.setup();
+      const { calls } = renderRefreshButton();
+
+      await click("Refresh item details")(user);
+
+      const dialog = await screen.findByRole("dialog", {
+        name: `The myakiba extension is in review at ${browser.storeName}`,
+      });
+      expect(dialog.textContent).toContain(`Refresh item details in ${other.browsers} until then.`);
+      expect(
+        screen
+          .getByRole("link", { name: `View on ${other.storeName} (opens in a new tab)` })
+          .getAttribute("href"),
+      ).toBe(LISTING_URLS[other.store]);
       expect(calls()).toBe(0);
     });
 
@@ -184,9 +201,11 @@ test("another browser is told the extension needs desktop Chrome or Firefox", as
   await click("Refresh item details")(user);
 
   const dialog = await screen.findByRole("dialog", {
-    name: "Refreshing item details needs desktop Chrome or Firefox",
+    name: "Refreshing item details needs the myakiba extension",
   });
-  expect(dialog.textContent).toContain("Open myakiba in one of them to refresh item details.");
+  expect(dialog.textContent).toContain(
+    "It runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox 140 or later.",
+  );
   expect(screen.queryByRole("link")).toBeNull();
   expect(calls()).toBe(0);
 });

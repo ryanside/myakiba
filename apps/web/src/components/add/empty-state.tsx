@@ -1,5 +1,11 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { STORE_NAMES } from "@/components/extension/extension-notice";
+import {
+  PICK,
+  RUNS_IN,
+  installLink,
+  meanwhile,
+  reviewTitle,
+} from "@/components/extension/extension-notice";
 import { buttonVariants } from "@/components/ui/button";
 import { useGlide } from "@/hooks/use-glide";
 import { extensionAvailability } from "@/lib/extension-availability";
@@ -12,8 +18,8 @@ import { FRAME_WIDTH } from "./row-fields";
 
 type EmptyMessage = {
   readonly body: string;
-  /** The row under the message holds both searches, so only an install is the message's own. */
-  readonly install: { readonly label: string; readonly href: string } | null;
+  /** The row under the message holds both searches, so only a store link is the message's own. */
+  readonly link: { readonly label: string; readonly href: string } | null;
 };
 
 /** What an empty Add page says, by the extension's state and where this browser can get it. */
@@ -24,27 +30,23 @@ export function emptyMessage(
   if (status === "ready" || status === "outdated") {
     return {
       body: "Click Pick for myakiba on any MyFigureCollection item and it lands here.",
-      install: null,
+      link: null,
     };
   }
   switch (availability.kind) {
     case "listed":
       return {
-        body: "Picking new items needs the myakiba extension. Items already in myakiba can be added without it.",
-        install: {
-          label: `Install from ${STORE_NAMES[availability.store]}`,
-          href: availability.url,
-        },
+        body: "Install the myakiba extension, then click Pick for myakiba on any MyFigureCollection item and it lands here.",
+        link: installLink(availability),
       };
-    case "in_review":
-      return {
-        body: `The myakiba extension is in review at ${STORE_NAMES[availability.store]}, so new items can't be picked yet. Items already in myakiba can be added now.`,
-        install: null,
-      };
+    case "in_review": {
+      const { body, link } = meanwhile(PICK, availability.alternative);
+      return { body: `${reviewTitle(availability.store)}. ${body}`, link };
+    }
     case "unsupported":
       return {
-        body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Items already in myakiba can be added here.",
-        install: null,
+        body: `Picking items needs the myakiba extension, which runs ${RUNS_IN}.`,
+        link: null,
       };
   }
 }
@@ -56,7 +58,7 @@ export function emptyMessage(
 export function EmptyState() {
   const status = useExtensionStatus().kind;
   const availability = extensionAvailability();
-  const { body, install } = emptyMessage(status, availability);
+  const { body, link } = emptyMessage(status, availability);
   const known = status !== "checking";
   const glide = useGlide<HTMLDivElement>(body, { axis: "height" });
 
@@ -72,14 +74,14 @@ export function EmptyState() {
         )}
       >
         <p className="max-w-[65ch] text-pretty">{body}</p>
-        {install ? (
+        {link ? (
           <a
-            href={install.href}
+            href={link.href}
             target="_blank"
             rel="noopener noreferrer"
             className={buttonVariants()}
           >
-            {install.label}
+            {link.label}
             <HugeiconsIcon icon={ExternalIcon} data-icon="inline-end" aria-hidden="true" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>
