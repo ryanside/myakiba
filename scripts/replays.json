@@ -5151,6 +5151,52 @@
         "in production mode > /privacy with Accept: application/json, */*;q=0 does not get the web app",
         "in production mode > /privacy with Accept: text/html;q=0, application/json does not get the web app"
       ]
+    },
+    {
+      "fix": "5db85c8e246b45ae7847f59dc8801fe33a925233",
+      "bug": "How it works told every visitor to install the extension \"in Chrome or Firefox on a computer.\" once any one store listed it, so Firefox visitors read that they could install it while Firefox Add-ons still reviewed it, and no visitor got a link to their store's listing.",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": [
+        "How it works names the browsers a store lists and links a visitor to their listing",
+        "How it works names both browsers once both stores list the extension"
+      ]
+    },
+    {
+      "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
+      "bug": "While one store listed the extension and the visitor's own store still reviewed it, the visitor read that picking and refreshing item details were unavailable, though both worked in the other store's browser.",
+      "test": "apps/web/src/lib/extension-availability.test.ts",
+      "fixed": [
+        "each store's availability follows only its own listing",
+        "a store under review names no alternative while no other store lists the extension"
+      ]
+    },
+    {
+      "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
+      "bug": "The Add page's empty state told a visitor whose store still reviewed the extension that new items could not be picked, though another store's browser could pick them.",
+      "test": "apps/web/src/components/add/empty-state.test.ts",
+      "fixed": [
+        "what an empty Add page says > without it, while its store reviews it and another lists it, where to pick meanwhile"
+      ]
+    },
+    {
+      "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
+      "bug": "The Item Refresh dialog told a visitor whose store still reviewed the extension that refreshing item details was unavailable, though another store's browser could refresh them.",
+      "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+      "fixed": [
+        "in Chrome > a missing extension under review here names the browser whose store lists it",
+        "in Firefox > a missing extension under review here names the browser whose store lists it"
+      ]
+    },
+    {
+      "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
+      "bug": "Onboarding told a visitor whose store still reviewed the extension that new items could not be picked, though another store's browser could pick them.",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": [
+        "onboarding's extension step > in Chrome > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's extension step > in Firefox > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's add step > in Chrome > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's add step > in Firefox > names the browser whose store lists the extension while this store reviews it"
+      ]
     }
   ],
   "lint": [
