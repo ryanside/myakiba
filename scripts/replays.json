@@ -5159,7 +5159,9 @@
       "fixed": [
         "How it works names the browsers a store lists and links a visitor to their listing",
         "How it works names both browsers once both stores list the extension"
-      ]
+      ],
+      "testAt": "21d6f75b52cd1da6bed1ce9f6c7cbfeef36c9ad9",
+      "reason": "The next fix in this PR rewrote these notices' copy and linked the listed store, so these tests' assertions are pinned to the copy they were written against."
     },
     {
       "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
@@ -5168,7 +5170,9 @@
       "fixed": [
         "each store's availability follows only its own listing",
         "a store under review names no alternative while no other store lists the extension"
-      ]
+      ],
+      "testAt": "21d6f75b52cd1da6bed1ce9f6c7cbfeef36c9ad9",
+      "reason": "The next fix in this PR rewrote these notices' copy and linked the listed store, so these tests' assertions are pinned to the copy they were written against."
     },
     {
       "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
@@ -5176,7 +5180,9 @@
       "test": "apps/web/src/components/add/empty-state.test.ts",
       "fixed": [
         "what an empty Add page says > without it, while its store reviews it and another lists it, where to pick meanwhile"
-      ]
+      ],
+      "testAt": "21d6f75b52cd1da6bed1ce9f6c7cbfeef36c9ad9",
+      "reason": "The next fix in this PR rewrote these notices' copy and linked the listed store, so these tests' assertions are pinned to the copy they were written against."
     },
     {
       "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
@@ -5185,7 +5191,9 @@
       "fixed": [
         "in Chrome > a missing extension under review here names the browser whose store lists it",
         "in Firefox > a missing extension under review here names the browser whose store lists it"
-      ]
+      ],
+      "testAt": "21d6f75b52cd1da6bed1ce9f6c7cbfeef36c9ad9",
+      "reason": "The next fix in this PR rewrote these notices' copy and linked the listed store, so these tests' assertions are pinned to the copy they were written against."
     },
     {
       "fix": "9d1fe806fa68e991df899ca966e817ab439594db",
@@ -5196,6 +5204,53 @@
         "onboarding's extension step > in Firefox > names the browser whose store lists the extension while this store reviews it",
         "onboarding's add step > in Chrome > names the browser whose store lists the extension while this store reviews it",
         "onboarding's add step > in Firefox > names the browser whose store lists the extension while this store reviews it"
+      ],
+      "testAt": "21d6f75b52cd1da6bed1ce9f6c7cbfeef36c9ad9",
+      "reason": "The next fix in this PR rewrote these notices' copy and linked the listed store, so these tests' assertions are pinned to the copy they were written against."
+    },
+    {
+      "fix": "d2a37f8634f11ed26d5bd67fb164acd135914f09",
+      "bug": "While a visitor's store reviewed the extension and another store listed it, the notices named that store but gave no link to its listing. Their copy also restated their buttons, promised a release, and pointed new accounts to an empty Item Database.",
+      "test": "apps/web/src/components/extension/extension-gate.test.tsx",
+      "fixed": [
+        "in Chrome > a missing extension under review here names the browser whose store lists it",
+        "in Firefox > a missing extension under review here names the browser whose store lists it",
+        "in Chrome > a missing extension links to this browser's store listing",
+        "in Chrome > a missing extension is under review while no store lists it",
+        "in Firefox > a missing extension links to this browser's store listing",
+        "in Firefox > a missing extension is under review while no store lists it",
+        "another browser is told the extension needs desktop Chrome or Firefox"
+      ]
+    },
+    {
+      "fix": "d2a37f8634f11ed26d5bd67fb164acd135914f09",
+      "bug": "While a visitor's store reviewed the extension and another store listed it, onboarding named that store but gave no link to its listing. Their copy also restated their buttons, promised a release, and pointed new accounts to an empty Item Database.",
+      "test": "apps/web/src/components/extension/extension-notice.test.tsx",
+      "fixed": [
+        "onboarding's extension step > in Chrome > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's extension step > in Firefox > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's add step > in Chrome > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's add step > in Firefox > names the browser whose store lists the extension while this store reviews it",
+        "onboarding's extension step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's extension step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's extension step > says the extension needs desktop Chrome or Firefox in another browser",
+        "onboarding's add step > in Chrome > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's add step > in Firefox > shows the review notice while the extension is missing and this store has no listing",
+        "onboarding's add step > says the extension needs desktop Chrome or Firefox in another browser",
+        "How it works names the browsers a store lists and links a visitor to their listing"
+      ]
+    },
+    {
+      "fix": "d2a37f8634f11ed26d5bd67fb164acd135914f09",
+      "bug": "While a visitor's store reviewed the extension and another store listed it, the Add page's empty state named that store but gave no link to its listing. Their copy also restated their buttons, promised a release, and pointed new accounts to an empty Item Database.",
+      "test": "apps/web/src/components/add/empty-state.test.ts",
+      "fixed": [
+        "what an empty Add page says > without it, while its store reviews it and another lists it, where to pick meanwhile",
+        "what an empty Add page says > with the extension ready, how to pick",
+        "what an empty Add page says > with the extension outdated, how to pick",
+        "what an empty Add page says > without it, where a browser's store lists it, how to install it",
+        "what an empty Add page says > without it, while a store reviews it, what still works",
+        "what an empty Add page says > without it, in a browser it does not run in, which ones it does"
       ]
     }
   ],
