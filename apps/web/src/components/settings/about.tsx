@@ -47,7 +47,7 @@ function BuildId({ id }: { readonly id: string }) {
       href={`${REPOSITORY}/commit/${id}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="rounded-sm text-sm tabular-nums underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="-mx-1 rounded-sm px-1 text-sm tabular-nums underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       {id.slice(0, 7)}
       <span className="sr-only"> (opens the commit on GitHub)</span>

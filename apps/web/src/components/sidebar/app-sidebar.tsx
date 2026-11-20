@@ -138,7 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           type="button"
           aria-haspopup="dialog"
           onClick={openOnboarding}
-          className="w-fit rounded-md text-left text-[0.8125rem] text-muted-foreground outline-ring color-motion hover:text-foreground focus-visible:outline-2"
+          className="-mx-1.5 w-fit rounded-md px-1.5 text-left text-[0.8125rem] text-muted-foreground outline-ring color-motion hover:text-foreground focus-visible:outline-2"
         >
           Getting started
         </button>
@@ -147,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem key={link.title}>
               <SidebarMenuButton
                 size="sm"
-                className="h-7 px-0 text-[0.8125rem] text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent"
+                className="-mx-1.5 h-7 px-1.5 text-[0.8125rem] text-muted-foreground hover:bg-transparent hover:text-foreground active:bg-transparent"
                 render={
                   link.external ? (
                     (renderProps) => (

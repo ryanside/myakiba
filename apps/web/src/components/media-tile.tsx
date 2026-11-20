@@ -144,7 +144,7 @@ export function MediaCardImage({
 }
 
 export function MediaCardBody({ children }: { readonly children: ReactNode }): React.JSX.Element {
-  return <div className="flex min-w-0 flex-1 flex-col gap-1.5 pt-3">{children}</div>;
+  return <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-1.5 pt-3 pb-1.5">{children}</div>;
 }
 
 export function MediaCardTitle({
