@@ -2526,11 +2526,13 @@
             "the item page's resync button > asks for an update when the extension is too old",
             "in Chrome > an Item Refresh starts when the extension is ready, whichever stores list it",
             "in Chrome > a missing extension links to this browser's store listing",
-            "in Chrome > a missing extension is under review while this browser's store has no listing",
+            "in Chrome > a missing extension is under review while no store lists it",
+            "in Chrome > a missing extension under review here names the browser whose store lists it",
             "in Chrome > an outdated extension asks for an update",
             "in Firefox > an Item Refresh starts when the extension is ready, whichever stores list it",
             "in Firefox > a missing extension links to this browser's store listing",
-            "in Firefox > a missing extension is under review while this browser's store has no listing",
+            "in Firefox > a missing extension is under review while no store lists it",
+            "in Firefox > a missing extension under review here names the browser whose store lists it",
             "in Firefox > an outdated extension asks for an update",
             "another browser is told the extension needs desktop Chrome or Firefox",
             "an extension that answers ready in another browser still starts the refresh",
@@ -2539,7 +2541,7 @@
             "a gated button shows it is checking and ignores a second click until the check ends",
             "a gate whose check throws stops checking and can check again"
           ],
-          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; Item Refresh is the entry point that still gates on the extension, so these cases say refresh, not import."
+          "reason": "CSV, MyFigureCollection Imports and Import History were retired in R2; Item Refresh is the entry point that still gates on the extension, so these cases say refresh, not import. The under-review case later split in two: one where no store lists the extension, and one where another store does."
         }
       ]
     },
