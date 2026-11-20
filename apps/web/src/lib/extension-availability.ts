@@ -3,16 +3,19 @@ import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
 import type { ExtensionStore } from "@/lib/extension-listings";
 import { describeUserAgent } from "@/lib/user-agent";
 
+/** A store that lists the extension, and its listing. */
+export type ExtensionListing = { readonly store: ExtensionStore; readonly url: string };
+
 /**
  * Where a visitor can get the extension, from their browser and that browser's store. While their
- * store reviews it, `alternative` is a store that lists it for another browser, if one does.
+ * store reviews it, `alternative` is a listing for another browser, if one exists.
  */
 export type ExtensionAvailability =
-  | { readonly kind: "listed"; readonly store: ExtensionStore; readonly url: string }
+  | ({ readonly kind: "listed" } & ExtensionListing)
   | {
       readonly kind: "in_review";
       readonly store: ExtensionStore;
-      readonly alternative: ExtensionStore | null;
+      readonly alternative: ExtensionListing | null;
     }
   | { readonly kind: "unsupported" };
 
@@ -41,6 +44,9 @@ export function extensionAvailability(
   if (store === null) return { kind: "unsupported" };
   const url = EXTENSION_LISTINGS[store];
   if (url !== null) return { kind: "listed", store, url };
-  const alternative = EXTENSION_STORES.find((other) => EXTENSION_LISTINGS[other] !== null) ?? null;
-  return { kind: "in_review", store, alternative };
+  const alternative = EXTENSION_STORES.flatMap((other) => {
+    const listing = EXTENSION_LISTINGS[other];
+    return listing === null ? [] : [{ store: other, url: listing }];
+  })[0];
+  return { kind: "in_review", store, alternative: alternative ?? null };
 }

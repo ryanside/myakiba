@@ -3,7 +3,7 @@ import { PuzzleIcon } from "@hugeicons/core-free-icons";
 import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
 import { buttonVariants } from "@/components/ui/button";
 import { extensionAvailability } from "@/lib/extension-availability";
-import type { ExtensionAvailability } from "@/lib/extension-availability";
+import type { ExtensionAvailability, ExtensionListing } from "@/lib/extension-availability";
 import { useExtensionStatus } from "@/lib/extension-gate";
 import type { ExtensionStore } from "@/lib/extension-listings";
 import { cn } from "@/lib/utils";
@@ -17,12 +17,6 @@ const STORE_BROWSERS = {
   chromeWebStore: "Chrome, Edge or another Chromium browser",
   firefoxAddons: "Firefox",
 } as const satisfies Record<ExtensionStore, string>;
-
-/** Where to do `task` while this browser's store reviews the extension, or null when no store lists it. */
-export function meanwhile(task: string, alternative: ExtensionStore | null): string | null {
-  if (alternative === null) return null;
-  return `Until then, ${task} in ${STORE_BROWSERS[alternative]}, which can install it from ${STORE_NAMES[alternative]}.`;
-}
 
 export type ExtensionNoticeCopy = {
   readonly title: string;
@@ -39,66 +33,73 @@ export const UPDATE_LINK = {
   href: `/#${EXTENSION_UPDATE_FAQ_ID}`,
 } as const;
 
-export const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
+/** What a surface needs the extension for, in the words each notice uses. */
+type Task = { readonly installTitle: string; readonly doing: string; readonly does: string };
 
-function inReview(store: ExtensionStore): string {
-  return `It is in review at ${STORE_NAMES[store]} now, and it will be released shortly.`;
+const REFRESH: Task = {
+  installTitle: "Install the myakiba extension first",
+  doing: "Refreshing item details",
+  does: "Refresh item details",
+};
+
+export const PICK: Task = {
+  installTitle: "Install the myakiba extension to pick items",
+  doing: "Picking items",
+  does: "Pick items",
+};
+
+export const RUNS_IN = `on a computer in Chrome, Edge or another Chromium browser, or in Firefox ${EXTENSION_MIN_BROWSER_VERSION} or later`;
+
+export function installLink(listing: ExtensionListing): NonNullable<ExtensionNoticeCopy["link"]> {
+  return { label: `Install from ${STORE_NAMES[listing.store]}`, href: listing.url };
+}
+
+export function reviewTitle(store: ExtensionStore): string {
+  return `The myakiba extension is in review at ${STORE_NAMES[store]}`;
+}
+
+/** What to do while this browser's store reviews the extension: use another store's, or wait. */
+export function meanwhile(
+  task: Task,
+  alternative: ExtensionListing | null,
+): Pick<ExtensionNoticeCopy, "body" | "link"> {
+  if (alternative === null) return { body: `${task.doing} works once it's approved.`, link: null };
+  return {
+    body: `${task.does} in ${STORE_BROWSERS[alternative.store]} until then.`,
+    link: { label: `View on ${STORE_NAMES[alternative.store]}`, href: alternative.url },
+  };
+}
+
+function noticeCopy(availability: ExtensionAvailability, task: Task): ExtensionNoticeCopy {
+  switch (availability.kind) {
+    case "listed":
+      return {
+        title: task.installTitle,
+        body: "Reload this page after you install it.",
+        link: installLink(availability),
+      };
+    case "in_review":
+      return {
+        title: reviewTitle(availability.store),
+        ...meanwhile(task, availability.alternative),
+      };
+    case "unsupported":
+      return {
+        title: `${task.doing} needs the myakiba extension`,
+        body: `It runs ${RUNS_IN}.`,
+        link: null,
+      };
+  }
 }
 
 /** What to tell a visitor without the extension, by where their browser gets it. */
 export function missingExtensionCopy(availability: ExtensionAvailability): ExtensionNoticeCopy {
-  switch (availability.kind) {
-    case "listed":
-      return {
-        title: "Install the myakiba extension first",
-        body: `myakiba refreshes item details through its browser extension, with your own MyFigureCollection sign-in. Install it from ${STORE_NAMES[availability.store]}, then reload this page.`,
-        link: { label: `Install from ${STORE_NAMES[availability.store]}`, href: availability.url },
-      };
-    case "in_review":
-      return {
-        title: UNDER_REVIEW_TITLE,
-        body: `${inReview(availability.store)} ${
-          meanwhile("refresh item details", availability.alternative) ??
-          "Picking items and refreshing item details need it, so both are unavailable until it passes review."
-        }`,
-        link: null,
-      };
-    case "unsupported":
-      return {
-        title: "Refreshing item details needs desktop Chrome or Firefox",
-        body: `myakiba refreshes item details through its browser extension, which runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox, version ${EXTENSION_MIN_BROWSER_VERSION} or later. Open myakiba in one of them to refresh item details.`,
-        link: null,
-      };
-  }
+  return noticeCopy(availability, REFRESH);
 }
-
-const ALREADY_ADDABLE = "Items already in the Item Database can still be added";
 
 /** The same, for a surface that takes new Items by Pick. */
 export function pickExtensionCopy(availability: ExtensionAvailability): ExtensionNoticeCopy {
-  switch (availability.kind) {
-    case "listed":
-      return {
-        title: "Install the myakiba extension to pick items",
-        body: `Picking needs the myakiba browser extension, which reads MyFigureCollection pages with your own sign-in. Install it from ${STORE_NAMES[availability.store]}, then reload this page. ${ALREADY_ADDABLE} without it.`,
-        link: { label: `Install from ${STORE_NAMES[availability.store]}`, href: availability.url },
-      };
-    case "in_review":
-      return {
-        title: UNDER_REVIEW_TITLE,
-        body: `${inReview(availability.store)} ${
-          meanwhile("pick new items", availability.alternative) ??
-          "Until it is listed, new items can't be picked."
-        } ${ALREADY_ADDABLE}.`,
-        link: null,
-      };
-    case "unsupported":
-      return {
-        title: "Picking needs desktop Chrome or Firefox",
-        body: `The myakiba browser extension runs on a computer in Chrome, Edge or another Chromium browser, or in Firefox, version ${EXTENSION_MIN_BROWSER_VERSION} or later. Open myakiba in one of them to pick items. ${ALREADY_ADDABLE} here.`,
-        link: null,
-      };
-  }
+  return noticeCopy(availability, PICK);
 }
 
 export function ExtensionNotice({

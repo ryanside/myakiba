@@ -317,7 +317,7 @@ test.each([
       browseWith(CHROME.userAgent);
       listIn(CHROME.store);
     },
-    /Items already in myakiba can be added without it/u,
+    /Install the myakiba extension, then click Pick for myakiba/u,
   ],
   [
     "in a browser it does not run in",
@@ -325,7 +325,7 @@ test.each([
       browseWith(SAFARI);
       listIn(CHROME.store);
     },
-    /on desktop Chrome or Firefox/u,
+    /which runs on a computer in Chrome/u,
   ],
 ])("the one message while the extension is %s speaks of picking", async (_name, arrange, body) => {
   arrange();

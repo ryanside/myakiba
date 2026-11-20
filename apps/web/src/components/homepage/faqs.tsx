@@ -9,7 +9,6 @@ import {
   EXTENSION_FAQ_ID,
   EXTENSION_UPDATE_FAQ_ID,
   STORE_NAMES,
-  UNDER_REVIEW_TITLE,
 } from "@/components/extension/extension-notice";
 import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
 import { HomeSection } from "@/components/homepage/kit";
@@ -20,6 +19,8 @@ const STORE_BROWSERS = {
   chromeWebStore: "Chrome, Edge and other Chromium browsers",
   firefoxAddons: "Firefox",
 } as const satisfies Record<ExtensionStore, string>;
+
+const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
 
 function ExtensionInstallAnswer() {
   const listed = EXTENSION_STORES.filter((store) => EXTENSION_LISTINGS[store] !== null);

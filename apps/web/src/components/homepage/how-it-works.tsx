@@ -31,8 +31,7 @@ function installWhere(): string {
   if (listed.length === 0) {
     return `in ${browsers(reviewing)} on a computer, once it passes store review.`;
   }
-  const later =
-    reviewing.length === 0 ? "" : ` ${browsers(reviewing)} support follows store review.`;
+  const later = reviewing.length === 0 ? "" : ` ${browsers(reviewing)} is in review.`;
   return `in ${browsers(listed)} on a computer.${later}`;
 }
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { listIn } from "../../test/extension-browser";
+import { LISTING_URLS, listIn } from "../../test/extension-browser";
 import type { ExtensionStore } from "./extension-listings";
 
 const { extensionAvailability, storeForBrowser } = await import("./extension-availability");
@@ -74,7 +74,7 @@ test("each store's availability follows only its own listing", () => {
   expect(extensionAvailability(firefox)).toEqual({
     kind: "in_review",
     store: "firefoxAddons",
-    alternative: "chromeWebStore",
+    alternative: { store: "chromeWebStore", url: LISTING_URLS.chromeWebStore },
   });
   expect(extensionAvailability("Mozilla/5.0 (iPhone) Mobile Safari/604.1")).toEqual({
     kind: "unsupported",

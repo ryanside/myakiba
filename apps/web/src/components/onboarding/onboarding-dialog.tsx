@@ -65,8 +65,7 @@ const STEPS: readonly [StepMeta, ...StepMeta[]] = [
     step: 3,
     eyebrow: "Extension",
     title: "Install the myakiba extension.",
-    description:
-      "myakiba gets MyFigureCollection items through its browser extension, with your own MyFigureCollection sign-in. You need it to add items, but you can finish setup without it.",
+    description: "It adds items to myakiba from their MyFigureCollection pages.",
   },
   {
     id: "add",
