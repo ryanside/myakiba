@@ -48,5 +48,5 @@ Preconditions:
 - A new Order's title defaults to its first row's Item title.
 - A row added to the Collection is `Owned` and paid. A row added to an Order takes the Order's status and Paid.
 - The page drops an `item` preset whose id does not match `^[a-z0-9]{8,64}$` and opens empty. `seed-items` uses ids that match. After it reads the preset, the page removes `item=` from the URL.
-- The page says the extension is in review and that new items can't be picked. That text is expected here.
+- The empty page says picking new items needs the extension and links `Install from the Chrome Web Store`. That text is expected here.
 - From source: the `Wishlist` checkbox and the `Lists` button in the sentence put the same rows on the Wishlist and on Lists in the same commit. The `Item Database` destination keeps the rows in the Item Database only, with the button `Keep 1 in Item Database`.

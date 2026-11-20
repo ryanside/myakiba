@@ -23,6 +23,7 @@ const {
   resetEntryPoints,
 } = await import("../../../test/extension-entry-points");
 const { default: FAQsSection } = await import("@/components/homepage/faqs");
+const { HowItWorks } = await import("@/components/homepage/how-it-works");
 
 afterEach(resetEntryPoints);
 
@@ -178,6 +179,68 @@ test("the FAQ links both stores once both list the extension", async () => {
     LISTING_URLS.firefoxAddons,
   );
   expect(answer.textContent).not.toContain("under review");
+});
+
+// How it works plays a demo that waits on the page's fonts, which happy-dom does not have.
+Object.defineProperty(document, "fonts", {
+  configurable: true,
+  value: { status: "loaded", ready: Promise.resolve() },
+});
+
+function installStep() {
+  render(<HowItWorks />);
+  const lead = screen.getByText("Install the myakiba extension", { exact: false });
+  return lead.closest("li");
+}
+
+const INSTALL_LINK = { name: "Install the myakiba extension (opens in a new tab)" } as const;
+
+test("How it works says the extension waits on store review while no store lists it", () => {
+  listIn();
+  browseWith(SUPPORTED_BROWSERS[0].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain(
+    "in Chrome or Firefox on a computer, once it passes store review.",
+  );
+  expect(screen.queryByRole("link", INSTALL_LINK)).toBeNull();
+});
+
+test("How it works names the browsers a store lists and links a visitor to their listing", () => {
+  listIn("chromeWebStore");
+  browseWith(SUPPORTED_BROWSERS[0].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain(
+    "in Chrome on a computer. Firefox support follows store review.",
+  );
+  expect(screen.getByRole("link", INSTALL_LINK).getAttribute("href")).toBe(
+    LISTING_URLS.chromeWebStore,
+  );
+});
+
+test("How it works links no listing for a visitor whose store still reviews the extension", () => {
+  listIn("chromeWebStore");
+  browseWith(SUPPORTED_BROWSERS[1].userAgent);
+
+  installStep();
+
+  expect(screen.queryByRole("link", INSTALL_LINK)).toBeNull();
+});
+
+test("How it works names both browsers once both stores list the extension", () => {
+  listIn("chromeWebStore", "firefoxAddons");
+  browseWith(SUPPORTED_BROWSERS[1].userAgent);
+
+  const step = installStep();
+
+  expect(step?.textContent).toContain("in Chrome or Firefox on a computer.");
+  expect(step?.textContent).not.toContain("review");
+  expect(screen.getByRole("link", INSTALL_LINK).getAttribute("href")).toBe(
+    LISTING_URLS.firefoxAddons,
+  );
 });
 
 test("the update link opens an FAQ answer that says how to update, even while every store reviews", async () => {

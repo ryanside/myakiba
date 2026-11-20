@@ -58,7 +58,7 @@ Every step was driven against a real run of build `4023b6303` on 2026-11-16, exc
 Each needs something the harness does not have. Report them as unreachable, with the prerequisite.
 
 - Picks and `Add to item database` need the browser extension holding a MyFigureCollection page. The Add page shows only search rows.
-- Item Refresh needs the extension. `Refresh item details` on an Item page opens the dialog `The myakiba browser extension is under review` instead.
+- Item Refresh needs the extension. `Refresh item details` on an Item page opens the dialog `Install the myakiba extension first`, with the link `Install from the Chrome Web Store`, instead.
 - Item pictures and the picture quota need a Pick. The S3 store runs, but nothing sends it a picture.
 - `Continue with Google` and the Account section's Google `Connect` need real OAuth credentials.
 - The verification email and the password-reset link need a real Resend key.
