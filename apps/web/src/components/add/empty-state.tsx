@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { STORE_NAMES } from "@/components/extension/extension-notice";
+import { STORE_NAMES, meanwhile } from "@/components/extension/extension-notice";
 import { buttonVariants } from "@/components/ui/button";
 import { useGlide } from "@/hooks/use-glide";
 import { extensionAvailability } from "@/lib/extension-availability";
@@ -36,11 +36,17 @@ export function emptyMessage(
           href: availability.url,
         },
       };
-    case "in_review":
+    case "in_review": {
+      const store = STORE_NAMES[availability.store];
+      const then = meanwhile("pick new items", availability.alternative);
       return {
-        body: `The myakiba extension is in review at ${STORE_NAMES[availability.store]}, so new items can't be picked yet. Items already in myakiba can be added now.`,
+        body:
+          then === null
+            ? `The myakiba extension is in review at ${store}, so new items can't be picked yet. Items already in myakiba can be added now.`
+            : `The myakiba extension is in review at ${store}. ${then} Items already in myakiba can be added now.`,
         install: null,
       };
+    }
     case "unsupported":
       return {
         body: "Picking new items needs the myakiba extension, on desktop Chrome or Firefox. Items already in myakiba can be added here.",

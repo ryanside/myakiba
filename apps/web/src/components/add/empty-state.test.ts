@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { emptyMessage } from "./empty-state";
 
 const LISTED = { kind: "listed", store: "firefoxAddons", url: "https://addons.example" } as const;
-const IN_REVIEW = { kind: "in_review", store: "chromeWebStore" } as const;
+const IN_REVIEW = { kind: "in_review", store: "chromeWebStore", alternative: null } as const;
 const UNSUPPORTED = { kind: "unsupported" } as const;
 
 describe("what an empty Add page says", () => {
@@ -26,6 +26,19 @@ describe("what an empty Add page says", () => {
   test("without it, while a store reviews it, what still works", () => {
     expect(emptyMessage("absent", IN_REVIEW)).toEqual({
       body: "The myakiba extension is in review at the Chrome Web Store, so new items can't be picked yet. Items already in myakiba can be added now.",
+      install: null,
+    });
+  });
+
+  test("without it, while its store reviews it and another lists it, where to pick meanwhile", () => {
+    expect(
+      emptyMessage("absent", {
+        kind: "in_review",
+        store: "firefoxAddons",
+        alternative: "chromeWebStore",
+      }),
+    ).toEqual({
+      body: "The myakiba extension is in review at Firefox Add-ons. Until then, pick new items in Chrome, Edge or another Chromium browser, which can install it from the Chrome Web Store. Items already in myakiba can be added now.",
       install: null,
     });
   });

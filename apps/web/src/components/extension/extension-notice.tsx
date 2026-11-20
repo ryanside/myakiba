@@ -13,6 +13,17 @@ export const STORE_NAMES = {
   firefoxAddons: "Firefox Add-ons",
 } as const satisfies Record<ExtensionStore, string>;
 
+const STORE_BROWSERS = {
+  chromeWebStore: "Chrome, Edge or another Chromium browser",
+  firefoxAddons: "Firefox",
+} as const satisfies Record<ExtensionStore, string>;
+
+/** Where to do `task` while this browser's store reviews the extension, or null when no store lists it. */
+export function meanwhile(task: string, alternative: ExtensionStore | null): string | null {
+  if (alternative === null) return null;
+  return `Until then, ${task} in ${STORE_BROWSERS[alternative]}, which can install it from ${STORE_NAMES[alternative]}.`;
+}
+
 export type ExtensionNoticeCopy = {
   readonly title: string;
   readonly body: string;
@@ -30,9 +41,8 @@ export const UPDATE_LINK = {
 
 export const UNDER_REVIEW_TITLE = "The myakiba browser extension is under review";
 
-function underReviewBody(stores: readonly ExtensionStore[]): string {
-  const where = stores.map((store) => STORE_NAMES[store]).join(" and ");
-  return `It is in review at ${where} now, and it will be released shortly. Picking items and refreshing item details need it, so both are unavailable until it passes review.`;
+function inReview(store: ExtensionStore): string {
+  return `It is in review at ${STORE_NAMES[store]} now, and it will be released shortly.`;
 }
 
 /** What to tell a visitor without the extension, by where their browser gets it. */
@@ -45,7 +55,14 @@ export function missingExtensionCopy(availability: ExtensionAvailability): Exten
         link: { label: `Install from ${STORE_NAMES[availability.store]}`, href: availability.url },
       };
     case "in_review":
-      return { title: UNDER_REVIEW_TITLE, body: underReviewBody([availability.store]), link: null };
+      return {
+        title: UNDER_REVIEW_TITLE,
+        body: `${inReview(availability.store)} ${
+          meanwhile("refresh item details", availability.alternative) ??
+          "Picking items and refreshing item details need it, so both are unavailable until it passes review."
+        }`,
+        link: null,
+      };
     case "unsupported":
       return {
         title: "Refreshing item details needs desktop Chrome or Firefox",
@@ -69,7 +86,10 @@ export function pickExtensionCopy(availability: ExtensionAvailability): Extensio
     case "in_review":
       return {
         title: UNDER_REVIEW_TITLE,
-        body: `It is in review at ${STORE_NAMES[availability.store]} now, and it will be released shortly. Until it is listed, new items can't be picked. ${ALREADY_ADDABLE}.`,
+        body: `${inReview(availability.store)} ${
+          meanwhile("pick new items", availability.alternative) ??
+          "Until it is listed, new items can't be picked."
+        } ${ALREADY_ADDABLE}.`,
         link: null,
       };
     case "unsupported":

@@ -95,6 +95,26 @@ describe.each(SURFACES.map((surface) => [surface.name, surface] as const))(
           expect(installLink(browser)).toBeNull();
         });
 
+        test("names the browser whose store lists the extension while this store reviews it", async () => {
+          const other = SUPPORTED_BROWSERS.find(({ store }) => store !== browser.store);
+          if (other === undefined) throw new Error("two supported browsers");
+          browseWith(browser.userAgent);
+          listIn(other.store);
+          loadExtension({ installed: false });
+
+          const container = await surface.open();
+
+          await screen.findByText(UNDER_REVIEW);
+          expect(container.textContent).toContain(
+            `Until then, pick new items in ${other.browsers}, which can install it from ${other.storeName}.`,
+          );
+          expect(container.textContent).not.toContain("new items can't be picked");
+          expect(container.textContent).toContain(
+            "Items already in the Item Database can still be added.",
+          );
+          expect(installLink(browser)).toBeNull();
+        });
+
         test("shows no notice once the extension is installed, even with no listing", async () => {
           browseWith(browser.userAgent);
           listIn();

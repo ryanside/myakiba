@@ -1,12 +1,19 @@
 import { EXTENSION_MIN_BROWSER_VERSION } from "@myakiba/contracts/shared/extension-browsers";
-import { EXTENSION_LISTINGS } from "@/lib/extension-listings";
+import { EXTENSION_LISTINGS, EXTENSION_STORES } from "@/lib/extension-listings";
 import type { ExtensionStore } from "@/lib/extension-listings";
 import { describeUserAgent } from "@/lib/user-agent";
 
-/** Where a visitor can get the extension, from their browser and that browser's store. */
+/**
+ * Where a visitor can get the extension, from their browser and that browser's store. While their
+ * store reviews it, `alternative` is a store that lists it for another browser, if one does.
+ */
 export type ExtensionAvailability =
   | { readonly kind: "listed"; readonly store: ExtensionStore; readonly url: string }
-  | { readonly kind: "in_review"; readonly store: ExtensionStore }
+  | {
+      readonly kind: "in_review";
+      readonly store: ExtensionStore;
+      readonly alternative: ExtensionStore | null;
+    }
   | { readonly kind: "unsupported" };
 
 // Edge, Opera, Brave and every other Chromium browser carry Chrome's token and version.
@@ -33,5 +40,7 @@ export function extensionAvailability(
   const store = storeForBrowser(userAgent);
   if (store === null) return { kind: "unsupported" };
   const url = EXTENSION_LISTINGS[store];
-  return url === null ? { kind: "in_review", store } : { kind: "listed", store, url };
+  if (url !== null) return { kind: "listed", store, url };
+  const alternative = EXTENSION_STORES.find((other) => EXTENSION_LISTINGS[other] !== null) ?? null;
+  return { kind: "in_review", store, alternative };
 }

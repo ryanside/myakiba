@@ -140,12 +140,8 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       expect(calls()).toBe(0);
     });
 
-    test("a missing extension is under review while this browser's store has no listing", async () => {
-      listIn(
-        ...SUPPORTED_BROWSERS.filter(({ store }) => store !== browser.store).map(
-          ({ store }) => store,
-        ),
-      );
+    test("a missing extension is under review while no store lists it", async () => {
+      listIn();
       loadExtension({ installed: false });
       const user = userEvent.setup();
       const { calls } = renderRefreshButton();
@@ -156,6 +152,26 @@ describe.each(SUPPORTED_BROWSERS.map((browser) => [browser.name, browser] as con
       expect(dialog.textContent).toContain(`It is in review at ${browser.storeName} now`);
       expect(dialog.textContent).toContain("it will be released shortly");
       expect(dialog.textContent).toContain("so both are unavailable until it passes review");
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(calls()).toBe(0);
+    });
+
+    test("a missing extension under review here names the browser whose store lists it", async () => {
+      const other = SUPPORTED_BROWSERS.find(({ store }) => store !== browser.store);
+      if (other === undefined) throw new Error("two supported browsers");
+      listIn(other.store);
+      loadExtension({ installed: false });
+      const user = userEvent.setup();
+      const { calls } = renderRefreshButton();
+
+      await click("Refresh item details")(user);
+
+      const dialog = await screen.findByRole("dialog", { name: UNDER_REVIEW });
+      expect(dialog.textContent).toContain(`It is in review at ${browser.storeName} now`);
+      expect(dialog.textContent).toContain(
+        `Until then, refresh item details in ${other.browsers}, which can install it from ${other.storeName}.`,
+      );
+      expect(dialog.textContent).not.toContain("unavailable");
       expect(screen.queryByRole("link")).toBeNull();
       expect(calls()).toBe(0);
     });
