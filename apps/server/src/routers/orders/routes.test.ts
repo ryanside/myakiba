@@ -581,6 +581,9 @@ describe("Paid on an Order", () => {
     expect(await setPaid("order-1", true, [])).toMatchObject({ status: 200 });
     expect(await paidOf("order-1")).toEqual({ paid: true, payment: "partly" });
 
+    expect(await setPaid("order-1", false, [])).toMatchObject({ status: 200 });
+    expect(await paidOf("order-1")).toEqual({ paid: false, payment: "unpaid" });
+
     expect(await setPaid("order-1", true, ["paid"])).toMatchObject({ status: 200 });
     expect(await paidOf("order-1")).toEqual({ paid: true, payment: "paid" });
 

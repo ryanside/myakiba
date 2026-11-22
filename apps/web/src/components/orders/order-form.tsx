@@ -45,6 +45,7 @@ import { FormSection } from "@/components/ui/form-section";
 import * as z from "zod";
 import type { EditedOrder, NewOrder, CascadeOptions } from "@myakiba/contracts/orders/schema";
 import type { Order } from "@myakiba/contracts/orders/types";
+import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { useCascadeOptions } from "@/hooks/use-cascade-options";
 import { CascadeOptionsDropdown } from "@/components/cascade-options-dropdown";
 import { Textarea } from "../ui/textarea";
@@ -208,7 +209,10 @@ function OrderFormContent(
         if (type === "edit-order") {
           const { callbackFn, orderData: editOrderData } = props as DeferredEditOrderFormProps;
           const transformedValue: EditedOrder = { orderId: editOrderData.orderId, ...base };
-          const saved = await callbackFn(transformedValue, cascadeOptions);
+          const changed = ORDER_CASCADE_OPTIONS.filter(
+            (field) => transformedValue[field] !== editOrderData[field],
+          );
+          const saved = await callbackFn(transformedValue, changed);
           // A failed write already rolled back and said why, so the form stays open to retry.
           if (saved.isErr()) return saved;
         } else if (type === "split") {
@@ -508,19 +512,21 @@ function OrderFormContent(
         />
       </FormSection>
 
-      <FormSection title="Options" defaultOpen={false}>
-        <div className="grid gap-1.5">
-          <Label>Cascade to Items</Label>
-          <CascadeOptionsDropdown
-            cascadeOptions={cascadeOptions}
-            cascadeDisplayText={cascadeDisplayText}
-            cascadeOptionsList={cascadeOptionsList}
-            handleSelectAll={handleSelectAll}
-            handleSelectNone={handleSelectNone}
-            handleCascadeOptionChange={handleCascadeOptionChange}
-          />
-        </div>
-      </FormSection>
+      {type === "edit-order" ? null : (
+        <FormSection title="Options" defaultOpen={false}>
+          <div className="grid gap-1.5">
+            <Label>Cascade to Items</Label>
+            <CascadeOptionsDropdown
+              cascadeOptions={cascadeOptions}
+              cascadeDisplayText={cascadeDisplayText}
+              cascadeOptionsList={cascadeOptionsList}
+              handleSelectAll={handleSelectAll}
+              handleSelectNone={handleSelectNone}
+              handleCascadeOptionChange={handleCascadeOptionChange}
+            />
+          </div>
+        </FormSection>
+      )}
 
       <FormSection title="Notes" defaultOpen={false}>
         <form.Field
