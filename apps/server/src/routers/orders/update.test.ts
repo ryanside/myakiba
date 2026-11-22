@@ -70,9 +70,15 @@ beforeEach(async () => {
     shop: "AmiAmi",
     orderDate: "2026-01-05",
   });
-  await db
-    .insert(collection)
-    .values({ id: "collection-1", userId, itemId: "item-1", orderId: "order-1" });
+  await db.insert(collection).values({
+    id: "collection-1",
+    userId,
+    itemId: "item-1",
+    orderId: "order-1",
+    status: "Ordered",
+    shop: "AmiAmi",
+    orderDate: "2026-01-05",
+  });
 });
 
 const editedOrder = {
@@ -243,5 +249,105 @@ describe("an Order edit writes each shape the app sends", () => {
       updatedAt: expect.any(Date),
     });
     expect(after.item).toEqual({ ...before.item, status: "Shipped" });
+  });
+});
+
+describe("an Order edit copies to its items only what it changed", () => {
+  /** An item whose user set its own Shop, status, Paid, dates and shipping method. */
+  const handSet = {
+    id: "collection-2",
+    userId,
+    itemId: "item-2",
+    orderId: "order-1",
+    status: "Owned",
+    paid: true,
+    shop: "HLJ",
+    orderDate: "2025-12-30",
+    paymentDate: "2026-02-01",
+    shippingMethod: "EMS",
+  } as const;
+
+  beforeEach(async () => {
+    await db
+      .insert(item)
+      .values({ id: "item-2", ownerId: userId, externalId: 187, title: "figma Rin" });
+    await db.insert(collection).values(handSet);
+  });
+
+  const readItems = async () =>
+    db.select().from(collection).where(eq(collection.orderId, "order-1")).orderBy(collection.id);
+
+  /** The item that holds the Order's values, then the item with its own. */
+  const readPair = async () => {
+    const [following, own, ...rest] = await readItems();
+    if (!following || !own || rest.length > 0) throw new Error("order-1 should hold two items");
+    return { following, own };
+  };
+
+  const everyCascadeOption = [
+    "status",
+    "paid",
+    "shop",
+    "orderDate",
+    "paymentDate",
+    "shippingDate",
+    "collectionDate",
+    "shippingMethod",
+  ];
+
+  test("a title change leaves every item as it was, even naming every cascade option", async () => {
+    const stored = await readOrder();
+    const before = await readItems();
+
+    const response = await put(
+      {
+        status: stored.status,
+        paid: stored.paid,
+        title: "Renamed",
+        shop: stored.shop,
+        orderDate: stored.orderDate,
+        releaseDate: stored.releaseDate,
+        paymentDate: stored.paymentDate,
+        shippingDate: stored.shippingDate,
+        collectionDate: stored.collectionDate,
+        shippingMethod: stored.shippingMethod,
+        shippingFee: stored.shippingFee,
+        taxes: stored.taxes,
+        duties: stored.duties,
+        tariffs: stored.tariffs,
+        miscFees: stored.miscFees,
+        notes: stored.notes,
+      },
+      everyCascadeOption,
+    );
+
+    expect(response.status).toBe(200);
+    const renamed = await readOrder();
+    expect(renamed.title).toBe("Renamed");
+    expect(await readItems()).toEqual(before);
+  });
+
+  test("a changed field moves only to the items that held the Order's old value", async () => {
+    const { following, own } = await readPair();
+
+    const response = await put(
+      { status: "Shipped", paid: true, shop: "Mandarake", paymentDate: "2026-03-01" },
+      ["status", "paid", "shop", "paymentDate"],
+    );
+
+    expect(response.status).toBe(200);
+    expect(await readItems()).toEqual([
+      { ...following, status: "Shipped", paid: true, shop: "Mandarake", paymentDate: "2026-03-01" },
+      own,
+    ]);
+  });
+
+  test("a cleared date clears only the items that held the Order's date", async () => {
+    const { following, own } = await readPair();
+
+    const response = await put({ orderDate: null }, ["orderDate"]);
+
+    expect(response.status).toBe(200);
+    expect(await readItems()).toEqual([{ ...following, orderDate: null }, own]);
   });
 });
