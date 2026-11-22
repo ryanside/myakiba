@@ -466,6 +466,43 @@ describe("the merge dialog", () => {
   );
 
   test(
+    "holds the merge on Notes while the merged Orders' notes pass the limit, until they are shortened",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      const longNotes = `${"a".repeat(6000)}\n\n${"b".repeat(6000)}`;
+      answerDraft = async () => Result.ok({ ...mergeDraft, notes: longNotes });
+      try {
+        const send = mock(async (..._args: unknown[]): Saving => Result.ok());
+        const queryClient = openMerge(send);
+        const merge = await screen.findByRole("button", { name: "Merge" });
+        const notes = screen.getByPlaceholderText("Add any notes...") as HTMLTextAreaElement;
+
+        expect({
+          notes: notes.value.length,
+          alert:
+            screen.queryByText(
+              "The merged Orders' notes together pass the 10,000-character limit. Shorten them to merge.",
+            ) !== null,
+          disabled: merge.hasAttribute("disabled"),
+        }).toEqual({ notes: longNotes.length, alert: true, disabled: true });
+
+        fireEvent.change(notes, { target: { value: "Box 1 and Box 2" } });
+        await waitFor(() => expect(merge.hasAttribute("disabled")).toBe(false));
+        expect(screen.queryByRole("alert") === null).toBe(true);
+        await userEvent.setup().click(merge);
+        await waitFor(() => expect(send.mock.calls.length).toBe(1));
+        expect(send.mock.calls[0]).toEqual([
+          { ...mergeDraft, notes: "Box 1 and Box 2", title: "New Merged Order" },
+          ids,
+        ]);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
     "says why it cannot open when the source Orders do not load",
     untilBodyDone(async () => {
       const previous = answerDraft;

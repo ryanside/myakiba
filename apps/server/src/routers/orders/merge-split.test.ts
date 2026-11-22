@@ -6,6 +6,7 @@ import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
 import * as figureSchema from "@myakiba/db/schema/figure";
+import * as z from "zod";
 import { newOrderSchema } from "@myakiba/contracts/orders/schema";
 
 const { collection, item, order } = figureSchema;
@@ -349,6 +350,40 @@ describe("a merge starts from its source Orders", () => {
       status: 200,
       body: { shop: "", paid: false },
     });
+  });
+
+  test("the draft keeps every note in full past the notes limit, and merging it writes nothing", async () => {
+    await db
+      .update(order)
+      .set({ notes: "a".repeat(6000) })
+      .where(eq(order.id, "order-1"));
+    await db
+      .update(order)
+      .set({ notes: "b".repeat(6000) })
+      .where(eq(order.id, "order-2"));
+    const before = { orders: await readOrders(), items: await itemsWithoutOrder() };
+    const { body } = await draftOf(["order-1", "order-2"]);
+    const draft = newOrderSchema
+      .omit({ title: true, notes: true })
+      .extend({ notes: z.string() })
+      .parse(body);
+
+    const response = await app.handle(
+      new Request("http://localhost/api/orders/merge", {
+        method: "POST",
+        headers: { "x-test-user": userId, "content-type": "application/json" },
+        body: JSON.stringify({
+          orderIds: ["order-1", "order-2"],
+          newOrder: { ...draft, title: "Combined" },
+        }),
+      }),
+    );
+
+    expect({ notes: draft.notes.length, status: response.status }).toEqual({
+      notes: 12_002,
+      status: 422,
+    });
+    expect({ orders: await readOrders(), items: await itemsWithoutOrder() }).toEqual(before);
   });
 
   test("merging with the draft keeps the source fees and every item's own values", async () => {
