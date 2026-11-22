@@ -21,7 +21,12 @@ import { Result } from "better-result";
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
 
-type ServerItem = { readonly id: string; readonly itemTitle: string; readonly price: number };
+type ServerItem = {
+  readonly id: string;
+  readonly itemTitle: string;
+  readonly price: number;
+  readonly paid: boolean;
+};
 type Write = {
   readonly name: string;
   readonly args: readonly unknown[];
@@ -29,9 +34,9 @@ type Write = {
   fail: () => void;
 };
 
-const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000 };
-const RIN = { id: "co-rin", itemTitle: "Rin", price: 500 };
-const LEN = { id: "co-len", itemTitle: "Len", price: 200 };
+const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000, paid: true };
+const RIN = { id: "co-rin", itemTitle: "Rin", price: 500, paid: true };
+const LEN = { id: "co-len", itemTitle: "Len", price: 200, paid: false };
 const ITEM_PAGE_KEY = ["item", 1006, "itemRelatedCollection"];
 
 const server = {
@@ -55,7 +60,7 @@ function holdListReads() {
 const listPage = (items: readonly ServerItem[]) => {
   const totals = {
     totalCount: items.length,
-    totalValue: items.reduce((sum, { price }) => sum + price, 0),
+    totalValue: items.reduce((sum, { price, paid }) => (paid ? sum + price : sum), 0),
     totalItemsThisMonth: 0,
   };
   return { items, ...totals };
@@ -217,7 +222,7 @@ const shown = () => ({
 const loaded = () =>
   waitFor(() =>
     expect(shown()).toEqual({
-      totals: "3 items worth 1700",
+      totals: "3 items worth 1500",
       items: ["Miku 1000", "Rin 500", "Len 200"],
       itemPage: "1000",
     }),
@@ -236,7 +241,7 @@ const toastTitles = () =>
 const mikuAt = (price: number) => ({ ...MIKU, price }) as CollectionItemFormValues;
 
 describe("a Collection Item write on the collection page", () => {
-  test("an unfiltered delete hides the items and lowers the totals before the server answers", async () => {
+  test("an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -264,7 +269,7 @@ describe("a Collection Item write on the collection page", () => {
     const editing = collection.act((actions) => actions.handleEditCollectionItem(mikuAt(1500)));
     await waitFor(() =>
       expect(shown()).toEqual({
-        totals: "3 items worth 1700",
+        totals: "3 items worth 1500",
         items: ["Miku 1500", "Rin 500", "Len 200"],
         itemPage: "1500",
       }),
@@ -274,7 +279,7 @@ describe("a Collection Item write on the collection page", () => {
     await answer(0, "fail");
     await waitFor(() =>
       expect(shown()).toEqual({
-        totals: "3 items worth 1700",
+        totals: "3 items worth 1500",
         items: ["Miku 1000", "Rin 500", "Len 200"],
         itemPage: "1000",
       }),
