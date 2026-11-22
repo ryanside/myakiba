@@ -263,11 +263,7 @@ export function useRemoveListMembersMutation(listId: string) {
         settle({ kind: "failed", toastId, members: now.members }, now.later);
         return;
       }
-      toast.add({
-        type: "error",
-        title: failureToast.title,
-        ...(failure instanceof ApiNotFound && { description: failureToast.description }),
-      });
+      toast.add({ type: "error", title: failureToast.title });
       settle(failure instanceof ApiNotFound ? ENDED : NONE, now.later);
     },
   });

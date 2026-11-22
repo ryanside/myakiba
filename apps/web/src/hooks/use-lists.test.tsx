@@ -1040,8 +1040,14 @@ describe("Undo after Remove from List", () => {
     server.restoreFailures.push({ status: 404, value: "List not found" });
     await answerRestore();
 
-    await waitFor(() => expect(screen.queryAllByText("List not found").length).toBe(1));
-    expect(shownActions()).toBe(0);
+    await waitFor(() => expect(screen.queryAllByText("Failed to undo").length).toBe(1));
+    expect({
+      actions: shownActions(),
+      reason: screen.queryAllByText("List not found").length,
+    }).toEqual({
+      actions: 0,
+      reason: 0,
+    });
   });
 
   test("a removal that answers after an Undo's 404 opens no Undo", async () => {
@@ -1051,7 +1057,7 @@ describe("Undo after Remove from List", () => {
     const answerRemoval = await startHeldRemove(["m2"]);
     server.restoreFailures.push({ status: 404, value: "List not found" });
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Undo" })));
-    await waitFor(() => expect(screen.queryAllByText("List not found").length).toBe(1));
+    await waitFor(() => expect(screen.queryAllByText("Failed to undo").length).toBe(1));
 
     await answerRemoval();
 
@@ -1206,13 +1212,13 @@ describe("Undo after Remove from List", () => {
     );
   });
 
-  test("an Undo into a deleted List says so and offers no Retry", async () => {
+  test("an Undo into a deleted List says only that it failed and offers no Retry", async () => {
     await removeFromList(["m1"], "figma Saber");
     server.restoreFailures.push({ status: 404, value: "List not found" });
 
     await act(async () => lastToastAction()());
 
-    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo: List not found"));
+    await waitFor(() => expect(shownToasts().at(-1)).toBe("error: Failed to undo"));
   });
 
   test("a failed remove says what happened and offers no Undo", async () => {

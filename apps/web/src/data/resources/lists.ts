@@ -1,6 +1,5 @@
 import { LIST_PAGE_SIZE } from "@myakiba/contracts/lists/schema";
 import type { ListInput, ListMemberRestore, ListTarget } from "@myakiba/contracts/lists/schema";
-import { ApiNotFound } from "@/lib/errors/api-not-found";
 import {
   addTargetsToLists,
   createList,
@@ -173,8 +172,5 @@ export const restoreListMembersCommand = defineCommand({
     readonly listId: string;
     readonly members: readonly ListMemberRestore[];
   }) => restoreListMembers(listId, members),
-  failureToast: (_input, failure) => ({
-    title: "Failed to undo",
-    ...(failure instanceof ApiNotFound && { description: failure.message }),
-  }),
+  failureToast: () => ({ title: "Failed to undo" }),
 });
