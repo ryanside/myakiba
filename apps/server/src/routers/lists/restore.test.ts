@@ -25,7 +25,8 @@ await mock.module("@myakiba/auth/server", () => ({
 const db = await createTestDatabase();
 const { default: listsRouter } = await import("./index");
 const { default: ordersRouter } = await import("../orders/index");
-const app = new Elysia({ prefix: "/api" }).use(listsRouter).use(ordersRouter);
+const { default: collectionRouter } = await import("../collection/index");
+const app = new Elysia({ prefix: "/api" }).use(listsRouter).use(ordersRouter).use(collectionRouter);
 
 const userId = "user-1";
 const TITLES = ["A", "B", "C", "D", "E"] as const;
@@ -138,7 +139,7 @@ test("Undo of the middle of three removals puts only that member back between it
   expect(await shownTitles()).toBe("ACE");
 });
 
-test("Undo after a reorder puts the member back at the position it held", async () => {
+test("after a reorder, Undo by rule returns the member to the slot it held, which now sits between other members", async () => {
   const members = await removed("B");
   expect(
     await statusOf("PATCH", "/list-1/members/order", {
@@ -153,7 +154,7 @@ test("Undo after a reorder puts the member back at the position it held", async 
   expect(await shownTitles()).toBe("EBACD");
 });
 
-test("Undo goes ahead of a member added since that took its position", async () => {
+test("Undo of a member whose slot another member holds now puts it at the end", async () => {
   const members = await removed("E");
   expect(
     await statusOf("PUT", "/targets", {
@@ -164,7 +165,7 @@ test("Undo goes ahead of a member added since that took its position", async () 
   expect(await shownTitles()).toBe("ABCDF");
 
   expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
-  expect(await shownTitles()).toBe("ABCDEF");
+  expect(await shownTitles()).toBe("ABCDFE");
 });
 
 test("Undo of a member another tab added back, and a repeated Undo, add nothing", async () => {
@@ -219,6 +220,55 @@ test("Undo skips a member whose target was deleted since and puts the rest back"
   expect(await shownTitles()).toBe("ABCDE");
 });
 
+test("a slot two members share counts as held, so Undo puts the member at the end", async () => {
+  await db.update(listMember).set({ position: 0 });
+  expect(await shownTitles()).toBe("ABCDE");
+
+  expect(await undo(await removed("B"))).toEqual({ status: 200, body: { restoredCount: 1 } });
+  expect(await shownTitles()).toBe("ACDEB");
+});
+
+test("Undo stores a position past the end as the end, and the next add still appends", async () => {
+  await removed("B");
+
+  expect(await undo([{ type: "item", id: "item-B", position: 2_147_483_647 }])).toEqual({
+    status: 200,
+    body: { restoredCount: 1 },
+  });
+  expect(
+    await statusOf("PUT", "/targets", {
+      targets: [{ type: "item", id: "item-F" }],
+      listIds: ["list-1"],
+    }),
+  ).toBe(200);
+  expect(await shownTitles()).toBe("ACDEBF");
+  const positions = await memberRows();
+  expect(positions.map(({ position }) => position)).toEqual([0, 2, 3, 4, 5, 6]);
+});
+
+test("removing the last two and restoring one puts it at the end", async () => {
+  const [, last] = await removed("D", "E");
+
+  expect(await undo(last ? [last] : [])).toEqual({ status: 200, body: { restoredCount: 1 } });
+  expect(await shownTitles()).toBe("ABCE");
+});
+
+test("an owned target that was never in the List goes to the end", async () => {
+  expect(await undo([{ type: "item", id: "item-F", position: 1 }])).toEqual({
+    status: 200,
+    body: { restoredCount: 1 },
+  });
+  expect(await shownTitles()).toBe("ABCDEF");
+});
+
+test("the same Undo twice puts the member back once", async () => {
+  const members = await removed("B");
+
+  expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 1 } });
+  expect(await undo(members)).toEqual({ status: 200, body: { restoredCount: 0 } });
+  expect(await shownTitles()).toBe("ABCDE");
+});
+
 test("Undo refuses a body that names a member id, a user or a time", async () => {
   const members = await removed("B");
   const extras: readonly Body[] = [
@@ -255,6 +305,19 @@ async function holdingMember(memberId: string) {
   };
 }
 
+/** Waits until a statement that starts with `statement` waits on a lock. */
+async function waitForBlocked(statement: string) {
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      sql`SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND datname = current_database()
+          AND query LIKE ${`${statement}%`}`,
+    );
+    if (waiting && waiting.count > 0) return;
+    await Bun.sleep(10);
+  }
+}
+
 async function waitForLockWaits(count: number) {
   for (;;) {
     const [waiting] = await db.execute<{ count: number }>(
@@ -289,9 +352,82 @@ test("an Undo of an Order and a delete of that Order at once both finish", async
   const commit = await holdingMember("member-ordered");
 
   const undone = undo(members);
-  await waitForLockWaits(1);
+  await Promise.race([undone, waitForLockWaits(1)]);
   const deleted = callApi("DELETE", "/orders/", { orderIds: ["order-1"] });
-  await waitForLockWaits(2);
+  await waitForBlocked('delete from "collection"');
+  await commit();
+
+  const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
+    undone,
+    deleted,
+  ]);
+  expect({ undone: undoneStatus, deleted: deletedStatus }).toEqual({
+    undone: 200,
+    deleted: 200,
+  });
+  expect(await shownTitles()).toBe("ABCDE");
+});
+
+/** A List holding an Order early and one of its Ordered Collection Items later. */
+async function listWithOrderAndItsItem() {
+  await db.insert(order).values({ id: "order-1", userId, title: "AmiAmi preorder" });
+  await db.insert(collection).values({
+    id: "collection-ordered",
+    userId,
+    itemId: "item-F",
+    orderId: "order-1",
+    status: "Ordered",
+  });
+  await db.insert(listMember).values([
+    { id: "member-order", listId: "list-1", userId, orderId: "order-1", position: 5 },
+    {
+      id: "member-ordered",
+      listId: "list-1",
+      userId,
+      collectionId: "collection-ordered",
+      position: 6,
+    },
+  ]);
+}
+
+test("an Undo of another member and a delete of an Order in the List at once both finish", async () => {
+  await listWithOrderAndItsItem();
+  const members = await removed("C");
+  const commit = await holdingMember("member-ordered");
+
+  const deleted = callApi("DELETE", "/orders/", { orderIds: ["order-1"] });
+  await waitForLockWaits(1);
+  const undone = undo(members);
+  await Promise.race([undone, waitForLockWaits(2)]);
+  await commit();
+
+  const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
+    undone,
+    deleted,
+  ]);
+  expect({ undone: undoneStatus, deleted: deletedStatus }).toEqual({
+    undone: 200,
+    deleted: 200,
+  });
+  expect(await shownTitles()).toBe("ABCDE");
+});
+
+test("an Undo and a bulk delete of Collection Items in the List at once both finish", async () => {
+  await db.insert(collection).values([
+    { id: "collection-1", userId, itemId: "item-F", status: "Owned" },
+    { id: "collection-2", userId, itemId: "item-F", status: "Owned" },
+  ]);
+  await db.insert(listMember).values([
+    { id: "member-c1", listId: "list-1", userId, collectionId: "collection-1", position: 5 },
+    { id: "member-c2", listId: "list-1", userId, collectionId: "collection-2", position: 6 },
+  ]);
+  const members = await removed("C");
+  const commit = await holdingMember("member-c1");
+
+  const deleted = callApi("DELETE", "/collection/", { ids: ["collection-2", "collection-1"] });
+  await waitForLockWaits(1);
+  const undone = undo(members);
+  await Promise.race([undone, waitForLockWaits(2)]);
   await commit();
 
   const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
