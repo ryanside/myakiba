@@ -381,7 +381,7 @@ export const Orders = {
   ),
 
   mergeDraft: query(
-    { action: "orders.merge_draft", failure: "Failed to get the merged order" },
+    { action: "orders.merge_draft", failure: "Couldn't load the orders to merge." },
     async (scope, input: { readonly orderIds: string[] }) => {
       scope.log.set({ merge: { orderCount: input.orderIds.length } });
       const sources = await scope.tx

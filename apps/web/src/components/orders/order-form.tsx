@@ -49,8 +49,7 @@ import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { WRITE_LIMITS } from "@myakiba/contracts/shared/write-limits";
 import { useRead } from "@/data/client";
 import { orders } from "@/data/resources/orders";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "../ui/textarea";
 import { minorUnitsToMajorString } from "@myakiba/utils/currency";
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
@@ -128,13 +127,7 @@ function MergeOrderFormContent(
     <DialogContent className="sm:max-w-lg!">
       <DialogHeader>
         <DialogTitle>Merge Orders</DialogTitle>
-        <DialogDescription>
-          {draft.isError ? (
-            draft.error.message
-          ) : (
-            <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
-          )}
-        </DialogDescription>
+        <DialogDescription>{draft.isError ? draft.error.message : <Spinner />}</DialogDescription>
       </DialogHeader>
     </DialogContent>
   );

@@ -668,7 +668,10 @@ describe("the merge dialog reads its Orders fresh on every open", () => {
         };
         merge.open();
         await settle();
-        expect(mergeShown()).toBe(false);
+        expect({
+          merge: mergeShown(),
+          loading: screen.queryByRole("status", { name: "Loading" }) !== null,
+        }).toEqual({ merge: false, loading: true });
 
         await act(async () => release());
         await screen.findByRole("button", { name: "Merge" });
