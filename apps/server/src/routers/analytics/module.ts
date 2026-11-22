@@ -38,7 +38,7 @@ import type {
   EntrySection,
 } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
-import { paidItemCount, paidItemPrice } from "@/lib/order-money";
+import { itemIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
 
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
@@ -424,7 +424,7 @@ async function getSectionAnalytics(
       .selectDistinct({
         id: collection.id,
         price: paidItemPrice.as("price"),
-        paid: collection.paid,
+        paid: sql<boolean>`${itemIsPaid}`.as("paid"),
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
