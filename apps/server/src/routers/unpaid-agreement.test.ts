@@ -251,14 +251,17 @@ type Dashboard = {
   readonly unpaidCosts: number;
   readonly categoriesOwned: readonly { readonly name: string; readonly totalValue: number }[];
 };
-type CollectionList = { readonly totalValue: number };
+type CollectionList = { readonly totalValue: number; readonly paidItemCount: number };
 type ExpensesCollection = {
   readonly summary: {
     readonly spend: number;
     readonly orderLinked: { readonly spend: number };
     readonly standalone: { readonly spend: number };
   };
+  readonly kpis: { readonly averageItemCost: number };
   readonly spendingByPeriod: readonly { readonly collectionItems: number }[];
+  readonly averageCostByPeriod: readonly { readonly collectionItems: number }[];
+  readonly averageCostToDate: readonly { readonly collectionItems: number }[];
 };
 type AnalyticsOverview = {
   readonly analytics: {
@@ -272,7 +275,7 @@ type AnalyticsOverview = {
 };
 type AnalyticsSection = {
   readonly analytics: {
-    readonly kpis: { readonly totalSpent: number };
+    readonly kpis: { readonly totalSpent: number; readonly averageSpent: number };
     readonly rows: readonly { readonly totalSpent: number }[];
   };
 };
@@ -295,7 +298,11 @@ type ExpensesOrders = {
   };
 };
 type ExpenseShops = {
-  readonly items: readonly { readonly shop: string; readonly spend: number }[];
+  readonly items: readonly {
+    readonly shop: string;
+    readonly spend: number;
+    readonly averageItemCost?: number;
+  }[];
 };
 type Monthly = {
   readonly paidAmount: number;
@@ -560,5 +567,34 @@ describe("an Owned Order Item that is still unpaid", () => {
         orderExpenses.summary.fees.spend +
         orderExpenses.kpis.unpaidCosts,
     ).toBe(orderTotal);
+  });
+
+  test("averages divide Collection Spend by the paid items it sums", async () => {
+    const collectionPage = await get<CollectionList>(ownedUnpaid, "/collection?limit=10");
+    const expenses = await get<ExpensesCollection>(ownedUnpaid, "/expenses/collection");
+    const expenseShops = await get<ExpenseShops>(ownedUnpaid, "/expenses/shops?scope=collection");
+    const sections = await Promise.all(
+      ["origins", "shops", "scales"].map((name) =>
+        get<AnalyticsSection>(ownedUnpaid, `/analytics/${name}`),
+      ),
+    );
+    const nonZero = (rows: readonly { readonly collectionItems: number }[]) =>
+      rows.map((row) => row.collectionItems).filter((value) => value > 0);
+
+    expect({
+      collectionPagePaidItems: collectionPage.paidItemCount,
+      expenses: expenses.kpis.averageItemCost,
+      expensesByPeriod: nonZero(expenses.averageCostByPeriod),
+      expensesToDate: nonZero(expenses.averageCostToDate),
+      expenseShops: expenseShops.items.map((row) => row.averageItemCost),
+      analyticsSections: sections.map(({ analytics }) => analytics.kpis.averageSpent),
+    }).toEqual({
+      collectionPagePaidItems: 1,
+      expenses: 8000,
+      expensesByPeriod: [8000],
+      expensesToDate: [8000],
+      expenseShops: [8000],
+      analyticsSections: [8000, 8000, 8000],
+    });
   });
 });
