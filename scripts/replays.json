@@ -5432,13 +5432,36 @@
         "Undo after Remove from List > an Undo the server refuses as invalid offers no Retry",
         "Undo after Remove from List > an Undo that hits a defect offers Retry without telling the user to reload",
         "Undo after Remove from List > a failed remove says what happened and offers no Undo"
-      ]
+      ],
+      "testAt": "73d44f3868ed568485775934bb08ea77a0e9b2b9",
+      "atHead": [
+        "Undo after Remove from List > removals from one List while its Undo is open join one toast whose Undo puts all of them back",
+        "Undo after Remove from List > a joined Undo that fails keeps one Retry that puts back everything it covered",
+        "Undo after Remove from List > an Undo the server refuses as invalid offers no Retry",
+        "Undo after Remove from List > an Undo that hits a defect offers no Retry",
+        "Undo after Remove from List > a failed remove says what happened and offers no Undo"
+      ],
+      "reason": "A later round in this PR made the Undo belong to its List page and changed which failures offer Retry, so its harness stays at the fix."
     },
     {
       "fix": "73d44f3868ed568485775934bb08ea77a0e9b2b9",
       "bug": "The selection bar cleared the whole selection after a remove, including a member ticked while the remove was saving.",
       "test": "apps/web/src/components/lists/list-members-action-bar.test.tsx",
       "fixed": ["a remove deselects what it removed and keeps a member ticked while it was saving"]
+    },
+    {
+      "fix": "7d81a81bd605cba8c3dda66c858f8ac06284cebb",
+      "bug": "The Undo outlived its List page: it stayed open and live after the user left, a target removed twice inside one toast went into the body twice and the server refused it, a join past the route limit was refused the same way, a 404 left an open Retry for a List that is gone, a 401 or a defect offered Retry, and a failed remove left its stale row on screen.",
+      "test": "apps/web/src/hooks/use-lists.test.tsx",
+      "fixed": [
+        "Undo after Remove from List > leaving the List page closes its Undo, and the Undo it held cannot fire",
+        "Undo after Remove from List > an Undo that hits a defect offers no Retry",
+        "Undo after Remove from List > an Undo answered 401 offers no Retry",
+        "Undo after Remove from List > a 404 on Undo closes the List's open Retry, since nothing can go back to it",
+        "Undo after Remove from List > removing the same target twice inside one toast's life sends it once",
+        "Undo after Remove from List > a removal that would take the open Undo past the route's limit starts a new one",
+        "Undo after Remove from List > a failed remove says what happened and offers no Undo"
+      ]
     }
   ],
   "lint": [
