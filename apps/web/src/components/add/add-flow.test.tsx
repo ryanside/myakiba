@@ -578,13 +578,16 @@ test("the Release control and its menu show date, type, barcode and price in the
 
   await user.click(first as HTMLElement);
   await waitFor(() => {
-    for (const text of ["05/01/2026", "Limited", "4580590174562", "¥25,000"]) {
+    for (const text of ["05/01/2026", "Limited", "4580590174562"]) {
       expect(control().textContent).toContain(text);
     }
   });
-  expect(
-    screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).getAttribute("placeholder"),
-  ).toBe("¥25,000");
+  expect(control().textContent).not.toContain("¥25,000");
+  const price = screen.getByRole("textbox", {
+    name: "Price for Hatsune Miku",
+    description: "Release ¥25,000",
+  });
+  expect(price.getAttribute("placeholder")).toBe("No price");
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 
   await click(user, "Add 1 to collection");
@@ -630,6 +633,11 @@ const yenItem = () =>
 const priceOf = (title: string) =>
   screen.getByRole<HTMLInputElement>("textbox", { name: `Price for ${title}` });
 const sentPrices = () => server.commits.at(-1)?.rows.map(({ price }) => price);
+const yenHint = () =>
+  screen.queryByRole<HTMLInputElement>("textbox", {
+    name: "Price for Yen",
+    description: "Release ¥25,000",
+  });
 
 test.each([
   ["the Collection", "/add?to=collection", "Add 2 to collection"],
@@ -645,11 +653,13 @@ test.each([
     openAddPage(url);
     await rowsLoaded();
 
-    expect(priceOf("Yen").placeholder).toBe("¥25,000");
+    expect(priceOf("Yen").placeholder).toBe("No price");
     expect(priceOf("Yen").value).toBe("");
+    expect(yenHint()).not.toBeNull();
+    expect(screen.getAllByText("Release ¥25,000")).toHaveLength(1);
     expect(priceOf("Hatsune Miku").placeholder).toBe("$5,000.00");
-    expect(priceOf("Yen").title).toBe("Release price");
-    expect(priceOf("Hatsune Miku").title).toBe("");
+    expect(priceOf("Hatsune Miku").getAttribute("aria-describedby")).toBeNull();
+    expect(screen.queryByText(/^Release \$/u)).toBeNull();
 
     await user.click(priceOf("Yen"));
     await user.tab();
@@ -685,7 +695,8 @@ test("a price filled across currencies is what was typed, survives a reload, and
   await user.clear(await screen.findByRole("textbox", { name: "Price" }));
   await click(user, "Fill 2 selected");
   await waitFor(() => expect(priceOf("Yen").value).toBe(""));
-  expect(priceOf("Yen").placeholder).toBe("¥25,000");
+  expect(priceOf("Yen").placeholder).toBe("No price");
+  expect(yenHint()).not.toBeNull();
 
   await click(user, "Add 2 to collection");
   await waitFor(() => expect(server.commits).toHaveLength(1));
@@ -710,7 +721,8 @@ test("an Item in another currency that waits for room comes in with a blank pric
   await waitFor(() => expect(screen.queryAllByText("No longer in myakiba").length).toBe(100));
   await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
 
-  await waitFor(() => expect(priceOf("Yen").placeholder).toBe("¥25,000"));
+  await waitFor(() => expect(yenHint()).not.toBeNull());
+  expect(priceOf("Yen").placeholder).toBe("No price");
   expect(priceOf("Yen").value).toBe("");
 });
 

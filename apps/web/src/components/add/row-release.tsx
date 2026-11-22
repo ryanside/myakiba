@@ -15,6 +15,7 @@ import type { AddController } from "./add-controller";
 import type { DraftRow } from "./add-draft";
 import { LabeledField } from "@/components/form-fields";
 import type { AddItem } from "./commit-input";
+import { foreignReleasePrice } from "./row-fields";
 
 type Release = NonNullable<AddItem["latestRelease"]>;
 
@@ -101,7 +102,9 @@ export function ReleaseField({
                 {release.barcode ? (
                   <span className="min-w-0 truncate">#{release.barcode}</span>
                 ) : null}
-                {price(release) ? <span className="ms-auto shrink-0">{price(release)}</span> : null}
+                {price(release) && !foreignReleasePrice(release, c.currency) ? (
+                  <span className="ms-auto shrink-0">{price(release)}</span>
+                ) : null}
               </span>
             ) : null}
           </SelectValue>

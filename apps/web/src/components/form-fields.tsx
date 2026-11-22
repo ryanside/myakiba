@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { TagsInput } from "@/components/vocabulary-fields";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FieldError } from "@/components/ui/field";
+import { FieldDescription, FieldError } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { MaskInput } from "@/components/ui/mask-input";
 import {
@@ -20,12 +20,15 @@ import type { Currency, OrderStatus } from "@myakiba/contracts/shared/types";
 export function LabeledField({
   id,
   label,
+  description,
   error,
   className,
   children,
 }: {
   readonly id: string;
   readonly label: ReactNode;
+  /** Shown under the field as `${id}-description`, which the field names in aria-describedby. */
+  readonly description?: ReactNode;
   readonly error?: string | undefined;
   readonly className?: string | undefined;
   readonly children: ReactNode;
@@ -34,6 +37,11 @@ export function LabeledField({
     <div className={cn("grid gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
+      {description ? (
+        <FieldDescription id={`${id}-description`} className="text-xs nth-last-2:mt-0">
+          {description}
+        </FieldDescription>
+      ) : null}
       {error ? (
         <FieldError id={`${id}-error`} className="text-xs whitespace-normal">
           {error}

@@ -123,6 +123,15 @@ export function plannedPrice(
   return parsed.isOk() ? parsed.value : null;
 }
 
+/** The release's own price when it is in another currency, which a blank Price does not save. */
+export function foreignReleasePrice(
+  release: AddItem["latestRelease"],
+  currency: AddController["currency"],
+): string | null {
+  if (releasePriceDefault(release, currency) > 0) return null;
+  return formatReleasePrice(release?.price, release?.priceCurrency, currency);
+}
+
 export function hasOwnValue(row: DraftRow, field: FieldId): boolean {
   const { overrides } = row;
   switch (field) {
@@ -194,10 +203,17 @@ export function RowField({
     case "price": {
       const issue = issues.find((candidate) => candidate.fieldId === id);
       const saved = releasePriceDefault(release, c.currency);
-      const listed =
-        saved > 0 ? null : formatReleasePrice(release?.price, release?.priceCurrency, c.currency);
+      const hint = foreignReleasePrice(release, c.currency);
+      const describedBy = [hint && `${id}-description`, issue && `${id}-error`].filter(Boolean);
       return (
-        <LabeledField id={id} label={cellLabel} error={issue?.message} className={cellGap}>
+        <LabeledField
+          id={id}
+          label={cellLabel}
+          description={hint && `Release ${hint}`}
+          error={issue?.message}
+          // The hint's line takes the cell's padding, so the row stays as tall as one without it.
+          className={cn(cellGap, hint && "-my-1 [&>p]:leading-[13px]")}
+        >
           <MaskInput
             id={id}
             mask="currency"
@@ -206,11 +222,10 @@ export function RowField({
             placeholder={
               saved > 0
                 ? formatCurrencyFromMinorUnits(saved, c.currency, getCurrencyLocale(c.currency))
-                : (listed ?? "No price")
+                : "No price"
             }
-            title={listed ? "Release price" : undefined}
             invalid={issue !== undefined}
-            aria-describedby={issue ? `${id}-error` : undefined}
+            aria-describedby={describedBy.length > 0 ? describedBy.join(" ") : undefined}
             inputMode="decimal"
             className={cn(
               INLINE_CELL,
