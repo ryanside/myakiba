@@ -123,13 +123,6 @@ export function plannedPrice(
   return parsed.isOk() ? parsed.value : null;
 }
 
-function pricePlaceholder(release: AddItem["latestRelease"], currency: AddController["currency"]) {
-  const saved = releasePriceDefault(release, currency);
-  if (saved > 0) return formatCurrencyFromMinorUnits(saved, currency, getCurrencyLocale(currency));
-  const listed = formatReleasePrice(release?.price, release?.priceCurrency, currency);
-  return listed ? `Release ${listed}` : "No price";
-}
-
 export function hasOwnValue(row: DraftRow, field: FieldId): boolean {
   const { overrides } = row;
   switch (field) {
@@ -200,6 +193,9 @@ export function RowField({
   switch (field.id) {
     case "price": {
       const issue = issues.find((candidate) => candidate.fieldId === id);
+      const saved = releasePriceDefault(release, c.currency);
+      const listed =
+        saved > 0 ? null : formatReleasePrice(release?.price, release?.priceCurrency, c.currency);
       return (
         <LabeledField id={id} label={cellLabel} error={issue?.message} className={cellGap}>
           <MaskInput
@@ -207,14 +203,19 @@ export function RowField({
             mask="currency"
             currency={c.currency}
             locale={getCurrencyLocale(c.currency)}
-            placeholder={pricePlaceholder(release, c.currency)}
+            placeholder={
+              saved > 0
+                ? formatCurrencyFromMinorUnits(saved, c.currency, getCurrencyLocale(c.currency))
+                : (listed ?? "No price")
+            }
+            title={listed ? "Release price" : undefined}
             invalid={issue !== undefined}
             aria-describedby={issue ? `${id}-error` : undefined}
             inputMode="decimal"
             className={cn(
               INLINE_CELL,
               "tabular-nums",
-              releasePriceDefault(release, c.currency) === 0 && "placeholder:text-muted-foreground",
+              saved === 0 && "placeholder:text-muted-foreground",
             )}
             onFocus={selectAll}
             value={overrides.price ?? ""}

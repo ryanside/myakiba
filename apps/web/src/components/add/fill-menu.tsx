@@ -124,10 +124,8 @@ function blankPriceHint(c: AddController): string {
   const priced = c.selectedRows.filter(
     ({ row, item }) => releasePriceDefault(c.releaseOf(row, item), c.currency) > 0,
   ).length;
-  if (priced === 0) return "Blank saves no price";
-  return priced === total
-    ? "Blank uses the release price"
-    : `Blank uses the release price on ${priced} of ${total} rows`;
+  if (priced === total) return "Blank uses the release price";
+  return priced === 0 ? "Blank saves no price" : "Blank saves no price on some rows";
 }
 
 export function AddFillMenu({

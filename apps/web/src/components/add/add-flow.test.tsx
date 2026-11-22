@@ -584,7 +584,7 @@ test("the Release control and its menu show date, type, barcode and price in the
   });
   expect(
     screen.getByRole("textbox", { name: "Price for Hatsune Miku" }).getAttribute("placeholder"),
-  ).toBe("Release ¥25,000");
+  ).toBe("¥25,000");
   expect(document.body.textContent).not.toMatch(/convert|currenc/iu);
 
   await click(user, "Add 1 to collection");
@@ -645,9 +645,11 @@ test.each([
     openAddPage(url);
     await rowsLoaded();
 
-    expect(priceOf("Yen").placeholder).toBe("Release ¥25,000");
+    expect(priceOf("Yen").placeholder).toBe("¥25,000");
     expect(priceOf("Yen").value).toBe("");
     expect(priceOf("Hatsune Miku").placeholder).toBe("$5,000.00");
+    expect(priceOf("Yen").title).toBe("Release price");
+    expect(priceOf("Hatsune Miku").title).toBe("");
 
     await user.click(priceOf("Yen"));
     await user.tab();
@@ -683,7 +685,7 @@ test("a price filled across currencies is what was typed, survives a reload, and
   await user.clear(await screen.findByRole("textbox", { name: "Price" }));
   await click(user, "Fill 2 selected");
   await waitFor(() => expect(priceOf("Yen").value).toBe(""));
-  expect(priceOf("Yen").placeholder).toBe("Release ¥25,000");
+  expect(priceOf("Yen").placeholder).toBe("¥25,000");
 
   await click(user, "Add 2 to collection");
   await waitFor(() => expect(server.commits).toHaveLength(1));
@@ -708,7 +710,7 @@ test("an Item in another currency that waits for room comes in with a blank pric
   await waitFor(() => expect(screen.queryAllByText("No longer in myakiba").length).toBe(100));
   await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
 
-  await waitFor(() => expect(priceOf("Yen").placeholder).toBe("Release ¥25,000"));
+  await waitFor(() => expect(priceOf("Yen").placeholder).toBe("¥25,000"));
   expect(priceOf("Yen").value).toBe("");
 });
 
@@ -726,7 +728,7 @@ test("a Price fill says what a blank saves for the selected rows", async () => {
     return hint;
   };
 
-  expect(await blankHint()).toBe("Blank uses the release price on 1 of 2 rows");
+  expect(await blankHint()).toBe("Blank saves no price on some rows");
   await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
   expect(await blankHint()).toBe("Blank uses the release price");
   await user.click(screen.getByRole("checkbox", { name: "Select Yen" }));
