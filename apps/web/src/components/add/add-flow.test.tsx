@@ -1848,3 +1848,21 @@ test("an Item already in the Collection that waits for room comes in unselected"
   await waitFor(() => expect(isChecked("Owned waiting")).toBe("false"));
   expect(shows("In your collection")).toBe(true);
 });
+
+test("an Item added again after its commit arrives unselected", async () => {
+  draft(ITEM_ID);
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await rowsLoaded();
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(draftItemIds()).toEqual([]));
+  seedItems(item(ITEM_ID, { title: "Hatsune Miku", externalId: 98_777, collectionCount: 1 }));
+
+  await click(user, "Search myakiba");
+  await user.type(await screen.findByRole("combobox", { name: "Search myakiba" }), "Hatsune");
+  await user.click(await screen.findByRole("option", { name: /Hatsune Miku/u }));
+  await user.keyboard("{Escape}");
+
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+  expect(shows("In your collection")).toBe(true);
+});

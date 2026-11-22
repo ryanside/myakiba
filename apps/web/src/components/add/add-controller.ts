@@ -67,6 +67,7 @@ export function useAddController(search: AddSearchParams) {
     data: itemData,
     isPending: itemsPending,
     isPlaceholderData: itemsStale,
+    isFetching: itemsFetching,
     error: itemsError,
     refetch: refetchItems,
   } = useRead(add.items, rowItemIds);
@@ -79,6 +80,18 @@ export function useAddController(search: AddSearchParams) {
     selected: isRowSelected(row, items.get(row.itemId)),
   }));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
+  // A row's selection is decided once, from the first fresh read of its Item, so a commit that makes
+  // the Item owned cannot unselect the row before a retry of that commit.
+  useEffect(() => {
+    if (itemsLoading || itemsFetching) return;
+    const decided = new Map(
+      draftRows.flatMap((row) => {
+        const item = items.get(row.itemId);
+        return row.selected === undefined && item ? [[row.itemId, isRowSelected(row, item)]] : [];
+      }),
+    );
+    if (decided.size > 0) dispatch({ type: "decide", selected: decided });
+  });
   const itemsReadError =
     itemsError !== null && rows.some((row) => !items.has(row.itemId)) ? itemsError : null;
   const lookup = lookupOf(itemsLoading, itemsReadError !== null);

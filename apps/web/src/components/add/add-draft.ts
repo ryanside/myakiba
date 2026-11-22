@@ -63,6 +63,7 @@ export type DraftAction =
   | { readonly type: "remove"; readonly itemIds: readonly string[] }
   | { readonly type: "select"; readonly itemId: string; readonly selected: boolean }
   | { readonly type: "select-all"; readonly selected: boolean }
+  | { readonly type: "decide"; readonly selected: ReadonlyMap<string, boolean> }
   | { readonly type: "edit"; readonly itemId: string; readonly overrides: RowOverrides };
 
 export function draftReducer(state: DraftState, action: DraftAction): DraftState {
@@ -85,6 +86,14 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         rows: state.rows.map((row) =>
           row.itemId === action.itemId ? { ...row, selected: action.selected } : row,
         ),
+      };
+    case "decide":
+      return {
+        ...state,
+        rows: state.rows.map((row) => ({
+          ...row,
+          selected: row.selected ?? action.selected.get(row.itemId),
+        })),
       };
     case "select-all":
       return {
