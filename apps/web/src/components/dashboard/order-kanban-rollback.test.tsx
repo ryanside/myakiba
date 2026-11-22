@@ -101,6 +101,7 @@ const order = (
   status,
   shop: "AmiAmi",
   total: 1000,
+  unpaidCosts: 1000,
   itemImages: [],
   itemIds: [],
   releaseDate: null,

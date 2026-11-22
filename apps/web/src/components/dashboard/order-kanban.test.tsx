@@ -103,6 +103,7 @@ const order = (
   status,
   shop: "AmiAmi",
   total: 1000,
+  unpaidCosts: 1000,
   itemImages: [],
   itemIds: [],
   releaseDate: null,
@@ -615,6 +616,36 @@ describe("a dashboard kanban card's Paid checkbox", () => {
       sent: [{ orderId: "miku", change: { paid: false } }],
       paid: "false",
       board: { Ordered: [], Shipped: ["miku"], Owned: [] },
+    });
+  });
+});
+
+describe("a dashboard kanban card's Unpaid Costs", () => {
+  const shownUnpaidCosts = (orderId: string) =>
+    within(card(orderId)).queryByText("Unpaid Costs")?.nextElementSibling?.textContent ?? null;
+
+  test("shows on a Partly paid card, and not on an unpaid card, whose total is what it owes", async () => {
+    await renderBoard([
+      order("rin", "Shipped", { paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 }),
+      order("len", "Shipped", { total: 3000, unpaidCosts: 3000 }),
+      order("miku", "Ordered", { paid: true, payment: "paid", total: 3000, unpaidCosts: 0 }),
+    ]);
+
+    expect(["rin", "len", "miku"].map(shownUnpaidCosts)).toEqual(["$12.00", null, null]);
+  });
+
+  test("a Paid click on a Partly paid card clears it at once, and a failed write brings it back", async () => {
+    await renderBoard([
+      order("rin", "Shipped", { paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 }),
+    ]);
+
+    await clickPaid("rin");
+    const clicked = shownUnpaidCosts("rin");
+    await settle(writes[0], "fail");
+
+    expect({ clicked, afterFailure: shownUnpaidCosts("rin") }).toEqual({
+      clicked: null,
+      afterFailure: "$12.00",
     });
   });
 });

@@ -28,3 +28,10 @@ export const ORDER_PAYMENT_DISPLAY = {
 export function paymentOf(paid: boolean): OrderPayment {
   return paid ? "paid" : "unpaid";
 }
+
+export function partlyPaidUnpaidCosts(order: {
+  readonly payment: OrderPayment;
+  readonly unpaidCosts: number;
+}): number | null {
+  return order.payment === "partly" && order.unpaidCosts > 0 ? order.unpaidCosts : null;
+}

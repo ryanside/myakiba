@@ -104,6 +104,7 @@ const order: Order = {
   paid: false,
   payment: "unpaid",
   total: 0,
+  unpaidCosts: 0,
   shippingFee: 0,
   taxes: 0,
   duties: 0,

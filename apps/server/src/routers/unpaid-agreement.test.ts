@@ -359,9 +359,11 @@ type AnalyticsSection = {
 };
 type OrdersList = {
   readonly items: readonly {
+    readonly orderId: string;
     readonly title: string;
     readonly total: number;
     readonly payment: string;
+    readonly unpaidCosts: number;
   }[];
   readonly totalSpent: number;
   readonly unpaidCosts: number;
@@ -390,6 +392,7 @@ type Monthly = {
   readonly paidAmount: number;
   readonly unpaidAmount: number;
   readonly unpaidOrderCount: number;
+  readonly orders: readonly { readonly orderId: string; readonly unpaidCosts: number }[];
 };
 
 const get = async <T>(userId: string, path: string): Promise<T> => {
@@ -753,6 +756,61 @@ describe("an Owned Order Item that is still unpaid", () => {
       expensesToDate: [8000],
       expenseShops: [8000],
       analyticsSections: [8000, 8000, 8000],
+    });
+  });
+});
+
+describe("each Order's own Unpaid Costs", () => {
+  const users = [oneOrder, twoOrders, paidApart, ownedUnpaid, feesPaid];
+
+  test.each(users)(
+    "%s: each row's Unpaid Costs is that Order's share of the page's, and the rows add up to it",
+    async (userId) => {
+      const orders = await get<OrdersList>(userId, "/orders?limit=10");
+      const shares = await Promise.all(
+        orders.items.map(async (row) => {
+          const alone = await get<OrdersList>(
+            userId,
+            `/orders?limit=10&search=${encodeURIComponent(row.title)}`,
+          );
+          const detail = await get<{ readonly unpaidCosts: number }>(
+            userId,
+            `/orders/${row.orderId}`,
+          );
+          return { row: row.unpaidCosts, share: alone.unpaidCosts, detail: detail.unpaidCosts };
+        }),
+      );
+
+      expect(orders.items.length).toBeGreaterThan(0);
+      for (const { row, share, detail } of shares)
+        expect({ row, detail }).toEqual({ row: share, detail: share });
+      expect(orders.items.reduce((sum, row) => sum + row.unpaidCosts, 0)).toBe(orders.unpaidCosts);
+    },
+  );
+
+  test("a Partly paid, a paid and an unpaid Order with nothing priced each carry their own Unpaid Costs", async () => {
+    const orders = await get<OrdersList>(feesPaid, "/orders?limit=10&sort=title&order=asc");
+
+    expect(orders.items.map((row) => [row.title, row.payment, row.unpaidCosts])).toEqual([
+      ["Fees paid", "partly", 60_000],
+      ["Not yet priced", "unpaid", 0],
+      ["Paid in full", "paid", 0],
+    ]);
+  });
+
+  test("the Dashboard board shows each Order the Unpaid Costs the Orders page does", async () => {
+    const board = async (userId: string, month: number) => {
+      const monthly = await get<Monthly>(userId, `/dashboard/monthly?month=${month}&year=2024`);
+      return Object.fromEntries(monthly.orders.map((row) => [row.orderId, row.unpaidCosts]));
+    };
+    const page = async (userId: string) => {
+      const orders = await get<OrdersList>(userId, "/orders?limit=10");
+      return Object.fromEntries(orders.items.map((row) => [row.orderId, row.unpaidCosts]));
+    };
+
+    expect({ twoOrders: await board(twoOrders, 3), feesPaid: await board(feesPaid, 7) }).toEqual({
+      twoOrders: await page(twoOrders),
+      feesPaid: await page(feesPaid),
     });
   });
 });

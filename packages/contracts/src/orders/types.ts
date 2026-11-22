@@ -16,6 +16,7 @@ export type Order = {
   paid: boolean;
   payment: OrderPayment;
   total: number;
+  unpaidCosts: number;
   shippingFee: number;
   taxes: number;
   duties: number;

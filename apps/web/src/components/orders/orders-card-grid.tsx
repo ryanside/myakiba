@@ -11,7 +11,7 @@ import {
   CARD_GRID_GAP_CLASS_NAME,
 } from "@/components/media-tile";
 import { ThemedBadge } from "@/components/reui/badge";
-import { getStatusVariant } from "@/lib/orders";
+import { getStatusVariant, partlyPaidUnpaidCosts } from "@/lib/orders";
 import { PaymentBadge } from "@/components/orders/payment";
 import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,7 @@ export function OrdersCardGrid({
         const isPending = isOrderPending(order.orderId);
         const displayImages = order.images.slice(0, 4);
         const destination = { to: "/orders/$id", params: { id: order.orderId } } as const;
+        const unpaidCosts = partlyPaidUnpaidCosts(order);
 
         return (
           <MediaCard key={order.orderId} selected={isSelected} className="animate-data-in">
@@ -180,6 +181,14 @@ export function OrdersCardGrid({
                   </span>
                 ) : null}
               </span>
+              {unpaidCosts === null ? null : (
+                <span className="flex min-w-0 items-baseline justify-between gap-2 text-xs leading-4">
+                  <span className="truncate text-muted-foreground">Unpaid Costs</span>
+                  <span className="shrink-0 tabular-nums">
+                    {formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
+                  </span>
+                </span>
+              )}
             </MediaCardBody>
           </MediaCard>
         );

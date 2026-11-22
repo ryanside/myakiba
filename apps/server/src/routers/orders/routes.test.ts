@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
 import * as authSchema from "@myakiba/db/schema/auth";
@@ -635,5 +636,37 @@ describe("Paid on an Order", () => {
       paid: await ids("paid=true"),
       unpaid: await ids("paid=false"),
     }).toEqual({ paid: ["order-2"], unpaid: ["order-1"] });
+  });
+});
+
+describe("an Order's Unpaid Costs", () => {
+  const unpaidCostsOf = async () => {
+    const list = await call("GET", "?limit=10&sort=title&order=asc");
+    const detail = await call("GET", "/order-1");
+    const { items } = list.body as { items: { orderId: string; unpaidCosts: number }[] };
+    const { unpaidCosts } = detail.body as { unpaidCosts: number };
+    return { list: items.map((row) => [row.orderId, row.unpaidCosts]), detail: unpaidCosts };
+  };
+
+  test("the list and the Order page count each unpaid item's price, and the fees while the Order's own Paid is no", async () => {
+    await db.update(order).set({ shippingFee: 500, paid: true }).where(eq(order.id, "order-1"));
+    await db
+      .update(collection)
+      .set({ price: 1000, paid: true })
+      .where(eq(collection.id, "c-owned"));
+    await db.update(collection).set({ price: 2000 }).where(eq(collection.id, "c-ordered"));
+
+    expect(await unpaidCostsOf()).toEqual({
+      list: [
+        ["order-1", 2000],
+        ["order-2", 0],
+      ],
+      detail: 2000,
+    });
+
+    await db.update(order).set({ paid: false }).where(eq(order.id, "order-1"));
+
+    const unpaid = await unpaidCostsOf();
+    expect(unpaid.detail).toBe(2500);
   });
 });

@@ -6,6 +6,7 @@ import { formatDateOnlyForDisplay } from "@/lib/date-display";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyValue } from "@/components/cells/empty-value";
 import { cn } from "@/lib/utils";
+import { partlyPaidUnpaidCosts } from "@/lib/orders";
 import { PaymentLine } from "./payment";
 import {
   Timeline,
@@ -88,6 +89,7 @@ export function OrderSummary({
   const miscFees = order?.miscFees ?? 0;
   const totalAmount = order?.total ?? 0;
   const itemsTotal = totalAmount - shippingFee - taxes - duties - tariffs - miscFees;
+  const unpaidCosts = order && !isLoading ? partlyPaidUnpaidCosts(order) : null;
 
   const timelineSteps = [
     { step: 1, title: "Ordered", date: order?.orderDate },
@@ -183,6 +185,15 @@ export function OrderSummary({
             </span>
           )}
         </div>
+        {unpaidCosts === null ? null : (
+          <CostRow
+            label="Unpaid Costs"
+            amount={unpaidCosts}
+            currency={currency}
+            locale={locale}
+            animateRow
+          />
+        )}
       </section>
     </div>
   );

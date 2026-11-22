@@ -93,6 +93,7 @@ const ordersRead = prepared("orders_kanban", (tx) =>
       itemImages: orderPreviewImagesSql,
       itemIds: orderPreviewItemIdsSql,
       total: orderTotal,
+      unpaidCosts: orderUnpaidCosts,
     })
     .from(order)
     .leftJoin(collection, and(eq(order.id, collection.orderId)))
@@ -285,6 +286,7 @@ const monthlyOrdersKanbanRead = prepared("monthly_orders_kanban", (tx) => {
       itemImages: orderPreviewImagesSql,
       itemIds: orderPreviewItemIdsSql,
       total: orderTotal,
+      unpaidCosts: orderUnpaidCosts,
     })
     .from(order)
     .leftJoin(collection, and(eq(order.id, collection.orderId)))

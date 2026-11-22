@@ -36,7 +36,7 @@ import { ImageThumbnail } from "@/components/ui/image-thumbnail";
 import { TILE_HOVER_CLASS_NAME, TILE_SURFACE_CLASS_NAME } from "@/components/media-tile";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { ORDER_STATUS_COLORS, paymentOf } from "@/lib/orders";
+import { ORDER_STATUS_COLORS, partlyPaidUnpaidCosts, paymentOf } from "@/lib/orders";
 import { PaidCheckbox } from "@/components/orders/payment";
 import { getCurrencyLocale } from "@/lib/locale";
 import { Skeleton } from "../ui/skeleton";
@@ -309,6 +309,7 @@ function OrderCard({
   ...props
 }: OrderCardProps) {
   const locale = getCurrencyLocale(currency);
+  const unpaidCosts = partlyPaidUnpaidCosts(order);
 
   const content = (
     <div
@@ -364,6 +365,16 @@ function OrderCard({
               onPaidChange={(paid) => onPaidChange(order.orderId, paid)}
             />
           </div>
+          {unpaidCosts === null ? null : (
+            <div className="flex items-center justify-between gap-2 px-1.5 py-1">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                Unpaid Costs
+              </span>
+              <span className="text-xs tabular-nums">
+                {formatCurrencyFromMinorUnits(unpaidCosts, currency, locale)}
+              </span>
+            </div>
+          )}
           {DATE_FIELDS.map(({ field, label }) => {
             const dateValue = order[field] ?? null;
             const triggerButton = (

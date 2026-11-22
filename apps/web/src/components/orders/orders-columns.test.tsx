@@ -41,6 +41,7 @@ function order(orderId: string): Order {
     miscFees: 0,
     notes: "",
     total: 0,
+    unpaidCosts: 0,
     itemCount: 0,
     images: [],
     createdAt: "2026-11-05T00:00:00.000Z",
@@ -119,6 +120,7 @@ const {
   updatedAt: _updatedAt,
   payment: _payment,
   total: _total,
+  unpaidCosts: _unpaidCosts,
   itemCount: _itemCount,
   images: _images,
   ...savedOrder
@@ -216,4 +218,26 @@ test("draws the row's open-order link with a different icon from its expand butt
   if (!open) throw new Error("the row has no open-order link");
 
   expect(glyph(open)).not.toEqual(glyph(expand));
+});
+
+test("the Unpaid Costs column shows what each row still owes, and is blank once a row reads Paid, before the refetch brings its zero", () => {
+  render(
+    <OrderPendingContext
+      value={{ isOrderPending: () => false, isCollectionItemPending: () => false }}
+    >
+      <ColumnCells
+        orders={[
+          { ...order("partly"), paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 },
+          { ...order("unpaid"), total: 3000, unpaidCosts: 3000 },
+          { ...order("paid"), paid: true, payment: "paid", total: 3000, unpaidCosts: 0 },
+          { ...order("just-paid"), paid: true, payment: "paid", total: 3000, unpaidCosts: 1200 },
+        ]}
+        columnId="unpaidCosts"
+      />
+    </OrderPendingContext>,
+  );
+
+  expect(
+    ["partly", "unpaid", "paid", "just-paid"].map((id) => screen.getByTestId(id).textContent),
+  ).toEqual(["$12.00", "$30.00", "", ""]);
 });

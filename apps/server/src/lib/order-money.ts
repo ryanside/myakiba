@@ -18,7 +18,10 @@ export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${
   Number,
 );
 export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
-export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderFeesUnpaid} THEN ${orderFees} ELSE 0 END`;
+export const orderUnpaidCosts =
+  sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderFeesUnpaid} THEN ${orderFees} ELSE 0 END`.mapWith(
+    Number,
+  );
 
 export const paidItemCount = sql<number>`COUNT(${collection.id}) FILTER (WHERE ${itemIsPaid})`;
 

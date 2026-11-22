@@ -20,6 +20,7 @@ import type { CollectionItemFormValues } from "@myakiba/contracts/collection/typ
 import { SHIPPING_METHODS, ORDER_STATUSES } from "@myakiba/contracts/shared/constants";
 import { ORDER_CASCADE_OPTIONS } from "@myakiba/contracts/orders/constants";
 import { ORDER_STATUS_COLORS } from "@/lib/orders";
+import { formatCurrencyFromMinorUnits } from "@myakiba/utils/currency";
 import { PaidCheckbox } from "./payment";
 import type {
   Currency,
@@ -50,6 +51,7 @@ function editedOrder({
   updatedAt: _updatedAt,
   payment: _payment,
   total: _total,
+  unpaidCosts: _unpaidCosts,
   itemCount: _itemCount,
   images: _images,
   ...edited
@@ -421,6 +423,26 @@ export function createOrdersColumns({
       meta: {
         ...NUMERIC_COLUMN_META,
         headerTitle: "Total",
+        skeleton: <Skeleton className="h-6" />,
+      },
+    },
+    {
+      accessorKey: "unpaidCosts",
+      id: "unpaidCosts",
+      header: ({ column }) => (
+        <DataGridColumnHeader title="Unpaid Costs" visibility={true} column={column} />
+      ),
+      cell: ({ row }) =>
+        row.original.payment === "paid" || row.original.unpaidCosts === 0
+          ? null
+          : formatCurrencyFromMinorUnits(row.original.unpaidCosts, currency, locale),
+      enableSorting: false,
+      enableHiding: true,
+      enableResizing: true,
+      size: 112,
+      meta: {
+        ...NUMERIC_COLUMN_META,
+        headerTitle: "Unpaid Costs",
         skeleton: <Skeleton className="h-6" />,
       },
     },

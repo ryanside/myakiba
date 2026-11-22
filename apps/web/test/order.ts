@@ -20,6 +20,7 @@ export const order: Order = {
   miscFees: 0,
   notes: "",
   total: 1000,
+  unpaidCosts: 1000,
   itemCount: 1,
   images: [],
   createdAt: "2026-11-05T00:00:00.000Z",

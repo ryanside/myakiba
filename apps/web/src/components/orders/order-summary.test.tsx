@@ -19,6 +19,7 @@ const order: Order = {
   paid: true,
   payment: "paid",
   total: 0,
+  unpaidCosts: 0,
   shippingFee: 0,
   taxes: 0,
   duties: 0,
@@ -73,4 +74,23 @@ test("payment shows apart from the steps, with the Payment Date when there is on
 test("an unpaid order says so with no date", () => {
   summary({ status: "Ordered", paid: false, payment: "unpaid" });
   expect(screen.getByText("Unpaid")).not.toBeNull();
+});
+
+const unpaidCostsRow = () => screen.queryByText("Unpaid Costs")?.parentElement?.textContent ?? null;
+
+test("a Partly paid order shows its Unpaid Costs under the Total", () => {
+  summary({ paid: true, payment: "partly", total: 3000, unpaidCosts: 1200 });
+  expect(unpaidCostsRow()).toBe("Unpaid Costs$12.00");
+});
+
+test.each([
+  [
+    "an unpaid order, whose Total is what it owes",
+    { paid: false, payment: "unpaid", unpaidCosts: 3000 },
+  ],
+  ["a paid order", { paid: true, payment: "paid", unpaidCosts: 0 }],
+  ["a Partly paid order that owes nothing", { paid: false, payment: "partly", unpaidCosts: 0 }],
+] as const)("%s shows no Unpaid Costs row", (_name, fields) => {
+  summary({ ...fields, total: 3000 });
+  expect(unpaidCostsRow()).toBeNull();
 });
