@@ -81,10 +81,9 @@ type SettingEntry = {
 export const SETTINGS = {
   currency: {
     section: "preferences",
-    title: "Display currency",
-    description:
-      "Your spending and totals show in this currency. Release prices keep the currency they were listed in.",
-    keywords: ["money", "price", "cost", "usd", "jpy", "yen", "eur"],
+    title: "Currency",
+    description: "Switching relabels your amounts without converting them.",
+    keywords: ["money", "price", "cost", "display", "usd", "jpy", "yen", "eur"],
   },
   "date-format": {
     section: "preferences",
@@ -209,7 +208,7 @@ export const SETTINGS = {
   "delete-account": {
     section: "account",
     title: "Delete account",
-    description: "Permanently delete your account and all associated data.",
+    description: "Permanently delete your account and your data.",
     keywords: ["remove", "close", "erase", "danger"],
   },
   version: {

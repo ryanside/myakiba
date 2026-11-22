@@ -115,9 +115,17 @@ const pressed = (name: string) =>
   screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
 
 async function chooseCurrency(code: string) {
-  fireEvent.click(screen.getByRole("button", { name: "Display currency" }));
+  fireEvent.click(screen.getByRole("button", { name: "Currency" }));
   fireEvent.click(await screen.findByRole("option", { name: new RegExp(`^${code}`) }));
 }
+
+test("the currency row says a switch relabels amounts and converts nothing", async () => {
+  renderPreferences();
+  expect(await screen.findByRole("button", { name: "Currency" })).toBeDefined();
+  expect(
+    screen.getByText("Switching relabels your amounts without converting them."),
+  ).toBeDefined();
+});
 
 test("the preview shows an example order in the chosen formats before they are saved", async () => {
   renderPreferences();
@@ -191,7 +199,7 @@ test("a format saved elsewhere keeps an unsaved edit to the other format", async
   act(() => setSession({ ...user, currency: "EUR" }));
 
   expect(pressed("DD/MM/YYYY")).toBeTrue();
-  expect(screen.getByRole("button", { name: "Display currency" }).textContent).toStartWith("EUR");
+  expect(screen.getByRole("button", { name: "Currency" }).textContent).toStartWith("EUR");
 
   fireEvent.click(screen.getByRole("button", { name: "Save formats" }));
 
@@ -209,9 +217,7 @@ test("the formats refuse edits while a save is in flight", async () => {
 
   fireEvent.click(screen.getByRole("button", { name: "YYYY/MM/DD" }));
   expect(pressed("DD/MM/YYYY")).toBeTrue();
-  expect(
-    screen.getByRole("button", { name: "Display currency" }).hasAttribute("disabled"),
-  ).toBeTrue();
+  expect(screen.getByRole("button", { name: "Currency" }).hasAttribute("disabled")).toBeTrue();
 
   act(() => releaseHeldSave());
   await saveSettles();
