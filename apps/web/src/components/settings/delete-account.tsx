@@ -90,9 +90,10 @@ export function DeleteAccount() {
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete account</DialogTitle>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
             <DialogDescription>
-              Everything you saved in myakiba is erased immediately. There is no grace period.
+              This action cannot be undone. This will permanently delete your account and remove all
+              your data from our servers.
             </DialogDescription>
           </DialogHeader>
           {needsFreshSignIn ? (

@@ -175,7 +175,7 @@ test("Disconnect unlinks the Google account by its local id", async () => {
   await waitFor(() => expect(unlinkBodies).toEqual([{ accountId: "google-account" }]));
 });
 
-test("Delete Account says what it deletes and still asks for the password", async () => {
+test("Delete Account still asks for the password", async () => {
   openAccount();
   const pointer = userEvent.setup();
   const trigger = await waitFor(() => {
@@ -185,9 +185,9 @@ test("Delete Account says what it deletes and still asks for the password", asyn
   });
   await pointer.click(trigger);
 
-  const dialog = await screen.findByRole("dialog", { name: "Delete account" });
+  const dialog = await screen.findByRole("dialog", { name: "Are you absolutely sure?" });
   expect(dialog.textContent).toContain(
-    "Everything you saved in myakiba is erased immediately. There is no grace period.",
+    "This action cannot be undone. This will permanently delete your account and remove all your data from our servers.",
   );
   const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
   expect(submit.hasAttribute("disabled")).toBe(false);
