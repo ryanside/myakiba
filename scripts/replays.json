@@ -5419,6 +5419,29 @@
       "bug": "The unpaid count on the Dashboard and Expenses and the Unpaid filter on the Orders page read only an Order's own Paid, so an Order with paid Order Fees and unpaid Order Items showed 0 unpaid beside its Unpaid Costs and listed under Paid.",
       "test": "apps/web/src/queries/orders.test.ts",
       "fixed": ["the Orders list sends the Paid filter and the Paid Orders link's feesPaid apart"]
+    },
+    {
+      "fix": "1f89414aea85999495d6b40315b532980083d7a8",
+      "bug": "An Expenses Paid Orders or Shipping link left feesPaid on the Orders list, which no chip showed, so pressing Unpaid or choosing Unpaid in the filter form kept it and hid every Order whose fees are unpaid.",
+      "test": "apps/web/src/components/orders/orders-quick-filters.test.tsx",
+      "fixed": [
+        "after an Expenses Paid Orders link, Unpaid replaces the link's feesPaid instead of narrowing it"
+      ]
+    },
+    {
+      "fix": "1f89414aea85999495d6b40315b532980083d7a8",
+      "bug": "An Expenses Paid Orders or Shipping link left feesPaid on the Orders list, which no chip showed, so pressing Unpaid or choosing Unpaid in the filter form kept it and hid every Order whose fees are unpaid.",
+      "test": "apps/web/src/components/orders/orders-filters-form.test.tsx",
+      "fixed": [
+        "choosing Unpaid after an Expenses Paid Orders link replaces the link's feesPaid",
+        "applying the form keeps only the payment filter its Paid field shows"
+      ]
+    },
+    {
+      "fix": "1f89414aea85999495d6b40315b532980083d7a8",
+      "bug": "The Dashboard showed the unpaid Order count under Active Orders, but the count includes Owned Orders, so an Owned, partly paid Order read 1 unpaid under 0 active.",
+      "test": "apps/web/src/components/count-and-sum-figures.test.tsx",
+      "fixed": ["an Owned, partly paid Order counts beside Unpaid Costs, not under Active Orders"]
     }
   ],
   "lint": [
