@@ -9,5 +9,5 @@ export type ExtensionListings = { readonly [Store in ExtensionStore]: string | n
 export const EXTENSION_LISTINGS: ExtensionListings = {
   chromeWebStore:
     "https://chromewebstore.google.com/detail/myakiba/cipiinpifbjbpjnhghkeonigecihoebm",
-  firefoxAddons: null,
+  firefoxAddons: "https://addons.mozilla.org/addon/myakiba/",
 };

@@ -195,7 +195,9 @@ test("the FAQ links both stores once both list the extension", async () => {
   expect(screen.getByRole("link", { name: "Firefox Add-ons" }).getAttribute("href")).toBe(
     LISTING_URLS.firefoxAddons,
   );
-  expect(answer.textContent).not.toContain("under review");
+  expect(answer.textContent).toBe(
+    "On a computer, install it from the Chrome Web Store for Chrome, Edge and other Chromium browsers, or from Firefox Add-ons.",
+  );
 });
 
 // How it works plays a demo that waits on the page's fonts, which happy-dom does not have.
