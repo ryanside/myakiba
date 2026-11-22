@@ -5254,6 +5254,29 @@
         "what an empty Add page says > without it, while a store reviews it, what still works",
         "what an empty Add page says > without it, in a browser it does not run in, which ones it does"
       ]
+    },
+    {
+      "fix": "1ad4ca6850b6d0aeb7ddaac0cc30c1b5d3695bf9",
+      "bug": "The Collection and Orders footers counted only the page's selected rows out of the page's rows, so after paging they read 0 selected while the action bar counted 3, and an Order's items footer dropped its count on the next page.",
+      "test": "apps/web/src/components/selection-footer.test.tsx",
+      "fixed": [
+        "the selection footer counts every selected row, not only the page's > on the Collection page",
+        "the selection footer counts every selected row, not only the page's > on the Orders page",
+        "the selection footer counts every selected row, not only the page's > in an Order's items"
+      ],
+      "testAt": "0dbf0fad9063b0a6d501471b69cdd4ba8bd4e16e",
+      "reason": "The next fix in this PR drops \"of N\" from the footer and changes these tests' expected text, so this fix replays against the test file as it stood before that change."
+    },
+    {
+      "fix": "c278a271f0651ecd2c8d27d7bb1889c222c1df97",
+      "bug": "The Collection and Orders footers counted the selection out of the rows the search matched, but a selection spans searches, so 3 selected rows and a search matching 1 read \"3 of 1 row(s) selected\".",
+      "test": "apps/web/src/components/selection-footer.test.tsx",
+      "fixed": [
+        "the selection footer counts every selected row, not only the page's > on the Collection page",
+        "the selection footer counts every selected row, not only the page's > on the Orders page",
+        "the selection footer keeps counting rows a search hides > on the Collection page",
+        "the selection footer keeps counting rows a search hides > on the Orders page"
+      ]
     }
   ],
   "lint": [
