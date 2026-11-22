@@ -5,33 +5,9 @@ import { ActiveDot } from "@/components/active-dot";
 import { MyAkibaLogo } from "@/components/myakiba-logo";
 import { buttonVariants } from "@/components/ui/button";
 import { getPageBackground } from "@/lib/page-background";
+import { NAV_GROUPS } from "@/components/sidebar/nav-groups";
 import { cn } from "@/lib/utils";
 import "@/components/page-background.css";
-
-type NavItem = { readonly title: string; readonly url: string; readonly prefix?: true };
-
-// The app sidebar's links, as `components/sidebar/app-sidebar.tsx` lists them.
-const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly NavItem[] }[] = [
-  {
-    label: "Overview",
-    items: [
-      { title: "Dashboard", url: "/dashboard" },
-      { title: "Calendar", url: "/calendar" },
-      { title: "Analytics", url: "/analytics", prefix: true },
-      { title: "Expenses", url: "/expenses", prefix: true },
-    ],
-  },
-  {
-    label: "Library",
-    items: [
-      { title: "Collection", url: "/collection" },
-      { title: "Orders", url: "/orders", prefix: true },
-      { title: "Wishlist", url: "/wishlist" },
-      { title: "Lists", url: "/lists", prefix: true },
-      { title: "Item Database", url: "/items" },
-    ],
-  },
-];
 
 const FOOTER_LINKS = ["Changelog", "Discord", "GitHub"] as const;
 
@@ -51,7 +27,8 @@ function Sidebar({ path }: { readonly path: string }) {
           <div key={group.label} className="flex w-full min-w-0 flex-col py-2">
             <div className="group-label flex h-6 shrink-0 items-center px-2">{group.label}</div>
             {group.items.map((item) => {
-              const active = item.prefix ? path.startsWith(item.url) : path === item.url;
+              const active =
+                item.pathnameMatch === "prefix" ? path.startsWith(item.url) : path === item.url;
               return (
                 <div
                   key={item.url}
