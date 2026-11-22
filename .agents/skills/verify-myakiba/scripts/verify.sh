@@ -162,7 +162,15 @@ seed_user() {
     -H "origin: $url" -H 'x-captcha-response: XXXX.DUMMY.TOKEN.XXXX' \
     -d "{\"email\":\"$email\",\"password\":\"$password\",\"name\":\"Verify User\"${username:+,\"username\":\"$username\"}}")
   code=${body##*$'\n'}
-  [ "$code" = 200 ] || die "sign-up for $email answered $code: ${body%$'\n'*}"
+  if [ "$code" != 200 ]; then
+    # Better Auth checks the username before it hides an existing email, so a repeat seed of
+    # the same email answers that the username is taken.
+    case $body in
+      *USERNAME_IS_ALREADY_TAKEN*) [ -n "$(psql_run "select id from \"user\" where email = '$email'")" ] ||
+        die "sign-up for $email answered $code: ${body%$'\n'*}" ;;
+      *) die "sign-up for $email answered $code: ${body%$'\n'*}" ;;
+    esac
+  fi
   [ "$(psql_run "update \"user\" set email_verified = true where email = '$email' returning email")" = "$email" ] ||
     die "no user row for $email after sign-up"
   echo "user: $email / $password, username ${username:-generated} (email verified)"

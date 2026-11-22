@@ -347,3 +347,18 @@ test("a new account that saved preferences and left at the extension step sees n
 
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+
+test("a new account that saved preferences and reloads at Pick your first items sees no onboarding", async () => {
+  setBrowserLocale("en-GB");
+  await openDashboard(false);
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Install the myakiba extension." });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByRole("dialog", { name: "Pick your first items." });
+  cleanup();
+
+  await openDashboard(false);
+  await act(() => Bun.sleep(500));
+
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
