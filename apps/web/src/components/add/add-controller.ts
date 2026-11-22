@@ -10,7 +10,7 @@ import { useUserPreferences } from "@/hooks/use-user-preferences";
 import type { AddSearch as AddSearchParams } from "@/lib/add-search";
 import { pickFailureCopy } from "@/lib/pick-failure";
 import { startsSelected, useAddDraft } from "./add-draft";
-import type { RowOverrides } from "./add-draft";
+import type { DraftRow, RowOverrides } from "./add-draft";
 import type { CommitAnswer } from "./commit-button";
 import {
   defaultOrderTitle,
@@ -33,7 +33,7 @@ export function useAddController(search: AddSearchParams) {
   const { emailVerified, email } = session.user;
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
-  const { rows, waiting, ticket, dispatch } = useAddDraft(search.item);
+  const { rows, waiting, newestArrival, dispatch } = useAddDraft(search.item);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
@@ -69,7 +69,7 @@ export function useAddController(search: AddSearchParams) {
     isPlaceholderData: itemsStale,
     error: itemsError,
     refetch: refetchItems,
-  } = useRead(add.items, { itemIds: rowItemIds, ticket });
+  } = useRead(add.items, { itemIds: rowItemIds, newestArrival });
   const readItems: ReadonlyMap<string, AddItem> = new Map(
     (itemData?.items ?? []).map((item) => [item.itemId, item]),
   );
@@ -90,10 +90,8 @@ export function useAddController(search: AddSearchParams) {
       return item && row.selected !== null ? [[row.itemId, item] as const] : [];
     }),
   );
-  // A row the read answered without its Item is gone, so it decides nothing and blocks nothing.
-  const undecided = rows.some(
-    (row) => row.selected === null && !(answered && !readItems.has(row.itemId)),
-  );
+  const gone = (row: DraftRow) => answered && !readItems.has(row.itemId);
+  const undecided = rows.some((row) => row.selected === null && !gone(row));
   const itemsLoading =
     rowItemIds.length > 0 && (itemsPending || itemsStale || (undecided && itemsError === null));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
@@ -335,7 +333,7 @@ export function useAddController(search: AddSearchParams) {
       destination,
       emailVerified,
       loading: pending,
-      unresolved: undecided && itemsError !== null,
+      rowsFailedToLoad: undecided && itemsError !== null,
       onIssues: reportIssues,
       onSending: () => setSending(true),
       onFailed: () => setSending(false),

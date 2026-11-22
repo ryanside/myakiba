@@ -31,7 +31,6 @@ export function ItemBadges({
   );
 }
 
-/** Where the viewer already has an Item, for a row that keeps its height. */
 export function HeldNote({
   item: { collectionCount, onOrderCount },
 }: {

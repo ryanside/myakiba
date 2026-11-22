@@ -65,7 +65,6 @@ type AddRow =
       readonly kind: "loading";
       readonly id: string;
       readonly selected: boolean;
-      /** A draft row, which can leave while it loads. */
       readonly removable: boolean;
     }
   | {
@@ -197,7 +196,6 @@ function fieldCell(field: Field) {
 
 function SelectAll() {
   const { c } = useAddTable();
-  // A row still waiting for its read has no choice for Select all to make.
   const choosable = c.countedRows.filter((row) => row.selected !== null);
   const total = choosable.length;
   const selected = choosable.filter((row) => row.selected === true).length;
@@ -291,7 +289,6 @@ function RemoveRowButton({ id, label }: { readonly id: string; readonly label: s
   );
 }
 
-/** A loading draft row can be removed before its Item arrives, as a missing one can. */
 function actionsCell({ row: { original }, column }: CellContext<AddRow, unknown>) {
   if (original.kind === "item") return <RowActions row={original} />;
   if (original.kind === "loading" && original.removable) {

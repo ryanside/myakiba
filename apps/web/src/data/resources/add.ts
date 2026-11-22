@@ -24,17 +24,16 @@ export type AddChoices = Omit<AddCommit, "commitId">;
 
 const COMMIT_BUSY = "You've added a lot of items this hour. Try again in a few minutes.";
 
-type AddItemsInput = { readonly itemIds: readonly string[]; readonly ticket: number };
+type AddItemsInput = { readonly itemIds: readonly string[]; readonly newestArrival: number };
 
 export const add = {
   /**
    * Row details and badges for the draft's Items. Ids the server no longer has are left out. The
-   * `ticket` of the draft's newest row is in the key, so only a read sent since that row arrived
-   * answers it.
+   * draft's `newestArrival` is in the key, so only a read sent since its newest row arrived answers it.
    */
   items: rootedRead("itemDatabase", {
-    key: ({ itemIds, ticket }: AddItemsInput) =>
-      ["item-database-items", "add", itemIds, ticket] as const,
+    key: ({ itemIds, newestArrival }: AddItemsInput) =>
+      ["item-database-items", "add", itemIds, newestArrival] as const,
     load: async ({ itemIds }: AddItemsInput) =>
       itemIds.length === 0
         ? Result.ok({ items: [] })

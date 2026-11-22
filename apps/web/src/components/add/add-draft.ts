@@ -49,8 +49,7 @@ const appRouteApi = getRouteApi("/(app)");
 type DraftState = {
   readonly rows: readonly DraftRow[];
   readonly waiting: readonly string[];
-  /** When the newest row arrived, on this page's own count, which the Items read is keyed by. */
-  readonly ticket: number;
+  readonly newestArrival: number;
 };
 
 let lastTicket = 0;
@@ -72,7 +71,7 @@ function settle(
   return {
     rows: [...entering, ...rows],
     waiting: queue.slice(room),
-    ticket: entering.length > 0 ? at : state.ticket,
+    newestArrival: entering.length > 0 ? at : state.newestArrival,
   };
 }
 
@@ -145,11 +144,10 @@ function readDraft({
   readonly presetItem: string | undefined;
 }): DraftState {
   const rows = storedDraft.read(userId) ?? [];
-  // A restored row still waiting arrives again, so no read from before this page can decide it.
   const restored: DraftState = {
     rows,
     waiting: storedWaiting.read(userId) ?? [],
-    ticket: rows.some((row) => row.selected === null) ? nextTicket() : 0,
+    newestArrival: rows.some((row) => row.selected === null) ? nextTicket() : 0,
   };
   return draftReducer(restored, {
     type: "add",
@@ -174,5 +172,10 @@ export function useAddDraft(presetItem: string | undefined) {
     storedDraft.write(userId, state.rows);
     storedWaiting.write(userId, state.waiting);
   }, [userId, state.rows, state.waiting]);
-  return { rows: state.rows, waiting: state.waiting, ticket: state.ticket, dispatch } as const;
+  return {
+    rows: state.rows,
+    waiting: state.waiting,
+    newestArrival: state.newestArrival,
+    dispatch,
+  } as const;
 }

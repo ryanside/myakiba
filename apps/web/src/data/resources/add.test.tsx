@@ -120,12 +120,14 @@ describe("add.items", () => {
   test("is keyed in the itemDatabase family and asks for the draft's ids", async () => {
     const { queryClient } = withClient();
 
-    await queryClient.fetchQuery(add.items.options({ itemIds: ["item-1", "item-2"], ticket: 3 }));
-
-    expect(inFamilies(add.items.key({ itemIds: ["item-1"], ticket: 3 }), ["itemDatabase"])).toBe(
-      true,
+    await queryClient.fetchQuery(
+      add.items.options({ itemIds: ["item-1", "item-2"], newestArrival: 3 }),
     );
-    expect(add.items.key({ itemIds: ["item-1", "item-2"], ticket: 3 })).toEqual([
+
+    expect(
+      inFamilies(add.items.key({ itemIds: ["item-1"], newestArrival: 3 }), ["itemDatabase"]),
+    ).toBe(true);
+    expect(add.items.key({ itemIds: ["item-1", "item-2"], newestArrival: 3 })).toEqual([
       "item-database-items",
       "add",
       ["item-1", "item-2"],
@@ -137,7 +139,9 @@ describe("add.items", () => {
   test("answers an empty draft without a request", async () => {
     const { queryClient } = withClient();
 
-    expect(await queryClient.fetchQuery(add.items.options({ itemIds: [], ticket: 0 }))).toEqual({
+    expect(
+      await queryClient.fetchQuery(add.items.options({ itemIds: [], newestArrival: 0 })),
+    ).toEqual({
       items: [],
     });
     expect(server.itemQueries).toEqual([]);
