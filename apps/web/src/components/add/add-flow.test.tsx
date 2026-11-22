@@ -1786,3 +1786,62 @@ test("Fill all writes Price, Score and a row's date to the selected rows only", 
   expect(Number(rows[0]?.score)).toBeGreaterThan(0);
   expect(rows[0]?.orderDate).toMatch(/^\d{4}-\d{2}-15$/u);
 });
+
+// ------------------------------------------------------------------------------ Items already held
+
+const isChecked = (title: string) =>
+  screen.queryByRole("checkbox", { name: `Select ${title}` })?.getAttribute("aria-checked") ?? null;
+const shows = (text: string) => screen.queryByText(text) !== null;
+
+test("a picked Item already in the Collection or an Order arrives unselected, says so, and stays out of the commit", async () => {
+  seedItems(
+    item("item-30001", { title: "Owned pick", collectionCount: 1 }),
+    item("item-30002", { title: "Ordered pick", onOrderCount: 1 }),
+    item("item-30003", { title: "New pick" }),
+  );
+  loadExtension({ picks: [30_001, 30_002, 30_003].map((mfcId) => fakePick(mfcId)) });
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(3));
+
+  await waitFor(() =>
+    expect([isChecked("Owned pick"), isChecked("Ordered pick"), isChecked("New pick")]).toEqual([
+      "false",
+      "false",
+      "true",
+    ]),
+  );
+  expect([shows("In your collection"), shows("On order")]).toEqual([true, true]);
+
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(1));
+  expect(server.commits[0]?.rows.map(({ itemId }) => itemId)).toEqual(["item-30003"]);
+
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(2));
+  await user.click(screen.getByRole("checkbox", { name: "Select Owned pick" }));
+  await click(user, "Add 1 to collection");
+  await waitFor(() => expect(server.commits).toHaveLength(2));
+  expect(server.commits[1]?.rows.map(({ itemId }) => itemId)).toEqual(["item-30001"]);
+});
+
+test("an Item already in the Collection that waits for room comes in unselected", async () => {
+  seedItems(item("owned0000001", { title: "Owned waiting", collectionCount: 1 }));
+  seedDraft(
+    Array.from({ length: 100 }, (_, index) => ({
+      itemId: `row${String(index).padStart(9, "0")}`,
+      overrides: {},
+      selected: true,
+    })),
+  );
+  sessionStorage.setItem(
+    "myakiba:account:add-waiting",
+    JSON.stringify({ userId: USER.id, value: ["owned0000001"] }),
+  );
+  const user = userEvent.setup();
+  openAddPage("/add?to=collection");
+  const [firstRemove] = await screen.findAllByRole("button", { name: "Remove this row" });
+  await user.click(firstRemove as HTMLElement);
+
+  await waitFor(() => expect(isChecked("Owned waiting")).toBe("false"));
+  expect(shows("In your collection")).toBe(true);
+});
