@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, mock, setDefaultTimeout, spyOn, test } from "bun:test";
-import { act, cleanup, configure, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { PositionOrderInput } from "@myakiba/contracts/shared/position-order";
 import { Result } from "better-result";
@@ -197,7 +205,7 @@ const {
   useRemoveListMembersMutation,
   useRemoveTargetsFromListMutation,
 } = await import("./use-lists");
-const { toast } = await import("@/components/ui/toast");
+const { toast, Toaster } = await import("@/components/ui/toast");
 const toastAdd = spyOn(toast, "add");
 const { refreshItemCommand } = await import("@/data/resources/item");
 const { useResourceMutation } = await import("@/data/client");
@@ -818,6 +826,44 @@ describe("Undo after Remove from List", () => {
       ]),
     );
     expect(shownToasts().at(-1)).toBe("error: Failed to undo: Retry");
+  });
+
+  test("two removals whose Undos both fail each keep a Retry that puts back their own members", async () => {
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Toaster>
+          <ListScreens />
+        </Toaster>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(server.fetches.length).toBeGreaterThanOrEqual(4));
+    const removeThenUndo = async (memberId: string) => {
+      const actions = currentActions;
+      await act(async () => {
+        await actions?.removeMembers.run([memberId], memberId);
+      });
+      return lastToastAction();
+    };
+    const undos = [await removeThenUndo("m1"), await removeThenUndo("m2")];
+    server.restoreFailures.push(
+      { status: 500, value: "Failed to undo" },
+      { status: 500, value: "Failed to undo" },
+    );
+    for (const undo of undos) await act(async () => undo());
+    await waitFor(() => expect(screen.queryAllByRole("button", { name: "Retry" }).length).toBe(2));
+    server.writes.length = 0;
+
+    for (const retry of screen.getAllByRole("button", { name: "Retry" })) {
+      await act(async () => fireEvent.click(retry));
+    }
+
+    await waitFor(() =>
+      expect(server.writes.toSorted()).toEqual([
+        "restore item-m1@0 to l1",
+        "restore item-m2@0 to l1",
+      ]),
+    );
   });
 
   test("an Undo into a deleted List says so and offers no Retry", async () => {

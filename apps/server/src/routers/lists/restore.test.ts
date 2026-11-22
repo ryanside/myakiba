@@ -1,9 +1,9 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { Elysia } from "elysia";
 import { initLogger } from "evlog";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import * as authSchema from "@myakiba/db/schema/auth";
-import { collection, item, list, listMember } from "@myakiba/db/schema/figure";
+import { collection, item, list, listMember, order } from "@myakiba/db/schema/figure";
 import * as z from "zod";
 import { listTargetSchema } from "@myakiba/contracts/lists/schema";
 import { createTestDatabase } from "../../../test/database";
@@ -24,7 +24,8 @@ await mock.module("@myakiba/auth/server", () => ({
 
 const db = await createTestDatabase();
 const { default: listsRouter } = await import("./index");
-const app = new Elysia({ prefix: "/api" }).use(listsRouter);
+const { default: ordersRouter } = await import("../orders/index");
+const app = new Elysia({ prefix: "/api" }).use(listsRouter).use(ordersRouter);
 
 const userId = "user-1";
 const TITLES = ["A", "B", "C", "D", "E"] as const;
@@ -57,9 +58,9 @@ beforeEach(async () => {
 type Json = string | number | null | readonly Json[] | { readonly [key: string]: Json };
 type Body = { readonly [key: string]: Json };
 
-const call = async (method: string, path: string, body?: Body) => {
+const callApi = async (method: string, path: string, body?: Body) => {
   const response = await app.handle(
-    new Request(`http://localhost/api/lists${path}`, {
+    new Request(`http://localhost/api${path}`, {
       method,
       headers: { "x-test-user": userId, "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -68,6 +69,8 @@ const call = async (method: string, path: string, body?: Body) => {
   const isJson = response.headers.get("content-type")?.includes("application/json");
   return { status: response.status, body: isJson ? await response.json() : await response.text() };
 };
+
+const call = (method: string, path: string, body?: Body) => callApi(method, `/lists${path}`, body);
 
 const removed = async (...titles: readonly string[]) => {
   const answer = await call("DELETE", "/list-1/members", {
@@ -230,4 +233,74 @@ test("Undo refuses a body that names a member id, a user or a time", async () =>
   }
   expect(await statusOf("POST", "/list-1/members/restore", { members, userId })).toBe(422);
   expect(await shownTitles()).toBe("ACDE");
+});
+
+/** Locks one List Member row, so an Undo that reads the List's members stops there. */
+async function holdingMember(memberId: string) {
+  const locked = Promise.withResolvers<null>();
+  const commit = Promise.withResolvers<null>();
+  const open = db.transaction(async (tx) => {
+    await tx
+      .select({ id: listMember.id })
+      .from(listMember)
+      .where(eq(listMember.id, memberId))
+      .for("update");
+    locked.resolve(null);
+    await commit.promise;
+  });
+  await locked.promise;
+  return async () => {
+    commit.resolve(null);
+    await open;
+  };
+}
+
+async function waitForLockWaits(count: number) {
+  for (;;) {
+    const [waiting] = await db.execute<{ count: number }>(
+      sql`SELECT count(*)::int AS count FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND datname = current_database()`,
+    );
+    if (waiting && waiting.count >= count) return;
+    await Bun.sleep(10);
+  }
+}
+
+test("an Undo of an Order and a delete of that Order at once both finish", async () => {
+  await db.insert(order).values({ id: "order-1", userId, title: "AmiAmi preorder" });
+  await db.insert(collection).values({
+    id: "collection-ordered",
+    userId,
+    itemId: "item-F",
+    orderId: "order-1",
+    status: "Ordered",
+  });
+  await db.insert(listMember).values([
+    { id: "member-order", listId: "list-1", userId, orderId: "order-1", position: 5 },
+    {
+      id: "member-ordered",
+      listId: "list-1",
+      userId,
+      collectionId: "collection-ordered",
+      position: 6,
+    },
+  ]);
+  const members = await removed("order");
+  const commit = await holdingMember("member-ordered");
+
+  const undone = undo(members);
+  await waitForLockWaits(1);
+  const deleted = callApi("DELETE", "/orders/", { orderIds: ["order-1"] });
+  await waitForLockWaits(2);
+  await commit();
+
+  const [{ status: undoneStatus }, { status: deletedStatus }] = await Promise.all([
+    undone,
+    deleted,
+  ]);
+  expect({ undone: undoneStatus, deleted: deletedStatus }).toEqual({
+    undone: 200,
+    deleted: 200,
+  });
+  expect(await shownTitles()).toBe("ABCDE");
 });
