@@ -31,10 +31,6 @@ const NAV_GROUPS: readonly { readonly label: string; readonly items: readonly Na
       { title: "Item Database", url: "/items" },
     ],
   },
-  {
-    label: "Account",
-    items: [{ title: "Settings", url: "/settings" }],
-  },
 ];
 
 const FOOTER_LINKS = ["Changelog", "Discord", "GitHub"] as const;

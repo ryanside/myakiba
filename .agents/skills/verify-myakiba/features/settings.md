@@ -12,7 +12,7 @@ A user picks a display currency and a date format, and money and dates across th
 
 ## How to get to it (user POV)
 
-- Sidebar link `Settings`, or `Settings` in the account menu, or `<url>/settings?section=<id>`.
+- `Settings` in the account menu, or `<url>/settings?section=<id>`.
 - The settings nav links are `Preferences`, `Appearance`, `Layout`, `Shops`, `Profile`, `Account` and `About`. The section ids are their lowercase names.
 - The onboarding dialog's Preferences step edits the same currency and date format.
 

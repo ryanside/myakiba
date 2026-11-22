@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { flushFrame, frames, renderSidebar } from "../../../test/sidebar-app";
 
 const realVisibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
@@ -31,6 +31,26 @@ async function expectOrders() {
     timeout: 2000,
   });
 }
+
+test("the sidebar lists the Overview and Library pages, and Settings is left to the account menu", async () => {
+  await renderSidebar();
+
+  const main = screen.getByRole("navigation", { name: "Main" });
+  const linksIn = (group: string) =>
+    within(within(main).getByRole("list", { name: group }))
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+  expect(within(main).getAllByRole("list")).toHaveLength(2);
+  expect(linksIn("Overview")).toEqual(["Dashboard", "Calendar", "Analytics", "Expenses"]);
+  expect(linksIn("Library")).toEqual([
+    "Collection",
+    "Orders",
+    "Wishlist",
+    "Lists",
+    "Item Database",
+  ]);
+  expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+});
 
 test("every sidebar link is the whole menu button, so its hover area is its hit area", async () => {
   await renderSidebar();
