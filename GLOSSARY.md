@@ -194,7 +194,7 @@ _Avoid_: Unique Owned
 Use Add for the header button and the Add Page; keep full action names for destinations.
 
 **Add Page**:
-The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
+The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab. It shows at most 100 rows; Items past that wait and become rows as rows are committed or removed.
 _Avoid_: Add menu, Add tray, sheet
 
 **Pick**:

@@ -33,7 +33,7 @@ export function useAddController(search: AddSearchParams) {
   const { emailVerified, email } = session.user;
   const { currency, dateFormat } = useUserPreferences();
   const navigate = useNavigate();
-  const { rows, full, dispatch } = useAddDraft(search.item);
+  const { rows, waiting, dispatch } = useAddDraft(search.item);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(Boolean(search.q));
   const [formState, setFormState] = useState<DestinationForm>(() => presetDestination(search.to));
@@ -62,7 +62,7 @@ export function useAddController(search: AddSearchParams) {
   }, [hasPresetItem, navigate]);
 
   const rowItemIds = rows.map((row) => row.itemId);
-  const draftItemIds: ReadonlySet<string> = new Set(rowItemIds);
+  const draftItemIds: ReadonlySet<string> = new Set([...rowItemIds, ...waiting]);
   const {
     data: itemData,
     isPending: itemsPending,
@@ -291,7 +291,7 @@ export function useAddController(search: AddSearchParams) {
     handleRetryPick,
     handleDiscardPick,
 
-    full,
+    waiting: waiting.length,
     stopped: intake.stopped,
     failedPicks,
     unverifiedPick,
