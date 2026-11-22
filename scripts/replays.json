@@ -5391,6 +5391,34 @@
       "fixed": [
         "a Paid click on the orders page > sets Paid on the Order and its items in one write, marking a filtered Order saving until it lands"
       ]
+    },
+    {
+      "fix": "c51a7ded020a409cf0ad5197fa3001da058800a6",
+      "bug": "The unpaid count on the Dashboard and Expenses and the Unpaid filter on the Orders page read only an Order's own Paid, so an Order with paid Order Fees and unpaid Order Items showed 0 unpaid beside its Unpaid Costs and listed under Paid.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Order whose Order Fees are paid and whose two Order Items are not is Partly paid > it counts as unpaid beside its Unpaid Costs, as an Order marked unpaid with nothing priced does",
+        "an Order whose Order Fees are paid and whose two Order Items are not is Partly paid > the Unpaid filter lists it and the Paid filter lists only the Order paid in full",
+        "an Order whose Order Fees are paid and whose two Order Items are not is Partly paid > an Expenses Paid Orders count links to every Order whose own Paid is yes",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > Expenses counts a paid item on an Unpaid Order as Order Item Spend, and an unpaid item on a Paid Order as neither",
+        "each item's price follows its own Paid and each Order's fees follow the Order's > the Dashboard month splits its Orders' amounts the same way",
+        "the Orders page lists the Orders behind Unpaid Costs > Unpaid Costs of at least 1 and the Unpaid filter both keep a Paid Order that holds an unpaid item",
+        "the Orders page lists the Orders behind Order Spend > Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid Orders link leaves out"
+      ]
+    },
+    {
+      "fix": "c51a7ded020a409cf0ad5197fa3001da058800a6",
+      "bug": "The unpaid count on the Dashboard and Expenses and the Unpaid filter on the Orders page read only an Order's own Paid, so an Order with paid Order Fees and unpaid Order Items showed 0 unpaid beside its Unpaid Costs and listed under Paid.",
+      "test": "apps/server/src/routers/orders/routes.test.ts",
+      "fixed": [
+        "Paid on an Order > the Paid filter lists Orders paid in full, the Unpaid filter the rest, and feesPaid the Orders whose own Paid is yes"
+      ]
+    },
+    {
+      "fix": "c51a7ded020a409cf0ad5197fa3001da058800a6",
+      "bug": "The unpaid count on the Dashboard and Expenses and the Unpaid filter on the Orders page read only an Order's own Paid, so an Order with paid Order Fees and unpaid Order Items showed 0 unpaid beside its Unpaid Costs and listed under Paid.",
+      "test": "apps/web/src/queries/orders.test.ts",
+      "fixed": ["the Orders list sends the Paid filter and the Paid Orders link's feesPaid apart"]
     }
   ],
   "lint": [
