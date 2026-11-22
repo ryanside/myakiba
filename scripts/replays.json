@@ -5254,6 +5254,23 @@
         "what an empty Add page says > without it, while a store reviews it, what still works",
         "what an empty Add page says > without it, in a browser it does not run in, which ones it does"
       ]
+    },
+    {
+      "fix": "daa300e70e7fb1121f13e44fafa34eb3a3d4a657",
+      "bug": "Every Collection Spend read summed each Owned Collection Item's price whatever its Paid, so an Owned and unpaid Order Item counted in both Collection Spend and Unpaid Costs on the Collection page, the Dashboard, Expenses and Analytics.",
+      "test": "apps/server/src/routers/unpaid-agreement.test.ts",
+      "fixed": [
+        "an Owned Order Item that is still unpaid > counts as Unpaid Costs and in no page's Spend",
+        "an Owned Order Item that is still unpaid > Collection Spend, Fee Spend and Unpaid Costs add up to the Order Total"
+      ]
+    },
+    {
+      "fix": "913f3faf54d13d9871a23ae0e694ff5090c8247d",
+      "bug": "The Collection page's optimistic delete subtracted a deleted unpaid item's price from Item Spend, which counts only paid items.",
+      "test": "apps/web/src/data/resources/collection.test.tsx",
+      "fixed": [
+        "a Collection Item write on the collection page > an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers"
+      ]
     }
   ],
   "lint": [
