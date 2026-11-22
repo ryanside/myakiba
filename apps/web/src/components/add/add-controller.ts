@@ -80,8 +80,6 @@ export function useAddController(search: AddSearchParams) {
     selected: isRowSelected(row, items.get(row.itemId)),
   }));
   // A failed refresh leaves the Items it already read, so only a row without one needs the error.
-  // A row's selection is decided once, from the first fresh read of its Item, so a commit that makes
-  // the Item owned cannot unselect the row before a retry of that commit.
   useEffect(() => {
     if (itemsLoading || itemsFetching) return;
     const decided = new Map(
