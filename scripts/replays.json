@@ -5433,7 +5433,9 @@
         "a row whose read failed blocks Add for every row until it is removed or read",
         "a row waiting for its read can be removed",
         "Select all leaves a row waiting for its read to that read",
-        "an unselected row says where the Item is, without counting its Collection Items"
+        "an unselected row says where the Item is, without counting its Collection Items",
+        "a re-picked owned Item keeps its note when an older read answers late",
+        "a New Order's default title comes from the read that decided its row, so a retry after a reload repeats it"
       ]
     },
     {
@@ -5443,6 +5445,26 @@
       "fixed": [
         "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
         "when a failed read leaves nothing to add, Add says to retry or remove, beside the button too"
+      ]
+    },
+    {
+      "fix": "35620847900c22cddc4dc517184da6b2e7f68860",
+      "bug": "Dropping the arrival from the Items read's key once every row was decided handed rows to an id-set key, where a failed read unloaded a row that had just loaded and an older read replaced the summary that decided a re-picked row, dropping its note or its New Order title.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "a re-picked owned Item keeps its note when an older read answers late",
+        "a row that just loaded stays loaded when the next read fails",
+        "a New Order's default title comes from the read that decided its row, so a retry after a reload repeats it"
+      ]
+    },
+    {
+      "fix": "ab03a4666250787f6072e1ecb8762394b0af5c5c",
+      "bug": "A row that loaded under one Items read key lost its summary when a later key's read failed and the later row was removed during the failure, and the narrow failure line showed beside the verify reason.",
+      "test": "apps/web/src/components/add/add-flow.test.tsx",
+      "fixed": [
+        "a loaded row keeps its Item and edits when a row added after it fails and is removed during the failure",
+        "a row that loaded on its first read keeps its Item and edits when a later row fails and is removed during the failure",
+        "an unverified user whose read failed sees only the verify reason at the button"
       ]
     }
   ],
