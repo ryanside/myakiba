@@ -5398,7 +5398,16 @@
       "test": "apps/web/src/components/add/add-flow.test.tsx",
       "fixed": [
         "a picked Item already in the Collection or an Order arrives unselected, says so, and stays out of the commit",
-        "an Item already in the Collection that waits for room comes in unselected"
+        "an Item already in the Collection that waits for room comes in unselected",
+        "an Item added again after its commit arrives unselected"
+      ]
+    },
+    {
+      "fix": "8e21fa2b6b0e96ae80cea546d84944aafe0a72fe",
+      "bug": "Add row selection followed the Item's held counts on every render, so after a commit's answer was lost and the page reloaded, its default rows read as owned and turned unselected, and the retry sent other rows under a new commitId, saving the hand-ticked rows twice.",
+      "test": "apps/web/src/components/add/add-retry.test.tsx",
+      "fixed": [
+        "a reload after a lost answer keeps each row's selection, so the retry repeats the commit"
       ]
     }
   ],
