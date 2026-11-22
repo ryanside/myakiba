@@ -80,17 +80,6 @@ export default function UserMenu({ session }: { session: Session }) {
         <DropdownMenuGroup>
           <DropdownMenuItem
             onClick={() => {
-              navigate({
-                to: "/profile/$username",
-                params: { username: session.user.username ?? "" },
-              });
-            }}
-          >
-            <HugeiconsIcon icon={UserIcon} aria-hidden="true" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
               navigate({ to: "/settings" });
             }}
           >

@@ -41,7 +41,7 @@ Preconditions:
 - While submitting, the `Sign in` button shows only a spinner and loses its name. Wait on the URL, not on the button.
 - `has_seen_onboarding` turns `t` when the Preferences step's `Continue` saves, before the dialog closes.
 - The Preferences step's `Continue` saves the username, currency and date format that differ from the account's.
-- The account menu also holds `Profile` and `Settings`.
+- The account menu also holds `Settings`.
 - The default preview profile keeps the session cookie for this run's origin across tabs. Open an `incognito` profile tab for a clean signed-out start.
 - Cookies ignore the port, and every run signs its cookie cache with the same secret. A session from an earlier run can survive in a profile, so sign out before `$H down`, or sign out first when the dashboard opens without a sign-in.
 - Sign-in calls Cloudflare Turnstile. Without internet access, sign-in and `seed-user` fail on the captcha.
