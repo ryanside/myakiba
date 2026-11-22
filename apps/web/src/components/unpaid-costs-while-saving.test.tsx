@@ -101,6 +101,13 @@ function serve() {
     }
     const text = await request.text();
     const body = text ? parseJson(Body, text).unwrap() : null;
+    const edit = z.object({ order: z.unknown() }).safeParse(body);
+    if (
+      request.method === "PUT" &&
+      edit.success &&
+      !orderEditSchema.safeParse(edit.data.order).success
+    )
+      return new Response("Unrecognized key", { status: 422 });
     const { promise, resolve } = Promise.withResolvers<Response>();
     const write: Write = {
       method: request.method,
@@ -155,6 +162,8 @@ function cell(header: string, title = "AmiAmi preorder"): string {
     rowOf(title).children[headers.findIndex((text) => text?.startsWith(header))]?.textContent ?? ""
   );
 }
+
+const paidBox = () => screen.getByRole("checkbox", { name: "AmiAmi preorder paid" });
 
 const shown = (title = "AmiAmi preorder") => ({
   total: cell("Total", title),
@@ -247,16 +256,34 @@ describe("a fee edit from the Total cell", () => {
   });
 });
 
+test("a fee edit with the fee columns shown keeps Shipping, Total and Unpaid Costs from one server row", async () => {
+  localStorage.setItem("orders:columnVisibility", JSON.stringify({ shippingFee: true }));
+  const user = await renderOrders("/orders");
+
+  await freeTheShipping(user);
+  const whileSaving = { shipping: cell("Shipping Fee"), ...shown() };
+  server.writes[0]?.settle("ok");
+
+  await waitFor(() =>
+    expect({ shipping: cell("Shipping Fee"), ...shown() }).toEqual({ shipping: "$0.00", ...NEW }),
+  );
+  expect(whileSaving).toEqual({ shipping: "$100.00", ...OLD });
+});
+
 test("a title edit made while a fee edit still saves sends only Order fields and saves", async () => {
   const user = await renderOrders("/orders");
   await freeTheShipping(user);
+  server.saved = [{ ...freeShipping, title: "HLJ preorder" }];
 
   await user.click(screen.getByRole("button", { name: /edit Order title$/ }));
   const title = screen.getByRole("textbox", { name: "Order title" });
   await user.clear(title);
   await user.type(title, "HLJ preorder{Enter}");
   await waitFor(() => expect(server.writes.length).toBe(2));
+  for (const write of server.writes) write.settle("ok");
 
+  await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+  await waitFor(() => expect(shown("HLJ preorder")).toEqual(NEW));
   const body = z.object({ order: z.unknown() }).parse(server.writes[1]?.body);
   expect(orderEditSchema.safeParse(body.order).success).toBe(true);
 });
@@ -265,15 +292,46 @@ test("a Paid click on a Partly paid row draws its Total and no Unpaid Costs whil
   const user = await renderOrders("/orders");
   server.saved = [{ ...partly, paid: true, payment: "paid", unpaidCosts: 0 }];
 
-  await user.click(screen.getByRole("checkbox", { name: "AmiAmi preorder paid" }));
+  await user.click(paidBox());
   await waitFor(() => expect(server.writes.length).toBe(1));
-  const whileSaving = shown();
+  const whileSaving = { paid: paidBox().getAttribute("aria-checked"), ...shown() };
   server.writes[0]?.settle("ok");
 
   await waitFor(() => expect(queryClient.isMutating()).toBe(0));
-  expect({ whileSaving, after: shown() }).toEqual({
-    whileSaving: { total: "$121.00", unpaidCosts: "" },
-    after: { total: "$121.00", unpaidCosts: "" },
+  expect({
+    whileSaving,
+    after: { paid: paidBox().getAttribute("aria-checked"), ...shown() },
+  }).toEqual({
+    whileSaving: { paid: "true", total: "$121.00", unpaidCosts: "" },
+    after: { paid: "true", total: "$121.00", unpaidCosts: "" },
+  });
+});
+
+test("a second Paid click while the first saves does nothing, so the row never reads unchecked beside the old amount", async () => {
+  const user = await renderOrders("/orders");
+  server.saved = [{ ...partly, paid: true, payment: "paid", unpaidCosts: 0 }];
+
+  await user.click(paidBox());
+  await waitFor(() => expect(server.writes.length).toBe(1));
+  server.holdReads();
+  server.writes[0]?.settle("ok");
+  await waitFor(() => expect(queryClient.isFetching()).toBeGreaterThan(0));
+  await user.click(paidBox());
+  const afterSecondClick = {
+    writes: server.writes.length,
+    paid: paidBox().getAttribute("aria-checked"),
+    ...shown(),
+  };
+  server.releaseReads();
+  for (const write of server.writes.slice(1)) write.settle("ok");
+
+  await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+  expect({
+    afterSecondClick,
+    after: { paid: paidBox().getAttribute("aria-checked"), ...shown() },
+  }).toEqual({
+    afterSecondClick: { writes: 1, paid: "true", total: "$121.00", unpaidCosts: "" },
+    after: { paid: "true", total: "$121.00", unpaidCosts: "" },
   });
 });
 
@@ -299,10 +357,13 @@ test("paying the only unpaid item in an expanded row keeps the row's pair until 
   await user.click(await screen.findByRole("checkbox", { name: "Rin paid" }));
   await waitFor(() => expect(server.writes.length).toBe(1));
   const whileSaving = shown();
+  const itemWhileSaving = screen
+    .getByRole("checkbox", { name: "Rin paid" })
+    .getAttribute("aria-checked");
   server.writes[0]?.settle("ok");
 
   await waitFor(() => expect(shown()).toEqual({ total: "$121.00", unpaidCosts: "$100.00" }));
-  expect(whileSaving).toEqual(OLD);
+  expect({ whileSaving, itemWhileSaving }).toEqual({ whileSaving: OLD, itemWhileSaving: "true" });
 });
 
 test("a negative fee draws the row's Total and no Unpaid Costs", async () => {

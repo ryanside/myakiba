@@ -67,8 +67,8 @@ const feesPaid: Order = {
   itemCount: 2,
 };
 
-async function renderOrderPage() {
-  server.order = feesPaid;
+async function renderOrderPage(shown: Order = feesPaid) {
+  server.order = shown;
   server.items = [
     item("Miku", { paid: true, price: 100 }),
     item("Rin", { paid: false, price: 2000 }),
@@ -102,8 +102,22 @@ async function renderOrderPage() {
     </QueryClientProvider>,
   );
   await screen.findByText("Rin");
-  await waitFor(() => expect(summary().total).toBe("$21.00"));
+  await waitFor(() => expect(summary().total).toBe(formatted(shown.total)));
   return userEvent.setup({ delay: null });
+}
+
+const formatted = (minorUnits: number) => `$${(minorUnits / 100).toFixed(2)}`;
+
+/** The cost breakdown's Items and Shipping lines beside the Total and Unpaid Costs. */
+function breakdown() {
+  const amountBeside = (label: string) =>
+    screen.queryByText(label, { selector: "section span" })?.nextElementSibling?.textContent ??
+    null;
+  return {
+    items: amountBeside("Items"),
+    shipping: amountBeside("Shipping"),
+    ...summary(),
+  };
 }
 
 function summary() {
@@ -130,10 +144,13 @@ test("paying the only unpaid item keeps the Order's pair until the server's Orde
   await user.click(screen.getByRole("checkbox", { name: "Rin paid" }));
   await waitFor(() => expect(server.writes.length).toBe(1));
   const whileSaving = summary();
+  const itemWhileSaving = screen
+    .getByRole("checkbox", { name: "Rin paid" })
+    .getAttribute("aria-checked");
   server.writes[0]?.settle();
 
   await waitFor(() => expect(summary()).toEqual({ total: "$21.00", unpaidCosts: null }));
-  expect(whileSaving).toEqual(OLD);
+  expect({ whileSaving, itemWhileSaving }).toEqual({ whileSaving: OLD, itemWhileSaving: "true" });
 });
 
 test("an item price edit keeps the Order's pair until the server's Order lands", async () => {
@@ -173,4 +190,44 @@ test("removing the only unpaid item keeps the Order's pair until the server's Or
 
   await waitFor(() => expect(summary()).toEqual({ total: "$1.00", unpaidCosts: null }));
   expect(whileSaving).toEqual(OLD);
+});
+
+// $100 of unpaid shipping, a $1 paid item and a $20 unpaid item: Total $121.00, Unpaid Costs $120.00.
+const shippingUnpaid: Order = {
+  ...feesPaid,
+  paid: false,
+  shippingFee: 10_000,
+  total: 12_100,
+  unpaidCosts: 12_000,
+};
+
+test("a fee edit in Edit order keeps the cost breakdown, Total and Unpaid Costs from one server Order", async () => {
+  const user = await renderOrderPage(shippingUnpaid);
+  server.afterWrite = () => {
+    server.order = { ...shippingUnpaid, shippingFee: 20_000, total: 22_100, unpaidCosts: 22_000 };
+  };
+
+  await user.click(screen.getByRole("button", { name: "Edit" }));
+  const shipping = await screen.findByLabelText("Shipping");
+  await user.clear(shipping);
+  await user.type(shipping, "200");
+  await user.click(screen.getByRole("button", { name: "Update" }));
+  await waitFor(() => expect(server.writes.length).toBe(1));
+  const whileSaving = breakdown();
+  server.writes[0]?.settle();
+
+  await waitFor(() =>
+    expect(breakdown()).toEqual({
+      items: "$21.00",
+      shipping: "$200.00",
+      total: "$221.00",
+      unpaidCosts: "$220.00",
+    }),
+  );
+  expect(whileSaving).toEqual({
+    items: "$21.00",
+    shipping: "$100.00",
+    total: "$121.00",
+    unpaidCosts: "$120.00",
+  });
 });
