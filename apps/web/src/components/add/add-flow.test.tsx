@@ -1792,7 +1792,7 @@ test("Fill all writes Price, Score and a row's date to the selected rows only", 
 
 const isChecked = (title: string) =>
   screen.queryByRole("checkbox", { name: `Select ${title}` })?.getAttribute("aria-checked") ?? null;
-const shows = (text: string) => screen.queryByText(text) !== null;
+const shows = (text: string) => screen.queryAllByText(text).length > 0;
 
 test("a picked Item already in the Collection or an Order arrives unselected, says so, and stays out of the commit", async () => {
   seedItems(
@@ -2380,4 +2380,24 @@ test("a New Order created from the current read retries a lost answer with the s
     retried?.ownership.order?.fields?.title,
     retried?.commitId === lost?.commitId,
   ]).toEqual(["Rem renamed", "Rem renamed", true]);
+});
+
+test("each place an unselected row's Item is in also has a line of its own that nothing truncates", async () => {
+  seedItems(
+    item(ITEM_ID, {
+      title: "Hatsune Miku",
+      externalId: 98_777,
+      collectionCount: 1,
+      onOrderCount: 1,
+    }),
+  );
+  openAddPage(`/add?item=${ITEM_ID}&to=collection`);
+  await waitFor(() => expect(isChecked("Hatsune Miku")).toBe("false"));
+
+  // Every grid cell truncates; what matters is that nothing inside the cell truncates the line.
+  const ownLine = (text: string) =>
+    screen
+      .queryAllByText(text)
+      .some((element) => element.closest('[class~="truncate"]') === element.closest("td"));
+  expect([ownLine("In your collection"), ownLine("On order")]).toEqual([true, true]);
 });
