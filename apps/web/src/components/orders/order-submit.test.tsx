@@ -548,6 +548,75 @@ test("moving items to a new order offers no Cascade to Items choice", () => {
   queryClient.clear();
 });
 
+describe("the merge dialog's Notes", () => {
+  const notesLimit =
+    "The merged Orders' notes together pass the 10,000-character limit. Shorten them to merge.";
+
+  function openWithNotes(notes: string) {
+    answerDraft = async () => Result.ok({ ...mergeDraft, notes });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <OrderForm
+          type="merge"
+          renderTrigger={trigger}
+          orderIds={ids}
+          callbackFn={mock(async (): Saving => Result.ok())}
+          clearSelections={() => {}}
+          currency="USD"
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    return queryClient;
+  }
+  const mergeDisabled = () =>
+    screen.getByRole("button", { name: "Merge" }).hasAttribute("disabled");
+
+  test(
+    "keeps Merge held and says why after the Notes section is collapsed",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes(`${"a".repeat(6000)}\n\n${"b".repeat(6000)}`);
+        await screen.findByRole("button", { name: "Merge" });
+        fireEvent.click(screen.getByRole("button", { name: "Notes" }));
+        await waitFor(() => expect(screen.queryByPlaceholderText("Add any notes...")).toBeNull());
+        await settle();
+
+        expect({
+          disabled: mergeDisabled(),
+          reason: screen.queryByText(notesLimit) !== null,
+        }).toEqual({ disabled: true, reason: true });
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+
+  test(
+    "takes a paste past 1,000 characters, as the server does",
+    untilBodyDone(async () => {
+      const previous = answerDraft;
+      try {
+        const queryClient = openWithNotes("n".repeat(1500));
+        await screen.findByRole("button", { name: "Merge" });
+        const user = userEvent.setup();
+        await user.click(screen.getByRole("button", { name: "Notes" }));
+        const notes = screen.getByPlaceholderText("Add any notes...") as HTMLTextAreaElement;
+        await user.click(notes);
+        await user.paste("p".repeat(600));
+
+        expect(notes.value.length).toBe(2100);
+        queryClient.clear();
+      } finally {
+        answerDraft = previous;
+      }
+    }),
+  );
+});
+
 describe("the merge dialog reads its Orders fresh on every open", () => {
   const otherIds = new Set(["c", "d"]);
 

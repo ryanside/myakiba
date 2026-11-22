@@ -240,7 +240,7 @@ const sourceOrders = {
 const ownItemValues = {
   "collection-1": {
     status: "Owned",
-    paid: false,
+    paid: true,
     shop: "Mandarake",
     orderDate: "2025-12-30",
     paymentDate: "2026-01-02",
