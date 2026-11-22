@@ -5503,6 +5503,23 @@
         "an Order write on the orders page > a failed edit puts the Order back, says so and refetches the list",
         "an Order write on the orders page > an edit that fails while a delete of the same Order is saving shows the Order until the delete lands"
       ]
+    },
+    {
+      "fix": "154a7d720674b54def00dd62fab4d2efd4dda46f",
+      "bug": "An Order edit patched its fee fields into the cached Order, so the Order page's Items line read -$79.00 and a shown Shipping Fee column read the new fee beside the old Total and Unpaid Costs; and a Paid click on the default Orders list left the control enabled, so a second click before the refreshed row landed drew the row unchecked beside the old $120.00.",
+      "test": "apps/web/src/components/unpaid-costs-while-saving.test.tsx",
+      "fixed": [
+        "a fee edit with the fee columns shown keeps Shipping, Total and Unpaid Costs from one server row",
+        "a second Paid click while the first saves does nothing, so the row never reads unchecked beside the old amount"
+      ]
+    },
+    {
+      "fix": "154a7d720674b54def00dd62fab4d2efd4dda46f",
+      "bug": "An Order edit patched its fee fields into the cached Order, so the Order page's Items line read -$79.00 and a shown Shipping Fee column read the new fee beside the old Total and Unpaid Costs; and a Paid click on the default Orders list left the control enabled, so a second click before the refreshed row landed drew the row unchecked beside the old $120.00.",
+      "test": "apps/web/src/components/order-page-unpaid-costs.test.tsx",
+      "fixed": [
+        "a fee edit in Edit order keeps the cost breakdown, Total and Unpaid Costs from one server Order"
+      ]
     }
   ],
   "lint": [
