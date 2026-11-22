@@ -26,6 +26,8 @@ import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 import {
   paidItemCount,
+  orderIsPaid,
+  orderPaidInFull,
   orderPayment,
   orderSpend,
   orderTotal,
@@ -54,7 +56,7 @@ function listFilters(userId: string, filters: OrdersQuery): SQL | undefined {
     filters.colDateStart ? gte(order.collectionDate, filters.colDateStart) : undefined,
     filters.colDateEnd ? lte(order.collectionDate, filters.colDateEnd) : undefined,
     filters.status ? inArray(order.status, filters.status) : undefined,
-    filters.paid === undefined ? undefined : eq(order.paid, filters.paid),
+    filters.feesPaid === undefined ? undefined : eq(orderIsPaid, filters.feesPaid),
     filters.shippingFeeMin === undefined
       ? undefined
       : gte(order.shippingFee, filters.shippingFeeMin),
@@ -182,6 +184,7 @@ export const Orders = {
           )
           .having(
             and(
+              input.paid === undefined ? undefined : eq(orderPaidInFull, input.paid),
               input.totalMin === undefined ? undefined : sql`${orderTotal} >= ${input.totalMin}`,
               input.totalMax === undefined ? undefined : sql`${orderTotal} <= ${input.totalMax}`,
               input.unpaidCostsMin === undefined

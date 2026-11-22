@@ -472,7 +472,7 @@ describe("each item's price follows its own Paid and each Order's fees follow th
       feeSpend: 500,
       orderItemCount: 2,
       paidOrderCount: 1,
-      unpaidOrderCount: 1,
+      unpaidOrderCount: 2,
     });
   });
 
@@ -492,7 +492,7 @@ describe("each item's price follows its own Paid and each Order's fees follow th
       paidAmount: monthly.paidAmount,
       unpaidAmount: monthly.unpaidAmount,
       unpaidOrderCount: monthly.unpaidOrderCount,
-    }).toEqual({ paidAmount: 10_500, unpaidAmount: 5500, unpaidOrderCount: 1 });
+    }).toEqual({ paidAmount: 10_500, unpaidAmount: 5500, unpaidOrderCount: 2 });
   });
 });
 
@@ -575,7 +575,7 @@ describe("Paid is apart from the Acquisition Status", () => {
 });
 
 describe("the Orders page lists the Orders behind Unpaid Costs", () => {
-  test("Unpaid Costs of at least 1 keeps a Paid Order that holds an unpaid item, which the Paid filter leaves out", async () => {
+  test("Unpaid Costs of at least 1 and the Unpaid filter both keep a Paid Order that holds an unpaid item", async () => {
     const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
     const owing = await get<OrdersList>(twoOrders, "/orders?limit=10&unpaidCostsMin=1");
     const unpaidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=false");
@@ -583,13 +583,13 @@ describe("the Orders page lists the Orders behind Unpaid Costs", () => {
     expect({
       owing: owing.items.map((row) => row.title).toSorted(),
       owingUnpaidCosts: owing.unpaidCosts,
-      unpaidOrders: unpaidOrders.items.map((row) => row.title),
+      unpaidOrders: unpaidOrders.items.map((row) => row.title).toSorted(),
       unpaidOrdersUnpaidCosts: unpaidOrders.unpaidCosts,
     }).toEqual({
       owing: ["AmiAmi", "HLJ"],
       owingUnpaidCosts: everyOrder.unpaidCosts,
-      unpaidOrders: ["AmiAmi"],
-      unpaidOrdersUnpaidCosts: 1500,
+      unpaidOrders: ["AmiAmi", "HLJ"],
+      unpaidOrdersUnpaidCosts: everyOrder.unpaidCosts,
     });
   });
 
@@ -607,10 +607,10 @@ describe("the Orders page lists the Orders behind Unpaid Costs", () => {
 });
 
 describe("the Orders page lists the Orders behind Order Spend", () => {
-  test("Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid filter leaves out", async () => {
+  test("Order Spend of at least 1 keeps an Unpaid Order that holds a paid item, which the Paid Orders link leaves out", async () => {
     const everyOrder = await get<OrdersList>(twoOrders, "/orders?limit=10");
     const spent = await get<OrdersList>(twoOrders, "/orders?limit=10&orderSpendMin=1");
-    const paidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&paid=true");
+    const paidOrders = await get<OrdersList>(twoOrders, "/orders?limit=10&feesPaid=true");
 
     expect({
       spent: spent.items.map((row) => row.title).toSorted(),

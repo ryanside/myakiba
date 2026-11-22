@@ -9,7 +9,7 @@ export const itemIsPaid = sql`${collection.paid}`;
 
 export const paidItemPrice = sql<number>`CASE WHEN ${itemIsPaid} THEN ${collection.price} ELSE 0 END`;
 
-export const orderIsUnpaid = sql`NOT ${order.paid}`;
+const orderFeesUnpaid = sql`NOT ${order.paid}`;
 export const orderIsPaid = sql`${order.paid}`;
 
 export const orderFees = sql<number>`(${order.shippingFee} + ${order.taxes} + ${order.duties} + ${order.tariffs} + ${order.miscFees})`;
@@ -18,19 +18,22 @@ export const orderTotal = sql<number>`COALESCE(SUM(${collection.price}), 0) + ${
   Number,
 );
 export const orderSpend = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsPaid}), 0) + CASE WHEN ${orderIsPaid} THEN ${orderFees} ELSE 0 END`;
-export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderIsUnpaid} THEN ${orderFees} ELSE 0 END`;
+export const orderUnpaidCosts = sql<number>`COALESCE(SUM(${collection.price}) FILTER (WHERE ${itemIsUnpaid}), 0) + CASE WHEN ${orderFeesUnpaid} THEN ${orderFees} ELSE 0 END`;
 
 export const paidItemCount = sql<number>`COUNT(${collection.id}) FILTER (WHERE ${itemIsPaid})`;
 
+export const orderPaidInFull = sql<boolean>`(${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE)`;
+export const unpaidOrder = sql<boolean>`NOT ${orderPaidInFull}`;
+
 export const orderPayment = sql<OrderPayment>`CASE
-  WHEN ${order.paid} AND BOOL_AND(${collection.paid}) IS NOT FALSE THEN 'paid'
+  WHEN ${orderPaidInFull} THEN 'paid'
   WHEN NOT ${order.paid} AND BOOL_OR(${collection.paid}) IS NOT TRUE THEN 'unpaid'
   ELSE 'partly' END`;
 
 export function selectUnpaidCosts(tx: ReadTx, where: SQL | undefined) {
   const byOrder = tx
     .select({
-      isUnpaid: sql<boolean>`${orderIsUnpaid}`.as("is_unpaid"),
+      isUnpaid: unpaidOrder.as("is_unpaid"),
       unpaidCosts: orderUnpaidCosts.as("unpaid_costs"),
     })
     .from(order)

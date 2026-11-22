@@ -31,6 +31,7 @@ export const orderFiltersSchema = z.object({
   colDateEnd: z.iso.date().optional(),
   status: z.array(z.enum(ORDER_STATUSES)).optional(),
   paid: z.boolean().optional(),
+  feesPaid: z.boolean().optional(),
   totalMin: z.coerce.number().int().optional(),
   totalMax: z.coerce.number().int().optional(),
   unpaidCostsMin: z.coerce.number().int().optional(),

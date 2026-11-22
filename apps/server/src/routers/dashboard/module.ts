@@ -9,13 +9,13 @@ import { prepared, query } from "@/domain/kernel";
 import { itemImageSql } from "@/lib/item-image-url";
 import {
   orderIsPaid,
-  orderIsUnpaid,
   orderPayment,
   orderSpend,
   orderTotal,
   orderUnpaidCosts,
   paidItemPrice,
   selectUnpaidCosts,
+  unpaidOrder,
 } from "@/lib/order-money";
 
 const DASHBOARD_KANBAN_ORDER_LIMIT = 75;
@@ -27,7 +27,7 @@ function ordersReleasingInMonth(tx: ReadTx) {
     .select({
       orderId: order.id,
       shop: order.shop,
-      isUnpaid: sql<boolean>`${orderIsUnpaid}`.as("is_unpaid"),
+      isUnpaid: unpaidOrder.as("is_unpaid"),
       itemCount: count(collection.id).as("item_count"),
       itemTotal: sql<number>`COALESCE(${sum(collection.price)}, 0)`.as("item_total"),
       shippingFee: order.shippingFee,

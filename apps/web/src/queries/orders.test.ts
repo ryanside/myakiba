@@ -8,14 +8,14 @@ globalThis.fetch = Object.assign(
     requested.push({
       url: new URL(request.url),
       method: request.method,
-      body: await request.json(),
+      body: request.method === "GET" ? undefined : await request.json(),
     });
     return new Response("Order updated successfully");
   },
   { preconnect: realFetch.preconnect },
 );
 
-const { editOrder, fillOrderPaid } = await import("./orders");
+const { editOrder, fillOrderPaid, getOrders } = await import("./orders");
 
 afterAll(() => {
   globalThis.fetch = realFetch;
@@ -55,4 +55,13 @@ test("Paid from a checkbox writes Paid to the Order and every item in it, as an 
   expect(requested.map(({ url, method, body }) => [url.pathname, method, body])).toEqual([
     ["/api/orders/fill", "PUT", { orderIds: ["order-1"], fill: { field: "paid", value: true } }],
   ]);
+});
+
+test("the Orders list sends the Paid filter and the Paid Orders link's feesPaid apart", async () => {
+  requested.length = 0;
+  await getOrders({ paid: false, feesPaid: true });
+
+  expect(
+    requested.map(({ url }) => [url.searchParams.get("paid"), url.searchParams.get("feesPaid")]),
+  ).toEqual([["false", "true"]]);
 });

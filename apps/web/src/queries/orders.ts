@@ -40,6 +40,7 @@ export function getOrders(filters: OrderFilters): Promise<Result<OrdersPage, Api
     colDateEnd: filters.colDateEnd,
     status: filters.status,
     paid: filters.paid,
+    feesPaid: filters.feesPaid,
     totalMin: filters.totalMin,
     totalMax: filters.totalMax,
     unpaidCostsMin: filters.unpaidCostsMin,

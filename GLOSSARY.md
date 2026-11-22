@@ -89,10 +89,10 @@ The saved price of each attached Order Item, added once regardless of its copy c
 An Order with a status of Ordered or Shipped. An Owned Order is no longer active.
 
 **Paid Order**:
-An Order whose own Paid is yes. A Payment Date by itself does not make an Order a Paid Order, and its Order Items can still be unpaid.
+An Order whose own Paid is yes, so its Order Fees count as Spend. A Payment Date by itself does not make an Order a Paid Order, and its Order Items can still be unpaid. The Paid filter on the Orders page lists only Orders paid in full: Paid Orders whose Order Items are all paid.
 
 **Unpaid Order**:
-An Order whose own Paid is no, whatever its Acquisition Status. Its Order Fees count as Unpaid Costs, not Spend. Each of its Order Items counts by its own Paid, so a paid Order Item on an Unpaid Order is Spend.
+An Order that is not paid in full: its own Paid is no, or one of its Order Items is unpaid, whatever its Acquisition Status. A Partly paid Order is an Unpaid Order, even when it is also a Paid Order. The unpaid counts on the Dashboard and Expenses and the Unpaid filter on the Orders page count Unpaid Orders. An Order marked unpaid with nothing priced is an Unpaid Order with no Unpaid Costs.
 
 **Order Release Date**:
 The date the whole Order is expected to release. It remains separate from Selected Item Releases, but adding Order Items or changing an attached Order Item's Selected Item Release advances it to the latest relevant date when later. Automatic changes never move it earlier, clear it, or replace a later user-entered date.
@@ -158,7 +158,7 @@ The part of Order Spend that comes from Order Fees.
 The part of Fee Spend that comes from Shipping Fees on Paid Orders. Paid Orders with free shipping still count when myakiba calculates the number of Orders and any average based on that number.
 
 **Unpaid Costs**:
-The Order Fees on Unpaid Orders, plus the saved price of every unpaid Order Item, on any Order. They are what is still owed, so a date range does not narrow them, and they do not count as Order Spend or Shipping Spend.
+The Order Fees on Orders whose own Paid is no, plus the saved price of every unpaid Order Item, on any Order. They are what is still owed, so a date range does not narrow them, and no Spend counts them.
 _Avoid_: Unpaid commitments, Unpaid
 
 **Scoped Shop Spend**:

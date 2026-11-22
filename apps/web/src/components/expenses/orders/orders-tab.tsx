@@ -97,7 +97,7 @@ export default function OrdersTab({
   }
   const unpaidValue = formatCurrencyFromMinorUnits(data?.kpis.unpaidCosts ?? 0, currency, locale);
   const paidOrdersSearch = {
-    paid: true,
+    feesPaid: true,
     shop: filters.shop,
     expenseDateStart: filters.dateStart,
     expenseDateEnd: filters.dateEnd,

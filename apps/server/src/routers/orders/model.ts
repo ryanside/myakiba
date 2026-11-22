@@ -18,6 +18,7 @@ export const ordersQuerySchema = searchSchema.extend({
   shipMethod: commaSeparatedShipMethodArray,
   status: commaSeparatedStatusArray,
   paid: z.stringbool().optional(),
+  feesPaid: z.stringbool().optional(),
 });
 
 export const orderIdParamSchema = z.object({ orderId: z.string().max(WRITE_LIMITS.id) });

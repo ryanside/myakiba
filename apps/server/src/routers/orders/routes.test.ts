@@ -615,13 +615,25 @@ describe("Paid on an Order", () => {
     ]);
   });
 
-  test("the list narrows to Paid or Unpaid Orders", async () => {
-    expect(await setPaid("order-2", true, [])).toMatchObject({ status: 200 });
+  test("the Paid filter lists Orders paid in full, the Unpaid filter the rest, and feesPaid the Orders whose own Paid is yes", async () => {
     const ids = async (query: string) => {
-      const { items } = await read<{ items: { orderId: string }[] }>(`?limit=10&${query}`);
+      const { items } = await read<{ items: { orderId: string }[] }>(
+        `?limit=10&sort=title&order=asc&${query}`,
+      );
       return items.map((row) => row.orderId);
     };
-    expect(await ids("paid=true")).toEqual(["order-2"]);
-    expect(await ids("paid=false")).toEqual(["order-1"]);
+
+    expect(await setPaid("order-2", true, [])).toMatchObject({ status: 200 });
+    expect({
+      paid: await ids("paid=true"),
+      unpaid: await ids("paid=false"),
+      feesPaid: await ids("feesPaid=true"),
+    }).toEqual({ paid: [], unpaid: ["order-1", "order-2"], feesPaid: ["order-2"] });
+
+    expect(await fillPaid("order-2", true)).toMatchObject({ status: 200 });
+    expect({
+      paid: await ids("paid=true"),
+      unpaid: await ids("paid=false"),
+    }).toEqual({ paid: ["order-2"], unpaid: ["order-1"] });
   });
 });
