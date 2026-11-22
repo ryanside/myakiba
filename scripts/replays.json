@@ -5424,6 +5424,43 @@
       "fixed": [
         "the merge dialog > holds the merge on Notes while the merged Orders' notes pass the limit, until they are shortened"
       ]
+    },
+    {
+      "fix": "cc3fdfd5bc81f1dfbc846ad3630a8c82a8b5243c",
+      "bug": "The merge draft stayed cached across opens and every collection write refetched it, so a reopened Merge dialog could submit an old draft's fees, a failed refetch hid behind the cached form, a selection that moved onto a cached draft kept the old values, and a merge read the deleted Orders back for a 404.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the merge dialog reads its Orders fresh on every open > waits for the new draft after a source Order changed, then shows its fees",
+        "the merge dialog reads its Orders fresh on every open > shows the error and no Merge when the reopened draft fails, though an earlier one loaded",
+        "the merge dialog reads its Orders fresh on every open > sends the values and ids of the Orders selected now when the selection changes while open"
+      ],
+      "testAt": "6e9607584d9bfd2c576f083d40c07f71119f18f1",
+      "reason": "A later commit in this PR adds a check to the first of these tests that the loading state reads as Loading, which this fix does not provide, so this fix replays against the test file as its failing-test commit left it."
+    },
+    {
+      "fix": "cc3fdfd5bc81f1dfbc846ad3630a8c82a8b5243c",
+      "bug": "The merge draft sat in the orders family, so the merge's own refetch read the deleted Orders back and answered 404.",
+      "test": "apps/web/src/data/resources/orders.test.tsx",
+      "fixed": [
+        "a merge from the Merge dialog > does not read the merge draft again once the merged Orders are gone"
+      ]
+    },
+    {
+      "fix": "fb0bc89511fb94558bc59cdf13e2155016d21c01",
+      "bug": "The merge's notes length check lived on the Notes field, so collapsing Notes unmounted it and turned Merge back on over the limit with no reason shown, and the 1,000-character textarea cut a paste the server would take.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the merge dialog's Notes > keeps Merge held and says why after the Notes section is collapsed",
+        "the merge dialog's Notes > takes a paste past 1,000 characters, as the server does"
+      ]
+    },
+    {
+      "fix": "a6ebe9f081eeff6928c2c98f979ca1f3f6c56276",
+      "bug": "The merge draft's loading spinner had no accessible name.",
+      "test": "apps/web/src/components/orders/order-submit.test.tsx",
+      "fixed": [
+        "the merge dialog reads its Orders fresh on every open > waits for the new draft after a source Order changed, then shows its fees"
+      ]
     }
   ],
   "lint": [
