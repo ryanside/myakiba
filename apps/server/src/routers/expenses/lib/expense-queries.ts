@@ -3,7 +3,13 @@ import type { ReadTx } from "@myakiba/db/tx";
 import { collection, item, order } from "@myakiba/db/schema/figure";
 import { and, count, desc, eq, gte, inArray, isNotNull, lte, or, sql, sum } from "drizzle-orm";
 import type { AnyColumn, SQL } from "drizzle-orm";
-import { itemIsPaid, orderFees, orderIsPaid, selectUnpaidCosts } from "@/lib/order-money";
+import {
+  itemIsPaid,
+  orderFees,
+  orderIsPaid,
+  paidItemPrice,
+  selectUnpaidCosts,
+} from "@/lib/order-money";
 import type { ExpenseBucket, ExpenseFilters } from "../model";
 
 export interface OrderTotalRow {
@@ -106,14 +112,14 @@ export async function getCollectionSummary(
 ): Promise<CollectionSummaryRow> {
   const [row] = await tx
     .select({
-      spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`,
+      spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`,
       itemCount: sql<number>`${count(collection.id)}::integer`,
       orderLinkedSpend: sql<number>`COALESCE(${sum(
-        sql`CASE WHEN ${collection.orderId} IS NOT NULL THEN ${collection.price} ELSE 0 END`,
+        sql`CASE WHEN ${collection.orderId} IS NOT NULL THEN ${paidItemPrice} ELSE 0 END`,
       )}, 0)::double precision`,
       orderLinkedCount: sql<number>`COUNT(${collection.id}) FILTER (WHERE ${collection.orderId} IS NOT NULL)::integer`,
       standaloneSpend: sql<number>`COALESCE(${sum(
-        sql`CASE WHEN ${collection.orderId} IS NULL THEN ${collection.price} ELSE 0 END`,
+        sql`CASE WHEN ${collection.orderId} IS NULL THEN ${paidItemPrice} ELSE 0 END`,
       )}, 0)::double precision`,
       standaloneCount: sql<number>`COUNT(${collection.id}) FILTER (WHERE ${collection.orderId} IS NULL)::integer`,
       shopCount: sql<number>`COUNT(DISTINCT NULLIF(${collection.shop}, ''))::integer`,
@@ -144,7 +150,7 @@ export function getCollectionCategoryRows(
     .select({
       category: sql<Category>`${item.category}::text`,
       count: sql<number>`${count(collection.id)}::integer`,
-      spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`,
+      spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`,
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -272,7 +278,7 @@ export function getOwnedItemSeries(
   filters: ExpenseFilters,
   bucket: ExpenseBucket,
 ): Promise<ItemSeriesRow[]> {
-  const itemSpend = sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`;
+  const itemSpend = sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`;
   const itemBucket = bucketSql(realizedItemDateSql(), bucket);
   return tx
     .select({

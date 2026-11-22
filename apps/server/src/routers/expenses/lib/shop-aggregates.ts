@@ -19,7 +19,7 @@ import {
   paidOrderWhere,
   realizedOrderDateSql,
 } from "./expense-queries";
-import { orderFees, orderIsPaid } from "@/lib/order-money";
+import { orderFees, orderIsPaid, paidItemPrice } from "@/lib/order-money";
 import { itemImageSql } from "@/lib/item-image-url";
 
 const EMPTY_FEE_BREAKDOWN = {
@@ -68,7 +68,7 @@ async function getCollectionShopRows(
     tx
       .select({
         shop: collection.shop,
-        spend: sql<number>`COALESCE(${sum(collection.price)}, 0)::double precision`.as("spend"),
+        spend: sql<number>`COALESCE(${sum(paidItemPrice)}, 0)::double precision`.as("spend"),
         itemCount: sql<number>`${count(collection.id)}::integer`.as("item_count"),
       })
       .from(collection)
