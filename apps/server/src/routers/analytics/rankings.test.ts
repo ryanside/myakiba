@@ -47,6 +47,7 @@ beforeAll(async () => {
         userId,
         itemId: "item-1",
         status: "Owned" as const,
+        paid: true,
         price: (index + 1) ** 3 * 100,
         shop,
       })),

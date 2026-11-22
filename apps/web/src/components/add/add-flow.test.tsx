@@ -10,6 +10,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
+import { parseJson } from "@myakiba/utils/parse-json";
+import * as z from "zod";
 import { MONEY_INPUT_HINT } from "@/lib/money-input";
 import type { RowOverrides } from "./add-draft";
 import { captureIdOf, fakePick } from "../../../test/fake-extension";
@@ -24,6 +26,7 @@ import {
   seedDraft,
   draftItemIds,
   DRAFT_KEY,
+  USER,
 } from "../../../test/add-app";
 
 configure({ asyncUtilTimeout: 3000 });
@@ -55,6 +58,13 @@ const draftWith = (itemId: string, overrides: RowOverrides) =>
 const click = (user: User, name: string | RegExp) =>
   user.click(screen.getByRole("button", { name }));
 const rowsLoaded = () => screen.findAllByRole("checkbox", { name: /^Select (?!all)/u });
+const rowCheckboxes = () => screen.queryAllByRole("checkbox", { name: /^Select (?!all)/u });
+const waitingItemIds = (): readonly string[] => {
+  const stored = sessionStorage.getItem("myakiba:account:add-waiting");
+  return stored === null
+    ? []
+    : parseJson(z.object({ value: z.array(z.string()) }), stored).unwrap().value;
+};
 const chooseOption = async (user: User, field: string, option: string) => {
   await user.click(screen.getByRole("combobox", { name: field }));
   await user.click(await screen.findByRole("option", { name: option }));
@@ -1293,7 +1303,7 @@ test("?q= opens the search with its words, and focus in it", async () => {
   await waitFor(() => expect(document.activeElement).toBe(box));
 });
 
-test("a full page says so, in a status region too, and removing a row clears it", async () => {
+test("a full page says how many wait, in a status region too, and a removed row lets one in", async () => {
   seedDraft(
     Array.from({ length: 100 }, (_, index) => ({
       itemId: `row${String(index).padStart(9, "0")}`,
@@ -1311,15 +1321,103 @@ test("a full page says so, in a status region too, and removing a row clears it"
   await user.keyboard("{Enter}");
   await user.keyboard("{Escape}");
 
-  await screen.findByText(/This page holds 100 items at a time\. Add these first/u);
-  expect(
-    screen
-      .getAllByRole("status")
-      .some(({ textContent }) => textContent === "This page holds 100 items at a time."),
-  ).toBe(true);
+  const waitingText = "1 more item waits and comes in as you add or remove these.";
+  await waitFor(() =>
+    expect(screen.getAllByRole("note").some(({ textContent }) => textContent === waitingText)).toBe(
+      true,
+    ),
+  );
+  expect(screen.getAllByRole("status").some(({ textContent }) => textContent === waitingText)).toBe(
+    true,
+  );
 
   await user.click(screen.getAllByRole("button", { name: "Remove this row" })[0] as HTMLElement);
-  await waitFor(() => expect(screen.queryByText(/Add these first/u)).toBeNull());
+  await waitFor(() => expect(screen.queryAllByText(waitingText)).toEqual([]));
+  expect(draftItemIds()).toContain(ITEM_ID);
+});
+
+test("picks past the row cap wait on the page and come in as rows are committed", async () => {
+  const mfcIds = Array.from({ length: 101 }, (_, index) => 10_000 + index);
+  seedItems(...mfcIds.map((mfcId) => item(`item-${mfcId}`, { title: `Pick ${mfcId}` })));
+  const extension = loadExtension({ picks: mfcIds.map((mfcId) => fakePick(mfcId, null)) });
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+
+  await waitFor(() =>
+    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(101),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+
+  const kept = draftItemIds() ?? [];
+  await click(user, "Keep 100 in Item Database");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(1));
+  expect(new Set([...kept, ...(draftItemIds() ?? [])])).toEqual(
+    new Set(mfcIds.map((mfcId) => `item-${mfcId}`)),
+  );
+});
+
+test("Items waiting past the row cap survive a reload, before and after a commit", async () => {
+  const mfcIds = Array.from({ length: 103 }, (_, index) => 20_000 + index);
+  const allIds = mfcIds.map((mfcId) => `item-${mfcId}`);
+  seedItems(...mfcIds.map((mfcId) => item(`item-${mfcId}`, { title: `Pick ${mfcId}` })));
+  const extension = loadExtension({ picks: mfcIds.map((mfcId) => fakePick(mfcId, null)) });
+  const user = userEvent.setup();
+  openAddPage("/add?to=none");
+  await waitFor(() =>
+    expect(extension.acknowledged.flatMap(({ captureIds }) => captureIds)).toHaveLength(103),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+  cleanup();
+
+  openAddPage("/add?to=none");
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("note")
+        .some(
+          ({ textContent }) =>
+            textContent === "3 more items wait and come in as you add or remove these.",
+        ),
+    ).toBe(true),
+  );
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(100));
+  const kept = draftItemIds() ?? [];
+  expect(new Set([...kept, ...waitingItemIds()])).toEqual(new Set(allIds));
+
+  await click(user, "Keep 100 in Item Database");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(3));
+  cleanup();
+
+  openAddPage("/add?to=none");
+  await waitFor(() => expect(rowCheckboxes()).toHaveLength(3));
+  const left = draftItemIds() ?? [];
+  expect(left).toHaveLength(3);
+  expect(waitingItemIds()).toEqual([]);
+  expect(new Set([...kept, ...left])).toEqual(new Set(allIds));
+  expect(screen.queryAllByText(/more items? waits?/u)).toEqual([]);
+});
+
+test("the status region reads failed picks and waiting Items as two sentences", async () => {
+  seedDraft(
+    Array.from({ length: 100 }, (_, index) => ({
+      itemId: `row${String(index).padStart(9, "0")}`,
+      overrides: {},
+      selected: true,
+    })),
+  );
+  sessionStorage.setItem(
+    "myakiba:account:add-waiting",
+    JSON.stringify({ userId: USER.id, value: [ITEM_ID] }),
+  );
+  server.uploadAnswer = async () => refused(503, "down");
+  loadExtension({ picks: [fakePick(98_777, "Picked Miku")] });
+  openAddPage();
+
+  await waitFor(() =>
+    expect(screen.getAllByRole("status").map(({ textContent }) => textContent)).toContain(
+      "1 pick could not be saved. 1 more item waits and comes in as you add or remove these.",
+    ),
+  );
 });
 
 test("the search says how many it found, and aria-expanded follows the panel", async () => {

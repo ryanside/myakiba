@@ -21,7 +21,12 @@ import { Result } from "better-result";
 configure({ asyncUtilTimeout: 4000 });
 setDefaultTimeout(20_000);
 
-type ServerItem = { readonly id: string; readonly itemTitle: string; readonly price: number };
+type ServerItem = {
+  readonly id: string;
+  readonly itemTitle: string;
+  readonly price: number;
+  readonly paid: boolean;
+};
 type Write = {
   readonly name: string;
   readonly args: readonly unknown[];
@@ -29,9 +34,9 @@ type Write = {
   fail: () => void;
 };
 
-const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000 };
-const RIN = { id: "co-rin", itemTitle: "Rin", price: 500 };
-const LEN = { id: "co-len", itemTitle: "Len", price: 200 };
+const MIKU = { id: "co-miku", itemTitle: "Miku", price: 1000, paid: true };
+const RIN = { id: "co-rin", itemTitle: "Rin", price: 500, paid: true };
+const LEN = { id: "co-len", itemTitle: "Len", price: 200, paid: false };
 const ITEM_PAGE_KEY = ["item", 1006, "itemRelatedCollection"];
 
 const server = {
@@ -55,7 +60,8 @@ function holdListReads() {
 const listPage = (items: readonly ServerItem[]) => {
   const totals = {
     totalCount: items.length,
-    totalValue: items.reduce((sum, { price }) => sum + price, 0),
+    totalValue: items.reduce((sum, { price, paid }) => (paid ? sum + price : sum), 0),
+    paidItemCount: items.filter(({ paid }) => paid).length,
     totalItemsThisMonth: 0,
   };
   return { items, ...totals };
@@ -154,7 +160,7 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
   let actions: Actions | null = null;
   function CollectionPage() {
     const { filters } = useCollectionFilters();
-    const { items, totalCount, totalValue } = useCollectionQuery();
+    const { items, totalCount, totalValue, paidItemCount, averageItemCost } = useCollectionQuery();
     const mutations = useCollectionMutations({ filters });
     useEffect(() => {
       actions = mutations;
@@ -162,6 +168,8 @@ function renderCollectionPage(initialFilters: CollectionFilters) {
     return (
       <>
         <p aria-label="totals">{`${totalCount} items worth ${totalValue}`}</p>
+        <p aria-label="paid items">{paidItemCount}</p>
+        <p aria-label="average cost">{averageItemCost}</p>
         <ul aria-label="collection">
           {items.map((item) => (
             <li key={item.id}>{`${item.itemTitle} ${item.price}`}</li>
@@ -217,7 +225,7 @@ const shown = () => ({
 const loaded = () =>
   waitFor(() =>
     expect(shown()).toEqual({
-      totals: "3 items worth 1700",
+      totals: "3 items worth 1500",
       items: ["Miku 1000", "Rin 500", "Len 200"],
       itemPage: "1000",
     }),
@@ -236,7 +244,7 @@ const toastTitles = () =>
 const mikuAt = (price: number) => ({ ...MIKU, price }) as CollectionItemFormValues;
 
 describe("a Collection Item write on the collection page", () => {
-  test("an unfiltered delete hides the items and lowers the totals before the server answers", async () => {
+  test("an unfiltered delete hides the items and lowers the totals by their paid prices before the server answers", async () => {
     const collection = renderCollectionPage({});
     await loaded();
     const readsBeforeWrite = server.listReads;
@@ -245,7 +253,11 @@ describe("a Collection Item write on the collection page", () => {
       actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
     );
     await waitFor(() =>
-      expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "" }),
+      expect(shown()).toEqual({
+        totals: "1 items worth 500",
+        items: ["Rin 500"],
+        itemPage: "",
+      }),
     );
 
     await answer(0, "finish");
@@ -257,6 +269,38 @@ describe("a Collection Item write on the collection page", () => {
     });
   });
 
+  test("an unfiltered delete lowers the paid item count before the server answers", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+    const paidItems = () => screen.getByLabelText("paid items").textContent;
+    expect(paidItems()).toBe("2");
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
+    );
+    await waitFor(() => expect(paidItems()).toBe("1"));
+
+    await answer(0, "finish");
+    expect(await deleting).toBe("ok");
+    await waitFor(() => expect(paidItems()).toBe("1"));
+  });
+
+  test("Average Cost is the mean of the paid prices, before and after a delete", async () => {
+    const collection = renderCollectionPage({});
+    await loaded();
+    const averageCost = () => screen.getByLabelText("average cost").textContent;
+    expect(averageCost()).toBe("750");
+
+    const deleting = collection.act((actions) =>
+      actions.handleDeleteCollectionItems(new Set([MIKU.id, LEN.id])),
+    );
+    await waitFor(() => expect(averageCost()).toBe("500"));
+
+    await answer(0, "finish");
+    expect(await deleting).toBe("ok");
+    await waitFor(() => expect(averageCost()).toBe("500"));
+  });
+
   test("a failed edit restores the row and the Item page's copy and says so", async () => {
     const collection = renderCollectionPage({});
     await loaded();
@@ -264,7 +308,7 @@ describe("a Collection Item write on the collection page", () => {
     const editing = collection.act((actions) => actions.handleEditCollectionItem(mikuAt(1500)));
     await waitFor(() =>
       expect(shown()).toEqual({
-        totals: "3 items worth 1700",
+        totals: "3 items worth 1500",
         items: ["Miku 1500", "Rin 500", "Len 200"],
         itemPage: "1500",
       }),
@@ -274,7 +318,7 @@ describe("a Collection Item write on the collection page", () => {
     await answer(0, "fail");
     await waitFor(() =>
       expect(shown()).toEqual({
-        totals: "3 items worth 1700",
+        totals: "3 items worth 1500",
         items: ["Miku 1000", "Rin 500", "Len 200"],
         itemPage: "1000",
       }),
@@ -434,7 +478,11 @@ describe("a failed Collection Item write after the filter changes", () => {
           setTimeout(resolve, 50);
         }),
     );
-    expect(shown()).toEqual({ totals: "1 items worth 500", items: ["Rin 500"], itemPage: "1000" });
+    expect(shown()).toEqual({
+      totals: "1 items worth 500",
+      items: ["Rin 500"],
+      itemPage: "1000",
+    });
 
     await releaseReads();
     expect(await deleting).toBe("error");

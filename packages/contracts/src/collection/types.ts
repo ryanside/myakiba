@@ -49,5 +49,6 @@ export type CollectionStats = {
 /** A page of Collection Items and the summary of every item the filters match. */
 export type CollectionPage = Page<CollectionItem> & {
   readonly totalValue: number;
+  readonly paidItemCount: number;
   readonly totalItemsThisMonth: number;
 };

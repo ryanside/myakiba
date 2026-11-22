@@ -138,11 +138,11 @@ A Wishlist Release Filter for Items whose latest Item Release date is today or e
 One of three expense views: Collection, Orders, or Shipping. Each has its own rules for what counts, which Shop to use, and how averages work, so totals from different views can overlap.
 
 **Spend**:
-Money that an Expense Scope counts as spent. Unpaid Costs are shown separately and do not count as Spend.
+Money that an Expense Scope counts as spent, which is money paid. Unpaid Costs are shown separately and never count as Spend.
 _Avoid_: Cost, Spending, Total Spent when referring to this exact number
 
 **Collection Spend**:
-The saved price of each Owned Collection Item, added once regardless of its copy count. This includes both Collection Items outside Orders and Order Items.
+The saved price of each Owned and paid Collection Item, added once regardless of its copy count. This includes both Collection Items outside Orders and Order Items. An Owned Order Item that is still unpaid counts as Unpaid Costs, not Collection Spend.
 _Avoid_: Collection Item Spend
 
 **Order Spend**:
@@ -175,7 +175,7 @@ Spend with no Realized Expense Date. It appears in all-time totals and breakdown
 Order Spend divided by the number of Paid Orders.
 
 **Average Collection Item Spend**:
-Collection Spend divided by the number of Owned Collection Items.
+Collection Spend divided by the number of Owned and paid Collection Items, the ones whose prices it adds.
 
 **Average Order Item Spend**:
 Order Item Spend divided by the number of Order Items it counts.
@@ -194,7 +194,7 @@ _Avoid_: Unique Owned
 Use Add for the header button and the Add Page; keep full action names for destinations.
 
 **Add Page**:
-The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab.
+The page where a user chooses where Items go. Its rows come from Picks and from a search of your Item Database; one commit sends the selected rows to the Collection, a new or existing Order, or neither, and optionally to the Wishlist and Lists. Its rows live only in that browser tab. It shows at most 100 rows; Items past that wait and become rows as rows are committed or removed.
 _Avoid_: Add menu, Add tray, sheet
 
 **Pick**:

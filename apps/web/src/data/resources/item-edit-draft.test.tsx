@@ -52,6 +52,7 @@ const collectionPage: CollectionPage = {
   items: [item],
   totalCount: 1,
   totalValue: 1000,
+  paidItemCount: 1,
   totalItemsThisMonth: 0,
 };
 

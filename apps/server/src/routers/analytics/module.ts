@@ -38,6 +38,7 @@ import type {
   EntrySection,
 } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
+import { itemIsPaid, paidItemCount, paidItemPrice } from "@/lib/order-money";
 
 const RELATIONSHIP_PREVIEW_LIMIT = 3;
 
@@ -115,7 +116,7 @@ function entryRankings(tx: ReadTx) {
       name: entry.name,
       category: entry.category,
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
+      totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -152,7 +153,7 @@ function shopRankings(tx: ReadTx) {
     .select({
       shop: collection.shop,
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
+      totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .where(
@@ -189,7 +190,7 @@ function scaleRankings(tx: ReadTx) {
     .select({
       scale: sql<string>`${item.scale}`.as("scale"),
       itemCount: count().as("itemCount"),
-      totalSpent: sql<number>`SUM(${collection.price})`.mapWith(Number).as("totalSpent"),
+      totalSpent: sql<number>`SUM(${paidItemPrice})`.mapWith(Number).as("totalSpent"),
     })
     .from(collection)
     .innerJoin(item, eq(collection.itemId, item.id))
@@ -293,6 +294,7 @@ async function getSectionAnalytics(
   let rows: readonly AnalyticsSectionRow[];
   let totalCount: number;
   let totalItemCount: number;
+  let totalPaidItemCount: number;
   let totalSpent: number;
 
   if (section === "shops") {
@@ -301,7 +303,8 @@ async function getSectionAnalytics(
         id: sql<string | null>`NULL`.as("id"),
         name: collection.shop,
         itemCount: count().as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+        paidItemCount: sql<number>`${paidItemCount}`.mapWith(Number).as("paidItemCount"),
+        totalSpent: sql<number>`COALESCE(SUM(${paidItemPrice}), 0)`
           .mapWith(Number)
           .as("totalSpent"),
       })
@@ -335,6 +338,9 @@ async function getSectionAnalytics(
           totalItemCount: sql<number>`COALESCE(SUM(${shopSummary.itemCount}), 0)`
             .mapWith(Number)
             .as("totalItemCount"),
+          totalPaidItemCount: sql<number>`COALESCE(SUM(${shopSummary.paidItemCount}), 0)`
+            .mapWith(Number)
+            .as("totalPaidItemCount"),
           totalSpent: sql<number>`COALESCE(SUM(${shopSummary.totalSpent}), 0)`
             .mapWith(Number)
             .as("totalSpent"),
@@ -346,6 +352,7 @@ async function getSectionAnalytics(
     rows = shopRows;
     totalCount = totals?.totalCount ?? 0;
     totalItemCount = totals?.totalItemCount ?? 0;
+    totalPaidItemCount = totals?.totalPaidItemCount ?? 0;
     totalSpent = totals?.totalSpent ?? 0;
   } else if (section === "scales") {
     const scaleSummary = tx
@@ -353,7 +360,8 @@ async function getSectionAnalytics(
         id: sql<string | null>`NULL`.as("id"),
         name: sql<string>`${item.scale}`.as("name"),
         itemCount: count().as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+        paidItemCount: sql<number>`${paidItemCount}`.mapWith(Number).as("paidItemCount"),
+        totalSpent: sql<number>`COALESCE(SUM(${paidItemPrice}), 0)`
           .mapWith(Number)
           .as("totalSpent"),
       })
@@ -388,6 +396,9 @@ async function getSectionAnalytics(
           totalItemCount: sql<number>`COALESCE(SUM(${scaleSummary.itemCount}), 0)`
             .mapWith(Number)
             .as("totalItemCount"),
+          totalPaidItemCount: sql<number>`COALESCE(SUM(${scaleSummary.paidItemCount}), 0)`
+            .mapWith(Number)
+            .as("totalPaidItemCount"),
           totalSpent: sql<number>`COALESCE(SUM(${scaleSummary.totalSpent}), 0)`
             .mapWith(Number)
             .as("totalSpent"),
@@ -399,6 +410,7 @@ async function getSectionAnalytics(
     rows = scaleRows;
     totalCount = totals?.totalCount ?? 0;
     totalItemCount = totals?.totalItemCount ?? 0;
+    totalPaidItemCount = totals?.totalPaidItemCount ?? 0;
     totalSpent = totals?.totalSpent ?? 0;
   } else {
     const entryFilters = and(
@@ -411,7 +423,8 @@ async function getSectionAnalytics(
     const matchedCollections = tx
       .selectDistinct({
         id: collection.id,
-        price: collection.price,
+        price: paidItemPrice.as("price"),
+        paid: sql<boolean>`${itemIsPaid}`.as("paid"),
       })
       .from(collection)
       .innerJoin(entry_to_item, eq(collection.itemId, entry_to_item.itemId))
@@ -424,7 +437,7 @@ async function getSectionAnalytics(
         id: entry.id,
         name: entry.name,
         itemCount: sql<number>`COUNT(DISTINCT ${collection.id})`.mapWith(Number).as("itemCount"),
-        totalSpent: sql<number>`COALESCE(SUM(${collection.price}), 0)`
+        totalSpent: sql<number>`COALESCE(SUM(${paidItemPrice}), 0)`
           .mapWith(Number)
           .as("totalSpent"),
       })
@@ -451,6 +464,9 @@ async function getSectionAnalytics(
       tx
         .select({
           totalItemCount: count().as("totalItemCount"),
+          totalPaidItemCount: sql<number>`COUNT(*) FILTER (WHERE ${matchedCollections.paid})`
+            .mapWith(Number)
+            .as("totalPaidItemCount"),
           totalSpent: sql<number>`COALESCE(SUM(${matchedCollections.price}), 0)`
             .mapWith(Number)
             .as("totalSpent"),
@@ -461,6 +477,7 @@ async function getSectionAnalytics(
     rows = entryRows;
     totalCount = countRows[0]?.totalCount ?? 0;
     totalItemCount = totalsRows[0]?.totalItemCount ?? 0;
+    totalPaidItemCount = totalsRows[0]?.totalPaidItemCount ?? 0;
     totalSpent = totalsRows[0]?.totalSpent ?? 0;
   }
 
@@ -476,7 +493,7 @@ async function getSectionAnalytics(
             uniqueCount: totalCount,
             totalItemCount,
             totalSpent,
-            averageSpent: totalItemCount === 0 ? 0 : totalSpent / totalItemCount,
+            averageSpent: totalPaidItemCount === 0 ? 0 : totalSpent / totalPaidItemCount,
           },
     rows: rows.map(({ id, name, itemCount, totalSpent: rowTotalSpent }) => ({
       id,

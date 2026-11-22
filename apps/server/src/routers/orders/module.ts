@@ -25,7 +25,7 @@ import { SomeOrdersNotFound } from "./errors/some-orders-not-found";
 import type { OrdersQuery } from "./model";
 import { itemImageSql } from "@/lib/item-image-url";
 import {
-  orderPaidItemCount,
+  paidItemCount,
   orderPayment,
   orderSpend,
   orderTotal,
@@ -198,7 +198,7 @@ export const Orders = {
                 : sql`${orderSpend} <= ${input.orderSpendMax}`,
               input.paidItemsMin === undefined
                 ? undefined
-                : sql`${orderPaidItemCount} >= ${input.paidItemsMin}`,
+                : sql`${paidItemCount} >= ${input.paidItemsMin}`,
             ),
           )
           .$dynamic();

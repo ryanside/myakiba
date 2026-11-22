@@ -1,6 +1,6 @@
 import { Alert02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MAX_ADD_ROWS, mfcItemUrl } from "@myakiba/contracts/add/constants";
+import { mfcItemUrl } from "@myakiba/contracts/add/constants";
 import type { ReactNode } from "react";
 import { formatCount } from "@/components/page-header";
 import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
@@ -13,24 +13,35 @@ import { VerifyEmailNotice } from "./verify-email-notice";
 
 /** The two screen-reader status regions, always mounted, so a change is announced. */
 export function LiveRegions({ controller }: { readonly controller: AddController }) {
-  const { announcement, failedPicks, full } = controller;
+  const { announcement, failedPicks, waiting } = controller;
   return (
     <>
       <p role="status" className="sr-only">
         {announcement}
       </p>
       <p role="status" className="sr-only">
-        {failedPicks > 0 ? `${formatCount(failedPicks, "pick", "picks")} could not be saved` : ""}
-        {full ? `This page holds ${MAX_ADD_ROWS} items at a time.` : ""}
+        {[
+          failedPicks > 0 ? `${formatCount(failedPicks, "pick", "picks")} could not be saved` : "",
+          waiting > 0 ? waitingText(waiting) : "",
+        ]
+          .filter(Boolean)
+          .join(". ")}
       </p>
     </>
   );
 }
 
-/** Verify email, extension stopped, read error, MFC hint and the row cap, in this order. */
 export function Notices({ controller }: { readonly controller: AddController }) {
-  const { emailVerified, unverifiedPick, email, stopped, itemsReadError, retryItems, mfc, full } =
-    controller;
+  const {
+    emailVerified,
+    unverifiedPick,
+    email,
+    stopped,
+    itemsReadError,
+    retryItems,
+    mfc,
+    waiting,
+  } = controller;
   return (
     <>
       {!emailVerified || unverifiedPick ? <VerifyEmailNotice email={email} /> : null}
@@ -47,16 +58,19 @@ export function Notices({ controller }: { readonly controller: AddController }) 
         />
       ) : null}
       {mfc === undefined ? null : <MfcHint mfcItemId={mfc} />}
-      {full ? (
+      {waiting > 0 ? (
         <Alert role="note">
-          <AlertDescription>
-            This page holds {MAX_ADD_ROWS} items at a time. Add these first, then find the rest with
-            search.
-          </AlertDescription>
+          <AlertDescription>{waitingText(waiting)}</AlertDescription>
         </Alert>
       ) : null}
     </>
   );
+}
+
+function waitingText(waiting: number): string {
+  return waiting === 1
+    ? "1 more item waits and comes in as you add or remove these."
+    : `${waiting.toLocaleString()} more items wait and come in as you add or remove these.`;
 }
 
 function ErrorNotice({

@@ -27,11 +27,15 @@ export function useCollectionQuery() {
   const filtersActive = hasActiveFiltersOrSorting(filters);
 
   const { data, isPending, isError, error, status } = useRead(collectionResource.list, filters);
+  const totalValue = data?.totalValue ?? 0;
+  const paidItemCount = data?.paidItemCount ?? 0;
 
   return {
     items: data?.items ?? [],
     totalCount: data?.totalCount ?? 0,
-    totalValue: data?.totalValue ?? 0,
+    totalValue,
+    paidItemCount,
+    averageItemCost: paidItemCount > 0 ? Math.round(totalValue / paidItemCount) : 0,
     totalItemsThisMonth: data?.totalItemsThisMonth ?? 0,
     isPending,
     isError,

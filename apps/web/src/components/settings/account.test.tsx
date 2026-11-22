@@ -175,6 +175,26 @@ test("Disconnect unlinks the Google account by its local id", async () => {
   await waitFor(() => expect(unlinkBodies).toEqual([{ accountId: "google-account" }]));
 });
 
+test("Delete Account still asks for the password", async () => {
+  openAccount();
+  const pointer = userEvent.setup();
+  const trigger = await waitFor(() => {
+    const button = screen.getByRole("button", { name: "Delete Account" });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    return button;
+  });
+  await pointer.click(trigger);
+
+  const dialog = await screen.findByRole("dialog", { name: "Are you absolutely sure?" });
+  expect(dialog.textContent).toContain(
+    "This action cannot be undone. This will permanently delete your account and remove all your data from our servers.",
+  );
+  const submit = screen.getByRole("button", { name: "Delete Account Permanently" });
+  expect(submit.hasAttribute("disabled")).toBe(false);
+  await pointer.click(submit);
+  expect(await screen.findByText("Password must be at least 8 characters")).toBeTruthy();
+});
+
 test("Change password reopened right after a change starts idle", async () => {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
   Object.defineProperty(media, "matches", { value: true });

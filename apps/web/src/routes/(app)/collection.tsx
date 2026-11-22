@@ -38,9 +38,15 @@ export const Route = createFileRoute("/(app)/collection")({
 
 function RouteComponent() {
   const { currency, locale } = useUserPreferences();
-  const { isPending, isError, error, totalCount, totalValue, totalItemsThisMonth } =
-    useCollectionQuery();
-  const averageItemCost = totalCount > 0 ? Math.round(totalValue / totalCount) : 0;
+  const {
+    isPending,
+    isError,
+    error,
+    totalCount,
+    totalValue,
+    averageItemCost,
+    totalItemsThisMonth,
+  } = useCollectionQuery();
 
   if (isError) {
     return (
